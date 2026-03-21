@@ -58,14 +58,24 @@ export function createTruck(scene, shadows) {
     grip: 0.03,           // how fast velocity aligns to heading (0=ice, 1=instant grip)
     driftThreshold: 0.15, // angle (radians) before considered "drifting"
     isDrifting: false,
+    isSpinningOut: false,
     slipAngle: 0,
   };
 
   return { mesh, state, particles };
 }
 
-export function updateTruck(truck, input, deltaTime) {
+export function updateTruck(truck, input, deltaTime, terrainManager = null) {
   const { mesh, state, particles } = truck;
+
+  // Get current terrain and apply modifiers
+  let terrainGripMultiplier = 1.0;
+  let terrainDragMultiplier = 1.0;
+  if (terrainManager) {
+    const terrain = terrainManager.getTerrainAt(mesh.position);
+    terrainGripMultiplier = terrain.gripMultiplier;
+    terrainDragMultiplier = terrain.dragMultiplier;
+  }
 
   // Current speed magnitude
   const speed = state.velocity.length();
@@ -78,7 +88,7 @@ export function updateTruck(truck, input, deltaTime) {
 
   // Oversteer at high speed: grip reduces slightly, rear breaks loose easier
   const oversteerFactor = Math.max(0.5, 1 - (speedRatio * 0.3)); // At max speed, grip reduced to 70%
-  const effectiveGrip = state.grip * oversteerFactor;
+  const effectiveGrip = state.grip * oversteerFactor * terrainGripMultiplier; // Apply terrain modifier
 
   // Steering — with speed-dependent turn rate
   if (input.left)  state.heading -= effectiveTurnSpeed * speedRatio * deltaTime;
@@ -100,9 +110,9 @@ export function updateTruck(truck, input, deltaTime) {
     if (state.velocity.length() < 0.1) state.velocity = Vector3.Zero();
   }
 
-  // Gentle natural drag when coasting (much less than active braking)
+  // Gentle natural drag when coasting (terrain affects drag)
   if (speed > 0.1 && !input.forward) {
-    const naturalDrag = state.velocity.scale(-0.8 * deltaTime);
+    const naturalDrag = state.velocity.scale(-0.8 * terrainDragMultiplier * deltaTime);
     state.velocity.addInPlace(naturalDrag);
   }
 
@@ -111,28 +121,51 @@ export function updateTruck(truck, input, deltaTime) {
   if (speed > 0.1) {
     const velocityDir = state.velocity.clone().normalize();
     const targetVelocity = forward.scale(speed);
-    state.velocity = Vector3.Lerp(state.velocity, targetVelocity, effectiveGrip);
+    
+    // Calculate slip angle before applying grip
+    state.slipAngle = Math.acos(Math.max(-1, Math.min(1, forward.dot(velocityDir))));
+    
+    // SPIN-OUT MECHANIC: If slip angle exceeds terrain-dependent breakpoint, lose all grip
+    // Higher grip surfaces allow more angle before spinning out
+    const spinoutThreshold = 0.35 + (terrainGripMultiplier * 0.25); // 0.45-0.725 radians (~26-42 degrees)
+    
+    if (state.slipAngle > spinoutThreshold && speed > 3) {
+      // Spinning out! Apply counter-rotation to the heading (rear swings out faster)
+      const spinDirection = Math.sign(Math.sin(state.slipAngle));
+      const spinRate = (state.slipAngle - spinoutThreshold) * 3; // Stronger spin as angle increases
+      state.heading += spinRate * deltaTime * spinDirection;
+      
+      // Reduce grip drastically during spinout
+      state.velocity = Vector3.Lerp(state.velocity, targetVelocity, effectiveGrip * 0.2);
+      state.isSpinningOut = true;
+    } else {
+      // Normal grip application
+      state.velocity = Vector3.Lerp(state.velocity, targetVelocity, effectiveGrip);
+      state.isSpinningOut = false;
+    }
+  } else {
+    state.slipAngle = 0;
+    state.isSpinningOut = false;
   }
 
   // Move the truck based on actual velocity (not heading)
   mesh.position.addInPlace(state.velocity.scale(deltaTime));
   mesh.rotation.y = state.heading;
 
-  // Calculate slip angle and update drift indicator
+  // Update drift and particle indicator
   if (speed > 0.5) {
-    const velocityDir = state.velocity.clone().normalize();
-    state.slipAngle = Math.acos(Math.max(-1, Math.min(1, forward.dot(velocityDir))));
     state.isDrifting = state.slipAngle > state.driftThreshold;
     
-    // Particle emission scales with drift intensity
+    // Particle emission scales with drift intensity (more during spinout)
     const driftIntensity = Math.max(0, state.slipAngle - state.driftThreshold);
-    particles.emitRate = driftIntensity * 300; // 0-100+ particles/sec based on slide
+    const spinoutBoost = state.isSpinningOut ? 2.0 : 1.0;
+    particles.emitRate = driftIntensity * 300 * spinoutBoost;
     
     // Debug output
-    if (state.isDrifting) {
-      console.log(`DRIFT! Speed: ${speed.toFixed(2)}, SlipAngle: ${state.slipAngle.toFixed(3)}, EmitRate: ${particles.emitRate.toFixed(1)}`);
-    } else {
-      console.log(`Speed: ${speed.toFixed(2)}, SlipAngle: ${state.slipAngle.toFixed(3)}`);
+    if (state.isSpinningOut) {
+      console.log(`SPINOUT! Speed: ${speed.toFixed(2)}, SlipAngle: ${state.slipAngle.toFixed(3)} rad`);
+    } else if (state.isDrifting) {
+      console.log(`DRIFT! Speed: ${speed.toFixed(2)}, SlipAngle: ${state.slipAngle.toFixed(3)}`);
     }
   } else {
     state.isDrifting = false;

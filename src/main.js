@@ -17,6 +17,7 @@ import {
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { createTruck, updateTruck } from "./truck.js";
+import { TerrainManager, TERRAIN_TYPES } from "./terrain.js";
 
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true);
@@ -47,22 +48,47 @@ async function createScene() {
   const shadows = new ShadowGenerator(1024, sun);
   shadows.useBlurExponentialShadowMap = true;
 
+  // -- Terrain System --
+  const terrainManager = new TerrainManager(80, 2);
+  
+  // Add some test terrain patches to demonstrate different surfaces
+  terrainManager.setTerrainRect(-30, -30, 25, 55, TERRAIN_TYPES.MUD);
+  terrainManager.setTerrainCircle(20, 20, 10, TERRAIN_TYPES.ASPHALT);
+  terrainManager.setTerrainRect(-10, 15, 20, 10, TERRAIN_TYPES.LOOSE_DIRT);
+
   // -- Ground --
   const ground = MeshBuilder.CreateGround("ground", { width: 80, height: 80, subdivisions: 8 }, scene);
   const groundMat = new StandardMaterial("groundMat", scene);
-  // Draw a 10x10 checkerboard across the full 512x512 texture (uScale=1, no clamping issues)
-  const checkerTex = new DynamicTexture("checkerTex", { width: 512, height: 512 }, scene);
-  const ctx = checkerTex.getContext();
-  const tiles = 10;
-  const tileSize = 512 / tiles;
-  for (let row = 0; row < tiles; row++) {
-    for (let col = 0; col < tiles; col++) {
-      ctx.fillStyle = ((col + row) % 2 === 0) ? "#8B7240" : "#5C4A1A";
-      ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+  
+  // Generate texture from terrain grid
+  const texSize = 512;
+  const groundTex = new DynamicTexture("groundTex", { width: texSize, height: texSize }, scene);
+  const ctx = groundTex.getContext();
+  const pixelsPerCell = texSize / terrainManager.cellsPerSide;
+  
+  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
+    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
+      const index = row * terrainManager.cellsPerSide + col;
+      const terrain = terrainManager.grid[index];
+      const color = terrain.color;
+      
+      // Convert Color3 to hex string
+      const r = Math.floor(color.r * 255);
+      const g = Math.floor(color.g * 255);
+      const b = Math.floor(color.b * 255);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      
+      ctx.fillRect(
+        col * pixelsPerCell,
+        row * pixelsPerCell,
+        pixelsPerCell,
+        pixelsPerCell
+      );
     }
   }
-  checkerTex.update();
-  groundMat.diffuseTexture = checkerTex;
+  
+  groundTex.update();
+  groundMat.diffuseTexture = groundTex;
   ground.material = groundMat;
   ground.receiveShadows = true;
   new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0 }, scene);
@@ -89,7 +115,7 @@ async function createScene() {
   // -- Game loop --
   scene.onBeforeRenderObservable.add(() => {
     const dt = engine.getDeltaTime() / 1000;
-    updateTruck(truck, input, dt);
+    updateTruck(truck, input, dt, terrainManager);
     // Slide the camera in the XZ plane to follow the truck, keeping the fixed offset
     const targetCamPos = truck.mesh.position.add(CAM_OFFSET);
     camera.position = Vector3.Lerp(camera.position, targetCamPos, 0.08);

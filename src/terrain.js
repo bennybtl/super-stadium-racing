@@ -1,0 +1,103 @@
+import { Vector3, Color3 } from "@babylonjs/core";
+
+// Terrain types with their properties
+export const TERRAIN_TYPES = {
+  ASPHALT: {
+    name: "asphalt",
+    gripMultiplier: 3.5,    // Best grip
+    color: new Color3(0.2, 0.2, 0.25),
+    dragMultiplier: 0.5,
+  },
+  PACKED_DIRT: {
+    name: "packed_dirt",
+    gripMultiplier: 2.0,    // Baseline
+    color: new Color3(0.35, 0.28, 0.18),
+    dragMultiplier: 0.8,
+  },
+  LOOSE_DIRT: {
+    name: "loose_dirt",
+    gripMultiplier: 0.5,    // Slides more
+    color: new Color3(0.4, 0.32, 0.2),
+    dragMultiplier: 1.0,
+  },
+  MUD: {
+    name: "mud",
+    gripMultiplier: 0.15,    // Very slippery
+    color: new Color3(0.25, 0.2, 0.15),
+    dragMultiplier: 2.9,    // Slows you down
+  },
+};
+
+export class TerrainManager {
+  constructor(gridSize = 80, cellSize = 2) {
+    this.gridSize = gridSize;
+    this.cellSize = cellSize;
+    this.cellsPerSide = Math.floor(gridSize / cellSize);
+    
+    // Create a grid of terrain cells
+    this.grid = [];
+    for (let i = 0; i < this.cellsPerSide * this.cellsPerSide; i++) {
+      // Default everything to packed dirt
+      this.grid[i] = TERRAIN_TYPES.PACKED_DIRT;
+    }
+  }
+
+  // Get terrain type at a world position
+  getTerrainAt(position) {
+    // Convert world position to grid coordinates
+    const halfGrid = this.gridSize / 2;
+    const x = Math.floor((position.x + halfGrid) / this.cellSize);
+    const z = Math.floor((position.z + halfGrid) / this.cellSize);
+    
+    // Bounds check
+    if (x < 0 || x >= this.cellsPerSide || z < 0 || z >= this.cellsPerSide) {
+      return TERRAIN_TYPES.PACKED_DIRT;
+    }
+    
+    const index = z * this.cellsPerSide + x;
+    return this.grid[index] || TERRAIN_TYPES.PACKED_DIRT;
+  }
+
+  // Set terrain type for a rectangular area
+  setTerrainRect(x, z, width, height, terrainType) {
+    const halfGrid = this.gridSize / 2;
+    const startX = Math.floor((x + halfGrid) / this.cellSize);
+    const startZ = Math.floor((z + halfGrid) / this.cellSize);
+    const endX = Math.floor((x + width + halfGrid) / this.cellSize);
+    const endZ = Math.floor((z + height + halfGrid) / this.cellSize);
+    
+    for (let gz = startZ; gz < endZ; gz++) {
+      for (let gx = startX; gx < endX; gx++) {
+        if (gx >= 0 && gx < this.cellsPerSide && gz >= 0 && gz < this.cellsPerSide) {
+          const index = gz * this.cellsPerSide + gx;
+          this.grid[index] = terrainType;
+        }
+      }
+    }
+  }
+
+  // Set terrain type in a circular area
+  setTerrainCircle(centerX, centerZ, radius, terrainType) {
+    const halfGrid = this.gridSize / 2;
+    const radiusInCells = Math.ceil(radius / this.cellSize);
+    const centerCellX = Math.floor((centerX + halfGrid) / this.cellSize);
+    const centerCellZ = Math.floor((centerZ + halfGrid) / this.cellSize);
+    
+    for (let gz = centerCellZ - radiusInCells; gz <= centerCellZ + radiusInCells; gz++) {
+      for (let gx = centerCellX - radiusInCells; gx <= centerCellX + radiusInCells; gx++) {
+        if (gx >= 0 && gx < this.cellsPerSide && gz >= 0 && gz < this.cellsPerSide) {
+          // Check if within circle
+          const worldX = (gx * this.cellSize) - halfGrid;
+          const worldZ = (gz * this.cellSize) - halfGrid;
+          const dx = worldX - centerX;
+          const dz = worldZ - centerZ;
+          
+          if (dx * dx + dz * dz <= radius * radius) {
+            const index = gz * this.cellsPerSide + gx;
+            this.grid[index] = terrainType;
+          }
+        }
+      }
+    }
+  }
+}
