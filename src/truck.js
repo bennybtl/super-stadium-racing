@@ -56,6 +56,7 @@ export function createTruck(scene, shadows) {
     suspensionVelocity: 0,    // Rate of suspension compression/extension
     targetRoll: 0,        // Target roll angle based on turning
     currentRoll: 0,       // Actual roll angle (smoothed)
+    terrainRoll: 0,       // Roll angle from terrain slope
     maxSpeed: 20,
     maxReverseSpeed: -1,
     acceleration: 5,      // reduced from 12

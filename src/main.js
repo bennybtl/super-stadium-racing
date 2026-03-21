@@ -150,7 +150,7 @@ async function createScene() {
     updateTruck(truck, input, dt, terrainManager);
     
     // Simple gravity
-    const gravity = -30;
+    const gravity = -25;
     truck.state.verticalVelocity += gravity * dt;
     
     // Move truck vertically
@@ -167,7 +167,10 @@ async function createScene() {
       
       // Calculate terrain slope in direction of travel (only when on ground)
       const forward = new Vector3(Math.sin(truck.state.heading), 0, Math.cos(truck.state.heading));
+      const right = new Vector3(Math.cos(truck.state.heading), 0, -Math.sin(truck.state.heading));
       const slopeCheckDist = 0.3;
+      
+      // Forward/backward slope (pitch)
       const heightAhead = currentTrack.getHeightAt(
         truck.mesh.position.x + forward.x * slopeCheckDist,
         truck.mesh.position.z + forward.z * slopeCheckDist
@@ -177,6 +180,17 @@ async function createScene() {
         truck.mesh.position.z - forward.z * slopeCheckDist
       );
       const terrainSlopeAngle = Math.atan2(heightAhead - heightBehind, slopeCheckDist * 2);
+      
+      // Left/right slope (roll)
+      const heightRight = currentTrack.getHeightAt(
+        truck.mesh.position.x + right.x * slopeCheckDist,
+        truck.mesh.position.z + right.z * slopeCheckDist
+      );
+      const heightLeft = currentTrack.getHeightAt(
+        truck.mesh.position.x - right.x * slopeCheckDist,
+        truck.mesh.position.z - right.z * slopeCheckDist
+      );
+      const terrainRollAngle = Math.atan2(heightRight - heightLeft, slopeCheckDist * 2);
       
       // Convert horizontal velocity to vertical based on terrain slope
       const horizontalSpeed = truck.state.velocity.length();
@@ -205,9 +219,13 @@ async function createScene() {
       
       // Update pitch to match terrain slope
       truck.mesh.rotation.x = -terrainSlopeAngle; // Negative because forward is +Z
+      
+      // Store terrain roll for combining with turn-based roll
+      truck.state.terrainRoll = terrainRollAngle;
     } else {
       truck.state.onGround = false;
       // When in air, rotation.x is maintained from when truck left the ground
+      truck.state.terrainRoll = 0;
     }
     
     // Suspension visual spring (doesn't affect physics much)
@@ -224,8 +242,9 @@ async function createScene() {
       truck.state.suspensionVelocity *= 0.95;
     }
     
-    // Apply roll for leaning in turns
-    truck.mesh.rotation.z = truck.state.currentRoll;
+    // Apply roll - combine terrain roll with turn-based roll
+    const combinedRoll = (truck.state.terrainRoll || 0) + truck.state.currentRoll;
+    truck.mesh.rotation.z = combinedRoll;
     
     // Slide the camera in the XZ plane to follow the truck, keeping the fixed offset
     const targetCamPos = truck.mesh.position.add(CAM_OFFSET);
