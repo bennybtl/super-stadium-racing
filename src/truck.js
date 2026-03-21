@@ -49,6 +49,13 @@ export function createTruck(scene, shadows) {
   const state = {
     heading: 0,           // radians, 0 = facing +Z
     velocity: Vector3.Zero(), // actual movement vector (can diverge from heading = drift)
+    verticalVelocity: 0,  // Y-axis velocity for jumping
+    onGround: true,       // whether truck is touching the ground
+    // Suspension system
+    suspensionCompression: 0, // How much suspension is compressed (0 = rest, negative = extended)
+    suspensionVelocity: 0,    // Rate of suspension compression/extension
+    targetRoll: 0,        // Target roll angle based on turning
+    currentRoll: 0,       // Actual roll angle (smoothed)
     maxSpeed: 20,
     maxReverseSpeed: -1,
     acceleration: 5,      // reduced from 12
@@ -90,24 +97,28 @@ export function updateTruck(truck, input, deltaTime, terrainManager = null) {
   const oversteerFactor = Math.max(0.5, 1 - (speedRatio * 0.3)); // At max speed, grip reduced to 70%
   const effectiveGrip = state.grip * oversteerFactor * terrainGripMultiplier; // Apply terrain modifier
 
-  // Steering — with speed-dependent turn rate
-  if (input.left)  state.heading -= effectiveTurnSpeed * speedRatio * deltaTime;
-  if (input.right) state.heading += effectiveTurnSpeed * speedRatio * deltaTime;
+  // Steering — only when on ground, with speed-dependent turn rate
+  if (state.onGround) {
+    if (input.left)  state.heading -= effectiveTurnSpeed * speedRatio * deltaTime;
+    if (input.right) state.heading += effectiveTurnSpeed * speedRatio * deltaTime;
+  }
 
   // Heading direction (where the truck is pointing)
   const forward = new Vector3(Math.sin(state.heading), 0, Math.cos(state.heading));
 
-  // Acceleration / braking — apply force in the heading direction
-  if (input.forward) {
-    state.velocity.addInPlace(forward.scale(state.acceleration * deltaTime));
-    if (speed > state.maxSpeed) {
-      state.velocity.normalize().scaleInPlace(state.maxSpeed);
+  // Acceleration / braking — only when on ground
+  if (state.onGround) {
+    if (input.forward) {
+      state.velocity.addInPlace(forward.scale(state.acceleration * deltaTime));
+      if (speed > state.maxSpeed) {
+        state.velocity.normalize().scaleInPlace(state.maxSpeed);
+      }
+    } else if (input.back) {
+      // Active braking - gradual deceleration
+      const brakeForce = state.velocity.scale(-1.5 * deltaTime);
+      state.velocity.addInPlace(brakeForce);
+      if (state.velocity.length() < 0.1) state.velocity = Vector3.Zero();
     }
-  } else if (input.back) {
-    // Active braking - gradual deceleration
-    const brakeForce = state.velocity.scale(-1.5 * deltaTime);
-    state.velocity.addInPlace(brakeForce);
-    if (state.velocity.length() < 0.1) state.velocity = Vector3.Zero();
   }
 
   // Gentle natural drag when coasting (terrain affects drag)
@@ -151,6 +162,33 @@ export function updateTruck(truck, input, deltaTime, terrainManager = null) {
   // Move the truck based on actual velocity (not heading)
   mesh.position.addInPlace(state.velocity.scale(deltaTime));
   mesh.rotation.y = state.heading;
+
+  // Calculate target roll (lean) based on turning
+  // Roll is influenced by how fast the truck is turning relative to its speed
+  if (state.onGround && speed > 1) {
+    // Calculate lateral (sideways) component of velocity
+    const right = new Vector3(Math.cos(state.heading), 0, -Math.sin(state.heading));
+    const lateralSpeed = state.velocity.dot(right);
+    
+    // Calculate turn rate
+    let turnRate = 0;
+    if (input.left) turnRate = -effectiveTurnSpeed * speedRatio;
+    if (input.right) turnRate = effectiveTurnSpeed * speedRatio;
+    
+    // Combine lateral speed and turn rate for roll
+    const rollFromLateral = lateralSpeed * 0.04; // Lean into the slide
+    const rollFromTurning = turnRate * speed * 0.02; // Lean into the turn
+    state.targetRoll = rollFromLateral + rollFromTurning; // Positive = lean right when turning right
+    
+    // Clamp roll to reasonable limits
+    state.targetRoll = Math.max(-0.25, Math.min(0.25, state.targetRoll));
+  } else {
+    state.targetRoll = 0;
+  }
+  
+  // Smooth roll towards target
+  const rollSpeed = state.onGround ? 8 : 3; // Slower roll in air
+  state.currentRoll += (state.targetRoll - state.currentRoll) * rollSpeed * deltaTime;
 
   // Update drift and particle indicator
   if (speed > 0.5) {

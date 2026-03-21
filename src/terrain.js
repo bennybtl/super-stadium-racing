@@ -100,4 +100,12 @@ export class TerrainManager {
       }
     }
   }
+
+  // Set terrain type for a specific cell by grid coordinates
+  setTerrainCell(col, row, terrainType) {
+    if (col >= 0 && col < this.cellsPerSide && row >= 0 && row < this.cellsPerSide) {
+      const index = row * this.cellsPerSide + col;
+      this.grid[index] = terrainType;
+    }
+  }
 }
