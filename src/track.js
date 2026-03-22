@@ -318,9 +318,11 @@ export const EXAMPLE_TRACKS = {
       .addHill(-20, -20, 8, 2, TERRAIN_TYPES.PACKED_DIRT)
       .addHill(20, 20, 10, 2.5, TERRAIN_TYPES.PACKED_DIRT)
       .addHill(0, 0, 12, -1.5, TERRAIN_TYPES.LOOSE_DIRT)
-      .addTerrainCircle(0, 0, 8, TERRAIN_TYPES.WATER)
-      .addSlopedRect(40, -50, 10, 10, "x", 6, 0, TERRAIN_TYPES.PACKED_DIRT)
-      .addSlopedRect(20, -50, 10, 10, "x", 0, 4, TERRAIN_TYPES.PACKED_DIRT)
+
+      .addHill(-40, 30, 18, -1.5, TERRAIN_TYPES.MUD)
+      .addTerrainCircle(-40, 30, 10, TERRAIN_TYPES.WATER)
+
+      .addSlopedRect(20, -50, 20, 20, "x", 0, 6, TERRAIN_TYPES.PACKED_DIRT)
       .addCheckpoint(0, -30, 0, 10, 1)
       .addCheckpoint(25, 0, Math.PI / 2, 10, 2)
       .addCheckpoint(0, 30, Math.PI, 10, 3)

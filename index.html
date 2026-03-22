@@ -65,12 +65,39 @@
         border: 2px solid #0ff;
         pointer-events: none;
       }
+      
+      #boost-display {
+        position: absolute;
+        top: 160px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #f80;
+        font-family: 'Courier New', monospace;
+        font-size: 24px;
+        font-weight: bold;
+        padding: 15px 25px;
+        border: 2px solid #f80;
+        pointer-events: none;
+      }
+      
+      #boost-display.active {
+        color: #ff0;
+        border-color: #ff0;
+        box-shadow: 0 0 20px #ff0;
+        animation: pulse 0.3s infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
     </style>
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
     <div id="checkpoint-display">Checkpoints: <span id="checkpoint-counter">0</span></div>
     <div id="lap-display">Lap: <span id="lap-counter">0</span></div>
+    <div id="boost-display">Nitro: <span id="boost-counter">5</span></div>
     <div id="debug-panel">
       <div class="row"><span class="label">Compression:</span><span class="value" id="debug-compression">-</span></div>
       <div class="row"><span class="label">Groundedness:</span><span class="value" id="debug-groundedness">-</span></div>
