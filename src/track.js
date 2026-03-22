@@ -107,6 +107,35 @@ export class Track {
     return this;
   }
 
+  // Add a concrete barrier wall (immovable)
+  // Creates a rectangular wall at the specified position
+  addConcreteBarrier(centerX, centerZ, heading, length = 10, height = 2) {
+    this.features.push({
+      type: "concreteBarrier",
+      centerX,
+      centerZ,
+      heading,
+      length,
+      height,
+    });
+    return this;
+  }
+
+  // Add hay bales (movable obstacles)
+  // Creates a rectangular barrier that can be pushed
+  addHayBales(centerX, centerZ, heading, length = 1, height = 1) {
+    this.features.push({
+      type: "hayBales",
+      centerX,
+      centerZ,
+      heading,
+      length,
+      height,
+      depth: 1.5,
+    });
+    return this;
+  }
+
   // Get the height at a world position
   getHeightAt(x, z) {
     let totalHeight = 0;
@@ -295,7 +324,14 @@ export const EXAMPLE_TRACKS = {
       .addCheckpoint(0, -30, 0, 10, 1)
       .addCheckpoint(25, 0, Math.PI / 2, 10, 2)
       .addCheckpoint(0, 30, Math.PI, 10, 3)
-      .addCheckpoint(-25, 0, -Math.PI / 2, 10, 4);
+      .addCheckpoint(-25, 0, -Math.PI / 2, 10, 4)
+      .addConcreteBarrier(-40, 0, 0, 20, 2)
+      .addConcreteBarrier(40, 0, 0, 20, 2)
+      .addHayBales(0, -40, Math.PI / 2, 2, 1.0)
+      .addHayBales(0, 40, Math.PI / 2, 2, 1.0)
+      .addHayBales(0, 43, Math.PI / 2, 2, 1.0)
+      .addHayBales(0, 46, Math.PI / 2, 2, 1.0)
+      .addHayBales(0, 49, Math.PI / 2, 2, 1.0);
     },
 
   mudPit: () => {

@@ -12,6 +12,7 @@ import {
   Color4,
   PhysicsAggregate,
   PhysicsShapeType,
+  PhysicsMotionType,
   FreeCamera,
   DynamicTexture,
   Texture,
@@ -146,6 +147,7 @@ async function createScene() {
   let lapCount = 0;
   let lastCheckpointPassed = -1; // Track index of last checkpoint passed
   const checkpointMeshes = [];
+  const hayBales = []; // Track hay bales to keep them at terrain level
   
   // Create visual representation for each checkpoint
   for (const feature of currentTrack.features) {
@@ -242,6 +244,85 @@ async function createScene() {
     }
   }
 
+  // -- Barriers --
+  // Create visual and physics representation for barriers
+  for (const feature of currentTrack.features) {
+    if (feature.type === "concreteBarrier") {
+      const terrainHeight = currentTrack.getHeightAt(feature.centerX, feature.centerZ);
+      
+      // Create concrete barrier mesh
+      const barrier = MeshBuilder.CreateBox("concreteBarrier", {
+        width: feature.length,
+        height: feature.height,
+        depth: 0.5
+      }, scene);
+      
+      barrier.position = new Vector3(
+        feature.centerX,
+        terrainHeight + feature.height / 2,
+        feature.centerZ
+      );
+      barrier.rotation.y = feature.heading;
+      
+      // Concrete material
+      const concreteMat = new StandardMaterial("concreteMat", scene);
+      concreteMat.diffuseColor = new Color3(0.6, 0.6, 0.6);
+      concreteMat.specularColor = new Color3(0.2, 0.2, 0.2);
+      barrier.material = concreteMat;
+      barrier.receiveShadows = true;
+      shadows.addShadowCaster(barrier);
+      
+      // Static physics body (immovable)
+      new PhysicsAggregate(barrier, PhysicsShapeType.BOX, {
+        mass: 0,
+        restitution: 0.1,
+        friction: 0.8
+      }, scene);
+    }
+    
+    if (feature.type === "hayBales") {
+      const terrainHeight = currentTrack.getHeightAt(feature.centerX, feature.centerZ);
+      
+      // Create hay bale mesh
+      const hayBale = MeshBuilder.CreateBox("hayBale", {
+        width: feature.length,
+        height: feature.height,
+        depth: feature.depth,
+      }, scene);
+      
+      hayBale.position = new Vector3(
+        feature.centerX,
+        terrainHeight + feature.height / 2,
+        feature.centerZ
+      );
+      hayBale.rotation.y = feature.heading;
+      
+      // Hay material (golden yellow)
+      const hayMat = new StandardMaterial("hayMat", scene);
+      hayMat.diffuseColor = new Color3(0.8, 0.7, 0.3);
+      hayMat.specularColor = new Color3(0.1, 0.1, 0.05);
+      hayBale.material = hayMat;
+      hayBale.receiveShadows = true;
+      shadows.addShadowCaster(hayBale);
+      
+      // Dynamic physics body (can be pushed, but heavy and slow)
+      const hayPhysics = new PhysicsAggregate(hayBale, PhysicsShapeType.BOX, {
+        mass: 50, // Heavy so it's hard to push
+        restitution: 0.1,
+        friction: 2.5 // Very high friction makes it slow down quickly
+      }, scene);
+      
+      // Set motion type to dynamic but keep them grounded
+      hayPhysics.body.setMotionType(PhysicsMotionType.DYNAMIC);
+      hayPhysics.body.setLinearDamping(3.0); // Heavy damping to stop sliding
+      hayPhysics.body.setAngularDamping(5); // Prevent spinning
+      
+      // Keep hay bales at terrain level by locking Y position after physics
+      hayBales.push({ mesh: hayBale, initialHeight: terrainHeight + feature.height / 2 });
+      hayPhysics.body.setAngularDamping(2.0);
+    }
+  }
+
   // -- Input --
   const input = { forward: false, back: false, left: false, right: false };
 
@@ -250,6 +331,37 @@ async function createScene() {
     if (e.code === "KeyS" || e.code === "ArrowDown")  input.back    = true;
     if (e.code === "KeyA" || e.code === "ArrowLeft")  input.left    = true;
     if (e.code === "KeyD" || e.code === "ArrowRight") input.right   = true;
+    
+    // Reset truck position if stuck on wall
+    if (e.code === "KeyR") {
+      // Find nearest barrier and push truck away from it
+      let nearestBarrier = null;
+      let nearestDistance = Infinity;
+      
+      scene.meshes.forEach(mesh => {
+        if (mesh.physicsBody && (mesh.name.includes("concrete") || mesh.name.includes("hayBale"))) {
+          const distance = Vector3.Distance(truck.mesh.position, mesh.position);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestBarrier = mesh;
+          }
+        }
+      });
+      
+      if (nearestBarrier && nearestDistance < 10) {
+        // Push truck away from nearest barrier
+        const awayDirection = truck.mesh.position.subtract(nearestBarrier.position);
+        awayDirection.y = 0;
+        awayDirection.normalize();
+        truck.mesh.position.addInPlace(awayDirection.scale(3)); // Push 3 units away
+        truck.mesh.position.y += 5; // Lift truck up to drop back down
+        truck.state.velocity.scaleInPlace(0); // Stop all velocity
+      } else {
+        // No nearby barrier, just lift and stop the truck
+        truck.mesh.position.y += 5; // Lift truck up to drop back down
+        truck.state.velocity.scaleInPlace(0);
+      }
+    }
     
     // Zoom controls
     if (e.code === "Minus" || e.code === "NumpadSubtract") {
@@ -351,6 +463,11 @@ async function createScene() {
       for (const cp of checkpointMeshes) {
         cp.feature.passed = false;
       }
+    }
+    
+    // Keep hay bales at terrain level
+    for (const bale of hayBales) {
+      bale.mesh.position.y = bale.initialHeight;
     }
     
     // Slide the camera in the XZ plane to follow the truck, keeping the fixed offset

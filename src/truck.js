@@ -6,6 +6,9 @@ import {
   ParticleSystem,
   Texture,
   Color4,
+  PhysicsAggregate,
+  PhysicsShapeType,
+  PhysicsMotionType,
 } from "@babylonjs/core";
 
 export function createTruck(scene, shadows) {
@@ -16,6 +19,16 @@ export function createTruck(scene, shadows) {
   mat.diffuseColor = new Color3(0.8, 0.2, 0.1);
   mesh.material = mat;
   shadows.addShadowCaster(mesh);
+
+  // Add physics body to truck for collision with barriers
+  const truckPhysics = new PhysicsAggregate(mesh, PhysicsShapeType.BOX, {
+    mass: 10,
+    restitution: 0.2,
+    friction: 0.5
+  }, scene);
+  // Use kinematic mode - controlled by us but still participates in collisions
+  truckPhysics.body.setMotionType(PhysicsMotionType.ANIMATED);
+  truckPhysics.body.disablePreStep = false;
 
   // Drift smoke particle system
   const particles = new ParticleSystem("drift", 200, scene);
@@ -102,11 +115,11 @@ export function createTruck(scene, shadows) {
     slipAngle: 0,
   };
 
-  return { mesh, state, particles, splashParticles };
+  return { mesh, state, particles, splashParticles, physics: truckPhysics };
 }
 
 export function updateTruck(truck, input, deltaTime, terrainManager = null, track = null) {
-  const { mesh, state, particles, splashParticles } = truck;
+  const { mesh, state, particles, splashParticles, physics } = truck;
 
   // === VERTICAL PHYSICS ===
   const gravity = -50;
@@ -289,8 +302,96 @@ export function updateTruck(truck, input, deltaTime, terrainManager = null, trac
   }
 
   // Move the truck based on actual velocity (not heading)
-  mesh.position.addInPlace(state.velocity.scale(deltaTime));
+  const oldPosition = mesh.position.clone();
+  const newPosition = mesh.position.add(state.velocity.scale(deltaTime));
+  
+  // Check if new position would collide - if so, stop movement in that direction
+  if (physics) {
+    // First check if we're already intersecting something (e.g., from drifting)
+    const scene = mesh.getScene();
+    let alreadyIntersecting = false;
+    let intersectingMesh = null;
+    
+    scene.meshes.forEach(otherMesh => {
+      if (otherMesh !== mesh && otherMesh.physicsBody && 
+          (otherMesh.name.includes("concrete") || otherMesh.name.includes("hayBale"))) {
+        if (mesh.intersectsMesh(otherMesh, false)) {
+          alreadyIntersecting = true;
+          intersectingMesh = otherMesh;
+        }
+      }
+    });
+    
+    // If already intersecting, push truck away from the wall
+    if (alreadyIntersecting && intersectingMesh) {
+      const awayFromWall = mesh.position.subtract(intersectingMesh.position);
+      awayFromWall.y = 0;
+      awayFromWall.normalize();
+      mesh.position.addInPlace(awayFromWall.scale(0.1)); // Push away
+      state.velocity.scaleInPlace(0.3); // Reduce velocity when clipping
+    }
+    
+    // Now try to move to new position
+    mesh.position = newPosition;
+    
+    // Check for intersections at new position
+    let hasCollision = false;
+    let collisionMesh = null;
+    scene.meshes.forEach(otherMesh => {
+      if (otherMesh !== mesh && otherMesh.physicsBody && 
+          (otherMesh.name.includes("concrete") || otherMesh.name.includes("hayBale"))) {
+        if (mesh.intersectsMesh(otherMesh, false)) {
+          hasCollision = true;
+          collisionMesh = otherMesh;
+        }
+      }
+    });
+    
+    // If collision detected, check if we're moving towards or away from it
+    if (hasCollision && collisionMesh) {
+      // Vector from old position to collision object
+      const toCollision = collisionMesh.position.subtract(oldPosition);
+      toCollision.y = 0; // Only consider horizontal direction
+      toCollision.normalize();
+      
+      // Project velocity onto the collision normal (component moving towards collision)
+      const velocityTowardsCollision = state.velocity.dot(toCollision);
+      
+      if (velocityTowardsCollision > 0) {
+        // Check if it's a pushable hay bale
+        if (collisionMesh.name.includes("hayBale") && collisionMesh.physicsBody) {
+          // Apply impulse to push the hay bale
+          const pushForce = toCollision.scale(velocityTowardsCollision * 200); // Scale force based on velocity
+          collisionMesh.physicsBody.applyImpulse(pushForce, collisionMesh.position);
+          
+          // Reduce truck velocity less than hitting a wall
+          const normalComponent = toCollision.scale(velocityTowardsCollision * 0.5);
+          state.velocity.subtractInPlace(normalComponent);
+        } else {
+          // Concrete barrier - full stop
+          // Moving towards collision - remove the component moving towards it
+          // but keep the perpendicular component (allows sliding along walls)
+          const normalComponent = toCollision.scale(velocityTowardsCollision);
+          state.velocity.subtractInPlace(normalComponent);
+          
+          // Revert to old position to prevent clipping into wall
+          mesh.position = oldPosition;
+        }
+      }
+      // If moving away (reversing), allow the movement
+    }
+  } else {
+    mesh.position = newPosition;
+  }
+  
   mesh.rotation.y = state.heading;
+  
+  // Sync physics body with mesh transform (ANIMATED bodies need explicit updates)
+  if (truck.physics) {
+    truck.physics.body.transformNode.position = mesh.position.clone();
+    truck.physics.body.transformNode.rotationQuaternion = mesh.rotationQuaternion ? mesh.rotationQuaternion.clone() : null;
+    truck.physics.body.transformNode.rotation = mesh.rotation.clone();
+  }
   
   // Apply roll - combine terrain roll with turn-based roll
   const combinedRoll = (state.terrainRoll || 0) + state.currentRoll;
