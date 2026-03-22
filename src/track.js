@@ -91,6 +91,22 @@ export class Track {
     return this;
   }
 
+  // Add a checkpoint gate for racing
+  // heading is in radians (0 = facing +Z, PI/2 = facing +X)
+  // checkpointNumber: optional number for ordered checkpoints (1, 2, 3, etc.)
+  addCheckpoint(centerX, centerZ, heading, width = 8, checkpointNumber = null) {
+    this.features.push({
+      type: "checkpoint",
+      centerX,
+      centerZ,
+      heading,
+      width,
+      checkpointNumber,
+      passed: false, // Track if checkpoint has been passed
+    });
+    return this;
+  }
+
   // Get the height at a world position
   getHeightAt(x, z) {
     let totalHeight = 0;
@@ -276,6 +292,10 @@ export const EXAMPLE_TRACKS = {
       .addTerrainCircle(0, 0, 8, TERRAIN_TYPES.WATER)
       .addSlopedRect(40, -50, 10, 10, "x", 6, 0, TERRAIN_TYPES.PACKED_DIRT)
       .addSlopedRect(20, -50, 10, 10, "x", 0, 4, TERRAIN_TYPES.PACKED_DIRT)
+      .addCheckpoint(0, -30, 0, 10, 1)
+      .addCheckpoint(25, 0, Math.PI / 2, 10, 2)
+      .addCheckpoint(0, 30, Math.PI, 10, 3)
+      .addCheckpoint(-25, 0, -Math.PI / 2, 10, 4);
     },
 
   mudPit: () => {

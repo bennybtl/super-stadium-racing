@@ -141,6 +141,107 @@ async function createScene() {
   // -- Truck --
   const truck = createTruck(scene, shadows);
 
+  // -- Checkpoints --
+  let checkpointCount = 0;
+  let lapCount = 0;
+  let lastCheckpointPassed = -1; // Track index of last checkpoint passed
+  const checkpointMeshes = [];
+  
+  // Create visual representation for each checkpoint
+  for (const feature of currentTrack.features) {
+    if (feature.type === "checkpoint") {
+      const terrainHeight = currentTrack.getHeightAt(feature.centerX, feature.centerZ);
+      
+      // Calculate positions for the two barrels
+      const halfWidth = feature.width / 2;
+      const perpX = Math.cos(feature.heading); // Perpendicular to heading
+      const perpZ = -Math.sin(feature.heading);
+      
+      const pos1 = new Vector3(
+        feature.centerX + perpX * halfWidth,
+        terrainHeight + 1,
+        feature.centerZ + perpZ * halfWidth
+      );
+      const pos2 = new Vector3(
+        feature.centerX - perpX * halfWidth,
+        terrainHeight + 1,
+        feature.centerZ - perpZ * halfWidth
+      );
+      
+      // Create barrels (cylinders)
+      const barrel1 = MeshBuilder.CreateCylinder("barrel1", { height: 2, diameter: 1 }, scene);
+      barrel1.position = pos1;
+      const barrel2 = MeshBuilder.CreateCylinder("barrel2", { height: 2, diameter: 1 }, scene);
+      barrel2.position = pos2;
+      
+      const barrelMat = new StandardMaterial("barrelMat", scene);
+      barrelMat.diffuseColor = new Color3(0.8, 0.5, 0.1);
+      barrel1.material = barrelMat;
+      barrel2.material = barrelMat;
+      
+      // Create arrow mesh between barrels
+      const arrowLength = feature.width - 2;
+      const arrow = MeshBuilder.CreateBox("arrow", { width: arrowLength, height: 0.2, depth: 1.5 }, scene);
+      arrow.position = new Vector3(feature.centerX, terrainHeight + 2.5, feature.centerZ);
+      arrow.rotation.y = feature.heading;
+      
+      const arrowMat = new StandardMaterial("arrowMat", scene);
+      arrowMat.diffuseColor = new Color3(1, 1, 0);
+      arrowMat.emissiveColor = new Color3(0.3, 0.3, 0);
+      arrow.material = arrowMat;
+      
+      // Create arrow head (triangle)
+      const arrowHead = MeshBuilder.CreateCylinder("arrowHead", { 
+        diameterTop: 0, 
+        diameterBottom: 2, 
+        height: 2 
+      }, scene);
+      arrowHead.rotation.x = Math.PI / 2;
+      arrowHead.rotation.y = feature.heading;
+      const forwardX = Math.sin(feature.heading);
+      const forwardZ = Math.cos(feature.heading);
+      arrowHead.position = new Vector3(
+        feature.centerX + forwardX * (arrowLength / 2 + 1),
+        terrainHeight + 2.5,
+        feature.centerZ + forwardZ * (arrowLength / 2 + 1)
+      );
+      arrowHead.material = arrowMat;
+      
+      // Create checkpoint number display if numbered
+      let numberPlane = null;
+      if (feature.checkpointNumber !== null) {
+        const planeSize = 3;
+        numberPlane = MeshBuilder.CreatePlane("numberPlane", { size: planeSize }, scene);
+        numberPlane.position = new Vector3(
+          feature.centerX,
+          terrainHeight + 4,
+          feature.centerZ
+        );
+        numberPlane.billboardMode = 7; // Always face camera
+        
+        // Create dynamic texture for the number
+        const numberTexture = new DynamicTexture("numberTexture", { width: 256, height: 256 }, scene);
+        const ctx = numberTexture.getContext();
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.font = "bold 180px Arial";
+        ctx.fillStyle = "yellow";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(feature.checkpointNumber.toString(), 128, 128);
+        numberTexture.update();
+        
+        const numberMat = new StandardMaterial("numberMat", scene);
+        numberMat.diffuseTexture = numberTexture;
+        numberMat.emissiveTexture = numberTexture;
+        numberMat.opacityTexture = numberTexture;
+        numberPlane.material = numberMat;
+      }
+      
+      checkpointMeshes.push({ feature, barrel1, barrel2, arrow, arrowHead, numberPlane });
+    }
+  }
+
   // -- Input --
   const input = { forward: false, back: false, left: false, right: false };
 
@@ -184,6 +285,73 @@ async function createScene() {
     document.getElementById('debug-x').textContent = debugInfo.x.toFixed(2);
     document.getElementById('debug-y').textContent = debugInfo.y.toFixed(2);
     document.getElementById('debug-z').textContent = debugInfo.z.toFixed(2);
+    
+    // Check for checkpoint collisions
+    for (let i = 0; i < checkpointMeshes.length; i++) {
+      const checkpoint = checkpointMeshes[i];
+      const feature = checkpoint.feature;
+      
+      // Check if this checkpoint is next in sequence (if numbered)
+      let isNextInSequence = true;
+      if (feature.checkpointNumber !== null) {
+        // Must pass checkpoints in order: 1, 2, 3, 4, etc.
+        const expectedNumber = checkpointCount + 1;
+        isNextInSequence = feature.checkpointNumber === expectedNumber;
+      }
+      
+      // Only allow triggering if it's not the last checkpoint that was passed AND it's next in sequence
+      if (!feature.passed && i !== lastCheckpointPassed && isNextInSequence) {
+        // Calculate if truck is crossing the checkpoint line
+        const dx = truck.mesh.position.x - feature.centerX;
+        const dz = truck.mesh.position.z - feature.centerZ;
+        
+        // Check if truck is within checkpoint width (perpendicular distance)
+        const perpX = Math.cos(feature.heading);
+        const perpZ = -Math.sin(feature.heading);
+        const perpDist = Math.abs(dx * perpX + dz * perpZ);
+        
+        // Check if truck is near the checkpoint line (along the heading direction)
+        const forwardX = Math.sin(feature.heading);
+        const forwardZ = Math.cos(feature.heading);
+        const forwardDist = dx * forwardX + dz * forwardZ;
+        
+        // Check if truck is moving in the correct direction (forward through the checkpoint)
+        const velocityDotForward = truck.state.velocity.x * forwardX + truck.state.velocity.z * forwardZ;
+        
+        // Trigger only if truck is within width, crosses the line, AND moving in correct direction
+        if (perpDist < feature.width / 2 && Math.abs(forwardDist) < 2 && velocityDotForward > 0) {
+          feature.passed = true;
+          checkpointCount++;
+          lastCheckpointPassed = i; // Track this checkpoint
+          
+          // Visual feedback - change arrow color temporarily
+          checkpoint.arrow.material.diffuseColor = new Color3(0, 1, 0);
+          checkpoint.arrowHead.material.diffuseColor = new Color3(0, 1, 0);
+          
+          setTimeout(() => {
+            checkpoint.arrow.material.diffuseColor = new Color3(1, 1, 0);
+            checkpoint.arrowHead.material.diffuseColor = new Color3(1, 1, 0);
+          }, 1000);
+          
+          // Update counter display
+          document.getElementById('checkpoint-counter').textContent = checkpointCount;
+        }
+      }
+    }
+    
+    // Check if all checkpoints are passed (lap completed)
+    const totalCheckpoints = currentTrack.features.filter(f => f.type === 'checkpoint').length;
+    if (checkpointCount === totalCheckpoints) {
+      lapCount++;
+      checkpointCount = 0;
+      document.getElementById('lap-counter').textContent = lapCount;
+      document.getElementById('checkpoint-counter').textContent = checkpointCount;
+      
+      // Reset all checkpoints for next lap
+      for (const cp of checkpointMeshes) {
+        cp.feature.passed = false;
+      }
+    }
     
     // Slide the camera in the XZ plane to follow the truck, keeping the fixed offset
     const CAM_OFFSET = BASE_CAM_OFFSET.scale(zoomLevel);

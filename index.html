@@ -37,10 +37,40 @@
         color: #0f0;
         text-align: right;
       }
+      
+      #checkpoint-display {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #ff0;
+        font-family: 'Courier New', monospace;
+        font-size: 24px;
+        font-weight: bold;
+        padding: 15px 25px;
+        border: 2px solid #ff0;
+        pointer-events: none;
+      }
+      
+      #lap-display {
+        position: absolute;
+        top: 80px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #0ff;
+        font-family: 'Courier New', monospace;
+        font-size: 28px;
+        font-weight: bold;
+        padding: 15px 25px;
+        border: 2px solid #0ff;
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="checkpoint-display">Checkpoints: <span id="checkpoint-counter">0</span></div>
+    <div id="lap-display">Lap: <span id="lap-counter">0</span></div>
     <div id="debug-panel">
       <div class="row"><span class="label">Compression:</span><span class="value" id="debug-compression">-</span></div>
       <div class="row"><span class="label">Groundedness:</span><span class="value" id="debug-groundedness">-</span></div>
