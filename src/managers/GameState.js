@@ -3,6 +3,7 @@
  */
 export class GameState {
   constructor(maxBoosts = 5) {
+    this.maxBoosts = maxBoosts;
     this.checkpointCount = 0;
     this.lapCount = 0;
     this.lastCheckpointPassed = -1;
@@ -25,6 +26,13 @@ export class GameState {
   resetCheckpoints() {
     this.checkpointCount = 0;
     this.lastCheckpointPassed = -1;
+  }
+
+  reset() {
+    this.checkpointCount = 0;
+    this.lapCount = 0;
+    this.lastCheckpointPassed = -1;
+    this.boostCount = this.maxBoosts;
   }
 
   useBoost() {

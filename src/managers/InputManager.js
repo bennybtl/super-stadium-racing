@@ -19,6 +19,7 @@ export class InputManager {
     // Callbacks for special actions
     this.onResetCallback = null;
     this.onBoostCallback = null;
+    this.onPauseCallback = null;
     
     this.setupEventListeners();
   }
@@ -49,6 +50,13 @@ export class InputManager {
       }
     }
     
+    // Pause/Menu
+    if (e.code === "Escape") {
+      if (this.onPauseCallback) {
+        this.onPauseCallback();
+      }
+    }
+    
     // Zoom controls
     if (e.code === "Minus" || e.code === "NumpadSubtract") {
       this.cameraController.zoomOut();
@@ -75,5 +83,9 @@ export class InputManager {
 
   onBoost(callback) {
     this.onBoostCallback = callback;
+  }
+
+  onPause(callback) {
+    this.onPauseCallback = callback;
   }
 }

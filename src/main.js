@@ -27,6 +27,7 @@ import { CameraController } from "./managers/CameraController.js";
 import { InputManager } from "./managers/InputManager.js";
 import { CheckpointManager } from "./managers/CheckpointManager.js";
 import { BarrierManager } from "./managers/BarrierManager.js";
+import { MenuManager } from "./managers/MenuManager.js";
 
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true);
@@ -143,6 +144,7 @@ async function createScene() {
   const truck = createTruck(scene, shadows);
 
   // -- Initialize Managers --
+  const menuManager = new MenuManager();
   const uiManager = new UIManager();
   const gameState = new GameState(truck.state.maxBoosts);
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
@@ -155,6 +157,11 @@ async function createScene() {
   // -- Input Manager --
   const inputManager = new InputManager(truck, cameraController);
   
+  // Handle pause/menu toggle
+  inputManager.onPause(() => {
+    menuManager.togglePause();
+  });
+  
   // Handle boost activation
   inputManager.onBoost(() => {
     if (gameState.useBoost() && !truck.state.boostActive) {
@@ -164,7 +171,56 @@ async function createScene() {
     }
   });
   
+  // Function to reset game state
+  const resetGame = () => {
+    // Reset truck position and state
+    truck.mesh.position = new Vector3(0, 5, 0);
+    truck.state.velocity = Vector3.Zero();
+    truck.state.verticalVelocity = 0;
+    truck.state.heading = 0;
+    truck.state.boostActive = false;
+    truck.state.boostTimer = 0;
+    
+    // Reset game state
+    gameState.reset();
+    checkpointManager.reset();
+    barrierManager.reset();
+    
+    // Update UI
+    uiManager.updateBoosts(gameState.boostCount);
+    uiManager.updateLaps(0);
+    uiManager.updateCheckpoints(0);
+  };
+  
   // Handle reset
+  inputManager.onReset(() => {
+    resetGame();
+  });
+  
+  // Setup menu callbacks
+  menuManager.onStartGame = () => {
+    menuManager.gameStarted = true;
+    menuManager.hideMenu();
+    resetGame();
+  };
+  
+  menuManager.onResume = () => {
+    menuManager.hideMenu();
+  };
+  
+  menuManager.onReset = () => {
+    resetGame();
+    menuManager.hideMenu();
+  };
+  
+  menuManager.onExit = () => {
+    menuManager.gameStarted = false;
+    menuManager.showStartMenu();
+    resetGame();
+  };
+  
+  // Old reset handler - now using resetGame function
+  /*
   inputManager.onReset(() => {
     // Find nearest barrier and push truck away from it
     let nearestBarrier = null;
@@ -194,9 +250,15 @@ async function createScene() {
       truck.state.velocity.scaleInPlace(0);
     }
   });
+  */
 
   // -- Game loop --
   scene.onBeforeRenderObservable.add(() => {
+    // Skip game updates if paused or menu is active
+    if (menuManager.isMenuActive()) {
+      return;
+    }
+    
     const dt = engine.getDeltaTime() / 1000;
     
     // Get movement input from InputManager

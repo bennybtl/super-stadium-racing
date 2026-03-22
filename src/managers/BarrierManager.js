@@ -17,6 +17,7 @@ export class BarrierManager {
     this.track = track;
     this.shadows = shadows;
     this.hayBales = [];
+    this.concreteBarriers = [];
   }
 
   createBarriers() {
@@ -61,6 +62,9 @@ export class BarrierManager {
       restitution: 0.8,
       friction: 0.0
     }, this.scene);
+    
+    // Store reference for disposal
+    this.concreteBarriers.push(barrier);
   }
 
   createHayBale(feature) {
@@ -91,20 +95,47 @@ export class BarrierManager {
     // Dynamic physics body (can be pushed, but heavy and slow)
     const hayPhysics = new PhysicsAggregate(hayBale, PhysicsShapeType.BOX, {
       mass: 50, // Heavy so it's hard to push
-      restitution: 0.1,
+      restitution: 0.01, // Very low bounce
       friction: 2.5 // Very high friction makes it slow down quickly
     }, this.scene);
     
     // Set motion type to dynamic but keep them grounded
     hayPhysics.body.setMotionType(PhysicsMotionType.DYNAMIC);
-    hayPhysics.body.setLinearDamping(3.0); // Heavy damping to stop sliding
-    hayPhysics.body.setAngularDamping(2.0); // Prevent spinning
+    hayPhysics.body.setLinearDamping(5.0); // Increased damping to reduce bounce
+    hayPhysics.body.setAngularDamping(3.0); // Increased to prevent spinning
     
     // Keep hay bales at terrain level by locking Y position after physics
     this.hayBales.push({ 
-      mesh: hayBale, 
+      mesh: hayBale,
+      physics: hayPhysics,
       initialHeight: terrainHeight + feature.height / 2 
     });
+  }
+
+  disposeAll() {
+    // Dispose all concrete barriers
+    for (const barrier of this.concreteBarriers) {
+      if (barrier.physicsBody) {
+        barrier.physicsBody.dispose();
+      }
+      barrier.dispose();
+    }
+    this.concreteBarriers = [];
+    
+    // Dispose all hay bales
+    for (const bale of this.hayBales) {
+      if (bale.physics) {
+        bale.physics.dispose();
+      }
+      bale.mesh.dispose();
+    }
+    this.hayBales = [];
+  }
+
+  reset() {
+    // Dispose and recreate all barriers
+    this.disposeAll();
+    this.createBarriers();
   }
 
   update() {
