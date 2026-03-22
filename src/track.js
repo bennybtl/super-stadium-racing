@@ -272,8 +272,11 @@ export const EXAMPLE_TRACKS = {
     return new Track("Hills")
       .addHill(-20, -20, 8, 2, TERRAIN_TYPES.PACKED_DIRT)
       .addHill(20, 20, 10, 2.5, TERRAIN_TYPES.PACKED_DIRT)
-      .addHill(0, 0, 12, 1.5, TERRAIN_TYPES.LOOSE_DIRT);
-  },
+      .addHill(0, 0, 12, -1.5, TERRAIN_TYPES.LOOSE_DIRT)
+      .addTerrainCircle(0, 0, 8, TERRAIN_TYPES.WATER)
+      .addSlopedRect(40, -50, 10, 10, "x", 6, 0, TERRAIN_TYPES.PACKED_DIRT)
+      .addSlopedRect(20, -50, 10, 10, "x", 0, 4, TERRAIN_TYPES.PACKED_DIRT)
+    },
 
   mudPit: () => {
     return new Track("Mud Pit")
@@ -285,9 +288,10 @@ export const EXAMPLE_TRACKS = {
 
   bankedTurn: () => {
     return new Track("Banked Turn")
-      .addSlopedRect(-20, 0, 40, 80, "x", 8, 0, TERRAIN_TYPES.PACKED_DIRT)
+      .addSlopedRect(-20, 0, 40, 80, "x", 4, 0, TERRAIN_TYPES.PACKED_DIRT)
       .addSlopedRect(20, 0, 10, 10, "x", 6, 0, TERRAIN_TYPES.PACKED_DIRT)
+      .addSlopedRect(0, 0, 10, 10, "x", 0, 4, TERRAIN_TYPES.PACKED_DIRT)
       .addRidgeEW(20, 5, 1.5)
-      .addRidgeEW(-20, 5, 1.5);
-  },
+      .addRidgeEW(-20, 5, 1.5)
+    },
 };

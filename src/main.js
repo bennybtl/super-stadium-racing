@@ -14,6 +14,7 @@ import {
   PhysicsShapeType,
   FreeCamera,
   DynamicTexture,
+  Texture,
   VertexBuffer,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
@@ -33,8 +34,13 @@ async function createScene() {
   scene.enablePhysics(new Vector3(0, -9.81, 0), new HavokPlugin(true, havok));
 
   // -- Camera: fixed isometric offset, slides with the truck --
-  const CAM_OFFSET = new Vector3(0, 28, -20);
-  const camera = new FreeCamera("cam", CAM_OFFSET.clone(), scene);
+  const BASE_CAM_OFFSET = new Vector3(0, 28, -20);
+  let zoomLevel = 2.0; // Current zoom multiplier
+  const MIN_ZOOM = 0.5; // Closest zoom (50% of base distance)
+  const MAX_ZOOM = 2.5; // Farthest zoom (200% of base distance)
+  const ZOOM_STEP = 0.1; // Zoom increment per key press
+  
+  const camera = new FreeCamera("cam", BASE_CAM_OFFSET.clone(), scene);
   camera.setTarget(Vector3.Zero());
 
   // -- Lighting --
@@ -52,7 +58,7 @@ async function createScene() {
 
   // -- Track System --
   // Create a track - you can switch between example tracks or create your own
-  const currentTrack = EXAMPLE_TRACKS.bankedTurn();
+  const currentTrack = EXAMPLE_TRACKS.hills();
   
   // Can save track to JSON
   console.log("Track JSON:", currentTrack.toJSON());
@@ -61,14 +67,15 @@ async function createScene() {
   // const loadedTrack = Track.fromJSON(jsonString);
 
   // -- Terrain System --
-  const terrainManager = new TerrainManager(80, 2);
+  const terrainManager = new TerrainManager(160, 2);
   
   // Apply track terrain types to terrain manager
-  // Sample the track at each terrain grid cell
+  // Sample the track at each terrain grid cell center
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-      const worldX = (col - terrainManager.cellsPerSide / 2) * terrainManager.cellSize;
-      const worldZ = (row - terrainManager.cellsPerSide / 2) * terrainManager.cellSize;
+      // Sample at the center of each cell
+      const worldX = (col - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
+      const worldZ = (row - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
       
       const terrainType = currentTrack.getTerrainTypeAt(worldX, worldZ);
       if (terrainType) {
@@ -78,7 +85,7 @@ async function createScene() {
   }
 
   // -- Ground --
-  const ground = MeshBuilder.CreateGround("ground", { width: 80, height: 80, subdivisions: 80 }, scene);
+  const ground = MeshBuilder.CreateGround("ground", { width: 160, height: 160, subdivisions: 80 }, scene);
   
   // Apply terrain height to ground vertices
   const positions = ground.getVerticesData(VertexBuffer.PositionKind);
@@ -110,9 +117,13 @@ async function createScene() {
       const b = Math.floor(color.b * 255);
       ctx.fillStyle = `rgb(${r},${g},${b})`;
       
+      // Flip Y for texture (canvas Y is inverted from world Z)
+      const textureRow = terrainManager.cellsPerSide - 1 - row;
+      // Also flip X (canvas X needs to be inverted from world X)
+      const textureCol = terrainManager.cellsPerSide - 1 - col;
       ctx.fillRect(
-        col * pixelsPerCell,
-        row * pixelsPerCell,
+        textureCol * pixelsPerCell,
+        textureRow * pixelsPerCell,
         pixelsPerCell,
         pixelsPerCell
       );
@@ -121,6 +132,8 @@ async function createScene() {
   
   groundTex.update();
   groundMat.diffuseTexture = groundTex;
+  groundMat.diffuseTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
+  groundMat.diffuseTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
   ground.material = groundMat;
   ground.receiveShadows = true;
   new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0 }, scene);
@@ -136,6 +149,14 @@ async function createScene() {
     if (e.code === "KeyS" || e.code === "ArrowDown")  input.back    = true;
     if (e.code === "KeyA" || e.code === "ArrowLeft")  input.left    = true;
     if (e.code === "KeyD" || e.code === "ArrowRight") input.right   = true;
+    
+    // Zoom controls
+    if (e.code === "Minus" || e.code === "NumpadSubtract") {
+      zoomLevel = Math.min(MAX_ZOOM, zoomLevel + ZOOM_STEP);
+    }
+    if (e.code === "Equal" || e.code === "NumpadAdd") {
+      zoomLevel = Math.max(MIN_ZOOM, zoomLevel - ZOOM_STEP);
+    }
   });
   window.addEventListener("keyup", (e) => {
     if (e.code === "KeyW" || e.code === "ArrowUp")    input.forward = false;
@@ -147,106 +168,25 @@ async function createScene() {
   // -- Game loop --
   scene.onBeforeRenderObservable.add(() => {
     const dt = engine.getDeltaTime() / 1000;
-    updateTruck(truck, input, dt, terrainManager);
     
-    // Simple gravity
-    const gravity = -25;
-    truck.state.verticalVelocity += gravity * dt;
+    // Update truck physics (vertical + horizontal)
+    const debugInfo = updateTruck(truck, input, dt, terrainManager, currentTrack);
     
-    // Move truck vertically
-    truck.mesh.position.y += truck.state.verticalVelocity * dt;
-    
-    // Check ground collision
-    const terrainHeight = currentTrack.getHeightAt(truck.mesh.position.x, truck.mesh.position.z);
-    const truckBottomY = terrainHeight + 0.4; // 0.4 = half truck height
-    
-    // If on or near ground - relaxed threshold to allow easier takeoff
-    if (truck.mesh.position.y <= truckBottomY + 0.2) {
-      truck.mesh.position.y = Math.max(truck.mesh.position.y, truckBottomY);
-      truck.state.onGround = true;
-      
-      // Calculate terrain slope in direction of travel (only when on ground)
-      const forward = new Vector3(Math.sin(truck.state.heading), 0, Math.cos(truck.state.heading));
-      const right = new Vector3(Math.cos(truck.state.heading), 0, -Math.sin(truck.state.heading));
-      const slopeCheckDist = 0.3;
-      
-      // Forward/backward slope (pitch)
-      const heightAhead = currentTrack.getHeightAt(
-        truck.mesh.position.x + forward.x * slopeCheckDist,
-        truck.mesh.position.z + forward.z * slopeCheckDist
-      );
-      const heightBehind = currentTrack.getHeightAt(
-        truck.mesh.position.x - forward.x * slopeCheckDist,
-        truck.mesh.position.z - forward.z * slopeCheckDist
-      );
-      const terrainSlopeAngle = Math.atan2(heightAhead - heightBehind, slopeCheckDist * 2);
-      
-      // Left/right slope (roll)
-      const heightRight = currentTrack.getHeightAt(
-        truck.mesh.position.x + right.x * slopeCheckDist,
-        truck.mesh.position.z + right.z * slopeCheckDist
-      );
-      const heightLeft = currentTrack.getHeightAt(
-        truck.mesh.position.x - right.x * slopeCheckDist,
-        truck.mesh.position.z - right.z * slopeCheckDist
-      );
-      const terrainRollAngle = Math.atan2(heightRight - heightLeft, slopeCheckDist * 2);
-      
-      // Convert horizontal velocity to vertical based on terrain slope
-      const horizontalSpeed = truck.state.velocity.length();
-      let expectedVerticalVelocity = horizontalSpeed * Math.sin(terrainSlopeAngle);
-      
-      // Amplify upward slopes (for jumping) but stick harder to downward slopes
-      if (terrainSlopeAngle > 0) {
-        // Going uphill - amplify for better jumping
-        expectedVerticalVelocity *= 1.4;
-      } else {
-        // Going downhill - add extra downward force to stick to terrain
-        expectedVerticalVelocity *= 2.8;
-      }
-      
-      // Set vertical velocity to follow terrain, with some bounce on hard impacts
-      if (truck.state.verticalVelocity < -2) {
-        // Hard landing - bounce with suspension (relaxed from -5)
-        const bounceAmount = Math.abs(truck.state.verticalVelocity) * 0.25;
-        truck.state.verticalVelocity = bounceAmount;
-        truck.state.suspensionCompression = -0.2;
-        truck.state.suspensionVelocity = bounceAmount;
-      } else {
-        // Normal ground contact - follow terrain
-        truck.state.verticalVelocity = expectedVerticalVelocity;
-      }
-      
-      // Update pitch to match terrain slope
-      truck.mesh.rotation.x = -terrainSlopeAngle; // Negative because forward is +Z
-      
-      // Store terrain roll for combining with turn-based roll
-      truck.state.terrainRoll = terrainRollAngle;
-    } else {
-      truck.state.onGround = false;
-      // When in air, rotation.x is maintained from when truck left the ground
-      truck.state.terrainRoll = 0;
-    }
-    
-    // Suspension visual spring (doesn't affect physics much)
-    if (truck.state.onGround) {
-      const suspensionStiffness = 80;
-      const suspensionDamping = 10;
-      const compressionForce = -truck.state.suspensionCompression * suspensionStiffness;
-      const dampingForce = -truck.state.suspensionVelocity * suspensionDamping;
-      truck.state.suspensionVelocity += (compressionForce + dampingForce) * dt;
-      truck.state.suspensionCompression += truck.state.suspensionVelocity * dt;
-      truck.state.suspensionCompression = Math.max(-0.25, Math.min(0.15, truck.state.suspensionCompression));
-    } else {
-      truck.state.suspensionCompression *= 0.95;
-      truck.state.suspensionVelocity *= 0.95;
-    }
-    
-    // Apply roll - combine terrain roll with turn-based roll
-    const combinedRoll = (truck.state.terrainRoll || 0) + truck.state.currentRoll;
-    truck.mesh.rotation.z = combinedRoll;
+    // Update debug panel
+    document.getElementById('debug-compression').textContent = debugInfo.compression.toFixed(3);
+    document.getElementById('debug-groundedness').textContent = debugInfo.groundedness.toFixed(3);
+    document.getElementById('debug-penetration').textContent = debugInfo.penetration.toFixed(3);
+    document.getElementById('debug-vvel').textContent = debugInfo.verticalVelocity.toFixed(2);
+    document.getElementById('debug-speed').textContent = debugInfo.speed.toFixed(2);
+    document.getElementById('debug-grip').textContent = debugInfo.effectiveGrip.toFixed(4);
+    document.getElementById('debug-slip').textContent = (debugInfo.slipAngle * 57.3).toFixed(1) + '°';
+    document.getElementById('debug-terrain').textContent = debugInfo.terrainGripMultiplier.toFixed(2) + 'x';
+    document.getElementById('debug-x').textContent = debugInfo.x.toFixed(2);
+    document.getElementById('debug-y').textContent = debugInfo.y.toFixed(2);
+    document.getElementById('debug-z').textContent = debugInfo.z.toFixed(2);
     
     // Slide the camera in the XZ plane to follow the truck, keeping the fixed offset
+    const CAM_OFFSET = BASE_CAM_OFFSET.scale(zoomLevel);
     const targetCamPos = truck.mesh.position.add(CAM_OFFSET);
     camera.position = Vector3.Lerp(camera.position, targetCamPos, 0.08);
     camera.setTarget(truck.mesh.position);

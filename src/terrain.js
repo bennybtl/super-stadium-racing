@@ -26,6 +26,12 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.25, 0.2, 0.15),
     dragMultiplier: 2.9,    // Slows you down
   },
+  WATER: {
+    name: "WATER",
+    gripMultiplier: 0.3,     // Low grip
+    color: new Color3(0.2, 0.4, 0.6),
+    dragMultiplier: 6.0,     // Very high drag
+  },
 };
 
 export class TerrainManager {
@@ -45,9 +51,10 @@ export class TerrainManager {
   // Get terrain type at a world position
   getTerrainAt(position) {
     // Convert world position to grid coordinates
+    // Since we sample at cell centers (cellIndex + 0.5), we need to round to nearest cell
     const halfGrid = this.gridSize / 2;
-    const x = Math.floor((position.x + halfGrid) / this.cellSize);
-    const z = Math.floor((position.z + halfGrid) / this.cellSize);
+    const x = Math.round((position.x + halfGrid) / this.cellSize - 0.5);
+    const z = Math.round((position.z + halfGrid) / this.cellSize - 0.5);
     
     // Bounds check
     if (x < 0 || x >= this.cellsPerSide || z < 0 || z >= this.cellsPerSide) {
@@ -86,9 +93,9 @@ export class TerrainManager {
     for (let gz = centerCellZ - radiusInCells; gz <= centerCellZ + radiusInCells; gz++) {
       for (let gx = centerCellX - radiusInCells; gx <= centerCellX + radiusInCells; gx++) {
         if (gx >= 0 && gx < this.cellsPerSide && gz >= 0 && gz < this.cellsPerSide) {
-          // Check if within circle
-          const worldX = (gx * this.cellSize) - halfGrid;
-          const worldZ = (gz * this.cellSize) - halfGrid;
+          // Check if cell center is within circle
+          const worldX = (gx - this.cellsPerSide / 2 + 0.5) * this.cellSize;
+          const worldZ = (gz - this.cellsPerSide / 2 + 0.5) * this.cellSize;
           const dx = worldX - centerX;
           const dz = worldZ - centerZ;
           
