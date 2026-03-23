@@ -8,6 +8,7 @@ export class UIManager {
     this.lapCounter = document.getElementById('lap-counter');
     this.boostCounter = document.getElementById('boost-counter');
     this.boostDisplay = document.getElementById('boost-display');
+    this.raceTimer = document.getElementById('race-timer');
     
     // Debug panel elements
     this.debugCompression = document.getElementById('debug-compression');
@@ -27,8 +28,17 @@ export class UIManager {
     this.checkpointCounter.textContent = count;
   }
 
-  updateLaps(count) {
+  updateLaps(count, totalLaps = null) {
     this.lapCounter.textContent = count;
+    // If total laps provided, update the parent display
+    if (totalLaps !== null) {
+      const lapDisplay = document.getElementById('lap-display');
+      if (lapDisplay) {
+        lapDisplay.innerHTML = `Lap: <span id="lap-counter">${count}</span>/${totalLaps}`;
+        // Re-cache the lap counter reference since we replaced the HTML
+        this.lapCounter = document.getElementById('lap-counter');
+      }
+    }
   }
 
   updateBoosts(count) {
@@ -64,5 +74,27 @@ export class UIManager {
     this.debugX.textContent = position.x.toFixed(2);
     this.debugY.textContent = position.y.toFixed(2);
     this.debugZ.textContent = position.z.toFixed(2);
+  }
+
+  updateTimer(milliseconds) {
+    if (!this.raceTimer) return;
+    
+    const minutes = Math.floor(milliseconds / 60000);
+    const seconds = Math.floor((milliseconds % 60000) / 1000);
+    const ms = Math.floor((milliseconds % 1000) / 10);
+    
+    this.raceTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+  }
+
+  showRaceTimer() {
+    if (this.raceTimer) {
+      this.raceTimer.style.display = 'block';
+    }
+  }
+
+  hideRaceTimer() {
+    if (this.raceTimer) {
+      this.raceTimer.style.display = 'none';
+    }
   }
 }

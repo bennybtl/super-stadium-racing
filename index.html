@@ -38,44 +38,59 @@
         text-align: right;
       }
       
-      #checkpoint-display {
+      #race-timer {
         position: absolute;
         top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 24px;
+        font-weight: bold;
+        padding: 5px 5px;
+        border: 2px solid #00ff00;
+        border-radius: 5px;
+        display: none;
+      }
+
+      #checkpoint-display {
+        position: absolute;
+        top: 100px;
         right: 10px;
         background: rgba(0, 0, 0, 0.7);
         color: #ff0;
         font-family: 'Courier New', monospace;
-        font-size: 24px;
+        font-size: 16px;
         font-weight: bold;
-        padding: 15px 25px;
+        padding: 5px 5px;
         border: 2px solid #ff0;
         pointer-events: none;
       }
       
       #lap-display {
         position: absolute;
-        top: 80px;
+        top: 60px;
         right: 10px;
         background: rgba(0, 0, 0, 0.7);
         color: #0ff;
         font-family: 'Courier New', monospace;
-        font-size: 28px;
+        font-size: 16px;
         font-weight: bold;
-        padding: 15px 25px;
+        padding: 5px 5px;
         border: 2px solid #0ff;
         pointer-events: none;
       }
       
       #boost-display {
         position: absolute;
-        top: 160px;
+        top: 140px;
         right: 10px;
         background: rgba(0, 0, 0, 0.7);
         color: #f80;
         font-family: 'Courier New', monospace;
-        font-size: 24px;
+        font-size: 16px;
         font-weight: bold;
-        padding: 15px 25px;
+        padding: 5px 5px;
         border: 2px solid #f80;
         pointer-events: none;
       }
@@ -95,11 +110,11 @@
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="race-timer">0:00.00</div>
     <div id="checkpoint-display">Checkpoints: <span id="checkpoint-counter">0</span></div>
     <div id="lap-display">Lap: <span id="lap-counter">0</span></div>
     <div id="boost-display">Nitro: <span id="boost-counter">5</span></div>
-    <div id="debug-panel">
-      <div class="row"><span class="label">Compression:</span><span class="value" id="debug-compression">-</span></div>
+    <div id="debug-panel">\n      <div class="row"><span class="label">Compression:</span><span class="value" id="debug-compression">-</span></div>
       <div class="row"><span class="label">Groundedness:</span><span class="value" id="debug-groundedness">-</span></div>
       <div class="row"><span class="label">Penetration:</span><span class="value" id="debug-penetration">-</span></div>
       <div class="row"><span class="label">Vert Velocity:</span><span class="value" id="debug-vvel">-</span></div>

@@ -6,8 +6,11 @@ export class GameState {
     this.maxBoosts = maxBoosts;
     this.checkpointCount = 0;
     this.lapCount = 0;
-    this.lastCheckpointPassed = -1;
+    this.lastCheckpointPassed = 0; // Start at 0 so first checkpoint (1) is next
     this.boostCount = maxBoosts;
+    this.lapTimes = []; // Array of lap times in milliseconds
+    this.raceFinished = false;
+    this.totalRaceTime = 0;
   }
 
   incrementCheckpoint(checkpointIndex) {
@@ -16,23 +19,34 @@ export class GameState {
     return this.checkpointCount;
   }
 
-  completeLap() {
+  completeLap(lapTime) {
     this.lapCount++;
     this.checkpointCount = 0;
-    this.lastCheckpointPassed = -1;
+    this.lastCheckpointPassed = 0; // Reset to 0 so first checkpoint (1) is next
+    if (lapTime !== undefined) {
+      this.lapTimes.push(lapTime);
+    }
     return this.lapCount;
+  }
+
+  finishRace(totalTime) {
+    this.raceFinished = true;
+    this.totalRaceTime = totalTime;
   }
 
   resetCheckpoints() {
     this.checkpointCount = 0;
-    this.lastCheckpointPassed = -1;
+    this.lastCheckpointPassed = 0;
   }
 
   reset() {
     this.checkpointCount = 0;
     this.lapCount = 0;
-    this.lastCheckpointPassed = -1;
+    this.lastCheckpointPassed = 0;
     this.boostCount = this.maxBoosts;
+    this.lapTimes = [];
+    this.raceFinished = false;
+    this.totalRaceTime = 0;
   }
 
   useBoost() {

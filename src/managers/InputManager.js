@@ -25,8 +25,17 @@ export class InputManager {
   }
 
   setupEventListeners() {
-    window.addEventListener("keydown", (e) => this.handleKeyDown(e));
-    window.addEventListener("keyup", (e) => this.handleKeyUp(e));
+    // Store bound functions so we can remove them later
+    this.boundKeyDown = (e) => this.handleKeyDown(e);
+    this.boundKeyUp = (e) => this.handleKeyUp(e);
+    
+    window.addEventListener("keydown", this.boundKeyDown);
+    window.addEventListener("keyup", this.boundKeyUp);
+  }
+
+  dispose() {
+    window.removeEventListener("keydown", this.boundKeyDown);
+    window.removeEventListener("keyup", this.boundKeyUp);
   }
 
   handleKeyDown(e) {

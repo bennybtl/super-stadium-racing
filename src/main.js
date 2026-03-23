@@ -28,9 +28,22 @@ import { InputManager } from "./managers/InputManager.js";
 import { CheckpointManager } from "./managers/CheckpointManager.js";
 import { BarrierManager } from "./managers/BarrierManager.js";
 import { MenuManager } from "./managers/MenuManager.js";
+import { AIDriver } from "./ai/AIDriver.js";
 
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true);
+
+// Create MenuManager once globally (not recreated with scene)
+const menuManager = new MenuManager();
+
+// Create a global input state (will be connected to InputManager instances)
+let globalInputManager = null;
+
+// Race state
+let raceStarted = false;
+let raceStartTime = null;
+let totalLaps = 3; // Will be set from menu selection
+let lapStartTime = null;
 
 async function createScene() {
   const scene = new Scene(engine);
@@ -60,7 +73,9 @@ async function createScene() {
 
   // -- Track System --
   // Create a track - you can switch between example tracks or create your own
-  const currentTrack = EXAMPLE_TRACKS.hills();
+  const trackKey = window.selectedTrack || 'hills';
+  totalLaps = window.selectedLaps || 3;
+  const currentTrack = EXAMPLE_TRACKS[trackKey]();
   
   // Can save track to JSON
   console.log("Track JSON:", currentTrack.toJSON());
@@ -140,22 +155,60 @@ async function createScene() {
   ground.receiveShadows = true;
   new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0 }, scene);
 
-  // -- Truck --
-  const truck = createTruck(scene, shadows);
-
-  // -- Initialize Managers --
-  const menuManager = new MenuManager();
-  const uiManager = new UIManager();
-  const gameState = new GameState(truck.state.maxBoosts);
+  // -- Initialize Managers (needed before creating trucks) --
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
   const barrierManager = new BarrierManager(scene, currentTrack, shadows);
   
   // Create track features
   checkpointManager.createCheckpoints();
   barrierManager.createBarriers();
+
+  // -- AI Driver --
+  const aiDriver = new AIDriver(currentTrack, checkpointManager, barrierManager, scene);
+
+  // -- Trucks --
+  const playerTruck = createTruck(scene, shadows); // Player truck
+  const aiTruck1 = createTruck(scene, shadows, aiDriver); // AI truck
+  
+  // Position AI truck slightly offset
+  aiTruck1.mesh.position.x = 3;
+  aiTruck1.mesh.position.z = 3;
+
+  // -- Truck State Management --
+  const trucks = [
+    {
+      truck: playerTruck,
+      gameState: new GameState(playerTruck.state.maxBoosts),
+      isPlayer: true,
+      name: 'Player',
+      id: 'player'
+    },
+    {
+      truck: aiTruck1,
+      gameState: new GameState(0), // AI doesn't use boosts
+      isPlayer: false,
+      name: 'AI 1',
+      id: 'ai1'
+    }
+  ];
+  
+  const playerTruckData = trucks[0]; // Reference for player-specific operations
+
+  // -- Initialize UI Managers --
+  // Note: menuManager is global, created once
+  const uiManager = new UIManager();
+  
+  // Initialize lap display with total laps
+  uiManager.updateLaps(0, totalLaps);
   
   // -- Input Manager --
-  const inputManager = new InputManager(truck, cameraController);
+  // Dispose old input manager if it exists to remove old event listeners
+  if (globalInputManager) {
+    globalInputManager.dispose();
+  }
+  
+  const inputManager = new InputManager(playerTruckData.truck, cameraController);
+  globalInputManager = inputManager;
   
   // Handle pause/menu toggle
   inputManager.onPause(() => {
@@ -164,31 +217,47 @@ async function createScene() {
   
   // Handle boost activation
   inputManager.onBoost(() => {
-    if (gameState.useBoost() && !truck.state.boostActive) {
-      truck.state.boostActive = true;
-      truck.state.boostTimer = truck.state.boostDuration;
-      uiManager.updateBoosts(gameState.boostCount);
+    if (playerTruckData.gameState.useBoost() && !playerTruckData.truck.state.boostActive) {
+      playerTruckData.truck.state.boostActive = true;
+      playerTruckData.truck.state.boostTimer = playerTruckData.truck.state.boostDuration;
+      uiManager.updateBoosts(playerTruckData.gameState.boostCount);
     }
   });
   
   // Function to reset game state
   const resetGame = () => {
-    // Reset truck position and state
-    truck.mesh.position = new Vector3(0, 5, 0);
-    truck.state.velocity = Vector3.Zero();
-    truck.state.verticalVelocity = 0;
-    truck.state.heading = 0;
-    truck.state.boostActive = false;
-    truck.state.boostTimer = 0;
+    // Reset race state
+    raceStarted = false;
+    raceStartTime = null;
+    lapStartTime = null;
+    uiManager.hideRaceTimer();
     
-    // Reset game state
-    gameState.reset();
+    // Reset all trucks
+    trucks.forEach((truckData, index) => {
+      const offsetX = index * 3;
+      const offsetZ = index * 3;
+      
+      truckData.truck.mesh.position = new Vector3(offsetX, 5, offsetZ);
+      truckData.truck.state.velocity = Vector3.Zero();
+      truckData.truck.state.verticalVelocity = 0;
+      truckData.truck.state.heading = 0;
+      truckData.truck.state.boostActive = false;
+      truckData.truck.state.boostTimer = 0;
+      truckData.gameState.reset();
+    });
+    
+    // Reset AI driver path following
+    if (aiDriver) {
+      aiDriver.reset();
+    }
+    
+    // Reset managers
     checkpointManager.reset();
     barrierManager.reset();
     
     // Update UI
-    uiManager.updateBoosts(gameState.boostCount);
-    uiManager.updateLaps(0);
+    uiManager.updateBoosts(playerTruckData.gameState.boostCount);
+    uiManager.updateLaps(0, totalLaps);
     uiManager.updateCheckpoints(0);
   };
   
@@ -197,27 +266,8 @@ async function createScene() {
     resetGame();
   });
   
-  // Setup menu callbacks
-  menuManager.onStartGame = () => {
-    menuManager.gameStarted = true;
-    menuManager.hideMenu();
-    resetGame();
-  };
-  
-  menuManager.onResume = () => {
-    menuManager.hideMenu();
-  };
-  
-  menuManager.onReset = () => {
-    resetGame();
-    menuManager.hideMenu();
-  };
-  
-  menuManager.onExit = () => {
-    menuManager.gameStarted = false;
-    menuManager.showStartMenu();
-    resetGame();
-  };
+  // Store scene-specific reset function globally so menu can access it
+  window.currentResetGame = resetGame;
   
   // Old reset handler - now using resetGame function
   /*
@@ -261,46 +311,154 @@ async function createScene() {
     
     const dt = engine.getDeltaTime() / 1000;
     
-    // Get movement input from InputManager
+    // Update race timer if race has started
+    if (raceStarted && raceStartTime !== null) {
+      const elapsedTime = Date.now() - raceStartTime;
+      uiManager.updateTimer(elapsedTime);
+    }
+    
+    // Get movement input from InputManager (for player only)
     const input = inputManager.getMovementInput();
     
-    // Update truck physics
-    const debugInfo = updateTruck(truck, input, dt, terrainManager, currentTrack);
+    // Update all trucks (skip finished ones)
+    trucks.forEach((truckData) => {
+      if (truckData.gameState.raceFinished) {
+        return; // Don't update finished trucks
+      }
+      const truckInput = truckData.isPlayer ? input : { forward: false, back: false, left: false, right: false };
+      updateTruck(truckData.truck, truckInput, dt, terrainManager, currentTrack);
+    });
     
     // Update managers
     barrierManager.update();
     
-    // Update UI
-    uiManager.updateDebugPanel(truck.state, debugInfo.terrainType);
-    uiManager.updatePosition(truck.mesh.position);
-    uiManager.setBoostActive(truck.state.boostActive);
+    // Update UI with player truck info
+    const playerDebugInfo = trucks[0].truck._truckInstance.state;
+    uiManager.updateDebugPanel(playerTruckData.truck.state, terrainManager.getTerrainAt(
+      playerTruckData.truck.mesh.position.x,
+      playerTruckData.truck.mesh.position.z
+    ));
+    uiManager.updatePosition(playerTruckData.truck.mesh.position);
+    uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
     
-    // Check for checkpoint passage
-    const checkpointResult = checkpointManager.update(
-      truck.mesh.position, 
-      truck.state.velocity,
-      gameState.lastCheckpointPassed
-    );
-    
-    if (checkpointResult && checkpointResult.passed) {
-      const newCount = gameState.incrementCheckpoint(checkpointResult.index);
-      uiManager.updateCheckpoints(newCount);
-      
-      // Check if lap completed
-      if (newCount === checkpointManager.getTotalCheckpoints()) {
-        const lapCount = gameState.completeLap();
-        uiManager.updateLaps(lapCount);
-        uiManager.updateCheckpoints(0);
-        checkpointManager.reset();
+    // Check checkpoint passage for all trucks
+    trucks.forEach((truckData) => {
+      // Skip updates for finished trucks
+      if (truckData.gameState.raceFinished) {
+        return;
       }
-    }
+      
+      const checkpointResult = checkpointManager.update(
+        truckData.truck.mesh.position,
+        truckData.truck.state.velocity,
+        truckData.gameState.lastCheckpointPassed,
+        truckData.id
+      );
+      
+      if (checkpointResult && checkpointResult.passed) {
+        // Start race when first truck passes first checkpoint
+        if (!raceStarted && checkpointResult.index === 1) {
+          raceStarted = true;
+          raceStartTime = Date.now();
+          lapStartTime = Date.now();
+          uiManager.showRaceTimer();
+          console.log('Race started!');
+        }
+        
+        const newCount = truckData.gameState.incrementCheckpoint(checkpointResult.index);
+        
+        // Update UI for player only
+        if (truckData.isPlayer) {
+          uiManager.updateCheckpoints(newCount);
+        } else {
+          console.log(`[${truckData.name}] Passed checkpoint ${checkpointResult.index}, count: ${newCount}/${checkpointManager.getTotalCheckpoints()}`);
+        }
+        
+        // Check if lap completed
+        if (newCount === checkpointManager.getTotalCheckpoints()) {
+          const currentTime = Date.now();
+          const lapTime = lapStartTime ? currentTime - lapStartTime : 0;
+          lapStartTime = currentTime; // Start timing next lap
+          
+          const lapCount = truckData.gameState.completeLap(lapTime);
+          
+          // Reset checkpoints for this specific truck
+          checkpointManager.resetForTruck(truckData.id);
+          
+          if (truckData.isPlayer) {
+            uiManager.updateLaps(lapCount, totalLaps);
+            uiManager.updateCheckpoints(0);
+            console.log(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);
+          } else {
+            console.log(`[${truckData.name}] Completed lap ${lapCount} in ${(lapTime / 1000).toFixed(2)}s!`);
+          }
+          
+          // Check if race is finished
+          if (lapCount >= totalLaps) {
+            const totalTime = currentTime - raceStartTime;
+            truckData.gameState.finishRace(totalTime);
+            
+            // Stop the truck
+            truckData.truck.state.velocity = Vector3.Zero();
+            truckData.truck.state.verticalVelocity = 0;
+            
+            if (truckData.isPlayer) {
+              console.log('\n=== RACE FINISHED ===');
+              console.log(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
+              console.log('Lap Times:');
+              truckData.gameState.lapTimes.forEach((time, i) => {
+                console.log(`  Lap ${i + 1}: ${(time / 1000).toFixed(2)}s`);
+              });
+            } else {
+              console.log(`[${truckData.name}] Finished race! Total time: ${(totalTime / 1000).toFixed(2)}s`);
+            }
+          }
+        }
+      }
+    });
     
-    // Update camera to follow truck
-    cameraController.update(truck.mesh.position);
+    // Update camera to follow player truck
+    cameraController.update(playerTruckData.truck.mesh.position);
   });
 
   return scene;
 }
+
+// Setup menu callbacks once (outside createScene)
+menuManager.onStartGame = () => {
+  // Store selected track and laps globally
+  window.selectedTrack = menuManager.selectedTrack;
+  window.selectedLaps = menuManager.selectedLaps;
+  menuManager.gameStarted = true;
+  menuManager.hideMenu();
+  
+  // Recreate scene with selected track
+  engine.stopRenderLoop();
+  createScene().then(newScene => {
+    engine.runRenderLoop(() => {
+      newScene.render();
+    });
+  });
+};
+
+menuManager.onResume = () => {
+  menuManager.hideMenu();
+};
+
+menuManager.onReset = () => {
+  if (window.currentResetGame) {
+    window.currentResetGame();
+  }
+  menuManager.hideMenu();
+};
+
+menuManager.onExit = () => {
+  menuManager.gameStarted = false;
+  menuManager.showStartMenu();
+  if (window.currentResetGame) {
+    window.currentResetGame();
+  }
+};
 
 createScene().then((scene) => {
   engine.runRenderLoop(() => scene.render());

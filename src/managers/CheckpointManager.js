@@ -117,14 +117,20 @@ export class CheckpointManager {
   /**
    * Check if truck has passed through any checkpoint
    * Returns: { passed: boolean, index: number } or null
+   * truckId: unique identifier for the truck (to track individually)
    */
-  update(truckPosition, truckVelocity, lastCheckpointPassed) {
+  update(truckPosition, truckVelocity, lastCheckpointPassed, truckId = 'default') {
     for (let i = 0; i < this.checkpointMeshes.length; i++) {
       const checkpoint = this.checkpointMeshes[i];
       const feature = checkpoint.feature;
       
-      // Skip if already passed
-      if (feature.passed) continue;
+      // Initialize passedBy tracking if not exists
+      if (!feature.passedBy) {
+        feature.passedBy = new Set();
+      }
+      
+      // Skip if this truck already passed this checkpoint
+      if (feature.passedBy.has(truckId)) continue;
       
       // Skip if not the next checkpoint in sequence (if numbered)
       if (feature.checkpointNumber !== null) {
@@ -153,7 +159,7 @@ export class CheckpointManager {
       
       // Trigger only if truck is within width, crosses the line, AND moving in correct direction
       if (perpDist < feature.width / 2 && Math.abs(forwardDist) < 2 && velocityDotForward > 0) {
-        feature.passed = true;
+        feature.passedBy.add(truckId);
         
         // Visual feedback - change arrow color temporarily
         checkpoint.arrow.material.diffuseColor = new Color3(0, 1, 0);
@@ -164,7 +170,7 @@ export class CheckpointManager {
           checkpoint.arrowHead.material.diffuseColor = new Color3(1, 1, 0);
         }, 1000);
         
-        return { passed: true, index: i };
+        return { passed: true, index: feature.checkpointNumber }; // Return checkpoint number, not array index
       }
     }
     
@@ -173,7 +179,15 @@ export class CheckpointManager {
 
   reset() {
     for (const cp of this.checkpointMeshes) {
-      cp.feature.passed = false;
+      cp.feature.passedBy = new Set();
+    }
+  }
+
+  resetForTruck(truckId) {
+    for (const cp of this.checkpointMeshes) {
+      if (cp.feature.passedBy) {
+        cp.feature.passedBy.delete(truckId);
+      }
     }
   }
 

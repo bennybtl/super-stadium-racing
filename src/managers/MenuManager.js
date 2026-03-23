@@ -3,9 +3,11 @@
  */
 export class MenuManager {
   constructor() {
-    this.currentMenu = 'start'; // 'start', 'game', 'pause', or null
+    this.currentMenu = 'start'; // 'start', 'trackSelect', 'lapSelect', 'game', 'pause', or null
     this.gameStarted = false;
     this.isPaused = false;
+    this.selectedTrack = null;
+    this.selectedLaps = 3; // Default to 3 laps
     
     this.createMenuElements();
     this.setupEventListeners();
@@ -107,14 +109,70 @@ export class MenuManager {
 
   showStartMenu() {
     this.currentMenu = 'start';
-    this.title.textContent = 'Off-Road Racer';
+    this.title.textContent = 'SUPER Off-Road!';
     this.buttonContainer.innerHTML = '';
     
-    const startButton = this.createButton('Start', () => this.onStartGame());
+    const startButton = this.createButton('Start', () => this.showTrackSelectMenu());
     const settingsButton = this.createButton('Settings', () => this.onSettings());
     
     this.buttonContainer.appendChild(startButton);
     this.buttonContainer.appendChild(settingsButton);
+    
+    this.overlay.style.display = 'flex';
+  }
+
+  showTrackSelectMenu() {
+    this.currentMenu = 'trackSelect';
+    this.title.textContent = 'Select Track';
+    this.buttonContainer.innerHTML = '';
+    
+    // Create button for each track
+    const tracks = [
+      { key: 'simple', name: 'Simple Ridge' },
+      { key: 'crossroads', name: 'Crossroads' },
+      { key: 'rollercoaster', name: 'Rollercoaster' },
+      { key: 'hills', name: 'Hills' },
+      { key: 'mudPit', name: 'Mud Pit' },
+      { key: 'bankedTurn', name: 'Banked Turn' }
+    ];
+    
+    tracks.forEach(track => {
+      const trackButton = this.createButton(track.name, () => {
+        this.selectedTrack = track.key;
+        this.showLapSelectMenu();
+      });
+      this.buttonContainer.appendChild(trackButton);
+    });
+    
+    // Add back button
+    const backButton = this.createButton('Back', () => this.showStartMenu());
+    backButton.style.marginTop = '20px';
+    backButton.style.background = 'linear-gradient(to bottom, #666, #444)';
+    this.buttonContainer.appendChild(backButton);
+    
+    this.overlay.style.display = 'flex';
+  }
+
+  showLapSelectMenu() {
+    this.currentMenu = 'lapSelect';
+    this.title.textContent = 'Select Laps';
+    this.buttonContainer.innerHTML = '';
+    
+    const lapOptions = [1, 3, 5, 10];
+    
+    lapOptions.forEach(laps => {
+      const lapButton = this.createButton(`${laps} Lap${laps > 1 ? 's' : ''}`, () => {
+        this.selectedLaps = laps;
+        this.onStartGame();
+      });
+      this.buttonContainer.appendChild(lapButton);
+    });
+    
+    // Add back button
+    const backButton = this.createButton('Back', () => this.showTrackSelectMenu());
+    backButton.style.marginTop = '20px';
+    backButton.style.background = 'linear-gradient(to bottom, #666, #444)';
+    this.buttonContainer.appendChild(backButton);
     
     this.overlay.style.display = 'flex';
   }
@@ -156,7 +214,7 @@ export class MenuManager {
   onStartGame() {
     this.gameStarted = true;
     this.hideMenu();
-    // Will be overridden
+    // Will be overridden - should receive selectedTrack
   }
 
   onSettings() {

@@ -17,9 +17,10 @@ import { Controls } from "./Controls.js";
  * Main Truck class that coordinates all truck subsystems
  */
 export class Truck {
-  constructor(scene, shadows) {
+  constructor(scene, shadows, driver = null) {
     this.scene = scene;
     this.shadows = shadows;
+    this.driver = driver; // Optional AI driver
     
     // Create mesh and physics
     this.mesh = this.createMesh();
@@ -34,6 +35,11 @@ export class Truck {
     this.entityPhysics = new EntityPhysics(this.state);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
+    
+    // If AI driver, make truck visually distinct
+    if (this.driver) {
+      this.mesh.material.diffuseColor = new Color3(0.2, 0.2, 0.8); // Blue for AI
+    }
   }
 
   createMesh() {
@@ -95,6 +101,11 @@ export class Truck {
   }
 
   update(input, deltaTime, terrainManager = null, track = null) {
+    // If AI driver, get input from driver
+    if (this.driver) {
+      input = this.driver.getInput(this.mesh.position, this.state.heading);
+    }
+    
     // Update boost timer
     this.controls.updateBoost(deltaTime);
     
@@ -174,8 +185,8 @@ export class Truck {
 }
 
 // Export legacy factory function for backward compatibility
-export function createTruck(scene, shadows) {
-  const truck = new Truck(scene, shadows);
+export function createTruck(scene, shadows, driver = null) {
+  const truck = new Truck(scene, shadows, driver);
   return {
     mesh: truck.mesh,
     state: truck.state,
