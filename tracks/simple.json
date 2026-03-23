@@ -1,0 +1,12 @@
+{
+  "name": "Simple Ridge",
+  "features": [
+    {
+      "type": "ridgeEW",
+      "centerZ": 0,
+      "width": 3,
+      "height": 1,
+      "terrainType": null
+    }
+  ]
+}

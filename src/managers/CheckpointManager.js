@@ -3,7 +3,8 @@ import {
   StandardMaterial, 
   Color3, 
   Vector3,
-  DynamicTexture 
+  DynamicTexture,
+  TransformNode
 } from "@babylonjs/core";
 
 /**
@@ -21,95 +22,7 @@ export class CheckpointManager {
     // Create visual representation for each checkpoint
     for (const feature of this.track.features) {
       if (feature.type === "checkpoint") {
-        const terrainHeight = this.track.getHeightAt(feature.centerX, feature.centerZ);
-        
-        // Calculate positions for the two barrels
-        const halfWidth = feature.width / 2;
-        const perpX = Math.cos(feature.heading); // Perpendicular to heading
-        const perpZ = -Math.sin(feature.heading);
-        
-        const pos1 = new Vector3(
-          feature.centerX + perpX * halfWidth,
-          terrainHeight + 1,
-          feature.centerZ + perpZ * halfWidth
-        );
-        const pos2 = new Vector3(
-          feature.centerX - perpX * halfWidth,
-          terrainHeight + 1,
-          feature.centerZ - perpZ * halfWidth
-        );
-        
-        // Create barrels (cylinders)
-        const barrel1 = MeshBuilder.CreateCylinder("barrel1", { height: 2, diameter: 1 }, this.scene);
-        barrel1.position = pos1;
-        const barrel2 = MeshBuilder.CreateCylinder("barrel2", { height: 2, diameter: 1 }, this.scene);
-        barrel2.position = pos2;
-        
-        const barrelMat = new StandardMaterial("barrelMat", this.scene);
-        barrelMat.diffuseColor = new Color3(0.8, 0.5, 0.1);
-        barrel1.material = barrelMat;
-        barrel2.material = barrelMat;
-        
-        // Create arrow mesh between barrels
-        const arrowLength = feature.width - 2;
-        const arrow = MeshBuilder.CreateBox("arrow", { width: arrowLength, height: 0.2, depth: 1.5 }, this.scene);
-        arrow.position = new Vector3(feature.centerX, terrainHeight + 2.5, feature.centerZ);
-        arrow.rotation.y = feature.heading;
-        
-        const arrowMat = new StandardMaterial("arrowMat", this.scene);
-        arrowMat.diffuseColor = new Color3(1, 1, 0);
-        arrowMat.emissiveColor = new Color3(0.3, 0.3, 0);
-        arrow.material = arrowMat;
-        
-        // Create arrow head (triangle)
-        const arrowHead = MeshBuilder.CreateCylinder("arrowHead", { 
-          diameterTop: 0, 
-          diameterBottom: 2, 
-          height: 2 
-        }, this.scene);
-        arrowHead.rotation.x = Math.PI / 2;
-        arrowHead.rotation.y = feature.heading;
-        const forwardX = Math.sin(feature.heading);
-        const forwardZ = Math.cos(feature.heading);
-        arrowHead.position = new Vector3(
-          feature.centerX + forwardX * (arrowLength / 2 + 1),
-          terrainHeight + 2.5,
-          feature.centerZ + forwardZ * (arrowLength / 2 + 1)
-        );
-        arrowHead.material = arrowMat;
-        
-        // Create checkpoint number display if numbered
-        let numberPlane = null;
-        if (feature.checkpointNumber !== null) {
-          const planeSize = 3;
-          numberPlane = MeshBuilder.CreatePlane("numberPlane", { size: planeSize }, this.scene);
-          numberPlane.position = new Vector3(
-            feature.centerX,
-            terrainHeight + 4,
-            feature.centerZ
-          );
-          numberPlane.billboardMode = 7; // Always face camera
-          
-          // Create dynamic texture for the number
-          const numberTexture = new DynamicTexture("numberTexture", { width: 256, height: 256 }, this.scene);
-          const ctx = numberTexture.getContext();
-          ctx.fillStyle = "black";
-          ctx.fillRect(0, 0, 256, 256);
-          ctx.font = "bold 180px Arial";
-          ctx.fillStyle = "yellow";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(feature.checkpointNumber.toString(), 128, 128);
-          numberTexture.update();
-          
-          const numberMat = new StandardMaterial("numberMat", this.scene);
-          numberMat.diffuseTexture = numberTexture;
-          numberMat.emissiveTexture = numberTexture;
-          numberMat.opacityTexture = numberTexture;
-          numberPlane.material = numberMat;
-        }
-        
-        this.checkpointMeshes.push({ feature, barrel1, barrel2, arrow, arrowHead, numberPlane });
+        this.createSingleCheckpoint(feature);
       }
     }
   }
@@ -193,5 +106,135 @@ export class CheckpointManager {
 
   getTotalCheckpoints() {
     return this.checkpointMeshes.length;
+  }
+  
+  /**
+   * Create a single checkpoint visual
+   */
+  createSingleCheckpoint(feature) {
+    const terrainHeight = this.track.getHeightAt(feature.centerX, feature.centerZ);
+    
+    // Create parent container for the entire checkpoint
+    const container = new TransformNode("checkpointContainer", this.scene);
+    container.position = new Vector3(feature.centerX, terrainHeight, feature.centerZ);
+    container.rotation.y = feature.heading;
+    
+    // Calculate positions for the two barrels (relative to container)
+    const halfWidth = feature.width / 2;
+    const perpX = Math.cos(0); // Relative to container's local space
+    const perpZ = -Math.sin(0);
+    
+    // Create barrels (cylinders) - positioned relative to container
+    const barrel1 = MeshBuilder.CreateCylinder("barrel1", { height: 2, diameter: 1 }, this.scene);
+    barrel1.position = new Vector3(perpX * halfWidth, 1, perpZ * halfWidth);
+    barrel1.parent = container;
+    
+    const barrel2 = MeshBuilder.CreateCylinder("barrel2", { height: 2, diameter: 1 }, this.scene);
+    barrel2.position = new Vector3(-perpX * halfWidth, 1, -perpZ * halfWidth);
+    barrel2.parent = container;
+    
+    const barrelMat = new StandardMaterial("barrelMat", this.scene);
+    barrelMat.diffuseColor = new Color3(0.8, 0.5, 0.1);
+    barrel1.material = barrelMat;
+    barrel2.material = barrelMat;
+    
+    // Create arrow mesh between barrels - positioned relative to container
+    const arrowLength = feature.width - 2;
+    const arrow = MeshBuilder.CreateBox("arrow", { width: arrowLength, height: 0.2, depth: 1.5 }, this.scene);
+    arrow.position = new Vector3(0, 2.5, 0);
+    arrow.parent = container;
+    
+    const arrowMat = new StandardMaterial("arrowMat", this.scene);
+    arrowMat.diffuseColor = new Color3(1, 1, 0);
+    arrowMat.emissiveColor = new Color3(0.3, 0.3, 0);
+    arrow.material = arrowMat;
+    
+    // Create arrow head (triangle) - positioned relative to container
+    const arrowHead = MeshBuilder.CreateCylinder("arrowHead", { 
+      diameterTop: 0, 
+      diameterBottom: 2, 
+      height: 2 
+    }, this.scene);
+    arrowHead.rotation.x = Math.PI / 2;
+    arrowHead.position = new Vector3(0, 2.5, arrowLength / 2 + 1);
+    arrowHead.parent = container;
+    arrowHead.material = arrowMat;
+    
+    // Create checkpoint number display if numbered
+    let numberPlane = null;
+    if (feature.checkpointNumber !== null) {
+      const planeSize = 3;
+      numberPlane = MeshBuilder.CreatePlane("numberPlane", { size: planeSize }, this.scene);
+      numberPlane.position = new Vector3(0, 4, 0);
+      numberPlane.billboardMode = 7; // Always face camera
+      numberPlane.parent = container;
+      
+      // Create dynamic texture for the number
+      const numberTexture = new DynamicTexture("numberTexture", { width: 256, height: 256 }, this.scene);
+      const ctx = numberTexture.getContext();
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.font = "bold 180px Arial";
+      ctx.fillStyle = "yellow";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(feature.checkpointNumber.toString(), 128, 128);
+      numberTexture.update();
+      
+      const numberMat = new StandardMaterial("numberMat", this.scene);
+      numberMat.diffuseTexture = numberTexture;
+      numberMat.emissiveTexture = numberTexture;
+      numberMat.opacityTexture = numberTexture;
+      numberPlane.material = numberMat;
+    }
+    
+    // Add shadows
+    if (this.shadows) {
+      this.shadows.addShadowCaster(barrel1);
+      this.shadows.addShadowCaster(barrel2);
+    }
+    
+    // Store checkpoint data
+    const checkpointData = {
+      feature,
+      container,
+      barrel1,
+      barrel2,
+      arrow,
+      arrowHead,
+      numberPlane
+    };
+    
+    this.checkpointMeshes.push(checkpointData);
+    
+    return checkpointData;
+  }
+  
+  /**
+   * Renumber all checkpoints sequentially
+   */
+  renumberCheckpoints() {
+    // Update feature checkpoint numbers
+    const checkpointFeatures = this.track.features.filter(f => f.type === 'checkpoint');
+    checkpointFeatures.forEach((feature, index) => {
+      feature.checkpointNumber = index + 1;
+    });
+    
+    // Update visual numbers
+    this.checkpointMeshes.forEach(checkpoint => {
+      if (checkpoint.numberPlane) {
+        // Update texture with new number
+        const numberTexture = checkpoint.numberPlane.material.diffuseTexture;
+        const ctx = numberTexture.getContext();
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.font = "bold 180px Arial";
+        ctx.fillStyle = "yellow";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(checkpoint.feature.checkpointNumber.toString(), 128, 128);
+        numberTexture.update();
+      }
+    });
   }
 }

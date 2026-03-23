@@ -20,7 +20,7 @@ import {
 import HavokPhysics from "@babylonjs/havok";
 import { createTruck, updateTruck } from "./truck.js";
 import { TerrainManager } from "./terrain.js";
-import { EXAMPLE_TRACKS } from "./track.js";
+import { Track, EXAMPLE_TRACKS } from "./track.js";
 import { UIManager } from "./managers/UIManager.js";
 import { GameState } from "./managers/GameState.js";
 import { CameraController } from "./managers/CameraController.js";
@@ -29,6 +29,8 @@ import { CheckpointManager } from "./managers/CheckpointManager.js";
 import { BarrierManager } from "./managers/BarrierManager.js";
 import { MenuManager } from "./managers/MenuManager.js";
 import { AIDriver } from "./ai/AIDriver.js";
+import { TrackLoader } from "./managers/TrackLoader.js";
+import { EditorController } from "./managers/EditorController.js";
 
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true);
@@ -36,14 +38,22 @@ const engine = new Engine(canvas, true);
 // Create MenuManager once globally (not recreated with scene)
 const menuManager = new MenuManager();
 
+// Create TrackLoader globally
+const trackLoader = new TrackLoader();
+window.trackLoader = trackLoader; // Make available to MenuManager
+
 // Create a global input state (will be connected to InputManager instances)
 let globalInputManager = null;
+let globalEditorController = null;
 
 // Race state
 let raceStarted = false;
 let raceStartTime = null;
 let totalLaps = 3; // Will be set from menu selection
 let lapStartTime = null;
+
+// Editor state
+let isEditorMode = false;
 
 async function createScene() {
   const scene = new Scene(engine);
@@ -72,10 +82,21 @@ async function createScene() {
   shadows.useBlurExponentialShadowMap = true;
 
   // -- Track System --
-  // Create a track - you can switch between example tracks or create your own
+  // Create a track - load from JSON or create new
   const trackKey = window.selectedTrack || 'hills';
   totalLaps = window.selectedLaps || 3;
-  const currentTrack = EXAMPLE_TRACKS[trackKey]();
+  isEditorMode = window.isEditorMode || false;
+  
+  let currentTrack;
+  if (trackKey === 'new') {
+    currentTrack = new Track('New Track');
+  } else {
+    currentTrack = trackLoader.getTrack(trackKey);
+    if (!currentTrack) {
+      console.warn(`Track ${trackKey} not found, creating empty track`);
+      currentTrack = new Track(trackKey);
+    }
+  }
   
   // Can save track to JSON
   console.log("Track JSON:", currentTrack.toJSON());
@@ -198,31 +219,58 @@ async function createScene() {
   // Note: menuManager is global, created once
   const uiManager = new UIManager();
   
-  // Initialize lap display with total laps
-  uiManager.updateLaps(0, totalLaps);
-  
-  // -- Input Manager --
-  // Dispose old input manager if it exists to remove old event listeners
-  if (globalInputManager) {
-    globalInputManager.dispose();
+  // Initialize lap display with total laps (only in game mode)
+  if (!isEditorMode) {
+    uiManager.updateLaps(0, totalLaps);
   }
   
-  const inputManager = new InputManager(playerTruckData.truck, cameraController);
-  globalInputManager = inputManager;
-  
-  // Handle pause/menu toggle
-  inputManager.onPause(() => {
-    menuManager.togglePause();
-  });
-  
-  // Handle boost activation
-  inputManager.onBoost(() => {
-    if (playerTruckData.gameState.useBoost() && !playerTruckData.truck.state.boostActive) {
-      playerTruckData.truck.state.boostActive = true;
-      playerTruckData.truck.state.boostTimer = playerTruckData.truck.state.boostDuration;
-      uiManager.updateBoosts(playerTruckData.gameState.boostCount);
+  // -- Editor Controller or Input Manager --
+  if (isEditorMode) {
+    // Editor mode - camera controls
+    if (globalEditorController) {
+      globalEditorController.dispose();
     }
-  });
+    
+    const editorController = new EditorController(camera, scene);
+    editorController.activate(currentTrack, checkpointManager, menuManager);
+    globalEditorController = editorController;
+    
+    // Store current track for saving
+    window.currentEditorTrack = currentTrack;
+    window.currentEditorScene = scene;
+    
+    // Hide trucks and racing UI in editor mode
+    playerTruck.mesh.setEnabled(false);
+    aiTruck1.mesh.setEnabled(false);
+    document.getElementById('checkpoint-display').style.display = 'none';
+    document.getElementById('lap-display').style.display = 'none';
+    document.getElementById('boost-display').style.display = 'none';
+    
+    console.log('[Editor] Track editor mode active');
+  } else {
+    // Game mode - truck controls
+    // Dispose old input manager if it exists to remove old event listeners
+    if (globalInputManager) {
+      globalInputManager.dispose();
+    }
+    
+    const inputManager = new InputManager(playerTruckData.truck, cameraController);
+    globalInputManager = inputManager;
+    
+    // Handle pause/menu toggle
+    inputManager.onPause(() => {
+      menuManager.togglePause();
+    });
+    
+    // Handle boost activation
+    inputManager.onBoost(() => {
+      if (playerTruckData.gameState.useBoost() && !playerTruckData.truck.state.boostActive) {
+        playerTruckData.truck.state.boostActive = true;
+        playerTruckData.truck.state.boostTimer = playerTruckData.truck.state.boostDuration;
+        uiManager.updateBoosts(playerTruckData.gameState.boostCount);
+      }
+    });
+  }
   
   // Function to reset game state
   const resetGame = () => {
@@ -261,10 +309,12 @@ async function createScene() {
     uiManager.updateCheckpoints(0);
   };
   
-  // Handle reset
-  inputManager.onReset(() => {
-    resetGame();
-  });
+  // Handle reset (only in game mode)
+  if (!isEditorMode && globalInputManager) {
+    globalInputManager.onReset(() => {
+      resetGame();
+    });
+  }
   
   // Store scene-specific reset function globally so menu can access it
   window.currentResetGame = resetGame;
@@ -311,6 +361,14 @@ async function createScene() {
     
     const dt = engine.getDeltaTime() / 1000;
     
+    // Editor mode - update camera controller
+    if (isEditorMode && globalEditorController) {
+      globalEditorController.update(dt);
+      return; // Skip game logic in editor mode
+    }
+    
+    // Game mode updates below
+    
     // Update race timer if race has started
     if (raceStarted && raceStartTime !== null) {
       const elapsedTime = Date.now() - raceStartTime;
@@ -318,7 +376,7 @@ async function createScene() {
     }
     
     // Get movement input from InputManager (for player only)
-    const input = inputManager.getMovementInput();
+    const input = globalInputManager ? globalInputManager.getMovementInput() : { forward: false, back: false, left: false, right: false };
     
     // Update all trucks (skip finished ones)
     trucks.forEach((truckData) => {
@@ -460,8 +518,57 @@ menuManager.onExit = () => {
   }
 };
 
-createScene().then((scene) => {
-  engine.runRenderLoop(() => scene.render());
+// Editor mode callbacks
+menuManager.onStartEditor = () => {
+  window.selectedTrack = menuManager.selectedTrack;
+  window.isEditorMode = true;
+  menuManager.editorMode = true;
+  menuManager.hideMenu();
+  
+  // Recreate scene in editor mode
+  engine.stopRenderLoop();
+  createScene().then(newScene => {
+    engine.runRenderLoop(() => {
+      newScene.render();
+    });
+  });
+};
+
+menuManager.onEditorResume = () => {
+  menuManager.hideMenu();
+};
+
+menuManager.onEditorSave = () => {
+  if (window.currentEditorTrack) {
+    const track = window.currentEditorTrack;
+    trackLoader.downloadTrack(track);
+    trackLoader.saveTrackToStorage(menuManager.selectedTrack || 'custom', track);
+  }
+  menuManager.hideMenu();
+};
+
+menuManager.onEditorExit = () => {
+  window.isEditorMode = false;
+  menuManager.editorMode = false;
+  menuManager.gameStarted = false;
+  menuManager.showStartMenu();
+  
+  // Return to start menu
+  engine.stopRenderLoop();
+  window.selectedTrack = 'hills';
+  createScene().then(newScene => {
+    engine.runRenderLoop(() => {
+      newScene.render();
+    });
+  });
+};
+
+// Load tracks then start
+trackLoader.loadAllTracks().then(() => {
+  console.log('Tracks loaded, starting game');
+  createScene().then((scene) => {
+    engine.runRenderLoop(() => scene.render());
+  });
 });
 
 window.addEventListener("resize", () => engine.resize());

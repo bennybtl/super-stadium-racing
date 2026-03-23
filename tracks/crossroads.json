@@ -1,0 +1,19 @@
+{
+  "name": "Crossroads",
+  "features": [
+    {
+      "type": "ridgeEW",
+      "centerZ": 0,
+      "width": 3,
+      "height": 1.2,
+      "terrainType": null
+    },
+    {
+      "type": "ridgeNS",
+      "centerX": 0,
+      "width": 3,
+      "height": 1.2,
+      "terrainType": null
+    }
+  ]
+}

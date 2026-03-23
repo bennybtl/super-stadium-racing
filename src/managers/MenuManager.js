@@ -3,9 +3,10 @@
  */
 export class MenuManager {
   constructor() {
-    this.currentMenu = 'start'; // 'start', 'trackSelect', 'lapSelect', 'game', 'pause', or null
+    this.currentMenu = 'start'; // 'start', 'trackSelect', 'lapSelect', 'game', 'pause', 'editor', 'editorPause'
     this.gameStarted = false;
     this.isPaused = false;
+    this.editorMode = false;
     this.selectedTrack = null;
     this.selectedLaps = 3; // Default to 3 laps
     
@@ -113,9 +114,11 @@ export class MenuManager {
     this.buttonContainer.innerHTML = '';
     
     const startButton = this.createButton('Start', () => this.showTrackSelectMenu());
+    const editorButton = this.createButton('Track Editor', () => this.showEditorTrackSelect());
     const settingsButton = this.createButton('Settings', () => this.onSettings());
     
     this.buttonContainer.appendChild(startButton);
+    this.buttonContainer.appendChild(editorButton);
     this.buttonContainer.appendChild(settingsButton);
     
     this.overlay.style.display = 'flex';
@@ -177,6 +180,59 @@ export class MenuManager {
     this.overlay.style.display = 'flex';
   }
 
+  showEditorTrackSelect() {
+    this.currentMenu = 'editorTrackSelect';
+    this.title.textContent = 'Select Track to Edit';
+    this.buttonContainer.innerHTML = '';
+    
+    // Get track list (will be populated by main.js)
+    const trackList = window.trackLoader ? window.trackLoader.getTrackList() : [];
+    
+    trackList.forEach(trackKey => {
+      const track = window.trackLoader.getTrack(trackKey);
+      const trackButton = this.createButton(track.name, () => {
+        this.selectedTrack = trackKey;
+        this.onStartEditor();
+      });
+      this.buttonContainer.appendChild(trackButton);
+    });
+    
+    // Add new track button
+    const newButton = this.createButton('+ New Track', () => {
+      this.selectedTrack = 'new';
+      this.onStartEditor();
+    });
+    newButton.style.background = 'linear-gradient(to bottom, #4caf50, #388e3c)';
+    this.buttonContainer.appendChild(newButton);
+    
+    // Add back button
+    const backButton = this.createButton('Back', () => this.showStartMenu());
+    backButton.style.marginTop = '20px';
+    backButton.style.background = 'linear-gradient(to bottom, #666, #444)';
+    this.buttonContainer.appendChild(backButton);
+    
+    this.overlay.style.display = 'flex';
+  }
+
+  showEditorMenu() {
+    this.currentMenu = 'editorPause';
+    this.isPaused = true;
+    this.title.textContent = 'Track Editor';
+    this.buttonContainer.innerHTML = '';
+    
+    const resumeButton = this.createButton('Resume Editing', () => this.onEditorResume());
+    const saveButton = this.createButton('Save Track', () => this.onEditorSave());
+    const loadButton = this.createButton('Load Track', () => this.onEditorLoad());
+    const exitButton = this.createButton('Exit to Menu', () => this.onEditorExit());
+    
+    this.buttonContainer.appendChild(resumeButton);
+    this.buttonContainer.appendChild(saveButton);
+    this.buttonContainer.appendChild(loadButton);
+    this.buttonContainer.appendChild(exitButton);
+    
+    this.overlay.style.display = 'flex';
+  }
+
   showPauseMenu() {
     this.currentMenu = 'pause';
     this.isPaused = true;
@@ -201,12 +257,25 @@ export class MenuManager {
   }
 
   togglePause() {
-    if (this.gameStarted && this.currentMenu !== 'start') {
+    console.log('[MenuManager] togglePause called, editorMode:', this.editorMode, 'isPaused:', this.isPaused);
+    if (this.editorMode) {
+      // In editor mode
+      if (this.isPaused) {
+        console.log('[MenuManager] Resuming editor');
+        this.onEditorResume();
+      } else {
+        console.log('[MenuManager] Showing editor menu');
+        this.showEditorMenu();
+      }
+    } else if (this.gameStarted && this.currentMenu !== 'start') {
+      // In game mode
       if (this.isPaused) {
         this.onResume();
       } else {
         this.showPauseMenu();
       }
+    } else {
+      console.log('[MenuManager] togglePause conditions not met - gameStarted:', this.gameStarted, 'currentMenu:', this.currentMenu);
     }
   }
 
@@ -231,6 +300,32 @@ export class MenuManager {
   }
 
   onExit() {
+    this.gameStarted = false;
+    this.showStartMenu();
+    // Will be overridden
+  }
+
+  onStartEditor() {
+    this.editorMode = true;
+    this.hideMenu();
+    // Will be overridden
+  }
+
+  onEditorResume() {
+    this.hideMenu();
+    // Will be overridden
+  }
+
+  onEditorSave() {
+    // Will be overridden
+  }
+
+  onEditorLoad() {
+    this.showEditorTrackSelect();
+  }
+
+  onEditorExit() {
+    this.editorMode = false;
     this.gameStarted = false;
     this.showStartMenu();
     // Will be overridden

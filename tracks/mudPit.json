@@ -1,0 +1,52 @@
+{
+  "name": "Mud Pit",
+  "features": [
+    {
+      "type": "ridgeEW",
+      "centerZ": -10,
+      "width": 5,
+      "height": 1.5,
+      "terrainType": null
+    },
+    {
+      "type": "ridgeEW",
+      "centerZ": 10,
+      "width": 5,
+      "height": 1.5,
+      "terrainType": null
+    },
+    {
+      "type": "terrainRect",
+      "x": 0,
+      "z": 0,
+      "width": 60,
+      "depth": 15,
+      "terrainType": {
+        "name": "mud",
+        "gripMultiplier": 0.15,
+        "color": {
+          "r": 0.25,
+          "g": 0.2,
+          "b": 0.15
+        },
+        "dragMultiplier": 2.9
+      }
+    },
+    {
+      "type": "terrainCircle",
+      "centerX": 0,
+      "centerZ": 0,
+      "radius": 8,
+      "terrainType": {
+        "name": "asphalt",
+        "gripMultiplier": 3.5,
+        "color": {
+          "r": 0.2,
+          "g": 0.2,
+          "b": 0.25
+        },
+        "dragMultiplier": 0.5
+      }
+    }
+  ]
+}

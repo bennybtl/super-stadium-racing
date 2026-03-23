@@ -1,0 +1,206 @@
+{
+  "name": "Hills",
+  "features": [
+    {
+      "type": "hill",
+      "centerX": -20,
+      "centerZ": -20,
+      "radius": 8,
+      "height": 2,
+      "terrainType": {
+        "name": "packed_dirt",
+        "gripMultiplier": 2,
+        "color": {
+          "r": 0.35,
+          "g": 0.28,
+          "b": 0.18
+        },
+        "dragMultiplier": 0.8
+      }
+    },
+    {
+      "type": "hill",
+      "centerX": 20,
+      "centerZ": 20,
+      "radius": 10,
+      "height": 2.5,
+      "terrainType": {
+        "name": "packed_dirt",
+        "gripMultiplier": 2,
+        "color": {
+          "r": 0.35,
+          "g": 0.28,
+          "b": 0.18
+        },
+        "dragMultiplier": 0.8
+      }
+    },
+    {
+      "type": "hill",
+      "centerX": 0,
+      "centerZ": 0,
+      "radius": 12,
+      "height": -1.5,
+      "terrainType": {
+        "name": "loose_dirt",
+        "gripMultiplier": 0.5,
+        "color": {
+          "r": 0.4,
+          "g": 0.32,
+          "b": 0.2
+        },
+        "dragMultiplier": 1
+      }
+    },
+    {
+      "type": "hill",
+      "centerX": -40,
+      "centerZ": 30,
+      "radius": 18,
+      "height": -1.5,
+      "terrainType": {
+        "name": "mud",
+        "gripMultiplier": 0.15,
+        "color": {
+          "r": 0.25,
+          "g": 0.2,
+          "b": 0.15
+        },
+        "dragMultiplier": 2.9
+      }
+    },
+    {
+      "type": "terrainCircle",
+      "centerX": -40,
+      "centerZ": 30,
+      "radius": 10,
+      "terrainType": {
+        "name": "WATER",
+        "gripMultiplier": 0.3,
+        "color": {
+          "r": 0.2,
+          "g": 0.4,
+          "b": 0.6
+        },
+        "dragMultiplier": 6
+      }
+    },
+    {
+      "type": "slopedRect",
+      "centerX": 20,
+      "centerZ": -50,
+      "width": 20,
+      "depth": 20,
+      "slopeAxis": "x",
+      "heightAtMin": 0,
+      "heightAtMax": 6,
+      "terrainType": {
+        "name": "packed_dirt",
+        "gripMultiplier": 2,
+        "color": {
+          "r": 0.35,
+          "g": 0.28,
+          "b": 0.18
+        },
+        "dragMultiplier": 0.8
+      }
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -60,
+      "centerZ": -1,
+      "heading": 0,
+      "width": 10,
+      "checkpointNumber": 1,
+      "passed": false
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 8.5,
+      "centerZ": -49.5,
+      "heading": 1.5707963267948966,
+      "width": 10,
+      "checkpointNumber": 2,
+      "passed": false
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 23,
+      "centerZ": 0,
+      "heading": 3.141592653589793,
+      "width": 10,
+      "checkpointNumber": 3,
+      "passed": false
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 10,
+      "centerZ": 40,
+      "heading": -1.5707963267948966,
+      "width": 10,
+      "checkpointNumber": 4,
+      "passed": false
+    },
+    {
+      "type": "concreteBarrier",
+      "centerX": -40,
+      "centerZ": 0,
+      "heading": 0,
+      "length": 20,
+      "height": 2
+    },
+    {
+      "type": "concreteBarrier",
+      "centerX": 40,
+      "centerZ": 0,
+      "heading": 0,
+      "length": 20,
+      "height": 2
+    },
+    {
+      "type": "hayBales",
+      "centerX": 0,
+      "centerZ": -40,
+      "heading": 1.5707963267948966,
+      "length": 2,
+      "height": 1,
+      "depth": 1.5
+    },
+    {
+      "type": "hayBales",
+      "centerX": 0,
+      "centerZ": 40,
+      "heading": 1.5707963267948966,
+      "length": 2,
+      "height": 1,
+      "depth": 1.5
+    },
+    {
+      "type": "hayBales",
+      "centerX": 0,
+      "centerZ": 43,
+      "heading": 1.5707963267948966,
+      "length": 2,
+      "height": 1,
+      "depth": 1.5
+    },
+    {
+      "type": "hayBales",
+      "centerX": 0,
+      "centerZ": 46,
+      "heading": 1.5707963267948966,
+      "length": 2,
+      "height": 1,
+      "depth": 1.5
+    },
+    {
+      "type": "hayBales",
+      "centerX": 0,
+      "centerZ": 49,
+      "heading": 1.5707963267948966,
+      "length": 2,
+      "height": 1,
+      "depth": 1.5
+    }
+  ]
+}
