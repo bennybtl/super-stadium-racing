@@ -9,7 +9,6 @@ import {
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
-import { EntityPhysics } from "./EntityPhysics.js";
 import { DriftPhysics } from "./DriftPhysics.js";
 import { Controls } from "./Controls.js";
 
@@ -32,7 +31,6 @@ export class Truck {
     // Initialize subsystems
     this.particles = new ParticleEffects(this.mesh, scene);
     this.terrainPhysics = new TerrainPhysics(this.state);
-    this.entityPhysics = new EntityPhysics(this.state);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
     
@@ -139,13 +137,11 @@ export class Truck {
     // Apply grip and drift physics
     this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip);
     
-    // Movement and collision
-    const oldPosition = this.mesh.position.clone();
-    let newPosition = this.terrainPhysics.checkSteepSlope(this.mesh, deltaTime, track);
-    
-    // Handle entity collisions
-    this.entityPhysics.handleCollisions(this.mesh, this.physics, oldPosition, newPosition);
-    
+    // Movement - apply velocity to X/Z position (Y is handled by TerrainPhysics)
+    const newPosition = this.terrainPhysics.checkSteepSlope(this.mesh, deltaTime, track);
+    this.mesh.position.x = newPosition.x;
+    this.mesh.position.z = newPosition.z;
+
     // Update rotation
     this.mesh.rotation.y = this.state.heading;
     

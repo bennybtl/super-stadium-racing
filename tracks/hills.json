@@ -140,67 +140,6 @@
       "width": 10,
       "checkpointNumber": 4,
       "passed": false
-    },
-    {
-      "type": "concreteBarrier",
-      "centerX": -40,
-      "centerZ": 0,
-      "heading": 0,
-      "length": 20,
-      "height": 2
-    },
-    {
-      "type": "concreteBarrier",
-      "centerX": 40,
-      "centerZ": 0,
-      "heading": 0,
-      "length": 20,
-      "height": 2
-    },
-    {
-      "type": "hayBales",
-      "centerX": 0,
-      "centerZ": -40,
-      "heading": 1.5707963267948966,
-      "length": 2,
-      "height": 1,
-      "depth": 1.5
-    },
-    {
-      "type": "hayBales",
-      "centerX": 0,
-      "centerZ": 40,
-      "heading": 1.5707963267948966,
-      "length": 2,
-      "height": 1,
-      "depth": 1.5
-    },
-    {
-      "type": "hayBales",
-      "centerX": 0,
-      "centerZ": 43,
-      "heading": 1.5707963267948966,
-      "length": 2,
-      "height": 1,
-      "depth": 1.5
-    },
-    {
-      "type": "hayBales",
-      "centerX": 0,
-      "centerZ": 46,
-      "heading": 1.5707963267948966,
-      "length": 2,
-      "height": 1,
-      "depth": 1.5
-    },
-    {
-      "type": "hayBales",
-      "centerX": 0,
-      "centerZ": 49,
-      "heading": 1.5707963267948966,
-      "length": 2,
-      "height": 1,
-      "depth": 1.5
     }
   ]
 }

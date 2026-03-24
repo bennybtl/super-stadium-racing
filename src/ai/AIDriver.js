@@ -5,10 +5,9 @@ import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core"
  * Uses A* pathfinding to calculate optimal route avoiding obstacles
  */
 export class AIDriver {
-  constructor(track, checkpointManager, barrierManager, scene) {
+  constructor(track, checkpointManager, scene) {
     this.track = track;
     this.checkpointManager = checkpointManager;
-    this.barrierManager = barrierManager;
     this.scene = scene;
     
     // Pathfinding state
@@ -135,11 +134,11 @@ export class AIDriver {
     const startCell = this.worldToGrid(start.x, start.z);
     const goalCell = this.worldToGrid(goal.x, goal.z);
     
-    // If start or goal is blocked, find nearest valid cell
-    if (this.isBlocked(startCell.x, startCell.z)) {
-      startCell.x = this.gridCells / 2;
-      startCell.z = this.gridCells / 2;
-    }
+    // // If start or goal is blocked, find nearest valid cell
+    // if (this.isBlocked(startCell.x, startCell.z)) {
+    //   startCell.x = this.gridCells / 2;
+    //   startCell.z = this.gridCells / 2;
+    // }
     
     const openSet = [startCell];
     const cameFrom = new Map();
@@ -254,7 +253,9 @@ export class AIDriver {
       const nx = x + dir.x;
       const nz = z + dir.z;
       
-      if (this.isValidCell(nx, nz) && !this.isBlocked(nx, nz)) {
+      if (this.isValidCell(nx, nz) 
+        // && !this.isBlocked(nx, nz)
+      ) {
         neighbors.push({ x: nx, z: nz });
       }
     }
@@ -267,31 +268,6 @@ export class AIDriver {
    */
   isValidCell(x, z) {
     return x >= 0 && x < this.gridCells && z >= 0 && z < this.gridCells;
-  }
-
-  /**
-   * Check if cell is blocked by obstacles
-   */
-  isBlocked(gridX, gridZ) {
-    const worldPos = this.gridToWorld(gridX, gridZ);
-    
-    // Check against all barriers
-    for (const feature of this.track.features) {
-      if (feature.type === "concreteBarrier" || feature.type === "hayBales") {
-        const dist = Math.sqrt(
-          Math.pow(worldPos.x - feature.centerX, 2) + 
-          Math.pow(worldPos.z - feature.centerZ, 2)
-        );
-        
-        // Add safety margin around obstacles
-        const safetyMargin = 3;
-        if (dist < (feature.length / 2 + safetyMargin)) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
   }
 
   /**

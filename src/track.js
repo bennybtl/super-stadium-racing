@@ -107,31 +107,39 @@ export class Track {
     return this;
   }
 
-  // Add a concrete barrier wall (immovable)
-  // Creates a rectangular wall at the specified position
-  addConcreteBarrier(centerX, centerZ, heading, length = 10, height = 2) {
+  // Add a straight wall (immovable)
+  // heading: radians — the wall runs perpendicular to this direction
+  // length: wall length along its face, height: wall height, thickness: wall depth (default 0.5)
+  addWall(centerX, centerZ, heading, length = 10, height = 2, thickness = 0.5) {
     this.features.push({
-      type: "concreteBarrier",
+      type: "wall",
       centerX,
       centerZ,
       heading,
       length,
       height,
+      thickness,
     });
     return this;
   }
 
-  // Add hay bales (movable obstacles)
-  // Creates a rectangular barrier that can be pushed
-  addHayBales(centerX, centerZ, heading, length = 1, height = 1) {
+  // Add a curved wall approximated by box segments along an arc (immovable)
+  // centerX/centerZ: centre of the arc's parent circle
+  // radius: distance from centre to wall face
+  // startAngle/endAngle: arc extents in radians (0 = +X axis, increases counter-clockwise)
+  // segments: number of box segments used to approximate the curve (more = smoother)
+  // height/thickness: dimensions of each segment
+  addCurvedWall(centerX, centerZ, radius, startAngle, endAngle, height = 2, segments = 12, thickness = 0.5) {
     this.features.push({
-      type: "hayBales",
+      type: "curvedWall",
       centerX,
       centerZ,
-      heading,
-      length,
+      radius,
+      startAngle,
+      endAngle,
       height,
-      depth: 1.5,
+      segments,
+      thickness,
     });
     return this;
   }
@@ -327,8 +335,6 @@ export const EXAMPLE_TRACKS = {
       .addCheckpoint(25, 0, Math.PI / 2, 10, 2)
       .addCheckpoint(0, 30, Math.PI, 10, 3)
       .addCheckpoint(-25, 0, -Math.PI / 2, 10, 4)
-      .addConcreteBarrier(-40, 0, 0, 20, 2)
-      .addConcreteBarrier(40, 0, 0, 20, 2)
       .addHayBales(0, -40, Math.PI / 2, 2, 1.0)
       .addHayBales(0, 40, Math.PI / 2, 2, 1.0)
       .addHayBales(0, 43, Math.PI / 2, 2, 1.0)

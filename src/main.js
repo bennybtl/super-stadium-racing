@@ -26,7 +26,6 @@ import { GameState } from "./managers/GameState.js";
 import { CameraController } from "./managers/CameraController.js";
 import { InputManager } from "./managers/InputManager.js";
 import { CheckpointManager } from "./managers/CheckpointManager.js";
-import { BarrierManager } from "./managers/BarrierManager.js";
 import { MenuManager } from "./managers/MenuManager.js";
 import { AIDriver } from "./ai/AIDriver.js";
 import { TrackLoader } from "./managers/TrackLoader.js";
@@ -178,14 +177,12 @@ async function createScene() {
 
   // -- Initialize Managers (needed before creating trucks) --
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
-  const barrierManager = new BarrierManager(scene, currentTrack, shadows);
   
   // Create track features
   checkpointManager.createCheckpoints();
-  barrierManager.createBarriers();
 
   // -- AI Driver --
-  const aiDriver = new AIDriver(currentTrack, checkpointManager, barrierManager, scene);
+  const aiDriver = new AIDriver(currentTrack, checkpointManager, scene);
 
   // -- Trucks --
   const playerTruck = createTruck(scene, shadows); // Player truck
@@ -304,7 +301,7 @@ async function createScene() {
     
     // Reset managers
     checkpointManager.reset();
-    barrierManager.reset();
+    
     
     // Update UI
     uiManager.updateBoosts(playerTruckData.gameState.boostCount);
@@ -321,39 +318,6 @@ async function createScene() {
   
   // Store scene-specific reset function globally so menu can access it
   window.currentResetGame = resetGame;
-  
-  // Old reset handler - now using resetGame function
-  /*
-  inputManager.onReset(() => {
-    // Find nearest barrier and push truck away from it
-    let nearestBarrier = null;
-    let nearestDistance = Infinity;
-    
-    scene.meshes.forEach(mesh => {
-      if (mesh.physicsBody && (mesh.name.includes("concrete") || mesh.name.includes("hayBale"))) {
-        const distance = Vector3.Distance(truck.mesh.position, mesh.position);
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nearestBarrier = mesh;
-        }
-      }
-    });
-    
-    if (nearestBarrier && nearestDistance < 10) {
-      // Push truck away from nearest barrier
-      const awayDirection = truck.mesh.position.subtract(nearestBarrier.position);
-      awayDirection.y = 0;
-      awayDirection.normalize();
-      truck.mesh.position.addInPlace(awayDirection.scale(3)); // Push 3 units away
-      truck.mesh.position.y += 5; // Lift truck up to drop back down
-      truck.state.velocity.scaleInPlace(0); // Stop all velocity
-    } else {
-      // No nearby barrier, just lift and stop the truck
-      truck.mesh.position.y += 5; // Lift truck up to drop back down
-      truck.state.velocity.scaleInPlace(0);
-    }
-  });
-  */
 
   // -- Game loop --
   scene.onBeforeRenderObservable.add(() => {
@@ -392,7 +356,6 @@ async function createScene() {
     });
     
     // Update managers
-    barrierManager.update();
     
     // Update UI with player truck info
     const playerDebugInfo = trucks[0].truck._truckInstance.state;
