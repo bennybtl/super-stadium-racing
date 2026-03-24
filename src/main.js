@@ -191,6 +191,9 @@ async function createScene() {
   const playerTruck = createTruck(scene, shadows); // Player truck
   const aiTruck1 = createTruck(scene, shadows, aiDriver); // AI truck
   
+  // Set truck reference for AI respawn capability
+  aiDriver.setTruck(aiTruck1);
+  
   // Position AI truck slightly offset
   aiTruck1.mesh.position.x = 3;
   aiTruck1.mesh.position.z = 3;
@@ -383,6 +386,7 @@ async function createScene() {
       if (truckData.gameState.raceFinished) {
         return; // Don't update finished trucks
       }
+      // For player, use input from InputManager. For AI, pass empty input (truck will get AI input internally)
       const truckInput = truckData.isPlayer ? input : { forward: false, back: false, left: false, right: false };
       updateTruck(truckData.truck, truckInput, dt, terrainManager, currentTrack);
     });
@@ -424,6 +428,14 @@ async function createScene() {
         }
         
         const newCount = truckData.gameState.incrementCheckpoint(checkpointResult.index);
+        
+        // Notify AI driver if this is an AI truck
+        if (!truckData.isPlayer && truckData.truck.aiDriver) {
+          truckData.truck.aiDriver.onCheckpointPassed(
+            checkpointResult.index,
+            { x: truckData.truck.mesh.position.x, z: truckData.truck.mesh.position.z }
+          );
+        }
         
         // Update UI for player only
         if (truckData.isPlayer) {

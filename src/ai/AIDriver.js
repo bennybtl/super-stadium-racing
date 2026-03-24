@@ -15,6 +15,7 @@ export class AIDriver {
     this.path = [];
     this.currentPathIndex = 0;
     this.currentCheckpointTarget = 0;
+    this.lastCheckpointPassed = 0;
     
     // Grid for pathfinding (simplified world representation)
     this.gridSize = 160; // Match terrain size
@@ -22,59 +23,84 @@ export class AIDriver {
     this.gridCells = Math.floor(this.gridSize / this.gridResolution);
     
     // Steering parameters
-    this.lookAheadDistance = 5;
+    this.lookAheadDistance = 15;
     this.steeringStrength = 1.0;
     this.maxSpeed = 0.8; // 80% of max speed for safety
+    
+    // Stuck detection
+    this.stuckTimer = 0;
+    this.stuckThreshold = 3000; // 3 seconds in milliseconds
+    this.lastPosition = null;
+    this.truckMesh = null; // Will be set after truck creation
     
     // Debug visualization
     this.debugLines = [];
     this.debugEnabled = true;
     
-    // Calculate path through all checkpoints
-    this.calculateCompletePath();
+    // Get all checkpoints for reference
+    this.checkpoints = this.getCheckpointPositions();
+    
+    // Calculate path to first checkpoint
+    this.calculatePathToNextCheckpoint();
     
     if (this.debugEnabled && this.scene) {
-      this.createDebugVisualization();
+      this.updateDebugVisualization();
     }
   }
 
   /**
-   * Calculate full path through all checkpoints
+   * Calculate path to next checkpoint from current position
    */
-  calculateCompletePath() {
-    const checkpoints = this.getCheckpointPositions();
-    
-    if (checkpoints.length === 0) {
+  calculatePathToNextCheckpoint(currentPosition = { x: 0, z: 0 }) {
+    if (this.checkpoints.length === 0) {
       console.warn('[AIDriver] No checkpoints found!');
       return;
     }
     
-    this.path = [];
+    // Determine next checkpoint index
+    const nextCheckpointIndex = this.lastCheckpointPassed % this.checkpoints.length;
+    const targetCheckpoint = this.checkpoints[nextCheckpointIndex];
     
-    // Start from origin
-    let currentPos = { x: 0, z: 0 };
+    // Calculate approach point - a point before the checkpoint in the correct direction
+    // The checkpoint heading indicates which direction you should be traveling when passing through
+    const approachDistance = 10; // Distance before checkpoint to aim for
+    const approachPoint = {
+      x: targetCheckpoint.x - Math.sin(targetCheckpoint.heading) * approachDistance,
+      z: targetCheckpoint.z - Math.cos(targetCheckpoint.heading) * approachDistance
+    };
     
-    // Path to each checkpoint in order
-    for (let i = 0; i < checkpoints.length; i++) {
-      const targetPos = checkpoints[i];
-      const segment = this.findPath(currentPos, targetPos);
-      
-      // Add segment to path (skip first point if not the first segment to avoid duplicates)
-      if (this.path.length > 0) {
-        this.path.push(...segment.slice(1));
-      } else {
-        this.path.push(...segment);
-      }
-      
-      currentPos = targetPos;
+    // Calculate path from current position to approach point
+    this.path = this.findPath(currentPosition, approachPoint);
+    
+    // Add the checkpoint itself as the final waypoint to ensure we pass through it
+    this.path.push({ x: targetCheckpoint.x, z: targetCheckpoint.z });
+    
+    this.currentPathIndex = 0;
+    this.currentCheckpointTarget = nextCheckpointIndex;
+    
+    console.log(`[AIDriver] Calculated path to checkpoint #${targetCheckpoint.index} (heading: ${(targetCheckpoint.heading * 180 / Math.PI).toFixed(1)}°) with ${this.path.length} waypoints`);
+    
+    // Update debug visualization if enabled
+    if (this.debugEnabled && this.scene) {
+      this.updateDebugVisualization();
     }
-    
-    // Loop back to first checkpoint for continuous laps
-    const firstCheckpoint = checkpoints[0];
-    const loopSegment = this.findPath(currentPos, firstCheckpoint);
-    this.path.push(...loopSegment.slice(1));
-    
-    console.log(`[AIDriver] Calculated looping path with ${this.path.length} waypoints through ${checkpoints.length} checkpoints`);
+  }
+
+  /**
+   * Called when AI passes a checkpoint - recalculate path to next
+   */
+  onCheckpointPassed(checkpointIndex, currentPosition) {
+    this.lastCheckpointPassed = checkpointIndex;
+    console.log(`[AIDriver] Passed checkpoint ${checkpointIndex}, recalculating path...`);
+    this.calculatePathToNextCheckpoint(currentPosition);
+  }
+
+  /**
+   * Set truck reference for respawning
+   */
+  setTruck(truck) {
+    this.truck = truck;
+    this.truckMesh = truck.mesh;
   }
 
   /**
@@ -88,7 +114,7 @@ export class AIDriver {
         checkpoints.push({
           x: feature.centerX,
           z: feature.centerZ,
-          index: feature.number,
+          index: feature.checkpointNumber || 0,
           heading: feature.heading
         });
       }
@@ -96,6 +122,8 @@ export class AIDriver {
     
     // Sort by checkpoint number
     checkpoints.sort((a, b) => a.index - b.index);
+    
+    console.log(`[AIDriver] Found ${checkpoints.length} checkpoints:`, checkpoints.map(cp => `#${cp.index} at (${cp.x.toFixed(1)}, ${cp.z.toFixed(1)})`));
     
     return checkpoints;
   }
@@ -343,7 +371,52 @@ export class AIDriver {
     const turnStrength = cross.y;
     const alignment = dot;
     
-
+    // Always steer towards target
+    const steeringThreshold = 0.05;
+    
+    // Adjust throttle based on how sharp the turn is
+    let shouldMoveForward = true;
+    let shouldReverse = false;
+    
+    // Sharp turn threshold - higher turnStrength means sharper turn needed
+    const sharpTurnThreshold = 0.6;
+    const extremeTurnThreshold = 0.85;
+    
+    if (Math.abs(turnStrength) > extremeTurnThreshold) {
+      // Very sharp turn needed - brake to slow down
+      shouldMoveForward = false;
+      shouldReverse = true;
+      console.log(`[AIDriver] Extreme turn detected (${turnStrength.toFixed(2)}), braking`);
+    } else if (Math.abs(turnStrength) > sharpTurnThreshold) {
+      // Sharp turn needed - coast (no throttle) to slow down
+      shouldMoveForward = false;
+      shouldReverse = false;
+      console.log(`[AIDriver] Sharp turn detected (${turnStrength.toFixed(2)}), coasting`);
+    }
+    
+    const input = {
+      forward: shouldMoveForward,
+      back: shouldReverse,
+      left: turnStrength < -steeringThreshold,
+      right: turnStrength > steeringThreshold
+    };
+    
+    // Stuck detection - only trigger if not trying to move forward or back
+    const currentPos = { x: position.x, z: position.z };
+    if (!input.forward && !input.back) {
+      this.stuckTimer += 16.67; // Approximate deltaTime (60fps)
+      
+      // If stuck for too long, respawn facing target
+      if (this.stuckTimer >= this.stuckThreshold && this.truckMesh) {
+        console.log('[AIDriver] Stuck detected (not moving forward/back), respawning facing target...');
+        this.respawnFacingTarget(targetWaypoint);
+        this.stuckTimer = 0;
+      }
+    } else {
+      // Moving, reset timer
+      this.stuckTimer = 0;
+    }
+    this.lastPosition = currentPos;
     
     // Update debug visualization
     if (this.debugEnabled && this.debugTarget) {
@@ -352,12 +425,7 @@ export class AIDriver {
       this.debugTarget.position.y = this.track.getHeightAt(targetWaypoint.x, targetWaypoint.z) + 2;
     }
     
-    return {
-      forward: alignment > 0.3, // Move forward if roughly aligned
-      back: alignment < -0.5,   // Reverse if facing wrong way
-      left: turnStrength > 0.1,
-      right: turnStrength < -0.1
-    };
+    return input;
   }
 
   /**
@@ -421,13 +489,51 @@ export class AIDriver {
    */
   reset() {
     this.currentPathIndex = 0;
+    this.stuckTimer = 0;
+    this.lastPosition = null;
   }
 
   /**
-   * Create visual debug representation of path
+   * Respawn truck at current position but facing target waypoint
    */
-  createDebugVisualization() {
+  respawnFacingTarget(targetWaypoint) {
+    if (!this.truck || !this.truckMesh || !targetWaypoint) return;
+    
+    const currentPos = this.truckMesh.position;
+    const dx = targetWaypoint.x - currentPos.x;
+    const dz = targetWaypoint.z - currentPos.z;
+    
+    // Calculate heading to target
+    const targetHeading = Math.atan2(dx, dz);
+    
+    // Set rotation on mesh
+    this.truckMesh.rotation.y = targetHeading;
+    
+    // Update truck state heading
+    this.truck.state.heading = targetHeading;
+    
+    // Reset velocities
+    this.truck.state.velocity.set(0, 0, 0);
+    this.truck.state.verticalVelocity = 0;
+    
+    // Reset physics body velocity
+    if (this.truck.physics && this.truck.physics.body) {
+      this.truck.physics.body.setLinearVelocity(new Vector3(0, 0, 0));
+      this.truck.physics.body.setAngularVelocity(new Vector3(0, 0, 0));
+    }
+    
+    console.log(`[AIDriver] Respawned facing target at heading ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
+  }
+
+  /**
+   * Update visual debug representation of path
+   */
+  updateDebugVisualization() {
     if (!this.scene) return;
+    
+    // Clean up old debug markers
+    this.debugLines.forEach(mesh => mesh.dispose());
+    this.debugLines = [];
     
     // Create spheres along the path
     for (let i = 0; i < this.path.length; i += 5) { // Every 5th waypoint to reduce clutter
@@ -445,13 +551,15 @@ export class AIDriver {
       this.debugLines.push(sphere);
     }
     
-    // Create target marker
-    this.debugTarget = MeshBuilder.CreateSphere('aiTarget', { diameter: 1 }, this.scene);
-    const targetMat = new StandardMaterial('aiTargetMat', this.scene);
-    targetMat.diffuseColor = new Color3(0, 1, 0);
-    targetMat.emissiveColor = new Color3(0, 0.5, 0);
-    this.debugTarget.material = targetMat;
+    // Create target marker if it doesn't exist
+    if (!this.debugTarget) {
+      this.debugTarget = MeshBuilder.CreateSphere('aiTarget', { diameter: 1 }, this.scene);
+      const targetMat = new StandardMaterial('aiTargetMat', this.scene);
+      targetMat.diffuseColor = new Color3(0, 1, 0);
+      targetMat.emissiveColor = new Color3(0, 0.5, 0);
+      this.debugTarget.material = targetMat;
+    }
     
-    console.log(`[AIDriver] Created debug visualization with ${this.debugLines.length} markers`);
+    console.log(`[AIDriver] Updated debug visualization with ${this.debugLines.length} markers`);
   }
 }

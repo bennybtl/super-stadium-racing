@@ -193,6 +193,7 @@ export function createTruck(scene, shadows, driver = null) {
     particles: truck.particles.driftParticles,
     splashParticles: truck.particles.splashParticles,
     physics: truck.physics,
+    aiDriver: truck.driver, // Expose AI driver reference
     _truckInstance: truck  // Store reference for updateTruck
   };
 }
