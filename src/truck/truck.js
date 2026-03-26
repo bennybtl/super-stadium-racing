@@ -6,21 +6,22 @@ import {
   PhysicsAggregate,
   PhysicsShapeType,
   PhysicsMotionType,
-  TransformNode,
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
 import { DriftPhysics } from "./DriftPhysics.js";
 import { Controls } from "./Controls.js";
+import { TruckBody } from "./TruckBody.js";
 
 /**
  * Main Truck class that coordinates all truck subsystems
  */
 export class Truck {
-  constructor(scene, shadows, driver = null) {
+  constructor(scene, shadows, diffuseColor = null, driver = null) {
     this.scene = scene;
     this.shadows = shadows;
     this.driver = driver; // Optional AI driver
+    this.diffuseColor = diffuseColor ? diffuseColor : new Color3(0.8, 0.2, 0.1);
     
     // Create mesh and physics
     this.mesh = this.createMesh();
@@ -35,24 +36,19 @@ export class Truck {
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
 
-    // Debug heading arrow (toggle with showHeadingArrow / hideHeadingArrow)
-    this._headingArrow = this._createHeadingArrow();
-    
-    // If AI driver, make truck visually distinct
-    if (this.driver) {
-      this.mesh.material.diffuseColor = new Color3(0.2, 0.2, 0.8); // Blue for AI
-    }
+    // Visual puppet — sits on top of the invisible physics box
+    this.body = new TruckBody(this.mesh, scene, shadows, {
+      body:   this.diffuseColor,
+      cabin:  new Color3(0.25, 0.25, 0.3),
+      wheel:  new Color3(0.12, 0.12, 0.12),
+      detail: new Color3(0.75, 0.75, 0.75),
+    });
   }
 
   createMesh() {
-    const mesh = MeshBuilder.CreateBox("truck", { width: 1.5, height: 0.8, depth: 2.2 }, this.scene);
+    const mesh = MeshBuilder.CreateBox("truck", { width: 1.5, height: 0.8, depth: 2.6 }, this.scene);
     mesh.position.y = 0.4;
-
-    const mat = new StandardMaterial("truckMat", this.scene);
-    mat.diffuseColor = new Color3(0.8, 0.2, 0.1);
-    mesh.material = mat;
-    this.shadows.addShadowCaster(mesh);
-    
+    mesh.isVisible = false;  // visual puppet replaces this
     return mesh;
   }
 
@@ -66,49 +62,6 @@ export class Truck {
     physics.body.disablePreStep = false;
     
     return physics;
-  }
-
-  _createHeadingArrow() {
-    // Shaft: thin box pointing forward (+Z in local space)
-    const shaft = MeshBuilder.CreateBox("_dbgShaft", { width: 0.12, height: 0.12, depth: 1.6 }, this.scene);
-    const tip   = MeshBuilder.CreateBox("_dbgTip",   { width: 0.35, height: 0.35, depth: 0.35 }, this.scene);
-
-    const mat = new StandardMaterial("_dbgArrowMat", this.scene);
-    mat.diffuseColor  = new Color3(1, 1, 0); // bright yellow
-    mat.emissiveColor = new Color3(0.6, 0.6, 0);
-    shaft.material = mat;
-    tip.material   = mat;
-
-    // Position: shaft centre is 1.9 units ahead of truck centre, tip at the nose
-    shaft.position = new Vector3(0, 1.2, 1.9);
-    tip.position   = new Vector3(0, 1.2, 2.7);
-
-    shaft.isPickable = false;
-    tip.isPickable   = false;
-
-    return { shaft, tip };
-  }
-
-  _updateHeadingArrow() {
-    if (!this._headingArrow) return;
-    const { shaft, tip } = this._headingArrow;
-    // Mirror truck world position + heading (independent of roll/pitch)
-    const p = this.mesh.position;
-    const fwd = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-    const baseY = p.y + 1.2;
-
-    shaft.position = new Vector3(
-      p.x + fwd.x * 1.9,
-      baseY,
-      p.z + fwd.z * 1.9
-    );
-    tip.position = new Vector3(
-      p.x + fwd.x * 2.7,
-      baseY,
-      p.z + fwd.z * 2.7
-    );
-    shaft.rotation.y = this.state.heading;
-    tip.rotation.y   = this.state.heading;
   }
 
   createState() {
@@ -192,8 +145,8 @@ export class Truck {
     // Update rotation
     this.mesh.rotation.y = this.state.heading;
 
-    // Update debug heading arrow
-    this._updateHeadingArrow();
+    // Animate visual puppet
+    this.body.update(this.state, input, speed, deltaTime);
     
     // Sync physics body
     this.syncPhysicsBody();
@@ -231,8 +184,8 @@ export class Truck {
 }
 
 // Export legacy factory function for backward compatibility
-export function createTruck(scene, shadows, driver = null) {
-  const truck = new Truck(scene, shadows, driver);
+export function createTruck(scene, shadows, diffuseColor = null,driver = null) {
+  const truck = new Truck(scene, shadows, diffuseColor, driver);
   return {
     mesh: truck.mesh,
     state: truck.state,

@@ -20,7 +20,7 @@ import {
 import HavokPhysics from "@babylonjs/havok";
 import { createTruck, updateTruck } from "./truck.js";
 import { TerrainManager } from "./terrain.js";
-import { Track, EXAMPLE_TRACKS } from "./track.js";
+import { Track } from "./track.js";
 import { UIManager } from "./managers/UIManager.js";
 import { GameState } from "./managers/GameState.js";
 import { CameraController } from "./managers/CameraController.js";
@@ -190,19 +190,24 @@ async function createScene() {
   tireStackManager.createTireStacks();
 
   // -- AI Driver --
-  const aiDriver = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
+  const aiDriver1 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
+  const aiDriver2 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
 
   // -- Trucks --
   const playerTruck = createTruck(scene, shadows); // Player truck
-  const aiTruck1 = createTruck(scene, shadows, aiDriver); // AI truck
+  const aiTruck1 = createTruck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1); // AI truck
+  const aiTruck2 = createTruck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2); // AI truck
   
   // Set truck reference for AI respawn capability
-  aiDriver.setTruck(aiTruck1);
+  aiDriver1.setTruck(aiTruck1);
+  aiDriver2.setTruck(aiTruck2);
   
   // Position AI truck slightly offset
   aiTruck1.mesh.position.x = 3;
   aiTruck1.mesh.position.z = 3;
 
+  aiTruck1.mesh.position.x = 6;
+  aiTruck1.mesh.position.z = 6;
 
 
   // -- Truck State Management --
@@ -220,6 +225,13 @@ async function createScene() {
       isPlayer: false,
       name: 'AI 1',
       id: 'ai1'
+    },
+    {
+      truck: aiTruck2,
+      gameState: new GameState(0), // AI doesn't use boosts
+      isPlayer: false,
+      name: 'AI 2',
+      id: 'ai2'
     }
   ];
   
@@ -305,8 +317,11 @@ async function createScene() {
     });
     
     // Reset AI driver path following
-    if (aiDriver) {
-      aiDriver.reset();
+    if (aiDriver1) {
+      aiDriver1.reset();
+    }
+    if (aiDriver2) {
+      aiDriver2.reset();
     }
     
     // Reset managers

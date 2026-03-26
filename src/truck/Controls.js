@@ -10,8 +10,12 @@ export class Controls {
 
   updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
     if (groundedness > 0.1) {
-      if (input.left) this.state.heading -= effectiveTurnSpeed * speedRatio * groundedness * deltaTime;
-      if (input.right) this.state.heading += effectiveTurnSpeed * speedRatio * groundedness * deltaTime;
+      // Invert steering when reversing so the truck turns the natural direction
+      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+      const fwdSpeed = this.state.velocity.dot(forward);
+      const steerSign = fwdSpeed < 0 ? -1 : 1;
+      if (input.left)  this.state.heading -= steerSign * effectiveTurnSpeed * speedRatio * groundedness * deltaTime;
+      if (input.right) this.state.heading += steerSign * effectiveTurnSpeed * speedRatio * groundedness * deltaTime;
     }
   }
 
