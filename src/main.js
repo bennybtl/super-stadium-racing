@@ -27,6 +27,7 @@ import { CameraController } from "./managers/CameraController.js";
 import { InputManager } from "./managers/InputManager.js";
 import { CheckpointManager } from "./managers/CheckpointManager.js";
 import { WallManager } from "./managers/WallManager.js";
+import { TireStackManager } from "./managers/TireStackManager.js";
 import { MenuManager } from "./managers/MenuManager.js";
 import { AIDriver } from "./ai/AIDriver.js";
 import { TrackLoader } from "./managers/TrackLoader.js";
@@ -174,15 +175,19 @@ async function createScene() {
   groundMat.diffuseTexture.vOffset = 1;
   ground.material = groundMat;
   ground.receiveShadows = true;
-  new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0 }, scene);
+  // MESH shape follows the actual displaced vertices so dynamic objects (tires etc.)
+  // land on the real terrain surface rather than a bounding box.
+  new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
   // -- Initialize Managers (needed before creating trucks) --
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
   const wallManager = new WallManager(scene, currentTrack, shadows);
+  const tireStackManager = new TireStackManager(scene, currentTrack, shadows);
   
   // Create track features
   checkpointManager.createCheckpoints();
   wallManager.createWalls();
+  tireStackManager.createTireStacks();
 
   // -- AI Driver --
   const aiDriver = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
@@ -307,6 +312,7 @@ async function createScene() {
     // Reset managers
     checkpointManager.reset();
     wallManager.reset();
+    tireStackManager.reset();
 
     // Update UI
     uiManager.updateBoosts(playerTruckData.gameState.boostCount);
@@ -365,6 +371,7 @@ async function createScene() {
     
     // Update managers
     wallManager.update(trucks);
+    tireStackManager.update(trucks);
     
     // Update UI with player truck info
     const playerDebugInfo = trucks[0].truck._truckInstance.state;

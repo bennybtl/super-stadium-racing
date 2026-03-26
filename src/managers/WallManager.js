@@ -33,6 +33,8 @@ export class WallManager {
         this.createStraightWall(feature);
       } else if (feature.type === "curvedWall") {
         this.createCurvedWall(feature);
+      } else if (feature.type === "polyWall") {
+        this.createPolyWall(feature);
       }
     }
   }
@@ -108,6 +110,56 @@ export class WallManager {
       this._applyWallMaterial(mesh);
       this._addPhysics(mesh);
       this.wallMeshes.push(mesh);
+    }
+  }
+
+  createPolyWall(feature) {
+    const { points, height, thickness, friction } = feature;
+    if (!points || points.length < 2) return;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+
+      const dx     = p1.x - p0.x;
+      const dz     = p1.z - p0.z;
+      const length = Math.sqrt(dx * dx + dz * dz);
+      if (length < 0.01) continue;
+
+      // heading: angle such that cos(h)=dx/len and -sin(h)=dz/len
+      // matches the convention used by createStraightWall
+      const heading = Math.atan2(-dz, dx);
+
+      // Sub-segment so each piece is ~4 units long (terrain-following)
+      const numSegs = Math.max(1, Math.round(length / 4));
+      const segLen  = length / numSegs;
+      const dirX    = dx / length;
+      const dirZ    = dz / length;
+
+      for (let s = 0; s < numSegs; s++) {
+        const t  = (s + 0.5) * segLen;
+        const px = p0.x + dirX * t;
+        const pz = p0.z + dirZ * t;
+        const terrainHeight = this.track.getHeightAt(px, pz);
+
+        const mesh = MeshBuilder.CreateBox("wall_poly", {
+          width:  segLen * 1.02,
+          height,
+          depth:  thickness,
+        }, this.scene);
+
+        mesh.position = new Vector3(px, terrainHeight + height / 2, pz);
+        mesh.rotation.y = heading;
+
+        mesh._wallHalfLength = (segLen * 1.02) / 2;
+        mesh._wallHalfThick  = thickness / 2;
+        mesh._wallHeading    = heading;
+        mesh._wallFriction   = friction ?? 0.1;
+
+        this._applyWallMaterial(mesh);
+        this._addPhysics(mesh);
+        this.wallMeshes.push(mesh);
+      }
     }
   }
 

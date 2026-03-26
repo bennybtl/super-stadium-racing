@@ -146,7 +146,7 @@
       "centerX": -20,
       "centerZ": -20,
       "heading": 0.7853981633974483,
-      "length": 18,
+      "length": 48,
       "height": 2,
       "thickness": 0.5,
       "segments": null
@@ -172,7 +172,17 @@
       "height": 2,
       "segments": 12,
       "thickness": 0.5
-    }
-
+    },
+    { "type": "tireStack", "x": -5, "z": 5 },
+    { "type": "tireStack", "x": -3, "z": 5 },
+    { "type": "tireStack", "x": -1, "z": 5 },
+    { "type": "tireStack", "x": 1,  "z": 5 },
+    { "type": "tireStack", "x": 3,  "z": 5 },
+    { "type": "tireStack", "x": 5,  "z": 5 },
+    { "type": "tireStack", "x": -4, "z": 7 },
+    { "type": "tireStack", "x": -2, "z": 7 },
+    { "type": "tireStack", "x": 0, "z": 7 },
+    { "type": "tireStack", "x": 2,  "z": 7 },
+    { "type": "tireStack", "x": 4,  "z": 7 }
   ]
 }

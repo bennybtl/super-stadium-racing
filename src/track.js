@@ -146,6 +146,29 @@ export class Track {
     return this;
   }
 
+  // Add a wall defined by a series of world-space points. Straight segments
+  // are generated between each consecutive pair of points, with terrain-following
+  // sub-segmentation so the wall hugs hills and dips.
+  // points: array of { x, z } coordinates
+  // height/thickness/friction: applied uniformly to all segments
+  addPolyWall(points, height = 2, thickness = 0.5, friction = 0.1) {
+    this.features.push({
+      type: "polyWall",
+      points,
+      height,
+      thickness,
+      friction,
+    });
+    return this;
+  }
+
+  // Add a stack of 3 movable tires at a world position.
+  // x/z: centre of the stack base on the terrain.
+  addTireStack(x, z) {
+    this.features.push({ type: "tireStack", x, z });
+    return this;
+  }
+
   // Get the height at a world position
   getHeightAt(x, z) {
     let totalHeight = 0;
