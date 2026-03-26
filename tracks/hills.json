@@ -140,6 +140,39 @@
       "width": 10,
       "checkpointNumber": 4,
       "passed": false
+    },
+    {
+      "type": "wall",
+      "centerX": -20,
+      "centerZ": -20,
+      "heading": 0.7853981633974483,
+      "length": 18,
+      "height": 2,
+      "thickness": 0.5,
+      "segments": null
+    },
+    {
+      "type": "curvedWall",
+      "centerX": 30,
+      "centerZ": 30,
+      "radius": 18,
+      "startAngle": 0,
+      "endAngle": 1.5707963267948966,
+      "height": 2,
+      "segments": 10,
+      "thickness": 0.5
+    },
+    {
+      "type": "curvedWall",
+      "centerX": 20,
+      "centerZ": 35,
+      "radius": 20,
+      "startAngle": 0,
+      "endAngle": 1.5707963267948966,
+      "height": 2,
+      "segments": 12,
+      "thickness": 0.5
     }
+
   ]
 }

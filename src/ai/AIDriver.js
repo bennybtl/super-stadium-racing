@@ -5,9 +5,10 @@ import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core"
  * Uses A* pathfinding to calculate optimal route avoiding obstacles
  */
 export class AIDriver {
-  constructor(track, checkpointManager, scene) {
+  constructor(track, checkpointManager, wallManager, scene) {
     this.track = track;
     this.checkpointManager = checkpointManager;
+    this.wallManager = wallManager;
     this.scene = scene;
     
     // Pathfinding state
@@ -134,11 +135,11 @@ export class AIDriver {
     const startCell = this.worldToGrid(start.x, start.z);
     const goalCell = this.worldToGrid(goal.x, goal.z);
     
-    // // If start or goal is blocked, find nearest valid cell
-    // if (this.isBlocked(startCell.x, startCell.z)) {
-    //   startCell.x = this.gridCells / 2;
-    //   startCell.z = this.gridCells / 2;
-    // }
+    // If start cell is blocked, fall back to grid centre
+    if (this.isBlocked(startCell.x, startCell.z)) {
+      startCell.x = this.gridCells / 2;
+      startCell.z = this.gridCells / 2;
+    }
     
     const openSet = [startCell];
     const cameFrom = new Map();
@@ -253,9 +254,7 @@ export class AIDriver {
       const nx = x + dir.x;
       const nz = z + dir.z;
       
-      if (this.isValidCell(nx, nz) 
-        // && !this.isBlocked(nx, nz)
-      ) {
+      if (this.isValidCell(nx, nz) && !this.isBlocked(nx, nz)) {
         neighbors.push({ x: nx, z: nz });
       }
     }
@@ -268,6 +267,33 @@ export class AIDriver {
    */
   isValidCell(x, z) {
     return x >= 0 && x < this.gridCells && z >= 0 && z < this.gridCells;
+  }
+
+  /**
+   * Check if a grid cell is blocked by a wall segment
+   */
+  isBlocked(gridX, gridZ) {
+    if (!this.wallManager) return false;
+
+    const worldPos = this.gridToWorld(gridX, gridZ);
+    const safetyMargin = 2; // extra clearance around each wall segment
+
+    for (const seg of this.wallManager.getWallSegments()) {
+      // Transform worldPos into the segment's local space to do AABB test
+      const dx = worldPos.x - seg.x;
+      const dz = worldPos.z - seg.z;
+      const cos = Math.cos(-seg.heading);
+      const sin = Math.sin(-seg.heading);
+      const localX = cos * dx - sin * dz;
+      const localZ = sin * dx + cos * dz;
+
+      if (Math.abs(localX) < seg.halfLength + safetyMargin &&
+          Math.abs(localZ) < seg.halfDepth  + safetyMargin) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -362,12 +388,12 @@ export class AIDriver {
       // Very sharp turn needed - brake to slow down
       shouldMoveForward = false;
       shouldReverse = true;
-      console.log(`[AIDriver] Extreme turn detected (${turnStrength.toFixed(2)}), braking`);
+      // console.debug(`[AIDriver] Extreme turn detected (${turnStrength.toFixed(2)}), braking`);
     } else if (Math.abs(turnStrength) > sharpTurnThreshold) {
       // Sharp turn needed - coast (no throttle) to slow down
       shouldMoveForward = false;
       shouldReverse = false;
-      console.log(`[AIDriver] Sharp turn detected (${turnStrength.toFixed(2)}), coasting`);
+      // console.debug(`[AIDriver] Sharp turn detected (${turnStrength.toFixed(2)}), coasting`);
     }
     
     const input = {
@@ -384,7 +410,7 @@ export class AIDriver {
       
       // If stuck for too long, respawn facing target
       if (this.stuckTimer >= this.stuckThreshold && this.truckMesh) {
-        console.log('[AIDriver] Stuck detected (not moving forward/back), respawning facing target...');
+        // console.debug('[AIDriver] Stuck detected (not moving forward/back), respawning facing target...');
         this.respawnFacingTarget(targetWaypoint);
         this.stuckTimer = 0;
       }

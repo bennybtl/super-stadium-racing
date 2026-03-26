@@ -26,6 +26,7 @@ import { GameState } from "./managers/GameState.js";
 import { CameraController } from "./managers/CameraController.js";
 import { InputManager } from "./managers/InputManager.js";
 import { CheckpointManager } from "./managers/CheckpointManager.js";
+import { WallManager } from "./managers/WallManager.js";
 import { MenuManager } from "./managers/MenuManager.js";
 import { AIDriver } from "./ai/AIDriver.js";
 import { TrackLoader } from "./managers/TrackLoader.js";
@@ -177,12 +178,14 @@ async function createScene() {
 
   // -- Initialize Managers (needed before creating trucks) --
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
+  const wallManager = new WallManager(scene, currentTrack, shadows);
   
   // Create track features
   checkpointManager.createCheckpoints();
+  wallManager.createWalls();
 
   // -- AI Driver --
-  const aiDriver = new AIDriver(currentTrack, checkpointManager, scene);
+  const aiDriver = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
 
   // -- Trucks --
   const playerTruck = createTruck(scene, shadows); // Player truck
@@ -194,6 +197,8 @@ async function createScene() {
   // Position AI truck slightly offset
   aiTruck1.mesh.position.x = 3;
   aiTruck1.mesh.position.z = 3;
+
+
 
   // -- Truck State Management --
   const trucks = [
@@ -301,8 +306,8 @@ async function createScene() {
     
     // Reset managers
     checkpointManager.reset();
-    
-    
+    wallManager.reset();
+
     // Update UI
     uiManager.updateBoosts(playerTruckData.gameState.boostCount);
     uiManager.updateLaps(0, totalLaps);
@@ -345,6 +350,9 @@ async function createScene() {
     // Get movement input from InputManager (for player only)
     const input = globalInputManager ? globalInputManager.getMovementInput() : { forward: false, back: false, left: false, right: false };
     
+    // Pre-clamp wall-ward velocity before trucks move
+    wallManager.preUpdate(trucks, dt);
+
     // Update all trucks (skip finished ones)
     trucks.forEach((truckData) => {
       if (truckData.gameState.raceFinished) {
@@ -356,6 +364,7 @@ async function createScene() {
     });
     
     // Update managers
+    wallManager.update(trucks);
     
     // Update UI with player truck info
     const playerDebugInfo = trucks[0].truck._truckInstance.state;

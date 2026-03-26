@@ -6,6 +6,7 @@ import {
   PhysicsAggregate,
   PhysicsShapeType,
   PhysicsMotionType,
+  TransformNode,
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
@@ -33,6 +34,9 @@ export class Truck {
     this.terrainPhysics = new TerrainPhysics(this.state);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
+
+    // Debug heading arrow (toggle with showHeadingArrow / hideHeadingArrow)
+    this._headingArrow = this._createHeadingArrow();
     
     // If AI driver, make truck visually distinct
     if (this.driver) {
@@ -62,6 +66,49 @@ export class Truck {
     physics.body.disablePreStep = false;
     
     return physics;
+  }
+
+  _createHeadingArrow() {
+    // Shaft: thin box pointing forward (+Z in local space)
+    const shaft = MeshBuilder.CreateBox("_dbgShaft", { width: 0.12, height: 0.12, depth: 1.6 }, this.scene);
+    const tip   = MeshBuilder.CreateBox("_dbgTip",   { width: 0.35, height: 0.35, depth: 0.35 }, this.scene);
+
+    const mat = new StandardMaterial("_dbgArrowMat", this.scene);
+    mat.diffuseColor  = new Color3(1, 1, 0); // bright yellow
+    mat.emissiveColor = new Color3(0.6, 0.6, 0);
+    shaft.material = mat;
+    tip.material   = mat;
+
+    // Position: shaft centre is 1.9 units ahead of truck centre, tip at the nose
+    shaft.position = new Vector3(0, 1.2, 1.9);
+    tip.position   = new Vector3(0, 1.2, 2.7);
+
+    shaft.isPickable = false;
+    tip.isPickable   = false;
+
+    return { shaft, tip };
+  }
+
+  _updateHeadingArrow() {
+    if (!this._headingArrow) return;
+    const { shaft, tip } = this._headingArrow;
+    // Mirror truck world position + heading (independent of roll/pitch)
+    const p = this.mesh.position;
+    const fwd = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    const baseY = p.y + 1.2;
+
+    shaft.position = new Vector3(
+      p.x + fwd.x * 1.9,
+      baseY,
+      p.z + fwd.z * 1.9
+    );
+    tip.position = new Vector3(
+      p.x + fwd.x * 2.7,
+      baseY,
+      p.z + fwd.z * 2.7
+    );
+    shaft.rotation.y = this.state.heading;
+    tip.rotation.y   = this.state.heading;
   }
 
   createState() {
@@ -144,6 +191,9 @@ export class Truck {
 
     // Update rotation
     this.mesh.rotation.y = this.state.heading;
+
+    // Update debug heading arrow
+    this._updateHeadingArrow();
     
     // Sync physics body
     this.syncPhysicsBody();

@@ -110,7 +110,8 @@ export class Track {
   // Add a straight wall (immovable)
   // heading: radians — the wall runs perpendicular to this direction
   // length: wall length along its face, height: wall height, thickness: wall depth (default 0.5)
-  addWall(centerX, centerZ, heading, length = 10, height = 2, thickness = 0.5) {
+  // segments: how many boxes to split the wall into so it follows the terrain (null = auto)
+  addWall(centerX, centerZ, heading, length = 10, height = 2, thickness = 0.5, segments = null) {
     this.features.push({
       type: "wall",
       centerX,
@@ -119,6 +120,7 @@ export class Track {
       length,
       height,
       thickness,
+      segments,
     });
     return this;
   }
