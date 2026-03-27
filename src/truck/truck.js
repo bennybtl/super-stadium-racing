@@ -158,7 +158,7 @@ export class Truck {
     this.driftPhysics.updateRoll(this.mesh, speed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
     
     // Update particle effects
-    this.particles.update(this.state, speed, terrainManager, isGrounded);
+    this.particles.update(this.state, speed, terrainManager, isGrounded, deltaTime);
     
     // Return debug info
     return {
