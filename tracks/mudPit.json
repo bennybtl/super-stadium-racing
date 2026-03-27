@@ -2,50 +2,41 @@
   "name": "Mud Pit",
   "features": [
     {
-      "type": "ridgeEW",
-      "centerZ": -10,
-      "width": 5,
-      "height": 1.5,
+      "type": "squareHill",
+      "centerX": 0,
+      "centerZ": 0,
+      "width": 40,
+      "depth": 40,
+      "height": 7,
+      "transition": 14,
       "terrainType": null
     },
     {
-      "type": "ridgeEW",
-      "centerZ": 10,
-      "width": 5,
-      "height": 1.5,
-      "terrainType": null
-    },
-    {
-      "type": "terrainRect",
-      "x": 0,
-      "z": 0,
-      "width": 60,
-      "depth": 15,
+      "type": "squareHill",
+      "centerX": 0,
+      "centerZ": 0,
+      "width": 20,
+      "depth": 20,
+      "height": -7,
+      "transition": 14,
       "terrainType": {
         "name": "mud",
         "gripMultiplier": 0.15,
-        "color": {
-          "r": 0.25,
-          "g": 0.2,
-          "b": 0.15
-        },
+        "color": { "r": 0.25, "g": 0.2, "b": 0.15 },
         "dragMultiplier": 2.9
       }
     },
     {
-      "type": "terrainCircle",
+      "type": "terrainRect",
       "centerX": 0,
       "centerZ": 0,
-      "radius": 8,
+      "width": 23,
+      "depth": 23,
       "terrainType": {
-        "name": "asphalt",
-        "gripMultiplier": 3.5,
-        "color": {
-          "r": 0.2,
-          "g": 0.2,
-          "b": 0.25
-        },
-        "dragMultiplier": 0.5
+        "name": "WATER",
+        "gripMultiplier": 0.3,
+        "dragMultiplier": 6.0,
+        "color": { "r": 0.2, "g": 0.4, "b": 0.6 }
       }
     }
   ]

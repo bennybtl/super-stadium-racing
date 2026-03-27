@@ -6,7 +6,7 @@ import { Vector3 } from "@babylonjs/core";
 export class TerrainPhysics {
   constructor(state) {
     this.state = state;
-    this.gravity = -50;
+    this.gravity = -30;
   }
 
   update(mesh, deltaTime, track) {

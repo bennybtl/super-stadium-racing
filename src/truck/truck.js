@@ -101,7 +101,9 @@ export class Truck {
   update(input, deltaTime, terrainManager = null, track = null) {
     // If AI driver, get input from driver
     if (this.driver) {
-      input = this.driver.getInput(this.mesh.position, this.state.heading);
+      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+      const fwdSpeed = this.state.velocity.dot(forward);
+      input = this.driver.getInput(this.mesh.position, this.state.heading, fwdSpeed);
     }
     
     // Update boost timer
@@ -110,10 +112,11 @@ export class Truck {
     // Terrain physics (gravity, suspension, slopes)
     const { groundedness, penetration } = this.terrainPhysics.update(this.mesh, deltaTime, track);
     
-    // Get terrain modifiers
+    // Get terrain modifiers — only apply when wheels are actually on or near the ground
     let terrainGripMultiplier = 1.0;
     let terrainDragMultiplier = 1.0;
-    if (terrainManager) {
+    const isGrounded = penetration > -0.3;
+    if (terrainManager && isGrounded) {
       const terrain = terrainManager.getTerrainAt(this.mesh.position);
       terrainGripMultiplier = terrain.gripMultiplier;
       terrainDragMultiplier = terrain.dragMultiplier;
@@ -132,7 +135,7 @@ export class Truck {
     this.controls.updateAcceleration(input, forward, groundedness, deltaTime);
     
     // Apply drag
-    this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier);
+    this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness);
     
     // Apply grip and drift physics
     this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip);
@@ -155,7 +158,7 @@ export class Truck {
     this.driftPhysics.updateRoll(this.mesh, speed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
     
     // Update particle effects
-    this.particles.update(this.state, speed, terrainManager);
+    this.particles.update(this.state, speed, terrainManager, isGrounded);
     
     // Return debug info
     return {

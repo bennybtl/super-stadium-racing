@@ -15,6 +15,9 @@ export class DriftPhysics {
       return;
     }
 
+    // No traction correction while airborne
+    if (groundedness <= 0) return;
+
     const velocityDir = this.state.velocity.clone().normalize();
     const forwardVelocity = this.state.velocity.dot(forward);
     const isReversing = forwardVelocity < 0;
@@ -41,10 +44,13 @@ export class DriftPhysics {
     this.state.isDrifting = this.state.slipAngle > this.state.driftThreshold;
   }
 
-  applyDrag(speed, input, deltaTime, terrainDragMultiplier) {
+  applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness = 1) {
     if (speed > 0.1) {
-      const coastingMultiplier = input.forward ? 0.3 : 0.8;
-      const naturalDrag = this.state.velocity.scale(-coastingMultiplier * terrainDragMultiplier * deltaTime);
+      // Minimal air resistance when airborne, full drag when grounded
+      const airborne = groundedness <= 0;
+      const coastingMultiplier = airborne ? 0.02 : (input.forward ? 0.3 : 0.8);
+      const drag = airborne ? 1.0 : terrainDragMultiplier;
+      const naturalDrag = this.state.velocity.scale(-coastingMultiplier * drag * deltaTime);
       this.state.velocity.addInPlace(naturalDrag);
     }
   }

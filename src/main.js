@@ -137,8 +137,10 @@ async function createScene() {
   ground.createNormals(true);
   
   const groundMat = new StandardMaterial("groundMat", scene);
+  groundMat.specularColor = new Color3(0.2, 0.2, 0.2 );   // no specular shine
+  groundMat.specularPower = 10;
   
-  // Generate texture from terrain grid
+  // Generate texture from terrain grid with per-pixel dirt noise
   const texSize = 512;
   const groundTex = new DynamicTexture("groundTex", { width: texSize, height: texSize }, scene);
   const ctx = groundTex.getContext();
@@ -147,22 +149,26 @@ async function createScene() {
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const index = row * terrainManager.cellsPerSide + col;
-      const terrain = terrainManager.grid[index];
-      const color = terrain.color;
+      const color = terrainManager.grid[index].color;
       
-      // Convert Color3 to hex string
-      const r = Math.floor(color.r * 255);
-      const g = Math.floor(color.g * 255);
-      const b = Math.floor(color.b * 255);
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      
-      // Direct mapping - no flips needed
-      ctx.fillRect(
-        col * pixelsPerCell,
-        row * pixelsPerCell,
-        pixelsPerCell,
-        pixelsPerCell
-      );
+      const baseR = Math.floor(color.r * 255);
+      const baseG = Math.floor(color.g * 255);
+      const baseB = Math.floor(color.b * 255);
+
+      // Fill cell pixel-by-pixel with subtle noise for a dirt look
+      const px = Math.ceil(pixelsPerCell);
+      const x0 = Math.floor(col * pixelsPerCell);
+      const y0 = Math.floor(row * pixelsPerCell);
+      for (let py = 0; py < px; py++) {
+        for (let pxx = 0; pxx < px; pxx++) {
+          const n = (Math.random() - 0.5) * 18; // ±9 noise range
+          const r = Math.max(0, Math.min(255, baseR + n));
+          const g = Math.max(0, Math.min(255, baseG + n * 0.9));
+          const b = Math.max(0, Math.min(255, baseB + n * 0.8));
+          ctx.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+          ctx.fillRect(x0 + pxx, y0 + py, 1, 1);
+        }
+      }
     }
   }
   

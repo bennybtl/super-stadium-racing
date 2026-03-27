@@ -73,7 +73,7 @@ export class ParticleEffects {
     return splashParticles;
   }
 
-  update(state, speed, terrainManager) {
+  update(state, speed, terrainManager, isGrounded = true) {
     // Update drift particles
     if (speed > 0.5) {
       const driftIntensity = Math.max(0, state.slipAngle - state.driftThreshold);
@@ -83,9 +83,9 @@ export class ParticleEffects {
       this.driftParticles.emitRate = 0;
     }
     
-    // Update splash particles when in water
+    // Update splash particles when in water and wheels are on the ground
     const isInWater = terrainManager && terrainManager.getTerrainAt(this.mesh.position).name === 'WATER';
-    if (isInWater && speed > 1) {
+    if (isInWater && isGrounded && speed > 1) {
       this.splashParticles.emitRate = speed * 80;
     } else {
       this.splashParticles.emitRate = 0;

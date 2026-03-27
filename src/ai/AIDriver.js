@@ -32,6 +32,13 @@ export class AIDriver {
     this.stuckThreshold = 3000; // 3 seconds in milliseconds
     this.lastPosition = null;
     this.truckMesh = null; // Will be set after truck creation
+    // Position-based stuck detection: sample every second, trigger if barely moved
+    this.positionCheckTimer = 0;
+    this.positionCheckInterval = 1000; // check every 1 second
+    this.lastCheckedPosition = null;
+    this.positionStuckTimer = 0;
+    this.positionStuckThreshold = 3000; // 3 seconds without movement
+    this.positionStuckMinDist = 1.0;   // must move at least 1 unit per second
     
     // Debug visualization
     this.debugLines = [];
@@ -61,18 +68,15 @@ export class AIDriver {
     const nextCheckpointIndex = this.lastCheckpointPassed % this.checkpoints.length;
     const targetCheckpoint = this.checkpoints[nextCheckpointIndex];
     
-    // Calculate approach point - a point before the checkpoint in the correct direction
-    // The checkpoint heading indicates which direction you should be traveling when passing through
-    const approachDistance = 10; // Distance before checkpoint to aim for
+    // Approach point: a point before the checkpoint aligned with its heading
+    const approachDistance = 10;
     const approachPoint = {
       x: targetCheckpoint.x - Math.sin(targetCheckpoint.heading) * approachDistance,
       z: targetCheckpoint.z - Math.cos(targetCheckpoint.heading) * approachDistance
     };
     
-    // Calculate path from current position to approach point
+    // Build path: approach → checkpoint centre
     this.path = this.findPath(currentPosition, approachPoint);
-    
-    // Add the checkpoint itself as the final waypoint to ensure we pass through it
     this.path.push({ x: targetCheckpoint.x, z: targetCheckpoint.z });
     
     this.currentPathIndex = 0;
@@ -80,7 +84,6 @@ export class AIDriver {
     
     console.log(`[AIDriver] Calculated path to checkpoint #${targetCheckpoint.index} (heading: ${(targetCheckpoint.heading * 180 / Math.PI).toFixed(1)}°) with ${this.path.length} waypoints`);
     
-    // Update debug visualization if enabled
     if (this.debugEnabled && this.scene) {
       this.updateDebugVisualization();
     }
@@ -90,9 +93,49 @@ export class AIDriver {
    * Called when AI passes a checkpoint - recalculate path to next
    */
   onCheckpointPassed(checkpointIndex, currentPosition) {
+    // Grab the gate we just passed before updating lastCheckpointPassed
+    const passedCheckpoint = this.checkpoints[this.currentCheckpointTarget];
+
     this.lastCheckpointPassed = checkpointIndex;
+
+    // Use the exit point as the start of the next path so A* routes
+    // forward from where the truck is actually heading, not backward to
+    // the approach side of the next checkpoint.
+    let pathStartPosition = currentPosition;
+    let exitPoint = null;
+    if (passedCheckpoint) {
+      const exitDistance = 10;
+      exitPoint = {
+        x: passedCheckpoint.x + Math.sin(passedCheckpoint.heading) * exitDistance,
+        z: passedCheckpoint.z + Math.cos(passedCheckpoint.heading) * exitDistance,
+      };
+      pathStartPosition = exitPoint;
+    }
+
+    this.calculatePathToNextCheckpoint(pathStartPosition);
+
+    // Prepend a smooth exit arc so the truck flows through the gate and
+    // curves naturally toward the next checkpoint rather than turning sharply.
+    if (exitPoint) {
+      // Build intermediate waypoints that blend from the gate's exit heading
+      // toward the first real waypoint of the new path.
+      const firstReal = this.path[0] ?? exitPoint;
+      const exitWaypoints = [];
+      const numBlendPoints = 4;
+      for (let i = numBlendPoints; i >= 1; i--) {
+        const t = i / (numBlendPoints + 1); // 1 = near gate, 0 = near firstReal
+        exitWaypoints.push({
+          x: exitPoint.x * t + firstReal.x * (1 - t),
+          z: exitPoint.z * t + firstReal.z * (1 - t),
+        });
+      }
+      // Prepend: [exitPoint, blend1, blend2, blend3, blend4, ...original path]
+      this.path.unshift(...exitWaypoints);
+      this.path.unshift(exitPoint);
+      this.currentPathIndex = 0;
+    }
+
     console.log(`[AIDriver] Passed checkpoint ${checkpointIndex}, recalculating path...`);
-    this.calculatePathToNextCheckpoint(currentPosition);
   }
 
   /**
@@ -340,7 +383,7 @@ export class AIDriver {
   /**
    * Get steering input based on current position
    */
-  getInput(position, heading) {
+  getInput(position, heading, fwdSpeed = 0) {
     if (this.path.length === 0) {
       console.log('[AIDriver] No path available');
       return { forward: false, back: false, left: false, right: false };
@@ -396,28 +439,51 @@ export class AIDriver {
       // console.debug(`[AIDriver] Sharp turn detected (${turnStrength.toFixed(2)}), coasting`);
     }
     
+    const isActuallyReversing = fwdSpeed < -0.3;
     const input = {
       forward: shouldMoveForward,
       back: shouldReverse,
-      left: turnStrength < -steeringThreshold,
-      right: turnStrength > steeringThreshold
+      // When actually moving backward, steering physics is inverted — flip to compensate
+      left: isActuallyReversing ? turnStrength > steeringThreshold : turnStrength < -steeringThreshold,
+      right: isActuallyReversing ? turnStrength < -steeringThreshold : turnStrength > steeringThreshold
     };
     
-    // Stuck detection - only trigger if not trying to move forward or back
+    // Stuck detection — no-throttle case
     const currentPos = { x: position.x, z: position.z };
     if (!input.forward && !input.back) {
-      this.stuckTimer += 16.67; // Approximate deltaTime (60fps)
-      
-      // If stuck for too long, respawn facing target
+      this.stuckTimer += 16.67;
       if (this.stuckTimer >= this.stuckThreshold && this.truckMesh) {
-        // console.debug('[AIDriver] Stuck detected (not moving forward/back), respawning facing target...');
         this.respawnFacingTarget(targetWaypoint);
         this.stuckTimer = 0;
+        this.positionStuckTimer = 0;
+        this.lastCheckedPosition = currentPos;
       }
     } else {
-      // Moving, reset timer
       this.stuckTimer = 0;
     }
+
+    // Stuck detection — position hasn't changed in 3 seconds
+    this.positionCheckTimer += 16.67;
+    if (this.positionCheckTimer >= this.positionCheckInterval) {
+      this.positionCheckTimer = 0;
+      if (this.lastCheckedPosition) {
+        const dx = currentPos.x - this.lastCheckedPosition.x;
+        const dz = currentPos.z - this.lastCheckedPosition.z;
+        const moved = Math.sqrt(dx * dx + dz * dz);
+        if (moved < this.positionStuckMinDist) {
+          this.positionStuckTimer += this.positionCheckInterval;
+          if (this.positionStuckTimer >= this.positionStuckThreshold && this.truckMesh) {
+            this.respawnFacingTarget(targetWaypoint);
+            this.positionStuckTimer = 0;
+            this.stuckTimer = 0;
+          }
+        } else {
+          this.positionStuckTimer = 0;
+        }
+      }
+      this.lastCheckedPosition = currentPos;
+    }
+
     this.lastPosition = currentPos;
     
     // Update debug visualization
@@ -496,35 +562,77 @@ export class AIDriver {
   }
 
   /**
-   * Respawn truck at current position but facing target waypoint
+   * Respawn truck facing target waypoint, moving it clear of any nearby walls first.
    */
   respawnFacingTarget(targetWaypoint) {
     if (!this.truck || !this.truckMesh || !targetWaypoint) return;
     
     const currentPos = this.truckMesh.position;
-    const dx = targetWaypoint.x - currentPos.x;
-    const dz = targetWaypoint.z - currentPos.z;
-    
-    // Calculate heading to target
+
+    // Find a clear spawn position by scanning outward from the current position.
+    // First try the nearest unblocked path waypoint behind the truck, then
+    // fall back to a radial sweep if none is found.
+    const spawnPos = this._findClearPosition(currentPos, targetWaypoint);
+
+    // Move the truck to the clear position
+    this.truckMesh.position.x = spawnPos.x;
+    this.truckMesh.position.z = spawnPos.z;
+    this.truckMesh.position.y = this.track.getHeightAt(spawnPos.x, spawnPos.z) + 0.6;
+
+    const dx = targetWaypoint.x - spawnPos.x;
+    const dz = targetWaypoint.z - spawnPos.z;
     const targetHeading = Math.atan2(dx, dz);
     
-    // Set rotation on mesh
     this.truckMesh.rotation.y = targetHeading;
-    
-    // Update truck state heading
     this.truck.state.heading = targetHeading;
     
     // Reset velocities
     this.truck.state.velocity.set(0, 0, 0);
     this.truck.state.verticalVelocity = 0;
     
-    // Reset physics body velocity
     if (this.truck.physics && this.truck.physics.body) {
       this.truck.physics.body.setLinearVelocity(new Vector3(0, 0, 0));
       this.truck.physics.body.setAngularVelocity(new Vector3(0, 0, 0));
     }
     
-    console.log(`[AIDriver] Respawned facing target at heading ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
+    console.log(`[AIDriver] Respawned at (${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(1)}) facing ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
+  }
+
+  /**
+   * Find the nearest position clear of walls.
+   * Prefers a recent path waypoint; falls back to a radial sweep.
+   */
+  _findClearPosition(currentPos, targetWaypoint) {
+    // 1. Walk back along the recorded path to find the nearest unblocked waypoint
+    for (let i = Math.max(0, this.currentPathIndex - 1); i >= 0; i--) {
+      const wp = this.path[i];
+      const cell = this.worldToGrid(wp.x, wp.z);
+      if (!this.isBlocked(cell.x, cell.z)) {
+        // Also verify it's not too far away (don't teleport across the map)
+        const dx = wp.x - currentPos.x;
+        const dz = wp.z - currentPos.z;
+        if (Math.sqrt(dx * dx + dz * dz) < 30) {
+          return { x: wp.x, z: wp.z };
+        }
+      }
+    }
+
+    // 2. Radial sweep: try increasingly large distances in 16 directions
+    const angles = 16;
+    for (let radius = 2; radius <= 12; radius += 2) {
+      for (let a = 0; a < angles; a++) {
+        const angle = (a / angles) * Math.PI * 2;
+        const candidateX = currentPos.x + Math.cos(angle) * radius;
+        const candidateZ = currentPos.z + Math.sin(angle) * radius;
+        const cell = this.worldToGrid(candidateX, candidateZ);
+        if (this.isValidCell(cell.x, cell.z) && !this.isBlocked(cell.x, cell.z)) {
+          return { x: candidateX, z: candidateZ };
+        }
+      }
+    }
+
+    // 3. Last resort: stay put
+    return { x: currentPos.x, z: currentPos.z };
   }
 
   /**
