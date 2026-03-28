@@ -1,11 +1,11 @@
 # Offroad Racing Game - Agent Documentation
 
 ## Project Overview
-This is an isometric offroad racing game built with Babylon.js and Havok Physics. It features arcade-style truck physics, terrain effects, checkpoints, and lap tracking. The game is inspired by classic games like Super Off-Road.
+An isometric offroad racing game built with Babylon.js and Havok Physics. Features arcade-style truck physics, terrain effects, AI drivers, checkpoints, lap tracking, a track editor, and a menu system. Inspired by classic games like Super Off-Road.
 
 ## Technology Stack
 - **Babylon.js** - 3D rendering engine
-- **Havok Physics** - Physics simulation
+- **Havok Physics** - Physics simulation (MESH shape for ground, BOX for walls/tires)
 - **Vite** - Build tool and dev server
 - **Vanilla JavaScript** - No framework, ES modules
 
@@ -13,211 +13,262 @@ This is an isometric offroad racing game built with Babylon.js and Havok Physics
 
 ```
 offroad/
-├── index.html           # Main HTML file with canvas and UI elements
-├── package.json         # Dependencies and scripts
-├── vite.config.js       # Vite configuration
+├── index.html
+├── package.json
+├── vite.config.js
+├── tracks/                        # JSON track definitions
+│   ├── simple.json
+│   ├── hills.json
+│   ├── mudPit.json
+│   ├── rollercoaster.json
+│   ├── bankedTurn.json
+│   └── crossroads.json
 └── src/
-    ├── main.js          # Scene setup, game loop, checkpoint system
-    ├── truck.js         # Truck creation and physics (vertical + horizontal)
-    ├── track.js         # Track system with terrain features and checkpoints
-    └── terrain.js       # Terrain grid system with different surface types
+    ├── main.js                    # Scene setup, game loop, scene orchestration
+    ├── terrain.js                 # Terrain grid, types, physics modifiers
+    ├── track.js                   # Track feature definitions + height/terrain queries
+    ├── truck.js                   # Legacy factory shim (createTruck / updateTruck)
+    ├── ai/
+    │   └── AIDriver.js            # A* pathfinding, stuck detection, respawn
+    ├── managers/
+    │   ├── BarrierManager.js      # Track boundary barriers
+    │   ├── CameraController.js    # Isometric camera + zoom
+    │   ├── CheckpointManager.js   # Gate detection, lap counting
+    │   ├── EditorController.js    # In-game track editor
+    │   ├── GameState.js           # Race state machine
+    │   ├── InputManager.js        # Keyboard input
+    │   ├── MenuManager.js         # Main menu UI
+    │   ├── TrackLoader.js         # JSON track loading
+    │   ├── TireStackManager.js    # Movable tire obstacles
+    │   ├── UIManager.js           # HUD elements
+    │   └── WallManager.js         # Wall/barrier physics meshes
+    └── truck/
+        ├── index.js               # Re-exports Truck class
+        ├── truck.js               # Truck class — coordinates all subsystems
+        ├── Controls.js            # Steering, acceleration, boost logic
+        ├── DriftPhysics.js        # Grip, slip angle, drag
+        ├── EntityPhysics.js       # Havok body sync
+        ├── ParticleEffects.js     # Drift smoke, water splash, nitro burst
+        ├── TerrainPhysics.js      # Gravity, suspension spring, slope orientation
+        └── TruckBody.js           # Visual puppet mesh (cabin, wheels, etc.)
 ```
 
 ## Core Systems
 
 ### 1. Track System (`track.js`)
-Defines terrain layouts using composable features:
+Defines terrain layouts using composable features stored in a `features[]` array.
+Tracks can be built programmatically or loaded from JSON files in `tracks/`.
 
 **Feature Types:**
-- `ridgeEW/ridgeNS` - Hills running east-west or north-south
-- `hill` - Circular hills with radius and height
-- `slopedRect` - Rectangular areas that slope along X or Z axis
-- `terrainRect/terrainCircle` - Areas with specific terrain types (mud, water, etc.)
-- `checkpoint` - Racing gates with optional numbering for ordered sequences
+- `ridgeEW` / `ridgeNS` — hills running east-west or north-south
+- `hill` — circular Gaussian hill with radius and height
+- `squareHill` — flat-topped rectangle with cosine transition skirt; `height` can be negative for pits
+- `slopedRect` — rectangle that slopes along X or Z axis; supports optional `transition` cosine falloff band
+- `terrainRect` / `terrainCircle` — areas with specific terrain types (mud, water, etc.)
+- `checkpoint` — racing gate with optional sequential numbering
+- `wall` — straight immovable wall, terrain-following via segments
+- `curvedWall` — arc of box segments approximating a curve
+- `polyWall` — wall defined by an array of `{x, z}` points
+- `tireStack` — movable stack of 3 tires at a world position
 
 **Key Methods:**
-- `getHeightAt(x, z)` - Returns terrain height at world position
-- `getTerrainTypeAt(x, z)` - Returns terrain type at world position
-- `addCheckpoint(centerX, centerZ, heading, width, checkpointNumber)` - Add checkpoint gate
+- `getHeightAt(x, z)` — additive sum of all elevation features at a world point
+- `getTerrainTypeAt(x, z)` — returns the terrain type of the topmost matching feature
 
-**Example Tracks:**
-Located in `EXAMPLE_TRACKS` object with pre-built track configurations.
+**`squareHill` math:**
+```
+edgeDx = max(0, |lx| - halfWidth)
+edgeDz = max(0, |lz| - halfDepth)
+dist = sqrt(edgeDx² + edgeDz²)      // distance to nearest rectangle edge
+t = clamp(dist / transition, 0, 1)
+height contribution = feature.height * (cos(t * π) + 1) / 2
+```
+This correctly handles corners without diagonal artifacts.
+
+**`slopedRect` with `transition`:**
+Outside the rectangle, the nearest-edge height is sampled and blended with a cosine falloff so there is no hard cliff at the boundary.
+
+**Adding a New Track Feature:**
+1. Add `add___()` method to `Track` class with a feature object pushed to `this.features`
+2. Add a `case` to `getHeightAt()` if it changes elevation
+3. Add a `case` to `getTerrainTypeAt()` if it changes terrain type
 
 ### 2. Terrain System (`terrain.js`)
-Grid-based terrain management that applies physics modifiers:
+Grid-based terrain management that applies physics and visual modifiers.
 
-**Terrain Types:**
-- `ASPHALT` - Best grip (3.5x), low drag
-- `PACKED_DIRT` - Default baseline (2.0x grip)
-- `LOOSE_DIRT` - Slides more (0.5x grip)
-- `MUD` - Very slippery (0.15x grip), high drag (2.9x)
-- `WATER` - Low grip (0.3x), very high drag (8.0x)
+**Terrain Types (built-in):**
+| Name | Grip Mult | Drag Mult |
+|------|-----------|-----------|
+| `ASPHALT` | 3.5× | 1.0× |
+| `PACKED_DIRT` | 2.0× | 1.0× |
+| `LOOSE_DIRT` | 0.5× | 1.2× |
+| `MUD` | 0.15× | 2.9× |
+| `WATER` | 0.3× | 6.0× |
 
 **Grid System:**
-- Default: 160x160 world units, 2x2 cell size = 80x80 grid
-- Cells are sampled at their centers: `(col - cellsPerSide/2 + 0.5) * cellSize`
-- `getTerrainAt(position)` uses `Math.round()` to find nearest cell center
+- 160×160 world units, 2×2 cell size → 80×80 grid cells
+- Cell centers: `(col - cellsPerSide/2 + 0.5) * cellSize`
+- `getTerrainAt(position)` snaps to nearest cell center with `Math.round()`
 
-**Important:** Terrain grid size must match ground mesh size (both 160x160).
+**Important:** The terrain grid size and ground mesh size must both be 160×160.
 
-### 3. Truck Physics (`truck.js`)
-Two-part physics system:
+**Visual Texture:**
+- `DynamicTexture` drawn per-cell from terrain color
+- Per-pixel brightness noise (±9 units) applied on top for a matte dirt look
+- Ground material: `specularColor = (0,0,0)`, `specularPower = 0` (no shine)
 
-**Vertical Physics:**
-- Spring-based terrain collision (springStrength: 150, damping: 7)
-- Suspension compression tracking for visual effects
-- Groundedness calculation based on suspension state
+### 3. Truck Physics (modular, in `src/truck/`)
+The `Truck` class in `truck/truck.js` coordinates four physics subsystems:
 
-**Horizontal Physics:**
-- Arcade-style drift mechanics with slip angle calculation
-- Speed-based understeer (turn rate decreases at high speed)
-- Grip system: velocity lerps toward heading direction
-- Terrain modifiers apply to grip and drag
-- Separate handling for forward/reverse movement
-- Particle effects for drifting and water splashing
+**`TerrainPhysics.js`** — vertical physics
+- Spring-based terrain collision: `springStrength: 150`, `damping: 7`
+- Returns `{ groundedness, penetration }` each frame
+- `penetration` is direct geometry (not lerped) — use `penetration > -0.3` to gate terrain effects
 
-**Key State:**
-- `heading` - Direction truck is facing (radians)
-- `velocity` - Actual movement vector (can diverge from heading = drift)
-- `slipAngle` - Angle between heading and velocity
-- `grip` - How fast velocity aligns to heading (modified by terrain)
+**`DriftPhysics.js`** — horizontal traction
+- `applyGripAndDrift(speed, forward, groundedness)`: early-returns when `groundedness <= 0` (no air correction)
+- `applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness)`: uses `coastingMultiplier = 0.02` and `drag = 1.0` when airborne
 
-### 4. Checkpoint System (`main.js`)
-Racing checkpoint system with lap tracking:
+**`Controls.js`** — steering and acceleration
+- Steering inverts when `fwdSpeed < 0` (reversing) so the truck turns naturally in both directions
+- Boost: `boostActive`, `boostTimer`, `boostCount` (max 5), `boostDuration: 3.0s`, `boostAccelMult: 2.5×`, `boostSpeedMult: 1.8×`
 
-**Visual Elements:**
-- Two orange barrel cylinders marking the gate
-- Yellow arrow indicating correct direction
-- Numbered billboard (if checkpoint has a number)
-- Turns green when passed
+**`TruckBody.js`** — visual puppet
+- A separate visible mesh that rides on top of the invisible Havok physics box
+- Animates cabin, wheels, suspension compression, roll
 
-**Detection Logic:**
-- Checks perpendicular distance to gate line (within width/2)
-- Checks forward distance along heading (within 2 units)
-- Requires velocity in correct direction (dot product > 0)
-- Prevents same checkpoint triggering twice consecutively
-- If numbered: enforces sequential order (must pass 1, then 2, then 3, etc.)
+**Key State (on `truck.state`):**
+- `heading` — direction truck faces (radians); 0 = +Z north
+- `velocity` — world-space movement vector (can diverge from heading = drift)
+- `slipAngle` — angle between heading and velocity direction
+- `boostActive` / `boostTimer` / `boostCount`
 
-**Lap Completion:**
-- When all checkpoints passed, lap counter increments
-- All checkpoints reset for next lap
-- Checkpoint counter resets to 0
+**Airborne terrain gating** (`truck/truck.js`):
+```js
+const isGrounded = penetration > -0.3;
+if (terrainManager && isGrounded) { /* apply terrain modifiers */ }
+```
 
-### 5. Camera System (`main.js`)
+### 4. Particle Effects (`truck/ParticleEffects.js`)
+Three independent `ParticleSystem` instances managed per-truck:
+
+**Drift smoke** (`driftParticles`)
+- Emitter attached to truck mesh (moves with truck)
+- `emitRate = driftIntensity * 300`; zero when speed < 0.5
+- Color adapts to terrain via `DRIFT_COLORS` map — system is recreated via `setDriftColor()` only when terrain name changes
+
+**`DRIFT_COLORS` presets:**
+| Terrain | Color |
+|---------|-------|
+| `default` / `packed_dirt` | Dusty brown |
+| `loose_dirt` | Lighter tan |
+| `mud` | Dark brown |
+| `asphalt` | Grey |
+| `WATER` | Blue-white |
+
+**Water splash** (`splashParticles`)
+- `emitRate = speed * 80` when `isInWater && isGrounded && speed > 1`
+- Gated by `isGrounded` (penetration-based) so no splash while flying over water
+
+**Nitro burst** (`nitroParticles`)
+- Fires once on the rising edge of `state.boostActive` (rising-edge detection via `_wasBoostActive`)
+- Emitter is a **fixed world-space `Vector3`** snapped to truck's rear at fire time — particles stay on track and don't follow the truck
+- Direction vectors are rotated into world space from `state.heading` at fire time
+- Active for 0.35 seconds then `emitRate` drops to 0
+- White → grey with `gravity = (0, 1.5, 0)` for rising smoke effect
+
+### 5. AI Driver (`ai/AIDriver.js`)
+Autonomous driver using A* pathfinding on a 160×160 / 2-unit-resolution grid.
+
+**Pathfinding:**
+- Grid cells are marked blocked if they overlap any wall segment (with 2-unit safety margin)
+- A* uses 8-directional movement (diagonal cost = 1.414)
+- On checkpoint pass: exit point (10 units ahead along gate heading) is used as the A* start position, then 4 blend waypoints are prepended for a smooth curve through the gate
+
+**Steering:**
+- `getInput(position, heading, fwdSpeed)` — `fwdSpeed` is actual velocity dot forward
+- Left/right are flipped when `fwdSpeed < -0.3` to compensate for physics reversing the steering effect
+
+**Stuck detection (two independent systems):**
+1. **No-throttle timer** — if coasting/reversing for 3+ seconds → respawn
+2. **Position timer** — samples position every 1s; if moved < 1 unit in 3s → respawn
+
+**Respawn (`_findClearPosition`):**
+1. Walk back along path — first unblocked waypoint within 30 units
+2. Radial sweep — 16 directions, 2–12 unit radius
+3. Last resort — stay put
+
+### 6. Checkpoint System (`managers/CheckpointManager.js`)
+- Gate detection: perpendicular distance < `width/2`, forward distance < 2 units, velocity dot forward > 0
+- Numbered checkpoints enforce sequential order
+- `lastCheckpointPassed` index prevents double-triggers
+- On lap complete: all checkpoints reset, lap counter increments
+
+### 7. Camera (`managers/CameraController.js`)
 - Fixed isometric offset from truck: `(0, 28, -20)`
-- Smoothly follows truck position with lerp (0.08 factor)
-- Zoom controls: `-` to zoom out (2x max), `=` to zoom in (0.5x min)
-- Zoom scales the base offset while maintaining angle
+- Lerp follows truck position (factor 0.08)
+- Zoom: `-` / `=` keys, scales offset in range 0.5×–2.0×
 
-## Coordinate Systems
-
-### World Space
-- Origin at center of track
-- +X = East, +Z = North, +Y = Up
-- Heading: 0 = facing +Z (north), π/2 = facing +X (east)
-
-### Terrain Grid
-- Cells are indexed by `row * cellsPerSide + col`
-- Cell centers calculated as: `(index - cellsPerSide/2 + 0.5) * cellSize`
-- Sampling and collision detection both use cell centers (important for alignment!)
-
-### Texture Coordinates
-- Ground texture is flipped in both X and Z to match world orientation
-- Dynamic texture drawn per-cell based on terrain grid
+## Coordinate System
+- Origin at track centre; +X = East, +Z = North, +Y = Up
+- `heading`: 0 = facing +Z (north), π/2 = facing +X (east)
+- Steering: `heading -= turnSpeed` turns left, `+= turnSpeed` turns right
 
 ## Key Game Loop Flow
 
-1. **Physics Update** (`updateTruck`)
-   - Vertical physics (gravity, spring, suspension)
-   - Get terrain at truck position → modifiers
-   - Horizontal physics (steering, acceleration, grip, drag)
-   - Particle system updates (drift smoke, water splash)
-
-2. **Checkpoint Detection**
-   - For each checkpoint mesh
-   - Check if next in sequence (if numbered)
-   - Check spatial conditions (width, distance, direction)
-   - Mark passed, increment counter, visual feedback
-
-3. **Lap Completion Check**
-   - If checkpointCount == total, increment lap
-   - Reset all checkpoints and counter
-
-4. **Camera Update**
-   - Lerp camera to truck position + offset
-   - Apply zoom scaling
-
-5. **Debug Panel Update**
-   - Display suspension, speed, grip, terrain, coordinates
-
-## Important Implementation Details
-
-### Terrain Texture Alignment
-The visual terrain texture and physics terrain grid must use identical sampling:
-- Both sample at cell centers: `(col - cellsPerSide/2 + 0.5) * cellSize`
-- `getTerrainAt()` rounds to nearest cell: `Math.round((pos + halfGrid)/cellSize - 0.5)`
-- Ground mesh and terrain grid must be same size (160x160)
-
-### Checkpoint Sequential Ordering
-- `checkpointNumber` parameter is optional (null = any order)
-- Numbered checkpoints enforce `expectedNumber = checkpointCount + 1`
-- `lastCheckpointPassed` index prevents duplicate triggers
-- Resets to -1 on lap completion
-
-### Particle Systems
-- Drift particles: emit rate based on slip angle and speed
-- Water splash particles: emit when in water terrain with speed > 1
-- Both use cloud/flare textures from Babylon.js assets
+1. **`Controls.updateBoost(deltaTime)`** — decrement boost timer
+2. **`TerrainPhysics.update()`** → returns `{ groundedness, penetration }`
+3. **Terrain modifiers** — gated on `penetration > -0.3`
+4. **`Controls.updateSteering()` / `updateAcceleration()`**
+5. **`DriftPhysics.applyDrag()` / `applyGripAndDrift()`**
+6. **Position update** — X/Z from velocity, Y from `TerrainPhysics`
+7. **`DriftPhysics.updateRoll()`** — visual lean
+8. **`ParticleEffects.update()`** — drift, splash, nitro
+9. **`CheckpointManager`** — gate detection, lap logic
+10. **`CameraController`** — lerp camera
 
 ## Controls
-- **W/↑** - Forward
-- **S/↓** - Back/Brake
-- **A/←** - Turn Left
-- **D/→** - Turn Right
-- **-** (minus) - Zoom Out
-- **=** (equals) - Zoom In
+| Key | Action |
+|-----|--------|
+| W / ↑ | Forward |
+| S / ↓ | Back / Brake |
+| A / ← | Turn Left |
+| D / → | Turn Right |
+| Space | Nitro boost |
+| - | Zoom Out |
+| = | Zoom In |
 
-## Debug Panel Elements
-Located in top-left, shows real-time physics data:
-- Compression, Groundedness, Penetration (suspension)
-- Vertical Velocity, Horizontal Speed
-- Effective Grip, Slip Angle
-- Terrain Multiplier
-- X, Y, Z coordinates
+## Common Gotchas
 
-## UI Elements
-- **Checkpoint Counter** (top-right, yellow) - Current checkpoint progress
-- **Lap Counter** (top-right, cyan) - Completed laps
-- **Debug Panel** (top-left, green) - Physics debugging info
+**Terrain modifiers applying in the air:**
+Use `penetration > -0.3` (direct geometry), not `groundedness > 0` (lerp-based, never fully zeros).
+
+**Particles following the truck when they shouldn't:**
+Setting `emitter = this.mesh` makes already-emitted particles move with the mesh. Use a fixed `Vector3` emitter for world-space effects (e.g. nitro burst).
+
+**AI steering inverted when reversing:**
+Physics inverts steering when `fwdSpeed < 0`. AI must check actual `fwdSpeed`, not its own `shouldReverse` intent.
+
+**A* routing backward through a checkpoint:**
+If A* starts from the truck's position AT the checkpoint, it routes to the approach side of the next one — backward. Fix: use the exit point (10u ahead) as the A* start.
+
+**NaN vertex positions crashing Havok:**
+If a track feature JSON is missing a required field (e.g. `depth`, `transition`), height calculations return `NaN`, poisoning the mesh vertices. Always add defensive `?? fallback` values.
+
+**Terrain texture/physics misalignment:**
+Both must sample at cell centers with `+ 0.5` offset. Ground mesh and grid must both be 160×160.
 
 ## Adding New Features
 
-### Adding a New Terrain Type
-1. Add to `TERRAIN_TYPES` in `terrain.js` with grip/drag multipliers and color
-2. Use in track features via `addTerrainRect()` or `addTerrainCircle()`
+### New terrain type
+1. Add to `TERRAIN_TYPES` in `terrain.js` with `gripMultiplier`, `dragMultiplier`, `color`
+2. Add to `DRIFT_COLORS` in `ParticleEffects.js` for correct drift smoke color
+3. Use via `addTerrainRect()` or `addTerrainCircle()` in a track definition
 
-### Adding a New Track
-1. Add to `EXAMPLE_TRACKS` in `track.js`
-2. Chain feature methods: `.addHill(...).addCheckpoint(...)`
-3. Update `main.js` to use: `EXAMPLE_TRACKS.yourTrack()`
+### New track feature
+1. Add `add___()` method to `Track` class (push to `this.features`)
+2. Add `case` to `getHeightAt()` for elevation
+3. Add `case` to `getTerrainTypeAt()` for terrain type override
 
-### Adding a New Track Feature
-1. Add feature type to `Track` class with `add___()` method
-2. Implement in `getHeightAt()` for elevation changes
-3. Implement in `getTerrainTypeAt()` if it affects terrain type
-
-## Common Issues
-
-**Texture/Physics Misalignment:**
-- Ensure terrain grid size matches ground mesh size
-- Both must sample at cell centers with `+ 0.5` offset
-- `getTerrainAt()` must use `Math.round()` with `-0.5` correction
-
-**Checkpoint Triggering Multiple Times:**
-- Use `lastCheckpointPassed` index to prevent consecutive triggers
-- Check velocity direction (dot product with heading > 0)
-
-**Lap Not Completing:**
-- Verify all checkpoints in sequence are being passed
-- Check `checkpointCount === totalCheckpoints` condition
-- Ensure checkpoint reset happens after lap increment
+### New track (JSON)
+Place a `.json` file in `tracks/` with a `name` and `features` array. Each feature object mirrors the parameters of the corresponding `add___()` method.

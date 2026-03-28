@@ -19,6 +19,7 @@ export class UIManager {
     this.debugGrip = document.getElementById('debug-grip');
     this.debugSlip = document.getElementById('debug-slip');
     this.debugTerrain = document.getElementById('debug-terrain');
+    this.debugSlope   = document.getElementById('debug-slope');
     this.debugX = document.getElementById('debug-x');
     this.debugY = document.getElementById('debug-y');
     this.debugZ = document.getElementById('debug-z');
@@ -53,7 +54,7 @@ export class UIManager {
     }
   }
 
-  updateDebugPanel(truckState, terrainType) {
+  updateDebugPanel(truckState, terrainType, slopeAngleDeg = null) {
     if (!this.debugCompression) return; // Debug panel may be disabled
 
     const speed = truckState.velocity.length();
@@ -65,7 +66,10 @@ export class UIManager {
     this.debugSpeed.textContent = speed.toFixed(2);
     this.debugGrip.textContent = truckState.grip.toFixed(3);
     this.debugSlip.textContent = (truckState.slipAngle * 180 / Math.PI).toFixed(1) + '°';
-    this.debugTerrain.textContent = terrainType || 'dirt';
+    this.debugTerrain.textContent = terrainType.name || 'dirt';
+    this.debugSlope.textContent = slopeAngleDeg !== null
+      ? slopeAngleDeg.toFixed(1) + '°'
+      : '-';
   }
 
   updatePosition(position) {

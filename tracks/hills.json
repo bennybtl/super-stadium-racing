@@ -3,8 +3,8 @@
   "features": [
     {
       "type": "hill",
-      "centerX": -20,
-      "centerZ": -20,
+      "centerX": -31.5,
+      "centerZ": -10,
       "radius": 8,
       "height": 2,
       "terrainType": {
@@ -20,9 +20,9 @@
     },
     {
       "type": "hill",
-      "centerX": 20,
-      "centerZ": 20,
-      "radius": 10,
+      "centerX": 58.5,
+      "centerZ": 53.5,
+      "radius": 14,
       "height": 2.5,
       "terrainType": {
         "name": "packed_dirt",
@@ -40,7 +40,7 @@
       "centerX": 0,
       "centerZ": 0,
       "radius": 12,
-      "height": -1.5,
+      "height": -2,
       "terrainType": {
         "name": "loose_dirt",
         "gripMultiplier": 0.5,
@@ -54,9 +54,9 @@
     },
     {
       "type": "hill",
-      "centerX": -40,
+      "centerX": -41,
       "centerZ": 30,
-      "radius": 18,
+      "radius": 23,
       "height": -1.5,
       "terrainType": {
         "name": "mud",
@@ -109,7 +109,7 @@
       "type": "checkpoint",
       "centerX": -60,
       "centerZ": -1,
-      "heading": 0,
+      "heading": -3.099999999999997,
       "width": 10,
       "checkpointNumber": 1,
       "passed": false
@@ -125,19 +125,19 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 23,
-      "centerZ": 0,
-      "heading": 3.141592653589793,
-      "width": 10,
+      "centerX": 58.5,
+      "centerZ": 35,
+      "heading": 6.1415926535897825,
+      "width": 40,
       "checkpointNumber": 3,
       "passed": false
     },
     {
       "type": "checkpoint",
-      "centerX": 10,
-      "centerZ": 40,
-      "heading": -1.5707963267948966,
-      "width": 10,
+      "centerX": -8,
+      "centerZ": 54,
+      "heading": -1.5207963267948965,
+      "width": 40,
       "checkpointNumber": 4,
       "passed": false
     },
@@ -173,16 +173,60 @@
       "segments": 12,
       "thickness": 0.5
     },
-    { "type": "tireStack", "x": -5, "z": 5 },
-    { "type": "tireStack", "x": -3, "z": 5 },
-    { "type": "tireStack", "x": -1, "z": 5 },
-    { "type": "tireStack", "x": 1,  "z": 5 },
-    { "type": "tireStack", "x": 3,  "z": 5 },
-    { "type": "tireStack", "x": 5,  "z": 5 },
-    { "type": "tireStack", "x": -4, "z": 7 },
-    { "type": "tireStack", "x": -2, "z": 7 },
-    { "type": "tireStack", "x": 0, "z": 7 },
-    { "type": "tireStack", "x": 2,  "z": 7 },
-    { "type": "tireStack", "x": 4,  "z": 7 }
+    {
+      "type": "tireStack",
+      "x": -5,
+      "z": 5
+    },
+    {
+      "type": "tireStack",
+      "x": -3,
+      "z": 5
+    },
+    {
+      "type": "tireStack",
+      "x": -1,
+      "z": 5
+    },
+    {
+      "type": "tireStack",
+      "x": 1,
+      "z": 5
+    },
+    {
+      "type": "tireStack",
+      "x": 3,
+      "z": 5
+    },
+    {
+      "type": "tireStack",
+      "x": 5,
+      "z": 5
+    },
+    {
+      "type": "tireStack",
+      "x": -4,
+      "z": 7
+    },
+    {
+      "type": "tireStack",
+      "x": -2,
+      "z": 7
+    },
+    {
+      "type": "tireStack",
+      "x": 0,
+      "z": 7
+    },
+    {
+      "type": "tireStack",
+      "x": 2,
+      "z": 7
+    },
+    {
+      "type": "tireStack",
+      "x": 4,
+      "z": 7
+    }
   ]
 }

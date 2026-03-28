@@ -106,8 +106,8 @@ export class ParticleEffects {
     particles.direction2 = new Vector3(0, 2.0, -5);
     particles.minAngularSpeed = 0;
     particles.maxAngularSpeed = Math.PI;
-    particles.minEmitPower = 4;
-    particles.maxEmitPower = 10;
+    particles.minEmitPower = 1;
+    particles.maxEmitPower = 3;
     particles.updateSpeed = 0.02;
 
     particles.start();

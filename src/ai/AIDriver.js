@@ -402,7 +402,6 @@ export class AIDriver {
       0,
       targetWaypoint.z - position.z
     );
-    const distToTarget = toTarget.length();
     toTarget.normalize();
     
     // Current heading vector
@@ -414,7 +413,6 @@ export class AIDriver {
     
     // Determine turn direction
     const turnStrength = cross.y;
-    const alignment = dot;
     
     // Always steer towards target
     const steeringThreshold = 0.05;
@@ -639,7 +637,7 @@ export class AIDriver {
    * Update visual debug representation of path
    */
   updateDebugVisualization() {
-    if (!this.scene) return;
+    if (!this.scene || !this.track || !this.  ) return;
     
     // Clean up old debug markers
     this.debugLines.forEach(mesh => mesh.dispose());

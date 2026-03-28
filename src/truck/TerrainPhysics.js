@@ -89,18 +89,14 @@ export class TerrainPhysics {
     }
 
     const moveDir = this.state.velocity.clone().normalize();
-    const checkDist = 1.5;
-    const futureX = mesh.position.x + moveDir.x * checkDist;
-    const futureZ = mesh.position.z + moveDir.z * checkDist;
-    
-    const currentHeight = track.getHeightAt(mesh.position.x, mesh.position.z);
-    const futureHeight = track.getHeightAt(futureX, futureZ);
-    const heightDiff = futureHeight - currentHeight;
-    const slopeAngle = Math.atan2(heightDiff, checkDist);
-    
+    const moveDirHeading = Math.atan2(moveDir.x, moveDir.z);
+
+    const slopeDeg = track.getTerrainSlopeAt(mesh.position.x, mesh.position.z, moveDirHeading, 1, 4);
+    const slopeAngle = slopeDeg * Math.PI / 180;
+
     // Only block upward slopes steeper than 45 degrees
     const maxSlopeAngle = Math.PI / 4;
-    if (heightDiff > 0 && slopeAngle > maxSlopeAngle) {
+    if (slopeDeg > 0 && slopeAngle > maxSlopeAngle) {
       const velocityIntoSlope = this.state.velocity.dot(moveDir);
       if (velocityIntoSlope > 0) {
         const normalComponent = moveDir.scale(velocityIntoSlope * 0.9);

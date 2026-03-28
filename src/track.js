@@ -188,6 +188,22 @@ export class Track {
     return this;
   }
 
+  getTerrainSlopeAt(x, z, heading, fwdSlopeDist = 1.0, offset = 0) {
+    const ox = x + Math.sin(heading) * offset;
+    const oz = z + Math.cos(heading) * offset;
+    const hx = ox + Math.sin(heading) * fwdSlopeDist;
+    const hz = oz + Math.cos(heading) * fwdSlopeDist;
+    const hbx = ox - Math.sin(heading) * fwdSlopeDist;
+    const hbz = oz - Math.cos(heading) * fwdSlopeDist;
+
+    const slopeRad = Math.atan2(
+      this.getHeightAt(hx, hz) - this.getHeightAt(hbx, hbz),
+      fwdSlopeDist * 2
+    );
+    const slopeDeg = slopeRad * 180 / Math.PI;
+    return slopeDeg;
+  }
+
   // Get the height at a world position
   getHeightAt(x, z) {
     let totalHeight = 0;

@@ -165,12 +165,12 @@ export class TruckBody {
 
   _animateWheels(state, speed, dt, input) {
     // Wheel spin: one full rotation per ~2.26 units travelled (circumference ≈ π×0.72)
-    const spinDelta = (speed * dt) / (Math.PI * 0.72) * Math.PI * 2;
+    // const spinDelta = (speed * dt) / (Math.PI * 0.72) * Math.PI * 2;
 
     // Forward speed sign determines spin direction
-    const forward = new Vector3(Math.sin(state.heading), 0, Math.cos(state.heading));
-    const fwdSpeed = state.velocity.dot(forward);
-    const spinSign = fwdSpeed >= 0 ? 1 : -1;
+    // const forward = new Vector3(Math.sin(state.heading), 0, Math.cos(state.heading));
+    // const fwdSpeed = state.velocity.dot(forward);
+    // const spinSign = fwdSpeed >= 0 ? 1 : -1;
 
     // Front wheel steer: lerp toward target angle
     const maxSteer = 0.42; // radians
@@ -184,7 +184,7 @@ export class TruckBody {
       w.mesh.position.y = w.baseLocalY + susTravel;
 
       // Spin around local X (the torus is rotated so local X is the axle)
-      w.mesh.rotation.x = (w.mesh.rotation.x ?? 0) + spinSign * spinDelta;
+      // w.mesh.rotation.x = (w.mesh.rotation.x ?? 0) + spinSign * spinDelta;
 
       // Steer front wheels around local Y
       if (w.isFront) {
