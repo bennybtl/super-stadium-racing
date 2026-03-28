@@ -5,6 +5,7 @@ import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { buildScene } from "./SceneBuilder.js";
+import { TRUCK_HEIGHT } from "../constants.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -42,7 +43,8 @@ export class RaceMode {
     let lapStartTime = null;
 
     // -- Trucks --
-    const playerTruck = createTruck(scene, shadows);
+    const spawnY = currentTrack.getHeightAt(0, 0) + TRUCK_HEIGHT + 3;
+    const playerTruck = createTruck(scene, shadows, null, null, new Vector3(0, spawnY, 0));
     const trucks = [
       {
         truck: playerTruck,
@@ -129,7 +131,7 @@ export class RaceMode {
         );
       }
 
-      const spawnY = currentTrack.getHeightAt(spawnX, spawnZ) + 0.8;
+      const spawnY = currentTrack.getHeightAt(spawnX, spawnZ) + TRUCK_HEIGHT;
       truck.mesh.position.set(spawnX, spawnY, spawnZ);
       truck.state.heading = spawnHeading;
       truck.mesh.rotation.y = spawnHeading;
@@ -159,7 +161,8 @@ export class RaceMode {
       uiManager.hideRaceTimer();
 
       trucks.forEach((truckData, index) => {
-        truckData.truck.mesh.position = new Vector3(index * 3, 5, index * 3);
+        const rx = index * 3, rz = index * 3;
+        truckData.truck.mesh.position = new Vector3(rx, currentTrack.getHeightAt(rx, rz) + TRUCK_HEIGHT, rz);
         truckData.truck.state.velocity = Vector3.Zero();
         truckData.truck.state.verticalVelocity = 0;
         truckData.truck.state.heading = 0;

@@ -12,12 +12,13 @@ import { TerrainPhysics } from "./TerrainPhysics.js";
 import { DriftPhysics } from "./DriftPhysics.js";
 import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
+import { TRUCK_HALF_HEIGHT, TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js";
 
 /**
  * Main Truck class that coordinates all truck subsystems
  */
 export class Truck {
-  constructor(scene, shadows, diffuseColor = null, driver = null) {
+  constructor(scene, shadows, diffuseColor = null, driver = null, spawnPos = null) {
     this.scene = scene;
     this.shadows = shadows;
     this.driver = driver; // Optional AI driver
@@ -25,6 +26,7 @@ export class Truck {
     
     // Create mesh and physics
     this.mesh = this.createMesh();
+    if (spawnPos) this.mesh.position.copyFrom(spawnPos);
     this.physics = this.createPhysics();
     
     // Initialize state
@@ -46,8 +48,8 @@ export class Truck {
   }
 
   createMesh() {
-    const mesh = MeshBuilder.CreateBox("truck", { width: 1.5, height: 0.8, depth: 2.6 }, this.scene);
-    mesh.position.y = 0.4;
+    const mesh = MeshBuilder.CreateBox("truck", { width: TRUCK_WIDTH, height: TRUCK_HEIGHT, depth: TRUCK_DEPTH }, this.scene);
+    mesh.position.y = TRUCK_HALF_HEIGHT;
     mesh.isVisible = false;  // visual puppet replaces this
     return mesh;
   }
@@ -187,8 +189,8 @@ export class Truck {
 }
 
 // Export legacy factory function for backward compatibility
-export function createTruck(scene, shadows, diffuseColor = null,driver = null) {
-  const truck = new Truck(scene, shadows, diffuseColor, driver);
+export function createTruck(scene, shadows, diffuseColor = null, driver = null, spawnPos = null) {
+  const truck = new Truck(scene, shadows, diffuseColor, driver, spawnPos);
   return {
     mesh: truck.mesh,
     state: truck.state,

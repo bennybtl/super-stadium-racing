@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-
+import { TRUCK_HALF_HEIGHT } from "../constants.js";
 /**
  * Handles terrain-related physics: gravity, suspension, slope collision
  */
@@ -88,15 +88,32 @@ export class TerrainPhysics {
       return mesh.position.add(this.state.velocity.scale(deltaTime));
     }
 
+    const truckBottom = mesh.position.y - TRUCK_HALF_HEIGHT;
+
+    // Skip slope blocking when the truck is airborne — the slope is below the truck
+    const terrainHere = track.getHeightAt(mesh.position.x, mesh.position.z);
+    if (truckBottom > terrainHere + 0.2) {
+      return mesh.position.add(this.state.velocity.scale(deltaTime));
+    }
+
     const moveDir = this.state.velocity.clone().normalize();
     const moveDirHeading = Math.atan2(moveDir.x, moveDir.z);
 
-    const slopeDeg = track.getTerrainSlopeAt(mesh.position.x, mesh.position.z, moveDirHeading, 1, 4);
+    const slopeDeg = track.getTerrainSlopeAt(mesh.position.x, mesh.position.z, moveDirHeading, 1, 3);
     const slopeAngle = slopeDeg * Math.PI / 180;
 
     // Only block upward slopes steeper than 45 degrees
     const maxSlopeAngle = Math.PI / 4;
     if (slopeDeg > 0 && slopeAngle > maxSlopeAngle) {
+      // Also skip if the forward sample terrain is below the truck's bottom —
+      // the slope is literally below the truck's trajectory (e.g. cresting a hill)
+      const forwardX = mesh.position.x + moveDir.x * 4;
+      const forwardZ = mesh.position.z + moveDir.z * 4;
+      const terrainAtForward = track.getHeightAt(forwardX, forwardZ);
+      if (terrainAtForward < truckBottom) {
+        return mesh.position.add(this.state.velocity.scale(deltaTime));
+      }
+
       const velocityIntoSlope = this.state.velocity.dot(moveDir);
       if (velocityIntoSlope > 0) {
         const normalComponent = moveDir.scale(velocityIntoSlope * 0.9);

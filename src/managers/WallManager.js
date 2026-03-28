@@ -1,19 +1,19 @@
-import {
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  Vector3,
-  PhysicsAggregate,
-  PhysicsShapeType,
-} from "@babylonjs/core";
+import { StraightWall } from "../objects/StraightWall.js";
+import { CurvedWall } from "../objects/CurvedWall.js";
+import { PolyWall } from "../objects/PolyWall.js";
+import { TRUCK_RADIUS } from "../constants.js";
 
 /**
- * WallManager - Creates and manages race track walls (straight and curved).
+ * WallManager - Creates and manages race track walls (straight, curved, poly).
  *
- * Walls are static physics bodies. Because trucks use PhysicsMotionType.ANIMATED,
- * the engine won't push them back automatically, so WallManager registers a
- * Babylon collision observable on each truck's physics body and manually cancels
- * the velocity component that drives into the wall.
+ * Wall construction and disposal is delegated to the object classes in
+ * src/objects/. This manager is responsible for spawning walls from track
+ * features, running per-frame velocity clamping and collision resolution
+ * against trucks, and the reset/dispose lifecycle.
+ *
+ * Trucks use PhysicsMotionType.ANIMATED so the engine won't push them back
+ * automatically. WallManager manually cancels the velocity component that
+ * drives into each wall segment every frame.
  */
 export class WallManager {
   constructor(scene, track, shadows) {
@@ -21,146 +21,25 @@ export class WallManager {
     this.track = track;
     this.shadows = shadows;
 
-    // All individual wall segment meshes (straight + curved arc segments)
-    this.wallMeshes = [];
+    // Wall objects (StraightWall | CurvedWall | PolyWall)
+    this._walls = [];
   }
 
-  // ─── Creation ────────────────────────────────────────────────────────────
-
-  createWalls() {
-    for (const feature of this.track.features) {
-      if (feature.type === "wall") {
-        this.createStraightWall(feature);
-      } else if (feature.type === "curvedWall") {
-        this.createCurvedWall(feature);
-      } else if (feature.type === "polyWall") {
-        this.createPolyWall(feature);
-      }
-    }
+  // ─── Convenience getter — flat list of all WallSegment instances ─────────
+  get _segments() {
+    return this._walls.flatMap(w => w.segments);
   }
 
   createStraightWall(feature) {
-    // Auto-calculate segments: ~one per 4 units of length, minimum 1
-    const segments = feature.segments ?? Math.max(1, Math.round(feature.length / 4));
-    const segLength = feature.length / segments;
-
-    // Direction the wall runs along in world space (local X after rotation.y = heading)
-    const dirX = Math.cos(feature.heading);
-    const dirZ = -Math.sin(feature.heading);
-
-    for (let i = 0; i < segments; i++) {
-      const offset = -feature.length / 2 + (i + 0.5) * segLength;
-      const px = feature.centerX + dirX * offset;
-      const pz = feature.centerZ + dirZ * offset;
-      const terrainHeight = this.track.getHeightAt(px, pz);
-
-      const mesh = MeshBuilder.CreateBox("wall", {
-        width: segLength * 1.02, // tiny overlap prevents gaps between segments
-        height: feature.height,
-        depth: feature.thickness,
-      }, this.scene);
-
-      mesh.position = new Vector3(px, terrainHeight + feature.height / 2, pz);
-      mesh.rotation.y = feature.heading;
-
-      // Store half-extents for per-frame collision checks
-      mesh._wallHalfLength = (segLength * 1.02) / 2;
-      mesh._wallHalfThick  = feature.thickness / 2;
-      mesh._wallHeading    = feature.heading;
-      mesh._wallFriction   = feature.friction ?? 0.1;
-
-      this._applyWallMaterial(mesh);
-      this._addPhysics(mesh);
-      this.wallMeshes.push(mesh);
-    }
+    this._walls.push(new StraightWall(feature, this.track, this.scene, this.shadows));
   }
 
   createCurvedWall(feature) {
-    const { centerX, centerZ, radius, startAngle, endAngle, height, segments, thickness } = feature;
-    const arcSpan = endAngle - startAngle;
-    const segmentAngle = arcSpan / segments;
-    // Width of each segment — slightly overlapping to avoid gaps
-    const segmentLength = 2 * radius * Math.sin(Math.abs(segmentAngle) / 2) * 1.05;
-
-    for (let i = 0; i < segments; i++) {
-      const midAngle = startAngle + (i + 0.5) * segmentAngle;
-
-      // Position on the arc
-      const px = centerX + Math.cos(midAngle) * radius;
-      const pz = centerZ - Math.sin(midAngle) * radius; // negate sin so CCW matches world Z
-
-      const terrainHeight = this.track.getHeightAt(px, pz);
-
-      const mesh = MeshBuilder.CreateBox("wall_arc", {
-        width: segmentLength,
-        height,
-        depth: thickness,
-      }, this.scene);
-
-      mesh.position = new Vector3(px, terrainHeight + height / 2, pz);
-      // Segment faces outward from the arc centre — perpendicular to the radius
-      mesh.rotation.y = midAngle + Math.PI / 2;
-
-      // Store half-extents for per-frame collision checks
-      mesh._wallHalfLength = (segmentLength * 1.05) / 2;
-      mesh._wallHalfThick  = thickness / 2;
-      mesh._wallHeading    = midAngle + Math.PI / 2;
-      mesh._wallFriction   = feature.friction ?? 0.1;
-
-      this._applyWallMaterial(mesh);
-      this._addPhysics(mesh);
-      this.wallMeshes.push(mesh);
-    }
+    this._walls.push(new CurvedWall(feature, this.track, this.scene, this.shadows));
   }
 
   createPolyWall(feature) {
-    const { points, height, thickness, friction } = feature;
-    if (!points || points.length < 2) return;
-
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-
-      const dx     = p1.x - p0.x;
-      const dz     = p1.z - p0.z;
-      const length = Math.sqrt(dx * dx + dz * dz);
-      if (length < 0.01) continue;
-
-      // heading: angle such that cos(h)=dx/len and -sin(h)=dz/len
-      // matches the convention used by createStraightWall
-      const heading = Math.atan2(-dz, dx);
-
-      // Sub-segment so each piece is ~4 units long (terrain-following)
-      const numSegs = Math.max(1, Math.round(length / 4));
-      const segLen  = length / numSegs;
-      const dirX    = dx / length;
-      const dirZ    = dz / length;
-
-      for (let s = 0; s < numSegs; s++) {
-        const t  = (s + 0.5) * segLen;
-        const px = p0.x + dirX * t;
-        const pz = p0.z + dirZ * t;
-        const terrainHeight = this.track.getHeightAt(px, pz);
-
-        const mesh = MeshBuilder.CreateBox("wall_poly", {
-          width:  segLen * 1.02,
-          height,
-          depth:  thickness,
-        }, this.scene);
-
-        mesh.position = new Vector3(px, terrainHeight + height / 2, pz);
-        mesh.rotation.y = heading;
-
-        mesh._wallHalfLength = (segLen * 1.02) / 2;
-        mesh._wallHalfThick  = thickness / 2;
-        mesh._wallHeading    = heading;
-        mesh._wallFriction   = friction ?? 0.1;
-
-        this._applyWallMaterial(mesh);
-        this._addPhysics(mesh);
-        this.wallMeshes.push(mesh);
-      }
-    }
+    this._walls.push(new PolyWall(feature, this.track, this.scene, this.shadows));
   }
 
   // ─── Pre-frame velocity clamp (call BEFORE updateTruck) ────────────────
@@ -171,11 +50,10 @@ export class WallManager {
    * grip/drift physics cannot re-inject wall-ward motion during the move step.
    */
   preUpdate(trucks, dt) {
-    const TRUCK_RADIUS = 0.75;
     for (const truckData of trucks) {
       const truck = truckData.truck ?? truckData;
       if (!truck.mesh || !truck.state) continue;
-      for (const seg of this.wallMeshes) {
+      for (const seg of this._segments) {
         this._preClampVelocity(truck, seg, TRUCK_RADIUS, dt);
       }
     }
@@ -184,12 +62,12 @@ export class WallManager {
   _preClampVelocity(truck, seg, truckRadius, dt) {
     const vel = truck.state.velocity;
     const pos = truck.mesh.position;
-    const h    = seg._wallHeading;
+    const h    = seg.heading;
     const cosH = Math.cos(h);
     const sinH = Math.sin(h);
 
-    const halfLen   = seg._wallHalfLength + truckRadius;
-    const halfThick = seg._wallHalfThick  + truckRadius;
+    const halfLen   = seg.halfLength + truckRadius;
+    const halfThick = seg.halfThick  + truckRadius;
 
     // Current local-space position
     const dx     = pos.x - seg.position.x;
@@ -222,7 +100,7 @@ export class WallManager {
       vel.x -= normalX * velDotNormal;
       vel.z -= normalZ * velDotNormal;
       // Bleed off a fraction of the remaining (tangential) speed
-      const retain = 1 - seg._wallFriction;
+      const retain = 1 - seg.friction;
       vel.x *= retain;
       vel.z *= retain;
     }
@@ -236,7 +114,6 @@ export class WallManager {
    * velocity, and smoothly correct its heading so it slides along the wall.
    */
   update(trucks) {
-    const TRUCK_RADIUS = 0.75; // half of truck width (1.5)
     if (!this._prevPositions) this._prevPositions = new Map();
     for (const truckData of trucks) {
       const truck = truckData.truck ?? truckData;
@@ -245,7 +122,7 @@ export class WallManager {
       const pos = truck.mesh.position;
       const prevPos = this._prevPositions.get(id) ?? pos.clone();
 
-      for (const seg of this.wallMeshes) {
+      for (const seg of this._segments) {
         this._resolveCollision(truck, seg, TRUCK_RADIUS, prevPos);
       }
 
@@ -256,12 +133,12 @@ export class WallManager {
 
   _resolveCollision(truck, seg, truckRadius, prevPos) {
     const pos  = truck.mesh.position;
-    const h    = seg._wallHeading;
+    const h    = seg.heading;
     const cosH = Math.cos(h);
     const sinH = Math.sin(h);
 
-    const halfLen   = seg._wallHalfLength + truckRadius;
-    const halfThick = seg._wallHalfThick  + truckRadius;
+    const halfLen   = seg.halfLength + truckRadius;
+    const halfThick = seg.halfThick  + truckRadius;
 
     const dx     = pos.x - seg.position.x;
     const dz     = pos.z - seg.position.z;
@@ -306,7 +183,7 @@ export class WallManager {
       vel.x -= normalX * velDotNormal;
       vel.z -= normalZ * velDotNormal;
       // Bleed off a fraction of the remaining (tangential) speed
-      const retain = 1 - seg._wallFriction;
+      const retain = 1 - seg.friction;
       vel.x *= retain;
       vel.z *= retain;
 
@@ -320,12 +197,12 @@ export class WallManager {
       // Angular distance (wrapped to [-π, π]) to each candidate
       const diff0 = ((truckH - wallParallel0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       const diff1 = ((truckH - wallParallel1 + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-
+      
       const newHeading = Math.abs(diff0) <= Math.abs(diff1) ? wallParallel0 : wallParallel1;
       truck.state.heading = newHeading;
 
       const deg = v => (v * 180 / Math.PI).toFixed(1) + '°';
-      console.log(
+      console.debug(
         `[Wall] COLLISION HEADING SNAP` +
         ` | truckHeading=${deg(truckH)}` +
         ` | wallSegHeading=${deg(h)}` +
@@ -348,7 +225,7 @@ export class WallManager {
     if (!seg._lastLogTime || now - seg._lastLogTime > 200) {
       seg._lastLogTime = now;
       const r = (v) => v.toFixed(3);
-      console.log(
+      console.debug(
         `[Wall] ${collisionType} | wallH=${r(h * 180/Math.PI)}°` +
         ` | localX=${r(localX)} localZ=${r(localZ)} signZ=${signZ}` +
         ` | halfThick=±${r(halfThick)}` +
@@ -362,13 +239,8 @@ export class WallManager {
   // ─── Lifecycle ───────────────────────────────────────────────────────────
 
   reset() {
-    this._disposeMeshes();
+    this.dispose();
     this._prevPositions = new Map();
-    this.createWalls();
-  }
-
-  dispose() {
-    this._disposeMeshes();
   }
 
   // ─── AI Helpers ──────────────────────────────────────────────────────────
@@ -378,39 +250,19 @@ export class WallManager {
    * wall segment so AIDriver can mark those grid cells as blocked.
    */
   getWallSegments() {
-    return this.wallMeshes.map(mesh => ({
-      x: mesh.position.x,
-      z: mesh.position.z,
-      halfLength: mesh._wallHalfLength,
-      halfDepth:  mesh._wallHalfThick,
-      heading: mesh._wallHeading,
+    return this._segments.map(seg => ({
+      x: seg.position.x,
+      z: seg.position.z,
+      halfLength: seg.halfLength,
+      halfDepth:  seg.halfThick,
+      heading:    seg.heading,
     }));
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────
 
-  _applyWallMaterial(mesh) {
-    const mat = new StandardMaterial("wallMat", this.scene);
-    mat.diffuseColor = new Color3(0.55, 0.55, 0.55);
-    mat.specularColor = new Color3(0.15, 0.15, 0.15);
-    mesh.material = mat;
-    mesh.receiveShadows = true;
-    this.shadows.addShadowCaster(mesh);
-  }
-
-  _addPhysics(mesh) {
-    new PhysicsAggregate(mesh, PhysicsShapeType.BOX, {
-      mass: 0,       // static — never moves
-      restitution: 0.2,
-      friction: 0.8,
-    }, this.scene);
-  }
-
-  _disposeMeshes() {
-    for (const mesh of this.wallMeshes) {
-      if (mesh.physicsBody) mesh.physicsBody.dispose();
-      mesh.dispose();
-    }
-    this.wallMeshes = [];
+  dispose() {
+    for (const wall of this._walls) wall.dispose();
+    this._walls = [];
   }
 }

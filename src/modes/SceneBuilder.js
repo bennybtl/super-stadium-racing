@@ -152,8 +152,20 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const wallManager = new WallManager(scene, currentTrack, shadows);
   const tireStackManager = new TireStackManager(scene, currentTrack, shadows);
   checkpointManager.createCheckpoints();
-  wallManager.createWalls();
-  tireStackManager.createTireStacks();
+
+  // Create Tire Stacks from track features (must be after ground so we can query heights)
+  for (const feature of currentTrack.features) {
+
+    if (feature.type === "tireStack") {
+      tireStackManager.createStack(feature);
+    } else if (feature.type === "wall") {
+      wallManager.createStraightWall(feature);
+    } else if (feature.type === "curvedWall") {
+      wallManager.createCurvedWall(feature);
+    } else if (feature.type === "polyWall") {
+      wallManager.createPolyWall(feature);
+    }
+  }
 
   return {
     scene,

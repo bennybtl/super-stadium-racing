@@ -1,24 +1,12 @@
-import {
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  Vector3,
-  PhysicsAggregate,
-  PhysicsShapeType,
-} from "@babylonjs/core";
-
-const TIRE_OUTER_RADIUS  = 0.42;  // outer radius of the torus
-const TIRE_TUBE_RADIUS   = 0.14;  // thickness of the torus tube
-const TIRE_HEIGHT        = TIRE_TUBE_RADIUS * 2; // how tall one tire sits
-const TIRES_PER_STACK    = 4;
-const STACK_MASS         = 40;    // total mass of the whole rigid stack
-
+import { Vector3 } from "@babylonjs/core";
+import { TireStack, TIRE_OUTER_RADIUS, STACK_MASS } from "../objects/TireStack.js";
+import { TRUCK_RADIUS } from "../constants.js";
 /**
  * TireStackManager — creates and manages movable tire stacks on the track.
  *
- * Each stack is a single rigid unit: one invisible BOX physics body with
- * three torus meshes parented to it as pure visuals. The whole group tumbles
- * together when hit by a truck.
+ * Construction and disposal of individual stacks is handled by TireStack.
+ * This manager is responsible for spawning stacks from track features,
+ * running per-frame collision with trucks, and reset/dispose lifecycle.
  */
 export class TireStackManager {
   constructor(scene, track, shadows) {
@@ -26,71 +14,16 @@ export class TireStackManager {
     this.track   = track;
     this.shadows = shadows;
 
-    // Array of { body: Mesh, tires: Mesh[], aggregate: PhysicsAggregate }
+    // Array of TireStack instances
     this._stacks = [];
   }
 
   // ─── Creation ────────────────────────────────────────────────────────────
-
-  createTireStacks() {
-    for (const feature of this.track.features) {
-      if (feature.type === "tireStack") {
-        this._createStack(feature);
-      }
-    }
-  }
-
-  _createStack(feature) {
+  createStack(feature) {
     const { x, z } = feature;
-    const groundY  = this.track.getHeightAt(x, z);
-
-    // Total height of the stacked tires
-    const stackHeight = TIRES_PER_STACK * TIRE_HEIGHT * 2;
-    const stackCentreY = groundY + stackHeight / 2;
-
-    // Invisible physics body — a box that tightly wraps all 3 tires
-    const body = MeshBuilder.CreateBox(`tireStack_${x}_${z}`, {
-      width:  TIRE_OUTER_RADIUS * 2,
-      height: stackHeight,
-      depth:  TIRE_OUTER_RADIUS * 2,
-    }, this.scene);
-    body.position   = new Vector3(x, stackCentreY, z);
-    body.isVisible  = false;
-    body.isPickable = false;
-
-    const aggregate = new PhysicsAggregate(body, PhysicsShapeType.BOX, {
-      mass:        STACK_MASS,
-      restitution: 0.2,
-      friction:    0.8,
-    }, this.scene);
-
-    // Linear damping: 0 = slides forever, 1 = stops almost instantly.
-    // Angular damping: controls how quickly it stops spinning/tumbling.
-    aggregate.body.setLinearDamping(0.6);
-    aggregate.body.setAngularDamping(0.4);
-
-    // Visual torus meshes parented to the body — they move with it for free
-    const tires = [];
-    for (let i = 0; i < TIRES_PER_STACK; i++) {
-      const tire = MeshBuilder.CreateTorus(`tire_${x}_${z}_${i}`, {
-        diameter:     TIRE_OUTER_RADIUS * 2,
-        thickness:    TIRE_TUBE_RADIUS * 2,
-        tessellation: 16,
-      }, this.scene);
-
-      // Position relative to the body's centre
-      const localY = -stackHeight / 2 + TIRE_TUBE_RADIUS + i * TIRE_HEIGHT;
-      tire.position   = new Vector3(0, localY, 0);
-      tire.rotation.y = Math.PI / 2; // lay flat
-      tire.parent     = body;
-
-      this._applyTireMaterial(tire);
-      this.shadows.addShadowCaster(tire);
-      tire.receiveShadows = true;
-      tires.push(tire);
-    }
-
-    this._stacks.push({ body, tires, aggregate });
+    const groundY = this.track.getHeightAt(x, z);
+    const stack = new TireStack(x, z, groundY, this.scene, this.shadows);
+    this._stacks.push(stack);
   }
 
   // ─── Per-frame interaction ────────────────────────────────────────────────
@@ -102,13 +35,12 @@ export class TireStackManager {
    */
   update(trucks) {
     // Combined contact radius: truck (≈half-diagonal of 1.5×2.2 box) + stack
-    const TRUCK_RADIUS   = 1.1;
     const CONTACT_DIST   = TRUCK_RADIUS + TIRE_OUTER_RADIUS;
     // Maximum fraction of truck speed lost per hit (capped so we don't reverse the truck)
     const MAX_SLOW       = 0.55;
 
     for (const stack of this._stacks) {
-      const sp = stack.body.position;
+      const sp = stack.position;
 
       for (const truckData of trucks) {
         const truck = truckData.truck ?? truckData;
@@ -151,29 +83,11 @@ export class TireStackManager {
   // ─── Lifecycle ───────────────────────────────────────────────────────────
 
   reset() {
-    this._dispose();
-    this.createTireStacks();
+    this.dispose();
   }
 
   dispose() {
-    this._dispose();
-  }
-
-  // ─── Private helpers ─────────────────────────────────────────────────────
-
-  _applyTireMaterial(mesh) {
-    const mat = new StandardMaterial("tireMat", this.scene);
-    mat.diffuseColor  = new Color3(0.08, 0.08, 0.08);
-    mat.specularColor = new Color3(0.05, 0.05, 0.05);
-    mesh.material = mat;
-  }
-
-  _dispose() {
-    for (const stack of this._stacks) {
-      stack.aggregate.dispose();
-      for (const tire of stack.tires) tire.dispose();
-      stack.body.dispose();
-    }
+    for (const stack of this._stacks) stack.dispose();
     this._stacks = [];
   }
 }
