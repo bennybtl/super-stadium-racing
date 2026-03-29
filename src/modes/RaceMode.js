@@ -1,9 +1,11 @@
-import { Vector3 } from "@babylonjs/core";
+import { Vector3, Color3 } from "@babylonjs/core";
+import { AIDriver } from "../ai/AIDriver.js";
 import { createTruck, updateTruck } from "../truck.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
+import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HEIGHT } from "../constants.js";
 
@@ -55,8 +57,8 @@ export class RaceMode {
       const rightX = Math.cos(h), rightZ = -Math.sin(h);
       const col = index % 2, row = Math.floor(index / 2);
       const lateralSign = col === 0 ? -1 : 1;
-      const x = startFinishCp.centerX + rightX * (lateralSign * 2) + fwdX * -(3 + row * 4);
-      const z = startFinishCp.centerZ + rightZ * (lateralSign * 2) + fwdZ * -(3 + row * 4);
+      const x = startFinishCp.centerX + rightX * (lateralSign * 2) + fwdX * -(3 + row * 7);
+      const z = startFinishCp.centerZ + rightZ * (lateralSign * 2) + fwdZ * -(3 + row * 7);
       return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HEIGHT, z), heading: h };
     };
 
@@ -67,10 +69,50 @@ export class RaceMode {
     let countdownActive = false;
 
     // -- Trucks --
+    const aiDriver1 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
+    const aiDriver2 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
+    const aiDriver3 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
+
     const spawn0 = getGridSpawn(0);
+    const spawn1 = getGridSpawn(1);
+    const spawn2 = getGridSpawn(2);
+    const spawn3 = getGridSpawn(3);
+
     const playerTruck = createTruck(scene, shadows, null, null, spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
+
+    const aiTruck1 = createTruck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
+    aiTruck1.mesh.position.copyFrom(spawn1.pos);
+    aiTruck1.state.heading = spawn1.heading;
+    aiTruck1.mesh.rotation.y = spawn1.heading;
+
+    const aiTruck2 = createTruck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2);
+    aiTruck2.mesh.position.copyFrom(spawn2.pos);
+    aiTruck2.state.heading = spawn2.heading;
+    aiTruck2.mesh.rotation.y = spawn2.heading;
+
+    const aiTruck3 = createTruck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3);
+    aiTruck3.mesh.position.copyFrom(spawn3.pos);
+    aiTruck3.state.heading = spawn3.heading;
+    aiTruck3.mesh.rotation.y = spawn3.heading;
+
+    // Set truck reference for AI respawn capability
+    aiDriver1.setTruck(aiTruck1);
+    aiDriver2.setTruck(aiTruck2);
+    aiDriver3.setTruck(aiTruck3);
+
+    // Re-initialize AI paths to target the start/finish gate (checkpoint N) from grid spawns
+    if (maxCheckpointNumber > 0) {
+      const initAI = (driver, spawnPos) => {
+        driver.lastCheckpointPassed = maxCheckpointNumber - 1;
+        driver.calculatePathToNextCheckpoint({ x: spawnPos.x, z: spawnPos.z });
+      };
+      initAI(aiDriver1, spawn1.pos);
+      initAI(aiDriver2, spawn2.pos);
+      initAI(aiDriver3, spawn3.pos);
+    }
+
     const trucks = [
       {
         truck: playerTruck,
@@ -80,7 +122,32 @@ export class RaceMode {
         id: "player",
         hasStarted: false,
       },
+      {
+        truck: aiTruck1,
+        gameState: new GameState(0),
+        isPlayer: false,
+        name: 'AI 1',
+        id: 'ai1',
+        hasStarted: false,
+      },
+      {
+        truck: aiTruck2,
+        gameState: new GameState(0),
+        isPlayer: false,
+        name: 'AI 2',
+        id: 'ai2',
+        hasStarted: false,
+      },
+      {
+        truck: aiTruck3,
+        gameState: new GameState(0),
+        isPlayer: false,
+        name: 'AI 3',
+        id: 'ai3',
+        hasStarted: false,
+      }
     ];
+
     const playerTruckData = trucks[0];
     // Prime lastCheckpointPassed so trucks are ready to cross the start/finish line first
     trucks.forEach(td => {
@@ -92,6 +159,9 @@ export class RaceMode {
     uiManager.showDebugPanel();
     uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
+
+    // -- Truck collision --
+    const truckCollisionManager = new TruckCollisionManager();
 
     // -- Input --
     const inputManager = new InputManager(playerTruckData.truck, cameraController);
@@ -187,16 +257,20 @@ export class RaceMode {
     };
 
     // -- Countdown --
+    const aiDrivers = [aiDriver1, aiDriver2, aiDriver3];
+
     const startCountdown = () => {
       this._countdownTimeouts.forEach(clearTimeout);
       this._countdownTimeouts = [];
       countdownActive = true;
+      aiDrivers.forEach(d => { d.paused = true; });
       uiManager.showCountdown('3');
       this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('2'), 1000));
       this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('1'), 2000));
       this._countdownTimeouts.push(setTimeout(() => {
         uiManager.showCountdown('GO!');
         countdownActive = false;
+        aiDrivers.forEach(d => { d.paused = false; });
         if (maxCheckpointNumber === 0 && !raceStarted) {
           raceStarted = true;
           raceStartTime = Date.now();
@@ -268,6 +342,7 @@ export class RaceMode {
         : inputManager.getMovementInput();
 
       wallManager.preUpdate(trucks, dt);
+      truckCollisionManager.preUpdate(trucks, dt);
 
       trucks.forEach((truckData) => {
         if (truckData.gameState.raceFinished) return;
@@ -278,6 +353,7 @@ export class RaceMode {
       });
 
       wallManager.update(trucks);
+      truckCollisionManager.update(trucks);
       tireStackManager.update(trucks);
 
       const slopeDegFront = currentTrack.getTerrainSlopeAt(
@@ -329,6 +405,13 @@ export class RaceMode {
           truckData.gameState.checkpointCount = 0;
           checkpointManager.resetForTruck(truckData.id);
           if (truckData.isPlayer) uiManager.updateCheckpoints(0);
+          // Notify AI driver so it recalculates path toward checkpoint #1
+          if (!truckData.isPlayer && truckData.truck.aiDriver) {
+            truckData.truck.aiDriver.onCheckpointPassed(maxCheckpointNumber, {
+              x: truckData.truck.mesh.position.x,
+              z: truckData.truck.mesh.position.z,
+            });
+          }
           return;
         }
 

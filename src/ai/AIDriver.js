@@ -40,6 +40,9 @@ export class AIDriver {
     this.positionStuckThreshold = 3000; // 3 seconds without movement
     this.positionStuckMinDist = 1.0;   // must move at least 1 unit per second
     
+    // Pause flag — when true, getInput returns all-false
+    this.paused = false;
+
     // Debug visualization
     this.debugLines = [];
     this.debugEnabled = true;
@@ -384,6 +387,9 @@ export class AIDriver {
    * Get steering input based on current position
    */
   getInput(position, heading, fwdSpeed = 0) {
+    if (this.paused) {
+      return { forward: false, back: false, left: false, right: false };
+    }
     if (this.path.length === 0) {
       console.log('[AIDriver] No path available');
       return { forward: false, back: false, left: false, right: false };
@@ -637,7 +643,7 @@ export class AIDriver {
    * Update visual debug representation of path
    */
   updateDebugVisualization() {
-    if (!this.scene || !this.track || !this.  ) return;
+    if (!this.scene || !this.track || !this.debugEnabled) return;
     
     // Clean up old debug markers
     this.debugLines.forEach(mesh => mesh.dispose());
