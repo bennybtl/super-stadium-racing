@@ -7,7 +7,7 @@ const DRIFT_COLORS = {
   loose_dirt:   { r: 0.50, g: 0.35, b: 0.18 }, // lighter tan
   mud:          { r: 0.22, g: 0.16, b: 0.10 }, // dark mud
   asphalt:      { r: 0.25, g: 0.25, b: 0.25 }, // grey tyre smoke
-  WATER:        { r: 0.70, g: 0.85, b: 1.00 }, // blue-white spray
+  WebTransportError:        { r: 0.70, g: 0.85, b: 1.00 }, // blue-white spray
 };
 
 /**
@@ -196,7 +196,7 @@ export class ParticleEffects {
     }
     
     // Update splash particles when in water and wheels are on the ground
-    const isInWater = terrainName === 'WATER';
+    const isInWater = terrainName === 'water';
     if (isInWater && isGrounded && speed > 1) {
       this.splashParticles.emitRate = speed * 80;
     } else {

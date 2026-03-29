@@ -86,6 +86,13 @@ export class TireStackManager {
     this.dispose();
   }
 
+  rebuild() {
+    this.dispose();
+    for (const feature of this.track.features) {
+      if (feature.type === "tireStack") this.createStack(feature);
+    }
+  }
+
   dispose() {
     for (const stack of this._stacks) stack.dispose();
     this._stacks = [];

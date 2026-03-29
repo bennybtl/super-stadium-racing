@@ -77,28 +77,35 @@ export class Truck {
       targetRoll: 0,
       currentRoll: 0,
       terrainRoll: 0,
+      terrainPitch: 0,
+      isDrifting: false,
+      isSpinningOut: false,
+      slipAngle: 0,
+      boostActive: false,
+      boostTimer: 0,
+
+      // Control parameters that can be tweaked for different handling characteristics
       springStrength: 150,
       damping: 7,
       maxSpeed: 25,
       maxReverseSpeed: -10,
-      acceleration: 7,
+      acceleration: 13,
       braking: 18,
       drag: 4,
       turnSpeed: 3.6,
       grip: 0.03,
       driftThreshold: 0.1,
-      isDrifting: false,
-      isSpinningOut: false,
-      slipAngle: 0,
+
+      // Boost parameters
       boostCount: 5,
-      boostActive: false,
-      boostTimer: 0,
       maxBoosts: 5,
       boostDuration: 3.0,
       boostAccelMult: 2.5,
       boostSpeedMult: 1.8,
     };
   }
+
+
 
   update(input, deltaTime, terrainManager = null, track = null) {
     // If AI driver, get input from driver

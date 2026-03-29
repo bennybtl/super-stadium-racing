@@ -164,7 +164,7 @@ Three independent `ParticleSystem` instances managed per-truck:
 | `loose_dirt` | Lighter tan |
 | `mud` | Dark brown |
 | `asphalt` | Grey |
-| `WATER` | Blue-white |
+| `water` | Blue-white |
 
 **Water splash** (`splashParticles`)
 - `emitRate = speed * 80` when `isInWater && isGrounded && speed > 1`

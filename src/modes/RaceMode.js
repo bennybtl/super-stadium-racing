@@ -18,6 +18,7 @@ export class RaceMode {
     this.controller = controller;
     this.scene = null;
     this.inputManager = null;
+    this._countdownTimeouts = [];
   }
 
   async setup({ trackKey, laps }) {
@@ -37,14 +38,39 @@ export class RaceMode {
 
     this.scene = scene;
 
+    // -- Starting grid (based on the last/finish checkpoint) --
+    const checkpointFeatures = currentTrack.features.filter(
+      f => f.type === 'checkpoint' && f.checkpointNumber != null
+    );
+    const maxCheckpointNumber = checkpointFeatures.reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
+    const startFinishCp = checkpointFeatures.find(f => f.checkpointNumber === maxCheckpointNumber) || null;
+
+    const getGridSpawn = (index) => {
+      if (!startFinishCp) {
+        const x = (index % 2) * 3, z = Math.floor(index / 2) * 3;
+        return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HEIGHT, z), heading: 0 };
+      }
+      const h = startFinishCp.heading;
+      const fwdX = Math.sin(h), fwdZ = Math.cos(h);
+      const rightX = Math.cos(h), rightZ = -Math.sin(h);
+      const col = index % 2, row = Math.floor(index / 2);
+      const lateralSign = col === 0 ? -1 : 1;
+      const x = startFinishCp.centerX + rightX * (lateralSign * 2) + fwdX * -(3 + row * 4);
+      const z = startFinishCp.centerZ + rightZ * (lateralSign * 2) + fwdZ * -(3 + row * 4);
+      return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HEIGHT, z), heading: h };
+    };
+
     // -- Race state --
     let raceStarted = false;
     let raceStartTime = null;
     let lapStartTime = null;
+    let countdownActive = false;
 
     // -- Trucks --
-    const spawnY = currentTrack.getHeightAt(0, 0) + TRUCK_HEIGHT + 3;
-    const playerTruck = createTruck(scene, shadows, null, null, new Vector3(0, spawnY, 0));
+    const spawn0 = getGridSpawn(0);
+    const playerTruck = createTruck(scene, shadows, null, null, spawn0.pos);
+    playerTruck.state.heading = spawn0.heading;
+    playerTruck.mesh.rotation.y = spawn0.heading;
     const trucks = [
       {
         truck: playerTruck,
@@ -52,12 +78,19 @@ export class RaceMode {
         isPlayer: true,
         name: "Player",
         id: "player",
+        hasStarted: false,
       },
     ];
     const playerTruckData = trucks[0];
+    // Prime lastCheckpointPassed so trucks are ready to cross the start/finish line first
+    trucks.forEach(td => {
+      td.gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
+    });
 
     // -- UI --
     const uiManager = new UIManager();
+    uiManager.showDebugPanel();
+    uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
 
     // -- Input --
@@ -153,6 +186,27 @@ export class RaceMode {
       );
     };
 
+    // -- Countdown --
+    const startCountdown = () => {
+      this._countdownTimeouts.forEach(clearTimeout);
+      this._countdownTimeouts = [];
+      countdownActive = true;
+      uiManager.showCountdown('3');
+      this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('2'), 1000));
+      this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('1'), 2000));
+      this._countdownTimeouts.push(setTimeout(() => {
+        uiManager.showCountdown('GO!');
+        countdownActive = false;
+        if (maxCheckpointNumber === 0 && !raceStarted) {
+          raceStarted = true;
+          raceStartTime = Date.now();
+          lapStartTime = Date.now();
+          uiManager.showRaceTimer();
+        }
+      }, 3000));
+      this._countdownTimeouts.push(setTimeout(() => uiManager.hideCountdown(), 3800));
+    };
+
     // -- Full race reset --
     const resetGame = () => {
       raceStarted = false;
@@ -161,23 +215,28 @@ export class RaceMode {
       uiManager.hideRaceTimer();
 
       trucks.forEach((truckData, index) => {
-        const rx = index * 3, rz = index * 3;
-        truckData.truck.mesh.position = new Vector3(rx, currentTrack.getHeightAt(rx, rz) + TRUCK_HEIGHT, rz);
+        const { pos, heading } = getGridSpawn(index);
+        truckData.truck.mesh.position = pos;
+        truckData.truck.state.heading = heading;
+        truckData.truck.mesh.rotation.y = heading;
         truckData.truck.state.velocity = Vector3.Zero();
         truckData.truck.state.verticalVelocity = 0;
-        truckData.truck.state.heading = 0;
         truckData.truck.state.boostActive = false;
         truckData.truck.state.boostTimer = 0;
         truckData.gameState.reset();
+        truckData.gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
+        truckData.hasStarted = false;
       });
 
-      checkpointManager.reset();
-      wallManager.reset();
-      tireStackManager.reset();
+      checkpointManager.rebuild();
+      wallManager.rebuild();
+      tireStackManager.rebuild();
 
       uiManager.updateBoosts(playerTruckData.gameState.boostCount);
       uiManager.updateLaps(0, totalLaps);
       uiManager.updateCheckpoints(0);
+
+      startCountdown();
     };
 
     // -- Menu callbacks --
@@ -204,7 +263,9 @@ export class RaceMode {
         uiManager.updateTimer(Date.now() - raceStartTime);
       }
 
-      const input = inputManager.getMovementInput();
+      const input = countdownActive
+        ? { forward: false, back: false, left: false, right: false }
+        : inputManager.getMovementInput();
 
       wallManager.preUpdate(trucks, dt);
 
@@ -252,16 +313,27 @@ export class RaceMode {
 
         if (!checkpointResult?.passed) return;
 
-        if (!raceStarted && checkpointResult.index === 1) {
-          raceStarted = true;
-          raceStartTime = Date.now();
-          lapStartTime = Date.now();
-          uiManager.showRaceTimer();
-          console.log("Race started!");
+        const checkpointIndex = checkpointResult.index;
+
+        // Start/finish crossing: start race timer and reset sequence so lap flow begins at CP 1
+        if (checkpointIndex === maxCheckpointNumber && !truckData.hasStarted) {
+          truckData.hasStarted = true;
+          if (!raceStarted) {
+            raceStarted = true;
+            raceStartTime = Date.now();
+            lapStartTime = Date.now();
+            uiManager.showRaceTimer();
+            console.log("Race started!");
+          }
+          truckData.gameState.lastCheckpointPassed = 0;
+          truckData.gameState.checkpointCount = 0;
+          checkpointManager.resetForTruck(truckData.id);
+          if (truckData.isPlayer) uiManager.updateCheckpoints(0);
+          return;
         }
 
         const newCount = truckData.gameState.incrementCheckpoint(
-          checkpointResult.index
+          checkpointIndex
         );
 
         if (!truckData.isPlayer && truckData.truck.aiDriver) {
@@ -322,10 +394,15 @@ export class RaceMode {
       cameraController.update(playerTruckData.truck.mesh.position);
     });
 
+    // Start the pre-race countdown
+    startCountdown();
+
     return scene;
   }
 
   teardown() {
+    this._countdownTimeouts.forEach(clearTimeout);
+    this._countdownTimeouts = [];
     if (this.inputManager) {
       this.inputManager.dispose();
       this.inputManager = null;
@@ -334,5 +411,11 @@ export class RaceMode {
       this.scene.dispose();
       this.scene = null;
     }
+    const debugPanel = document.getElementById('debug-panel');
+    if (debugPanel) debugPanel.style.display = 'none';
+    const raceStatusPanel = document.getElementById('race-status-panel');
+    if (raceStatusPanel) raceStatusPanel.style.display = 'none';
+    const countdownOverlay = document.getElementById('countdown-overlay');
+    if (countdownOverlay) countdownOverlay.style.display = 'none';
   }
 }

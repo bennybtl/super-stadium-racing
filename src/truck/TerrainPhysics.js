@@ -46,15 +46,19 @@ export class TerrainPhysics {
     
     // Calculate visual pitch/roll when on or near ground
     if (groundedness > 0.3 && track) {
-      this.updateTerrainOrientation(mesh, track);
+      this.updateTerrainOrientation(mesh, track, deltaTime);
     } else {
-      this.state.terrainRoll = 0;
+      // Smoothly return to flat when airborne
+      const airFactor = 1 - Math.exp(-10 * deltaTime);
+      this.state.terrainPitch += (0 - this.state.terrainPitch) * airFactor;
+      this.state.terrainRoll  += (0 - this.state.terrainRoll)  * airFactor;
+      mesh.rotation.x = -this.state.terrainPitch;
     }
     
     return { groundedness, penetration };
   }
 
-  updateTerrainOrientation(mesh, track) {
+  updateTerrainOrientation(mesh, track, deltaTime) {
     const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     const right = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
     const slopeCheckDist = 0.3;
@@ -67,7 +71,7 @@ export class TerrainPhysics {
       mesh.position.x - forward.x * slopeCheckDist,
       mesh.position.z - forward.z * slopeCheckDist
     );
-    const terrainSlopeAngle = Math.atan2(heightAheadVisual - heightBehindVisual, slopeCheckDist * 2);
+    const targetPitch = Math.atan2(heightAheadVisual - heightBehindVisual, slopeCheckDist * 2);
     
     const heightRight = track.getHeightAt(
       mesh.position.x + right.x * slopeCheckDist,
@@ -77,10 +81,14 @@ export class TerrainPhysics {
       mesh.position.x - right.x * slopeCheckDist,
       mesh.position.z - right.z * slopeCheckDist
     );
-    const terrainRollAngle = Math.atan2(heightRight - heightLeft, slopeCheckDist * 2);
-    
-    mesh.rotation.x = -terrainSlopeAngle;
-    this.state.terrainRoll = terrainRollAngle;
+    const targetRoll = Math.atan2(heightRight - heightLeft, slopeCheckDist * 2);
+
+    // Exponential smoothing — frame-rate independent, damps sudden angle spikes
+    const factor = 1 - Math.exp(-10 * deltaTime);
+    this.state.terrainPitch += (targetPitch - this.state.terrainPitch) * factor;
+    this.state.terrainRoll  += (targetRoll  - this.state.terrainRoll)  * factor;
+
+    mesh.rotation.x = -this.state.terrainPitch;
   }
 
   checkSteepSlope(mesh, deltaTime, track) {

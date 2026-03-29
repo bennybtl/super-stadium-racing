@@ -10,6 +10,12 @@ export class UIManager {
     this.boostDisplay = document.getElementById('boost-display');
     this.raceTimer = document.getElementById('race-timer');
     
+    // Debug panel
+    this.debugPanel = document.getElementById('debug-panel');
+    this.raceStatusPanel = document.getElementById('race-status-panel');
+    this.countdownOverlay = document.getElementById('countdown-overlay');
+    this.countdownText = document.getElementById('countdown-text');
+
     // Debug panel elements
     this.debugCompression = document.getElementById('debug-compression');
     this.debugGroundedness = document.getElementById('debug-groundedness');
@@ -52,6 +58,34 @@ export class UIManager {
     } else {
       this.boostDisplay.classList.remove('active');
     }
+  }
+
+  showDebugPanel() {
+    if (this.debugPanel) this.debugPanel.style.display = 'block';
+  }
+
+  hideDebugPanel() {
+    if (this.debugPanel) this.debugPanel.style.display = 'none';
+  }
+
+  showRaceStatusPanel() {
+    if (this.raceStatusPanel) this.raceStatusPanel.style.display = 'flex';
+  }
+
+  hideRaceStatusPanel() {
+    if (this.raceStatusPanel) this.raceStatusPanel.style.display = 'none';
+  }
+
+  showCountdown(text) {
+    if (this.countdownOverlay) {
+      this.countdownOverlay.style.display = 'flex';
+      this.countdownText.textContent = text;
+      this.countdownText.style.color = text === 'GO!' ? '#00ff44' : '#ffffff';
+    }
+  }
+
+  hideCountdown() {
+    if (this.countdownOverlay) this.countdownOverlay.style.display = 'none';
   }
 
   updateDebugPanel(truckState, terrainType, slopeAngleDeg = null) {

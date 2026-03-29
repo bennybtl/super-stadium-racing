@@ -75,7 +75,7 @@
       "centerZ": 30,
       "radius": 10,
       "terrainType": {
-        "name": "WATER",
+        "name": "water",
         "gripMultiplier": 0.3,
         "color": {
           "r": 0.2,
@@ -86,7 +86,7 @@
       }
     },
     {
-      "type": "slopedRect",
+      "type": "squareHill",
       "centerX": 20,
       "centerZ": -50,
       "width": 20,
@@ -94,6 +94,7 @@
       "slopeAxis": "x",
       "heightAtMin": 0,
       "heightAtMax": 6,
+      "transition": 0,
       "terrainType": {
         "name": "packed_dirt",
         "gripMultiplier": 2,

@@ -243,6 +243,15 @@ export class WallManager {
     this._prevPositions = new Map();
   }
 
+  rebuild() {
+    this.reset();
+    for (const feature of this.track.features) {
+      if (feature.type === "wall")        this.createStraightWall(feature);
+      else if (feature.type === "curvedWall") this.createCurvedWall(feature);
+      else if (feature.type === "polyWall")  this.createPolyWall(feature);
+    }
+  }
+
   // ─── AI Helpers ──────────────────────────────────────────────────────────
 
   /**

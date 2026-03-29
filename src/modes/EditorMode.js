@@ -53,7 +53,8 @@ export class EditorMode {
       ground.createNormals(true);
     };
 
-    window.rebuildTerrainTexture = () => {
+    // Fast: sync terrainManager.grid from track features (no canvas writes)
+    window.rebuildTerrainGrid = () => {
       for (let row = 0; row < terrainManager.cellsPerSide; row++) {
         for (let col = 0; col < terrainManager.cellsPerSide; col++) {
           const worldX =
@@ -65,6 +66,11 @@ export class EditorMode {
             terrainType || TERRAIN_TYPES.PACKED_DIRT;
         }
       }
+    };
+
+    // Slow: paint the canvas texture from terrainManager.grid (call on deselect)
+    window.rebuildTerrainTexture = () => {
+      window.rebuildTerrainGrid();
       const ctx = groundTex.getContext();
       for (let row = 0; row < terrainManager.cellsPerSide; row++) {
         for (let col = 0; col < terrainManager.cellsPerSide; col++) {

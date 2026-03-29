@@ -92,6 +92,16 @@ export class CheckpointManager {
     }
   }
 
+  dispose() {
+    for (const cp of this.checkpointMeshes) cp.dispose();
+    this.checkpointMeshes = [];
+  }
+
+  rebuild() {
+    this.dispose();
+    this.createCheckpoints();
+  }
+
   resetForTruck(truckId) {
     for (const cp of this.checkpointMeshes) {
       if (cp.feature.passedBy) {

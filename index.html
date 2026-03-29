@@ -10,6 +10,7 @@
       canvas { display: block; width: 100vw; height: 100vh; }
       
       #debug-panel {
+        display: none;
         position: absolute;
         top: 10px;
         left: 10px;
@@ -54,44 +55,37 @@
       }
 
       #checkpoint-display {
-        position: absolute;
-        top: 100px;
-        right: 10px;
+        width: 100%;
+        position: relative;
         background: rgba(0, 0, 0, 0.7);
-        color: #ff0;
+        color: #999999;
         font-family: 'Courier New', monospace;
         font-size: 16px;
         font-weight: bold;
         padding: 5px 5px;
-        border: 2px solid #ff0;
         pointer-events: none;
       }
       
       #lap-display {
-        position: absolute;
-        top: 60px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: #0ff;
+        width: 100%;
+        position: relative;
+        color: #999999;
         font-family: 'Courier New', monospace;
         font-size: 16px;
         font-weight: bold;
         padding: 5px 5px;
-        border: 2px solid #0ff;
         pointer-events: none;
       }
       
       #boost-display {
-        position: absolute;
-        top: 140px;
-        right: 10px;
+        width: 100%;
+        position: relative;
         background: rgba(0, 0, 0, 0.7);
-        color: #f80;
+        color: #999999;
         font-family: 'Courier New', monospace;
         font-size: 16px;
         font-weight: bold;
         padding: 5px 5px;
-        border: 2px solid #f80;
         pointer-events: none;
       }
       
@@ -106,15 +100,58 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0.7; }
       }
+
+      #race-status-panel {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        display: none;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+        background: rgba(0, 0, 0, 0.7);
+      }
+
+      #countdown-overlay {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      #countdown-text {
+        font-size: 20vw;
+        font-family: 'Arial Black', Arial, sans-serif;
+        font-weight: 900;
+        color: #fff;
+        text-shadow: 0 0 80px rgba(255, 200, 0, 0.7), 6px 6px 0 rgba(0, 0, 0, 0.8);
+        line-height: 1;
+        user-select: none;
+        -webkit-user-select: none;
+      }
     </style>
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
-    <div id="race-timer">0:00.00</div>
-    <div id="checkpoint-display">Checkpoints: <span id="checkpoint-counter">0</span></div>
-    <div id="lap-display">Lap: <span id="lap-counter">0</span></div>
-    <div id="boost-display">Nitro: <span id="boost-counter">5</span></div>
-    <div id="debug-panel">\n      <div class="row"><span class="label">Compression:</span><span class="value" id="debug-compression">-</span></div>
+
+    <div id="race-status-panel">
+
+      <div id="race-timer">0:00.00</div>
+      <div id="checkpoint-display">Checkpoints: <span id="checkpoint-counter">0</span></div>
+      <div id="lap-display">Lap: <span id="lap-counter">0</span></div>
+      <div id="boost-display">Nitro: <span id="boost-counter">5</span></div>
+
+    </div>
+
+    <div id="countdown-overlay"><span id="countdown-text"></span></div>
+
+    <div id="debug-panel">
+      <div class="row"><span class="label">Compression:</span><span class="value" id="debug-compression">-</span></div>
       <div class="row"><span class="label">Groundedness:</span><span class="value" id="debug-groundedness">-</span></div>
       <div class="row"><span class="label">Penetration:</span><span class="value" id="debug-penetration">-</span></div>
       <div class="row"><span class="label">Vert Velocity:</span><span class="value" id="debug-vvel">-</span></div>

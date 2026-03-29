@@ -155,7 +155,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // Create Tire Stacks from track features (must be after ground so we can query heights)
   for (const feature of currentTrack.features) {
-
     if (feature.type === "tireStack") {
       tireStackManager.createStack(feature);
     } else if (feature.type === "wall") {

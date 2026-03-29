@@ -43,6 +43,13 @@ export class EditorController {
     this.hillHighlightMaterial = null;
     this.hillPropertiesPanel = null;
 
+    // Square hill editing state
+    this.squareHillMeshes = [];
+    this.selectedSquareHill = null;
+    this.squareHillMaterial = null;
+    this.squareHillHighlightMaterial = null;
+    this.squareHillPropertiesPanel = null;
+
     // Checkpoint properties panel
     this.checkpointPropertiesPanel = null;
     
@@ -103,11 +110,30 @@ export class EditorController {
     for (const feature of track.features) {
       if (feature.type === 'hill') {
         this.createHillVisual(feature);
+      } else if (feature.type === 'squareHill') {
+        this.createSquareHillVisual(feature);
       }
     }
 
     // Create floating hill properties panel
     this.createHillPropertiesPanel();
+
+    // Create square hill properties panel
+    if (!this.squareHillMaterial) {
+      this.squareHillMaterial = new StandardMaterial('squareHillMat', this.scene);
+      this.squareHillMaterial.diffuseColor = new Color3(0.75, 0.55, 0.1);
+      this.squareHillMaterial.emissiveColor = new Color3(0.12, 0.08, 0.01);
+      this.squareHillMaterial.alpha = 0.20;
+      this.squareHillMaterial.backFaceCulling = false;
+    }
+    if (!this.squareHillHighlightMaterial) {
+      this.squareHillHighlightMaterial = new StandardMaterial('squareHillHighlightMat', this.scene);
+      this.squareHillHighlightMaterial.diffuseColor = new Color3(1.0, 0.8, 0.0);
+      this.squareHillHighlightMaterial.emissiveColor = new Color3(0.35, 0.25, 0.0);
+      this.squareHillHighlightMaterial.alpha = 0.20;
+      this.squareHillHighlightMaterial.backFaceCulling = false;
+    }
+    this.createSquareHillPropertiesPanel();
 
     // Create checkpoint properties panel
     this.createCheckpointPropertiesPanel();
@@ -143,10 +169,24 @@ export class EditorController {
     this.hillMeshes = [];
     this.selectedHill = null;
 
+    // Dispose all square hill editor visuals
+    for (const hillData of this.squareHillMeshes) {
+      hillData.mesh.dispose();
+      hillData.node.dispose();
+    }
+    this.squareHillMeshes = [];
+    this.selectedSquareHill = null;
+
     // Remove hill properties panel
     if (this.hillPropertiesPanel) {
       document.body.removeChild(this.hillPropertiesPanel);
       this.hillPropertiesPanel = null;
+    }
+
+    // Remove square hill properties panel
+    if (this.squareHillPropertiesPanel) {
+      document.body.removeChild(this.squareHillPropertiesPanel);
+      this.squareHillPropertiesPanel = null;
     }
 
     // Remove checkpoint properties panel
@@ -161,16 +201,20 @@ export class EditorController {
   handleKeyDown(event) {
     if (!this.isActive) return;
     
-    // Handle ESC key for menu
+    // Handle ESC key — deselect first, open menu if nothing selected
     if (event.key === 'Escape') {
-      console.log('[EditorController] ESC pressed, menuManager:', this.menuManager);
-      if (this.menuManager) {
-        console.log('[EditorController] Calling togglePause()');
+      if (this.selectedHill) {
+        this.deselectHill();
+      } else if (this.selectedSquareHill) {
+        this.deselectSquareHill();
+      } else if (this.selectedCheckpoint) {
+        this.deselectCheckpoint();
+      } else if (this.menuManager) {
         this.menuManager.togglePause();
       }
       event.preventDefault();
-      event.stopPropagation(); // Stop event from reaching other handlers
-      event.stopImmediatePropagation(); // Stop event from reaching other handlers on same element
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       return;
     }
     
@@ -181,6 +225,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.selectedHill) {
         this.deleteSelectedHill();
+        event.preventDefault();
+      } else if (this.selectedSquareHill) {
+        this.deleteSelectedSquareHill();
         event.preventDefault();
       }
       return;
@@ -326,6 +373,11 @@ export class EditorController {
       this.camera.position.addInPlace(movement);
       const currentTarget = this.camera.getTarget();
       this.camera.setTarget(currentTarget.add(movement));
+    } else if (this.selectedSquareHill) {
+      this.moveSelectedSquareHill(movement);
+      this.camera.position.addInPlace(movement);
+      const currentTarget = this.camera.getTarget();
+      this.camera.setTarget(currentTarget.add(movement));
     } else {
       // Move camera and target together
       this.camera.position.addInPlace(movement);
@@ -365,19 +417,39 @@ export class EditorController {
         for (const hillData of this.hillMeshes) {
           if (clickedMesh === hillData.mesh) {
             if (this.selectedHill === hillData) {
-              // Click selected hill again → deselect
               this.deselectHill();
             } else {
               this.deselectCheckpoint();
+              this.deselectSquareHill();
               this.selectHill(hillData);
             }
             return;
           }
         }
-        
-        // Clicked on something else — deselect both
+
+        // Check if clicked mesh is a square hill gizmo
+        for (const hillData of this.squareHillMeshes) {
+          if (clickedMesh === hillData.mesh) {
+            if (this.selectedSquareHill === hillData) {
+              this.deselectSquareHill();
+            } else {
+              this.deselectCheckpoint();
+              this.deselectHill();
+              this.selectSquareHill(hillData);
+            }
+            return;
+          }
+        }
+
+        // Clicked on something else (terrain, etc.) — deselect all
         this.deselectCheckpoint();
         this.deselectHill();
+        this.deselectSquareHill();
+      } else {
+        // Clicked on empty space (sky, etc.) — deselect all
+        this.deselectCheckpoint();
+        this.deselectHill();
+        this.deselectSquareHill();
       }
     }
   }
@@ -547,7 +619,14 @@ export class EditorController {
     hillBtn.style.cssText = buttonStyle;
     hillBtn.onclick = () => this.addHillEntity();
     this.addMenuOverlay.appendChild(hillBtn);
-    
+
+    // Add Square Hill button
+    const squareHillBtn = document.createElement('button');
+    squareHillBtn.textContent = 'Add Square Hill';
+    squareHillBtn.style.cssText = buttonStyle;
+    squareHillBtn.onclick = () => this.addSquareHillEntity();
+    this.addMenuOverlay.appendChild(squareHillBtn);
+
     // Close button
     const closeBtn = document.createElement('button');
     closeBtn.textContent = 'Cancel';
@@ -770,6 +849,7 @@ export class EditorController {
     this.selectHill(hillData);
 
     window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
 
     this.hideAddMenu();
     console.log('[EditorController] Added hill at', newX.toFixed(1), newZ.toFixed(1));
@@ -838,6 +918,7 @@ export class EditorController {
     if (this.selectedHill) {
       this.selectedHill.mesh.material = this.hillMaterial;
       this.hideHillProperties();
+      window.rebuildTerrainTexture?.();
       console.log('[EditorController] Deselected hill');
       this.selectedHill = null;
     }
@@ -854,6 +935,7 @@ export class EditorController {
     feature.centerZ += movement.z;
     this.updateHillVisual(this.selectedHill);
     window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
   }
 
   /**
@@ -885,6 +967,485 @@ export class EditorController {
     window.rebuildTerrainTexture?.();
 
     console.log('[EditorController] Deleted hill');
+  }
+
+  // ─── Square Hill Editing ──────────────────────────────────────────────────
+
+  addSquareHillEntity() {
+    const camPos = this.camera.position;
+    const camTarget = this.camera.target;
+    const direction = camTarget.subtract(camPos).normalize();
+    const newX = camPos.x + direction.x * 20;
+    const newZ = camPos.z + direction.z * 20;
+
+    const newFeature = {
+      type: 'squareHill',
+      centerX: newX,
+      centerZ: newZ,
+      width: 20,
+      depth: 20,
+      height: 5,
+      transition: 8,
+      terrainType: null,
+    };
+
+    this.currentTrack.features.push(newFeature);
+    const hillData = this.createSquareHillVisual(newFeature);
+
+    this.deselectCheckpoint();
+    this.deselectHill();
+    this.selectSquareHill(hillData);
+
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+
+    this.hideAddMenu();
+    console.log('[EditorController] Added square hill at', newX.toFixed(1), newZ.toFixed(1));
+  }
+
+  createSquareHillVisual(feature) {
+    const absH = Math.max(0.5, Math.abs(feature.height));
+    const transition = feature.transition ?? 8;
+    const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+
+    const node = new TransformNode('squareHillNode', this.scene);
+    node.position = new Vector3(feature.centerX, terrainH + absH / 2, feature.centerZ);
+    node.scaling  = new Vector3(feature.width + transition * 2, absH, (feature.depth ?? feature.width) + transition * 2);
+
+    const mesh = MeshBuilder.CreateBox('squareHillMesh', { size: 1 }, this.scene);
+    mesh.parent = node;
+    mesh.material = this.squareHillMaterial;
+    mesh.isPickable = true;
+
+    const hillData = { feature, node, mesh };
+    this.squareHillMeshes.push(hillData);
+    return hillData;
+  }
+
+  updateSquareHillVisual(hillData) {
+    const { feature, node } = hillData;
+    const transition = feature.transition ?? 8;
+    const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    // For sloped mode use the larger absolute endpoint so the box has meaningful height
+    const absH = feature.slopeAxis
+      ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
+      : Math.max(0.5, Math.abs(feature.height ?? 5));
+    node.position.x = feature.centerX;
+    node.position.z = feature.centerZ;
+    node.position.y = terrainH + absH / 2;
+    node.scaling.x  = feature.width + transition * 2;
+    node.scaling.y  = absH;
+    node.scaling.z  = (feature.depth ?? feature.width) + transition * 2;
+  }
+
+  selectSquareHill(hillData) {
+    this.deselectSquareHill();
+    this.selectedSquareHill = hillData;
+    hillData.mesh.material = this.squareHillHighlightMaterial;
+    this.showSquareHillProperties(hillData);
+    console.log('[EditorController] Selected square hill at',
+      hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
+  }
+
+  deselectSquareHill() {
+    if (this.selectedSquareHill) {
+      this.selectedSquareHill.mesh.material = this.squareHillMaterial;
+      this.hideSquareHillProperties();
+      window.rebuildTerrainTexture?.();
+      console.log('[EditorController] Deselected square hill');
+      this.selectedSquareHill = null;
+    }
+  }
+
+  moveSelectedSquareHill(movement) {
+    if (!this.selectedSquareHill || (movement.x === 0 && movement.z === 0)) return;
+    const { feature } = this.selectedSquareHill;
+    feature.centerX += movement.x;
+    feature.centerZ += movement.z;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  deleteSelectedSquareHill() {
+    if (!this.selectedSquareHill) return;
+    const hillData = this.selectedSquareHill;
+
+    const idx = this.currentTrack.features.indexOf(hillData.feature);
+    if (idx > -1) this.currentTrack.features.splice(idx, 1);
+
+    hillData.mesh.dispose();
+    hillData.node.dispose();
+
+    const meshIdx = this.squareHillMeshes.indexOf(hillData);
+    if (meshIdx > -1) this.squareHillMeshes.splice(meshIdx, 1);
+
+    this.hideSquareHillProperties();
+    this.selectedSquareHill = null;
+
+    window.rebuildTerrain?.();
+    window.rebuildTerrainTexture?.();
+    console.log('[EditorController] Deleted square hill');
+  }
+
+  // ─── Square Hill Properties Panel ─────────────────────────────────────────
+
+  createSquareHillPropertiesPanel() {
+    const panel = document.createElement('div');
+    panel.id = 'square-hill-properties-panel';
+    panel.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 270px;
+      background: rgba(0, 0, 0, 0.88);
+      padding: 18px 20px 16px;
+      border-radius: 10px;
+      border: 2px solid #f0a020;
+      display: none;
+      z-index: 1000;
+      min-width: 230px;
+      font-family: Arial, sans-serif;
+      color: white;
+      user-select: none;
+      pointer-events: auto;
+    `;
+
+    const title = document.createElement('div');
+    title.textContent = 'Square Hill';
+    title.style.cssText = 'font-size:13px; font-weight:bold; margin-bottom:16px; color:#f0a020; text-transform:uppercase; letter-spacing:1px;';
+    panel.appendChild(title);
+
+    const mkRow = () => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;';
+      return row;
+    };
+    const sliderCss = 'width:100%; accent-color:#f0a020; margin-bottom:14px; cursor:pointer;';
+    const btnBase = 'flex:1; padding:5px 0; border:1px solid #f0a020; border-radius:4px; cursor:pointer; font-size:12px; font-family:Arial; transition:background 0.15s;';
+
+    // ── Width ──
+    const widthRow = mkRow();
+    const widthLbl = document.createElement('span'); widthLbl.textContent = 'Width';
+    const widthVal = document.createElement('span'); widthVal.id = 'sq-width-val'; widthVal.textContent = '20.0';
+    widthRow.appendChild(widthLbl); widthRow.appendChild(widthVal);
+    panel.appendChild(widthRow);
+    const widthSlider = document.createElement('input');
+    widthSlider.type = 'range'; widthSlider.id = 'sq-width-slider';
+    widthSlider.min = '4'; widthSlider.max = '60'; widthSlider.step = '1'; widthSlider.value = '20';
+    widthSlider.style.cssText = sliderCss;
+    panel.appendChild(widthSlider);
+
+    // ── Depth ──
+    const depthRow = mkRow();
+    const depthLbl = document.createElement('span'); depthLbl.textContent = 'Depth';
+    const depthVal = document.createElement('span'); depthVal.id = 'sq-depth-val'; depthVal.textContent = '20.0';
+    depthRow.appendChild(depthLbl); depthRow.appendChild(depthVal);
+    panel.appendChild(depthRow);
+    const depthSlider = document.createElement('input');
+    depthSlider.type = 'range'; depthSlider.id = 'sq-depth-slider';
+    depthSlider.min = '4'; depthSlider.max = '60'; depthSlider.step = '1'; depthSlider.value = '20';
+    depthSlider.style.cssText = sliderCss;
+    panel.appendChild(depthSlider);
+
+    // ── Transition ──
+    const transRow = mkRow();
+    const transLbl = document.createElement('span'); transLbl.textContent = 'Transition';
+    const transVal = document.createElement('span'); transVal.id = 'sq-trans-val'; transVal.textContent = '8.0';
+    transRow.appendChild(transLbl); transRow.appendChild(transVal);
+    panel.appendChild(transRow);
+    const transSlider = document.createElement('input');
+    transSlider.type = 'range'; transSlider.id = 'sq-trans-slider';
+    transSlider.min = '0'; transSlider.max = '20'; transSlider.step = '0.5'; transSlider.value = '8';
+    transSlider.style.cssText = sliderCss;
+    panel.appendChild(transSlider);
+
+    // ── Mode toggle: Flat | Sloped ──
+    const modeLbl = document.createElement('div');
+    modeLbl.textContent = 'Mode';
+    modeLbl.style.cssText = 'font-size:12px; margin-bottom:6px;';
+    panel.appendChild(modeLbl);
+    const modeRow = document.createElement('div');
+    modeRow.style.cssText = 'display:flex; gap:6px; margin-bottom:14px;';
+    const flatBtn  = document.createElement('button'); flatBtn.id  = 'sq-mode-flat';   flatBtn.textContent = 'Flat';
+    const slopeBtn = document.createElement('button'); slopeBtn.id = 'sq-mode-sloped'; slopeBtn.textContent = 'Sloped';
+    flatBtn.style.cssText  = btnBase + 'background:#f0a020; color:#000;';
+    slopeBtn.style.cssText = btnBase + 'background:transparent; color:#f0a020;';
+    modeRow.appendChild(flatBtn); modeRow.appendChild(slopeBtn);
+    panel.appendChild(modeRow);
+
+    // ── Flat section ──
+    const flatSection = document.createElement('div');
+    flatSection.id = 'sq-flat-section';
+    const heightRow = mkRow();
+    const heightLbl = document.createElement('span'); heightLbl.textContent = 'Height';
+    const heightVal = document.createElement('span'); heightVal.id = 'sq-height-val'; heightVal.textContent = '5.0';
+    heightRow.appendChild(heightLbl); heightRow.appendChild(heightVal);
+    flatSection.appendChild(heightRow);
+    const heightSlider = document.createElement('input');
+    heightSlider.type = 'range'; heightSlider.id = 'sq-height-slider';
+    heightSlider.min = '-15'; heightSlider.max = '20'; heightSlider.step = '0.5'; heightSlider.value = '5';
+    heightSlider.style.cssText = sliderCss;
+    flatSection.appendChild(heightSlider);
+    panel.appendChild(flatSection);
+
+    // ── Sloped section ──
+    const slopedSection = document.createElement('div');
+    slopedSection.id = 'sq-sloped-section';
+    slopedSection.style.display = 'none';
+
+    // Axis toggle
+    const axisLbl = document.createElement('div');
+    axisLbl.textContent = 'Slope Axis';
+    axisLbl.style.cssText = 'font-size:12px; margin-bottom:6px;';
+    slopedSection.appendChild(axisLbl);
+    const axisRow = document.createElement('div');
+    axisRow.style.cssText = 'display:flex; gap:6px; margin-bottom:14px;';
+    const axisXBtn = document.createElement('button'); axisXBtn.id = 'sq-axis-x'; axisXBtn.textContent = 'Along X';
+    const axisZBtn = document.createElement('button'); axisZBtn.id = 'sq-axis-z'; axisZBtn.textContent = 'Along Z';
+    axisXBtn.style.cssText = btnBase + 'background:#f0a020; color:#000;';
+    axisZBtn.style.cssText = btnBase + 'background:transparent; color:#f0a020;';
+    axisRow.appendChild(axisXBtn); axisRow.appendChild(axisZBtn);
+    slopedSection.appendChild(axisRow);
+
+    // Height Min
+    const hMinRow = mkRow();
+    const hMinLbl = document.createElement('span'); hMinLbl.textContent = 'Height (\u2212 edge)';
+    const hMinVal = document.createElement('span'); hMinVal.id = 'sq-hmin-val'; hMinVal.textContent = '0.0';
+    hMinRow.appendChild(hMinLbl); hMinRow.appendChild(hMinVal);
+    slopedSection.appendChild(hMinRow);
+    const hMinSlider = document.createElement('input');
+    hMinSlider.type = 'range'; hMinSlider.id = 'sq-hmin-slider';
+    hMinSlider.min = '-15'; hMinSlider.max = '20'; hMinSlider.step = '0.5'; hMinSlider.value = '0';
+    hMinSlider.style.cssText = sliderCss;
+    slopedSection.appendChild(hMinSlider);
+
+    // Height Max
+    const hMaxRow = mkRow();
+    const hMaxLbl = document.createElement('span'); hMaxLbl.textContent = 'Height (+ edge)';
+    const hMaxVal = document.createElement('span'); hMaxVal.id = 'sq-hmax-val'; hMaxVal.textContent = '5.0';
+    hMaxRow.appendChild(hMaxLbl); hMaxRow.appendChild(hMaxVal);
+    slopedSection.appendChild(hMaxRow);
+    const hMaxSlider = document.createElement('input');
+    hMaxSlider.type = 'range'; hMaxSlider.id = 'sq-hmax-slider';
+    hMaxSlider.min = '-15'; hMaxSlider.max = '20'; hMaxSlider.step = '0.5'; hMaxSlider.value = '5';
+    hMaxSlider.style.cssText = sliderCss;
+    slopedSection.appendChild(hMaxSlider);
+
+    panel.appendChild(slopedSection);
+
+    // ── Terrain Type ──
+    const terrainLbl = document.createElement('div');
+    terrainLbl.textContent = 'Surface';
+    terrainLbl.style.cssText = 'font-size:12px; margin-bottom:6px;';
+    panel.appendChild(terrainLbl);
+    const terrainSelect = document.createElement('select');
+    terrainSelect.id = 'sq-terrain-select';
+    terrainSelect.style.cssText = 'width:100%; padding:6px 8px; background:#2a2a2a; color:white; border:1px solid #f0a020; border-radius:4px; font-size:12px; margin-bottom:16px; cursor:pointer;';
+    [
+      { value: 'none',        label: 'None (Default)' },
+      { value: 'packed_dirt', label: 'Packed Dirt'    },
+      { value: 'loose_dirt',  label: 'Loose Dirt'     },
+      { value: 'asphalt',     label: 'Asphalt'        },
+      { value: 'mud',         label: 'Mud'            },
+      { value: 'water',       label: 'Water'          },
+    ].forEach(({ value, label }) => {
+      const opt = document.createElement('option');
+      opt.value = value; opt.textContent = label;
+      terrainSelect.appendChild(opt);
+    });
+    panel.appendChild(terrainSelect);
+
+    // ── Hint ──
+    const hint = document.createElement('div');
+    hint.textContent = 'WASD to move  ·  Del to delete';
+    hint.style.cssText = 'font-size:10px; color:#888; margin-bottom:14px;';
+    panel.appendChild(hint);
+
+    // ── Delete button ──
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete Square Hill';
+    deleteBtn.style.cssText = 'display:block; width:100%; padding:8px; background:#c0392b; color:white; border:none; border-radius:5px; cursor:pointer; font-size:13px; font-family:Arial;';
+    panel.appendChild(deleteBtn);
+
+    // ── Helpers ──
+    const setModeUI = (sloped) => {
+      flatSection.style.display  = sloped ? 'none'  : 'block';
+      slopedSection.style.display = sloped ? 'block' : 'none';
+      flatBtn.style.background   = sloped ? 'transparent' : '#f0a020';
+      flatBtn.style.color        = sloped ? '#f0a020' : '#000';
+      slopeBtn.style.background  = sloped ? '#f0a020' : 'transparent';
+      slopeBtn.style.color       = sloped ? '#000' : '#f0a020';
+    };
+    const setAxisUI = (axis) => {
+      axisXBtn.style.background = axis === 'x' ? '#f0a020' : 'transparent';
+      axisXBtn.style.color      = axis === 'x' ? '#000' : '#f0a020';
+      axisZBtn.style.background = axis === 'z' ? '#f0a020' : 'transparent';
+      axisZBtn.style.color      = axis === 'z' ? '#000' : '#f0a020';
+    };
+    const rebuild = () => { window.rebuildTerrain?.(); window.rebuildTerrainGrid?.(); };
+
+    // ── Event wiring ──
+    widthSlider.addEventListener('input', () => {
+      if (!this.selectedSquareHill) return;
+      const val = parseFloat(widthSlider.value);
+      document.getElementById('sq-width-val').textContent = val.toFixed(1);
+      this.selectedSquareHill.feature.width = val;
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    depthSlider.addEventListener('input', () => {
+      if (!this.selectedSquareHill) return;
+      const val = parseFloat(depthSlider.value);
+      document.getElementById('sq-depth-val').textContent = val.toFixed(1);
+      this.selectedSquareHill.feature.depth = val;
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    transSlider.addEventListener('input', () => {
+      if (!this.selectedSquareHill) return;
+      const val = parseFloat(transSlider.value);
+      document.getElementById('sq-trans-val').textContent = val.toFixed(1);
+      this.selectedSquareHill.feature.transition = val;
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    flatBtn.addEventListener('click', () => {
+      if (!this.selectedSquareHill) return;
+      const f = this.selectedSquareHill.feature;
+      if (!f.slopeAxis) return; // already flat
+      // Carry a representative height over from the sloped values
+      f.height = parseFloat(hMaxSlider.value) || 5;
+      delete f.slopeAxis; delete f.heightAtMin; delete f.heightAtMax;
+      document.getElementById('sq-height-slider').value = f.height;
+      document.getElementById('sq-height-val').textContent = f.height.toFixed(1);
+      setModeUI(false);
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    slopeBtn.addEventListener('click', () => {
+      if (!this.selectedSquareHill) return;
+      const f = this.selectedSquareHill.feature;
+      if (f.slopeAxis) return; // already sloped
+      const prevH = f.height ?? 5;
+      f.slopeAxis = 'x';
+      f.heightAtMin = 0;
+      f.heightAtMax = prevH;
+      delete f.height;
+      document.getElementById('sq-hmin-slider').value = 0;
+      document.getElementById('sq-hmin-val').textContent = '0.0';
+      document.getElementById('sq-hmax-slider').value = prevH;
+      document.getElementById('sq-hmax-val').textContent = prevH.toFixed(1);
+      setModeUI(true);
+      setAxisUI('x');
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    heightSlider.addEventListener('input', () => {
+      if (!this.selectedSquareHill) return;
+      const val = parseFloat(heightSlider.value);
+      document.getElementById('sq-height-val').textContent = val.toFixed(1);
+      this.selectedSquareHill.feature.height = val;
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    axisXBtn.addEventListener('click', () => {
+      if (!this.selectedSquareHill) return;
+      this.selectedSquareHill.feature.slopeAxis = 'x';
+      setAxisUI('x');
+      rebuild();
+    });
+
+    axisZBtn.addEventListener('click', () => {
+      if (!this.selectedSquareHill) return;
+      this.selectedSquareHill.feature.slopeAxis = 'z';
+      setAxisUI('z');
+      rebuild();
+    });
+
+    hMinSlider.addEventListener('input', () => {
+      if (!this.selectedSquareHill) return;
+      const val = parseFloat(hMinSlider.value);
+      document.getElementById('sq-hmin-val').textContent = val.toFixed(1);
+      this.selectedSquareHill.feature.heightAtMin = val;
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    hMaxSlider.addEventListener('input', () => {
+      if (!this.selectedSquareHill) return;
+      const val = parseFloat(hMaxSlider.value);
+      document.getElementById('sq-hmax-val').textContent = val.toFixed(1);
+      this.selectedSquareHill.feature.heightAtMax = val;
+      this.updateSquareHillVisual(this.selectedSquareHill);
+      rebuild();
+    });
+
+    terrainSelect.addEventListener('change', () => {
+      if (!this.selectedSquareHill) return;
+      const val = terrainSelect.value;
+      if (val === 'none') {
+        this.selectedSquareHill.feature.terrainType = null;
+      } else {
+        const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === val);
+        this.selectedSquareHill.feature.terrainType = key ? TERRAIN_TYPES[key] : null;
+      }
+      window.rebuildTerrainGrid?.();
+    });
+
+    deleteBtn.addEventListener('click', () => this.deleteSelectedSquareHill());
+    panel.addEventListener('mousedown', e => e.stopPropagation());
+
+    document.body.appendChild(panel);
+    this.squareHillPropertiesPanel = panel;
+  }
+
+  showSquareHillProperties(hillData) {
+    if (!this.squareHillPropertiesPanel) return;
+    const { feature } = hillData;
+    const get = id => document.getElementById(id);
+    const sloped = !!feature.slopeAxis;
+
+    // Common fields
+    if (get('sq-width-slider'))  { get('sq-width-slider').value  = feature.width;  get('sq-width-val').textContent  = feature.width.toFixed(1); }
+    if (get('sq-depth-slider'))  { get('sq-depth-slider').value  = feature.depth ?? feature.width; get('sq-depth-val').textContent  = (feature.depth ?? feature.width).toFixed(1); }
+    if (get('sq-trans-slider'))  { get('sq-trans-slider').value  = feature.transition ?? 8; get('sq-trans-val').textContent  = (feature.transition ?? 8).toFixed(1); }
+    if (get('sq-terrain-select')) { get('sq-terrain-select').value = feature.terrainType?.name || 'none'; }
+
+    // Mode-specific
+    const flatSection   = document.getElementById('sq-flat-section');
+    const slopedSection = document.getElementById('sq-sloped-section');
+    const flatBtn  = document.getElementById('sq-mode-flat');
+    const slopeBtn = document.getElementById('sq-mode-sloped');
+    const btnBase = 'flex:1; padding:5px 0; border:1px solid #f0a020; border-radius:4px; cursor:pointer; font-size:12px; font-family:Arial; transition:background 0.15s;';
+
+    if (flatSection)   flatSection.style.display   = sloped ? 'none'  : 'block';
+    if (slopedSection) slopedSection.style.display  = sloped ? 'block' : 'none';
+    if (flatBtn)  { flatBtn.style.background  = sloped ? 'transparent' : '#f0a020'; flatBtn.style.color  = sloped ? '#f0a020' : '#000'; }
+    if (slopeBtn) { slopeBtn.style.background = sloped ? '#f0a020' : 'transparent'; slopeBtn.style.color = sloped ? '#000' : '#f0a020'; }
+
+    if (sloped) {
+      if (get('sq-hmin-slider')) { get('sq-hmin-slider').value = feature.heightAtMin ?? 0;  get('sq-hmin-val').textContent = (feature.heightAtMin ?? 0).toFixed(1); }
+      if (get('sq-hmax-slider')) { get('sq-hmax-slider').value = feature.heightAtMax ?? 5;  get('sq-hmax-val').textContent = (feature.heightAtMax ?? 5).toFixed(1); }
+      const axis = feature.slopeAxis ?? 'x';
+      const axisXBtn = document.getElementById('sq-axis-x');
+      const axisZBtn = document.getElementById('sq-axis-z');
+      if (axisXBtn) { axisXBtn.style.background = axis === 'x' ? '#f0a020' : 'transparent'; axisXBtn.style.color = axis === 'x' ? '#000' : '#f0a020'; }
+      if (axisZBtn) { axisZBtn.style.background = axis === 'z' ? '#f0a020' : 'transparent'; axisZBtn.style.color = axis === 'z' ? '#000' : '#f0a020'; }
+    } else {
+      if (get('sq-height-slider')) { get('sq-height-slider').value = feature.height ?? 5; get('sq-height-val').textContent = (feature.height ?? 5).toFixed(1); }
+    }
+
+    this.squareHillPropertiesPanel.style.display = 'block';
+  }
+
+  hideSquareHillProperties() {
+    if (this.squareHillPropertiesPanel) this.squareHillPropertiesPanel.style.display = 'none';
   }
 
   // ─── Hill Properties Panel ─────────────────────────────────────────────────
@@ -984,7 +1545,7 @@ export class EditorController {
       { value: 'loose_dirt',  label: 'Loose Dirt'     },
       { value: 'asphalt',     label: 'Asphalt'        },
       { value: 'mud',         label: 'Mud'            },
-      { value: 'WATER',       label: 'Water'          },
+      { value: 'water',       label: 'water'          },
     ].forEach(({ value, label }) => {
       const opt = document.createElement('option');
       opt.value = value; opt.textContent = label;
@@ -1023,6 +1584,7 @@ export class EditorController {
       this.selectedHill.feature.radius = val;
       this.updateHillVisual(this.selectedHill);
       window.rebuildTerrain?.();
+      window.rebuildTerrainGrid?.();
     });
 
     heightSlider.addEventListener('input', () => {
@@ -1032,6 +1594,7 @@ export class EditorController {
       this.selectedHill.feature.height = val;
       this.updateHillVisual(this.selectedHill);
       window.rebuildTerrain?.();
+      window.rebuildTerrainGrid?.();
     });
 
     terrainSelect.addEventListener('change', () => {
@@ -1043,7 +1606,7 @@ export class EditorController {
         const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === val);
         this.selectedHill.feature.terrainType = key ? TERRAIN_TYPES[key] : null;
       }
-      window.rebuildTerrainTexture?.();
+      window.rebuildTerrainGrid?.();
     });
 
     deleteBtn.addEventListener('click', () => this.deleteSelectedHill());

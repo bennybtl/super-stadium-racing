@@ -27,7 +27,7 @@ export const TERRAIN_TYPES = {
     dragMultiplier: 2.9,    // Slows you down
   },
   WATER: {
-    name: "WATER",
+    name: "water",
     gripMultiplier: 0.3,     // Low grip
     color: new Color3(0.2, 0.4, 0.6),
     dragMultiplier: 6.0,     // Very high drag

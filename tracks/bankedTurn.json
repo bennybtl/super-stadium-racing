@@ -2,7 +2,7 @@
   "name": "Banked Turn",
   "features": [
     {
-      "type": "slopedRect",
+      "type": "squareHill",
       "centerX": -20,
       "centerZ": 0,
       "width": 40,
@@ -10,6 +10,7 @@
       "slopeAxis": "x",
       "heightAtMin": 4,
       "heightAtMax": 0,
+      "transition": 0,
       "terrainType": {
         "name": "packed_dirt",
         "gripMultiplier": 2,
@@ -22,7 +23,7 @@
       }
     },
     {
-      "type": "slopedRect",
+      "type": "squareHill",
       "centerX": 20,
       "centerZ": 0,
       "width": 10,
@@ -30,6 +31,7 @@
       "slopeAxis": "x",
       "heightAtMin": 6,
       "heightAtMax": 0,
+      "transition": 0,
       "terrainType": {
         "name": "packed_dirt",
         "gripMultiplier": 2,
@@ -42,7 +44,7 @@
       }
     },
     {
-      "type": "slopedRect",
+      "type": "squareHill",
       "centerX": 0,
       "centerZ": 0,
       "width": 10,
@@ -50,6 +52,7 @@
       "slopeAxis": "x",
       "heightAtMin": 0,
       "heightAtMax": 4,
+      "transition": 0,
       "terrainType": {
         "name": "packed_dirt",
         "gripMultiplier": 2,

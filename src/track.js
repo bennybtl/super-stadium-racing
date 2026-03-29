@@ -90,20 +90,20 @@ export class Track {
     return this;
   }
 
-  // Add a sloped rectangular region
-  // The region slopes from one edge to another
-  // heightAtMin/heightAtMax specify the height at the min and max values of the slope axis
-  // transition: width of the cosine falloff band outside the rectangle edges (0 = hard edge)
+  // Add a square hill that slopes from one edge to the other.
+  // slopeAxis: "x" or "z" — which axis the slope runs along.
+  // heightAtMin/heightAtMax: elevation at the -axis and +axis edges.
+  // transition: cosine falloff band outside the rectangle (0 = hard edge).
   addSlopedRect(centerX, centerZ, width, depth, slopeAxis, heightAtMin, heightAtMax, terrainType = null, transition = 0) {
     this.features.push({
-      type: "slopedRect",
+      type: "squareHill",
       centerX,
       centerZ,
       width,
       depth,
-      slopeAxis, // "x" or "z" - which axis the slope runs along
-      heightAtMin, // height at the minimum value of the slope axis
-      heightAtMax, // height at the maximum value of the slope axis
+      slopeAxis,
+      heightAtMin,
+      heightAtMax,
       terrainType,
       transition,
     });
@@ -249,41 +249,24 @@ export class Track {
           const edgeDz = Math.max(0, Math.abs(lz) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
           if (dist >= transition) break;
-          const t = dist / transition;
-          totalHeight += feature.height * Math.cos(t * Math.PI / 2);
-          break;
-        }
-
-        case "slopedRect": {
-          const hw = feature.width / 2;
-          const hd = feature.depth / 2;
-          const transition = feature.transition ?? 0;
-          const lx = x - feature.centerX;
-          const lz = z - feature.centerZ;
-
-          // Distance from point to rectangle edge (0 when inside)
-          const edgeDx = Math.max(0, Math.abs(lx) - hw);
-          const edgeDz = Math.max(0, Math.abs(lz) - hd);
-          const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
-
-          if (dist > transition) break;
-
-          // Nearest point on the rectangle — used to sample slope height at the edge
-          const clampedX = Math.max(-hw, Math.min(hw, lx));
-          const clampedZ = Math.max(-hd, Math.min(hd, lz));
-
-          let innerHeight;
-          if (feature.slopeAxis === "x") {
-            const t = (clampedX + hw) / feature.width;
-            innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
-          } else {
-            const t = (clampedZ + hd) / feature.depth;
-            innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
-          }
-
-          // Inside the rectangle: full height. Outside: cosine falloff.
           const falloff = dist === 0 ? 1 : Math.cos((dist / transition) * Math.PI / 2);
-          totalHeight += innerHeight * falloff;
+          // Sloped variant: linear height across the rectangle, cosine falloff outside
+          if (feature.slopeAxis) {
+            const clampedX = Math.max(-hw, Math.min(hw, lx));
+            const clampedZ = Math.max(-hd, Math.min(hd, lz));
+            let innerHeight;
+            if (feature.slopeAxis === "x") {
+              const t = (clampedX + hw) / feature.width;
+              innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
+            } else {
+              const t = (clampedZ + hd) / feature.depth;
+              innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
+            }
+            totalHeight += innerHeight * falloff;
+          } else {
+            // Flat-top variant: uniform height with cosine falloff
+            totalHeight += feature.height * falloff;
+          }
           break;
         }
       }
@@ -355,19 +338,6 @@ export class Track {
           const edgeDz = Math.max(0, Math.abs(z - feature.centerZ) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
           if (dist < transition) return feature.terrainType;
-          break;
-        }
-
-        case "slopedRect": {
-          const hw = feature.width / 2;
-          const hd = feature.depth / 2;
-          const transition = feature.transition ?? 0;
-          const edgeDx = Math.max(0, Math.abs(x - feature.centerX) - hw);
-          const edgeDz = Math.max(0, Math.abs(z - feature.centerZ) - hd);
-          const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
-          if (dist <= transition) {
-            return feature.terrainType;
-          }
           break;
         }
       }
