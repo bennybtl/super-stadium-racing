@@ -7,7 +7,8 @@ const DRIFT_COLORS = {
   loose_dirt:   { r: 0.50, g: 0.35, b: 0.18 }, // lighter tan
   mud:          { r: 0.22, g: 0.16, b: 0.10 }, // dark mud
   asphalt:      { r: 0.25, g: 0.25, b: 0.25 }, // grey tyre smoke
-  WebTransportError:        { r: 0.70, g: 0.85, b: 1.00 }, // blue-white spray
+  water:        { r: 0.70, g: 0.85, b: 1.00 }, // blue-white spray
+  rocky:        { r: 0.35, g: 0.24, b: 0.16 }, // dark reddish-brown grit
 };
 
 /**

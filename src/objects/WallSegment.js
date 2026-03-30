@@ -18,24 +18,26 @@ export class WallSegment {
   /**
    * @param {number} px       - world X centre
    * @param {number} pz       - world Z centre
-   * @param {number} groundY  - terrain height at this position
+   * @param {number} centerY  - world Y centre of the box
    * @param {number} width    - box width (along the wall face)
    * @param {number} height   - box height
    * @param {number} depth    - box depth (wall thickness)
    * @param {number} heading  - rotation around Y (radians)
    * @param {number} friction - tangential speed bleed on impact (0–1)
+   * @param {number} index    - segment index (0-based) used for alternating colour
    * @param {string} name     - mesh name for debugging
    * @param {BABYLON.Scene} scene
    * @param {BABYLON.ShadowGenerator} shadows
    */
-  constructor(px, pz, groundY, width, height, depth, heading, friction, name, scene, shadows) {
+  constructor(px, pz, centerY, width, height, depth, heading, friction, index, name, scene, shadows) {
     this.halfLength = width / 2;
     this.halfThick  = depth / 2;
     this.heading    = heading;
     this.friction   = friction;
+    this._index     = index;
 
     this.mesh = MeshBuilder.CreateBox(name, { width, height, depth }, scene);
-    this.mesh.position = new Vector3(px, groundY + height / 2, pz);
+    this.mesh.position = new Vector3(px, centerY, pz);
     this.mesh.rotation.y = heading;
 
     this._applyMaterial(scene, shadows);
@@ -60,8 +62,9 @@ export class WallSegment {
 
   _applyMaterial(scene, shadows) {
     const mat = new StandardMaterial("wallMat", scene);
-    mat.diffuseColor  = new Color3(0.55, 0.55, 0.55);
-    mat.specularColor = new Color3(0.15, 0.15, 0.15);
+    const isRed = this._index % 2 === 0;
+    mat.diffuseColor  = isRed ? new Color3(0.85, 0.08, 0.08) : new Color3(1.0, 1.0, 1.0);
+    mat.specularColor = new Color3(0.2, 0.2, 0.2);
     this.mesh.material = mat;
     this.mesh.receiveShadows = true;
     shadows.addShadowCaster(this.mesh);

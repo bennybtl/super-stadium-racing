@@ -99,9 +99,9 @@ export class Truck {
       // Boost parameters
       boostCount: 5,
       maxBoosts: 5,
-      boostDuration: 3.0,
-      boostAccelMult: 2.5,
-      boostSpeedMult: 1.8,
+      boostDuration: 1.5,
+      boostAccelMult: 2,
+      boostSpeedMult: 1.5,
     };
   }
 

@@ -17,8 +17,8 @@ export class TerrainPhysics {
     const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
     const truckBottomY = terrainHeight + 0.4; // 0.4 = half truck height
     const penetration = truckBottomY - mesh.position.y;
-    
-    // Terrain acts as a spring - pushes back when penetrated or very close
+
+    // Terrain acts as a spring- pushes back when penetrated or very close
     if (penetration > -0.2) {
       const springForce = Math.max(0, penetration) * this.state.springStrength;
       const dampingForce = -this.state.verticalVelocity * this.state.damping;

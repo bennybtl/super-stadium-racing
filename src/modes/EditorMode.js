@@ -125,6 +125,14 @@ export class EditorMode {
       this.controller.exit();
     };
 
+    // Quick-test: hot-swap live track into loader, then switch to race for 1 lap.
+    // RaceMode will return here when the player exits.
+    window.quickTestTrack = () => {
+      const testKey = '__quicktest__';
+      trackLoader.tracks.set(testKey, currentTrack);
+      this.controller.goToTest({ trackKey: testKey, returnToEditor: trackKey });
+    };
+
     // -- Game loop --
     scene.onBeforeRenderObservable.add(() => {
       if (menuManager.isMenuActive()) return;
@@ -146,6 +154,7 @@ export class EditorMode {
     delete window.currentEditorScene;
     delete window.rebuildTerrain;
     delete window.rebuildTerrainTexture;
+    delete window.quickTestTrack;
 
     // Restore racing HUD
     document.getElementById("checkpoint-display").style.display = "";

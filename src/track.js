@@ -91,17 +91,18 @@ export class Track {
   }
 
   // Add a square hill that slopes from one edge to the other.
-  // slopeAxis: "x" or "z" — which axis the slope runs along.
-  // heightAtMin/heightAtMax: elevation at the -axis and +axis edges.
+  // slopeAxis: 'x'→0°, 'z'→90°. Converted to angle (degrees).
+  // heightAtMin/heightAtMax: elevation at the − and + ends of the slope direction.
   // transition: cosine falloff band outside the rectangle (0 = hard edge).
   addSlopedRect(centerX, centerZ, width, depth, slopeAxis, heightAtMin, heightAtMax, terrainType = null, transition = 0) {
+    const angle = slopeAxis === 'z' ? 90 : 0;
     this.features.push({
       type: "squareHill",
       centerX,
       centerZ,
       width,
       depth,
-      slopeAxis,
+      angle,
       heightAtMin,
       heightAtMax,
       terrainType,
@@ -243,30 +244,47 @@ export class Track {
           const hw = feature.width / 2;
           const hd = (feature.depth ?? feature.width) / 2;
           const transition = feature.transition ?? 4;
-          const lx = x - feature.centerX;
-          const lz = z - feature.centerZ;
+          // Rotate world offset into the box's local space
+          const wx = x - feature.centerX;
+          const wz = z - feature.centerZ;
+          const angleRad = (feature.angle ?? 0) * Math.PI / 180;
+          const cosA = Math.cos(angleRad);
+          const sinA = Math.sin(angleRad);
+          const lx =  wx * cosA + wz * sinA;
+          const lz = -wx * sinA + wz * cosA;
           const edgeDx = Math.max(0, Math.abs(lx) - hw);
           const edgeDz = Math.max(0, Math.abs(lz) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
           if (dist >= transition) break;
           const falloff = dist === 0 ? 1 : Math.cos((dist / transition) * Math.PI / 2);
-          // Sloped variant: linear height across the rectangle, cosine falloff outside
-          if (feature.slopeAxis) {
-            const clampedX = Math.max(-hw, Math.min(hw, lx));
-            const clampedZ = Math.max(-hd, Math.min(hd, lz));
-            let innerHeight;
-            if (feature.slopeAxis === "x") {
-              const t = (clampedX + hw) / feature.width;
-              innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
-            } else {
-              const t = (clampedZ + hd) / feature.depth;
-              innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
-            }
+          if (feature.heightAtMin !== undefined) {
+            // Slope runs along local X (the rotated width axis)
+            const t = (Math.max(-hw, Math.min(hw, lx)) + hw) / feature.width;
+            const innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
             totalHeight += innerHeight * falloff;
           } else {
-            // Flat-top variant: uniform height with cosine falloff
             totalHeight += feature.height * falloff;
           }
+          break;
+        }
+
+        case "meshGrid": {
+          const { centerX: cx, centerZ: cz, width, depth, cols, rows, heights } = feature;
+          if (!heights || cols < 2 || rows < 2) break;
+          const halfW = width / 2, halfD = depth / 2;
+          if (x < cx - halfW || x > cx + halfW || z < cz - halfD || z > cz + halfD) break;
+          // Fractional grid coordinate [0, cols-1] and [0, rows-1]
+          const fc = (x - (cx - halfW)) * (cols - 1) / width;
+          const fr = (z - (cz - halfD)) * (rows - 1) / depth;
+          const c0 = Math.max(0, Math.min(Math.floor(fc), cols - 2));
+          const r0 = Math.max(0, Math.min(Math.floor(fr), rows - 2));
+          const c1 = c0 + 1, r1 = r0 + 1;
+          const tc = fc - c0, tr = fr - r0;
+          totalHeight +=
+            (heights[r0 * cols + c0] ?? 0) * (1 - tc) * (1 - tr) +
+            (heights[r0 * cols + c1] ?? 0) *      tc  * (1 - tr) +
+            (heights[r1 * cols + c0] ?? 0) * (1 - tc) *      tr  +
+            (heights[r1 * cols + c1] ?? 0) *      tc  *      tr;
           break;
         }
       }
@@ -334,8 +352,15 @@ export class Track {
           const hw = feature.width / 2;
           const hd = (feature.depth ?? feature.width) / 2;
           const transition = feature.transition ?? 4;
-          const edgeDx = Math.max(0, Math.abs(x - feature.centerX) - hw);
-          const edgeDz = Math.max(0, Math.abs(z - feature.centerZ) - hd);
+          const wx = x - feature.centerX;
+          const wz = z - feature.centerZ;
+          const angleRad = (feature.angle ?? 0) * Math.PI / 180;
+          const cosA = Math.cos(angleRad);
+          const sinA = Math.sin(angleRad);
+          const lx =  wx * cosA + wz * sinA;
+          const lz = -wx * sinA + wz * cosA;
+          const edgeDx = Math.max(0, Math.abs(lx) - hw);
+          const edgeDz = Math.max(0, Math.abs(lz) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
           if (dist < transition) return feature.terrainType;
           break;

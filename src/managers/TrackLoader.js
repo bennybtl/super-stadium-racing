@@ -41,18 +41,23 @@ export class TrackLoader {
    * Load all tracks from the tracks directory
    */
   async loadAllTracks() {
-    const trackFiles = [
-      'simple.json',
-      'crossroads.json',
-      'rollercoaster.json',
-      'hills.json',
-      'mudPit.json',
-      'bankedTurn.json'
-    ];
+    const modules = import.meta.glob('/tracks/*.json', { query: '?raw', import: 'default' });
 
-    const loadPromises = trackFiles.map(file => this.loadTrack(file));
+    const loadPromises = Object.entries(modules).map(async ([path, load]) => {
+      try {
+        const rawJson = await load();
+        const filename = path.split('/').pop();
+        const key = filename.replace('.json', '');
+        const track = Track.fromJSON(rawJson);
+        this.tracks.set(key, track);
+        if (!this.trackList.includes(key)) this.trackList.push(key);
+        console.log(`[TrackLoader] Loaded track: ${track.name} (${key})`);
+      } catch (error) {
+        console.error(`[TrackLoader] Error loading track ${path}:`, error);
+      }
+    });
+
     await Promise.all(loadPromises);
-    
     console.log(`[TrackLoader] Loaded ${this.tracks.size} tracks`);
     return this.tracks;
   }
@@ -61,6 +66,15 @@ export class TrackLoader {
    * Get a track by key
    */
   getTrack(key) {
+    // First check if there's a saved version in localStorage
+    const savedTrack = this.loadTrackFromStorage(key);
+    if (savedTrack) {
+      console.log(`[TrackLoader] Loaded track ${key} from localStorage with ${savedTrack.features.length} features`);
+      return savedTrack;
+    }
+    
+    // Otherwise return the default track
+    console.log(`[TrackLoader] No localStorage version found for ${key}, using default`);
     return this.tracks.get(key);
   }
 
@@ -86,6 +100,7 @@ export class TrackLoader {
   loadTrackFromStorage(key) {
     const json = localStorage.getItem(`track_${key}`);
     if (json) {
+      console.log(`[TrackLoader] Found saved track in localStorage for ${key}`);
       const track = Track.fromJSON(json);
       this.tracks.set(key, track);
       if (!this.trackList.includes(key)) {

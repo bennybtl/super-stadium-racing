@@ -129,19 +129,12 @@ export class MenuManager {
     this.title.textContent = 'Select Track';
     this.buttonContainer.innerHTML = '';
     
-    // Create button for each track
-    const tracks = [
-      { key: 'simple', name: 'Simple Ridge' },
-      { key: 'crossroads', name: 'Crossroads' },
-      { key: 'rollercoaster', name: 'Rollercoaster' },
-      { key: 'hills', name: 'Hills' },
-      { key: 'mudPit', name: 'Mud Pit' },
-      { key: 'bankedTurn', name: 'Banked Turn' }
-    ];
-    
-    tracks.forEach(track => {
-      const trackButton = this.createButton(track.name, () => {
-        this.selectedTrack = track.key;
+    // Create button for each loaded track
+    const trackList = window.trackLoader ? window.trackLoader.getTrackList() : [];
+    trackList.forEach(key => {
+      const track = window.trackLoader.getTrack(key);
+      const trackButton = this.createButton(track ? track.name : key, () => {
+        this.selectedTrack = key;
         this.showLapSelectMenu();
       });
       this.buttonContainer.appendChild(trackButton);

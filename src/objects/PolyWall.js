@@ -33,17 +33,29 @@ export class PolyWall {
       const dirX    = dx / length;
       const dirZ    = dz / length;
 
+      // How far below the lowest sampled terrain point to extend the box
+      const SKIRT = 2;
+
       for (let s = 0; s < numSegs; s++) {
         const t       = (s + 0.5) * segLen;
         const px      = p0.x + dirX * t;
         const pz      = p0.z + dirZ * t;
         const groundY = track.getHeightAt(px, pz);
 
+        // Sample terrain at both ends of this segment
+        const half = segLen / 2;
+        const yA = track.getHeightAt(px - dirX * half, pz - dirZ * half);
+        const yB = track.getHeightAt(px + dirX * half, pz + dirZ * half);
+        const bottomY = Math.min(groundY, yA, yB) - SKIRT;
+        const topY    = groundY + height;
+        const totalH  = topY - bottomY;
+        const centerY = bottomY + totalH / 2;
+
         // Tiny overlap prevents gaps between segments
         const segW = segLen * 1.02;
         this.segments.push(
-          new WallSegment(px, pz, groundY, segW, height, thickness,
-            heading, friction, "wall_poly", scene, shadows)
+          new WallSegment(px, pz, centerY, segW, totalH, thickness,
+            heading, friction, this.segments.length, "wall_poly", scene, shadows)
         );
       }
     }

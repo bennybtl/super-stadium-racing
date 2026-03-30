@@ -2,31 +2,6 @@
   "name": "Mud Pit",
   "features": [
     {
-      "type": "squareHill",
-      "centerX": 0,
-      "centerZ": 0,
-      "width": 40,
-      "depth": 40,
-      "height": 7,
-      "transition": 14,
-      "terrainType": null
-    },
-    {
-      "type": "squareHill",
-      "centerX": 0,
-      "centerZ": 0,
-      "width": 20,
-      "depth": 20,
-      "height": -7,
-      "transition": 14,
-      "terrainType": {
-        "name": "mud",
-        "gripMultiplier": 0.15,
-        "color": { "r": 0.25, "g": 0.2, "b": 0.15 },
-        "dragMultiplier": 2.9
-      }
-    },
-    {
       "type": "terrainRect",
       "centerX": 0,
       "centerZ": 0,

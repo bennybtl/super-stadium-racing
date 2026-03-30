@@ -32,6 +32,12 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.2, 0.4, 0.6),
     dragMultiplier: 6.0,     // Very high drag
   },
+  ROCKY: {
+    name: "rocky",
+    gripMultiplier: 0.4,     // Unpredictable rocky surface
+    color: new Color3(0.42, 0.30, 0.22), // Dark reddish-brown rock
+    dragMultiplier: 5.0,     // Dramatic slowing — holes catch and drag the truck
+  },
 };
 
 export class TerrainManager {

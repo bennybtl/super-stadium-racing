@@ -3,10 +3,10 @@ import { TRUCK_RADIUS } from "../constants.js";
 // Two trucks collide when the distance between their centres is less than the
 // sum of their bounding radii.  We treat each truck as a circle (horizontal
 // plane only) with radius TRUCK_RADIUS.
-const COLLISION_DIST = TRUCK_RADIUS * 2;
+const COLLISION_DIST = TRUCK_RADIUS * 2.5;
 const COLLISION_DIST_SQ = COLLISION_DIST * COLLISION_DIST;
 const RESTITUTION = 0.35; // 0 = perfectly inelastic, 1 = perfectly elastic
-const FRICTION = 0.15;    // fraction of tangential speed bled off on impact
+const FRICTION = 0.075;    // fraction of tangential speed bled off on impact
 
 /**
  * TruckCollisionManager
@@ -126,9 +126,9 @@ export class TruckCollisionManager {
     // Bleed off a fraction of tangential speed (simulates friction at contact)
     const tx = -nz, tz = nx; // tangent perpendicular to normal
     const relVelT = (velA.x - velB.x) * tx + (velA.z - velB.z) * tz;
-    velA.x -= tx * relVelT * FRICTION * 0.5;
-    velA.z -= tz * relVelT * FRICTION * 0.5;
-    velB.x += tx * relVelT * FRICTION * 0.5;
-    velB.z += tz * relVelT * FRICTION * 0.5;
+    velA.x -= tx * relVelT * FRICTION;
+    velA.z -= tz * relVelT * FRICTION;
+    velB.x += tx * relVelT * FRICTION;
+    velB.z += tz * relVelT * FRICTION;
   }
 }

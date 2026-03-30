@@ -1,5 +1,6 @@
 import { Vector3, StandardMaterial, Color3, PointerEventTypes, MeshBuilder, TransformNode } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
+import { MeshGridTool } from "./MeshGridTool.js";
 
 /**
  * EditorController - Handles track editing mode
@@ -50,9 +51,32 @@ export class EditorController {
     this.squareHillHighlightMaterial = null;
     this.squareHillPropertiesPanel = null;
 
+    // Terrain rect editing state
+    this.terrainRectMeshes = [];
+    this.selectedTerrainRect = null;
+    this.terrainRectMaterial = null;
+    this.terrainRectHighlightMaterial = null;
+    this.terrainRectPropertiesPanel = null;
+
     // Checkpoint properties panel
     this.checkpointPropertiesPanel = null;
-    
+
+    // Grid snapping
+    this.snapEnabled = false;
+    this.snapSize = 1;
+    this.snapSizes = [0.5, 1, 2, 5];
+    this.snapIndicator = null;
+    // Accumulated raw (pre-snap) position of whatever is being dragged
+    this._rawDragPos = null;
+
+    // Test Track button
+    this.testTrackBtn = null;
+
+    // Undo / redo stacks (each entry is a JSON string of the features array)
+    this._undoStack = [];
+    this._redoStack = [];
+    this._snapshotDebounceTimer = null;
+
     // Bind event handlers
     this.boundKeyDown = this.handleKeyDown.bind(this);
     this.boundKeyUp = this.handleKeyUp.bind(this);
@@ -60,6 +84,9 @@ export class EditorController {
     
     // Track being edited
     this.currentTrack = null;
+
+    // Mesh grid terrain tool
+    this.meshGridTool = null;
   }
 
   /**
@@ -106,12 +133,40 @@ export class EditorController {
       this.hillHighlightMaterial.backFaceCulling = false;
     }
 
+    // Create square hill materials (always recreate for the current scene)
+    this.squareHillMaterial = new StandardMaterial('squareHillMat', this.scene);
+    this.squareHillMaterial.diffuseColor = new Color3(0.75, 0.55, 0.1);
+    this.squareHillMaterial.emissiveColor = new Color3(0.12, 0.08, 0.01);
+    this.squareHillMaterial.alpha = 0.20;
+    this.squareHillMaterial.backFaceCulling = false;
+
+    this.squareHillHighlightMaterial = new StandardMaterial('squareHillHighlightMat', this.scene);
+    this.squareHillHighlightMaterial.diffuseColor = new Color3(1.0, 0.8, 0.0);
+    this.squareHillHighlightMaterial.emissiveColor = new Color3(0.35, 0.25, 0.0);
+    this.squareHillHighlightMaterial.alpha = 0.20;
+    this.squareHillHighlightMaterial.backFaceCulling = false;
+
+    // Create terrainRect materials (always recreate for the current scene)
+    this.terrainRectMaterial = new StandardMaterial('terrainRectMat', this.scene);
+    this.terrainRectMaterial.diffuseColor = new Color3(0.2, 0.5, 0.9);
+    this.terrainRectMaterial.emissiveColor = new Color3(0.04, 0.1, 0.2);
+    this.terrainRectMaterial.alpha = 0.25;
+    this.terrainRectMaterial.backFaceCulling = false;
+
+    this.terrainRectHighlightMaterial = new StandardMaterial('terrainRectHighlightMat', this.scene);
+    this.terrainRectHighlightMaterial.diffuseColor = new Color3(0.0, 0.9, 1.0);
+    this.terrainRectHighlightMaterial.emissiveColor = new Color3(0.0, 0.3, 0.4);
+    this.terrainRectHighlightMaterial.alpha = 0.35;
+    this.terrainRectHighlightMaterial.backFaceCulling = false;
+
     // Build editor visuals for any hills already in the track
     for (const feature of track.features) {
       if (feature.type === 'hill') {
         this.createHillVisual(feature);
       } else if (feature.type === 'squareHill') {
         this.createSquareHillVisual(feature);
+      } else if (feature.type === 'terrainRect') {
+        this.createTerrainRectVisual(feature);
       }
     }
 
@@ -119,24 +174,23 @@ export class EditorController {
     this.createHillPropertiesPanel();
 
     // Create square hill properties panel
-    if (!this.squareHillMaterial) {
-      this.squareHillMaterial = new StandardMaterial('squareHillMat', this.scene);
-      this.squareHillMaterial.diffuseColor = new Color3(0.75, 0.55, 0.1);
-      this.squareHillMaterial.emissiveColor = new Color3(0.12, 0.08, 0.01);
-      this.squareHillMaterial.alpha = 0.20;
-      this.squareHillMaterial.backFaceCulling = false;
-    }
-    if (!this.squareHillHighlightMaterial) {
-      this.squareHillHighlightMaterial = new StandardMaterial('squareHillHighlightMat', this.scene);
-      this.squareHillHighlightMaterial.diffuseColor = new Color3(1.0, 0.8, 0.0);
-      this.squareHillHighlightMaterial.emissiveColor = new Color3(0.35, 0.25, 0.0);
-      this.squareHillHighlightMaterial.alpha = 0.20;
-      this.squareHillHighlightMaterial.backFaceCulling = false;
-    }
     this.createSquareHillPropertiesPanel();
+
+    // Create terrain rect properties panel
+    this.createTerrainRectPropertiesPanel();
 
     // Create checkpoint properties panel
     this.createCheckpointPropertiesPanel();
+
+    // Snap indicator (bottom-right)
+    this._createSnapIndicator();
+
+    // Test Track button (bottom-left)
+    this._createTestTrackButton();
+
+    // Mesh grid terrain editing tool
+    this.meshGridTool = new MeshGridTool(this);
+    this.meshGridTool.activate(this.scene, track);
   }
 
   /**
@@ -177,6 +231,14 @@ export class EditorController {
     this.squareHillMeshes = [];
     this.selectedSquareHill = null;
 
+    // Dispose all terrain rect editor visuals
+    for (const d of this.terrainRectMeshes) {
+      d.mesh.dispose();
+      d.node.dispose();
+    }
+    this.terrainRectMeshes = [];
+    this.selectedTerrainRect = null;
+
     // Remove hill properties panel
     if (this.hillPropertiesPanel) {
       document.body.removeChild(this.hillPropertiesPanel);
@@ -189,13 +251,118 @@ export class EditorController {
       this.squareHillPropertiesPanel = null;
     }
 
+    // Remove terrain rect properties panel
+    if (this.terrainRectPropertiesPanel) {
+      document.body.removeChild(this.terrainRectPropertiesPanel);
+      this.terrainRectPropertiesPanel = null;
+    }
+
     // Remove checkpoint properties panel
     if (this.checkpointPropertiesPanel) {
       document.body.removeChild(this.checkpointPropertiesPanel);
       this.checkpointPropertiesPanel = null;
     }
-    
+
+    // Remove snap indicator
+    if (this.snapIndicator) {
+      document.body.removeChild(this.snapIndicator);
+      this.snapIndicator = null;
+    }
+
+    // Remove test track button
+    if (this.testTrackBtn) {
+      document.body.removeChild(this.testTrackBtn);
+      this.testTrackBtn = null;
+    }
+
+    // Mesh grid tool
+    if (this.meshGridTool) {
+      this.meshGridTool.deactivate();
+      this.meshGridTool = null;
+    }
+
     console.log('[EditorController] Editor mode deactivated');
+  }
+
+  // ─── Undo / Redo ──────────────────────────────────────────────────────────
+
+  /**
+   * Save the current features array as an undo snapshot.
+   * Pass debounce=true for continuous operations (slider drags, WASD movement)
+   * so we don't flood the stack — a snapshot is only committed after 400ms of silence.
+   */
+  saveSnapshot(debounce = false) {
+    const commit = () => {
+      const snap = JSON.stringify(this.currentTrack.features);
+      // Don't push a duplicate of the current top
+      if (this._undoStack.length && this._undoStack[this._undoStack.length - 1] === snap) return;
+      this._undoStack.push(snap);
+      if (this._undoStack.length > 50) this._undoStack.shift();
+      this._redoStack = [];
+    };
+
+    if (!debounce) {
+      clearTimeout(this._snapshotDebounceTimer);
+      commit();
+    } else {
+      clearTimeout(this._snapshotDebounceTimer);
+      this._snapshotDebounceTimer = setTimeout(commit, 400);
+    }
+  }
+
+  _applySnapshot(snap) {
+    // Deselect everything
+    this.deselectCheckpoint();
+    this.deselectHill();
+    this.deselectSquareHill();
+    this.deselectTerrainRect?.();
+
+    // Dispose all gizmo meshes
+    for (const d of this.hillMeshes)       { d.mesh.dispose(); d.node.dispose(); }
+    for (const d of this.squareHillMeshes) { d.mesh.dispose(); d.node.dispose(); }
+    for (const d of this.terrainRectMeshes) { d.mesh.dispose(); d.node.dispose(); }
+    this.hillMeshes = [];
+    this.squareHillMeshes = [];
+    this.terrainRectMeshes = [];
+
+    // Restore features
+    this.currentTrack.features = JSON.parse(snap);
+
+    // Recreate gizmos + rebuild visuals
+    for (const feature of this.currentTrack.features) {
+      if (feature.type === 'hill') this.createHillVisual(feature);
+      else if (feature.type === 'squareHill') this.createSquareHillVisual(feature);
+      else if (feature.type === 'terrainRect') this.createTerrainRectVisual(feature);
+    }
+    // Restore mesh grid gizmos
+    this.meshGridTool?.onSnapshotRestored();
+    // Checkpoints are managed by CheckpointManager — rebuild from features
+    if (this.checkpointManager) {
+      this.checkpointManager.dispose?.();
+      for (const feature of this.currentTrack.features) {
+        if (feature.type === 'checkpoint') {
+          this.checkpointManager.createSingleCheckpoint(feature);
+        }
+      }
+    }
+
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+  }
+
+  undo() {
+    if (this._undoStack.length === 0) return;
+    this._redoStack.push(JSON.stringify(this.currentTrack.features));
+    this._applySnapshot(this._undoStack.pop());
+    console.log('[Undo] stack remaining:', this._undoStack.length);
+  }
+
+  redo() {
+    if (this._redoStack.length === 0) return;
+    this._undoStack.push(JSON.stringify(this.currentTrack.features));
+    this._applySnapshot(this._redoStack.pop());
+    console.log('[Redo] stack remaining:', this._redoStack.length);
   }
 
   handleKeyDown(event) {
@@ -217,6 +384,29 @@ export class EditorController {
       event.stopImmediatePropagation();
       return;
     }
+
+    // Handle Undo / Redo (Ctrl+Z / Ctrl+Shift+Z, also Cmd on Mac)
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      if (event.shiftKey) {
+        this.redo();
+      } else {
+        this.undo();
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    // Handle Duplicate (Ctrl+D / Cmd+D)
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+      if (this.selectedHill) this.duplicateSelectedHill();
+      else if (this.selectedSquareHill) this.duplicateSelectedSquareHill();
+      else if (this.selectedCheckpoint) this.duplicateSelectedCheckpoint();
+      else if (this.selectedTerrainRect) this.duplicateSelectedTerrainRect();
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     
     // Handle Delete key
     if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -229,6 +419,12 @@ export class EditorController {
       } else if (this.selectedSquareHill) {
         this.deleteSelectedSquareHill();
         event.preventDefault();
+      } else if (this.selectedTerrainRect) {
+        this.deleteSelectedTerrainRect();
+        event.preventDefault();
+      } else if (this.meshGridTool?.activeFeature) {
+        this.meshGridTool.deleteMeshGrid();
+        event.preventDefault();
       }
       return;
     }
@@ -239,7 +435,28 @@ export class EditorController {
       event.preventDefault();
       return;
     }
-    
+
+    // Handle G / Shift+G for grid snap
+    if (event.key.toLowerCase() === 'g' && !event.ctrlKey && !event.metaKey) {
+      if (event.shiftKey) {
+        // Cycle snap size
+        const idx = this.snapSizes.indexOf(this.snapSize);
+        this.snapSize = this.snapSizes[(idx + 1) % this.snapSizes.length];
+        this.snapEnabled = true;
+      } else {
+        this.snapEnabled = !this.snapEnabled;
+      }
+      this._updateSnapIndicator();
+      event.preventDefault();
+      return;
+    }
+
+    // Delegate [ / ] to mesh grid tool for height adjustment
+    if (this.meshGridTool?.onKeyDown(event)) {
+      event.preventDefault();
+      return;
+    }
+
     switch(event.key.toLowerCase()) {
       case 'w':
         this.keys.forward = true;
@@ -355,29 +572,51 @@ export class EditorController {
     if (this.selectedCheckpoint) {
       // Handle rotation
       if (this.keys.rotateLeft) {
+        this.saveSnapshot(true);
         this.rotateSelectedCheckpoint(this.rotationSpeed);
       }
       if (this.keys.rotateRight) {
+        this.saveSnapshot(true);
         this.rotateSelectedCheckpoint(-this.rotationSpeed);
       }
-      
-      // Handle movement
-      this.moveSelectedCheckpoint(movement);
-      // Camera follows the checkpoint
-      this.camera.position.addInPlace(movement);
+
+      const delta = this.moveSelectedCheckpoint(movement);
+      delta.y = movement.y;
+      this.camera.position.addInPlace(delta);
       const currentTarget = this.camera.getTarget();
-      this.camera.setTarget(currentTarget.add(movement));
+      this.camera.setTarget(currentTarget.add(delta));
     } else if (this.selectedHill) {
-      // WASD moves the hill; camera follows
-      this.moveSelectedHill(movement);
-      this.camera.position.addInPlace(movement);
+      const delta = this.moveSelectedHill(movement);
+      delta.y = movement.y;
+      this.camera.position.addInPlace(delta);
       const currentTarget = this.camera.getTarget();
-      this.camera.setTarget(currentTarget.add(movement));
+      this.camera.setTarget(currentTarget.add(delta));
     } else if (this.selectedSquareHill) {
-      this.moveSelectedSquareHill(movement);
-      this.camera.position.addInPlace(movement);
-      const currentTarget = this.camera.getTarget();
-      this.camera.setTarget(currentTarget.add(movement));
+      // Q/E rotates the square hill
+      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
+      if (this.keys.rotateLeft || this.keys.rotateRight) {
+        const f = this.selectedSquareHill.feature;
+        const delta = this.keys.rotateLeft ? rotStep : -rotStep;
+        f.angle = ((f.angle ?? 0) + delta * 180 / Math.PI + 360) % 360;
+        this.updateSquareHillVisual(this.selectedSquareHill);
+        // Sync the angle slider
+        const as = document.getElementById('sq-angle-slider');
+        const av = document.getElementById('sq-angle-val');
+        if (as) { as.value = f.angle; av.textContent = f.angle.toFixed(0) + '°'; }
+        window.rebuildTerrain?.();
+        window.rebuildTerrainGrid?.();
+      }
+      const delta2 = this.moveSelectedSquareHill(movement);
+      delta2.y = movement.y;
+      this.camera.position.addInPlace(delta2);
+      const currentTarget2 = this.camera.getTarget();
+      this.camera.setTarget(currentTarget2.add(delta2));
+    } else if (this.selectedTerrainRect) {
+      const delta = this.moveSelectedTerrainRect(movement);
+      delta.y = movement.y;
+      this.camera.position.addInPlace(delta);
+      const currentTarget3 = this.camera.getTarget();
+      this.camera.setTarget(currentTarget3.add(delta));
     } else {
       // Move camera and target together
       this.camera.position.addInPlace(movement);
@@ -386,9 +625,6 @@ export class EditorController {
     }
   }
 
-  /**
-   * Handle pointer down for selecting checkpoints
-   */
   handlePointerDown(pointerInfo) {
     if (!this.isActive) return;
     
@@ -398,6 +634,9 @@ export class EditorController {
       if (pickResult.hit && pickResult.pickedMesh) {
         // Check if clicked mesh is part of a checkpoint
         const clickedMesh = pickResult.pickedMesh;
+
+        // Mesh grid control points take priority
+        if (this.meshGridTool?.onPointerDown(clickedMesh)) return;
         
         if (this.checkpointManager) {
           for (const checkpointData of this.checkpointManager.checkpointMeshes) {
@@ -421,6 +660,7 @@ export class EditorController {
             } else {
               this.deselectCheckpoint();
               this.deselectSquareHill();
+              this.meshGridTool?.deselectPoint();
               this.selectHill(hillData);
             }
             return;
@@ -435,7 +675,23 @@ export class EditorController {
             } else {
               this.deselectCheckpoint();
               this.deselectHill();
+              this.deselectTerrainRect();
               this.selectSquareHill(hillData);
+            }
+            return;
+          }
+        }
+
+        // Check if clicked mesh is a terrain rect gizmo
+        for (const rectData of this.terrainRectMeshes) {
+          if (clickedMesh === rectData.mesh) {
+            if (this.selectedTerrainRect === rectData) {
+              this.deselectTerrainRect();
+            } else {
+              this.deselectCheckpoint();
+              this.deselectHill();
+              this.deselectSquareHill();
+              this.selectTerrainRect(rectData);
             }
             return;
           }
@@ -445,11 +701,13 @@ export class EditorController {
         this.deselectCheckpoint();
         this.deselectHill();
         this.deselectSquareHill();
+        this.deselectTerrainRect();
       } else {
         // Clicked on empty space (sky, etc.) — deselect all
         this.deselectCheckpoint();
         this.deselectHill();
         this.deselectSquareHill();
+        this.deselectTerrainRect();
       }
     }
   }
@@ -463,6 +721,7 @@ export class EditorController {
     this.deselectHill();
     
     this.selectedCheckpoint = checkpointData;
+    this._rawDragPos = { x: checkpointData.feature.centerX, z: checkpointData.feature.centerZ };
     
     // Highlight selected checkpoint
     const originalMat1 = checkpointData.barrel1.material;
@@ -495,6 +754,7 @@ export class EditorController {
       console.log('[EditorController] Deselected checkpoint');
       this.hideCheckpointProperties();
       this.selectedCheckpoint = null;
+      this._rawDragPos = null;
     }
   }
 
@@ -519,6 +779,7 @@ export class EditorController {
    */
   deleteSelectedCheckpoint() {
     if (!this.selectedCheckpoint) return;
+    this.saveSnapshot();
     
     const checkpoint = this.selectedCheckpoint;
     const feature = checkpoint.feature;
@@ -550,23 +811,331 @@ export class EditorController {
   /**
    * Move the selected checkpoint
    */
-  moveSelectedCheckpoint(movement) {
+  // ─── Duplicate ────────────────────────────────────────────────────────────
+
+  duplicateSelectedHill() {
+    if (!this.selectedHill) return;
+    this.saveSnapshot();
+    const src = this.selectedHill.feature;
+    const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
+    this.currentTrack.features.push(newFeature);
+    const hillData = this.createHillVisual(newFeature);
+    this.deselectHill();
+    this.selectHill(hillData);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  duplicateSelectedSquareHill() {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot();
+    const src = this.selectedSquareHill.feature;
+    const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
+    this.currentTrack.features.push(newFeature);
+    const hillData = this.createSquareHillVisual(newFeature);
+    this.deselectSquareHill();
+    this.selectSquareHill(hillData);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  duplicateSelectedCheckpoint() {
     if (!this.selectedCheckpoint) return;
-    
+    this.saveSnapshot();
+    const src = this.selectedCheckpoint.feature;
+    // Assign next checkpoint number
+    const maxNum = this.currentTrack.features
+      .filter(f => f.type === 'checkpoint' && f.checkpointNumber != null)
+      .reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
+    const newFeature = { ...src, centerX: src.centerX + 5, centerZ: src.centerZ + 5, checkpointNumber: maxNum + 1 };
+    this.currentTrack.features.push(newFeature);
+    const cpMesh = this.checkpointManager.createSingleCheckpoint(newFeature);
+    this.deselectCheckpoint();
+    this.selectCheckpoint(cpMesh);
+  }
+
+  // ─── Terrain Rect Editing ───────────────────────────────────────────────────────────
+
+  addTerrainRectEntity() {
+    const camPos = this.camera.position;
+    const camTarget = this.camera.target;
+    const direction = camTarget.subtract(camPos).normalize();
+    const newX = camPos.x + direction.x * 20;
+    const newZ = camPos.z + direction.z * 50;
+    const newFeature = {
+      type: 'terrainRect',
+      centerX: newX,
+      centerZ: newZ,
+      width: 10,
+      depth: 10,
+      terrainType: TERRAIN_TYPES.MUD,
+    };
+    this.saveSnapshot();
+    this.currentTrack.features.push(newFeature);
+    const rectData = this.createTerrainRectVisual(newFeature);
+    this.deselectCheckpoint();
+    this.deselectHill();
+    this.deselectSquareHill();
+    this.selectTerrainRect(rectData);
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+    this.hideAddMenu();
+  }
+
+  _terrainColorForType(terrainType) {
+    if (!terrainType) return new Color3(0.5, 0.5, 0.5);
+    const c = terrainType.color;
+    return c instanceof Color3 ? c : new Color3(c.r, c.g, c.b);
+  }
+
+  createTerrainRectVisual(feature) {
+    const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const node = new TransformNode('terrainRectNode', this.scene);
+    node.position = new Vector3(feature.centerX, terrainH + 0.05, feature.centerZ);
+    node.scaling  = new Vector3(feature.width, 0.1, feature.depth);
+
+    const mesh = MeshBuilder.CreateBox('terrainRectMesh', { size: 1 }, this.scene);
+    mesh.parent = node;
+    // Clone base material tinted to the terrain type's color
+    const mat = this.terrainRectMaterial.clone('trMat_' + Date.now());
+    const col = this._terrainColorForType(feature.terrainType);
+    mat.diffuseColor = col;
+    mat.emissiveColor = col.scale(0.3);
+    mesh.material = mat;
+    mesh.isPickable = true;
+
+    const rectData = { feature, node, mesh, mat };
+    this.terrainRectMeshes.push(rectData);
+    return rectData;
+  }
+
+  updateTerrainRectVisual(rectData) {
+    const { feature, node, mat } = rectData;
+    const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    node.position.x = feature.centerX;
+    node.position.z = feature.centerZ;
+    node.position.y = terrainH + 0.05;
+    node.scaling.x  = feature.width;
+    node.scaling.z  = feature.depth;
+    const col = this._terrainColorForType(feature.terrainType);
+    mat.diffuseColor = col;
+    mat.emissiveColor = col.scale(0.3);
+  }
+
+  selectTerrainRect(rectData) {
+    this.deselectTerrainRect();
+    this.selectedTerrainRect = rectData;
+    this._rawDragPos = { x: rectData.feature.centerX, z: rectData.feature.centerZ };
+    rectData.mesh.material = this.terrainRectHighlightMaterial;
+    this.showTerrainRectProperties(rectData);
+  }
+
+  deselectTerrainRect() {
+    if (!this.selectedTerrainRect) return;
+    this.selectedTerrainRect.mesh.material = this.selectedTerrainRect.mat;
+    this.selectedTerrainRect = null;
+    this._rawDragPos = null;
+    this.hideTerrainRectProperties();
+  }
+
+  moveSelectedTerrainRect(movement) {
+    if (!this.selectedTerrainRect || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    this.saveSnapshot(true);
+    const { feature } = this.selectedTerrainRect;
+    if (!this._rawDragPos) this._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+    this._rawDragPos.x += movement.x;
+    this._rawDragPos.z += movement.z;
+    const prevX = feature.centerX, prevZ = feature.centerZ;
+    feature.centerX = this._snap(this._rawDragPos.x);
+    feature.centerZ = this._snap(this._rawDragPos.z);
+    this.updateTerrainRectVisual(this.selectedTerrainRect);
+    window.rebuildTerrainGrid?.();
+    return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
+  }
+
+  deleteSelectedTerrainRect() {
+    if (!this.selectedTerrainRect) return;
+    this.saveSnapshot();
+    const rectData = this.selectedTerrainRect;
+    const idx = this.currentTrack.features.indexOf(rectData.feature);
+    if (idx > -1) this.currentTrack.features.splice(idx, 1);
+    rectData.mesh.dispose();
+    rectData.node.dispose();
+    const meshIdx = this.terrainRectMeshes.indexOf(rectData);
+    if (meshIdx > -1) this.terrainRectMeshes.splice(meshIdx, 1);
+    this.hideTerrainRectProperties();
+    this.selectedTerrainRect = null;
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+  }
+
+  duplicateSelectedTerrainRect() {
+    if (!this.selectedTerrainRect) return;
+    this.saveSnapshot();
+    const src = this.selectedTerrainRect.feature;
+    const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
+    this.currentTrack.features.push(newFeature);
+    const rectData = this.createTerrainRectVisual(newFeature);
+    this.deselectTerrainRect();
+    this.selectTerrainRect(rectData);
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+  }
+
+  createTerrainRectPropertiesPanel() {
+    const panel = document.createElement('div');
+    panel.id = 'terrain-rect-properties-panel';
+    panel.style.cssText = `
+      position: fixed; top: 80px; right: 20px;
+      background: rgba(0,0,0,0.88); padding: 18px 20px 16px;
+      border-radius: 10px; border: 2px solid #4a9eff;
+      display: none; z-index: 1000; min-width: 230px;
+      font-family: Arial, sans-serif; color: white;
+      user-select: none; pointer-events: auto;
+    `;
+
+    const title = document.createElement('div');
+    title.textContent = 'Terrain Rect';
+    title.style.cssText = 'font-size:13px; font-weight:bold; margin-bottom:16px; color:#4a9eff; text-transform:uppercase; letter-spacing:1px;';
+    panel.appendChild(title);
+
+    const mkRow = () => { const r = document.createElement('div'); r.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;'; return r; };
+    const sliderCss = 'width:100%; accent-color:#4a9eff; margin-bottom:14px; cursor:pointer;';
+
+    // Width
+    const widthRow = mkRow();
+    widthRow.appendChild(Object.assign(document.createElement('span'), { textContent: 'Width' }));
+    widthRow.appendChild(Object.assign(document.createElement('span'), { id: 'tr-width-val', textContent: '10.0' }));
+    panel.appendChild(widthRow);
+    const widthSlider = Object.assign(document.createElement('input'), { type: 'range', id: 'tr-width-slider', min: '1', max: '80', step: '0.5', value: '10' });
+    widthSlider.style.cssText = sliderCss;
+    panel.appendChild(widthSlider);
+
+    // Depth
+    const depthRow = mkRow();
+    depthRow.appendChild(Object.assign(document.createElement('span'), { textContent: 'Depth' }));
+    depthRow.appendChild(Object.assign(document.createElement('span'), { id: 'tr-depth-val', textContent: '10.0' }));
+    panel.appendChild(depthRow);
+    const depthSlider = Object.assign(document.createElement('input'), { type: 'range', id: 'tr-depth-slider', min: '1', max: '80', step: '0.5', value: '10' });
+    depthSlider.style.cssText = sliderCss;
+    panel.appendChild(depthSlider);
+
+    // Surface
+    const surfLbl = document.createElement('div');
+    surfLbl.textContent = 'Surface';
+    surfLbl.style.cssText = 'font-size:12px; margin-bottom:6px;';
+    panel.appendChild(surfLbl);
+    const terrainSelect = document.createElement('select');
+    terrainSelect.id = 'tr-terrain-select';
+    terrainSelect.style.cssText = 'width:100%; padding:6px 8px; background:#2a2a2a; color:white; border:1px solid #4a9eff; border-radius:4px; font-size:12px; margin-bottom:16px; cursor:pointer;';
+    [
+      { value: 'packed_dirt', label: 'Packed Dirt' },
+      { value: 'loose_dirt',  label: 'Loose Dirt'  },
+      { value: 'asphalt',     label: 'Asphalt'     },
+      { value: 'mud',         label: 'Mud'         },
+      { value: 'water',       label: 'Water'       },
+      { value: 'rocky',       label: 'Rocky'       },
+    ].forEach(({ value, label }) => {
+      const opt = document.createElement('option');
+      opt.value = value; opt.textContent = label;
+      terrainSelect.appendChild(opt);
+    });
+    panel.appendChild(terrainSelect);
+
+    // Hint
+    const hint = document.createElement('div');
+    hint.textContent = 'WASD to move  ·  Del to delete';
+    hint.style.cssText = 'font-size:10px; color:#888; margin-bottom:14px;';
+    panel.appendChild(hint);
+
+    // Duplicate
+    const dupBtn = document.createElement('button');
+    dupBtn.textContent = 'Duplicate Terrain Rect';
+    dupBtn.style.cssText = 'display:block; width:100%; padding:8px; background:#2980b9; color:white; border:none; border-radius:5px; cursor:pointer; font-size:13px; font-family:Arial; margin-bottom:8px;';
+    panel.appendChild(dupBtn);
+
+    // Delete
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete Terrain Rect';
+    deleteBtn.style.cssText = 'display:block; width:100%; padding:8px; background:#c0392b; color:white; border:none; border-radius:5px; cursor:pointer; font-size:13px; font-family:Arial;';
+    panel.appendChild(deleteBtn);
+
+    // Event wiring
+    widthSlider.addEventListener('input', () => {
+      if (!this.selectedTerrainRect) return;
+      this.saveSnapshot(true);
+      const val = parseFloat(widthSlider.value);
+      document.getElementById('tr-width-val').textContent = val.toFixed(1);
+      this.selectedTerrainRect.feature.width = val;
+      this.updateTerrainRectVisual(this.selectedTerrainRect);
+      window.rebuildTerrainGrid?.();
+    });
+
+    depthSlider.addEventListener('input', () => {
+      if (!this.selectedTerrainRect) return;
+      this.saveSnapshot(true);
+      const val = parseFloat(depthSlider.value);
+      document.getElementById('tr-depth-val').textContent = val.toFixed(1);
+      this.selectedTerrainRect.feature.depth = val;
+      this.updateTerrainRectVisual(this.selectedTerrainRect);
+      window.rebuildTerrainGrid?.();
+    });
+
+    terrainSelect.addEventListener('change', () => {
+      if (!this.selectedTerrainRect) return;
+      this.saveSnapshot();
+      const val = terrainSelect.value;
+      const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === val);
+      this.selectedTerrainRect.feature.terrainType = key ? TERRAIN_TYPES[key] : null;
+      this.updateTerrainRectVisual(this.selectedTerrainRect);
+      window.rebuildTerrainGrid?.();
+      window.rebuildTerrainTexture?.();
+    });
+
+    dupBtn.addEventListener('click', () => this.duplicateSelectedTerrainRect());
+    deleteBtn.addEventListener('click', () => this.deleteSelectedTerrainRect());
+    panel.addEventListener('mousedown', e => e.stopPropagation());
+
+    document.body.appendChild(panel);
+    this.terrainRectPropertiesPanel = panel;
+  }
+
+  showTerrainRectProperties(rectData) {
+    if (!this.terrainRectPropertiesPanel) return;
+    const { feature } = rectData;
+    const ws = document.getElementById('tr-width-slider');  if (ws) { ws.value = feature.width;  document.getElementById('tr-width-val').textContent  = feature.width.toFixed(1); }
+    const ds = document.getElementById('tr-depth-slider');  if (ds) { ds.value = feature.depth;  document.getElementById('tr-depth-val').textContent  = feature.depth.toFixed(1); }
+    const ts = document.getElementById('tr-terrain-select'); if (ts) ts.value = feature.terrainType?.name || 'mud';
+    this.terrainRectPropertiesPanel.style.display = 'block';
+  }
+
+  hideTerrainRectProperties() {
+    if (this.terrainRectPropertiesPanel) this.terrainRectPropertiesPanel.style.display = 'none';
+  }
+
+  moveSelectedCheckpoint(movement) {
+    if (!this.selectedCheckpoint) return new Vector3(0, 0, 0);
+    if (movement.x === 0 && movement.z === 0) return new Vector3(0, movement.y, 0);
+    this.saveSnapshot(true);
+
     const checkpoint = this.selectedCheckpoint;
     const feature = checkpoint.feature;
-    
-    // Update feature position
-    feature.centerX += movement.x;
-    feature.centerZ += movement.z;
-    
-    // Get terrain height at new position
+
+    if (!this._rawDragPos) this._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+    this._rawDragPos.x += movement.x;
+    this._rawDragPos.z += movement.z;
+
+    const prevX = feature.centerX;
+    const prevZ = feature.centerZ;
+    feature.centerX = this._snap(this._rawDragPos.x);
+    feature.centerZ = this._snap(this._rawDragPos.z);
+
     const terrainHeight = this.currentTrack.getHeightAt(feature.centerX, feature.centerZ);
-    
-    // Simply move the container - all children move automatically!
     checkpoint.container.position.x = feature.centerX;
     checkpoint.container.position.z = feature.centerZ;
     checkpoint.container.position.y = terrainHeight;
+
+    return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
   /**
@@ -626,6 +1195,20 @@ export class EditorController {
     squareHillBtn.style.cssText = buttonStyle;
     squareHillBtn.onclick = () => this.addSquareHillEntity();
     this.addMenuOverlay.appendChild(squareHillBtn);
+
+    // Add Terrain Rect button
+    const terrainRectBtn = document.createElement('button');
+    terrainRectBtn.textContent = 'Add Terrain Rect';
+    terrainRectBtn.style.cssText = buttonStyle;
+    terrainRectBtn.onclick = () => this.addTerrainRectEntity();
+    this.addMenuOverlay.appendChild(terrainRectBtn);
+
+    // Mesh Grid button
+    const meshGridBtn = document.createElement('button');
+    meshGridBtn.textContent = 'Mesh Grid';
+    meshGridBtn.style.cssText = buttonStyle + 'background: #1ec8c8; color: #000;';
+    meshGridBtn.onclick = () => { this.meshGridTool?.addMeshGridFeature(); this.hideAddMenu(); };
+    this.addMenuOverlay.appendChild(meshGridBtn);
 
     // Close button
     const closeBtn = document.createElement('button');
@@ -690,6 +1273,7 @@ export class EditorController {
     };
     
     // Add to track
+    this.saveSnapshot();
     this.currentTrack.features.push(newFeature);
     
     // Create visual representation
@@ -755,6 +1339,24 @@ export class EditorController {
     widthSlider.style.cssText = sliderCss;
     panel.appendChild(widthSlider);
 
+    // ── Order display + reorder buttons ──
+    const orderRow = mkRow();
+    orderRow.appendChild(Object.assign(document.createElement('span'), { textContent: 'Order' }));
+    const orderNum = Object.assign(document.createElement('span'), { id: 'cp-order-num', textContent: '#1' });
+    orderNum.style.cssText = 'font-weight:bold; color:#ff9f43;';
+    orderRow.appendChild(orderNum);
+    panel.appendChild(orderRow);
+
+    const orderBtnRow = document.createElement('div');
+    orderBtnRow.style.cssText = 'display:flex; gap:6px; margin-bottom:14px;';
+    const earlierBtn = Object.assign(document.createElement('button'), { textContent: '← Earlier' });
+    earlierBtn.style.cssText = 'flex:1; padding:6px; background:#555; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-family:Arial;';
+    const laterBtn = Object.assign(document.createElement('button'), { textContent: 'Later →' });
+    laterBtn.style.cssText = 'flex:1; padding:6px; background:#555; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-family:Arial;';
+    orderBtnRow.appendChild(earlierBtn);
+    orderBtnRow.appendChild(laterBtn);
+    panel.appendChild(orderBtnRow);
+
     // ── Hint ──
     const hint = document.createElement('div');
     hint.textContent = 'WASD to move  ·  QE to rotate  ·  Del to delete';
@@ -762,6 +1364,11 @@ export class EditorController {
     panel.appendChild(hint);
 
     // ── Delete button ──
+    const dupBtn = document.createElement('button');
+    dupBtn.textContent = 'Duplicate Checkpoint';
+    dupBtn.style.cssText = 'display:block; width:100%; padding:8px; background:#2980b9; color:white; border:none; border-radius:5px; cursor:pointer; font-size:13px; font-family:Arial; margin-bottom:8px;';
+    panel.appendChild(dupBtn);
+
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = 'Delete Checkpoint';
     deleteBtn.style.cssText = `
@@ -781,13 +1388,17 @@ export class EditorController {
     // ── Event wiring ──
     widthSlider.addEventListener('input', () => {
       if (!this.selectedCheckpoint) return;
+      this.saveSnapshot(true);
       const val = parseFloat(widthSlider.value);
       document.getElementById('cp-width-val').textContent = val.toFixed(1);
       this.selectedCheckpoint.feature.width = val;
       this.repositionCheckpointBarrels(this.selectedCheckpoint);
     });
 
+    dupBtn.addEventListener('click', () => this.duplicateSelectedCheckpoint());
     deleteBtn.addEventListener('click', () => this.deleteSelectedCheckpoint());
+    earlierBtn.addEventListener('click', () => this.shiftCheckpointOrder(-1));
+    laterBtn.addEventListener('click', () => this.shiftCheckpointOrder(1));
 
     panel.addEventListener('mousedown', e => e.stopPropagation());
 
@@ -800,6 +1411,8 @@ export class EditorController {
     const ws = document.getElementById('cp-width-slider');
     const wv = document.getElementById('cp-width-val');
     if (ws) { ws.value = checkpointData.feature.width; wv.textContent = checkpointData.feature.width.toFixed(1); }
+    const on = document.getElementById('cp-order-num');
+    if (on) on.textContent = '#' + (checkpointData.feature.checkpointNumber ?? '?');
     this.checkpointPropertiesPanel.style.display = 'block';
   }
 
@@ -817,6 +1430,100 @@ export class EditorController {
     const halfWidth = checkpointData.feature.width / 2;
     checkpointData.barrel1.position.x =  halfWidth;
     checkpointData.barrel2.position.x = -halfWidth;
+  }
+
+  // ─── Checkpoint Reordering ─────────────────────────────────────────────────
+
+  /**
+   * Swap the selected checkpoint's order number with its neighbour.
+   * direction: -1 = move earlier (lower number), +1 = move later (higher number)
+   */
+  shiftCheckpointOrder(direction) {
+    if (!this.selectedCheckpoint) return;
+    const myNum = this.selectedCheckpoint.feature.checkpointNumber;
+    if (myNum == null) return;
+    const targetNum = myNum + direction;
+    const other = this.currentTrack.features.find(
+      f => f.type === 'checkpoint' && f.checkpointNumber === targetNum
+    );
+    if (!other) return;
+    this.saveSnapshot();
+    this.selectedCheckpoint.feature.checkpointNumber = targetNum;
+    other.checkpointNumber = myNum;
+    this._refreshAllCheckpointDecals();
+    const on = document.getElementById('cp-order-num');
+    if (on) on.textContent = '#' + targetNum;
+  }
+
+  /** Re-render the number/finish decal on every checkpoint gate. */
+  _refreshAllCheckpointDecals() {
+    const maxNum = this.currentTrack.features
+      .filter(f => f.type === 'checkpoint' && f.checkpointNumber != null)
+      .reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
+    for (const cp of this.checkpointManager.checkpointMeshes) {
+      const isFinish = maxNum > 0 && cp.feature.checkpointNumber === maxNum;
+      cp.updateDecal(cp.feature.checkpointNumber, isFinish);
+    }
+  }
+
+  // ─── Grid Snapping ────────────────────────────────────────────────────────
+
+  /** Round a world-space coordinate to the current snap grid, if snap is on. */
+  _snap(v) {
+    return this.snapEnabled ? Math.round(v / this.snapSize) * this.snapSize : v;
+  }
+
+  _createSnapIndicator() {
+    const el = document.createElement('div');
+    el.id = 'editor-snap-indicator';
+    el.style.cssText = `
+      position: fixed; bottom: 20px; right: 20px;
+      background: rgba(0,0,0,0.75); color: #aaa;
+      padding: 6px 14px; border-radius: 20px;
+      font-family: Arial, sans-serif; font-size: 12px;
+      border: 1px solid #444; pointer-events: none;
+      z-index: 999; user-select: none;
+    `;
+    el.textContent = 'GRID: OFF  [G]';
+    document.body.appendChild(el);
+    this.snapIndicator = el;
+  }
+
+  _updateSnapIndicator() {
+    if (!this.snapIndicator) return;
+    if (this.snapEnabled) {
+      this.snapIndicator.style.color = '#2ecc71';
+      this.snapIndicator.style.borderColor = '#2ecc71';
+      this.snapIndicator.textContent = `GRID: ${this.snapSize}u  [G / Shift+G]`;
+    } else {
+      this.snapIndicator.style.color = '#aaa';
+      this.snapIndicator.style.borderColor = '#444';
+      this.snapIndicator.textContent = 'GRID: OFF  [G]';
+    }
+  }
+
+  // ─── Quick Test ───────────────────────────────────────────────────────────
+
+  _createTestTrackButton() {
+    const btn = document.createElement('button');
+    btn.textContent = '🏁 Test Track';
+    btn.style.cssText = `
+      position: fixed; bottom: 20px; left: 20px;
+      background: #27ae60; color: white;
+      border: none; border-radius: 8px;
+      padding: 10px 18px; font-size: 14px; font-family: Arial;
+      cursor: pointer; z-index: 999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    `;
+    btn.addEventListener('click', () => this.quickTestTrack());
+    btn.addEventListener('mouseover', () => btn.style.background = '#2ecc71');
+    btn.addEventListener('mouseout',  () => btn.style.background = '#27ae60');
+    document.body.appendChild(btn);
+    this.testTrackBtn = btn;
+  }
+
+  quickTestTrack() {
+    window.quickTestTrack?.();
   }
 
   // ─── Hill Editing ──────────────────────────────────────────────────────────
@@ -842,6 +1549,7 @@ export class EditorController {
       terrainType: null,
     };
 
+    this.saveSnapshot();
     this.currentTrack.features.push(newFeature);
     const hillData = this.createHillVisual(newFeature);
 
@@ -905,6 +1613,7 @@ export class EditorController {
   selectHill(hillData) {
     this.deselectHill();
     this.selectedHill = hillData;
+    this._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
     hillData.mesh.material = this.hillHighlightMaterial;
     this.showHillProperties(hillData);
     console.log('[EditorController] Selected hill at',
@@ -921,6 +1630,7 @@ export class EditorController {
       window.rebuildTerrainTexture?.();
       console.log('[EditorController] Deselected hill');
       this.selectedHill = null;
+      this._rawDragPos = null;
     }
   }
 
@@ -928,14 +1638,19 @@ export class EditorController {
    * Translate the selected hill by the given movement vector and rebuild terrain.
    */
   moveSelectedHill(movement) {
-    if (!this.selectedHill || (movement.x === 0 && movement.z === 0)) return;
-
+    if (!this.selectedHill || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    this.saveSnapshot(true);
     const { feature } = this.selectedHill;
-    feature.centerX += movement.x;
-    feature.centerZ += movement.z;
+    if (!this._rawDragPos) this._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+    this._rawDragPos.x += movement.x;
+    this._rawDragPos.z += movement.z;
+    const prevX = feature.centerX, prevZ = feature.centerZ;
+    feature.centerX = this._snap(this._rawDragPos.x);
+    feature.centerZ = this._snap(this._rawDragPos.z);
     this.updateHillVisual(this.selectedHill);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
+    return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
   /**
@@ -943,6 +1658,7 @@ export class EditorController {
    */
   deleteSelectedHill() {
     if (!this.selectedHill) return;
+    this.saveSnapshot();
 
     const hillData = this.selectedHill;
 
@@ -976,19 +1692,20 @@ export class EditorController {
     const camTarget = this.camera.target;
     const direction = camTarget.subtract(camPos).normalize();
     const newX = camPos.x + direction.x * 20;
-    const newZ = camPos.z + direction.z * 20;
+    const newZ = camPos.z + direction.z * 50;
 
     const newFeature = {
       type: 'squareHill',
       centerX: newX,
       centerZ: newZ,
-      width: 20,
-      depth: 20,
-      height: 5,
-      transition: 8,
+      width: 10,
+      depth: 10,
+      height: 3,
+      transition: 4,
       terrainType: null,
     };
 
+    this.saveSnapshot();
     this.currentTrack.features.push(newFeature);
     const hillData = this.createSquareHillVisual(newFeature);
 
@@ -1004,13 +1721,16 @@ export class EditorController {
   }
 
   createSquareHillVisual(feature) {
-    const absH = Math.max(0.5, Math.abs(feature.height));
     const transition = feature.transition ?? 8;
     const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const absH = feature.heightAtMin !== undefined
+      ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
+      : Math.max(0.5, Math.abs(feature.height ?? 5));
 
     const node = new TransformNode('squareHillNode', this.scene);
     node.position = new Vector3(feature.centerX, terrainH + absH / 2, feature.centerZ);
     node.scaling  = new Vector3(feature.width + transition * 2, absH, (feature.depth ?? feature.width) + transition * 2);
+    node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
 
     const mesh = MeshBuilder.CreateBox('squareHillMesh', { size: 1 }, this.scene);
     mesh.parent = node;
@@ -1027,7 +1747,7 @@ export class EditorController {
     const transition = feature.transition ?? 8;
     const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
     // For sloped mode use the larger absolute endpoint so the box has meaningful height
-    const absH = feature.slopeAxis
+    const absH = feature.heightAtMin !== undefined
       ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
       : Math.max(0.5, Math.abs(feature.height ?? 5));
     node.position.x = feature.centerX;
@@ -1036,11 +1756,13 @@ export class EditorController {
     node.scaling.x  = feature.width + transition * 2;
     node.scaling.y  = absH;
     node.scaling.z  = (feature.depth ?? feature.width) + transition * 2;
+    node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
   }
 
   selectSquareHill(hillData) {
     this.deselectSquareHill();
     this.selectedSquareHill = hillData;
+    this._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
     hillData.mesh.material = this.squareHillHighlightMaterial;
     this.showSquareHillProperties(hillData);
     console.log('[EditorController] Selected square hill at',
@@ -1054,21 +1776,29 @@ export class EditorController {
       window.rebuildTerrainTexture?.();
       console.log('[EditorController] Deselected square hill');
       this.selectedSquareHill = null;
+      this._rawDragPos = null;
     }
   }
 
   moveSelectedSquareHill(movement) {
-    if (!this.selectedSquareHill || (movement.x === 0 && movement.z === 0)) return;
+    if (!this.selectedSquareHill || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    this.saveSnapshot(true);
     const { feature } = this.selectedSquareHill;
-    feature.centerX += movement.x;
-    feature.centerZ += movement.z;
+    if (!this._rawDragPos) this._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+    this._rawDragPos.x += movement.x;
+    this._rawDragPos.z += movement.z;
+    const prevX = feature.centerX, prevZ = feature.centerZ;
+    feature.centerX = this._snap(this._rawDragPos.x);
+    feature.centerZ = this._snap(this._rawDragPos.z);
     this.updateSquareHillVisual(this.selectedSquareHill);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
+    return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
   deleteSelectedSquareHill() {
     if (!this.selectedSquareHill) return;
+    this.saveSnapshot();
     const hillData = this.selectedSquareHill;
 
     const idx = this.currentTrack.features.indexOf(hillData.feature);
@@ -1159,6 +1889,18 @@ export class EditorController {
     transSlider.style.cssText = sliderCss;
     panel.appendChild(transSlider);
 
+    // ── Angle (common to flat and sloped) ──
+    const angleRow = mkRow();
+    const angleLblTxt = document.createElement('span'); angleLblTxt.textContent = 'Angle';
+    const angleVal = document.createElement('span'); angleVal.id = 'sq-angle-val'; angleVal.textContent = '0°';
+    angleRow.appendChild(angleLblTxt); angleRow.appendChild(angleVal);
+    panel.appendChild(angleRow);
+    const angleSlider = document.createElement('input');
+    angleSlider.type = 'range'; angleSlider.id = 'sq-angle-slider';
+    angleSlider.min = '0'; angleSlider.max = '359'; angleSlider.step = '1'; angleSlider.value = '0';
+    angleSlider.style.cssText = sliderCss;
+    panel.appendChild(angleSlider);
+
     // ── Mode toggle: Flat | Sloped ──
     const modeLbl = document.createElement('div');
     modeLbl.textContent = 'Mode';
@@ -1192,20 +1934,6 @@ export class EditorController {
     const slopedSection = document.createElement('div');
     slopedSection.id = 'sq-sloped-section';
     slopedSection.style.display = 'none';
-
-    // Axis toggle
-    const axisLbl = document.createElement('div');
-    axisLbl.textContent = 'Slope Axis';
-    axisLbl.style.cssText = 'font-size:12px; margin-bottom:6px;';
-    slopedSection.appendChild(axisLbl);
-    const axisRow = document.createElement('div');
-    axisRow.style.cssText = 'display:flex; gap:6px; margin-bottom:14px;';
-    const axisXBtn = document.createElement('button'); axisXBtn.id = 'sq-axis-x'; axisXBtn.textContent = 'Along X';
-    const axisZBtn = document.createElement('button'); axisZBtn.id = 'sq-axis-z'; axisZBtn.textContent = 'Along Z';
-    axisXBtn.style.cssText = btnBase + 'background:#f0a020; color:#000;';
-    axisZBtn.style.cssText = btnBase + 'background:transparent; color:#f0a020;';
-    axisRow.appendChild(axisXBtn); axisRow.appendChild(axisZBtn);
-    slopedSection.appendChild(axisRow);
 
     // Height Min
     const hMinRow = mkRow();
@@ -1248,6 +1976,7 @@ export class EditorController {
       { value: 'asphalt',     label: 'Asphalt'        },
       { value: 'mud',         label: 'Mud'            },
       { value: 'water',       label: 'Water'          },
+      { value: 'rocky',       label: 'Rocky'          },
     ].forEach(({ value, label }) => {
       const opt = document.createElement('option');
       opt.value = value; opt.textContent = label;
@@ -1257,9 +1986,14 @@ export class EditorController {
 
     // ── Hint ──
     const hint = document.createElement('div');
-    hint.textContent = 'WASD to move  ·  Del to delete';
+    hint.textContent = 'WASD to move  ·  Q/E to rotate  ·  Del to delete';
     hint.style.cssText = 'font-size:10px; color:#888; margin-bottom:14px;';
     panel.appendChild(hint);
+
+    const dupBtn = document.createElement('button');
+    dupBtn.textContent = 'Duplicate Square Hill';
+    dupBtn.style.cssText = 'display:block; width:100%; padding:8px; background:#2980b9; color:white; border:none; border-radius:5px; cursor:pointer; font-size:13px; font-family:Arial; margin-bottom:8px;';
+    panel.appendChild(dupBtn);
 
     // ── Delete button ──
     const deleteBtn = document.createElement('button');
@@ -1276,17 +2010,13 @@ export class EditorController {
       slopeBtn.style.background  = sloped ? '#f0a020' : 'transparent';
       slopeBtn.style.color       = sloped ? '#000' : '#f0a020';
     };
-    const setAxisUI = (axis) => {
-      axisXBtn.style.background = axis === 'x' ? '#f0a020' : 'transparent';
-      axisXBtn.style.color      = axis === 'x' ? '#000' : '#f0a020';
-      axisZBtn.style.background = axis === 'z' ? '#f0a020' : 'transparent';
-      axisZBtn.style.color      = axis === 'z' ? '#000' : '#f0a020';
-    };
+
     const rebuild = () => { window.rebuildTerrain?.(); window.rebuildTerrainGrid?.(); };
 
     // ── Event wiring ──
     widthSlider.addEventListener('input', () => {
       if (!this.selectedSquareHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(widthSlider.value);
       document.getElementById('sq-width-val').textContent = val.toFixed(1);
       this.selectedSquareHill.feature.width = val;
@@ -1296,6 +2026,7 @@ export class EditorController {
 
     depthSlider.addEventListener('input', () => {
       if (!this.selectedSquareHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(depthSlider.value);
       document.getElementById('sq-depth-val').textContent = val.toFixed(1);
       this.selectedSquareHill.feature.depth = val;
@@ -1305,6 +2036,7 @@ export class EditorController {
 
     transSlider.addEventListener('input', () => {
       if (!this.selectedSquareHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(transSlider.value);
       document.getElementById('sq-trans-val').textContent = val.toFixed(1);
       this.selectedSquareHill.feature.transition = val;
@@ -1315,10 +2047,11 @@ export class EditorController {
     flatBtn.addEventListener('click', () => {
       if (!this.selectedSquareHill) return;
       const f = this.selectedSquareHill.feature;
-      if (!f.slopeAxis) return; // already flat
+      if (f.heightAtMin === undefined) return; // already flat
+      this.saveSnapshot();
       // Carry a representative height over from the sloped values
       f.height = parseFloat(hMaxSlider.value) || 5;
-      delete f.slopeAxis; delete f.heightAtMin; delete f.heightAtMax;
+      delete f.heightAtMin; delete f.heightAtMax;
       document.getElementById('sq-height-slider').value = f.height;
       document.getElementById('sq-height-val').textContent = f.height.toFixed(1);
       setModeUI(false);
@@ -1329,9 +2062,9 @@ export class EditorController {
     slopeBtn.addEventListener('click', () => {
       if (!this.selectedSquareHill) return;
       const f = this.selectedSquareHill.feature;
-      if (f.slopeAxis) return; // already sloped
+      if (f.heightAtMin !== undefined) return; // already sloped
+      this.saveSnapshot();
       const prevH = f.height ?? 5;
-      f.slopeAxis = 'x';
       f.heightAtMin = 0;
       f.heightAtMax = prevH;
       delete f.height;
@@ -1340,13 +2073,13 @@ export class EditorController {
       document.getElementById('sq-hmax-slider').value = prevH;
       document.getElementById('sq-hmax-val').textContent = prevH.toFixed(1);
       setModeUI(true);
-      setAxisUI('x');
       this.updateSquareHillVisual(this.selectedSquareHill);
       rebuild();
     });
 
     heightSlider.addEventListener('input', () => {
       if (!this.selectedSquareHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(heightSlider.value);
       document.getElementById('sq-height-val').textContent = val.toFixed(1);
       this.selectedSquareHill.feature.height = val;
@@ -1354,22 +2087,19 @@ export class EditorController {
       rebuild();
     });
 
-    axisXBtn.addEventListener('click', () => {
+    angleSlider.addEventListener('input', () => {
       if (!this.selectedSquareHill) return;
-      this.selectedSquareHill.feature.slopeAxis = 'x';
-      setAxisUI('x');
-      rebuild();
-    });
-
-    axisZBtn.addEventListener('click', () => {
-      if (!this.selectedSquareHill) return;
-      this.selectedSquareHill.feature.slopeAxis = 'z';
-      setAxisUI('z');
+      this.saveSnapshot(true);
+      const val = parseFloat(angleSlider.value);
+      document.getElementById('sq-angle-val').textContent = val.toFixed(0) + '°';
+      this.selectedSquareHill.feature.angle = val;
+      this.updateSquareHillVisual(this.selectedSquareHill);
       rebuild();
     });
 
     hMinSlider.addEventListener('input', () => {
       if (!this.selectedSquareHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(hMinSlider.value);
       document.getElementById('sq-hmin-val').textContent = val.toFixed(1);
       this.selectedSquareHill.feature.heightAtMin = val;
@@ -1379,6 +2109,7 @@ export class EditorController {
 
     hMaxSlider.addEventListener('input', () => {
       if (!this.selectedSquareHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(hMaxSlider.value);
       document.getElementById('sq-hmax-val').textContent = val.toFixed(1);
       this.selectedSquareHill.feature.heightAtMax = val;
@@ -1388,6 +2119,7 @@ export class EditorController {
 
     terrainSelect.addEventListener('change', () => {
       if (!this.selectedSquareHill) return;
+      this.saveSnapshot();
       const val = terrainSelect.value;
       if (val === 'none') {
         this.selectedSquareHill.feature.terrainType = null;
@@ -1398,6 +2130,7 @@ export class EditorController {
       window.rebuildTerrainGrid?.();
     });
 
+    dupBtn.addEventListener('click', () => this.duplicateSelectedSquareHill());
     deleteBtn.addEventListener('click', () => this.deleteSelectedSquareHill());
     panel.addEventListener('mousedown', e => e.stopPropagation());
 
@@ -1409,13 +2142,19 @@ export class EditorController {
     if (!this.squareHillPropertiesPanel) return;
     const { feature } = hillData;
     const get = id => document.getElementById(id);
-    const sloped = !!feature.slopeAxis;
+    const sloped = feature.heightAtMin !== undefined;
 
     // Common fields
     if (get('sq-width-slider'))  { get('sq-width-slider').value  = feature.width;  get('sq-width-val').textContent  = feature.width.toFixed(1); }
     if (get('sq-depth-slider'))  { get('sq-depth-slider').value  = feature.depth ?? feature.width; get('sq-depth-val').textContent  = (feature.depth ?? feature.width).toFixed(1); }
     if (get('sq-trans-slider'))  { get('sq-trans-slider').value  = feature.transition ?? 8; get('sq-trans-val').textContent  = (feature.transition ?? 8).toFixed(1); }
     if (get('sq-terrain-select')) { get('sq-terrain-select').value = feature.terrainType?.name || 'none'; }
+
+    // Common: angle applies to both flat and sloped
+    const ang = feature.angle ?? 0;
+    const as = document.getElementById('sq-angle-slider');
+    const av = document.getElementById('sq-angle-val');
+    if (as) { as.value = ang; av.textContent = ang.toFixed(0) + '°'; }
 
     // Mode-specific
     const flatSection   = document.getElementById('sq-flat-section');
@@ -1432,11 +2171,6 @@ export class EditorController {
     if (sloped) {
       if (get('sq-hmin-slider')) { get('sq-hmin-slider').value = feature.heightAtMin ?? 0;  get('sq-hmin-val').textContent = (feature.heightAtMin ?? 0).toFixed(1); }
       if (get('sq-hmax-slider')) { get('sq-hmax-slider').value = feature.heightAtMax ?? 5;  get('sq-hmax-val').textContent = (feature.heightAtMax ?? 5).toFixed(1); }
-      const axis = feature.slopeAxis ?? 'x';
-      const axisXBtn = document.getElementById('sq-axis-x');
-      const axisZBtn = document.getElementById('sq-axis-z');
-      if (axisXBtn) { axisXBtn.style.background = axis === 'x' ? '#f0a020' : 'transparent'; axisXBtn.style.color = axis === 'x' ? '#000' : '#f0a020'; }
-      if (axisZBtn) { axisZBtn.style.background = axis === 'z' ? '#f0a020' : 'transparent'; axisZBtn.style.color = axis === 'z' ? '#000' : '#f0a020'; }
     } else {
       if (get('sq-height-slider')) { get('sq-height-slider').value = feature.height ?? 5; get('sq-height-val').textContent = (feature.height ?? 5).toFixed(1); }
     }
@@ -1545,7 +2279,8 @@ export class EditorController {
       { value: 'loose_dirt',  label: 'Loose Dirt'     },
       { value: 'asphalt',     label: 'Asphalt'        },
       { value: 'mud',         label: 'Mud'            },
-      { value: 'water',       label: 'water'          },
+      { value: 'water',       label: 'Water'          },
+      { value: 'rocky',       label: 'Rocky'          },
     ].forEach(({ value, label }) => {
       const opt = document.createElement('option');
       opt.value = value; opt.textContent = label;
@@ -1558,6 +2293,12 @@ export class EditorController {
     hint.textContent = 'WASD to move  ·  Del to delete';
     hint.style.cssText = 'font-size: 10px; color: #888; margin-bottom: 14px;';
     panel.appendChild(hint);
+
+    // ── Duplicate button ──
+    const dupBtn = document.createElement('button');
+    dupBtn.textContent = 'Duplicate Hill';
+    dupBtn.style.cssText = 'display:block; width:100%; padding:8px; background:#2980b9; color:white; border:none; border-radius:5px; cursor:pointer; font-size:13px; font-family:Arial; margin-bottom:8px;';
+    panel.appendChild(dupBtn);
 
     // ── Delete button ──
     const deleteBtn = document.createElement('button');
@@ -1579,6 +2320,7 @@ export class EditorController {
     // ── Event wiring ──
     radiusSlider.addEventListener('input', () => {
       if (!this.selectedHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(radiusSlider.value);
       document.getElementById('hill-radius-val').textContent = val.toFixed(1);
       this.selectedHill.feature.radius = val;
@@ -1589,6 +2331,7 @@ export class EditorController {
 
     heightSlider.addEventListener('input', () => {
       if (!this.selectedHill) return;
+      this.saveSnapshot(true);
       const val = parseFloat(heightSlider.value);
       document.getElementById('hill-height-val').textContent = val.toFixed(1);
       this.selectedHill.feature.height = val;
@@ -1599,6 +2342,7 @@ export class EditorController {
 
     terrainSelect.addEventListener('change', () => {
       if (!this.selectedHill) return;
+      this.saveSnapshot();
       const val = terrainSelect.value;
       if (val === 'none') {
         this.selectedHill.feature.terrainType = null;
@@ -1609,6 +2353,7 @@ export class EditorController {
       window.rebuildTerrainGrid?.();
     });
 
+    dupBtn.addEventListener('click', () => this.duplicateSelectedHill());
     deleteBtn.addEventListener('click', () => this.deleteSelectedHill());
 
     // Stop pointer events from bleeding through to the 3D scene

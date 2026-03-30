@@ -91,7 +91,7 @@
       "centerZ": -50,
       "width": 20,
       "depth": 20,
-      "slopeAxis": "x",
+      "angle": 0,
       "heightAtMin": 0,
       "heightAtMax": 6,
       "transition": 0,

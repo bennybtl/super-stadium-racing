@@ -7,7 +7,7 @@ import { UIManager } from "../managers/UIManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
-import { TRUCK_HEIGHT } from "../constants.js";
+import { TRUCK_HEIGHT, TRUCK_HALF_HEIGHT } from "../constants.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -50,7 +50,7 @@ export class RaceMode {
     const getGridSpawn = (index) => {
       if (!startFinishCp) {
         const x = (index % 2) * 3, z = Math.floor(index / 2) * 3;
-        return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HEIGHT, z), heading: 0 };
+        return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: 0 };
       }
       const h = startFinishCp.heading;
       const fwdX = Math.sin(h), fwdZ = Math.cos(h);
@@ -59,7 +59,7 @@ export class RaceMode {
       const lateralSign = col === 0 ? -1 : 1;
       const x = startFinishCp.centerX + rightX * (lateralSign * 2) + fwdX * -(3 + row * 7);
       const z = startFinishCp.centerZ + rightZ * (lateralSign * 2) + fwdZ * -(3 + row * 7);
-      return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HEIGHT, z), heading: h };
+      return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: h };
     };
 
     // -- Race state --
@@ -234,7 +234,7 @@ export class RaceMode {
         );
       }
 
-      const spawnY = currentTrack.getHeightAt(spawnX, spawnZ) + TRUCK_HEIGHT;
+      const spawnY = currentTrack.getHeightAt(spawnX, spawnZ) + TRUCK_HALF_HEIGHT;
       truck.mesh.position.set(spawnX, spawnY, spawnZ);
       truck.state.heading = spawnHeading;
       truck.mesh.rotation.y = spawnHeading;
@@ -264,6 +264,20 @@ export class RaceMode {
       this._countdownTimeouts = [];
       countdownActive = true;
       aiDrivers.forEach(d => { d.paused = true; });
+
+      // Re-snap all trucks to their grid positions with zeroed physics state.
+      // This neutralises any drift from the large first-frame dt that accumulates
+      // during async scene setup, so trucks are clean when the player sees "3".
+      trucks.forEach((truckData, index) => {
+        const { pos, heading } = getGridSpawn(index);
+        truckData.truck.mesh.position.copyFrom(pos);
+        truckData.truck.state.heading = heading;
+        truckData.truck.mesh.rotation.y = heading;
+        truckData.truck.state.velocity = Vector3.Zero();
+        truckData.truck.state.verticalVelocity = 0;
+        truckData.truck.state.suspensionCompression = 0;
+      });
+
       uiManager.showCountdown('3');
       this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('2'), 1000));
       this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('1'), 2000));
@@ -331,7 +345,8 @@ export class RaceMode {
     scene.onBeforeRenderObservable.add(() => {
       if (menuManager.isMenuActive()) return;
 
-      const dt = engine.getDeltaTime() / 1000;
+      // Cap dt to 50 ms so a long async-setup pause can't explode the physics
+      const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
 
       if (raceStarted && raceStartTime !== null) {
         uiManager.updateTimer(Date.now() - raceStartTime);

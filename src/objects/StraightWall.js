@@ -20,17 +20,29 @@ export class StraightWall {
     const dirX = Math.cos(feature.heading);
     const dirZ = -Math.sin(feature.heading);
 
+    // How far below the lowest sampled terrain point to extend the box
+    const SKIRT = 2;
+
     for (let i = 0; i < segCount; i++) {
       const offset = -feature.length / 2 + (i + 0.5) * segLength;
       const px = feature.centerX + dirX * offset;
       const pz = feature.centerZ + dirZ * offset;
       const groundY = track.getHeightAt(px, pz);
 
+      // Sample terrain at both ends of this segment to find the lowest point
+      const half = segLength / 2;
+      const yA = track.getHeightAt(px - dirX * half, pz - dirZ * half);
+      const yB = track.getHeightAt(px + dirX * half, pz + dirZ * half);
+      const bottomY   = Math.min(groundY, yA, yB) - SKIRT;
+      const topY      = groundY + feature.height;
+      const totalH    = topY - bottomY;
+      const centerY   = bottomY + totalH / 2;
+
       // Tiny overlap (1.02×) prevents gaps between adjacent segments
       const segW = segLength * 1.02;
       this.segments.push(
-        new WallSegment(px, pz, groundY, segW, feature.height, feature.thickness,
-          feature.heading, friction, "wall", scene, shadows)
+        new WallSegment(px, pz, centerY, segW, totalH, feature.thickness,
+          feature.heading, friction, this.segments.length, "wall", scene, shadows)
       );
     }
   }

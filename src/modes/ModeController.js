@@ -1,6 +1,7 @@
 import { MenuMode } from "./MenuMode.js";
 import { RaceMode } from "./RaceMode.js";
 import { EditorMode } from "./EditorMode.js";
+import { TestMode } from "./TestMode.js";
 
 /**
  * Owns the engine render loop and coordinates transitions between
@@ -54,5 +55,9 @@ export class ModeController {
 
   goToEditor(config) {
     return this.switchTo(EditorMode, config);
+  }
+
+  goToTest(config) {
+    return this.switchTo(TestMode, config);
   }
 }
