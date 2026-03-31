@@ -1,7 +1,54 @@
 import { WallSegment } from "./WallSegment.js";
 
 /**
+ * Expand a polyline of control points into a dense sample array, honouring
+ * per-point `smoothing` values (0 = sharp corner, 10 = full Catmull-Rom).
+ * Returns an array of {x, z} at roughly `segLen`-spaced intervals.
+ */
+function expandPolyline(points) {
+  if (points.length < 2) return points;
+  const out = [];
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+
+    // Blend factor: average smoothing of the two endpoints, mapped to [0,1]
+    const smooth = ((p1.smoothing ?? 0) + (p2.smoothing ?? 0)) / 2 / 10;
+
+    if (smooth < 0.01) {
+      // Sharp — just the start point (end added by next iteration or after loop)
+      out.push({ x: p1.x, z: p1.z });
+    } else {
+      // Catmull-Rom with alpha blending so smoothing=0 is linear, 1 is full spline
+      const steps = Math.max(4, Math.round(smooth * 16));
+      for (let t = 0; t < steps; t++) {
+        const u = t / steps;
+        const u2 = u * u, u3 = u2 * u;
+        // Catmull-Rom basis
+        const b0 = -0.5 * u3 + u2 - 0.5 * u;
+        const b1 =  1.5 * u3 - 2.5 * u2 + 1;
+        const b2 = -1.5 * u3 + 2.0 * u2 + 0.5 * u;
+        const b3 =  0.5 * u3 - 0.5 * u2;
+        const cx = b0 * p0.x + b1 * p1.x + b2 * p2.x + b3 * p3.x;
+        const cz = b0 * p0.z + b1 * p1.z + b2 * p2.z + b3 * p3.z;
+        // Lerp between straight (u-interpolated) and spline by `smooth`
+        const sx = p1.x + (p2.x - p1.x) * u;
+        const sz = p1.z + (p2.z - p1.z) * u;
+        out.push({ x: sx + (cx - sx) * smooth, z: sz + (cz - sz) * smooth });
+      }
+    }
+  }
+  // Always include the final point
+  out.push({ x: points[points.length - 1].x, z: points[points.length - 1].z });
+  return out;
+}
+
+/**
  * PolyWall — builds terrain-following WallSegments along a polyline of world-space points.
+ * Each point may carry a `smoothing` value (0–10) that controls Catmull-Rom blending.
  */
 export class PolyWall {
   /**
@@ -12,8 +59,12 @@ export class PolyWall {
    */
   constructor(feature, track, scene, shadows) {
     this.segments = [];
-    const { points, height, thickness, friction = 0.1 } = feature;
-    if (!points || points.length < 2) return;
+    this._feature = feature;   // stored so the editor can identify this wall
+    const { height, thickness, friction = 0.1 } = feature;
+    const rawPoints = feature.points;
+    if (!rawPoints || rawPoints.length < 2) return;
+
+    const points = expandPolyline(rawPoints);
 
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[i];

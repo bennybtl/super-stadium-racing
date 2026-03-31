@@ -29,6 +29,7 @@ export class EditorMode {
       groundTex,
       pixelsPerCell,
       checkpointManager,
+      wallManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     this.scene = scene;
@@ -97,6 +98,24 @@ export class EditorMode {
       groundTex.update();
     };
 
+    // Rebuild a specific polyWall (or all polyWalls if feature is null)
+    window.rebuildPolyWall = (targetFeature) => {
+      wallManager._walls = wallManager._walls.filter(w => {
+        if (w._feature && (targetFeature === null || w._feature === targetFeature)) {
+          w.dispose?.();
+          return false;
+        }
+        return true;
+      });
+      for (const f of currentTrack.features) {
+        if (f.type === 'polyWall') {
+          if (targetFeature === null || f === targetFeature) {
+            wallManager.createPolyWall(f);
+          }
+        }
+      }
+    };
+
     // Hide racing HUD elements while in editor
     document.getElementById("checkpoint-display").style.display = "none";
     document.getElementById("lap-display").style.display = "none";
@@ -154,6 +173,7 @@ export class EditorMode {
     delete window.currentEditorScene;
     delete window.rebuildTerrain;
     delete window.rebuildTerrainTexture;
+    delete window.rebuildPolyWall;
     delete window.quickTestTrack;
 
     // Restore racing HUD

@@ -1,6 +1,7 @@
 import { Vector3, StandardMaterial, Color3, PointerEventTypes, MeshBuilder, TransformNode } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 import { MeshGridTool } from "./MeshGridTool.js";
+import { PolyWallTool } from "./PolyWallTool.js";
 
 /**
  * EditorController - Handles track editing mode
@@ -87,6 +88,9 @@ export class EditorController {
 
     // Mesh grid terrain tool
     this.meshGridTool = null;
+
+    // Poly wall editing tool
+    this.polyWallTool = null;
   }
 
   /**
@@ -191,6 +195,10 @@ export class EditorController {
     // Mesh grid terrain editing tool
     this.meshGridTool = new MeshGridTool(this);
     this.meshGridTool.activate(this.scene, track);
+
+    // Poly wall editing tool
+    this.polyWallTool = new PolyWallTool(this);
+    this.polyWallTool.activate(this.scene, track);
   }
 
   /**
@@ -281,6 +289,12 @@ export class EditorController {
       this.meshGridTool = null;
     }
 
+    // Poly wall tool
+    if (this.polyWallTool) {
+      this.polyWallTool.deactivate();
+      this.polyWallTool = null;
+    }
+
     console.log('[EditorController] Editor mode deactivated');
   }
 
@@ -336,6 +350,9 @@ export class EditorController {
     }
     // Restore mesh grid gizmos
     this.meshGridTool?.onSnapshotRestored();
+    // Restore poly wall gizmos
+    this.polyWallTool?.onSnapshotRestored();
+    window.rebuildPolyWall?.(null);
     // Checkpoints are managed by CheckpointManager — rebuild from features
     if (this.checkpointManager) {
       this.checkpointManager.dispose?.();
@@ -424,6 +441,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.meshGridTool?.activeFeature) {
         this.meshGridTool.deleteMeshGrid();
+        event.preventDefault();
+      } else if (this.polyWallTool?.selectedPoint) {
+        this.polyWallTool.deleteSelectedPoint();
         event.preventDefault();
       }
       return;
@@ -529,6 +549,12 @@ export class EditorController {
         this.keys.fast = false;
         break;
     }
+
+    // Flush any deferred poly wall rebuild when a movement key is released
+    const movKeys = ['w','s','a','d'];
+    if (movKeys.includes(event.key.toLowerCase()) && this.polyWallTool?.selectedPoint) {
+      this.polyWallTool.endDrag();
+    }
   }
 
   /**
@@ -617,6 +643,12 @@ export class EditorController {
       this.camera.position.addInPlace(delta);
       const currentTarget3 = this.camera.getTarget();
       this.camera.setTarget(currentTarget3.add(delta));
+    } else if (this.polyWallTool?.selectedPoint) {
+      const d = this.polyWallTool.moveSelectedPoint(movement.x, movement.z);
+      const delta4 = new Vector3(d.x, movement.y, d.z);
+      this.camera.position.addInPlace(delta4);
+      const currentTarget4 = this.camera.getTarget();
+      this.camera.setTarget(currentTarget4.add(delta4));
     } else {
       // Move camera and target together
       this.camera.position.addInPlace(movement);
@@ -637,6 +669,9 @@ export class EditorController {
 
         // Mesh grid control points take priority
         if (this.meshGridTool?.onPointerDown(clickedMesh)) return;
+
+        // Poly wall control points
+        if (this.polyWallTool?.onPointerDown(clickedMesh)) return;
         
         if (this.checkpointManager) {
           for (const checkpointData of this.checkpointManager.checkpointMeshes) {
@@ -661,6 +696,7 @@ export class EditorController {
               this.deselectCheckpoint();
               this.deselectSquareHill();
               this.meshGridTool?.deselectPoint();
+              this.polyWallTool?.deselectPoint();
               this.selectHill(hillData);
             }
             return;
@@ -1209,6 +1245,13 @@ export class EditorController {
     meshGridBtn.style.cssText = buttonStyle + 'background: #1ec8c8; color: #000;';
     meshGridBtn.onclick = () => { this.meshGridTool?.addMeshGridFeature(); this.hideAddMenu(); };
     this.addMenuOverlay.appendChild(meshGridBtn);
+
+    // Poly Wall button
+    const polyWallBtn = document.createElement('button');
+    polyWallBtn.textContent = 'Add Poly Wall';
+    polyWallBtn.style.cssText = buttonStyle + 'background: #f5a623; color: #000;';
+    polyWallBtn.onclick = () => { this.polyWallTool?.addPolyWallFeature(); this.hideAddMenu(); };
+    this.addMenuOverlay.appendChild(polyWallBtn);
 
     // Close button
     const closeBtn = document.createElement('button');

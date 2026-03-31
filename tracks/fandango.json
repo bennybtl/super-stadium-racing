@@ -14,11 +14,11 @@
         0,
         0,
         0,
-        3.5,
+        10,
         0,
         0,
-        0,
-        0,
+        3,
+        8,
         0,
         0,
         0,
@@ -27,7 +27,7 @@
         4,
         0,
         0,
-        0,
+        3,
         0,
         0,
         0,
@@ -96,10 +96,186 @@
     {
       "type": "checkpoint",
       "centerX": 0,
-      "centerZ": -50,
-      "heading": 1.5500000000000007,
-      "width": 19,
+      "centerZ": -54,
+      "heading": 4.699999999999991,
+      "width": 25.5,
       "checkpointNumber": 1
+    },
+    {
+      "type": "squareHill",
+      "centerX": -26,
+      "centerZ": 28,
+      "width": 15,
+      "depth": 8,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 3,
+      "heightAtMax": -1.5,
+      "angle": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": -48,
+      "centerZ": 28,
+      "width": 15,
+      "depth": 8,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 1,
+      "heightAtMax": -6,
+      "angle": 0
+    },
+    {
+      "type": "hill",
+      "centerX": -4,
+      "centerZ": 28,
+      "radius": 4,
+      "height": 2.5,
+      "terrainType": {
+        "name": "loose_dirt",
+        "gripMultiplier": 0.5,
+        "color": {
+          "r": 0.4,
+          "g": 0.32,
+          "b": 0.2
+        },
+        "dragMultiplier": 1
+      }
+    },
+    {
+      "type": "hill",
+      "centerX": -12,
+      "centerZ": 32,
+      "radius": 6,
+      "height": 2.5,
+      "terrainType": null
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -2,
+          "z": 40,
+          "smoothing": 0
+        },
+        {
+          "x": -2,
+          "z": -32,
+          "smoothing": 0
+        },
+        {
+          "x": -46,
+          "z": -32,
+          "smoothing": 0
+        },
+        {
+          "x": -46,
+          "z": -40.56512786309756,
+          "smoothing": 0
+        },
+        {
+          "x": 48,
+          "z": -40,
+          "smoothing": 0
+        },
+        {
+          "x": 48,
+          "z": -32,
+          "smoothing": 0
+        },
+        {
+          "x": 2,
+          "z": -32,
+          "smoothing": 0
+        },
+        {
+          "x": 2,
+          "z": 40,
+          "smoothing": 0
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -76,
+          "z": 20,
+          "smoothing": 0
+        },
+        {
+          "x": -20,
+          "z": 18,
+          "smoothing": 0
+        },
+        {
+          "x": -20,
+          "z": -8,
+          "smoothing": 0
+        },
+        {
+          "x": -72,
+          "z": -16,
+          "smoothing": 0
+        },
+        {
+          "x": -72,
+          "z": -56,
+          "smoothing": 0
+        },
+        {
+          "x": -62,
+          "z": -68,
+          "smoothing": 0
+        },
+        {
+          "x": 70,
+          "z": -70,
+          "smoothing": 0
+        },
+        {
+          "x": 70,
+          "z": -10,
+          "smoothing": 0
+        },
+        {
+          "x": 20,
+          "z": -6,
+          "smoothing": 0
+        },
+        {
+          "x": 20,
+          "z": 21,
+          "smoothing": 0
+        },
+        {
+          "x": 76,
+          "z": 21,
+          "smoothing": 0
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -59,
+      "centerZ": -37,
+      "heading": 0,
+      "width": 23,
+      "checkpointNumber": 2
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -11,
+      "centerZ": 2,
+      "heading": 0,
+      "width": 16,
+      "checkpointNumber": 3
     }
   ]
 }
