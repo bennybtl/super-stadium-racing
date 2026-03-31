@@ -59,7 +59,8 @@ export class MeshGridTool {
     if (existing) {
       this.activeFeature = existing;
       this.createGizmos(existing);
-      this.showPanel(existing);
+      // Panel is intentionally not shown here — it opens when a corner is clicked
+      // or when a new mesh grid is added via the Add Entity menu.
     }
   }
 
@@ -201,6 +202,7 @@ export class MeshGridTool {
     }
 
     this._buildLineSystem(feature);
+    this._updatePointVisibility();
   }
 
   destroyGizmos() {
@@ -208,6 +210,21 @@ export class MeshGridTool {
     this.pointMeshes = [];
     if (this.lineSystem) { this.lineSystem.dispose(); this.lineSystem = null; }
     this.selectedPoint = null;
+  }
+
+  /**
+   * Show all gizmos when a point is selected; otherwise show only the four
+   * corner spheres so inner points don't clutter the view.
+   */
+  _updatePointVisibility() {
+    if (!this.activeFeature) return;
+    const { cols, rows } = this.activeFeature;
+    const hasSelection = !!this.selectedPoint;
+    for (const p of this.pointMeshes) {
+      const isCorner = (p.r === 0 || p.r === rows - 1) && (p.c === 0 || p.c === cols - 1);
+      p.mesh.isVisible = hasSelection || isCorner;
+      p.mesh.isPickable = hasSelection || isCorner;
+    }
   }
 
   _buildLineSystem(feature) {
@@ -274,9 +291,16 @@ export class MeshGridTool {
     this.deselectPoint();
     this.selectedPoint = pointData;
     pointData.mesh.material = this.highlightMat;
+    this._updatePointVisibility();
     this._updateHeightDisplay();
-    // Bring the panel back if it was closed, then focus the height input
-    if (this.activeFeature) this.showPanel(this.activeFeature);
+    // Show panel when a corner point is clicked (corners are the entry point
+    // to the tool; inner points are only reachable once the panel is already open).
+    if (this.activeFeature) {
+      const { cols, rows } = this.activeFeature;
+      const isCorner = (pointData.r === 0 || pointData.r === rows - 1) &&
+                       (pointData.c === 0 || pointData.c === cols - 1);
+      if (isCorner) this.showPanel(this.activeFeature);
+    }
     const el = document.getElementById('mg-height-input');
     if (el) { requestAnimationFrame(() => { el.focus(); el.select(); }); }
   }
@@ -286,6 +310,7 @@ export class MeshGridTool {
       this.selectedPoint.mesh.material = this.normalMat;
       this.selectedPoint = null;
     }
+    this._updatePointVisibility();
     this._updateHeightDisplay();
   }
 

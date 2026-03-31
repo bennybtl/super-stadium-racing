@@ -68,10 +68,10 @@ export class InputManager {
     
     // Zoom controls
     if (e.code === "Minus" || e.code === "NumpadSubtract") {
-      this.cameraController.zoomOut();
+      this.cameraController.zoomIn();
     }
     if (e.code === "Equal" || e.code === "NumpadAdd") {
-      this.cameraController.zoomIn();
+      this.cameraController.zoomOut();
     }
   }
 
