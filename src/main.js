@@ -3,6 +3,7 @@ import { MenuManager } from "./managers/MenuManager.js";
 import { TrackLoader } from "./managers/TrackLoader.js";
 import { ModeController } from "./modes/ModeController.js";
 import { MenuMode } from "./modes/MenuMode.js";
+import '/src/vue/main.js';
 
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true);
