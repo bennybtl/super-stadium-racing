@@ -79,23 +79,21 @@ export class Checkpoint {
     }, FLASH_DURATION);
   }
 
-  /** Redraw the ground decal after a renumber. */
+  /** Redraw the ground decal after a renumber or width change. */
   updateDecal(checkpointNumber, isFinish) {
+    this.feature.checkpointNumber = checkpointNumber;
     this.isFinish = isFinish;
     if (!this.decal) return;
+    this.decal.dispose();
+    this.decal = this._createDecal(this.feature, isFinish, this._scene);
+  }
 
-    const tex = this.decal.material.diffuseTexture;
-    const ctx = tex.getContext();
-    const texSize = 512;
-    ctx.clearRect(0, 0, texSize, texSize);
-
-    if (isFinish) {
-      this._drawFinishDecal(ctx, checkpointNumber, texSize, this.feature.width);
-    } else {
-      this._drawNumberedDecal(ctx, checkpointNumber, texSize);
-    }
-
-    tex.update();
+  /** Reposition barrels and rebuild the decal after the gate width changes. */
+  updateWidth(newWidth) {
+    this.feature.width = newWidth;
+    this.barrel1.position.x =  newWidth / 2;
+    this.barrel2.position.x = -newWidth / 2;
+    if (this.decal) this.updateDecal(this.feature.checkpointNumber, this.isFinish);
   }
 
   dispose() {
@@ -151,7 +149,7 @@ export class Checkpoint {
 
   _drawFinishDecal(ctx, checkpointNumber, texSize, gateWidth) {
     const cols  = Math.max(2, Math.round(gateWidth / 2.5));
-    const rows  = 4;
+    const rows  = 3;
     const rectH = Math.round(texSize * 0.38);
     const rectY = Math.round((texSize - rectH) / 2);
     const cellW = texSize / cols;
@@ -162,7 +160,7 @@ export class Checkpoint {
         ctx.fillRect(c * cellW, rectY + r * cellH, cellW, cellH);
       }
     }
-    this._applyWearEffect(ctx, checkpointNumber, texSize, false);
+    this._applyWearEffect(ctx, checkpointNumber, texSize, false);s
   }
 
   _drawNumberedDecal(ctx, checkpointNumber, texSize) {

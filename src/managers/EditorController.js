@@ -502,11 +502,11 @@ export class EditorController {
         this.keys.rotateRight = true;
         event.preventDefault();
         break;
-      case '-':``
+      case '=':
         this.keys.down = true;
         event.preventDefault();
         break;
-      case '=':
+      case '-':
         this.keys.up = true;
         event.preventDefault();
         break;
@@ -539,10 +539,10 @@ export class EditorController {
       case 'e':
         this.keys.rotateRight = false;
         break;
-      case '-':
+      case '=':
         this.keys.down = false;
         break;
-      case '=':
+      case '-':
         this.keys.up = false;
         break;
       case 'shift':
@@ -1434,8 +1434,7 @@ export class EditorController {
       this.saveSnapshot(true);
       const val = parseFloat(widthSlider.value);
       document.getElementById('cp-width-val').textContent = val.toFixed(1);
-      this.selectedCheckpoint.feature.width = val;
-      this.repositionCheckpointBarrels(this.selectedCheckpoint);
+      this.selectedCheckpoint.updateWidth(val);
     });
 
     dupBtn.addEventListener('click', () => this.duplicateSelectedCheckpoint());
