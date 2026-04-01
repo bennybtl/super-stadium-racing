@@ -114,6 +114,7 @@ export const useEditorStore = defineStore('editor', () => {
   const hill = reactive({
     radius: 10,
     height: 5,
+    terrainType: 'none',
   });
 
   // ── Square hill panel ──
@@ -126,6 +127,7 @@ export const useEditorStore = defineStore('editor', () => {
     slopeMode: false,
     heightAtMin: 0,
     heightAtMax: 3,
+    terrainType: 'none',
   });
 
   // ── Terrain rect panel ──
@@ -144,14 +146,67 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Poly wall panel ──
   const polyWall = reactive({
-    selectedIndex: null,
-    pointCount: 0,
-    visible: false,
+    hasSelection: false,
+    smoothing: 0,
+    height: 2,
+    thickness: 0.5,
+    closed: false,
   });
 
   // ── Test mode (back button) ──
   const testModeActive = ref(false);
   const testModeReturnKey = ref(null);
+
+  // ── Vue panel bridge (set to EditorController instance on activate) ──
+  const _bridge = shallowRef(null);
+  function setBridge(controller) { _bridge.value = controller; }
+
+  // ── Checkpoint actions ──
+  function setCheckpointWidth(val)      { checkpoint.width = val;      _bridge.value?.changeCheckpointWidth(val); }
+  function shiftCheckpointOrder(dir)    { _bridge.value?.shiftCheckpointOrder(dir); }
+  function duplicateCheckpoint()        { _bridge.value?.duplicateSelectedCheckpoint(); }
+  function deleteCheckpoint()           { _bridge.value?.deleteSelectedCheckpoint(); }
+  function closeCheckpoint()            { _bridge.value?.deselectCheckpoint(); }
+
+  // ── Hill actions ──
+  function setHillRadius(val)           { hill.radius = val;       _bridge.value?.changeHillRadius(val); }
+  function setHillHeight(val)           { hill.height = val;       _bridge.value?.changeHillHeight(val); }
+  function setHillTerrainType(name)     { hill.terrainType = name; _bridge.value?.changeHillTerrainType(name); }
+  function duplicateHill()              { _bridge.value?.duplicateSelectedHill(); }
+  function deleteHill()                 { _bridge.value?.deleteSelectedHill(); }
+  function closeHill()                  { _bridge.value?.deselectHill(); }
+
+  // ── Square Hill actions ──
+  function setSquareHillWidth(val)      { squareHill.width = val;       _bridge.value?.changeSquareHillWidth(val); }
+  function setSquareHillDepth(val)      { squareHill.depth = val;       _bridge.value?.changeSquareHillDepth(val); }
+  function setSquareHillTransition(val) { squareHill.transition = val;  _bridge.value?.changeSquareHillTransition(val); }
+  function setSquareHillAngle(val)      { squareHill.angle = val;       _bridge.value?.changeSquareHillAngle(val); }
+  function setSquareHillHeight(val)     { squareHill.height = val;      _bridge.value?.changeSquareHillHeight(val); }
+  function setSquareHillHeightMin(val)  { squareHill.heightAtMin = val; _bridge.value?.changeSquareHillHeightMin(val); }
+  function setSquareHillHeightMax(val)  { squareHill.heightAtMax = val; _bridge.value?.changeSquareHillHeightMax(val); }
+  function setSquareHillMode(sloped)    { squareHill.slopeMode = sloped; _bridge.value?.changeSquareHillMode(sloped); }
+  function setSquareHillTerrainType(n)  { squareHill.terrainType = n;   _bridge.value?.changeSquareHillTerrainType(n); }
+  function duplicateSquareHill()        { _bridge.value?.duplicateSelectedSquareHill(); }
+  function deleteSquareHill()           { _bridge.value?.deleteSelectedSquareHill(); }
+  function closeSquareHill()            { _bridge.value?.deselectSquareHill(); }
+
+  // ── Terrain Rect actions ──
+  function setTerrainRectWidth(val)     { terrainRect.width = val;       _bridge.value?.changeTerrainRectWidth(val); }
+  function setTerrainRectDepth(val)     { terrainRect.depth = val;       _bridge.value?.changeTerrainRectDepth(val); }
+  function setTerrainRectTerrainType(n) { terrainRect.terrainType = n;   _bridge.value?.changeTerrainRectTerrainType(n); }
+  function duplicateTerrainRect()       { _bridge.value?.duplicateSelectedTerrainRect(); }
+  function deleteTerrainRect()          { _bridge.value?.deleteSelectedTerrainRect(); }
+  function closeTerrainRect()           { _bridge.value?.deselectTerrainRect(); }
+
+  // ── Poly Wall actions ──
+  function setPolyWallSmoothing(val)    { polyWall.smoothing = val;  _bridge.value?.changePolyWallSmoothing(val); }
+  function setPolyWallHeight(val)       { polyWall.height = val;     _bridge.value?.changePolyWallHeight(val); }
+  function setPolyWallThickness(val)    { polyWall.thickness = val;  _bridge.value?.changePolyWallThickness(val); }
+  function setPolyWallClosed(val)       { polyWall.closed = val;     _bridge.value?.changePolyWallClosed(val); }
+  function insertPolyWallPoint()        { _bridge.value?.insertPolyWallPoint(); }
+  function deletePolyWallPoint()        { _bridge.value?.deletePolyWallPoint(); }
+  function deletePolyWall()             { _bridge.value?.deletePolyWall(); }
+  function closePolyWall()              { _bridge.value?.deselectPolyWall(); }
 
   return {
     selectedType,
@@ -164,5 +219,15 @@ export const useEditorStore = defineStore('editor', () => {
     meshGrid,
     polyWall,
     testModeActive, testModeReturnKey,
+    setBridge,
+    setCheckpointWidth, shiftCheckpointOrder, duplicateCheckpoint, deleteCheckpoint, closeCheckpoint,
+    setHillRadius, setHillHeight, setHillTerrainType, duplicateHill, deleteHill, closeHill,
+    setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
+    setSquareHillHeight, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
+    setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
+    setTerrainRectWidth, setTerrainRectDepth, setTerrainRectTerrainType,
+    duplicateTerrainRect, deleteTerrainRect, closeTerrainRect,
+    setPolyWallSmoothing, setPolyWallHeight, setPolyWallThickness, setPolyWallClosed,
+    insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, closePolyWall,
   };
 });

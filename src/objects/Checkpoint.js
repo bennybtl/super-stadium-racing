@@ -160,7 +160,7 @@ export class Checkpoint {
         ctx.fillRect(c * cellW, rectY + r * cellH, cellW, cellH);
       }
     }
-    this._applyWearEffect(ctx, checkpointNumber, texSize, false);s
+    this._applyWearEffect(ctx, checkpointNumber, texSize, false);
   }
 
   _drawNumberedDecal(ctx, checkpointNumber, texSize) {

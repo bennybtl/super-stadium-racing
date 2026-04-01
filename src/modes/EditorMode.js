@@ -116,10 +116,7 @@ export class EditorMode {
       }
     };
 
-    // Hide racing HUD elements while in editor
-    document.getElementById("checkpoint-display").style.display = "none";
-    document.getElementById("lap-display").style.display = "none";
-    document.getElementById("boost-display").style.display = "none";
+    // Hide racing HUD while in editor (it starts hidden; only UIManager.showRaceStatusPanel shows it)
 
     console.log("[Editor] Track editor mode active");
 
@@ -176,10 +173,7 @@ export class EditorMode {
     delete window.rebuildPolyWall;
     delete window.quickTestTrack;
 
-    // Restore racing HUD
-    document.getElementById("checkpoint-display").style.display = "";
-    document.getElementById("lap-display").style.display = "";
-    document.getElementById("boost-display").style.display = "";
+    // (race HUD visibility is managed by UIManager / Pinia — nothing to restore here)
 
     if (this.scene) {
       this.scene.dispose();

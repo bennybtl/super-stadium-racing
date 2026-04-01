@@ -1,10 +1,8 @@
-import { StraightWall } from "../objects/StraightWall.js";
-import { CurvedWall } from "../objects/CurvedWall.js";
 import { PolyWall } from "../objects/PolyWall.js";
 import { TRUCK_RADIUS } from "../constants.js";
 
 /**
- * WallManager - Creates and manages race track walls (straight, curved, poly).
+ * WallManager - Creates and manages race track walls (poly).
  *
  * Wall construction and disposal is delegated to the object classes in
  * src/objects/. This manager is responsible for spawning walls from track
@@ -21,21 +19,13 @@ export class WallManager {
     this.track = track;
     this.shadows = shadows;
 
-    // Wall objects (StraightWall | CurvedWall | PolyWall)
+    // Wall objects (PolyWall)
     this._walls = [];
   }
 
   // ─── Convenience getter — flat list of all WallSegment instances ─────────
   get _segments() {
     return this._walls.flatMap(w => w.segments);
-  }
-
-  createStraightWall(feature) {
-    this._walls.push(new StraightWall(feature, this.track, this.scene, this.shadows));
-  }
-
-  createCurvedWall(feature) {
-    this._walls.push(new CurvedWall(feature, this.track, this.scene, this.shadows));
   }
 
   createPolyWall(feature) {
@@ -246,9 +236,7 @@ export class WallManager {
   rebuild() {
     this.reset();
     for (const feature of this.track.features) {
-      if (feature.type === "wall")        this.createStraightWall(feature);
-      else if (feature.type === "curvedWall") this.createCurvedWall(feature);
-      else if (feature.type === "polyWall")  this.createPolyWall(feature);
+      if (feature.type === "polyWall")  this.createPolyWall(feature);
     }
   }
 

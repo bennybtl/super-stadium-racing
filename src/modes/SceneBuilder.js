@@ -157,10 +157,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
   for (const feature of currentTrack.features) {
     if (feature.type === "tireStack") {
       tireStackManager.createStack(feature);
-    } else if (feature.type === "wall") {
-      wallManager.createStraightWall(feature);
-    } else if (feature.type === "curvedWall") {
-      wallManager.createCurvedWall(feature);
     } else if (feature.type === "polyWall") {
       wallManager.createPolyWall(feature);
     }

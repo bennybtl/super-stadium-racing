@@ -60,15 +60,17 @@ export class PolyWall {
   constructor(feature, track, scene, shadows) {
     this.segments = [];
     this._feature = feature;   // stored so the editor can identify this wall
-    const { height, thickness, friction = 0.1 } = feature;
+    const { height, thickness, friction = 0.1, closed = false } = feature;
     const rawPoints = feature.points;
     if (!rawPoints || rawPoints.length < 2) return;
 
     const points = expandPolyline(rawPoints);
+    const numPoints = points.length;
+    const edgeCount = closed ? numPoints : numPoints - 1;
 
-    for (let i = 0; i < points.length - 1; i++) {
+    for (let i = 0; i < edgeCount; i++) {
       const p0 = points[i];
-      const p1 = points[i + 1];
+      const p1 = points[(i + 1) % numPoints];
 
       const dx     = p1.x - p0.x;
       const dz     = p1.z - p0.z;
@@ -91,22 +93,25 @@ export class PolyWall {
         const t       = (s + 0.5) * segLen;
         const px      = p0.x + dirX * t;
         const pz      = p0.z + dirZ * t;
-        const groundY = track.getHeightAt(px, pz);
 
         // Sample terrain at both ends of this segment
         const half = segLen / 2;
         const yA = track.getHeightAt(px - dirX * half, pz - dirZ * half);
         const yB = track.getHeightAt(px + dirX * half, pz + dirZ * half);
-        const bottomY = Math.min(groundY, yA, yB) - SKIRT;
-        const topY    = groundY + height;
-        const totalH  = topY - bottomY;
-        const centerY = bottomY + totalH / 2;
+
+        // Parallelogram: each end matches its local terrain height
+        const avgY    = (yA + yB) / 2;
+        const totalH  = height + SKIRT;
+        const centerY = avgY + (height - SKIRT) / 2;
+        const yShiftA = (yA - yB) / 2;   // vertical offset at −X (start) end
+        const yShiftB = (yB - yA) / 2;   // vertical offset at +X (end) end
 
         // Tiny overlap prevents gaps between segments
         const segW = segLen * 1.02;
         this.segments.push(
           new WallSegment(px, pz, centerY, segW, totalH, thickness,
-            heading, friction, this.segments.length, "wall_poly", scene, shadows)
+            heading, friction, this.segments.length, "wall_poly", scene, shadows,
+            yShiftA, yShiftB)
         );
       }
     }

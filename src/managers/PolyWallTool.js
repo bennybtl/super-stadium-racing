@@ -33,8 +33,6 @@ export class PolyWallTool {
     this.normalMat    = null;
     this.activeMat    = null;  // active-wall (not selected) points
     this.highlightMat = null;
-
-    this.propertiesPanel = null;
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
@@ -57,8 +55,6 @@ export class PolyWallTool {
     this.highlightMat.diffuseColor  = new Color3(1.0, 1.0, 0.2);
     this.highlightMat.emissiveColor = new Color3(0.6, 0.6, 0.0);
 
-    this.createPanel();
-
     // Build gizmos for any polyWalls already in the track
     for (const f of track.features) {
       if (f.type === 'polyWall') this._createWallGizmos(f);
@@ -69,11 +65,6 @@ export class PolyWallTool {
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeWall = null;
-    this.hidePanel();
-    if (this.propertiesPanel) {
-      document.body.removeChild(this.propertiesPanel);
-      this.propertiesPanel = null;
-    }
     if (this.normalMat)    { this.normalMat.dispose();    this.normalMat    = null; }
     if (this.activeMat)    { this.activeMat.dispose();    this.activeMat    = null; }
     if (this.highlightMat) { this.highlightMat.dispose(); this.highlightMat = null; }
@@ -100,13 +91,14 @@ export class PolyWallTool {
       height:    2,
       thickness: 0.5,
       friction:  0.1,
+      closed:    false,
     };
 
     this.ec.saveSnapshot();
     this.track.features.push(feature);
     const wg = this._createWallGizmos(feature);
     this._setActiveWall(wg);
-    this.showPanel(feature);
+    this._syncStoreToFeature(feature);
     this._rebuildWall(feature);
   }
 
@@ -266,8 +258,7 @@ export class PolyWallTool {
     const mesh = wg.pointMeshes[idx];
     this.selectedPoint = { wg, idx, mesh };
     mesh.material = this.highlightMat;
-    this.showPanel(wg.feature);
-    this._syncPanelToPoint();
+    this._syncStoreToFeature(wg.feature, idx);
   }
 
   deselectPoint() {
@@ -278,7 +269,7 @@ export class PolyWallTool {
       this.selectedPoint = null;
     }
     this._rawDrag = null;  // clear stale drag origin so next selection starts fresh
-    this._syncPanelToPoint();
+    if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
   }
 
   // ─── Point movement (called from EditorController.update) ─────────────────
@@ -399,7 +390,7 @@ export class PolyWallTool {
     this.deselectPoint();
     this._destroyWallGizmos(wg);
     this._activeWall = null;
-    this.hidePanel();
+    if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
     window.rebuildPolyWall?.(null); // signal full rebuild
   }
 
@@ -412,186 +403,54 @@ export class PolyWallTool {
     for (const f of this.track.features) {
       if (f.type === 'polyWall') this._createWallGizmos(f);
     }
-    this.hidePanel();
+    if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
   }
 
-  // ─── Panel ────────────────────────────────────────────────────────────────
+  // ─── Vue Store Sync ───────────────────────────────────────────────────────
 
-  createPanel() {
-    const panel = document.createElement('div');
-    panel.id = 'poly-wall-panel';
-    panel.style.cssText = `
-      position: fixed;
-      top: 80px;
-      left: 280px;
-      background: rgba(0,0,0,0.88);
-      padding: 18px 20px 16px;
-      border-radius: 10px;
-      border: 2px solid #f5a623;
-      display: none;
-      z-index: 1000;
-      width: 240px;
-      font-family: Arial, sans-serif;
-      color: white;
-      user-select: none;
-      pointer-events: auto;
-    `;
-
-    const ACCENT = '#f5a623';
-
-    // Title + close
-    const titleRow = document.createElement('div');
-    titleRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;';
-    const titleEl = Object.assign(document.createElement('div'), { textContent: 'Poly Wall' });
-    titleEl.style.cssText = `font-size:13px; font-weight:bold; color:${ACCENT}; text-transform:uppercase; letter-spacing:1px;`;
-    const closeBtn = Object.assign(document.createElement('button'), { textContent: '×', title: 'Close panel' });
-    closeBtn.style.cssText = 'background:none; border:none; color:#888; font-size:18px; cursor:pointer; padding:0 2px;';
-    closeBtn.addEventListener('mouseover', () => closeBtn.style.color = 'white');
-    closeBtn.addEventListener('mouseout',  () => closeBtn.style.color = '#888');
-    closeBtn.addEventListener('click', () => this.hidePanel());
-    titleRow.appendChild(titleEl);
-    titleRow.appendChild(closeBtn);
-    panel.appendChild(titleRow);
-
-    const mkRow = (labelText) => {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;';
-      row.appendChild(Object.assign(document.createElement('span'), { textContent: labelText }));
-      return row;
-    };
-    const mkVal = (id, text) => {
-      const v = Object.assign(document.createElement('span'), { id, textContent: text });
-      v.style.color = ACCENT;
-      return v;
-    };
-    const mkSlider = (id, min, max, step, value) => {
-      const s = document.createElement('input');
-      Object.assign(s, { type: 'range', id, min, max, step, value });
-      s.style.cssText = `width:100%; accent-color:${ACCENT}; margin-bottom:14px; cursor:pointer;`;
-      panel.appendChild(s);
-      return s;
-    };
-    const mkBtn = (text, bg, fg, mb) => {
-      const b = Object.assign(document.createElement('button'), { textContent: text });
-      b.style.cssText = `display:block; width:100%; padding:8px; background:${bg}; color:${fg ?? 'white'}; border:none; border-radius:5px; cursor:pointer; font-size:13px; font-family:Arial; margin-bottom:${mb ?? 8}px;`;
-      panel.appendChild(b);
-      return b;
-    };
-    const mkSep = () => {
-      const hr = document.createElement('hr');
-      hr.style.cssText = 'border:none; border-top:1px solid #2a3a3a; margin:2px 0 14px;';
-      panel.appendChild(hr);
-    };
-    const mkSectionTitle = (text) => {
-      const d = Object.assign(document.createElement('div'), { textContent: text });
-      d.style.cssText = 'font-size:10px; font-weight:bold; color:#666; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;';
-      panel.appendChild(d);
-    };
-
-    // ── Selected point ──
-    mkSectionTitle('Selected Point');
-
-    const smoothRow = mkRow('Smoothing');
-    const smoothVal = mkVal('pw-smooth-val', '0');
-    smoothRow.appendChild(smoothVal);
-    panel.appendChild(smoothRow);
-    const smoothSlider = mkSlider('pw-smooth-slider', '0', '10', '0.5', '0');
-
-    const hint = document.createElement('div');
-    hint.textContent = 'WASD to move selected point';
-    hint.style.cssText = 'font-size:10px; color:#777; margin-bottom:14px;';
-    panel.appendChild(hint);
-
-    const insertBtn = mkBtn('Insert Point After', '#2980b9', 'white', 8);
-    const deletePointBtn = mkBtn('Delete Point', '#8e3020', 'white', 0);
-
-    mkSep();
-
-    // ── Wall properties ──
-    mkSectionTitle('Wall Properties');
-
-    const heightRow = mkRow('Height');
-    const heightVal = mkVal('pw-height-val', '2.0');
-    heightRow.appendChild(heightVal);
-    panel.appendChild(heightRow);
-    const heightSlider = mkSlider('pw-height-slider', '0.5', '8', '0.5', '2');
-
-    const thickRow = mkRow('Thickness');
-    const thickVal = mkVal('pw-thick-val', '0.5');
-    thickRow.appendChild(thickVal);
-    panel.appendChild(thickRow);
-    const thickSlider = mkSlider('pw-thick-slider', '0.2', '3', '0.1', '0.5');
-
-    mkSep();
-    const deleteWallBtn = mkBtn('Delete Wall', '#c0392b', 'white', 0);
-
-    // ── Event wiring ──
-    smoothSlider.addEventListener('input', () => {
-      const val = parseFloat(smoothSlider.value);
-      document.getElementById('pw-smooth-val').textContent = val.toFixed(1);
-      if (!this.selectedPoint) return;
-      this.ec.saveSnapshot(true);
-      this.selectedPoint.wg.feature.points[this.selectedPoint.idx].smoothing = val;
-      this._updatePointPositions(this.selectedPoint.wg);
-      this._rebuildWall(this.selectedPoint.wg.feature);
-    });
-
-    heightSlider.addEventListener('input', () => {
-      const val = parseFloat(heightSlider.value);
-      document.getElementById('pw-height-val').textContent = val.toFixed(1);
-      if (!this._activeWall) return;
-      this.ec.saveSnapshot(true);
-      this._activeWall.feature.height = val;
-      this._rebuildWall(this._activeWall.feature);
-    });
-
-    thickSlider.addEventListener('input', () => {
-      const val = parseFloat(thickSlider.value);
-      document.getElementById('pw-thick-val').textContent = val.toFixed(1);
-      if (!this._activeWall) return;
-      this.ec.saveSnapshot(true);
-      this._activeWall.feature.thickness = val;
-      this._rebuildWall(this._activeWall.feature);
-    });
-
-    insertBtn.addEventListener('click',      () => this.insertPointAfterSelected());
-    deletePointBtn.addEventListener('click', () => this.deleteSelectedPoint());
-    deleteWallBtn.addEventListener('click',  () => this.deleteActiveWall());
-
-    panel.addEventListener('mousedown', e => e.stopPropagation());
-    panel.addEventListener('wheel',     e => e.stopPropagation());
-
-    document.body.appendChild(panel);
-    this.propertiesPanel = panel;
+  _syncStoreToFeature(feature, selectedIdx = null) {
+    const store = this.ec._editorStore;
+    if (!store) return;
+    store.selectedType = 'polyWall';
+    store.polyWall.hasSelection = selectedIdx !== null;
+    store.polyWall.smoothing = selectedIdx !== null ? (feature.points[selectedIdx].smoothing ?? 0) : 0;
+    store.polyWall.height = feature.height ?? 2;
+    store.polyWall.thickness = feature.thickness ?? 0.5;
+    store.polyWall.closed = feature.closed ?? false;
   }
 
-  showPanel(feature) {
-    if (!this.propertiesPanel) return;
-    const get = id => document.getElementById(id);
-    const hs = get('pw-height-slider'), hv = get('pw-height-val');
-    if (hs) { hs.value = feature.height ?? 2; hv.textContent = (feature.height ?? 2).toFixed(1); }
-    const ts = get('pw-thick-slider'),  tv = get('pw-thick-val');
-    if (ts) { ts.value = feature.thickness ?? 0.5; tv.textContent = (feature.thickness ?? 0.5).toFixed(1); }
-    this._syncPanelToPoint();
-    this.propertiesPanel.style.display = 'block';
+  // Called by EditorController (bridge from Vue store actions)
+  changePolyWallSmoothing(val) {
+    if (!this.selectedPoint) return;
+    this.ec.saveSnapshot(true);
+    this.selectedPoint.wg.feature.points[this.selectedPoint.idx].smoothing = val;
+    this._updatePointPositions(this.selectedPoint.wg);
+    this._rebuildWall(this.selectedPoint.wg.feature);
   }
 
-  hidePanel() {
-    if (this.propertiesPanel) this.propertiesPanel.style.display = 'none';
+  changePolyWallHeight(val) {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot(true);
+    this._activeWall.feature.height = val;
+    this._rebuildWall(this._activeWall.feature);
   }
 
-  _syncPanelToPoint() {
-    const get = id => document.getElementById(id);
-    const ss = get('pw-smooth-slider'), sv = get('pw-smooth-val');
-    const insertBtn     = this.propertiesPanel?.querySelector('button:nth-of-type(1)');
-
-    if (this.selectedPoint) {
-      const smooth = this.selectedPoint.wg.feature.points[this.selectedPoint.idx].smoothing ?? 0;
-      if (ss) { ss.value = smooth; ss.disabled = false; }
-      if (sv) sv.textContent = smooth.toFixed(1);
-    } else {
-      if (ss) { ss.value = 0; ss.disabled = true; }
-      if (sv) sv.textContent = '—';
-    }
+  changePolyWallThickness(val) {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot(true);
+    this._activeWall.feature.thickness = val;
+    this._rebuildWall(this._activeWall.feature);
   }
+
+  changePolyWallClosed(val) {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot(true);
+    this._activeWall.feature.closed = val;
+    this._rebuildWall(this._activeWall.feature);
+  }
+
+  insertPolyWallPoint() { this.insertPointAfterSelected(); }
+  deletePolyWallPoint() { this.deleteSelectedPoint(); }
+  deletePolyWall()      { this.deleteActiveWall(); }
+  deselectPolyWall()    { this.deselectPoint(); }
 }

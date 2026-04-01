@@ -2,6 +2,7 @@ import { Vector3, StandardMaterial, Color3, PointerEventTypes, MeshBuilder, Tran
 import { TERRAIN_TYPES } from "../terrain.js";
 import { MeshGridTool } from "./MeshGridTool.js";
 import { PolyWallTool } from "./PolyWallTool.js";
+import { useEditorStore } from '../vue/store.js';
 
 /**
  * EditorController - Handles track editing mode
@@ -91,6 +92,9 @@ export class EditorController {
 
     // Poly wall editing tool
     this.polyWallTool = null;
+
+    // Vue editor store bridge
+    this._editorStore = useEditorStore();
   }
 
   /**
@@ -174,17 +178,8 @@ export class EditorController {
       }
     }
 
-    // Create floating hill properties panel
-    this.createHillPropertiesPanel();
-
-    // Create square hill properties panel
-    this.createSquareHillPropertiesPanel();
-
-    // Create terrain rect properties panel
-    this.createTerrainRectPropertiesPanel();
-
-    // Create checkpoint properties panel
-    this.createCheckpointPropertiesPanel();
+    // Wire Vue editor panels
+    this._editorStore.setBridge(this);
 
     // Snap indicator (bottom-right)
     this._createSnapIndicator();
@@ -247,28 +242,10 @@ export class EditorController {
     this.terrainRectMeshes = [];
     this.selectedTerrainRect = null;
 
-    // Remove hill properties panel
-    if (this.hillPropertiesPanel) {
-      document.body.removeChild(this.hillPropertiesPanel);
-      this.hillPropertiesPanel = null;
-    }
-
-    // Remove square hill properties panel
-    if (this.squareHillPropertiesPanel) {
-      document.body.removeChild(this.squareHillPropertiesPanel);
-      this.squareHillPropertiesPanel = null;
-    }
-
-    // Remove terrain rect properties panel
-    if (this.terrainRectPropertiesPanel) {
-      document.body.removeChild(this.terrainRectPropertiesPanel);
-      this.terrainRectPropertiesPanel = null;
-    }
-
-    // Remove checkpoint properties panel
-    if (this.checkpointPropertiesPanel) {
-      document.body.removeChild(this.checkpointPropertiesPanel);
-      this.checkpointPropertiesPanel = null;
+    // Hide all editor panels via Vue store
+    if (this._editorStore) {
+      this._editorStore.selectedType = null;
+      this._editorStore.setBridge(null);
     }
 
     // Remove snap indicator
@@ -1137,16 +1114,18 @@ export class EditorController {
   }
 
   showTerrainRectProperties(rectData) {
-    if (!this.terrainRectPropertiesPanel) return;
+    const s = this._editorStore;
+    if (!s) return;
     const { feature } = rectData;
-    const ws = document.getElementById('tr-width-slider');  if (ws) { ws.value = feature.width;  document.getElementById('tr-width-val').textContent  = feature.width.toFixed(1); }
-    const ds = document.getElementById('tr-depth-slider');  if (ds) { ds.value = feature.depth;  document.getElementById('tr-depth-val').textContent  = feature.depth.toFixed(1); }
-    const ts = document.getElementById('tr-terrain-select'); if (ts) ts.value = feature.terrainType?.name || 'mud';
-    this.terrainRectPropertiesPanel.style.display = 'block';
+    s.terrainRect.width       = feature.width;
+    s.terrainRect.depth       = feature.depth;
+    s.terrainRect.terrainType = feature.terrainType?.name || 'mud';
+    s.selectedType            = 'terrainRect';
   }
 
   hideTerrainRectProperties() {
-    if (this.terrainRectPropertiesPanel) this.terrainRectPropertiesPanel.style.display = 'none';
+    if (this._editorStore?.selectedType === 'terrainRect')
+      this._editorStore.selectedType = null;
   }
 
   moveSelectedCheckpoint(movement) {
@@ -1449,19 +1428,16 @@ export class EditorController {
   }
 
   showCheckpointProperties(checkpointData) {
-    if (!this.checkpointPropertiesPanel) return;
-    const ws = document.getElementById('cp-width-slider');
-    const wv = document.getElementById('cp-width-val');
-    if (ws) { ws.value = checkpointData.feature.width; wv.textContent = checkpointData.feature.width.toFixed(1); }
-    const on = document.getElementById('cp-order-num');
-    if (on) on.textContent = '#' + (checkpointData.feature.checkpointNumber ?? '?');
-    this.checkpointPropertiesPanel.style.display = 'block';
+    const s = this._editorStore;
+    if (!s) return;
+    s.checkpoint.width    = checkpointData.feature.width;
+    s.checkpoint.orderNum = checkpointData.feature.checkpointNumber ?? 1;
+    s.selectedType        = 'checkpoint';
   }
 
   hideCheckpointProperties() {
-    if (this.checkpointPropertiesPanel) {
-      this.checkpointPropertiesPanel.style.display = 'none';
-    }
+    if (this._editorStore?.selectedType === 'checkpoint')
+      this._editorStore.selectedType = null;
   }
 
   /**
@@ -1493,8 +1469,7 @@ export class EditorController {
     this.selectedCheckpoint.feature.checkpointNumber = targetNum;
     other.checkpointNumber = myNum;
     this._refreshAllCheckpointDecals();
-    const on = document.getElementById('cp-order-num');
-    if (on) on.textContent = '#' + targetNum;
+    if (this._editorStore) this._editorStore.checkpoint.orderNum = targetNum;
   }
 
   /** Re-render the number/finish decal on every checkpoint gate. */
@@ -2181,47 +2156,28 @@ export class EditorController {
   }
 
   showSquareHillProperties(hillData) {
-    if (!this.squareHillPropertiesPanel) return;
+    const s = this._editorStore;
+    if (!s) return;
     const { feature } = hillData;
-    const get = id => document.getElementById(id);
     const sloped = feature.heightAtMin !== undefined;
-
-    // Common fields
-    if (get('sq-width-slider'))  { get('sq-width-slider').value  = feature.width;  get('sq-width-val').textContent  = feature.width.toFixed(1); }
-    if (get('sq-depth-slider'))  { get('sq-depth-slider').value  = feature.depth ?? feature.width; get('sq-depth-val').textContent  = (feature.depth ?? feature.width).toFixed(1); }
-    if (get('sq-trans-slider'))  { get('sq-trans-slider').value  = feature.transition ?? 8; get('sq-trans-val').textContent  = (feature.transition ?? 8).toFixed(1); }
-    if (get('sq-terrain-select')) { get('sq-terrain-select').value = feature.terrainType?.name || 'none'; }
-
-    // Common: angle applies to both flat and sloped
-    const ang = feature.angle ?? 0;
-    const as = document.getElementById('sq-angle-slider');
-    const av = document.getElementById('sq-angle-val');
-    if (as) { as.value = ang; av.textContent = ang.toFixed(0) + '°'; }
-
-    // Mode-specific
-    const flatSection   = document.getElementById('sq-flat-section');
-    const slopedSection = document.getElementById('sq-sloped-section');
-    const flatBtn  = document.getElementById('sq-mode-flat');
-    const slopeBtn = document.getElementById('sq-mode-sloped');
-    const btnBase = 'flex:1; padding:5px 0; border:1px solid #f0a020; border-radius:4px; cursor:pointer; font-size:12px; font-family:Arial; transition:background 0.15s;';
-
-    if (flatSection)   flatSection.style.display   = sloped ? 'none'  : 'block';
-    if (slopedSection) slopedSection.style.display  = sloped ? 'block' : 'none';
-    if (flatBtn)  { flatBtn.style.background  = sloped ? 'transparent' : '#f0a020'; flatBtn.style.color  = sloped ? '#f0a020' : '#000'; }
-    if (slopeBtn) { slopeBtn.style.background = sloped ? '#f0a020' : 'transparent'; slopeBtn.style.color = sloped ? '#000' : '#f0a020'; }
-
+    s.squareHill.width       = feature.width;
+    s.squareHill.depth       = feature.depth ?? feature.width;
+    s.squareHill.transition  = feature.transition ?? 8;
+    s.squareHill.angle       = feature.angle ?? 0;
+    s.squareHill.slopeMode   = sloped;
+    s.squareHill.terrainType = feature.terrainType?.name || 'none';
     if (sloped) {
-      if (get('sq-hmin-slider')) { get('sq-hmin-slider').value = feature.heightAtMin ?? 0;  get('sq-hmin-val').textContent = (feature.heightAtMin ?? 0).toFixed(1); }
-      if (get('sq-hmax-slider')) { get('sq-hmax-slider').value = feature.heightAtMax ?? 5;  get('sq-hmax-val').textContent = (feature.heightAtMax ?? 5).toFixed(1); }
+      s.squareHill.heightAtMin = feature.heightAtMin ?? 0;
+      s.squareHill.heightAtMax = feature.heightAtMax ?? 5;
     } else {
-      if (get('sq-height-slider')) { get('sq-height-slider').value = feature.height ?? 5; get('sq-height-val').textContent = (feature.height ?? 5).toFixed(1); }
+      s.squareHill.height = feature.height ?? 5;
     }
-
-    this.squareHillPropertiesPanel.style.display = 'block';
+    s.selectedType = 'squareHill';
   }
 
   hideSquareHillProperties() {
-    if (this.squareHillPropertiesPanel) this.squareHillPropertiesPanel.style.display = 'none';
+    if (this._editorStore?.selectedType === 'squareHill')
+      this._editorStore.selectedType = null;
   }
 
   // ─── Hill Properties Panel ─────────────────────────────────────────────────
@@ -2409,32 +2365,190 @@ export class EditorController {
    * Populate and show the properties panel for the given hill.
    */
   showHillProperties(hillData) {
-    if (!this.hillPropertiesPanel) return;
+    const s = this._editorStore;
+    if (!s) return;
     const { feature } = hillData;
-
-    const rs = document.getElementById('hill-radius-slider');
-    const rv = document.getElementById('hill-radius-val');
-    const hs = document.getElementById('hill-height-slider');
-    const hv = document.getElementById('hill-height-val');
-    const ts = document.getElementById('hill-terrain-select');
-
-    if (rs) { rs.value = feature.radius; rv.textContent = feature.radius.toFixed(1); }
-    if (hs) { hs.value = feature.height; hv.textContent = feature.height.toFixed(1); }
-    if (ts) { ts.value = feature.terrainType?.name || 'none'; }
-
-    this.hillPropertiesPanel.style.display = 'block';
+    s.hill.radius      = feature.radius;
+    s.hill.height      = feature.height;
+    s.hill.terrainType = feature.terrainType?.name || 'none';
+    s.selectedType     = 'hill';
   }
 
   /**
    * Hide the hill properties panel.
    */
   hideHillProperties() {
-    if (this.hillPropertiesPanel) {
-      this.hillPropertiesPanel.style.display = 'none';
-    }
+    if (this._editorStore?.selectedType === 'hill')
+      this._editorStore.selectedType = null;
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+
+  // ─── Vue Bridge — change methods called by Pinia store actions ──────────────────
+
+  changeCheckpointWidth(val) {
+    if (!this.selectedCheckpoint) return;
+    this.saveSnapshot(true);
+    this.selectedCheckpoint.updateWidth(val);
+  }
+
+  changeHillRadius(val) {
+    if (!this.selectedHill) return;
+    this.saveSnapshot(true);
+    this.selectedHill.feature.radius = val;
+    this.updateHillVisual(this.selectedHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeHillHeight(val) {
+    if (!this.selectedHill) return;
+    this.saveSnapshot(true);
+    this.selectedHill.feature.height = val;
+    this.updateHillVisual(this.selectedHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeHillTerrainType(name) {
+    if (!this.selectedHill) return;
+    this.saveSnapshot();
+    this.selectedHill.feature.terrainType = name === 'none' ? null
+      : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillWidth(val) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot(true);
+    this.selectedSquareHill.feature.width = val;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillDepth(val) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot(true);
+    this.selectedSquareHill.feature.depth = val;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillTransition(val) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot(true);
+    this.selectedSquareHill.feature.transition = val;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillAngle(val) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot(true);
+    this.selectedSquareHill.feature.angle = val;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillHeight(val) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot(true);
+    this.selectedSquareHill.feature.height = val;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillHeightMin(val) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot(true);
+    this.selectedSquareHill.feature.heightAtMin = val;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillHeightMax(val) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot(true);
+    this.selectedSquareHill.feature.heightAtMax = val;
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillMode(sloped) {
+    if (!this.selectedSquareHill) return;
+    const f = this.selectedSquareHill.feature;
+    const s = this._editorStore;
+    if (sloped) {
+      if (f.heightAtMin !== undefined) return; // already sloped
+      this.saveSnapshot();
+      const prevH = f.height ?? 5;
+      f.heightAtMin = 0;
+      f.heightAtMax = prevH;
+      delete f.height;
+      if (s) { s.squareHill.heightAtMin = 0; s.squareHill.heightAtMax = prevH; }
+    } else {
+      if (f.heightAtMin === undefined) return; // already flat
+      this.saveSnapshot();
+      const prevH = f.heightAtMax ?? 5;
+      f.height = prevH;
+      delete f.heightAtMin; delete f.heightAtMax;
+      if (s) s.squareHill.height = prevH;
+    }
+    this.updateSquareHillVisual(this.selectedSquareHill);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeSquareHillTerrainType(name) {
+    if (!this.selectedSquareHill) return;
+    this.saveSnapshot();
+    this.selectedSquareHill.feature.terrainType = name === 'none' ? null
+      : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeTerrainRectWidth(val) {
+    if (!this.selectedTerrainRect) return;
+    this.saveSnapshot(true);
+    this.selectedTerrainRect.feature.width = val;
+    this.updateTerrainRectVisual(this.selectedTerrainRect);
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeTerrainRectDepth(val) {
+    if (!this.selectedTerrainRect) return;
+    this.saveSnapshot(true);
+    this.selectedTerrainRect.feature.depth = val;
+    this.updateTerrainRectVisual(this.selectedTerrainRect);
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeTerrainRectTerrainType(name) {
+    if (!this.selectedTerrainRect) return;
+    this.saveSnapshot();
+    const entry = Object.values(TERRAIN_TYPES).find(t => t.name === name);
+    this.selectedTerrainRect.feature.terrainType = entry || null;
+    this.updateTerrainRectVisual(this.selectedTerrainRect);
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+  }
+
+  // ── Poly Wall Vue bridge methods ──
+  changePolyWallSmoothing(val)  { this.polyWallTool.changePolyWallSmoothing(val); }
+  changePolyWallHeight(val)     { this.polyWallTool.changePolyWallHeight(val); }
+  changePolyWallThickness(val)  { this.polyWallTool.changePolyWallThickness(val); }
+  changePolyWallClosed(val)     { this.polyWallTool.changePolyWallClosed(val); }
+  insertPolyWallPoint()         { this.polyWallTool.insertPolyWallPoint(); }
+  deletePolyWallPoint()         { this.polyWallTool.deletePolyWallPoint(); }
+  deletePolyWall()              { this.polyWallTool.deletePolyWall(); }
+  deselectPolyWall()            { this.polyWallTool.deselectPolyWall(); }
 
   /**
    * Dispose of the controller

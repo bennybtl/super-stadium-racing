@@ -127,45 +127,6 @@ export class Track {
     return this;
   }
 
-  // Add a straight wall (immovable)
-  // heading: radians — the wall runs perpendicular to this direction
-  // length: wall length along its face, height: wall height, thickness: wall depth (default 0.5)
-  // segments: how many boxes to split the wall into so it follows the terrain (null = auto)
-  addWall(centerX, centerZ, heading, length = 10, height = 2, thickness = 0.5, segments = null) {
-    this.features.push({
-      type: "wall",
-      centerX,
-      centerZ,
-      heading,
-      length,
-      height,
-      thickness,
-      segments,
-    });
-    return this;
-  }
-
-  // Add a curved wall approximated by box segments along an arc (immovable)
-  // centerX/centerZ: centre of the arc's parent circle
-  // radius: distance from centre to wall face
-  // startAngle/endAngle: arc extents in radians (0 = +X axis, increases counter-clockwise)
-  // segments: number of box segments used to approximate the curve (more = smoother)
-  // height/thickness: dimensions of each segment
-  addCurvedWall(centerX, centerZ, radius, startAngle, endAngle, height = 2, segments = 12, thickness = 0.5) {
-    this.features.push({
-      type: "curvedWall",
-      centerX,
-      centerZ,
-      radius,
-      startAngle,
-      endAngle,
-      height,
-      segments,
-      thickness,
-    });
-    return this;
-  }
-
   // Add a wall defined by a series of world-space points. Straight segments
   // are generated between each consecutive pair of points, with terrain-following
   // sub-segmentation so the wall hugs hills and dips.

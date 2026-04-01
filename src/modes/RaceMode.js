@@ -156,6 +156,7 @@ export class RaceMode {
 
     // -- UI --
     const uiManager = new UIManager();
+    this.uiManager = uiManager;
     uiManager.showDebugPanel();
     uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
@@ -509,11 +510,9 @@ export class RaceMode {
       this.scene.dispose();
       this.scene = null;
     }
-    const debugPanel = document.getElementById('debug-panel');
-    if (debugPanel) debugPanel.style.display = 'none';
-    const raceStatusPanel = document.getElementById('race-status-panel');
-    if (raceStatusPanel) raceStatusPanel.style.display = 'none';
-    const countdownOverlay = document.getElementById('countdown-overlay');
-    if (countdownOverlay) countdownOverlay.style.display = 'none';
+    if (this.uiManager) {
+      this.uiManager.hideAll();
+      this.uiManager = null;
+    }
   }
 }
