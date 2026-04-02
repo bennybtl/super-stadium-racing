@@ -360,12 +360,16 @@ export class RaceMode {
       wallManager.preUpdate(trucks, dt);
       truckCollisionManager.preUpdate(trucks, dt);
 
+      let playerDebugInfo = null;
       trucks.forEach((truckData) => {
         if (truckData.gameState.raceFinished) return;
         const truckInput = truckData.isPlayer
           ? input
           : { forward: false, back: false, left: false, right: false };
-        updateTruck(truckData.truck, truckInput, dt, terrainManager, currentTrack);
+        const debugInfo = updateTruck(truckData.truck, truckInput, dt, terrainManager, currentTrack);
+        if (truckData.isPlayer) {
+          playerDebugInfo = debugInfo;
+        }
       });
 
       wallManager.update(trucks);
@@ -380,7 +384,7 @@ export class RaceMode {
         4
       );
       uiManager.updateDebugPanel(
-        playerTruckData.truck.state,
+        playerDebugInfo,
         terrainManager.getTerrainAt(playerTruckData.truck.mesh.position),
         slopeDegFront
       );

@@ -13,10 +13,35 @@ export class TerrainPhysics {
     // Apply gravity
     this.state.verticalVelocity += this.gravity * deltaTime;
     
+    // Add extra downward force when going downhill to keep truck grounded
+    if (track && this.state.velocity.length() > 5) {
+      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+      const checkDist = 2.0;
+      
+      const heightAhead = track.getHeightAt(
+        mesh.position.x + forward.x * checkDist,
+        mesh.position.z + forward.z * checkDist
+      );
+      const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
+      const heightDiff = heightAhead - heightHere;
+      
+      // If going downhill (heightDiff < 0), apply extra downward force
+      if (heightDiff < -0.25) {
+        const slopeFactor = Math.abs(heightDiff) / checkDist;
+        const speedFactor = Math.min(1, this.state.velocity.length() / 30);
+        const downhillForce = slopeFactor * speedFactor * 120; // Aggressive downward push
+        this.state.verticalVelocity -= downhillForce * deltaTime;
+      }
+    }
+    
     // Check terrain collision and apply spring force
     const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
     const truckBottomY = terrainHeight + 0.4; // 0.4 = half truck height
     const penetration = truckBottomY - mesh.position.y;
+    
+    if (Math.random() < 0.01) { // Log 1% of frames to avoid spam
+      console.log(`[TerrainPhysics] terrain=${terrainHeight.toFixed(2)}, truck.y=${mesh.position.y.toFixed(2)}, truckBottom=${truckBottomY.toFixed(2)}, penetration=${penetration.toFixed(3)}`);
+    }
 
     // Terrain acts as a spring- pushes back when penetrated or very close
     if (penetration > -0.2) {
@@ -31,7 +56,28 @@ export class TerrainPhysics {
     mesh.position.y += this.state.verticalVelocity * deltaTime;
     
     // Calculate suspension compression
-    const baseCompression = Math.max(0, Math.min(1, penetration / 0.2));
+    // When going downhill, truck may be slightly above terrain but still "grounded"
+    let baseCompression = Math.max(0, Math.min(1, penetration / 0.2));
+    
+    // Check if we're actively following terrain downward (downhill case)
+    let isFollowingTerrain = false;
+    if (track && penetration < 0 && penetration > -0.1 && this.state.velocity.length() > 2) {
+      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+      const checkDist = 1.5;
+      const heightAhead = track.getHeightAt(
+        mesh.position.x + forward.x * checkDist,
+        mesh.position.z + forward.z * checkDist
+      );
+      const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
+      
+      // If terrain is dropping ahead and we're moving down with it
+      if (heightAhead < heightHere - 0.3 && this.state.verticalVelocity < -2) {
+        isFollowingTerrain = true;
+        // Fake some compression as if we're on ground
+        baseCompression = 0.3;
+      }
+    }
+    
     let targetCompression = 0;
     if (baseCompression > 0) {
       const velocityCompression = Math.max(0, -this.state.verticalVelocity * 0.03);

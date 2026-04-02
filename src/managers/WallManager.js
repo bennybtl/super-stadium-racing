@@ -182,35 +182,43 @@ export class WallManager {
       vel.x *= retain;
       vel.z *= retain;
 
-      // Snap truck heading to whichever wall-parallel direction is closest
-      // to the truck's current heading. The wall's normal is (sin(h), cos(h)),
-      // so the two parallel directions are h+π/2 and h-π/2.
-      const truckH = truck.state.heading;
-      const wallParallel0 = h + Math.PI / 2;
-      const wallParallel1 = h - Math.PI / 2;
-
-      // Angular distance (wrapped to [-π, π]) to each candidate
-      const diff0 = ((truckH - wallParallel0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      const diff1 = ((truckH - wallParallel1 + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      // Only snap heading if the truck is moving significantly into the wall
+      // If the truck is nearly parallel and trying to steer away, don't force it parallel
+      const speedIntoWall = Math.abs(velDotNormal);
+      const shouldSnapHeading = speedIntoWall > 3; // Only snap if moving hard into wall
       
-      const newHeading = Math.abs(diff0) <= Math.abs(diff1) ? wallParallel0 : wallParallel1;
-      truck.state.heading = newHeading;
+      if (shouldSnapHeading) {
+        // Snap truck heading to whichever wall-parallel direction is closest
+        // to the truck's current heading. The wall's normal is (sin(h), cos(h)),
+        // so the two parallel directions are h+π/2 and h-π/2.
+        const truckH = truck.state.heading;
+        const wallParallel0 = h + Math.PI / 2;
+        const wallParallel1 = h - Math.PI / 2;
 
-      const deg = v => (v * 180 / Math.PI).toFixed(1) + '°';
-      console.debug(
-        `[Wall] COLLISION HEADING SNAP` +
-        ` | truckHeading=${deg(truckH)}` +
-        ` | wallSegHeading=${deg(h)}` +
-        ` | parallel0=${deg(wallParallel0)} (diff=${deg(diff0)})` +
-        ` | parallel1=${deg(wallParallel1)} (diff=${deg(diff1)})` +
-        ` | snappedTo=${deg(newHeading)}`
-      );
+        // Angular distance (wrapped to [-π, π]) to each candidate
+        const diff0 = ((truckH - wallParallel0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        const diff1 = ((truckH - wallParallel1 + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        
+        const newHeading = Math.abs(diff0) <= Math.abs(diff1) ? wallParallel0 : wallParallel1;
+        truck.state.heading = newHeading;
+
+        const deg = v => (v * 180 / Math.PI).toFixed(1) + '°';
+        console.debug(
+          `[Wall] COLLISION HEADING SNAP` +
+          ` | truckHeading=${deg(truckH)}` +
+          ` | wallSegHeading=${deg(h)}` +
+          ` | parallel0=${deg(wallParallel0)} (diff=${deg(diff0)})` +
+          ` | parallel1=${deg(wallParallel1)} (diff=${deg(diff1)})` +
+          ` | snappedTo=${deg(newHeading)}`
+        );
+      }
     }
 
-    // Push the truck back to the wall surface
+    // Push the truck back to the wall surface (with a small buffer)
     let correctionZ = 0;
+    const bufferDistance = 0.05; // Small buffer to prevent getting stuck
     if (Math.abs(localZ) < halfThick) {
-      correctionZ = signZ * halfThick - localZ;
+      correctionZ = signZ * (halfThick + bufferDistance) - localZ;
       pos.x += sinH * correctionZ;
       pos.z += cosH * correctionZ;
     }

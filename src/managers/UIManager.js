@@ -38,17 +38,16 @@ export class UIManager {
 
   updateTimer(milliseconds)          { this._race.timerMs = milliseconds; }
 
-  updateDebugPanel(truckState, terrainType, slopeAngleDeg = null) {
+  updateDebugPanel(debugInfo, terrainType, slopeAngleDeg = null) {
     const d = this._debug.data;
-    const speed = truckState.velocity.length();
-    d.compression    = truckState.suspensionCompression.toFixed(2);
-    d.groundedness   = truckState.onGround ? 1 : 0;
-    d.penetration    = '0.00';
-    d.vvel           = truckState.verticalVelocity.toFixed(2);
-    d.speed          = speed.toFixed(2);
-    d.grip           = truckState.grip.toFixed(3);
-    d.slip           = (truckState.slipAngle * 180 / Math.PI).toFixed(1) + '°';
-    d.terrain        = terrainType.name || 'dirt';
+    d.compression    = (debugInfo.compression ?? 0).toFixed(2);
+    d.groundedness   = (debugInfo.groundedness ?? 0).toFixed(2);
+    d.penetration    = (debugInfo.penetration ?? 0).toFixed(3);
+    d.vvel           = (debugInfo.verticalVelocity ?? 0).toFixed(2);
+    d.speed          = (debugInfo.speed ?? 0).toFixed(2);
+    d.grip           = (debugInfo.effectiveGrip ?? 0).toFixed(3);
+    d.slip           = ((debugInfo.slipAngle ?? 0) * 180 / Math.PI).toFixed(1) + '°';
+    d.terrain        = terrainType?.name || 'dirt';
     d.slope          = slopeAngleDeg !== null ? slopeAngleDeg.toFixed(1) + '°' : '-';
   }
 
