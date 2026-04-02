@@ -2581,6 +2581,7 @@ export class EditorController {
   }
 
   // ── Poly Wall Vue bridge methods ──
+  changePolyWallRadius(val)     { this.polyWallTool.changePolyWallRadius(val); }
   changePolyWallHeight(val)     { this.polyWallTool.changePolyWallHeight(val); }
   changePolyWallThickness(val)  { this.polyWallTool.changePolyWallThickness(val); }
   changePolyWallClosed(val)     { this.polyWallTool.changePolyWallClosed(val); }

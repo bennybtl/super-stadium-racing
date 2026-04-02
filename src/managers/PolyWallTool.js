@@ -82,10 +82,10 @@ export class PolyWallTool {
     const feature = {
       type:      'polyWall',
       points:    [
-        { x: cx - 10, z: cz - 5 },
-        { x: cx,      z: cz + 5 },
-        { x: cx + 10, z: cz - 5 },
-        { x: cx + 20, z: cz + 5 },
+        { x: cx - 10, z: cz - 5, radius: 0 },
+        { x: cx,      z: cz + 5, radius: 0 },
+        { x: cx + 10, z: cz - 5, radius: 0 },
+        { x: cx + 20, z: cz + 5, radius: 0 },
       ],
       height:    2,
       thickness: 0.5,
@@ -221,6 +221,8 @@ export class PolyWallTool {
     const mesh = wg.pointMeshes[idx];
     this.selectedPoint = { wg, idx, mesh };
     mesh.material = this.highlightMat;
+    console.log(`[PolyWallTool] selectPoint: idx=${idx}, total points=${wg.feature.points.length}`);
+    console.log(`[PolyWallTool] Selected point:`, wg.feature.points[idx]);
     this._syncStoreToFeature(wg.feature, idx);
   }
 
@@ -321,6 +323,7 @@ export class PolyWallTool {
     const newPt = {
       x: (p1.x + p2.x) / 2,
       z: (p1.z + p2.z) / 2,
+      radius: 0,
     };
     this.ec.saveSnapshot();
     pts.splice(idx + 1, 0, newPt);
@@ -375,12 +378,33 @@ export class PolyWallTool {
     if (!store) return;
     store.selectedType = 'polyWall';
     store.polyWall.hasSelection = selectedIdx !== null;
+    // First and last points can't have radius in open polywalls (need both incoming and outgoing segments)
+    // But in closed polywalls, all points can have radius
+    const isClosed = feature.closed ?? false;
+    const canHaveRadius = selectedIdx !== null && (
+      isClosed || (selectedIdx > 0 && selectedIdx < feature.points.length - 1)
+    );
+    store.polyWall.canHaveRadius = canHaveRadius;
+    store.polyWall.radius = selectedIdx !== null ? (feature.points[selectedIdx].radius ?? 0) : 0;
     store.polyWall.height = feature.height ?? 2;
     store.polyWall.thickness = feature.thickness ?? 0.5;
     store.polyWall.closed = feature.closed ?? false;
   }
 
   // Called by EditorController (bridge from Vue store actions)
+  changePolyWallRadius(val) {
+    if (!this.selectedPoint) return;
+    console.log(`[PolyWallTool] changePolyWallRadius: idx=${this.selectedPoint.idx}, val=${val}`);
+    console.log(`[PolyWallTool] Feature has ${this.selectedPoint.wg.feature.points.length} points`);
+    console.log(`[PolyWallTool] All point radii:`, this.selectedPoint.wg.feature.points.map((p, i) => `${i}:${p.radius ?? 0}`).join(', '));
+    this.ec.saveSnapshot(true);
+    this.selectedPoint.wg.feature.points[this.selectedPoint.idx].radius = val;
+    console.log(`[PolyWallTool] Updated point radius to:`, this.selectedPoint.wg.feature.points[this.selectedPoint.idx].radius);
+    console.log(`[PolyWallTool] All point radii after:`, this.selectedPoint.wg.feature.points.map((p, i) => `${i}:${p.radius ?? 0}`).join(', '));
+    this._updatePointPositions(this.selectedPoint.wg);
+    this._rebuildWall(this.selectedPoint.wg.feature);
+  }
+
   changePolyWallHeight(val) {
     if (!this._activeWall) return;
     this.ec.saveSnapshot(true);

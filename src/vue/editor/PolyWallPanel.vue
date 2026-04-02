@@ -8,6 +8,22 @@
     <!-- Selected Point Section -->
     <div class="ep-section-title">Selected Point</div>
 
+    <!-- Radius -->
+    <div class="ep-row">
+      <span>Radius</span>
+      <span>{{ radiusDisplay }}</span>
+    </div>
+    <input
+      type="range" min="0" max="10" step="0.5"
+      :value="editor.polyWall.radius"
+      :disabled="!editor.polyWall.canHaveRadius"
+      @input="editor.setPolyWallRadius(+$event.target.value)"
+      class="ep-slider"
+    />
+    <div v-if="!editor.polyWall.canHaveRadius && editor.polyWall.hasSelection" class="ep-hint" style="color: #ff9800;">
+      First and last points cannot be rounded (unless closed loop is enabled)
+    </div>
+
     <div class="ep-hint">WASD to move selected point</div>
 
     <button class="ep-btn-action" @click="editor.insertPolyWallPoint()">Insert Point After</button>
@@ -60,8 +76,14 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
 
 const editor = useEditorStore();
+
+const radiusDisplay = computed(() => {
+  if (!editor.polyWall.hasSelection) return '—';
+  return editor.polyWall.radius.toFixed(1);
+});
 </script>

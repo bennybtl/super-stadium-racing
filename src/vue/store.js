@@ -147,6 +147,8 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Poly wall panel ──
   const polyWall = reactive({
     hasSelection: false,
+    canHaveRadius: false,
+    radius: 0,
     height: 2,
     thickness: 0.5,
     closed: false,
@@ -206,6 +208,7 @@ export const useEditorStore = defineStore('editor', () => {
   function closeTerrainRect()           { _bridge.value?.deselectTerrainRect(); }
 
   // ── Poly Wall actions ──
+  function setPolyWallRadius(val)       { polyWall.radius = val;     _bridge.value?.changePolyWallRadius(val); }
   function setPolyWallHeight(val)       { polyWall.height = val;     _bridge.value?.changePolyWallHeight(val); }
   function setPolyWallThickness(val)    { polyWall.thickness = val;  _bridge.value?.changePolyWallThickness(val); }
   function setPolyWallClosed(val)       { polyWall.closed = val;     _bridge.value?.changePolyWallClosed(val); }
@@ -243,7 +246,7 @@ export const useEditorStore = defineStore('editor', () => {
     setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
     setTerrainRectWidth, setTerrainRectDepth, setTerrainRectTerrainType,
     duplicateTerrainRect, deleteTerrainRect, closeTerrainRect,
-    setPolyWallHeight, setPolyWallThickness, setPolyWallClosed,
+    setPolyWallRadius, setPolyWallHeight, setPolyWallThickness, setPolyWallClosed,
     insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, closePolyWall,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, closeBezierWall,
