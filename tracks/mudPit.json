@@ -7,12 +7,7 @@
       "centerZ": 0,
       "width": 23,
       "depth": 23,
-      "terrainType": {
-        "name": "water",
-        "gripMultiplier": 0.3,
-        "dragMultiplier": 6.0,
-        "color": { "r": 0.2, "g": 0.4, "b": 0.6 }
-      }
+      "terrainType": "water"
     }
   ]
 }

@@ -14,25 +14,25 @@ export class TerrainPhysics {
     this.state.verticalVelocity += this.gravity * deltaTime;
     
     // Add extra downward force when going downhill to keep truck grounded
-    if (track && this.state.velocity.length() > 5) {
-      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-      const checkDist = 2.0;
+    // if (track && this.state.velocity.length() > 5) {
+    //   const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    //   const checkDist = 2.0;
       
-      const heightAhead = track.getHeightAt(
-        mesh.position.x + forward.x * checkDist,
-        mesh.position.z + forward.z * checkDist
-      );
-      const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
-      const heightDiff = heightAhead - heightHere;
+    //   const heightAhead = track.getHeightAt(
+    //     mesh.position.x + forward.x * checkDist,
+    //     mesh.position.z + forward.z * checkDist
+    //   );
+    //   const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
+    //   const heightDiff = heightAhead - heightHere;
       
-      // If going downhill (heightDiff < 0), apply extra downward force
-      if (heightDiff < -0.25) {
-        const slopeFactor = Math.abs(heightDiff) / checkDist;
-        const speedFactor = Math.min(1, this.state.velocity.length() / 30);
-        const downhillForce = slopeFactor * speedFactor * 120; // Aggressive downward push
-        this.state.verticalVelocity -= downhillForce * deltaTime;
-      }
-    }
+    //   // If going downhill (heightDiff < 0), apply extra downward force
+    //   if (heightDiff < -0.25) {
+    //     const slopeFactor = Math.abs(heightDiff) / checkDist;
+    //     const speedFactor = Math.min(1, this.state.velocity.length() / 30);
+    //     const downhillForce = slopeFactor * speedFactor * 120; // Aggressive downward push
+    //     this.state.verticalVelocity -= downhillForce * deltaTime;
+    //   }
+    // }
     
     // Check terrain collision and apply spring force
     const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;

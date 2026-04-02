@@ -334,9 +334,19 @@ export class Track {
 
   // Serialize track to JSON string
   toJSON() {
+    // Deep clone features and convert terrainType objects to names
+    const serializedFeatures = this.features.map(feature => {
+      const serialized = { ...feature };
+      if (feature.terrainType && typeof feature.terrainType === 'object') {
+        // Convert terrainType object to just the name
+        serialized.terrainType = feature.terrainType.name;
+      }
+      return serialized;
+    });
+
     return JSON.stringify({
       name: this.name,
-      features: this.features,
+      features: serializedFeatures,
     }, null, 2);
   }
 
@@ -344,7 +354,20 @@ export class Track {
   static fromJSON(jsonString) {
     const data = JSON.parse(jsonString);
     const track = new Track(data.name);
-    track.features = data.features || [];
+    
+    // Convert features and map terrainType names to TERRAIN_TYPES objects
+    track.features = (data.features || []).map(feature => {
+      const loaded = { ...feature };
+      if (feature.terrainType && typeof feature.terrainType === 'string') {
+        // Convert terrainType name string to TERRAIN_TYPES object
+        const terrainKey = Object.keys(TERRAIN_TYPES).find(
+          key => TERRAIN_TYPES[key].name === feature.terrainType
+        );
+        loaded.terrainType = terrainKey ? TERRAIN_TYPES[terrainKey] : null;
+      }
+      return loaded;
+    });
+    
     return track;
   }
 

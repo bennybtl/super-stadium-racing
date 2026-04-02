@@ -7,16 +7,7 @@
       "centerZ": -10,
       "radius": 8,
       "height": 2,
-      "terrainType": {
-        "name": "packed_dirt",
-        "gripMultiplier": 2,
-        "color": {
-          "r": 0.35,
-          "g": 0.28,
-          "b": 0.18
-        },
-        "dragMultiplier": 0.8
-      }
+      "terrainType": "packed_dirt"
     },
     {
       "type": "hill",
@@ -24,16 +15,7 @@
       "centerZ": 53.5,
       "radius": 14,
       "height": 2.5,
-      "terrainType": {
-        "name": "packed_dirt",
-        "gripMultiplier": 2,
-        "color": {
-          "r": 0.35,
-          "g": 0.28,
-          "b": 0.18
-        },
-        "dragMultiplier": 0.8
-      }
+      "terrainType": "packed_dirt"
     },
     {
       "type": "hill",
@@ -41,16 +23,7 @@
       "centerZ": 0,
       "radius": 12,
       "height": -2,
-      "terrainType": {
-        "name": "loose_dirt",
-        "gripMultiplier": 0.5,
-        "color": {
-          "r": 0.4,
-          "g": 0.32,
-          "b": 0.2
-        },
-        "dragMultiplier": 1
-      }
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
@@ -58,32 +31,14 @@
       "centerZ": 30,
       "radius": 23,
       "height": -1.5,
-      "terrainType": {
-        "name": "mud",
-        "gripMultiplier": 0.15,
-        "color": {
-          "r": 0.25,
-          "g": 0.2,
-          "b": 0.15
-        },
-        "dragMultiplier": 2.9
-      }
+      "terrainType": "mud"
     },
     {
       "type": "terrainCircle",
       "centerX": -40,
       "centerZ": 30,
       "radius": 10,
-      "terrainType": {
-        "name": "water",
-        "gripMultiplier": 0.3,
-        "color": {
-          "r": 0.2,
-          "g": 0.4,
-          "b": 0.6
-        },
-        "dragMultiplier": 6
-      }
+      "terrainType": "water"
     },
     {
       "type": "squareHill",
@@ -95,16 +50,7 @@
       "heightAtMin": 0,
       "heightAtMax": 6,
       "transition": 0,
-      "terrainType": {
-        "name": "packed_dirt",
-        "gripMultiplier": 2,
-        "color": {
-          "r": 0.35,
-          "g": 0.28,
-          "b": 0.18
-        },
-        "dragMultiplier": 0.8
-      }
+      "terrainType": "packed_dirt"
     },
     {
       "type": "checkpoint",

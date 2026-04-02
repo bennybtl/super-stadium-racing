@@ -11,13 +11,13 @@ export const TERRAIN_TYPES = {
   PACKED_DIRT: {
     name: "packed_dirt",
     gripMultiplier: 2.0,    // Baseline
-    color: new Color3(0.35, 0.28, 0.18),
+    color: new Color3(0.54, 0.28, 0.08),
     dragMultiplier: 0.8,
   },
   LOOSE_DIRT: {
     name: "loose_dirt",
     gripMultiplier: 0.5,    // Slides more
-    color: new Color3(0.4, 0.32, 0.2),
+    color: new Color3(0.69, 0.43, 0.23),
     dragMultiplier: 1.0,
   },
   MUD: {
