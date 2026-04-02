@@ -116,6 +116,24 @@ export class EditorMode {
       }
     };
 
+    // Rebuild a specific bezierWall (or all bezierWalls if feature is null)
+    window.rebuildBezierWall = (targetFeature) => {
+      wallManager._walls = wallManager._walls.filter(w => {
+        if (w._feature && (targetFeature === null || w._feature === targetFeature)) {
+          w.dispose?.();
+          return false;
+        }
+        return true;
+      });
+      for (const f of currentTrack.features) {
+        if (f.type === 'bezierWall') {
+          if (targetFeature === null || f === targetFeature) {
+            wallManager.createBezierWall(f);
+          }
+        }
+      }
+    };
+
     // Hide racing HUD while in editor (it starts hidden; only UIManager.showRaceStatusPanel shows it)
 
     console.log("[Editor] Track editor mode active");
@@ -171,6 +189,7 @@ export class EditorMode {
     delete window.rebuildTerrain;
     delete window.rebuildTerrainTexture;
     delete window.rebuildPolyWall;
+    delete window.rebuildBezierWall;
     delete window.quickTestTrack;
 
     // (race HUD visibility is managed by UIManager / Pinia — nothing to restore here)

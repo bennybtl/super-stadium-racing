@@ -6,7 +6,6 @@ import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core"
  * Each control point is represented by a pickable sphere. Clicking a sphere
  * selects it; WASD moves it (via EditorController camera logic delegation) or
  * it can be dragged. The panel lets the user:
- *   • adjust the selected point's smoothing (0 = sharp, 10 = full Catmull-Rom)
  *   • insert a point after the selected one
  *   • delete the selected point (minimum 2 kept)
  *   • set global wall height & thickness
@@ -83,10 +82,10 @@ export class PolyWallTool {
     const feature = {
       type:      'polyWall',
       points:    [
-        { x: cx - 10, z: cz - 5,  smoothing: 0 },
-        { x: cx,      z: cz + 5,  smoothing: 0 },
-        { x: cx + 10, z: cz - 5,  smoothing: 0 },
-        { x: cx + 20, z: cz + 5,  smoothing: 0 },
+        { x: cx - 10, z: cz - 5 },
+        { x: cx,      z: cz + 5 },
+        { x: cx + 10, z: cz - 5 },
+        { x: cx + 20, z: cz + 5 },
       ],
       height:    2,
       thickness: 0.5,
@@ -144,53 +143,17 @@ export class PolyWallTool {
   _buildLineSystem(feature) {
     if (!feature.points || feature.points.length < 2) return null;
 
-    // Draw the raw (control) polyline
+    // Draw the polyline
     const ctrlPts = feature.points.map(pt => {
       const y = this.track.getHeightAt(pt.x, pt.z) + (feature?.height || 0);
       return new Vector3(pt.x, y + 0.15, pt.z);
     });
 
-    // Also draw the expanded (smoothed) preview
-    const expanded = this._expandPreview(feature.points);
-    const smoothPts = expanded.map(pt => {
-      const y = this.track.getHeightAt(pt.x, pt.z);
-      return new Vector3(pt.x, y + 0.12, pt.z);
-    });
-
-    const lines = [ctrlPts, smoothPts];
+    const lines = [ctrlPts];
     const ls = MeshBuilder.CreateLineSystem(`pwLines_${Date.now()}`, { lines }, this.scene);
     ls.color      = new Color3(1.0, 0.65, 0.1);
     ls.isPickable = false;
     return ls;
-  }
-
-  /** Lightweight version of expandPolyline for preview purposes */
-  _expandPreview(points) {
-    if (points.length < 2) return points;
-    const out = [];
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[Math.max(0, i - 1)];
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const p3 = points[Math.min(points.length - 1, i + 2)];
-      const smooth = ((p1.smoothing ?? 0) + (p2.smoothing ?? 0)) / 2 / 10;
-      if (smooth < 0.01) {
-        out.push({ x: p1.x, z: p1.z });
-      } else {
-        const steps = Math.max(4, Math.round(smooth * 16));
-        for (let t = 0; t < steps; t++) {
-          const u = t / steps;
-          const u2 = u * u, u3 = u2 * u;
-          const b0 = -0.5*u3+u2-0.5*u, b1=1.5*u3-2.5*u2+1, b2=-1.5*u3+2*u2+0.5*u, b3=0.5*u3-0.5*u2;
-          const cx = b0*p0.x+b1*p1.x+b2*p2.x+b3*p3.x;
-          const cz = b0*p0.z+b1*p1.z+b2*p2.z+b3*p3.z;
-          const sx = p1.x+(p2.x-p1.x)*u, sz = p1.z+(p2.z-p1.z)*u;
-          out.push({ x: sx+(cx-sx)*smooth, z: sz+(cz-sz)*smooth });
-        }
-      }
-    }
-    out.push({ x: points[points.length-1].x, z: points[points.length-1].z });
-    return out;
   }
 
   _refreshWallGizmos(wg) {
@@ -358,7 +321,6 @@ export class PolyWallTool {
     const newPt = {
       x: (p1.x + p2.x) / 2,
       z: (p1.z + p2.z) / 2,
-      smoothing: p1.smoothing ?? 0,
     };
     this.ec.saveSnapshot();
     pts.splice(idx + 1, 0, newPt);
@@ -413,21 +375,12 @@ export class PolyWallTool {
     if (!store) return;
     store.selectedType = 'polyWall';
     store.polyWall.hasSelection = selectedIdx !== null;
-    store.polyWall.smoothing = selectedIdx !== null ? (feature.points[selectedIdx].smoothing ?? 0) : 0;
     store.polyWall.height = feature.height ?? 2;
     store.polyWall.thickness = feature.thickness ?? 0.5;
     store.polyWall.closed = feature.closed ?? false;
   }
 
   // Called by EditorController (bridge from Vue store actions)
-  changePolyWallSmoothing(val) {
-    if (!this.selectedPoint) return;
-    this.ec.saveSnapshot(true);
-    this.selectedPoint.wg.feature.points[this.selectedPoint.idx].smoothing = val;
-    this._updatePointPositions(this.selectedPoint.wg);
-    this._rebuildWall(this.selectedPoint.wg.feature);
-  }
-
   changePolyWallHeight(val) {
     if (!this._activeWall) return;
     this.ec.saveSnapshot(true);

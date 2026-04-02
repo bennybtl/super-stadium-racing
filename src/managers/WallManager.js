@@ -1,4 +1,5 @@
 import { PolyWall } from "../objects/PolyWall.js";
+import { BezierWall } from "../objects/BezierWall.js";
 import { TRUCK_RADIUS } from "../constants.js";
 
 /**
@@ -19,7 +20,7 @@ export class WallManager {
     this.track = track;
     this.shadows = shadows;
 
-    // Wall objects (PolyWall)
+    // Wall objects (PolyWall, BezierWall)
     this._walls = [];
   }
 
@@ -30,6 +31,10 @@ export class WallManager {
 
   createPolyWall(feature) {
     this._walls.push(new PolyWall(feature, this.track, this.scene, this.shadows));
+  }
+
+  createBezierWall(feature) {
+    this._walls.push(new BezierWall(feature, this.track, this.scene, this.shadows));
   }
 
   // ─── Pre-frame velocity clamp (call BEFORE updateTruck) ────────────────
@@ -236,7 +241,8 @@ export class WallManager {
   rebuild() {
     this.reset();
     for (const feature of this.track.features) {
-      if (feature.type === "polyWall")  this.createPolyWall(feature);
+      if (feature.type === "polyWall")   this.createPolyWall(feature);
+      if (feature.type === "bezierWall") this.createBezierWall(feature);
     }
   }
 

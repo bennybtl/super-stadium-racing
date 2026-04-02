@@ -2,6 +2,7 @@ import { Vector3, StandardMaterial, Color3, PointerEventTypes, MeshBuilder, Tran
 import { TERRAIN_TYPES } from "../terrain.js";
 import { MeshGridTool } from "./MeshGridTool.js";
 import { PolyWallTool } from "./PolyWallTool.js";
+import { BezierWallTool } from "./BezierWallTool.js";
 import { useEditorStore } from '../vue/store.js';
 
 /**
@@ -92,6 +93,9 @@ export class EditorController {
 
     // Poly wall editing tool
     this.polyWallTool = null;
+
+    // Bezier wall editing tool
+    this.bezierWallTool = null;
 
     // Vue editor store bridge
     this._editorStore = useEditorStore();
@@ -194,6 +198,10 @@ export class EditorController {
     // Poly wall editing tool
     this.polyWallTool = new PolyWallTool(this);
     this.polyWallTool.activate(this.scene, track);
+
+    // Bezier wall editing tool
+    this.bezierWallTool = new BezierWallTool(this);
+    this.bezierWallTool.activate(this.scene, track);
   }
 
   /**
@@ -272,6 +280,12 @@ export class EditorController {
       this.polyWallTool = null;
     }
 
+    // Bezier wall tool
+    if (this.bezierWallTool) {
+      this.bezierWallTool.deactivate();
+      this.bezierWallTool = null;
+    }
+
     console.log('[EditorController] Editor mode deactivated');
   }
 
@@ -330,6 +344,9 @@ export class EditorController {
     // Restore poly wall gizmos
     this.polyWallTool?.onSnapshotRestored();
     window.rebuildPolyWall?.(null);
+    // Restore bezier wall gizmos
+    this.bezierWallTool?.onSnapshotRestored();
+    window.rebuildBezierWall?.(null);
     // Checkpoints are managed by CheckpointManager — rebuild from features
     if (this.checkpointManager) {
       this.checkpointManager.dispose?.();
@@ -626,6 +643,18 @@ export class EditorController {
       this.camera.position.addInPlace(delta4);
       const currentTarget4 = this.camera.getTarget();
       this.camera.setTarget(currentTarget4.add(delta4));
+    } else if (this.bezierWallTool?.selectedAnchor) {
+      const d = this.bezierWallTool.moveSelectedAnchor(movement.x, movement.z);
+      const delta5 = new Vector3(d.x, movement.y, d.z);
+      this.camera.position.addInPlace(delta5);
+      const currentTarget5 = this.camera.getTarget();
+      this.camera.setTarget(currentTarget5.add(delta5));
+    } else if (this.bezierWallTool?.selectedHandle) {
+      const d = this.bezierWallTool.moveSelectedHandle(movement.x, movement.z);
+      const delta6 = new Vector3(d.x, movement.y, d.z);
+      this.camera.position.addInPlace(delta6);
+      const currentTarget6 = this.camera.getTarget();
+      this.camera.setTarget(currentTarget6.add(delta6));
     } else {
       // Move camera and target together
       this.camera.position.addInPlace(movement);
@@ -649,6 +678,9 @@ export class EditorController {
 
         // Poly wall control points
         if (this.polyWallTool?.onPointerDown(clickedMesh)) return;
+
+        // Bezier wall control points
+        if (this.bezierWallTool?.onPointerDown(clickedMesh)) return;
         
         if (this.checkpointManager) {
           for (const checkpointData of this.checkpointManager.checkpointMeshes) {
@@ -674,6 +706,7 @@ export class EditorController {
               this.deselectSquareHill();
               this.meshGridTool?.deselectPoint();
               this.polyWallTool?.deselectPoint();
+              this.bezierWallTool?.deselectAll();
               this.selectHill(hillData);
             }
             return;
@@ -1231,6 +1264,13 @@ export class EditorController {
     polyWallBtn.style.cssText = buttonStyle + 'background: #f5a623; color: #000;';
     polyWallBtn.onclick = () => { this.polyWallTool?.addPolyWallFeature(); this.hideAddMenu(); };
     this.addMenuOverlay.appendChild(polyWallBtn);
+
+    // Bezier Wall button
+    const bezierWallBtn = document.createElement('button');
+    bezierWallBtn.textContent = 'Add Bezier Wall';
+    bezierWallBtn.style.cssText = buttonStyle + 'background: #4a9eff; color: #fff;';
+    bezierWallBtn.onclick = () => { this.bezierWallTool?.addBezierWallFeature(); this.hideAddMenu(); };
+    this.addMenuOverlay.appendChild(bezierWallBtn);
 
     // Close button
     const closeBtn = document.createElement('button');
@@ -2541,7 +2581,6 @@ export class EditorController {
   }
 
   // ── Poly Wall Vue bridge methods ──
-  changePolyWallSmoothing(val)  { this.polyWallTool.changePolyWallSmoothing(val); }
   changePolyWallHeight(val)     { this.polyWallTool.changePolyWallHeight(val); }
   changePolyWallThickness(val)  { this.polyWallTool.changePolyWallThickness(val); }
   changePolyWallClosed(val)     { this.polyWallTool.changePolyWallClosed(val); }
@@ -2549,6 +2588,15 @@ export class EditorController {
   deletePolyWallPoint()         { this.polyWallTool.deletePolyWallPoint(); }
   deletePolyWall()              { this.polyWallTool.deletePolyWall(); }
   deselectPolyWall()            { this.polyWallTool.deselectPolyWall(); }
+
+  // ── Bezier Wall Vue bridge methods ──
+  changeBezierWallHeight(val)   { this.bezierWallTool.changeBezierWallHeight(val); }
+  changeBezierWallThickness(val){ this.bezierWallTool.changeBezierWallThickness(val); }
+  changeBezierWallClosed(val)   { this.bezierWallTool.changeBezierWallClosed(val); }
+  insertBezierWallPoint()       { this.bezierWallTool.insertBezierWallPoint(); }
+  deleteBezierWallPoint()       { this.bezierWallTool.deleteBezierWallPoint(); }
+  deleteBezierWall()            { this.bezierWallTool.deleteBezierWall(); }
+  deselectBezierWall()          { this.bezierWallTool.deselectBezierWall(); }
 
   /**
    * Dispose of the controller

@@ -1,17 +1,17 @@
 <template>
   <EditorPanel
-    v-if="editor.selectedType === 'polyWall'"
-    title="Poly Wall"
-    accent-color="#f5a623"
-    @close="editor.closePolyWall()"
+    v-if="editor.selectedType === 'bezierWall'"
+    title="Bezier Wall"
+    accent-color="#4a9eff"
+    @close="editor.closeBezierWall()"
   >
     <!-- Selected Point Section -->
     <div class="ep-section-title">Selected Point</div>
 
-    <div class="ep-hint">WASD to move selected point</div>
+    <div class="ep-hint">WASD to move selected anchor or handle</div>
 
-    <button class="ep-btn-action" @click="editor.insertPolyWallPoint()">Insert Point After</button>
-    <button class="ep-btn-del" @click="editor.deletePolyWallPoint()">Delete Point</button>
+    <button class="ep-btn-action" @click="editor.insertBezierWallPoint()">Insert Point After</button>
+    <button class="ep-btn-del" @click="editor.deleteBezierWallPoint()">Delete Point</button>
 
     <hr class="ep-separator" />
 
@@ -21,24 +21,24 @@
     <!-- Height -->
     <div class="ep-row">
       <span>Height</span>
-      <span>{{ editor.polyWall.height.toFixed(1) }}</span>
+      <span>{{ editor.bezierWall.height.toFixed(1) }}</span>
     </div>
     <input
       type="range" min="0.5" max="8" step="0.5"
-      :value="editor.polyWall.height"
-      @input="editor.setPolyWallHeight(+$event.target.value)"
+      :value="editor.bezierWall.height"
+      @input="editor.setBezierWallHeight(+$event.target.value)"
       class="ep-slider"
     />
 
     <!-- Thickness -->
     <div class="ep-row">
       <span>Thickness</span>
-      <span>{{ editor.polyWall.thickness.toFixed(1) }}</span>
+      <span>{{ editor.bezierWall.thickness.toFixed(1) }}</span>
     </div>
     <input
       type="range" min="0.2" max="3" step="0.1"
-      :value="editor.polyWall.thickness"
-      @input="editor.setPolyWallThickness(+$event.target.value)"
+      :value="editor.bezierWall.thickness"
+      @input="editor.setBezierWallThickness(+$event.target.value)"
       class="ep-slider"
     />
 
@@ -47,15 +47,15 @@
       <span>Closed Loop</span>
       <input
         type="checkbox"
-        :checked="editor.polyWall.closed"
-        @change="editor.setPolyWallClosed($event.target.checked)"
+        :checked="editor.bezierWall.closed"
+        @change="editor.setBezierWallClosed($event.target.checked)"
         class="ep-checkbox"
       />
     </div>
 
     <hr class="ep-separator" />
 
-    <button class="ep-btn-del" @click="editor.deletePolyWall()">Delete Wall</button>
+    <button class="ep-btn-del" @click="editor.deleteBezierWall()">Delete Wall</button>
   </EditorPanel>
 </template>
 
