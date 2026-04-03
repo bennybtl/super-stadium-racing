@@ -150,6 +150,12 @@ export class Track {
     return this;
   }
 
+  // Add a flag at the specified position
+  addFlag(x, z, color = "red") {
+    this.features.push({ type: "flag", x, z, color });
+    return this;
+  }
+
   getTerrainSlopeAt(x, z, heading, fwdSlopeDist = 1.0, offset = 0) {
     const ox = x + Math.sin(heading) * offset;
     const oz = z + Math.cos(heading) * offset;

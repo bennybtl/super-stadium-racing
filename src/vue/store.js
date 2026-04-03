@@ -104,8 +104,9 @@ export const useDebugStore = defineStore('debug', () => {
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
 export const useEditorStore = defineStore('editor', () => {
-  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainRect' | 'normalMapDecal' | 'meshGrid' | 'polyWall')
+  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainRect' | 'normalMapDecal' | 'meshGrid' | 'polyWall' | 'flag')
   const selectedType = ref(null);
+  const activeTool = ref(null);
 
   // Add-entity menu
   const addMenuOpen = ref(false);
@@ -191,6 +192,11 @@ export const useEditorStore = defineStore('editor', () => {
     height: 2,
     thickness: 0.5,
     closed: false,
+  });
+
+  // ── Flag panel ──
+  const flag = reactive({
+    color: 'red',
   });
 
   // ── Test mode (back button) ──
@@ -279,8 +285,14 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteBezierWall()           { _bridge.value?.deleteBezierWall(); }
   function closeBezierWall()            { _bridge.value?.deselectBezierWall(); }
 
+  // ── Flag actions ──
+  function setFlagColor(val)            { flag.color = val; _bridge.value?.changeFlagColor(val); }
+  function deleteFlag()                 { _bridge.value?.deleteFlag(); }
+  function setActiveTool(val)           { activeTool.value = val; }
+
   return {
     selectedType,
+    activeTool,
     addMenuOpen,
     snapEnabled, snapSize,
     checkpoint,
@@ -292,6 +304,7 @@ export const useEditorStore = defineStore('editor', () => {
     polyWall,
     polyHill,
     bezierWall,
+    flag,
     testModeActive, testModeReturnKey,
     setBridge,
     setCheckpointWidth, shiftCheckpointOrder, duplicateCheckpoint, deleteCheckpoint, closeCheckpoint,
@@ -310,5 +323,6 @@ export const useEditorStore = defineStore('editor', () => {
     insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, closePolyHill,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, closeBezierWall,
+    setFlagColor, deleteFlag, setActiveTool,
   };
 });

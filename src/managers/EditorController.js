@@ -4,6 +4,7 @@ import { MeshGridTool } from "./MeshGridTool.js";
 import { PolyWallTool } from "./PolyWallTool.js";
 import { PolyHillTool } from "./PolyHillTool.js";
 import { BezierWallTool } from "./BezierWallTool.js";
+import { FlagTool } from "./FlagTool.js";
 import { useEditorStore } from '../vue/store.js';
 
 /**
@@ -74,6 +75,9 @@ export class EditorController {
     this.tireStackMaterial = null;
     this.tireStackHighlightMaterial = null;
 
+    // Flag editing state
+    this.flagTool = null;
+
     // Checkpoint properties panel
     this.checkpointPropertiesPanel = null;
 
@@ -112,6 +116,9 @@ export class EditorController {
 
     // Bezier wall editing tool
     this.bezierWallTool = null;
+
+    // Flag editing tool
+    this.flagTool = null;
 
     // Vue editor store bridge
     this._editorStore = useEditorStore();
@@ -213,6 +220,9 @@ export class EditorController {
     this.tireStackHighlightMaterial.alpha = 0.60;
     this.tireStackHighlightMaterial.backFaceCulling = false;
 
+    // Initialize flag editing tool early so it's available for feature loop
+    this.flagTool = new FlagTool(this.scene, track, this);
+
     // Build editor visuals for any hills already in the track
     for (const feature of track.features) {
       if (feature.type === 'hill') {
@@ -225,6 +235,8 @@ export class EditorController {
         this.createNormalMapDecalVisual(feature);
       } else if (feature.type === 'tireStack') {
         this.createTireStackVisual(feature);
+      } else if (feature.type === 'flag') {
+        this.flagTool._createFlagMesh(feature);
       }
     }
 
@@ -350,6 +362,12 @@ export class EditorController {
       this.bezierWallTool = null;
     }
 
+    // Flag tool
+    if (this.flagTool) {
+      this.flagTool.dispose();
+      this.flagTool = null;
+    }
+
     console.log('[EditorController] Editor mode deactivated');
   }
 
@@ -386,6 +404,8 @@ export class EditorController {
     this.deselectSquareHill();
     this.deselectTerrainRect?.();
     this.deselectNormalMapDecal?.();
+    this.deselectTireStack?.();
+    this.deselectFlag?.();
 
     // Dispose all gizmo meshes
     for (const d of this.hillMeshes)       { d.mesh.dispose(); d.node.dispose(); }
@@ -399,6 +419,11 @@ export class EditorController {
     this.normalMapDecalMeshes = [];
     this.tireStackMeshes = [];
 
+    // Dispose and rebuild flag meshes
+    if (this.flagTool) {
+      this.flagTool.dispose();
+    }
+
     // Restore features
     this.currentTrack.features = JSON.parse(snap);
 
@@ -408,6 +433,8 @@ export class EditorController {
       else if (feature.type === 'squareHill') this.createSquareHillVisual(feature);
       else if (feature.type === 'terrainRect') this.createTerrainRectVisual(feature);
       else if (feature.type === 'normalMapDecal') this.createNormalMapDecalVisual(feature);
+      else if (feature.type === 'tireStack') this.createTireStackVisual(feature);
+      else if (feature.type === 'flag' && this.flagTool) this.flagTool._createFlagMesh(feature);
     }
     // Restore mesh grid gizmos
     this.meshGridTool?.onSnapshotRestored();
@@ -513,6 +540,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.selectedTireStack) {
         this.deleteSelectedTireStack();
+        event.preventDefault();
+      } else if (this.flagTool?.getSelectedFlag()) {
+        this.flagTool.removeSelectedFlag();
         event.preventDefault();
       } else if (this.meshGridTool?.activeFeature) {
         this.meshGridTool.deleteMeshGrid();
@@ -752,6 +782,12 @@ export class EditorController {
       this.camera.position.addInPlace(deltaStack);
       const currentTargetStack = this.camera.getTarget();
       this.camera.setTarget(currentTargetStack.add(deltaStack));
+    } else if (this.flagTool?.getSelectedFlag()) {
+      const deltaFlag = this.moveSelectedFlag(movement);
+      deltaFlag.y = movement.y;
+      this.camera.position.addInPlace(deltaFlag);
+      const currentTargetFlag = this.camera.getTarget();
+      this.camera.setTarget(currentTargetFlag.add(deltaFlag));
     } else if (this.polyWallTool?.selectedPoint) {
       const d = this.polyWallTool.moveSelectedPoint(movement.x, movement.z);
       const delta4 = new Vector3(d.x, movement.y, d.z);
@@ -901,6 +937,26 @@ export class EditorController {
           }
         }
 
+        // Check if clicked mesh is a flag (pole or flag mesh)
+        if (this.flagTool) {
+          for (const flag of this.flagTool.flags) {
+            if (clickedMesh === flag.pole || clickedMesh === flag.flag) {
+              if (this.flagTool.getSelectedFlag() === flag) {
+                this.deselectFlag();
+              } else {
+                this.deselectCheckpoint();
+                this.deselectHill();
+                this.deselectSquareHill();
+                this.deselectTerrainRect();
+                this.deselectNormalMapDecal();
+                this.deselectTireStack();
+                this.flagTool.selectFlag(clickedMesh);
+              }
+              return;
+            }
+          }
+        }
+
         // Clicked on something else (terrain, etc.) — deselect all
         this.deselectCheckpoint();
         this.deselectHill();
@@ -908,6 +964,7 @@ export class EditorController {
         this.deselectTerrainRect();
         this.deselectNormalMapDecal();
         this.deselectTireStack();
+        this.deselectFlag();
         this.meshGridTool?.deselectPoint();
         this.polyWallTool?.deselectPoint();
         this.polyHillTool?.deselectPoint();
@@ -920,6 +977,7 @@ export class EditorController {
         this.deselectNormalMapDecal();
         this.deselectTireStack();
         this.deselectTerrainRect();
+        this.deselectFlag();
         this.meshGridTool?.deselectPoint();
         this.polyWallTool?.deselectPoint();
         this.polyHillTool?.deselectPoint();
@@ -1433,6 +1491,13 @@ export class EditorController {
     tireStackBtn.style.cssText = buttonStyle;
     tireStackBtn.onclick = () => this.addTireStackEntity();
     this.addMenuOverlay.appendChild(tireStackBtn);
+
+    // Add Flag button
+    const flagBtn = document.createElement('button');
+    flagBtn.textContent = 'Add Flag';
+    flagBtn.style.cssText = buttonStyle + 'background: #e74c3c; color: #fff;';
+    flagBtn.onclick = () => this.addFlagEntity();
+    this.addMenuOverlay.appendChild(flagBtn);
 
     // Mesh Grid button
     const meshGridBtn = document.createElement('button');
@@ -3059,6 +3124,57 @@ export class EditorController {
     this.selectTireStack(stackData);
   }
 
+  // ─── Flag Editing ───────────────────────────────────────────────────────
+
+  addFlagEntity() {
+    const camPos = this.camera.position;
+    const camTarget = this.camera.target;
+    const direction = camTarget.subtract(camPos).normalize();
+    const newX = camPos.x + direction.x * 20;
+    const newZ = camPos.z + direction.z * 50;
+    this.saveSnapshot();
+    this.flagTool.addFlag(newX, newZ);
+    this.deselectCheckpoint();
+    this.deselectHill();
+    this.deselectSquareHill();
+    this.deselectTerrainRect();
+    this.deselectNormalMapDecal();
+    this.deselectTireStack();
+    this.hideAddMenu();
+  }
+
+  moveSelectedFlag(movement) {
+    const selectedFlag = this.flagTool?.getSelectedFlag();
+    if (!selectedFlag || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    this.saveSnapshot(true);
+    const { feature } = selectedFlag;
+    if (!this._rawDragPos) this._rawDragPos = { x: feature.x, z: feature.z };
+    this._rawDragPos.x += movement.x;
+    this._rawDragPos.z += movement.z;
+    const prevX = feature.x, prevZ = feature.z;
+    const newX = this._snap(this._rawDragPos.x);
+    const newZ = this._snap(this._rawDragPos.z);
+    this.flagTool.moveSelectedFlag(newX, newZ);
+    return new Vector3(newX - prevX, 0, newZ - prevZ);
+  }
+
+  showFlagProperties(flagData) {
+    const s = this._editorStore;
+    if (!s) return;
+    s.flag.color = flagData.feature.color;
+    s.selectedType = 'flag';
+  }
+
+  hideFlagProperties() {
+    if (this._editorStore?.selectedType === 'flag')
+      this._editorStore.selectedType = null;
+  }
+
+  deselectFlag() {
+    this.flagTool?.deselectFlag();
+    this._rawDragPos = null;
+  }
+
   // ── Poly Wall Vue bridge methods ──
   changePolyWallRadius(val)     { this.polyWallTool.setPointRadius(val); }
   changePolyWallHeight(val)     { this.polyWallTool.setHeight(val); }
@@ -3087,6 +3203,10 @@ export class EditorController {
   deleteBezierWallPoint()       { this.bezierWallTool.deleteBezierWallPoint(); }
   deleteBezierWall()            { this.bezierWallTool.deleteBezierWall(); }
   deselectBezierWall()          { this.bezierWallTool.deselectBezierWall(); }
+
+  // ── Flag Vue bridge methods ──
+  changeFlagColor(val)          { this.flagTool.updateSelectedFlagColor(val); }
+  deleteFlag()                  { this.flagTool.removeSelectedFlag(); }
 
   /**
    * Dispose of the controller

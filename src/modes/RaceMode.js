@@ -36,6 +36,7 @@ export class RaceMode extends BaseMode {
       checkpointManager,
       wallManager,
       tireStackManager,
+      flagManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     this.scene = scene;
@@ -378,6 +379,7 @@ export class RaceMode extends BaseMode {
       wallManager.update(trucks);
       truckCollisionManager.update(trucks);
       tireStackManager.update(trucks);
+      flagManager.update(trucks);
 
       const slopeDegFront = currentTrack.getTerrainSlopeAt(
         playerTruckData.truck.mesh.position.x,

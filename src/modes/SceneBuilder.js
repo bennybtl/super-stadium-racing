@@ -23,6 +23,7 @@ import { CameraController } from "../managers/CameraController.js";
 import { CheckpointManager } from "../managers/CheckpointManager.js";
 import { WallManager } from "../managers/WallManager.js";
 import { TireStackManager } from "../managers/TireStackManager.js";
+import { FlagManager } from "../managers/FlagManager.js";
 import { paintTerrainTexture } from "../terrain-utils.js";
 
 /**
@@ -148,14 +149,17 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
   const wallManager = new WallManager(scene, currentTrack, shadows);
   const tireStackManager = new TireStackManager(scene, currentTrack, shadows);
+  const flagManager = new FlagManager(scene, currentTrack, shadows);
   checkpointManager.createCheckpoints();
 
-  // Create Tire Stacks from track features (must be after ground so we can query heights)
+  // Create Tire Stacks and Flags from track features (must be after ground so we can query heights)
   for (const feature of currentTrack.features) {
     if (feature.type === "tireStack") {
       tireStackManager.createStack(feature);
     } else if (feature.type === "polyWall") {
       wallManager.createPolyWall(feature);
+    } else if (feature.type === "flag") {
+      flagManager.createFlag(feature);
     }
   }
 
@@ -173,5 +177,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
     checkpointManager,
     wallManager,
     tireStackManager,
+    flagManager,
   };
 }

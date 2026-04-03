@@ -33,7 +33,13 @@ export class EditorMode extends BaseMode {
       checkpointManager,
       wallManager,
       shadows,
+      flagManager,
     } = await buildScene(engine, trackLoader, trackKey);
+
+    // Dispose runtime FlagManager flags – the EditorController's FlagTool
+    // creates its own editor-mode flag meshes (without shadows/physics).
+    // Keeping both sets causes duplicate meshes and breaks click-selection.
+    flagManager.dispose();
 
     this.scene = scene;
 

@@ -29,6 +29,7 @@ export class PracticeMode extends BaseMode {
       terrainManager,
       wallManager,
       tireStackManager,
+      flagManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     this.scene = scene;
@@ -105,6 +106,7 @@ export class PracticeMode extends BaseMode {
       const debugInfo = updateTruck(playerTruck, input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);
       tireStackManager.update(trucks, dt);
+      flagManager.update(trucks);
       cameraController.update(playerTruck.mesh.position);
       
       // Update debug panel

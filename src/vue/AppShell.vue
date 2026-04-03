@@ -14,6 +14,7 @@
     <PolyWallPanel />
     <PolyHillPanel />
     <BezierWallPanel />
+    <FlagPanel />
   </div>
 </template>
 
@@ -29,6 +30,7 @@ import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
 import PolyWallPanel    from './editor/PolyWallPanel.vue';
 import PolyHillPanel    from './editor/PolyHillPanel.vue';
 import BezierWallPanel  from './editor/BezierWallPanel.vue';
+import FlagPanel        from './editor/FlagPanel.vue';
 </script>
 
 <style scoped>
