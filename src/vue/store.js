@@ -58,20 +58,15 @@ export const useMenuStore = defineStore('menu', () => {
     if (target === 'start')            _bridge.value.showStartMenu();
     else if (target === 'trackSelect') _bridge.value.showTrackSelectMenu();
   }
-  
-  function setTruckMode(mode) {
-    truckMode.value = mode;
-    localStorage.setItem('truckMode', mode);
-  }
 
   return {
-    screen, isPaused, trackList, truckMode,
+    screen, isPaused, trackList,
     setBridge,
     showTrackSelect, showPracticeTrackSelect, showEditorTrackSelect, selectTrack,
     startGame, startPractice, startEditor,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
-    settings, back, setTruckMode,
+    settings, back,
   };
 });
 

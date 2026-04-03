@@ -74,27 +74,6 @@
 
         <!-- ── Settings ── -->
         <template v-else-if="store.screen === 'settings'">
-          <div class="settings-section">
-            <label class="settings-label">Truck Physics Mode</label>
-            <div class="settings-options">
-              <button 
-                class="settings-option" 
-                :class="{ active: store.truckMode === 'arcade' }"
-                @click="store.setTruckMode('arcade')"
-              >
-                <div class="option-title">🎮 Arcade</div>
-                <div class="option-desc">Fast & responsive (default)</div>
-              </button>
-              <button 
-                class="settings-option" 
-                :class="{ active: store.truckMode === 'physics' }"
-                @click="store.setTruckMode('physics')"
-              >
-                <div class="option-title">⚙️ Physics Sim</div>
-                <div class="option-desc">Realistic suspension & handling</div>
-              </button>
-            </div>
-          </div>
           <button class="menu-btn menu-btn--back" @click="store.back('start')">Back</button>
         </template>
 

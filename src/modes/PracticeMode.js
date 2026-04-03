@@ -1,7 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import { createTruckForMode } from "../truck/index.js";
-import { updateTruck } from "../truck.js";
-import { useMenuStore } from "../vue/store.js";
+import { createTruck, updateTruck } from "../truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { buildScene } from "./SceneBuilder.js";
@@ -35,10 +33,6 @@ export class PracticeMode extends BaseMode {
 
     this.scene = scene;
 
-    // Get selected truck mode from store
-    const store = useMenuStore();
-    const truckMode = store.truckMode;
-
     // Spawn just behind the start/finish checkpoint, facing forward
     const checkpointFeatures = currentTrack.features.filter(
       f => f.type === 'checkpoint' && f.checkpointNumber != null
@@ -58,8 +52,8 @@ export class PracticeMode extends BaseMode {
       heading = 0;
     }
 
-    // Create truck using selected mode
-    const playerTruck = createTruckForMode(truckMode, scene, shadows, null, null, spawnPos);
+    // Create truck
+    const playerTruck = createTruck(scene, shadows, null, null, spawnPos);
     playerTruck.state.heading = heading;
     playerTruck.mesh.rotation.y = heading;
 
