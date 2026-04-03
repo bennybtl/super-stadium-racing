@@ -1,6 +1,8 @@
 import { Vector3, Color3 } from "@babylonjs/core";
 import { AIDriver } from "../ai/AIDriver.js";
 import { createTruck, updateTruck } from "../truck.js";
+import { createTruckForMode } from "../truck/index.js";
+import { useMenuStore } from "../vue/store.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
@@ -69,6 +71,9 @@ export class RaceMode {
     let countdownActive = false;
 
     // -- Trucks --
+    const store = useMenuStore();
+    const truckMode = store.truckMode;
+
     const aiDriver1 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
     const aiDriver2 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
     const aiDriver3 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
@@ -78,21 +83,21 @@ export class RaceMode {
     const spawn2 = getGridSpawn(2);
     const spawn3 = getGridSpawn(3);
 
-    const playerTruck = createTruck(scene, shadows, null, null, spawn0.pos);
+    const playerTruck = createTruckForMode(truckMode, scene, shadows, null, null, spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
 
-    const aiTruck1 = createTruck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
+    const aiTruck1 = createTruckForMode(truckMode, scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
     aiTruck1.mesh.position.copyFrom(spawn1.pos);
     aiTruck1.state.heading = spawn1.heading;
     aiTruck1.mesh.rotation.y = spawn1.heading;
 
-    const aiTruck2 = createTruck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2);
+    const aiTruck2 = createTruckForMode(truckMode, scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2);
     aiTruck2.mesh.position.copyFrom(spawn2.pos);
     aiTruck2.state.heading = spawn2.heading;
     aiTruck2.mesh.rotation.y = spawn2.heading;
 
-    const aiTruck3 = createTruck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3);
+    const aiTruck3 = createTruckForMode(truckMode, scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3);
     aiTruck3.mesh.position.copyFrom(spawn3.pos);
     aiTruck3.state.heading = spawn3.heading;
     aiTruck3.mesh.rotation.y = spawn3.heading;

@@ -7,6 +7,9 @@ export const useMenuStore = defineStore('menu', () => {
   const screen = ref('start');
   const isPaused = ref(false);
   const trackList = ref([]); // [{ key, name }]
+  
+  // Settings state
+  const truckMode = ref(localStorage.getItem('truckMode') || 'arcade');
 
   // Opaque reference to MenuManager; not observed deeply.
   const _bridge = shallowRef(null);
@@ -14,6 +17,7 @@ export const useMenuStore = defineStore('menu', () => {
 
   // ── Actions called by Vue components ──
   function showTrackSelect()       { _bridge.value?.showTrackSelectMenu(); }
+  function showPracticeTrackSelect() { _bridge.value?.showPracticeTrackSelect(); }
   function showEditorTrackSelect() { _bridge.value?.showEditorTrackSelect(); }
 
   function selectTrack(key) {
@@ -34,6 +38,12 @@ export const useMenuStore = defineStore('menu', () => {
     _bridge.value.onStartEditor();
   }
 
+  function startPractice(key) {
+    if (!_bridge.value) return;
+    _bridge.value.selectedTrack = key;
+    _bridge.value.onStartPractice();
+  }
+
   function resume()       { _bridge.value?.onResume(); }
   function reset()        { _bridge.value?.onReset(); }
   function exit()         { _bridge.value?.onExit(); }
@@ -48,15 +58,20 @@ export const useMenuStore = defineStore('menu', () => {
     if (target === 'start')            _bridge.value.showStartMenu();
     else if (target === 'trackSelect') _bridge.value.showTrackSelectMenu();
   }
+  
+  function setTruckMode(mode) {
+    truckMode.value = mode;
+    localStorage.setItem('truckMode', mode);
+  }
 
   return {
-    screen, isPaused, trackList,
+    screen, isPaused, trackList, truckMode,
     setBridge,
-    showTrackSelect, showEditorTrackSelect, selectTrack,
-    startGame, startEditor,
+    showTrackSelect, showPracticeTrackSelect, showEditorTrackSelect, selectTrack,
+    startGame, startPractice, startEditor,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
-    settings, back,
+    settings, back, setTruckMode,
   };
 });
 

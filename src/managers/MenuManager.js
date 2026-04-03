@@ -42,6 +42,12 @@ export class MenuManager {
     this._store.screen = 'lapSelect';
   }
 
+  showPracticeTrackSelect() {
+    this.currentMenu = 'practiceTrackSelect';
+    this._refreshTrackList();
+    this._store.screen = 'practiceTrackSelect';
+  }
+
   showEditorTrackSelect() {
     this.currentMenu = 'editorTrackSelect';
     this._refreshTrackList();
@@ -53,6 +59,11 @@ export class MenuManager {
     this.isPaused = true;
     this._store.screen   = 'editorPause';
     this._store.isPaused = true;
+  }
+
+  showSettingsMenu() {
+    this.currentMenu = 'settings';
+    this._store.screen = 'settings';
   }
 
   showPauseMenu() {
@@ -82,7 +93,8 @@ export class MenuManager {
   // ── Overrideable callbacks (assigned by modes) ────────────────────────────
 
   onStartGame()    { this.gameStarted = true; this.hideMenu(); }
-  onSettings()     { console.log('[MenuManager] Settings not implemented'); }
+  onStartPractice() { this.gameStarted = true; this.hideMenu(); }
+  onSettings()     { this.showSettingsMenu(); }
   onResume()       { this.hideMenu(); }
   onReset()        {}
   onExit()         { this.gameStarted = false; this.showStartMenu(); }

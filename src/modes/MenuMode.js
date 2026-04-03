@@ -35,6 +35,14 @@ export class MenuMode {
       });
     };
 
+    menuManager.onStartPractice = () => {
+      menuManager.gameStarted = true;
+      menuManager.hideMenu();
+      this.controller.goToPractice({
+        trackKey: menuManager.selectedTrack,
+      });
+    };
+
     menuManager.onStartEditor = () => {
       menuManager.editorMode = true;
       menuManager.hideMenu();

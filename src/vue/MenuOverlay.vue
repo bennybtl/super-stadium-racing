@@ -6,7 +6,8 @@
 
         <!-- ── Start ── -->
         <template v-if="store.screen === 'start'">
-          <button class="menu-btn" @click="store.showTrackSelect()">Start</button>
+          <button class="menu-btn" @click="store.showTrackSelect()">Start Race</button>
+          <button class="menu-btn" @click="store.showPracticeTrackSelect()">Practice</button>
           <button class="menu-btn" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-btn" @click="store.settings()">Settings</button>
         </template>
@@ -31,6 +32,17 @@
             @click="store.startGame(n)"
           >{{ n }} Lap{{ n > 1 ? 's' : '' }}</button>
           <button class="menu-btn menu-btn--back" @click="store.back('trackSelect')">Back</button>
+        </template>
+
+        <!-- ── Practice track select ── -->
+        <template v-else-if="store.screen === 'practiceTrackSelect'">
+          <button
+            v-for="t in store.trackList"
+            :key="t.key"
+            class="menu-btn"
+            @click="store.startPractice(t.key)"
+          >{{ t.name }}</button>
+          <button class="menu-btn menu-btn--back" @click="store.back('start')">Back</button>
         </template>
 
         <!-- ── Editor track select ── -->
@@ -60,6 +72,32 @@
           <button class="menu-btn menu-btn--back" @click="store.editorExit()">Exit to Menu</button>
         </template>
 
+        <!-- ── Settings ── -->
+        <template v-else-if="store.screen === 'settings'">
+          <div class="settings-section">
+            <label class="settings-label">Truck Physics Mode</label>
+            <div class="settings-options">
+              <button 
+                class="settings-option" 
+                :class="{ active: store.truckMode === 'arcade' }"
+                @click="store.setTruckMode('arcade')"
+              >
+                <div class="option-title">🎮 Arcade</div>
+                <div class="option-desc">Fast & responsive (default)</div>
+              </button>
+              <button 
+                class="settings-option" 
+                :class="{ active: store.truckMode === 'physics' }"
+                @click="store.setTruckMode('physics')"
+              >
+                <div class="option-title">⚙️ Physics Sim</div>
+                <div class="option-desc">Realistic suspension & handling</div>
+              </button>
+            </div>
+          </div>
+          <button class="menu-btn menu-btn--back" @click="store.back('start')">Back</button>
+        </template>
+
       </div>
     </div>
   </div>
@@ -79,6 +117,7 @@ const title = computed(() => {
     case 'editorTrackSelect': return 'Select Track to Edit';
     case 'pause':             return 'Paused';
     case 'editorPause':       return 'Track Editor';
+    case 'settings':          return 'Settings';
     default:                  return '';
   }
 });
@@ -161,5 +200,66 @@ const title = computed(() => {
 }
 .menu-btn--green:hover {
   background: linear-gradient(to bottom, #66bb6a, #4caf50);
+}
+
+.settings-section {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.settings-label {
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.settings-options {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.settings-option {
+  flex: 1;
+  max-width: 200px;
+  padding: 15px;
+  background: rgba(60, 60, 60, 0.8);
+  border: 2px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.settings-option:hover {
+  background: rgba(80, 80, 80, 0.9);
+  border-color: #ff6347;
+  transform: translateY(-2px);
+}
+
+.settings-option.active {
+  background: linear-gradient(to bottom, #ff6347, #ff4500);
+  border-color: #ff6347;
+  box-shadow: 0 4px 12px rgba(255, 99, 71, 0.5);
+}
+
+.option-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.option-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.settings-option.active .option-desc {
+  color: rgba(255, 255, 255, 1);
 }
 </style>

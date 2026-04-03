@@ -2,6 +2,7 @@ import { MenuMode } from "./MenuMode.js";
 import { RaceMode } from "./RaceMode.js";
 import { EditorMode } from "./EditorMode.js";
 import { TestMode } from "./TestMode.js";
+import { PracticeMode } from "./PracticeMode.js";
 
 /**
  * Owns the engine render loop and coordinates transitions between
@@ -53,11 +54,24 @@ export class ModeController {
     return this.switchTo(RaceMode, config);
   }
 
+  goToPractice(config) {
+    return this.switchTo(PracticeMode, config);
+  }
+
   goToEditor(config) {
     return this.switchTo(EditorMode, config);
   }
 
   goToTest(config) {
     return this.switchTo(TestMode, config);
+  }
+
+  switchToMode(modeName) {
+    if (modeName === 'menu') return this.goToMenu();
+    if (modeName === 'race') return this.goToRace();
+    if (modeName === 'practice') return this.goToPractice();
+    if (modeName === 'editor') return this.goToEditor();
+    if (modeName === 'test') return this.goToTest();
+    return this.goToMenu();
   }
 }
