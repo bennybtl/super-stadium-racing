@@ -32,16 +32,44 @@ offroad/
     │   └── AIDriver.js            # A* pathfinding, stuck detection, respawn
     ├── managers/
     │   ├── BarrierManager.js      # Track boundary barriers
+    │   ├── BezierWallTool.js      # Editor: bezier curve walls
     │   ├── CameraController.js    # Isometric camera + zoom
     │   ├── CheckpointManager.js   # Gate detection, lap counting
-    │   ├── EditorController.js    # In-game track editor
+    │   ├── EditorController.js    # In-game track editor coordinator
     │   ├── GameState.js           # Race state machine
     │   ├── InputManager.js        # Keyboard input
     │   ├── MenuManager.js         # Main menu UI
+    │   ├── MeshGridTool.js        # Editor: mesh grid deformation
+    │   ├── PolyHillTool.js        # Editor: polyline hill manipulation
+    │   ├── PolyWallTool.js        # Editor: polyline wall manipulation
     │   ├── TrackLoader.js         # JSON track loading
     │   ├── TireStackManager.js    # Movable tire obstacles
     │   ├── UIManager.js           # HUD elements
     │   └── WallManager.js         # Wall/barrier physics meshes
+    ├── objects/
+    │   ├── BezierWall.js          # Bezier curve wall mesh
+    │   ├── Checkpoint.js          # Checkpoint gate mesh
+    │   ├── PolyHill.js            # Polyline hill visual mesh
+    │   ├── PolyWall.js            # Polyline wall mesh
+    │   ├── TireStack.js           # Tire stack physics object
+    │   └── WallSegment.js         # Single wall segment
+    ├── vue/                       # Vue 3 UI components
+    │   ├── AppShell.vue           # Main app container
+    │   ├── DebugPanel.vue         # Debug info overlay
+    │   ├── MenuOverlay.vue        # Main menu
+    │   ├── RaceHUD.vue            # Race status display
+    │   ├── main.js                # Vue app bootstrap
+    │   ├── store.js               # Pinia state store
+    │   └── editor/                # Editor UI panels
+    │       ├── BezierWallPanel.vue
+    │       ├── CheckpointPanel.vue
+    │       ├── EditorPanel.vue
+    │       ├── HillPanel.vue
+    │       ├── NormalMapDecalPanel.vue
+    │       ├── PolyHillPanel.vue
+    │       ├── PolyWallPanel.vue
+    │       ├── SquareHillPanel.vue
+    │       └── TerrainRectPanel.vue
     └── truck/
         ├── index.js               # Re-exports Truck class
         ├── truck.js               # Truck class — coordinates all subsystems
@@ -64,6 +92,7 @@ Tracks can be built programmatically or loaded from JSON files in `tracks/`.
 - `hill` — circular Gaussian hill with radius and height
 - `squareHill` — flat-topped rectangle with cosine transition skirt; `height` can be negative for pits
 - `slopedRect` — rectangle that slopes along X or Z axis; supports optional `transition` cosine falloff band
+- `polyHill` — triangular-profile hill extruded along a polyline with optional rounded corners
 - `terrainRect` / `terrainCircle` — areas with specific terrain types (mud, water, etc.)
 - `checkpoint` — racing gate with optional sequential numbering
 - `wall` — straight immovable wall, terrain-following via segments
@@ -87,6 +116,24 @@ This correctly handles corners without diagonal artifacts.
 
 **`slopedRect` with `transition`:**
 Outside the rectangle, the nearest-edge height is sampled and blended with a cosine falloff so there is no hard cliff at the boundary.
+
+**`polyHill` math:**
+Creates a raised terrain feature along a polyline path with a triangular cross-section profile.
+- Points: array of `{x, z, radius}` control points
+- `height` — peak elevation at the centerline
+- `width` — base width of the triangular profile (full width, not half)
+- `closed` — whether the polyline forms a closed loop
+- Each point's `radius` parameter (0-10) creates smooth rounded corners using circular arcs
+
+Height calculation:
+1. Expand control points into a smooth path using `_expandPolylineForHill()` which inserts arc segments at corners based on each point's radius value
+2. Find minimum distance from query point to any segment of the expanded polyline
+3. If distance < `width/2`: apply triangular falloff
+   ```
+   linearFalloff = 1 - (minDist / halfWidth)
+   height contribution = feature.height * linearFalloff
+   ```
+   This creates a ridge that comes to a point at the centerline and drops to 0 at the edges.
 
 **Adding a New Track Feature:**
 1. Add `add___()` method to `Track` class with a feature object pushed to `this.features`
@@ -209,6 +256,46 @@ Autonomous driver using A* pathfinding on a 160×160 / 2-unit-resolution grid.
 - Lerp follows truck position (factor 0.08)
 - Zoom: `-` / `=` keys, scales offset in range 0.5×–2.0×
 
+### 8. Track Editor System
+In-game track editor for creating and modifying track features visually.
+
+**Architecture:**
+- `EditorController.js` — main coordinator, manages tool activation/deactivation
+- Tool classes (`PolyHillTool`, `PolyWallTool`, `BezierWallTool`, etc.) — feature-specific manipulation
+- Vue 3 components in `src/vue/editor/` — UI panels for property editing
+- Pinia store (`src/vue/store.js`) — reactive state bridge between UI and editor tools
+
+**Editor Tools:**
+- **PolyHillTool** — polyline hills with control points, radius (rounded corners), height, width
+- **PolyWallTool** — polyline walls with control points, radius, height, thickness
+- **BezierWallTool** — bezier curve walls with anchor/handle manipulation
+- **MeshGridTool** — terrain deformation via grid control points
+
+**Control Point Manipulation:**
+- Click to select control points (shown as colored spheres)
+- WASD keys move selected point
+- Drag with mouse to reposition
+- Insert/delete points via UI panel buttons
+- Per-point radius for rounded corners (where applicable)
+
+**Vue Reactivity Pattern:**
+Each tool has a `_syncStoreToFeature(feature, selectedIdx)` method that updates individual store properties (NOT replacing the entire reactive object):
+```js
+store.polyHill.height = feature.height ?? 3;
+store.polyHill.width = feature.width ?? 5;
+// etc.
+```
+This preserves Vue 3's reactivity tracking. Replacing the whole object (`store.polyHill = {...}`) breaks reactivity!
+
+**Property Update Flow:**
+1. User drags slider in Vue panel
+2. Store action updates reactive property: `polyHill.height = val`
+3. Store action calls bridge method: `_bridge.value?.changePolyHillHeight(val)`
+4. Bridge calls tool method: `this.polyHillTool.setHeight(val)`
+5. Tool updates feature and rebuilds visual/terrain: `this._rebuildHill(feature)`
+
+**Important:** Rebuild methods should be called immediately (not deferred) when triggered by UI sliders to ensure real-time visual feedback.
+
 ## Coordinate System
 - Origin at track centre; +X = East, +Z = North, +Y = Up
 - `heading`: 0 = facing +Z (north), π/2 = facing +X (east)
@@ -257,6 +344,21 @@ If a track feature JSON is missing a required field (e.g. `depth`, `transition`)
 
 **Terrain texture/physics misalignment:**
 Both must sample at cell centers with `+ 0.5` offset. Ground mesh and grid must both be 160×160.
+
+**Editor UI not updating during slider drag (Vue 3):**
+When syncing from feature to store in editor tools, update individual reactive properties:
+```js
+// CORRECT ✓
+store.polyHill.height = feature.height;
+store.polyHill.width = feature.width;
+
+// WRONG ✗ - breaks reactivity
+store.polyHill = { height: feature.height, width: feature.width };
+```
+Replacing the entire reactive object loses Vue's proxy tracking.
+
+**Radius changes not applying immediately:**
+Editor tool property setters should call `_rebuildHill(feature)` or equivalent immediately, not use deferred rebuilds (`_rebuildDeferred`), to ensure real-time visual feedback when dragging sliders.
 
 ## Adding New Features
 
