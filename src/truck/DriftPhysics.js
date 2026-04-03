@@ -8,7 +8,7 @@ export class DriftPhysics {
     this.state = state;
   }
 
-  applyGripAndDrift(speed, forward, groundedness) {
+  applyGripAndDrift(speed, forward, groundedness, brakeGripReduction = 1.0) {
     if (speed <= 0.1) {
       this.state.slipAngle = 0;
       this.state.isSpinningOut = false;
@@ -33,8 +33,8 @@ export class DriftPhysics {
     const slipAngleFactor = Math.max(0.2, 1 - Math.pow(this.state.slipAngle / 1.5, 2));
     const reverseGripBoost = isReversing ? 15 : 1;
     
-    // Calculate effective grip (already computed by caller, but we need the components)
-    const gripMultiplier = slipAngleFactor * reverseGripBoost * groundedness;
+    // Apply brake grip reduction (simulates weight transfer reducing rear grip)
+    const gripMultiplier = slipAngleFactor * reverseGripBoost * groundedness * brakeGripReduction;
     
     // Apply grip
     this.state.velocity = Vector3.Lerp(this.state.velocity, targetVelocity, gripMultiplier);

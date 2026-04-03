@@ -90,7 +90,7 @@ export class Truck {
       maxSpeed: 25,
       maxReverseSpeed: -10,
       acceleration: 13,
-      braking: 18,
+      braking: 2,
       drag: 4,
       turnSpeed: 3.6,
       grip: 0.03,
@@ -146,8 +146,11 @@ export class Truck {
     // Apply drag
     this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness);
     
-    // Apply grip and drift physics
-    this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip);
+    // Calculate brake grip reduction (weight transfer)
+    const brakeGripReduction = this.controls.getBrakeGripReduction(input, speed);
+    
+    // Apply grip and drift physics with brake weight transfer
+    this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction);
     
     // Movement - apply velocity to X/Z position (Y is handled by TerrainPhysics)
     const newPosition = this.terrainPhysics.checkSteepSlope(this.mesh, deltaTime, track);

@@ -87,8 +87,28 @@ export class TerrainPhysics {
     this.state.suspensionCompression += (targetCompression - this.state.suspensionCompression) * 0.3;
     this.state.suspensionCompression = Math.max(0, Math.min(0.25, this.state.suspensionCompression));
     
-    // Calculate groundedness from compression
-    const groundedness = Math.min(1, this.state.suspensionCompression / 0.08);
+    // Calculate groundedness - include "following terrain downhill" case
+    let groundedness = Math.min(1, this.state.suspensionCompression / 0.08);
+    
+    // If we're close to terrain and moving downward, consider grounded even with small gap
+    // This maintains grip when tracking downhill slopes
+    if (groundedness < 0.5 && penetration > -0.3 && this.state.verticalVelocity < -1) {
+      // Check if terrain is dropping ahead of us (downhill)
+      if (track && this.state.velocity.length() > 3) {
+        const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+        const checkDist = 2.0;
+        const heightAhead = track.getHeightAt(
+          mesh.position.x + forward.x * checkDist,
+          mesh.position.z + forward.z * checkDist
+        );
+        const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
+        
+        // If terrain drops ahead and we're descending, maintain groundedness
+        if (heightAhead < heightHere - 0.4) {
+          groundedness = Math.max(groundedness, 0.7); // Good grip while tracking downhill
+        }
+      }
+    }
     
     // Calculate visual pitch/roll when on or near ground
     if (groundedness > 0.3 && track) {

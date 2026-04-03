@@ -6,6 +6,8 @@ import { Vector3 } from "@babylonjs/core";
 export class Controls {
   constructor(state) {
     this.state = state;
+    this.brakingToStop = false; // Track if we're holding brake at stop
+    this.lastBackInput = false;  // Track back button state
   }
 
   updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
@@ -22,7 +24,14 @@ export class Controls {
   updateAcceleration(input, forward, groundedness, deltaTime) {
     if (groundedness <= 0.1) return;
 
+    // Clear brake-to-stop flag when back button is released
+    if (!input.back && this.lastBackInput) {
+      this.brakingToStop = false;
+    }
+    this.lastBackInput = input.back;
+
     if (input.forward) {
+      this.brakingToStop = false; // Clear if accelerating forward
       this.handleForwardInput(forward, deltaTime);
     } else if (input.back) {
       this.handleBackwardInput(forward, deltaTime);
@@ -53,13 +62,25 @@ export class Controls {
 
   handleBackwardInput(forward, deltaTime) {
     const forwardSpeed = this.state.velocity.dot(forward);
+    const speed = this.state.velocity.length();
     
     if (forwardSpeed > 0.5) {
-      // Moving forward - apply brakes
-      const brakeForce = this.state.velocity.scale(-1.5 * deltaTime);
+      // Moving forward - apply brakes (reduced from full braking power)
+      const brakeForce = this.state.velocity.scale(-this.state.braking * deltaTime);
       this.state.velocity.addInPlace(brakeForce);
-    } else {
-      // Accelerate backward
+      
+      // Mark that we're braking to stop
+      if (speed < 2) {
+        this.brakingToStop = true;
+      }
+    } else if (speed < 0.3 && this.brakingToStop) {
+      // Holding brake at stop - prevent any movement
+      this.state.velocity.scaleInPlace(0);
+      
+      // Don't start reversing until brake is released and pressed again
+      // (this state will be cleared when back input is released)
+    } else if (!this.brakingToStop) {
+      // Released brake after stop - now can accelerate backward
       this.state.velocity.addInPlace(forward.scale(this.state.acceleration * -2.5 * deltaTime));
       
       const reverseSpeed = this.state.velocity.dot(forward);
@@ -96,5 +117,23 @@ export class Controls {
     const effectiveGrip = this.state.grip * oversteerFactor * terrainGripMultiplier * groundedness;
     
     return { speedRatio, effectiveTurnSpeed, effectiveGrip };
+  }
+
+  /**
+   * Calculate grip reduction due to braking (weight transfer to front)
+   * Returns a multiplier for rear grip (0-1)
+   */
+  getBrakeGripReduction(input, speed) {
+    // Only reduce rear grip when braking while moving forward at moderate speed
+    if (!input.back || speed < 3) return 1.0;
+    
+    const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    const forwardSpeed = this.state.velocity.dot(forward);
+    
+    if (forwardSpeed <= 0.5) return 1.0; // Not moving forward
+    
+    // Reduce rear grip proportional to speed (more weight transfer at higher speeds)
+    const speedFactor = Math.min(speed / this.state.maxSpeed, 1.0);
+    return Math.max(0.3, 1.0 - (speedFactor * 0.6)); // Reduce to 30-100% grip
   }
 }
