@@ -3,13 +3,25 @@ import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core"
 /**
  * AIDriver - Autonomous driver that navigates through checkpoints
  * Uses A* pathfinding to calculate optimal route avoiding obstacles
+ * 
+ * Skill level parameters:
+ * - lookAheadDistance: How far ahead the AI looks (higher = better planning)
+ * - maxSpeed: Speed multiplier (0-1, higher = faster driving)
+ * - steeringPrecision: How accurately the AI steers (0-1, higher = better control)
  */
 export class AIDriver {
-  constructor(track, checkpointManager, wallManager, scene) {
+  constructor(track, checkpointManager, wallManager, scene, skillConfig = {}) {
     this.track = track;
     this.checkpointManager = checkpointManager;
     this.wallManager = wallManager;
     this.scene = scene;
+    
+    // Skill-based parameters (can be customized per AI)
+    const {
+      lookAheadDistance = 20,  // Good: 20, OK: 15, Bad: 12
+      maxSpeed = 0.8,          // Good: 0.8, OK: 0.65, Bad: 0.5
+      steeringPrecision = 1.0, // Good: 1.0, OK: 0.85, Bad: 0.7
+    } = skillConfig;
     
     // Pathfinding state
     this.path = [];
@@ -22,10 +34,10 @@ export class AIDriver {
     this.gridResolution = 2; // 2 units per cell
     this.gridCells = Math.floor(this.gridSize / this.gridResolution);
     
-    // Steering parameters
-    this.lookAheadDistance = 15;
-    this.steeringStrength = 1.0;
-    this.maxSpeed = 0.8; // 80% of max speed for safety
+    // Steering parameters (skill-based)
+    this.lookAheadDistance = lookAheadDistance;
+    this.steeringStrength = steeringPrecision;
+    this.maxSpeed = maxSpeed;
     
     // Stuck detection
     this.stuckTimer = 0;
@@ -408,6 +420,7 @@ export class AIDriver {
       0,
       targetWaypoint.z - position.z
     );
+    const targetDist = toTarget.length();
     toTarget.normalize();
     
     // Current heading vector
@@ -423,25 +436,10 @@ export class AIDriver {
     // Always steer towards target
     const steeringThreshold = 0.05;
     
-    // Adjust throttle based on how sharp the turn is
-    let shouldMoveForward = true;
-    let shouldReverse = false;
-    
-    // Sharp turn threshold - higher turnStrength means sharper turn needed
-    const sharpTurnThreshold = 0.6;
-    const extremeTurnThreshold = 0.85;
-    
-    if (Math.abs(turnStrength) > extremeTurnThreshold) {
-      // Very sharp turn needed - brake to slow down
-      shouldMoveForward = false;
-      shouldReverse = true;
-      // console.debug(`[AIDriver] Extreme turn detected (${turnStrength.toFixed(2)}), braking`);
-    } else if (Math.abs(turnStrength) > sharpTurnThreshold) {
-      // Sharp turn needed - coast (no throttle) to slow down
-      shouldMoveForward = false;
-      shouldReverse = false;
-      // console.debug(`[AIDriver] Sharp turn detected (${turnStrength.toFixed(2)}), coasting`);
-    }
+    // Always move forward - never brake or coast, let physics handle the turns
+    // This prevents getting stuck on tight turns where the AI would otherwise stop
+    const shouldMoveForward = true;
+    const shouldReverse = false;
     
     const isActuallyReversing = fwdSpeed < -0.3;
     const input = {
@@ -525,7 +523,38 @@ export class AIDriver {
     
     this.currentPathIndex = closestIndex;
     
-    // Find point at look-ahead distance
+    // Adaptive look-ahead: use closer waypoints when the path ahead is curved
+    // This prevents targeting waypoints that are too far to the side on tight turns
+    let adaptiveLookAhead = this.lookAheadDistance;
+    
+    // Check path curvature by looking at the next few waypoints
+    if (closestIndex + 3 < this.path.length) {
+      const p0 = this.path[closestIndex];
+      const p1 = this.path[closestIndex + 1];
+      const p2 = this.path[closestIndex + 2];
+      const p3 = this.path[closestIndex + 3];
+      
+      // Calculate turn angle over next 3 segments
+      const dx1 = p1.x - p0.x;
+      const dz1 = p1.z - p0.z;
+      const dx2 = p3.x - p2.x;
+      const dz2 = p3.z - p2.z;
+      
+      const angle1 = Math.atan2(dx1, dz1);
+      const angle2 = Math.atan2(dx2, dz2);
+      let angleDiff = Math.abs(angle2 - angle1);
+      if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+      
+      // If path curves sharply (> 45 degrees), reduce look-ahead proportionally
+      const sharpTurnAngle = Math.PI / 4; // 45 degrees
+      if (angleDiff > sharpTurnAngle) {
+        const curveFactor = Math.min(angleDiff / Math.PI, 1.0); // 0 to 1
+        adaptiveLookAhead = this.lookAheadDistance * (1.0 - curveFactor * 0.6); // Reduce up to 60%
+        // console.debug(`[AIDriver] Sharp path ahead (${(angleDiff * 180 / Math.PI).toFixed(0)}°), look-ahead: ${adaptiveLookAhead.toFixed(1)}`);
+      }
+    }
+    
+    // Find point at adaptive look-ahead distance
     let accumulatedDist = 0;
     for (let i = closestIndex; i < this.path.length - 1; i++) {
       const p1 = this.path[i];
@@ -535,9 +564,9 @@ export class AIDriver {
         Math.pow(p2.z - p1.z, 2)
       );
       
-      if (accumulatedDist + segmentDist >= this.lookAheadDistance) {
+      if (accumulatedDist + segmentDist >= adaptiveLookAhead) {
         // Interpolate along this segment
-        const t = (this.lookAheadDistance - accumulatedDist) / segmentDist;
+        const t = (adaptiveLookAhead - accumulatedDist) / segmentDist;
         return {
           x: p1.x + (p2.x - p1.x) * t,
           z: p1.z + (p2.z - p1.z) * t
@@ -677,3 +706,28 @@ export class AIDriver {
     console.log(`[AIDriver] Updated debug visualization with ${this.debugLines.length} markers`);
   }
 }
+
+// Static factory methods for creating AI drivers with preset skill levels
+AIDriver.createGoodDriver = function(track, checkpointManager, wallManager, scene) {
+  return new AIDriver(track, checkpointManager, wallManager, scene, {
+    lookAheadDistance: 20,
+    maxSpeed: 0.8,
+    steeringPrecision: 1.0
+  });
+};
+
+AIDriver.createOkDriver = function(track, checkpointManager, wallManager, scene) {
+  return new AIDriver(track, checkpointManager, wallManager, scene, {
+    lookAheadDistance: 15,
+    maxSpeed: 0.65,
+    steeringPrecision: 0.85
+  });
+};
+
+AIDriver.createBadDriver = function(track, checkpointManager, wallManager, scene) {
+  return new AIDriver(track, checkpointManager, wallManager, scene, {
+    lookAheadDistance: 12,
+    maxSpeed: 0.5,
+    steeringPrecision: 0.7
+  });
+};
