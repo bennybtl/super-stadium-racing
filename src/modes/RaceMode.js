@@ -352,10 +352,10 @@ export class RaceMode extends BaseMode {
 
     // -- Game loop --
     scene.onBeforeRenderObservable.add(() => {
-      if (menuManager.isMenuActive()) return;
+      if (menuManager.isMenuActive() || document.hidden) return;
 
-      // Cap dt to 50 ms so a long async-setup pause can't explode the physics
-      const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
+      // Use 50ms cap for race mode (more generous than default 20ms)
+      const dt = this.getClampedDeltaTime(engine, 0.05);
 
       if (raceStarted && raceStartTime !== null) {
         uiManager.updateTimer(Date.now() - raceStartTime);

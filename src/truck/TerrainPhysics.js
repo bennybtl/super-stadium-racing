@@ -38,10 +38,6 @@ export class TerrainPhysics {
     const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
     const truckBottomY = terrainHeight + 0.4; // 0.4 = half truck height
     const penetration = truckBottomY - mesh.position.y;
-    
-    if (Math.random() < 0.01) { // Log 1% of frames to avoid spam
-      console.log(`[TerrainPhysics] terrain=${terrainHeight.toFixed(2)}, truck.y=${mesh.position.y.toFixed(2)}, truckBottom=${truckBottomY.toFixed(2)}, penetration=${penetration.toFixed(3)}`);
-    }
 
     // Terrain acts as a spring- pushes back when penetrated or very close
     if (penetration > -0.2) {

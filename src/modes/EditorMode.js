@@ -157,7 +157,7 @@ export class EditorMode extends BaseMode {
 
     // -- Game loop --
     scene.onBeforeRenderObservable.add(() => {
-      if (menuManager.isMenuActive()) return;
+      if (menuManager.isMenuActive() || document.hidden) return;
       const dt = engine.getDeltaTime() / 1000;
       editorController.update(dt);
     });

@@ -72,13 +72,15 @@ export class TestMode extends BaseMode {
     // Back button (top-left)
     this._createBackButton(returnToEditor);
 
-    // Setup visibility handler to prevent physics accumulation
-    this.setupVisibilityHandler(scene, playerTruck);
-
     // Simple game loop
     const trucks = [{ truck: playerTruck }];
+
+    // Setup visibility handler to prevent physics accumulation
+    this.setupVisibilityHandler(scene, trucks);
     scene.onBeforeRenderObservable.add(() => {
-      const dt = engine.getDeltaTime() / 1000;
+      if (document.hidden) return;
+
+      const dt = this.getClampedDeltaTime(engine);
       const input = inputManager.getMovementInput();
       wallManager.preUpdate(trucks, dt);
       updateTruck(playerTruck, input, dt, terrainManager, currentTrack);

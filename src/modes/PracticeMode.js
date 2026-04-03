@@ -63,6 +63,8 @@ export class PracticeMode extends BaseMode {
     playerTruck.state.heading = heading;
     playerTruck.mesh.rotation.y = heading;
 
+    const trucks = [{ truck: playerTruck }];
+
     // Reset physics state to prevent gravity accumulation during async scene setup
     this.resetTruckPhysics(playerTruck, spawnPos);
 
@@ -96,15 +98,13 @@ export class PracticeMode extends BaseMode {
     };
 
     // Setup visibility handler to prevent physics accumulation
-    this.setupVisibilityHandler(scene, playerTruck);
+    this.setupVisibilityHandler(scene, trucks);
 
     // Simple game loop
-    const trucks = [{ truck: playerTruck }];
-    let frameCount = 0;
     scene.onBeforeRenderObservable.add(() => {
-      if (menuManager.isPaused) return;
+      if (menuManager.isPaused || document.hidden) return;
 
-      const dt = engine.getDeltaTime() / 1000;
+      const dt = this.getClampedDeltaTime(engine);
       const input = inputManager.getMovementInput();
             
       wallManager.preUpdate(trucks, dt);
