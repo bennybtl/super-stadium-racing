@@ -2,6 +2,8 @@ import { VertexBuffer } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 import { EditorController } from "../managers/EditorController.js";
 import { buildScene } from "./SceneBuilder.js";
+import { BaseMode } from "./BaseMode.js";
+import { paintTerrainTexture } from "../terrain-utils.js";
 
 /**
  * EditorMode – track editing interface.
@@ -10,10 +12,9 @@ import { buildScene } from "./SceneBuilder.js";
  * editing), activates EditorController for camera/tool interaction, and
  * exposes terrain-rebuild helpers on `window` for editor tools to call.
  */
-export class EditorMode {
+export class EditorMode extends BaseMode {
   constructor(controller) {
-    this.controller = controller;
-    this.scene = null;
+    super(controller);
     this.editorController = null;
   }
 
@@ -73,28 +74,7 @@ export class EditorMode {
     window.rebuildTerrainTexture = () => {
       window.rebuildTerrainGrid();
       const ctx = groundTex.getContext();
-      for (let row = 0; row < terrainManager.cellsPerSide; row++) {
-        for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-          const index = row * terrainManager.cellsPerSide + col;
-          const color = terrainManager.grid[index].color;
-          const baseR = Math.floor(color.r * 255);
-          const baseG = Math.floor(color.g * 255);
-          const baseB = Math.floor(color.b * 255);
-          const px = Math.ceil(pixelsPerCell);
-          const x0 = Math.floor(col * pixelsPerCell);
-          const y0 = Math.floor(row * pixelsPerCell);
-          for (let py = 0; py < px; py++) {
-            for (let pxx = 0; pxx < px; pxx++) {
-              const n = (Math.random() - 0.5) * 18;
-              const r = Math.max(0, Math.min(255, baseR + n));
-              const g = Math.max(0, Math.min(255, baseG + n * 0.9));
-              const b = Math.max(0, Math.min(255, baseB + n * 0.8));
-              ctx.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
-              ctx.fillRect(x0 + pxx, y0 + py, 1, 1);
-            }
-          }
-        }
-      }
+      paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
       groundTex.update();
     };
 
@@ -194,9 +174,6 @@ export class EditorMode {
 
     // (race HUD visibility is managed by UIManager / Pinia — nothing to restore here)
 
-    if (this.scene) {
-      this.scene.dispose();
-      this.scene = null;
-    }
+    super.teardown();
   }
 }

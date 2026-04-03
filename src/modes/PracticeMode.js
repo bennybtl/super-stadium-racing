@@ -6,6 +6,7 @@ import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HEIGHT } from "../constants.js";
+import { BaseMode } from "./BaseMode.js";
 
 /**
  * PracticeMode – free-drive mode for testing and practice.
@@ -13,10 +14,9 @@ import { TRUCK_HEIGHT } from "../constants.js";
  * No AI trucks, no countdown, no lap/checkpoint tracking.
  * Just select a track and drive around to test handling and physics.
  */
-export class PracticeMode {
+export class PracticeMode extends BaseMode {
   constructor(controller) {
-    this.controller = controller;
-    this.scene = null;
+    super(controller);
     this.inputManager = null;
   }
 
@@ -63,6 +63,9 @@ export class PracticeMode {
     playerTruck.state.heading = heading;
     playerTruck.mesh.rotation.y = heading;
 
+    // Reset physics state to prevent gravity accumulation during async scene setup
+    this.resetTruckPhysics(playerTruck, spawnPos);
+
     // -- UI --
     const uiManager = new UIManager();
     this.uiManager = uiManager;
@@ -73,18 +76,9 @@ export class PracticeMode {
     this.inputManager = inputManager;
     inputManager.onPause(() => menuManager.showPauseMenu());
     inputManager.onReset(() => {
-      playerTruck.mesh.position.copyFrom(spawnPos);
+      this.resetTruckPhysics(playerTruck, spawnPos);
       playerTruck.state.heading = heading;
       playerTruck.mesh.rotation.y = heading;
-      playerTruck.state.velocity.setAll(0);
-      playerTruck.state.verticalVelocity = 0;
-      
-      // Reset physics body for physics truck
-      if (playerTruck._truckInstance && playerTruck._truckInstance.physics) {
-        const body = playerTruck._truckInstance.physics.body;
-        body.setLinearVelocity(Vector3.Zero());
-        body.setAngularVelocity(Vector3.Zero());
-      }
     });
 
     // Wire up pause callbacks
@@ -100,6 +94,9 @@ export class PracticeMode {
     menuManager.onExit = () => {
       this.controller.switchToMode('menu');
     };
+
+    // Setup visibility handler to prevent physics accumulation
+    this.setupVisibilityHandler(scene, playerTruck);
 
     // Simple game loop
     const trucks = [{ truck: playerTruck }];
@@ -149,9 +146,6 @@ export class PracticeMode {
       this.inputManager.dispose();
       this.inputManager = null;
     }
-    if (this.scene) {
-      this.scene.dispose();
-      this.scene = null;
-    }
+    super.teardown();
   }
 }

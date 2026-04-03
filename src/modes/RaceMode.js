@@ -10,6 +10,7 @@ import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HEIGHT, TRUCK_HALF_HEIGHT } from "../constants.js";
+import { BaseMode } from "./BaseMode.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -17,10 +18,9 @@ import { TRUCK_HEIGHT, TRUCK_HALF_HEIGHT } from "../constants.js";
  * Owns the Babylon scene, truck(s), input, UI, checkpoint/lap tracking
  * and the game loop. Delegates scene construction to SceneBuilder.
  */
-export class RaceMode {
+export class RaceMode extends BaseMode {
   constructor(controller) {
-    this.controller = controller;
-    this.scene = null;
+    super(controller);
     this.inputManager = null;
     this._countdownTimeouts = [];
   }
@@ -347,6 +347,9 @@ export class RaceMode {
       this.controller.exit();
     };
 
+    // Setup visibility handler to prevent physics accumulation
+    this.setupVisibilityHandler(scene, trucks);
+
     // -- Game loop --
     scene.onBeforeRenderObservable.add(() => {
       if (menuManager.isMenuActive()) return;
@@ -515,13 +518,10 @@ export class RaceMode {
       this.inputManager.dispose();
       this.inputManager = null;
     }
-    if (this.scene) {
-      this.scene.dispose();
-      this.scene = null;
-    }
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
     }
+    super.teardown();
   }
 }

@@ -3,6 +3,7 @@ import { createTruck, updateTruck } from "../truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HEIGHT } from "../constants.js";
+import { BaseMode } from "./BaseMode.js";
 
 /**
  * TestMode – lightweight free-drive for testing a track in the editor.
@@ -10,10 +11,9 @@ import { TRUCK_HEIGHT } from "../constants.js";
  * No AI trucks, no countdown, no lap/checkpoint tracking.
  * ESC or the on-screen button returns straight to EditorMode.
  */
-export class TestMode {
+export class TestMode extends BaseMode {
   constructor(controller) {
-    this.controller = controller;
-    this.scene = null;
+    super(controller);
     this.inputManager = null;
     this._backBtn = null;
   }
@@ -56,20 +56,24 @@ export class TestMode {
     playerTruck.state.heading = heading;
     playerTruck.mesh.rotation.y = heading;
 
+    // Reset physics state to prevent gravity accumulation during async scene setup
+    this.resetTruckPhysics(playerTruck, spawnPos);
+
     // Input — ESC goes straight back to editor
     const inputManager = new InputManager(playerTruck, cameraController);
     this.inputManager = inputManager;
     inputManager.onPause(() => this._exitToEditor(returnToEditor));
     inputManager.onReset(() => {
-      playerTruck.mesh.position.copyFrom(spawnPos);
+      this.resetTruckPhysics(playerTruck, spawnPos);
       playerTruck.state.heading = heading;
       playerTruck.mesh.rotation.y = heading;
-      playerTruck.state.velocity.setAll(0);
-      playerTruck.state.verticalVelocity = 0;
     });
 
     // Back button (top-left)
     this._createBackButton(returnToEditor);
+
+    // Setup visibility handler to prevent physics accumulation
+    this.setupVisibilityHandler(scene, playerTruck);
 
     // Simple game loop
     const trucks = [{ truck: playerTruck }];
@@ -117,9 +121,6 @@ export class TestMode {
       this.inputManager.dispose();
       this.inputManager = null;
     }
-    if (this.scene) {
-      this.scene.dispose();
-      this.scene = null;
-    }
+    super.teardown();
   }
 }

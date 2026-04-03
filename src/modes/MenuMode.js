@@ -1,4 +1,5 @@
 import { Scene, Color4, FreeCamera, Vector3 } from "@babylonjs/core";
+import { BaseMode } from "./BaseMode.js";
 
 /**
  * MenuMode – shows the start-screen DOM overlay (managed by MenuManager).
@@ -10,10 +11,9 @@ import { Scene, Color4, FreeCamera, Vector3 } from "@babylonjs/core";
  *   onStartGame   → goToRace
  *   onStartEditor → goToEditor
  */
-export class MenuMode {
+export class MenuMode extends BaseMode {
   constructor(controller) {
-    this.controller = controller;
-    this.scene = null;
+    super(controller);
   }
 
   async setup(_config) {
@@ -57,9 +57,6 @@ export class MenuMode {
   }
 
   teardown() {
-    if (this.scene) {
-      this.scene.dispose();
-      this.scene = null;
-    }
+    super.teardown();
   }
 }
