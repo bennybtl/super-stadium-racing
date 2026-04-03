@@ -142,6 +142,16 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Flip texture vertically so canvas Y aligns with world Z
   groundMat.diffuseTexture.vScale = -1;
   groundMat.diffuseTexture.vOffset = 1;
+  
+  // -- Normal map for surface detail (divots, holes, bumps) --
+  const normalMapPath = new URL('../assets/6481-normal.jpg', import.meta.url).href;
+  groundMat.bumpTexture = new Texture(normalMapPath, scene);
+  groundMat.bumpTexture.wrapU = Texture.WRAP_ADDRESSMODE;
+  groundMat.bumpTexture.wrapV = Texture.WRAP_ADDRESSMODE;
+  groundMat.bumpTexture.uScale = 10; // Repeat 20 times for fine detail
+  groundMat.bumpTexture.vScale = 10;
+  groundMat.bumpTexture.level = 0.2; // Adjust intensity as needed
+  
   ground.material = groundMat;
   ground.receiveShadows = true;
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
