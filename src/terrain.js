@@ -23,7 +23,7 @@ export const TERRAIN_TYPES = {
   MUD: {
     name: "mud",
     gripMultiplier: 0.15,    // Very slippery
-    color: new Color3(0.25, 0.2, 0.15),
+    color: new Color3(0.34, 0.18, 0.08),
     dragMultiplier: 2.9,    // Slows you down
   },
   WATER: {

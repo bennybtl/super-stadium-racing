@@ -29,6 +29,7 @@ export class EditorMode extends BaseMode {
       ground,
       groundTex,
       pixelsPerCell,
+      compositeNormalMap,
       checkpointManager,
       wallManager,
     } = await buildScene(engine, trackLoader, trackKey);
@@ -76,6 +77,13 @@ export class EditorMode extends BaseMode {
       const ctx = groundTex.getContext();
       paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
       groundTex.update();
+    };
+
+    // Rebuild composite normal map from normal map decal features
+    window.rebuildNormalMap = async () => {
+      const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
+      const { updateCompositeNormalMap } = await import('../shaders/ground-shader.js');
+      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, 160);
     };
 
     // Rebuild a specific polyWall (or all polyWalls if feature is null)
@@ -168,6 +176,7 @@ export class EditorMode extends BaseMode {
     delete window.currentEditorScene;
     delete window.rebuildTerrain;
     delete window.rebuildTerrainTexture;
+    delete window.rebuildNormalMap;
     delete window.rebuildPolyWall;
     delete window.rebuildBezierWall;
     delete window.quickTestTrack;

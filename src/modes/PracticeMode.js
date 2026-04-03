@@ -87,7 +87,7 @@ export class PracticeMode extends BaseMode {
     };
 
     menuManager.onReset = () => {
-      inputManager.reset();
+      inputManager.onResetCallback();
       menuManager.hideMenu();
     };
 
@@ -106,12 +106,7 @@ export class PracticeMode extends BaseMode {
 
       const dt = engine.getDeltaTime() / 1000;
       const input = inputManager.getMovementInput();
-      
-      // Log input every 60 frames for debugging
-      if (frameCount++ % 60 === 0) {
-        console.log('Input:', input);
-      }
-      
+            
       wallManager.preUpdate(trucks, dt);
       const debugInfo = updateTruck(playerTruck, input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);

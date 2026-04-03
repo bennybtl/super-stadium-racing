@@ -17,9 +17,7 @@ function expandPolyline(points, closed = false) {
     const p3 = closed ? points[(i + 2) % points.length] : (i + 2 < points.length ? points[i + 2] : null);
     
     const radius = p2.radius ?? 0;
-    
-    console.log(`[PolyWall] Segment ${i}: p2 idx=${(i+1) % points.length} radius=${radius}, has p3=${!!p3}, closed=${closed}`);
-    
+        
     // Add the start point only for the first iteration (or it gets added via arc endpoints)
     if (i === 0 && !closed) {
       out.push({ x: p1.x, z: p1.z });
@@ -38,16 +36,12 @@ function expandPolyline(points, closed = false) {
       const dx2 = p3.x - p2.x;
       const dz2 = p3.z - p2.z;
       const len2 = Math.sqrt(dx2 * dx2 + dz2 * dz2);
-      
-      console.log(`[PolyWall]   len2=${len2.toFixed(2)}, attempting radius`);
-      
+            
       if (len2 > 0.01) {
         // Clamp radius to not exceed segment lengths
         const maxRadius = Math.min(len * 0.45, len2 * 0.45);
         const clampedRadius = Math.min(radius, maxRadius);
-        
-        console.log(`[PolyWall]   maxRadius=${maxRadius.toFixed(2)}, clampedRadius=${clampedRadius.toFixed(2)}`);
-        
+                
         // Normalized direction vectors
         const dir1X = dx / len;
         const dir1Z = dz / len;

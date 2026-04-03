@@ -123,14 +123,21 @@ export async function buildScene(engine, trackLoader, trackKey) {
   groundMat.diffuseTexture.vScale = -1;
   groundMat.diffuseTexture.vOffset = 1;
   
-  // -- Normal map for surface detail (divots, holes, bumps) --
-  const normalMapPath = new URL('../assets/6481-normal.jpg', import.meta.url).href;
-  groundMat.bumpTexture = new Texture(normalMapPath, scene);
-  groundMat.bumpTexture.wrapU = Texture.WRAP_ADDRESSMODE;
-  groundMat.bumpTexture.wrapV = Texture.WRAP_ADDRESSMODE;
-  groundMat.bumpTexture.uScale = 10; // Repeat 20 times for fine detail
-  groundMat.bumpTexture.vScale = 10;
-  groundMat.bumpTexture.level = 0.2; // Adjust intensity as needed
+  // -- Normal map with decals for surface detail (divots, holes, bumps) --
+  // Collect all normal map decal features from the track
+  const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
+  
+  // Create composite normal map texture that blends base + decals
+  const { createCompositeNormalMap } = await import('../shaders/ground-shader.js');
+  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, 2048, 160);
+  
+  groundMat.bumpTexture = compositeNormalMap;
+  groundMat.bumpTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
+  groundMat.bumpTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
+  // Flip vertically to match diffuse texture orientation
+  groundMat.bumpTexture.vScale = -1;
+  groundMat.bumpTexture.vOffset = 1;
+  groundMat.bumpTexture.level = 0.25; // Adjust intensity as needed
   
   ground.material = groundMat;
   ground.receiveShadows = true;
@@ -162,6 +169,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     ground,
     groundTex,
     pixelsPerCell,
+    compositeNormalMap,
     checkpointManager,
     wallManager,
     tireStackManager,

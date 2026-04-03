@@ -61,6 +61,18 @@ export class EditorController {
     this.terrainRectHighlightMaterial = null;
     this.terrainRectPropertiesPanel = null;
 
+    // Normal map decal editing state
+    this.normalMapDecalMeshes = [];
+    this.selectedNormalMapDecal = null;
+    this.normalMapDecalMaterial = null;
+    this.normalMapDecalHighlightMaterial = null;
+
+    // Tire stack editing state
+    this.tireStackMeshes = [];
+    this.selectedTireStack = null;
+    this.tireStackMaterial = null;
+    this.tireStackHighlightMaterial = null;
+
     // Checkpoint properties panel
     this.checkpointPropertiesPanel = null;
 
@@ -171,6 +183,32 @@ export class EditorController {
     this.terrainRectHighlightMaterial.alpha = 0.35;
     this.terrainRectHighlightMaterial.backFaceCulling = false;
 
+    // Create normal map decal materials (always recreate for the current scene)
+    this.normalMapDecalMaterial = new StandardMaterial('normalMapDecalMat', this.scene);
+    this.normalMapDecalMaterial.diffuseColor = new Color3(0.8, 0.4, 0.9);
+    this.normalMapDecalMaterial.emissiveColor = new Color3(0.15, 0.08, 0.18);
+    this.normalMapDecalMaterial.alpha = 0.30;
+    this.normalMapDecalMaterial.backFaceCulling = false;
+
+    this.normalMapDecalHighlightMaterial = new StandardMaterial('normalMapDecalHighlightMat', this.scene);
+    this.normalMapDecalHighlightMaterial.diffuseColor = new Color3(1.0, 0.5, 1.0);
+    this.normalMapDecalHighlightMaterial.emissiveColor = new Color3(0.4, 0.2, 0.4);
+    this.normalMapDecalHighlightMaterial.alpha = 0.40;
+    this.normalMapDecalHighlightMaterial.backFaceCulling = false;
+
+    // Create tire stack materials (always recreate for the current scene)
+    this.tireStackMaterial = new StandardMaterial('tireStackMat', this.scene);
+    this.tireStackMaterial.diffuseColor = new Color3(0.2, 0.2, 0.2);
+    this.tireStackMaterial.emissiveColor = new Color3(0.05, 0.05, 0.05);
+    this.tireStackMaterial.alpha = 0.50;
+    this.tireStackMaterial.backFaceCulling = false;
+
+    this.tireStackHighlightMaterial = new StandardMaterial('tireStackHighlightMat', this.scene);
+    this.tireStackHighlightMaterial.diffuseColor = new Color3(0.4, 0.4, 0.4);
+    this.tireStackHighlightMaterial.emissiveColor = new Color3(0.15, 0.15, 0.15);
+    this.tireStackHighlightMaterial.alpha = 0.60;
+    this.tireStackHighlightMaterial.backFaceCulling = false;
+
     // Build editor visuals for any hills already in the track
     for (const feature of track.features) {
       if (feature.type === 'hill') {
@@ -179,6 +217,10 @@ export class EditorController {
         this.createSquareHillVisual(feature);
       } else if (feature.type === 'terrainRect') {
         this.createTerrainRectVisual(feature);
+      } else if (feature.type === 'normalMapDecal') {
+        this.createNormalMapDecalVisual(feature);
+      } else if (feature.type === 'tireStack') {
+        this.createTireStackVisual(feature);
       }
     }
 
@@ -249,6 +291,14 @@ export class EditorController {
     }
     this.terrainRectMeshes = [];
     this.selectedTerrainRect = null;
+
+    // Dispose all normal map decal editor visuals
+    for (const d of this.normalMapDecalMeshes) {
+      d.mesh.dispose();
+      d.node.dispose();
+    }
+    this.normalMapDecalMeshes = [];
+    this.selectedNormalMapDecal = null;
 
     // Hide all editor panels via Vue store
     if (this._editorStore) {
@@ -321,14 +371,19 @@ export class EditorController {
     this.deselectHill();
     this.deselectSquareHill();
     this.deselectTerrainRect?.();
+    this.deselectNormalMapDecal?.();
 
     // Dispose all gizmo meshes
     for (const d of this.hillMeshes)       { d.mesh.dispose(); d.node.dispose(); }
     for (const d of this.squareHillMeshes) { d.mesh.dispose(); d.node.dispose(); }
     for (const d of this.terrainRectMeshes) { d.mesh.dispose(); d.node.dispose(); }
+    for (const d of this.normalMapDecalMeshes) { d.mesh.dispose(); d.node.dispose(); }
+    for (const d of this.tireStackMeshes) { d.mesh.dispose(); d.node.dispose(); }
     this.hillMeshes = [];
     this.squareHillMeshes = [];
     this.terrainRectMeshes = [];
+    this.normalMapDecalMeshes = [];
+    this.tireStackMeshes = [];
 
     // Restore features
     this.currentTrack.features = JSON.parse(snap);
@@ -338,6 +393,7 @@ export class EditorController {
       if (feature.type === 'hill') this.createHillVisual(feature);
       else if (feature.type === 'squareHill') this.createSquareHillVisual(feature);
       else if (feature.type === 'terrainRect') this.createTerrainRectVisual(feature);
+      else if (feature.type === 'normalMapDecal') this.createNormalMapDecalVisual(feature);
     }
     // Restore mesh grid gizmos
     this.meshGridTool?.onSnapshotRestored();
@@ -414,6 +470,8 @@ export class EditorController {
       else if (this.selectedSquareHill) this.duplicateSelectedSquareHill();
       else if (this.selectedCheckpoint) this.duplicateSelectedCheckpoint();
       else if (this.selectedTerrainRect) this.duplicateSelectedTerrainRect();
+      else if (this.selectedNormalMapDecal) this.duplicateSelectedNormalMapDecal();
+      else if (this.selectedTireStack) this.duplicateSelectedTireStack();
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -432,6 +490,12 @@ export class EditorController {
         event.preventDefault();
       } else if (this.selectedTerrainRect) {
         this.deleteSelectedTerrainRect();
+        event.preventDefault();
+      } else if (this.selectedNormalMapDecal) {
+        this.deleteSelectedNormalMapDecal();
+        event.preventDefault();
+      } else if (this.selectedTireStack) {
+        this.deleteSelectedTireStack();
         event.preventDefault();
       } else if (this.meshGridTool?.activeFeature) {
         this.meshGridTool.deleteMeshGrid();
@@ -637,6 +701,30 @@ export class EditorController {
       this.camera.position.addInPlace(delta);
       const currentTarget3 = this.camera.getTarget();
       this.camera.setTarget(currentTarget3.add(delta));
+    } else if (this.selectedNormalMapDecal) {
+      // Q/E rotates the normal map decal
+      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
+      if (this.keys.rotateLeft || this.keys.rotateRight) {
+        const f = this.selectedNormalMapDecal.feature;
+        const delta = this.keys.rotateLeft ? rotStep : -rotStep;
+        f.angle = ((f.angle ?? 0) + delta * 180 / Math.PI + 360) % 360;
+        this.updateNormalMapDecalVisual(this.selectedNormalMapDecal);
+        // Sync the angle in Vue store if needed
+        if (this._editorStore?.selectedType === 'normalMapDecal') {
+          this._editorStore.normalMapDecal.angle = f.angle;
+        }
+      }
+      const deltaDecal = this.moveSelectedNormalMapDecal(movement);
+      deltaDecal.y = movement.y;
+      this.camera.position.addInPlace(deltaDecal);
+      const currentTargetDecal = this.camera.getTarget();
+      this.camera.setTarget(currentTargetDecal.add(deltaDecal));
+    } else if (this.selectedTireStack) {
+      const deltaStack = this.moveSelectedTireStack(movement);
+      deltaStack.y = movement.y;
+      this.camera.position.addInPlace(deltaStack);
+      const currentTargetStack = this.camera.getTarget();
+      this.camera.setTarget(currentTargetStack.add(deltaStack));
     } else if (this.polyWallTool?.selectedPoint) {
       const d = this.polyWallTool.moveSelectedPoint(movement.x, movement.z);
       const delta4 = new Vector3(d.x, movement.y, d.z);
@@ -737,7 +825,41 @@ export class EditorController {
               this.deselectCheckpoint();
               this.deselectHill();
               this.deselectSquareHill();
+              this.deselectNormalMapDecal();
               this.selectTerrainRect(rectData);
+            }
+            return;
+          }
+        }
+
+        // Check if clicked mesh is a normal map decal gizmo
+        for (const decalData of this.normalMapDecalMeshes) {
+          if (clickedMesh === decalData.mesh) {
+            if (this.selectedNormalMapDecal === decalData) {
+              this.deselectNormalMapDecal();
+            } else {
+              this.deselectCheckpoint();
+              this.deselectHill();
+              this.deselectSquareHill();
+              this.deselectTerrainRect();
+              this.selectNormalMapDecal(decalData);
+            }
+            return;
+          }
+        }
+
+        // Check if clicked mesh is a tire stack gizmo
+        for (const stackData of this.tireStackMeshes) {
+          if (clickedMesh === stackData.mesh) {
+            if (this.selectedTireStack === stackData) {
+              this.deselectTireStack();
+            } else {
+              this.deselectCheckpoint();
+              this.deselectHill();
+              this.deselectSquareHill();
+              this.deselectTerrainRect();
+              this.deselectNormalMapDecal();
+              this.selectTireStack(stackData);
             }
             return;
           }
@@ -748,11 +870,16 @@ export class EditorController {
         this.deselectHill();
         this.deselectSquareHill();
         this.deselectTerrainRect();
+        this.deselectNormalMapDecal();
+        this.deselectTireStack();
       } else {
         // Clicked on empty space (sky, etc.) — deselect all
         this.deselectCheckpoint();
         this.deselectHill();
         this.deselectSquareHill();
+        this.deselectTerrainRect();
+        this.deselectNormalMapDecal();
+        this.deselectTireStack();
         this.deselectTerrainRect();
       }
     }
@@ -1250,6 +1377,20 @@ export class EditorController {
     terrainRectBtn.style.cssText = buttonStyle;
     terrainRectBtn.onclick = () => this.addTerrainRectEntity();
     this.addMenuOverlay.appendChild(terrainRectBtn);
+
+    // Add Normal Map Decal button
+    const normalMapDecalBtn = document.createElement('button');
+    normalMapDecalBtn.textContent = 'Add Normal Map Decal';
+    normalMapDecalBtn.style.cssText = buttonStyle;
+    normalMapDecalBtn.onclick = () => this.addNormalMapDecalEntity();
+    this.addMenuOverlay.appendChild(normalMapDecalBtn);
+
+    // Add Tire Stack button
+    const tireStackBtn = document.createElement('button');
+    tireStackBtn.textContent = 'Add Tire Stack';
+    tireStackBtn.style.cssText = buttonStyle;
+    tireStackBtn.onclick = () => this.addTireStackEntity();
+    this.addMenuOverlay.appendChild(tireStackBtn);
 
     // Mesh Grid button
     const meshGridBtn = document.createElement('button');
@@ -2578,6 +2719,295 @@ export class EditorController {
     this.updateTerrainRectVisual(this.selectedTerrainRect);
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
+  }
+
+  // ─── Normal Map Decal Editing ───────────────────────────────────────────
+
+  addNormalMapDecalEntity() {
+    const camPos = this.camera.position;
+    const camTarget = this.camera.target;
+    const direction = camTarget.subtract(camPos).normalize();
+    const newX = camPos.x + direction.x * 20;
+    const newZ = camPos.z + direction.z * 50;
+    const newFeature = {
+      type: 'normalMapDecal',
+      centerX: newX,
+      centerZ: newZ,
+      width: 10,
+      depth: 10,
+      angle: 0,
+      normalMap: '6481-normal.jpg',
+      repeatU: 1,
+      repeatV: 1,
+      intensity: 0.5,
+    };
+    this.saveSnapshot();
+    this.currentTrack.features.push(newFeature);
+    const decalData = this.createNormalMapDecalVisual(newFeature);
+    this.deselectCheckpoint();
+    this.deselectHill();
+    this.deselectSquareHill();
+    this.deselectTerrainRect();
+    this.selectNormalMapDecal(decalData);
+    this.hideAddMenu();
+  }
+
+  createNormalMapDecalVisual(feature) {
+    const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const node = new TransformNode('normalMapDecalNode', this.scene);
+    node.position = new Vector3(feature.centerX, terrainH + 0.1, feature.centerZ);
+    node.scaling  = new Vector3(feature.width, 0.1, feature.depth);
+    node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
+
+    const mesh = MeshBuilder.CreateBox('normalMapDecalMesh', { size: 1 }, this.scene);
+    mesh.parent = node;
+    mesh.material = this.normalMapDecalMaterial;
+    mesh.isPickable = true;
+
+    const decalData = { feature, node, mesh };
+    this.normalMapDecalMeshes.push(decalData);
+    return decalData;
+  }
+
+  updateNormalMapDecalVisual(decalData) {
+    const { feature, node } = decalData;
+    const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    node.position.x = feature.centerX;
+    node.position.z = feature.centerZ;
+    node.position.y = terrainH + 0.1;
+    node.scaling.x  = feature.width;
+    node.scaling.z  = feature.depth;
+    node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
+  }
+
+  selectNormalMapDecal(decalData) {
+    this.deselectNormalMapDecal();
+    this.selectedNormalMapDecal = decalData;
+    this._rawDragPos = { x: decalData.feature.centerX, z: decalData.feature.centerZ };
+    decalData.mesh.material = this.normalMapDecalHighlightMaterial;
+    this.showNormalMapDecalProperties(decalData);
+  }
+
+  deselectNormalMapDecal() {
+    if (!this.selectedNormalMapDecal) return;
+    this.selectedNormalMapDecal.mesh.material = this.normalMapDecalMaterial;
+    this.selectedNormalMapDecal = null;
+    this._rawDragPos = null;
+    this.hideNormalMapDecalProperties();
+    window.rebuildNormalMap?.();
+  }
+
+  moveSelectedNormalMapDecal(movement) {
+    if (!this.selectedNormalMapDecal || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    this.saveSnapshot(true);
+    const { feature } = this.selectedNormalMapDecal;
+    if (!this._rawDragPos) this._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+    this._rawDragPos.x += movement.x;
+    this._rawDragPos.z += movement.z;
+    const prevX = feature.centerX, prevZ = feature.centerZ;
+    feature.centerX = this._snap(this._rawDragPos.x);
+    feature.centerZ = this._snap(this._rawDragPos.z);
+    this.updateNormalMapDecalVisual(this.selectedNormalMapDecal);
+    return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
+  }
+
+  deleteSelectedNormalMapDecal() {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot();
+    const decalData = this.selectedNormalMapDecal;
+    const idx = this.currentTrack.features.indexOf(decalData.feature);
+    if (idx > -1) this.currentTrack.features.splice(idx, 1);
+    decalData.mesh.dispose();
+    decalData.node.dispose();
+    const meshIdx = this.normalMapDecalMeshes.indexOf(decalData);
+    if (meshIdx > -1) this.normalMapDecalMeshes.splice(meshIdx, 1);
+    this.hideNormalMapDecalProperties();
+    this.selectedNormalMapDecal = null;
+    window.rebuildNormalMap?.();
+  }
+
+  duplicateSelectedNormalMapDecal() {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot();
+    const src = this.selectedNormalMapDecal.feature;
+    const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
+    this.currentTrack.features.push(newFeature);
+    const decalData = this.createNormalMapDecalVisual(newFeature);
+    this.deselectNormalMapDecal();
+    this.selectNormalMapDecal(decalData);
+  }
+
+  showNormalMapDecalProperties(decalData) {
+    const s = this._editorStore;
+    if (!s) return;
+    const { feature } = decalData;
+    s.normalMapDecal.width       = feature.width;
+    s.normalMapDecal.depth       = feature.depth;
+    s.normalMapDecal.angle       = feature.angle ?? 0;
+    s.normalMapDecal.normalMap   = feature.normalMap || '6481-normal.jpg';
+    s.normalMapDecal.repeatU     = feature.repeatU ?? 1;
+    s.normalMapDecal.repeatV     = feature.repeatV ?? 1;
+    s.normalMapDecal.intensity   = feature.intensity ?? 0.5;
+    s.selectedType               = 'normalMapDecal';
+  }
+
+  hideNormalMapDecalProperties() {
+    if (this._editorStore?.selectedType === 'normalMapDecal')
+      this._editorStore.selectedType = null;
+  }
+
+  // ── Normal Map Decal Vue bridge methods ──
+  changeNormalMapDecalWidth(val) {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot(true);
+    this.selectedNormalMapDecal.feature.width = val;
+    this.updateNormalMapDecalVisual(this.selectedNormalMapDecal);
+  }
+
+  changeNormalMapDecalDepth(val) {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot(true);
+    this.selectedNormalMapDecal.feature.depth = val;
+    this.updateNormalMapDecalVisual(this.selectedNormalMapDecal);
+  }
+
+  changeNormalMapDecalAngle(val) {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot(true);
+    this.selectedNormalMapDecal.feature.angle = val;
+    this.updateNormalMapDecalVisual(this.selectedNormalMapDecal);
+  }
+
+  changeNormalMapDecalNormalMap(val) {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot();
+    this.selectedNormalMapDecal.feature.normalMap = val;
+    window.rebuildNormalMap?.();
+  }
+
+  changeNormalMapDecalRepeatU(val) {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot(true);
+    this.selectedNormalMapDecal.feature.repeatU = val;
+    window.rebuildNormalMap?.();
+  }
+
+  changeNormalMapDecalRepeatV(val) {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot(true);
+    this.selectedNormalMapDecal.feature.repeatV = val;
+    window.rebuildNormalMap?.();
+  }
+
+  changeNormalMapDecalIntensity(val) {
+    if (!this.selectedNormalMapDecal) return;
+    this.saveSnapshot(true);
+    this.selectedNormalMapDecal.feature.intensity = val;
+    window.rebuildNormalMap?.();
+  }
+
+  // ─── Tire Stack Editing ───────────────────────────────────────────────────
+
+  addTireStackEntity() {
+    const camPos = this.camera.position;
+    const camTarget = this.camera.target;
+    const direction = camTarget.subtract(camPos).normalize();
+    const newX = camPos.x + direction.x * 20;
+    const newZ = camPos.z + direction.z * 50;
+    const newFeature = {
+      type: 'tireStack',
+      x: newX,
+      z: newZ,
+    };
+    this.saveSnapshot();
+    this.currentTrack.features.push(newFeature);
+    const stackData = this.createTireStackVisual(newFeature);
+    this.deselectCheckpoint();
+    this.deselectHill();
+    this.deselectSquareHill();
+    this.deselectTerrainRect();
+    this.deselectNormalMapDecal();
+    this.selectTireStack(stackData);
+    this.hideAddMenu();
+  }
+
+  createTireStackVisual(feature) {
+    const terrainH = this.currentTrack ? this.currentTrack.getHeightAt(feature.x, feature.z) : 0;
+    const node = new TransformNode('tireStackNode', this.scene);
+    node.position = new Vector3(feature.x, terrainH + 0.5, feature.z);
+
+    const mesh = MeshBuilder.CreateCylinder('tireStackMesh', { 
+      diameter: 0.84, 
+      height: 1.12, 
+      tessellation: 12 
+    }, this.scene);
+    mesh.parent = node;
+    mesh.material = this.tireStackMaterial;
+    mesh.isPickable = true;
+
+    const stackData = { feature, node, mesh };
+    this.tireStackMeshes.push(stackData);
+    return stackData;
+  }
+
+  updateTireStackVisual(stackData) {
+    const { feature, node } = stackData;
+    const terrainH = this.currentTrack.getHeightAt(feature.x, feature.z);
+    node.position.x = feature.x;
+    node.position.y = terrainH + 0.5;
+    node.position.z = feature.z;
+  }
+
+  selectTireStack(stackData) {
+    this.deselectTireStack();
+    this.selectedTireStack = stackData;
+    this._rawDragPos = { x: stackData.feature.x, z: stackData.feature.z };
+    stackData.mesh.material = this.tireStackHighlightMaterial;
+  }
+
+  deselectTireStack() {
+    if (!this.selectedTireStack) return;
+    this.selectedTireStack.mesh.material = this.tireStackMaterial;
+    this.selectedTireStack = null;
+    this._rawDragPos = null;
+  }
+
+  moveSelectedTireStack(movement) {
+    if (!this.selectedTireStack || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    this.saveSnapshot(true);
+    const { feature } = this.selectedTireStack;
+    if (!this._rawDragPos) this._rawDragPos = { x: feature.x, z: feature.z };
+    this._rawDragPos.x += movement.x;
+    this._rawDragPos.z += movement.z;
+    const prevX = feature.x, prevZ = feature.z;
+    feature.x = this._snap(this._rawDragPos.x);
+    feature.z = this._snap(this._rawDragPos.z);
+    this.updateTireStackVisual(this.selectedTireStack);
+    return new Vector3(feature.x - prevX, 0, feature.z - prevZ);
+  }
+
+  deleteSelectedTireStack() {
+    if (!this.selectedTireStack) return;
+    this.saveSnapshot();
+    const stackData = this.selectedTireStack;
+    const idx = this.currentTrack.features.indexOf(stackData.feature);
+    if (idx > -1) this.currentTrack.features.splice(idx, 1);
+    stackData.mesh.dispose();
+    stackData.node.dispose();
+    const meshIdx = this.tireStackMeshes.indexOf(stackData);
+    if (meshIdx > -1) this.tireStackMeshes.splice(meshIdx, 1);
+    this.selectedTireStack = null;
+  }
+
+  duplicateSelectedTireStack() {
+    if (!this.selectedTireStack) return;
+    this.saveSnapshot();
+    const src = this.selectedTireStack.feature;
+    const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
+    this.currentTrack.features.push(newFeature);
+    const stackData = this.createTireStackVisual(newFeature);
+    this.deselectTireStack();
+    this.selectTireStack(stackData);
   }
 
   // ── Poly Wall Vue bridge methods ──

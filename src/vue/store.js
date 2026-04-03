@@ -109,7 +109,7 @@ export const useDebugStore = defineStore('debug', () => {
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
 export const useEditorStore = defineStore('editor', () => {
-  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainRect' | 'meshGrid' | 'polyWall')
+  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainRect' | 'normalMapDecal' | 'meshGrid' | 'polyWall')
   const selectedType = ref(null);
 
   // Add-entity menu
@@ -150,6 +150,17 @@ export const useEditorStore = defineStore('editor', () => {
     width: 10,
     depth: 10,
     terrainType: 'mud',
+  });
+
+  // ── Normal Map Decal panel ──
+  const normalMapDecal = reactive({
+    width: 10,
+    depth: 10,
+    angle: 0,
+    normalMap: '6481-normal.jpg',
+    repeatU: 1,
+    repeatV: 1,
+    intensity: 0.5,
   });
 
   // ── Mesh grid panel ──
@@ -222,6 +233,18 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteTerrainRect()          { _bridge.value?.deleteSelectedTerrainRect(); }
   function closeTerrainRect()           { _bridge.value?.deselectTerrainRect(); }
 
+  // ── Normal Map Decal actions ──
+  function setNormalMapDecalWidth(val)     { normalMapDecal.width = val;     _bridge.value?.changeNormalMapDecalWidth(val); }
+  function setNormalMapDecalDepth(val)     { normalMapDecal.depth = val;     _bridge.value?.changeNormalMapDecalDepth(val); }
+  function setNormalMapDecalAngle(val)     { normalMapDecal.angle = val;     _bridge.value?.changeNormalMapDecalAngle(val); }
+  function setNormalMapDecalNormalMap(val) { normalMapDecal.normalMap = val; _bridge.value?.changeNormalMapDecalNormalMap(val); }
+  function setNormalMapDecalRepeatU(val)   { normalMapDecal.repeatU = val;   _bridge.value?.changeNormalMapDecalRepeatU(val); }
+  function setNormalMapDecalRepeatV(val)   { normalMapDecal.repeatV = val;   _bridge.value?.changeNormalMapDecalRepeatV(val); }
+  function setNormalMapDecalIntensity(val) { normalMapDecal.intensity = val; _bridge.value?.changeNormalMapDecalIntensity(val); }
+  function duplicateNormalMapDecal()       { _bridge.value?.duplicateSelectedNormalMapDecal(); }
+  function deleteNormalMapDecal()          { _bridge.value?.deleteSelectedNormalMapDecal(); }
+  function closeNormalMapDecal()           { _bridge.value?.deselectNormalMapDecal(); }
+
   // ── Poly Wall actions ──
   function setPolyWallRadius(val)       { polyWall.radius = val;     _bridge.value?.changePolyWallRadius(val); }
   function setPolyWallHeight(val)       { polyWall.height = val;     _bridge.value?.changePolyWallHeight(val); }
@@ -249,6 +272,7 @@ export const useEditorStore = defineStore('editor', () => {
     hill,
     squareHill,
     terrainRect,
+    normalMapDecal,
     meshGrid,
     polyWall,
     bezierWall,
@@ -261,6 +285,9 @@ export const useEditorStore = defineStore('editor', () => {
     setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
     setTerrainRectWidth, setTerrainRectDepth, setTerrainRectTerrainType,
     duplicateTerrainRect, deleteTerrainRect, closeTerrainRect,
+    setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
+    setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,
+    setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,
     setPolyWallRadius, setPolyWallHeight, setPolyWallThickness, setPolyWallClosed,
     insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, closePolyWall,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,

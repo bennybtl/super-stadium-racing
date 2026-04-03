@@ -10,6 +10,7 @@
     <HillPanel />
     <SquareHillPanel />
     <TerrainRectPanel />
+    <NormalMapDecalPanel />
     <PolyWallPanel />
     <BezierWallPanel />
   </div>
@@ -23,6 +24,7 @@ import CheckpointPanel  from './editor/CheckpointPanel.vue';
 import HillPanel        from './editor/HillPanel.vue';
 import SquareHillPanel  from './editor/SquareHillPanel.vue';
 import TerrainRectPanel from './editor/TerrainRectPanel.vue';
+import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
 import PolyWallPanel    from './editor/PolyWallPanel.vue';
 import BezierWallPanel  from './editor/BezierWallPanel.vue';
 </script>
