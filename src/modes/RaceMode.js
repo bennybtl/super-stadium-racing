@@ -379,7 +379,7 @@ export class RaceMode extends BaseMode {
       wallManager.update(trucks);
       truckCollisionManager.update(trucks);
       tireStackManager.update(trucks);
-      flagManager.update(trucks);
+      flagManager.update(trucks, dt);
 
       const slopeDegFront = currentTrack.getTerrainSlopeAt(
         playerTruckData.truck.mesh.position.x,

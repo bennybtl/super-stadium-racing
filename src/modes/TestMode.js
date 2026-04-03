@@ -29,6 +29,7 @@ export class TestMode extends BaseMode {
       terrainManager,
       wallManager,
       tireStackManager,
+      flagManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     this.scene = scene;
@@ -86,6 +87,7 @@ export class TestMode extends BaseMode {
       updateTruck(playerTruck, input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);
       tireStackManager.update(trucks);
+      flagManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position);
     });
 

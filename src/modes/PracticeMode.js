@@ -106,7 +106,7 @@ export class PracticeMode extends BaseMode {
       const debugInfo = updateTruck(playerTruck, input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);
       tireStackManager.update(trucks, dt);
-      flagManager.update(trucks);
+      flagManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position);
       
       // Update debug panel
