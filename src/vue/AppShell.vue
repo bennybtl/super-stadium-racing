@@ -12,6 +12,7 @@
     <TerrainRectPanel />
     <NormalMapDecalPanel />
     <PolyWallPanel />
+    <PolyHillPanel />
     <BezierWallPanel />
   </div>
 </template>
@@ -26,6 +27,7 @@ import SquareHillPanel  from './editor/SquareHillPanel.vue';
 import TerrainRectPanel from './editor/TerrainRectPanel.vue';
 import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
 import PolyWallPanel    from './editor/PolyWallPanel.vue';
+import PolyHillPanel    from './editor/PolyHillPanel.vue';
 import BezierWallPanel  from './editor/BezierWallPanel.vue';
 </script>
 

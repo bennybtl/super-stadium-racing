@@ -2,6 +2,7 @@ import { Vector3, StandardMaterial, Color3, PointerEventTypes, MeshBuilder, Tran
 import { TERRAIN_TYPES } from "../terrain.js";
 import { MeshGridTool } from "./MeshGridTool.js";
 import { PolyWallTool } from "./PolyWallTool.js";
+import { PolyHillTool } from "./PolyHillTool.js";
 import { BezierWallTool } from "./BezierWallTool.js";
 import { useEditorStore } from '../vue/store.js';
 
@@ -105,6 +106,9 @@ export class EditorController {
 
     // Poly wall editing tool
     this.polyWallTool = null;
+
+    // Poly hill editing tool
+    this.polyHillTool = null;
 
     // Bezier wall editing tool
     this.bezierWallTool = null;
@@ -241,6 +245,10 @@ export class EditorController {
     this.polyWallTool = new PolyWallTool(this);
     this.polyWallTool.activate(this.scene, track);
 
+    // Poly hill editing tool
+    this.polyHillTool = new PolyHillTool(this);
+    this.polyHillTool.activate(this.scene, track);
+
     // Bezier wall editing tool
     this.bezierWallTool = new BezierWallTool(this);
     this.bezierWallTool.activate(this.scene, track);
@@ -330,6 +338,12 @@ export class EditorController {
       this.polyWallTool = null;
     }
 
+    // Poly hill tool
+    if (this.polyHillTool) {
+      this.polyHillTool.deactivate();
+      this.polyHillTool = null;
+    }
+
     // Bezier wall tool
     if (this.bezierWallTool) {
       this.bezierWallTool.deactivate();
@@ -400,6 +414,9 @@ export class EditorController {
     // Restore poly wall gizmos
     this.polyWallTool?.onSnapshotRestored();
     window.rebuildPolyWall?.(null);
+    // Restore poly hill gizmos
+    this.polyHillTool?.onSnapshotRestored();
+    window.rebuildPolyHill?.(null);
     // Restore bezier wall gizmos
     this.bezierWallTool?.onSnapshotRestored();
     window.rebuildBezierWall?.(null);
@@ -503,6 +520,9 @@ export class EditorController {
       } else if (this.polyWallTool?.selectedPoint) {
         this.polyWallTool.deleteSelectedPoint();
         event.preventDefault();
+      } else if (this.polyHillTool?.selectedPoint) {
+        this.polyHillTool.deleteSelectedPoint();
+        event.preventDefault();
       }
       return;
     }
@@ -561,10 +581,12 @@ export class EditorController {
         event.preventDefault();
         break;
       case '=':
+      case '+':
         this.keys.down = true;
         event.preventDefault();
         break;
       case '-':
+      case '_':
         this.keys.up = true;
         event.preventDefault();
         break;
@@ -598,9 +620,11 @@ export class EditorController {
         this.keys.rotateRight = false;
         break;
       case '=':
+      case '+':
         this.keys.down = false;
         break;
       case '-':
+      case '_':
         this.keys.up = false;
         break;
       case 'shift':
@@ -612,6 +636,9 @@ export class EditorController {
     const movKeys = ['w','s','a','d'];
     if (movKeys.includes(event.key.toLowerCase()) && this.polyWallTool?.selectedPoint) {
       this.polyWallTool.endDrag();
+    }
+    if (movKeys.includes(event.key.toLowerCase()) && this.polyHillTool?.selectedPoint) {
+      this.polyHillTool.endDrag();
     }
   }
 
@@ -731,6 +758,12 @@ export class EditorController {
       this.camera.position.addInPlace(delta4);
       const currentTarget4 = this.camera.getTarget();
       this.camera.setTarget(currentTarget4.add(delta4));
+    } else if (this.polyHillTool?.selectedPoint) {
+      const d = this.polyHillTool.moveSelectedPoint(movement.x, movement.z);
+      const deltaHill = new Vector3(d.x, movement.y, d.z);
+      this.camera.position.addInPlace(deltaHill);
+      const currentTargetHill = this.camera.getTarget();
+      this.camera.setTarget(currentTargetHill.add(deltaHill));
     } else if (this.bezierWallTool?.selectedAnchor) {
       const d = this.bezierWallTool.moveSelectedAnchor(movement.x, movement.z);
       const delta5 = new Vector3(d.x, movement.y, d.z);
@@ -766,6 +799,9 @@ export class EditorController {
 
         // Poly wall control points
         if (this.polyWallTool?.onPointerDown(clickedMesh)) return;
+
+        // Poly hill control points
+        if (this.polyHillTool?.onPointerDown(clickedMesh)) return;
 
         // Bezier wall control points
         if (this.bezierWallTool?.onPointerDown(clickedMesh)) return;
@@ -872,6 +908,9 @@ export class EditorController {
         this.deselectTerrainRect();
         this.deselectNormalMapDecal();
         this.deselectTireStack();
+        this.meshGridTool?.deselectPoint();
+        this.polyWallTool?.deselectPoint();
+        this.polyHillTool?.deselectPoint();
       } else {
         // Clicked on empty space (sky, etc.) — deselect all
         this.deselectCheckpoint();
@@ -881,6 +920,9 @@ export class EditorController {
         this.deselectNormalMapDecal();
         this.deselectTireStack();
         this.deselectTerrainRect();
+        this.meshGridTool?.deselectPoint();
+        this.polyWallTool?.deselectPoint();
+        this.polyHillTool?.deselectPoint();
       }
     }
   }
@@ -1405,6 +1447,13 @@ export class EditorController {
     polyWallBtn.style.cssText = buttonStyle + 'background: #f5a623; color: #000;';
     polyWallBtn.onclick = () => { this.polyWallTool?.addPolyWallFeature(); this.hideAddMenu(); };
     this.addMenuOverlay.appendChild(polyWallBtn);
+
+    // Poly Hill button
+    const polyHillBtn = document.createElement('button');
+    polyHillBtn.textContent = 'Add Poly Hill';
+    polyHillBtn.style.cssText = buttonStyle + 'background: #88c440; color: #000;';
+    polyHillBtn.onclick = () => { this.polyHillTool?.addPolyHillFeature(); this.hideAddMenu(); };
+    this.addMenuOverlay.appendChild(polyHillBtn);
 
     // Bezier Wall button
     const bezierWallBtn = document.createElement('button');
@@ -3011,14 +3060,24 @@ export class EditorController {
   }
 
   // ── Poly Wall Vue bridge methods ──
-  changePolyWallRadius(val)     { this.polyWallTool.changePolyWallRadius(val); }
-  changePolyWallHeight(val)     { this.polyWallTool.changePolyWallHeight(val); }
-  changePolyWallThickness(val)  { this.polyWallTool.changePolyWallThickness(val); }
-  changePolyWallClosed(val)     { this.polyWallTool.changePolyWallClosed(val); }
-  insertPolyWallPoint()         { this.polyWallTool.insertPolyWallPoint(); }
-  deletePolyWallPoint()         { this.polyWallTool.deletePolyWallPoint(); }
+  changePolyWallRadius(val)     { this.polyWallTool.setPointRadius(val); }
+  changePolyWallHeight(val)     { this.polyWallTool.setHeight(val); }
+  changePolyWallThickness(val)  { this.polyWallTool.setThickness(val); }
+  changePolyWallClosed(val)     { this.polyWallTool.setClosed(val); }
+  insertPolyWallPoint()         { this.polyWallTool.insertPointAfter(); }
+  deletePolyWallPoint()         { this.polyWallTool.deleteSelectedPoint(); }
   deletePolyWall()              { this.polyWallTool.deletePolyWall(); }
-  deselectPolyWall()            { this.polyWallTool.deselectPolyWall(); }
+  deselectPolyWall()            { this.polyWallTool.deselectPoint(); }
+
+  // ── Poly Hill Vue bridge methods ──
+  changePolyHillRadius(val)     { this.polyHillTool.setPointRadius(val); }
+  changePolyHillHeight(val)     { this.polyHillTool.setHeight(val); }
+  changePolyHillWidth(val)      { this.polyHillTool.setWidth(val); }
+  changePolyHillClosed(val)     { this.polyHillTool.setClosed(val); }
+  insertPolyHillPoint()         { this.polyHillTool.insertPointAfter(); }
+  deletePolyHillPoint()         { this.polyHillTool.deleteSelectedPoint(); }
+  deletePolyHill()              { this.polyHillTool.deletePolyHill(); }
+  deselectPolyHill()            { this.polyHillTool.deselectPoint(); }
 
   // ── Bezier Wall Vue bridge methods ──
   changeBezierWallHeight(val)   { this.bezierWallTool.changeBezierWallHeight(val); }

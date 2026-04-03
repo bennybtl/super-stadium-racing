@@ -180,6 +180,16 @@ export const useEditorStore = defineStore('editor', () => {
     closed: false,
   });
 
+  // ── Poly hill panel ──
+  const polyHill = reactive({
+    hasSelection: false,
+    canHaveRadius: false,
+    radius: 0,
+    height: 3,
+    width: 5,
+    closed: false,
+  });
+
   // ── Bezier wall panel ──
   const bezierWall = reactive({
     hasSelection: false,
@@ -255,6 +265,16 @@ export const useEditorStore = defineStore('editor', () => {
   function deletePolyWall()             { _bridge.value?.deletePolyWall(); }
   function closePolyWall()              { _bridge.value?.deselectPolyWall(); }
 
+  // ── Poly Hill actions ──
+  function setPolyHillRadius(val)       { polyHill.radius = val;  _bridge.value?.changePolyHillRadius(val); }
+  function setPolyHillHeight(val)       { polyHill.height = val;  _bridge.value?.changePolyHillHeight(val); }
+  function setPolyHillWidth(val)        { polyHill.width = val;   _bridge.value?.changePolyHillWidth(val); }
+  function setPolyHillClosed(val)       { polyHill.closed = val;  _bridge.value?.changePolyHillClosed(val); }
+  function insertPolyHillPoint()        { _bridge.value?.insertPolyHillPoint(); }
+  function deletePolyHillPoint()        { _bridge.value?.deletePolyHillPoint(); }
+  function deletePolyHill()             { _bridge.value?.deletePolyHill(); }
+  function closePolyHill()              { _bridge.value?.deselectPolyHill(); }
+
   // ── Bezier Wall actions ──
   function setBezierWallHeight(val)     { bezierWall.height = val;     _bridge.value?.changeBezierWallHeight(val); }
   function setBezierWallThickness(val)  { bezierWall.thickness = val;  _bridge.value?.changeBezierWallThickness(val); }
@@ -275,6 +295,7 @@ export const useEditorStore = defineStore('editor', () => {
     normalMapDecal,
     meshGrid,
     polyWall,
+    polyHill,
     bezierWall,
     testModeActive, testModeReturnKey,
     setBridge,
@@ -290,6 +311,8 @@ export const useEditorStore = defineStore('editor', () => {
     setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,
     setPolyWallRadius, setPolyWallHeight, setPolyWallThickness, setPolyWallClosed,
     insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, closePolyWall,
+    setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillClosed,
+    insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, closePolyHill,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, closeBezierWall,
   };

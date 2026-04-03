@@ -32,6 +32,7 @@ export class EditorMode extends BaseMode {
       compositeNormalMap,
       checkpointManager,
       wallManager,
+      shadows,
     } = await buildScene(engine, trackLoader, trackKey);
 
     this.scene = scene;
@@ -122,6 +123,33 @@ export class EditorMode extends BaseMode {
       }
     };
 
+    // Poly hills array to track created hills
+    const polyHills = [];
+
+    // Rebuild a specific polyHill (or all polyHills if feature is null)
+    window.rebuildPolyHill = async (targetFeature) => {
+      // Remove hills that match the target feature
+      for (let i = polyHills.length - 1; i >= 0; i--) {
+        const hill = polyHills[i];
+        if (hill._feature && (targetFeature === null || hill._feature === targetFeature)) {
+          hill.dispose?.();
+          polyHills.splice(i, 1);
+        }
+      }
+      // Create new hills for matching features
+      const { PolyHill } = await import('../objects/PolyHill.js');
+      for (const f of currentTrack.features) {
+        if (f.type === 'polyHill') {
+          if (targetFeature === null || f === targetFeature) {
+            const hill = new PolyHill(f, currentTrack, scene, shadows);
+            polyHills.push(hill);
+          }
+        }
+      }
+      // Rebuild terrain mesh after height modifications
+      window.rebuildTerrain?.();
+    };
+
     // Hide racing HUD while in editor (it starts hidden; only UIManager.showRaceStatusPanel shows it)
 
     console.log("[Editor] Track editor mode active");
@@ -178,6 +206,7 @@ export class EditorMode extends BaseMode {
     delete window.rebuildTerrainTexture;
     delete window.rebuildNormalMap;
     delete window.rebuildPolyWall;
+    delete window.rebuildPolyHill;
     delete window.rebuildBezierWall;
     delete window.quickTestTrack;
 
