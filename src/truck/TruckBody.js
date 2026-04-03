@@ -1,4 +1,4 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3 } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, TransformNode } from "@babylonjs/core";
 
 /**
  * TruckBody — builds a purely visual puppet parented to the physics box mesh.
@@ -22,6 +22,17 @@ export class TruckBody {
     this.parent  = parent;
     this.scene   = scene;
     this.shadows = shadows;
+
+    // Visual root for the body (chassis, cabin). Follows the physics box
+    // closely but gets a partial terrain correction — allows suspension
+    // bounce while never sinking fully underground.
+    this._visualRoot = new TransformNode("truckBodyRoot", scene);
+    this._visualRoot.parent = parent;
+
+    // Wheel root gets the FULL terrain correction so wheels always
+    // stay above the ground surface.
+    this._wheelRoot = new TransformNode("truckWheelRoot", scene);
+    this._wheelRoot.parent = parent;
 
     this.colors = {
       body:   colors.body   ?? new Color3(0.8, 0.15, 0.05),
@@ -133,7 +144,7 @@ export class TruckBody {
     }, this.scene);
     tyre.rotation.z = Math.PI / 2;   // stand the torus upright
     tyre.position   = new Vector3(x, y, z);
-    tyre.parent     = this.parent;
+    tyre.parent     = this._wheelRoot;
     this._styleMesh(tyre, this.colors.wheel);
     this._parts.push(tyre);
 
@@ -143,7 +154,7 @@ export class TruckBody {
     }, this.scene);
     rim.rotation.z = Math.PI / 2;
     rim.position   = new Vector3(x, y, z);
-    rim.parent     = this.parent;
+    rim.parent     = this._wheelRoot;
     this._styleMesh(rim, this.colors.detail);
     this._parts.push(rim);
 
@@ -159,7 +170,26 @@ export class TruckBody {
    * @param {number}  speed   - current speed (units/s)
    * @param {number}  dt      - delta time (s)
    */
-  update(state, input, speed, dt) {
+  update(state, input, speed, dt, terrainY = null) {
+    // When the physics box dips below the terrain surface, push the
+    // wheel root fully above ground, and the body root partially —
+    // this lets the body bounce with the physics while the wheels
+    // stay planted on the surface.
+    if (terrainY !== null) {
+      const physY = this.parent.position.y;
+      const minY = terrainY + 0.4; // 0.4 = TRUCK_HALF_HEIGHT
+      const deficit = minY - physY;
+
+      // Wheels: full correction — always above terrain
+      this._wheelRoot.position.y = deficit > 0 ? deficit : 0;
+
+      // Body: allow up to 0.25 units of dip below ground for suspension feel,
+      // but never more than that
+      const bodyAllowance = 0.25;
+      const bodyDeficit = deficit - bodyAllowance;
+      this._visualRoot.position.y = bodyDeficit > 0 ? bodyDeficit : 0;
+    }
+
     this._animateWheels(state, speed, dt, input);
   }
 
@@ -198,7 +228,7 @@ export class TruckBody {
   _box(name, size, position, color) {
     const mesh = MeshBuilder.CreateBox(name, size, this.scene);
     mesh.position = position;
-    mesh.parent   = this.parent;
+    mesh.parent   = this._visualRoot;
     this._styleMesh(mesh, color);
     this._parts.push(mesh);
     return mesh;
@@ -219,5 +249,13 @@ export class TruckBody {
     for (const mesh of this._parts) mesh.dispose();
     this._parts  = [];
     this._wheels = [];
+    if (this._visualRoot) {
+      this._visualRoot.dispose();
+      this._visualRoot = null;
+    }
+    if (this._wheelRoot) {
+      this._wheelRoot.dispose();
+      this._wheelRoot = null;
+    }
   }
 }
