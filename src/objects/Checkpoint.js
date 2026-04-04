@@ -161,9 +161,46 @@ export class Checkpoint {
     decalTexture.update();
 
     const decalSize = isFinish ? feature.width * 0.82 : 8;
+
+    // Find the ground mesh to project the decal onto
+    const ground = scene.getMeshByName("ground");
+    if (!ground) {
+      // Fallback to flat plane if ground mesh not available
+      return this._createFlatDecal(decalTexture, decalSize, scene);
+    }
+
+    // World position on the terrain surface at the checkpoint center
+    const terrainY = this._track.getHeightAt(feature.centerX, feature.centerZ);
+    const worldPos = new Vector3(feature.centerX, terrainY, feature.centerZ);
+
+    // Project the decal onto the ground mesh.
+    // - position: world coords on the surface
+    // - normal: surface normal (Up for ground)
+    // - size: x = width, y = depth on ground plane, z = projection depth along normal
+    // - angle: rotation around the normal (heading)
+    const decal = MeshBuilder.CreateDecal("cpDecal", ground, {
+      position: worldPos,
+      normal: Vector3.Up(),
+      size: new Vector3(decalSize, decalSize, 10),
+      angle: -feature.heading - Math.PI / 2,
+    });
+
+    const mat = new StandardMaterial("cpDecalMat", scene);
+    mat.diffuseTexture  = decalTexture;
+    mat.emissiveTexture = decalTexture;
+    mat.opacityTexture  = decalTexture;
+    mat.backFaceCulling = false;
+    mat.zOffset         = -2;          // push slightly toward camera to avoid z-fighting
+    decal.material = mat;
+
+    return decal;
+  }
+
+  /** Fallback flat plane decal when the ground mesh isn't available. */
+  _createFlatDecal(decalTexture, decalSize, scene) {
     const decal = MeshBuilder.CreatePlane("cpDecal", { width: decalSize, height: decalSize }, scene);
-    decal.rotation.x = Math.PI / 2;  // lay flat
-    decal.position   = new Vector3(0, 0.06, 0); // just above ground
+    decal.rotation.x = Math.PI / 2;
+    decal.position   = new Vector3(0, 0.06, 0);
     decal.parent     = this.container;
 
     const mat = new StandardMaterial("cpDecalMat", scene);
@@ -172,7 +209,6 @@ export class Checkpoint {
     mat.opacityTexture  = decalTexture;
     mat.backFaceCulling = false;
     decal.material = mat;
-
     return decal;
   }
 

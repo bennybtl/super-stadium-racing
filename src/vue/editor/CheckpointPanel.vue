@@ -17,6 +17,18 @@
       class="ep-slider"
     />
 
+    <!-- Heading -->
+    <div class="ep-row">
+      <span>Rotation</span>
+      <span>{{ editor.checkpoint.heading.toFixed(0) }}°</span>
+    </div>
+    <input
+      type="range" min="-180" max="180" step="5"
+      :value="editor.checkpoint.heading"
+      @input="editor.setCheckpointHeading(+$event.target.value)"
+      class="ep-slider"
+    />
+
     <!-- Order -->
     <div class="ep-row">
       <span>Order</span>

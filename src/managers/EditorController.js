@@ -1045,6 +1045,14 @@ export class EditorController {
     
     // Simply rotate the container - all children rotate automatically!
     checkpoint.container.rotation.y = feature.heading;
+
+    // Rebuild the world-space decal with the new heading
+    checkpoint.updateDecal(feature.checkpointNumber, checkpoint.isFinish);
+
+    // Sync heading back to the UI store (degrees)
+    if (this._editorStore) {
+      this._editorStore.checkpoint.heading = +(feature.heading * 180 / Math.PI).toFixed(1);
+    }
   }
 
   /**
@@ -1727,6 +1735,7 @@ export class EditorController {
     if (!s) return;
     s.checkpoint.width    = checkpointData.feature.width;
     s.checkpoint.orderNum = checkpointData.feature.checkpointNumber ?? 1;
+    s.checkpoint.heading  = +(checkpointData.feature.heading * 180 / Math.PI).toFixed(1);
     s.selectedType        = 'checkpoint';
   }
 
@@ -2685,6 +2694,17 @@ export class EditorController {
     if (!this.selectedCheckpoint) return;
     this.saveSnapshot(true);
     this.selectedCheckpoint.updateWidth(val);
+  }
+
+  changeCheckpointHeading(degrees) {
+    if (!this.selectedCheckpoint) return;
+    this.saveSnapshot(true);
+    const rad = degrees * Math.PI / 180;
+    const checkpoint = this.selectedCheckpoint;
+    checkpoint.feature.heading = rad;
+    checkpoint.container.rotation.y = rad;
+    // Rebuild the world-space decal with the new heading
+    checkpoint.updateDecal(checkpoint.feature.checkpointNumber, checkpoint.isFinish);
   }
 
   changeHillRadius(val) {

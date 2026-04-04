@@ -119,6 +119,7 @@ export const useEditorStore = defineStore('editor', () => {
   const checkpoint = reactive({
     width: 10,
     orderNum: 1,
+    heading: 0,
   });
 
   // ── Hill panel ──
@@ -209,6 +210,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Checkpoint actions ──
   function setCheckpointWidth(val)      { checkpoint.width = val;      _bridge.value?.changeCheckpointWidth(val); }
+  function setCheckpointHeading(val)    { checkpoint.heading = val;    _bridge.value?.changeCheckpointHeading(val); }
   function shiftCheckpointOrder(dir)    { _bridge.value?.shiftCheckpointOrder(dir); }
   function duplicateCheckpoint()        { _bridge.value?.duplicateSelectedCheckpoint(); }
   function deleteCheckpoint()           { _bridge.value?.deleteSelectedCheckpoint(); }
@@ -307,7 +309,7 @@ export const useEditorStore = defineStore('editor', () => {
     flag,
     testModeActive, testModeReturnKey,
     setBridge,
-    setCheckpointWidth, shiftCheckpointOrder, duplicateCheckpoint, deleteCheckpoint, closeCheckpoint,
+    setCheckpointWidth, setCheckpointHeading, shiftCheckpointOrder, duplicateCheckpoint, deleteCheckpoint, closeCheckpoint,
     setHillRadius, setHillHeight, setHillTerrainType, duplicateHill, deleteHill, closeHill,
     setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
     setSquareHillHeight, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
