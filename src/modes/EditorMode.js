@@ -1,6 +1,6 @@
 import { VertexBuffer } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
-import { EditorController } from "../managers/EditorController.js";
+import { EditorController } from "../editor/EditorController.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 import { paintTerrainTexture } from "../terrain-utils.js";

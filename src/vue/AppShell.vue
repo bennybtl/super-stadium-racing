@@ -9,7 +9,7 @@
     <CheckpointPanel />
     <HillPanel />
     <SquareHillPanel />
-    <TerrainRectPanel />
+    <TerrainShapePanel />
     <NormalMapDecalPanel />
     <PolyWallPanel />
     <PolyHillPanel />
@@ -25,7 +25,7 @@ import DebugPanel     from './DebugPanel.vue';
 import CheckpointPanel  from './editor/CheckpointPanel.vue';
 import HillPanel        from './editor/HillPanel.vue';
 import SquareHillPanel  from './editor/SquareHillPanel.vue';
-import TerrainRectPanel from './editor/TerrainRectPanel.vue';
+import TerrainShapePanel  from './editor/TerrainShapePanel.vue';
 import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
 import PolyWallPanel    from './editor/PolyWallPanel.vue';
 import PolyHillPanel    from './editor/PolyHillPanel.vue';

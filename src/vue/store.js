@@ -104,7 +104,7 @@ export const useDebugStore = defineStore('debug', () => {
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
 export const useEditorStore = defineStore('editor', () => {
-  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainRect' | 'normalMapDecal' | 'meshGrid' | 'polyWall' | 'flag')
+  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainShape' | 'normalMapDecal' | 'meshGrid' | 'polyWall' | 'flag')
   const selectedType = ref(null);
   const activeTool = ref(null);
 
@@ -142,10 +142,12 @@ export const useEditorStore = defineStore('editor', () => {
     terrainType: 'none',
   });
 
-  // ── Terrain rect panel ──
-  const terrainRect = reactive({
+  // ── Terrain shape panel (rect + circle) ──
+  const terrainShape = reactive({
+    shape: 'rect',
     width: 10,
     depth: 10,
+    radius: 8,
     terrainType: 'mud',
   });
 
@@ -238,13 +240,15 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteSquareHill()           { _bridge.value?.deleteSelectedSquareHill(); }
   function closeSquareHill()            { _bridge.value?.deselectSquareHill(); }
 
-  // ── Terrain Rect actions ──
-  function setTerrainRectWidth(val)     { terrainRect.width = val;       _bridge.value?.changeTerrainRectWidth(val); }
-  function setTerrainRectDepth(val)     { terrainRect.depth = val;       _bridge.value?.changeTerrainRectDepth(val); }
-  function setTerrainRectTerrainType(n) { terrainRect.terrainType = n;   _bridge.value?.changeTerrainRectTerrainType(n); }
-  function duplicateTerrainRect()       { _bridge.value?.duplicateSelectedTerrainRect(); }
-  function deleteTerrainRect()          { _bridge.value?.deleteSelectedTerrainRect(); }
-  function closeTerrainRect()           { _bridge.value?.deselectTerrainRect(); }
+  // ── Terrain Shape actions ──
+  function setTerrainShapeShape(val)      { terrainShape.shape = val;       _bridge.value?.changeTerrainShapeShape(val); }
+  function setTerrainShapeWidth(val)      { terrainShape.width = val;       _bridge.value?.changeTerrainShapeWidth(val); }
+  function setTerrainShapeDepth(val)      { terrainShape.depth = val;       _bridge.value?.changeTerrainShapeDepth(val); }
+  function setTerrainShapeRadius(val)     { terrainShape.radius = val;      _bridge.value?.changeTerrainShapeRadius(val); }
+  function setTerrainShapeTerrainType(n)  { terrainShape.terrainType = n;   _bridge.value?.changeTerrainShapeTerrainType(n); }
+  function duplicateTerrainShape()        { _bridge.value?.duplicateSelectedTerrainShape(); }
+  function deleteTerrainShape()           { _bridge.value?.deleteSelectedTerrainShape(); }
+  function closeTerrainShape()            { _bridge.value?.deselectTerrainShape(); }
 
   // ── Normal Map Decal actions ──
   function setNormalMapDecalWidth(val)     { normalMapDecal.width = val;     _bridge.value?.changeNormalMapDecalWidth(val); }
@@ -300,7 +304,7 @@ export const useEditorStore = defineStore('editor', () => {
     checkpoint,
     hill,
     squareHill,
-    terrainRect,
+    terrainShape,
     normalMapDecal,
     meshGrid,
     polyWall,
@@ -314,8 +318,8 @@ export const useEditorStore = defineStore('editor', () => {
     setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
     setSquareHillHeight, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
-    setTerrainRectWidth, setTerrainRectDepth, setTerrainRectTerrainType,
-    duplicateTerrainRect, deleteTerrainRect, closeTerrainRect,
+    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRadius,
+    setTerrainShapeTerrainType, duplicateTerrainShape, deleteTerrainShape, closeTerrainShape,
     setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
     setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,
     setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,

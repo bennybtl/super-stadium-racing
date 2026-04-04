@@ -1,0 +1,286 @@
+import { Vector3, StandardMaterial, Color3, MeshBuilder, TransformNode } from "@babylonjs/core";
+import { TERRAIN_TYPES } from "../terrain.js";
+
+/**
+ * HillEditor – encapsulates all round-hill editing logic that was previously
+ * inline in EditorController.  The parent controller is passed as `editor` so
+ * we can access shared helpers (scene, camera, track, snap, snapshots, store…).
+ */
+export class HillEditor {
+  constructor(editor) {
+    /** @type {import('./EditorController.js').EditorController} */
+    this.editor = editor;
+
+    // Gizmo bookkeeping
+    this.meshes = [];          // { feature, node, mesh }
+    this.selected = null;
+
+    // Materials (created lazily in createMaterials)
+    this.material = null;
+    this.highlightMaterial = null;
+  }
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+  /** Create (or recreate) shared materials for the current scene. */
+  createMaterials() {
+    const scene = this.editor.scene;
+
+    if (!this.material) {
+      this.material = new StandardMaterial('hillMat', scene);
+      this.material.diffuseColor = new Color3(0.25, 0.75, 0.3);
+      this.material.emissiveColor = new Color3(0.04, 0.12, 0.05);
+      this.material.alpha = 0.20;
+      this.material.backFaceCulling = false;
+    }
+    if (!this.highlightMaterial) {
+      this.highlightMaterial = new StandardMaterial('hillHighlightMat', scene);
+      this.highlightMaterial.diffuseColor = new Color3(0.0, 0.9, 0.8);
+      this.highlightMaterial.emissiveColor = new Color3(0.0, 0.35, 0.3);
+      this.highlightMaterial.alpha = 0.20;
+      this.highlightMaterial.backFaceCulling = false;
+    }
+  }
+
+  /** Build gizmos for every existing hill feature in the track. */
+  createVisualsForTrack(track) {
+    for (const feature of track.features) {
+      if (feature.type === 'hill') {
+        this.createVisual(feature);
+      }
+    }
+  }
+
+  /** Dispose all gizmo meshes and reset state. */
+  dispose() {
+    for (const d of this.meshes) {
+      d.mesh.dispose();
+      d.node.dispose();
+    }
+    this.meshes = [];
+    this.selected = null;
+  }
+
+  /** Called after undo/redo restores a snapshot – clears arrays (meshes already disposed by controller). */
+  onSnapshotCleared() {
+    this.meshes = [];
+  }
+
+  /** Recreate gizmos for hill features after an undo/redo snapshot restore. */
+  onSnapshotRestored(features) {
+    for (const feature of features) {
+      if (feature.type === 'hill') this.createVisual(feature);
+    }
+  }
+
+  // ── CRUD ──────────────────────────────────────────────────────────────────
+
+  /** Place a new hill in front of the camera and select it. */
+  addEntity() {
+    const { camera } = this.editor;
+    const camPos = camera.position;
+    const camTarget = camera.target;
+    const direction = camTarget.subtract(camPos).normalize();
+    const distance = 20;
+
+    const newX = camPos.x + direction.x * distance;
+    const newZ = camPos.z + direction.z * distance;
+
+    const newFeature = {
+      type: 'hill',
+      centerX: newX,
+      centerZ: newZ,
+      radius: 10,
+      height: 5,
+      terrainType: null,
+    };
+
+    this.editor.saveSnapshot();
+    this.editor.currentTrack.features.push(newFeature);
+    const hillData = this.createVisual(newFeature);
+
+    this.editor.deselectCheckpoint();
+    this.select(hillData);
+
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+
+    this.editor.hideAddMenu();
+    console.log('[HillEditor] Added hill at', newX.toFixed(1), newZ.toFixed(1));
+  }
+
+  /** Build a cone-shaped editor gizmo for a hill feature. */
+  createVisual(feature) {
+    const scene = this.editor.scene;
+    const track = this.editor.currentTrack;
+    const absH = Math.max(0.5, Math.abs(feature.height));
+    const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+
+    const node = new TransformNode('hillNode', scene);
+    node.position = new Vector3(feature.centerX, terrainH + absH / 2, feature.centerZ);
+    node.scaling = new Vector3(feature.radius, absH, feature.radius);
+
+    const mesh = MeshBuilder.CreateCylinder('hillMesh', {
+      height: 1,
+      diameterTop: 0,
+      diameterBottom: 2,
+      tessellation: 24,
+    }, scene);
+    mesh.parent = node;
+    mesh.material = this.material;
+    mesh.isPickable = true;
+
+    const hillData = { feature, node, mesh };
+    this.meshes.push(hillData);
+    return hillData;
+  }
+
+  /** Sync the cone gizmo transform to the feature's current values. */
+  updateVisual(hillData) {
+    const { feature, node } = hillData;
+    const track = this.editor.currentTrack;
+    const absH = Math.max(0.5, Math.abs(feature.height));
+    const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    node.position.x = feature.centerX;
+    node.position.z = feature.centerZ;
+    node.position.y = terrainH + absH / 2;
+    node.scaling.x = feature.radius;
+    node.scaling.y = absH;
+    node.scaling.z = feature.radius;
+  }
+
+  // ── Selection ─────────────────────────────────────────────────────────────
+
+  select(hillData) {
+    this.deselect();
+    this.selected = hillData;
+    this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
+    hillData.mesh.material = this.highlightMaterial;
+    this.showProperties(hillData);
+    console.log('[HillEditor] Selected hill at',
+      hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
+  }
+
+  deselect() {
+    if (this.selected) {
+      this.selected.mesh.material = this.material;
+      this.hideProperties();
+      window.rebuildTerrainTexture?.();
+      console.log('[HillEditor] Deselected hill');
+      this.selected = null;
+      this.editor._rawDragPos = null;
+    }
+  }
+
+  // ── Movement ──────────────────────────────────────────────────────────────
+
+  move(movement) {
+    if (!this.selected || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    this.editor.saveSnapshot(true);
+    const { feature } = this.selected;
+    if (!this.editor._rawDragPos) this.editor._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+    this.editor._rawDragPos.x += movement.x;
+    this.editor._rawDragPos.z += movement.z;
+    const prevX = feature.centerX, prevZ = feature.centerZ;
+    feature.centerX = this.editor._snap(this.editor._rawDragPos.x);
+    feature.centerZ = this.editor._snap(this.editor._rawDragPos.z);
+    this.updateVisual(this.selected);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+    return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
+  }
+
+  // ── Delete / Duplicate ────────────────────────────────────────────────────
+
+  deleteSelected() {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+
+    const hillData = this.selected;
+
+    const idx = this.editor.currentTrack.features.indexOf(hillData.feature);
+    if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
+
+    hillData.mesh.dispose();
+    hillData.node.dispose();
+
+    const meshIdx = this.meshes.indexOf(hillData);
+    if (meshIdx > -1) this.meshes.splice(meshIdx, 1);
+
+    this.hideProperties();
+    this.selected = null;
+
+    window.rebuildTerrain?.();
+    window.rebuildTerrainTexture?.();
+
+    console.log('[HillEditor] Deleted hill');
+  }
+
+  duplicateSelected() {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+    const src = this.selected.feature;
+    const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
+    this.editor.currentTrack.features.push(newFeature);
+    const hillData = this.createVisual(newFeature);
+    this.deselect();
+    this.select(hillData);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  // ── Properties (Vue store bridge) ─────────────────────────────────────────
+
+  showProperties(hillData) {
+    const s = this.editor._editorStore;
+    if (!s) return;
+    const { feature } = hillData;
+    s.hill.radius = feature.radius;
+    s.hill.height = feature.height;
+    s.hill.terrainType = feature.terrainType?.name || 'none';
+    s.selectedType = 'hill';
+  }
+
+  hideProperties() {
+    if (this.editor._editorStore?.selectedType === 'hill')
+      this.editor._editorStore.selectedType = null;
+  }
+
+  // ── Vue Bridge — called by Pinia store actions ────────────────────────────
+
+  changeRadius(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.radius = val;
+    this.updateVisual(this.selected);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeHeight(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.height = val;
+    this.updateVisual(this.selected);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
+  changeTerrainType(name) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+    this.selected.feature.terrainType = name === 'none' ? null
+      : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
+    window.rebuildTerrainGrid?.();
+  }
+
+  // ── Click test ────────────────────────────────────────────────────────────
+
+  /** Returns the hillData if `mesh` belongs to a hill gizmo, otherwise null. */
+  findByMesh(mesh) {
+    for (const hillData of this.meshes) {
+      if (mesh === hillData.mesh) return hillData;
+    }
+    return null;
+  }
+}
