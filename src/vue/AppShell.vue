@@ -15,6 +15,8 @@
     <PolyHillPanel />
     <BezierWallPanel />
     <FlagPanel />
+    <AddEntityMenu />
+    <EditorStatusBar />
   </div>
 </template>
 
@@ -30,7 +32,9 @@ import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
 import PolyWallPanel    from './editor/PolyWallPanel.vue';
 import PolyHillPanel    from './editor/PolyHillPanel.vue';
 import BezierWallPanel  from './editor/BezierWallPanel.vue';
-import FlagPanel        from './editor/FlagPanel.vue';
+import FlagPanel          from './editor/FlagPanel.vue';
+import AddEntityMenu      from './editor/AddEntityMenu.vue';
+import EditorStatusBar    from './editor/EditorStatusBar.vue';
 </script>
 
 <style scoped>

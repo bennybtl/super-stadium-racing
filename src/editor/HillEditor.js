@@ -184,9 +184,7 @@ export class HillEditor {
     const prevX = feature.centerX, prevZ = feature.centerZ;
     feature.centerX = this.editor._snap(this.editor._rawDragPos.x);
     feature.centerZ = this.editor._snap(this.editor._rawDragPos.z);
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
@@ -210,9 +208,7 @@ export class HillEditor {
     this.hideProperties();
     this.selected = null;
 
-    window.rebuildTerrain?.();
-    window.rebuildTerrainTexture?.();
-
+    this.rebuildTerrain();
     console.log('[HillEditor] Deleted hill');
   }
 
@@ -225,8 +221,7 @@ export class HillEditor {
     const hillData = this.createVisual(newFeature);
     this.deselect();
     this.select(hillData);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   // ── Properties (Vue store bridge) ─────────────────────────────────────────
@@ -246,24 +241,26 @@ export class HillEditor {
       this.editor._editorStore.selectedType = null;
   }
 
+  rebuildTerrain() {
+    this.updateVisual(this.selected);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
   // ── Vue Bridge — called by Pinia store actions ────────────────────────────
 
   changeRadius(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.radius = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeHeight(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.height = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeTerrainType(name) {
@@ -271,7 +268,7 @@ export class HillEditor {
     this.editor.saveSnapshot();
     this.selected.feature.terrainType = name === 'none' ? null
       : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   // ── Click test ────────────────────────────────────────────────────────────

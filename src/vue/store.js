@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, reactive, shallowRef } from 'vue';
+import { ref, reactive, computed, shallowRef } from 'vue';
 
 // ─── Menu store ───────────────────────────────────────────────────────────────
 export const useMenuStore = defineStore('menu', () => {
@@ -208,7 +208,16 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Vue panel bridge (set to EditorController instance on activate) ──
   const _bridge = shallowRef(null);
-  function setBridge(controller) { _bridge.value = controller; }
+  function setBridge(controller) {
+    _bridge.value = controller;
+    if (!controller) { snapEnabled.value = false; snapSize.value = 1; }
+  }
+
+  const snapSizes = [0.5, 1, 2, 5];
+  const isEditorActive = computed(() => _bridge.value !== null);
+  function toggleSnap()    { snapEnabled.value = !snapEnabled.value; }
+  function cycleSnapSize() { const idx = snapSizes.indexOf(snapSize.value); snapSize.value = snapSizes[(idx + 1) % snapSizes.length]; snapEnabled.value = true; }
+  function quickTestTrack() { _bridge.value?.quickTestTrack(); }
 
   // ── Checkpoint actions ──
   function setCheckpointWidth(val)      { checkpoint.width = val;      _bridge.value?.changeCheckpointWidth(val); }
@@ -296,11 +305,31 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteFlag()                 { _bridge.value?.deleteFlag(); }
   function setActiveTool(val)           { activeTool.value = val; }
 
+  // ── Add-entity menu ──
+  function openAddMenu()       { addMenuOpen.value = true; }
+  function closeAddMenu()      { addMenuOpen.value = false; }
+  function toggleAddMenu()     { addMenuOpen.value = !addMenuOpen.value; }
+
+  // ── Add entity actions ──
+  function addCheckpoint()     { _bridge.value?.addCheckpoint(); }
+  function addHill()           { _bridge.value?.addHillEntity(); }
+  function addSquareHill()     { _bridge.value?.addSquareHillEntity(); }
+  function addTerrainRect()    { _bridge.value?.addTerrainRectEntity(); }
+  function addTerrainCircle()  { _bridge.value?.addTerrainCircleEntity(); }
+  function addNormalMapDecal() { _bridge.value?.addNormalMapDecalEntity(); }
+  function addTireStack()      { _bridge.value?.addTireStackEntity(); }
+  function addFlag()           { _bridge.value?.addFlagEntity(); }
+  function addMeshGrid()       { _bridge.value?.addMeshGridEntity(); }
+  function addPolyWall()       { _bridge.value?.addPolyWallEntity(); }
+  function addPolyHill()       { _bridge.value?.addPolyHillEntity(); }
+  function addBezierWall()     { _bridge.value?.addBezierWallEntity(); }
+
   return {
     selectedType,
     activeTool,
     addMenuOpen,
-    snapEnabled, snapSize,
+    snapEnabled, snapSize, snapSizes,
+    isEditorActive,
     checkpoint,
     hill,
     squareHill,
@@ -330,5 +359,10 @@ export const useEditorStore = defineStore('editor', () => {
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, closeBezierWall,
     setFlagColor, deleteFlag, setActiveTool,
+    toggleSnap, cycleSnapSize, quickTestTrack,
+    openAddMenu, closeAddMenu, toggleAddMenu,
+    addCheckpoint, addHill, addSquareHill, addTerrainRect, addTerrainCircle,
+    addNormalMapDecal, addTireStack, addFlag,
+    addMeshGrid, addPolyWall, addPolyHill, addBezierWall,
   };
 });

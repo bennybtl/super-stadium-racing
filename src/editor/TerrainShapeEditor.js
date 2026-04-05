@@ -139,11 +139,6 @@ export class TerrainShapeEditor {
     mat.emissiveColor = col.scale(0.3);
   }
 
-  updateVisual(data) {
-    if (data.feature.type === 'terrainRect') this.updateRectVisual(data);
-    else this.updateCircleVisual(data);
-  }
-
   // ── Selection ────────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
@@ -181,8 +176,7 @@ export class TerrainShapeEditor {
     const prevX = feature.centerX, prevZ = feature.centerZ;
     feature.centerX = this.editor._snap(this.editor._rawDragPos.x);
     feature.centerZ = this.editor._snap(this.editor._rawDragPos.z);
-    this.updateVisual(this.selected);
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
@@ -202,8 +196,7 @@ export class TerrainShapeEditor {
     this.selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
   }
 
   duplicateSelected() {
@@ -217,8 +210,7 @@ export class TerrainShapeEditor {
       : this.createCircleVisual(newFeature);
     this.deselect();
     this.select(newData);
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
   }
 
   addRectEntity() {
@@ -239,8 +231,7 @@ export class TerrainShapeEditor {
     this.editor.deselectHill?.();
     this.editor.squareHillEditor.deselect();
     this.select(data);
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
     this.editor.hideAddMenu();
   }
 
@@ -261,8 +252,7 @@ export class TerrainShapeEditor {
     this.editor.deselectHill?.();
     this.editor.squareHillEditor.deselect();
     this.select(data);
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
     this.editor.hideAddMenu();
   }
 
@@ -310,8 +300,7 @@ export class TerrainShapeEditor {
       ? this.createRectVisual(feature)
       : this.createCircleVisual(feature);
     this.select(newData);
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
   }
 
   // ── Properties panel ─────────────────────────────────────────────────────────
@@ -349,28 +338,35 @@ export class TerrainShapeEditor {
 
   // ── Vue Bridge ───────────────────────────────────────────────────────────────
 
+  rebuildTerrain() {
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+    if (this.selected.feature.type === 'terrainRect') {
+      this.updateRectVisual(this.selected);
+    } else if (this.selected.feature.type === 'terrainCircle') {
+      this.updateCircleVisual(this.selected);
+    }
+  }
+
   changeWidth(val) {
     if (!this.selected || this.selected.feature.type !== 'terrainRect') return;
     this.editor.saveSnapshot(true);
     this.selected.feature.width = val;
-    this.updateRectVisual(this.selected);
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeDepth(val) {
     if (!this.selected || this.selected.feature.type !== 'terrainRect') return;
     this.editor.saveSnapshot(true);
     this.selected.feature.depth = val;
-    this.updateRectVisual(this.selected);
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeRadius(val) {
     if (!this.selected || this.selected.feature.type !== 'terrainCircle') return;
     this.editor.saveSnapshot(true);
     this.selected.feature.radius = val;
-    this.updateCircleVisual(this.selected);
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeTerrainType(name) {
@@ -378,8 +374,6 @@ export class TerrainShapeEditor {
     this.editor.saveSnapshot();
     const entry = Object.values(TERRAIN_TYPES).find(t => t.name === name);
     this.selected.feature.terrainType = entry || null;
-    this.updateVisual(this.selected);
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
   }
 }

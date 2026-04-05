@@ -139,8 +139,7 @@ export class SquareHillEditor {
     this.editor.hillEditor.deselect();
     this.select(hillData);
 
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
 
     this.editor.hideAddMenu();
     console.log('[SquareHillEditor] Added square hill at', newX.toFixed(1), newZ.toFixed(1));
@@ -191,9 +190,7 @@ export class SquareHillEditor {
     const prevX = feature.centerX, prevZ = feature.centerZ;
     feature.centerX = this.editor._snap(this.editor._rawDragPos.x);
     feature.centerZ = this.editor._snap(this.editor._rawDragPos.z);
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
@@ -202,12 +199,10 @@ export class SquareHillEditor {
     if (!this.selected) return;
     const f = this.selected.feature;
     f.angle = ((f.angle ?? 0) + rotStep * 180 / Math.PI + 360) % 360;
-    this.updateVisual(this.selected);
     // Sync the Vue store
     const s = this.editor._editorStore;
     if (s) s.squareHill.angle = f.angle;
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   // ── Delete / Duplicate ────────────────────────────────────────────────────
@@ -229,8 +224,7 @@ export class SquareHillEditor {
     this.hideProperties();
     this.selected = null;
 
-    window.rebuildTerrain?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
     console.log('[SquareHillEditor] Deleted square hill');
   }
 
@@ -243,8 +237,7 @@ export class SquareHillEditor {
     const hillData = this.createVisual(newFeature);
     this.deselect();
     this.select(hillData);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   // ── Properties (Vue store bridge) ─────────────────────────────────────────
@@ -274,69 +267,61 @@ export class SquareHillEditor {
       this.editor._editorStore.selectedType = null;
   }
 
+  rebuildTerrain() {
+    this.updateVisual(this.selected);
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+  }
+
   // ── Vue Bridge — called by Pinia store actions ────────────────────────────
 
   changeWidth(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.width = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeDepth(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.depth = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeTransition(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.transition = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeAngle(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.angle = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeHeight(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.height = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeHeightMin(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.heightAtMin = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeHeightMax(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.heightAtMax = val;
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeMode(sloped) {
@@ -359,9 +344,7 @@ export class SquareHillEditor {
       delete f.heightAtMin; delete f.heightAtMax;
       if (s) s.squareHill.height = prevH;
     }
-    this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 
   changeTerrainType(name) {
@@ -369,6 +352,6 @@ export class SquareHillEditor {
     this.editor.saveSnapshot();
     this.selected.feature.terrainType = name === 'none' ? null
       : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
-    window.rebuildTerrainGrid?.();
+    this.rebuildTerrain();
   }
 }
