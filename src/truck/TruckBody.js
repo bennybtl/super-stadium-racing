@@ -1,4 +1,11 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3, TransformNode } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, SceneLoader } from "@babylonjs/core";
+import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
+// import truckBodyUrl from "../assets/test-body-3.obj?url";
+import truckBodyUrl from "../assets/offroad-truck-v3.obj?url";
+
+// Skip MTL lookup — materials are applied programmatically
+OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
+OBJFileLoader.SKIP_MATERIALS = true;
 
 /**
  * TruckBody — builds a purely visual puppet parented to the physics box mesh.
@@ -23,17 +30,6 @@ export class TruckBody {
     this.scene   = scene;
     this.shadows = shadows;
 
-    // Visual root for the body (chassis, cabin). Follows the physics box
-    // closely but gets a partial terrain correction — allows suspension
-    // bounce while never sinking fully underground.
-    this._visualRoot = new TransformNode("truckBodyRoot", scene);
-    this._visualRoot.parent = parent;
-
-    // Wheel root gets the FULL terrain correction so wheels always
-    // stay above the ground surface.
-    this._wheelRoot = new TransformNode("truckWheelRoot", scene);
-    this._wheelRoot.parent = parent;
-
     this.colors = {
       body:   colors.body   ?? new Color3(0.8, 0.15, 0.05),
       cabin:  colors.cabin  ?? new Color3(0.25, 0.25, 0.3),
@@ -52,75 +48,16 @@ export class TruckBody {
   // ─── Build ────────────────────────────────────────────────────────────────
 
   _build() {
-    // ── Chassis / truck bed ──────────────────────────────────────────────
-    // The physics box is 1.5 wide × 0.8 tall × 2.6 deep, centred at origin.
-    // We position the puppet so the bottom of the chassis sits at y=0 (ground
-    // of the physics box).
-
-    const chassis = this._box("chassis",
-      { width: 1.65, height: 0.8, depth: 4 },
-      new Vector3(0, 0.9, 0),
-      this.colors.body
-    );
-
-    // // Truck bed (rear open flat)
-    // const bed = this._box("bed",
-    //   { width: 1.35, height: 0.08, depth: 1.0 },
-    //   new Vector3(0, 0.0, -0.65),
-    //   this.colors.body
-    // );
-
-    // // Bed side rails
-    // for (const side of [-1, 1]) {
-    //   this._box("bedRail",
-    //     { width: 0.06, height: 0.22, depth: 1.0 },
-    //     new Vector3(side * 0.655, 0.1, -0.65),
-    //     this.colors.body
-    //   );
-    // }
-    // // Tailgate
-    // this._box("tailgate",
-    //   { width: 1.35, height: 0.22, depth: 0.06 },
-    //   new Vector3(0, 0.1, -1.18),
-    //   this.colors.body
-    // );
-
-    // ── Cabin ────────────────────────────────────────────────────────────
-    const cabin = this._box("cabin",
-      { width: 1.38, height: 1, depth: 1.2 },
-      new Vector3(0, 1.38, 0.38),
-      this.colors.cabin
-    );
-
-
-
-    // ── Headlights ───────────────────────────────────────────────────────
-    // for (const side of [-1, 1]) {
-    //   const light = this._box("headlight",
-    //     { width: 0.22, height: 0.14, depth: 0.06 },
-    //     new Vector3(side * 0.52, 0.06, 1.45),
-    //     new Color3(0.95, 0.95, 0.75)
-    //   );
-    //   const lmat = light.material;
-    //   lmat.emissiveColor = new Color3(0.5, 0.5, 0.3);
-    // }
-
-    // // ── Exhaust pipe ─────────────────────────────────────────────────────
-    // const exhaust = MeshBuilder.CreateCylinder("exhaust",
-    //   { diameter: 0.07, height: 0.35, tessellation: 8 }, this.scene);
-    // exhaust.rotation.z   = Math.PI / 2;
-    // exhaust.position     = new Vector3(-0.82, -0.12, -0.9);
-    // exhaust.parent       = this.parent;
-    // this._styleMesh(exhaust, new Color3(0.3, 0.3, 0.3));
-    // this._parts.push(exhaust);
+    // Body loaded asynchronously from OBJ (falls back to boxes on failure)
+    this._loadBody();
 
     // ── Wheels ───────────────────────────────────────────────────────────
     //  wheel local positions (relative to physics box centre)
     const wheelDefs = [
-      { id: "FL", x:  1, z:  1.2, isFront: true  },
-      { id: "FR", x: -1, z:  1.2, isFront: true  },
-      { id: "RL", x:  1, z: -1.2, isFront: false },
-      { id: "RR", x: -1, z: -1.2, isFront: false },
+      { id: "FL", x:  1.2, z:  1.4, isFront: true  },
+      { id: "FR", x: -1.2, z:  1.4, isFront: true  },
+      { id: "RL", x:  1.2, z: -1.2, isFront: false },
+      { id: "RR", x: -1.2, z: -1.2, isFront: false },
     ];
 
     for (const def of wheelDefs) {
@@ -133,18 +70,88 @@ export class TruckBody {
         baseLocalY: baseY,
       });
     }
+
+    this._buildSpareTire();
+  }
+
+  async _loadBody() {
+    try {
+      // Split the Vite-resolved URL into directory + filename for Babylon's loader
+      const lastSlash = truckBodyUrl.lastIndexOf('/');
+      const rootUrl   = truckBodyUrl.substring(0, lastSlash + 1);
+      const fileName  = truckBodyUrl.substring(lastSlash + 1);
+
+      const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, this.scene);
+      if (!result.meshes.length) throw new Error('OBJ loaded no meshes');
+
+      const mesh  = result.meshes[0];
+      mesh.parent = this.parent;
+
+      // ── Transform — adjust these to dial in the fit ───────────────────
+      // OBJ axes: X = truck length, Y = height, Z = width.
+      // rotation.y = -π/2 maps local-X → world-Z (forward) and local-Z → world-X (side).
+      // scaling:  .x controls length (world Z),  .z controls width (world X),  .y controls height.
+      // position: .x centers the body (OBJ is offset in Z),  .y lifts it so OBJ-bottom lands at ~0.5.
+      mesh.rotation = new Vector3(-Math.PI / 2, Math.PI / 2, 0);
+      mesh.scaling  = new Vector3(1.38, 1.34, 2.00); // length, height, width
+      mesh.position = new Vector3(0.69, 0.66, 0.0);  // center-X, bottom-Y, center-Z
+
+      this._styleMesh(mesh, this.colors.body);
+      mesh.receiveShadows = false; // prevents self-shadowing artifacts
+      this._parts.push(mesh);
+    } catch (err) {
+      console.warn('[TruckBody] body mesh load failed — using box fallback:', err);
+      this._buildBoxBody();
+    }
+  }
+
+  _buildBoxBody() {
+    this._box("chassis",
+      { width: 1.65, height: 0.8, depth: 4 },
+      new Vector3(0, 0.9, 0),
+      this.colors.body
+    );
+    this._box("cabin",
+      { width: 1.38, height: 1, depth: 1.2 },
+      new Vector3(0, 1.38, 0.38),
+      this.colors.cabin
+    );
+  }
+
+  _buildSpareTire() {
+    // Spare sits on the truck bed, leaning forward toward the cab
+    // rotation.z = PI/2 orients it like a wheel; rotation.x tilts the top forward
+    const tyre = MeshBuilder.CreateCylinder("spare_tyre", {
+      diameter: 1.2, height: 0.5, tessellation: 20,
+    }, this.scene);
+    tyre.rotation  = new Vector3(0.5, Math.PI, 0); // lean ~32° toward cab
+    tyre.position  = new Vector3(0, 1.5, -0.9);
+    tyre.parent    = this.parent;
+    this._styleMesh(tyre, this.colors.wheel);
+    tyre.receiveShadows = false;
+    this._parts.push(tyre);
+
+    const rim = MeshBuilder.CreateCylinder("spare_rim", {
+      diameter: 0.44, height: 0.12, tessellation: 12,
+    }, this.scene);
+    rim.rotation = tyre.rotation.clone();
+    rim.position = tyre.position.clone();
+    rim.parent   = this.parent;
+    this._styleMesh(rim, this.colors.detail);
+    rim.receiveShadows = false;
+    this._parts.push(rim);
   }
 
   _buildWheel(id, x, y, z) {
-    // Tyre (torus lying on its side)
-    const tyre = MeshBuilder.CreateTorus(`wheel_${id}`, {
-      diameter:     0.62,
-      thickness:    0.68,
-      tessellation: 18,
+    // Tyre (wide cylinder lying on its side)
+    const tyre = MeshBuilder.CreateCylinder(`wheel_${id}`, {
+      diameter:     1.2,
+      height:       0.5,
+      tessellation: 20,
     }, this.scene);
-    tyre.rotation.z = Math.PI / 2;   // stand the torus upright
+    tyre.rotation.z = Math.PI / 2;   // lay cylinder on its side
     tyre.position   = new Vector3(x, y, z);
-    tyre.parent     = this._wheelRoot;
+    tyre.parent     = this.parent;
     this._styleMesh(tyre, this.colors.wheel);
     this._parts.push(tyre);
 
@@ -154,7 +161,7 @@ export class TruckBody {
     }, this.scene);
     rim.rotation.z = Math.PI / 2;
     rim.position   = new Vector3(x, y, z);
-    rim.parent     = this._wheelRoot;
+    rim.parent     = this.parent;
     this._styleMesh(rim, this.colors.detail);
     this._parts.push(rim);
 
@@ -170,26 +177,7 @@ export class TruckBody {
    * @param {number}  speed   - current speed (units/s)
    * @param {number}  dt      - delta time (s)
    */
-  update(state, input, speed, dt, terrainY = null) {
-    // When the physics box dips below the terrain surface, push the
-    // wheel root fully above ground, and the body root partially —
-    // this lets the body bounce with the physics while the wheels
-    // stay planted on the surface.
-    if (terrainY !== null) {
-      const physY = this.parent.position.y;
-      const minY = terrainY + 0.4; // 0.4 = TRUCK_HALF_HEIGHT
-      const deficit = minY - physY;
-
-      // Wheels: full correction — always above terrain
-      this._wheelRoot.position.y = deficit > 0 ? deficit : 0;
-
-      // Body: allow up to 0.25 units of dip below ground for suspension feel,
-      // but never more than that
-      const bodyAllowance = 0.25;
-      const bodyDeficit = deficit - bodyAllowance;
-      this._visualRoot.position.y = bodyDeficit > 0 ? bodyDeficit : 0;
-    }
-
+  update(state, input, speed, dt) {
     this._animateWheels(state, speed, dt, input);
   }
 
@@ -228,7 +216,7 @@ export class TruckBody {
   _box(name, size, position, color) {
     const mesh = MeshBuilder.CreateBox(name, size, this.scene);
     mesh.position = position;
-    mesh.parent   = this._visualRoot;
+    mesh.parent   = this.parent;
     this._styleMesh(mesh, color);
     this._parts.push(mesh);
     return mesh;
@@ -237,7 +225,8 @@ export class TruckBody {
   _styleMesh(mesh, color) {
     const mat = new StandardMaterial(`${mesh.name}Mat`, this.scene);
     mat.diffuseColor  = color;
-    mat.specularColor = new Color3(0.15, 0.15, 0.15);
+    mat.specularColor = new Color3(0.9, 0.9, 0.9);
+    mat.specularPower = 128;
     mesh.material     = mat;
     mesh.receiveShadows = true;
     this.shadows.addShadowCaster(mesh);
@@ -249,13 +238,5 @@ export class TruckBody {
     for (const mesh of this._parts) mesh.dispose();
     this._parts  = [];
     this._wheels = [];
-    if (this._visualRoot) {
-      this._visualRoot.dispose();
-      this._visualRoot = null;
-    }
-    if (this._wheelRoot) {
-      this._wheelRoot.dispose();
-      this._wheelRoot = null;
-    }
   }
 }
