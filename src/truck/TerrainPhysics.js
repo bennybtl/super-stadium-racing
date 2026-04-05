@@ -1,5 +1,52 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
+
+/**
+ * Tunable constants for downhill terrain tracking.
+ * Tweak these to adjust how aggressively the truck hugs the ground on descents.
+ */
+const DOWNHILL = {
+  // --- Terrain-following detection (first pass) ---
+  // How far above terrain the truck can be and still trigger following (m)
+  followMaxGap:          0.15,
+  // Minimum truck speed (m/s) before checking terrain following
+  followMinSpeed:        2,
+  // Look-ahead distance (m) for terrain height sampling
+  followLookAhead:       1.5,
+  // Terrain must drop at least this much over followLookAhead to trigger following
+  followHeightDrop:      0.3,
+  // Must be descending faster than this (m/s, negative = down) to trigger following
+  followVertVelMin:     -1.5,
+  // Fake suspension compression injected when following terrain downhill
+  followFakeCompression: 0.5,
+
+  // --- Suspension compression ---
+  // How much downward velocity contributes to extra compression
+  velCompressionFactor:  0.03,
+  // Base compression scale applied to baseCompression
+  compressionBaseScale:  0.08,
+  // Exponential smoothing factor for suspension compression (0–1, higher = snappier)
+  suspensionSmoothing:   0.3,
+  // Maximum suspension compression value
+  maxCompression:        0.25,
+  // Compression value at which groundedness reaches 1.0
+  groundednessRef:       0.08,
+
+  // --- Groundedness boost (second pass) ---
+  // Max distance above terrain to still consider the boost check (m)
+  boostMaxGap:           0.4,
+  // Must be descending faster than this (m/s) to trigger boost
+  boostVertVelMin:      -0.5,
+  // Minimum truck speed (m/s) to trigger boost
+  boostMinSpeed:         2,
+  // Look-ahead distance (m) for boost check
+  boostLookAhead:        2.0,
+  // Terrain must drop at least this much over boostLookAhead to apply boost
+  boostHeightDrop:       0.3,
+  // Groundedness clamped to at least this value when tracking downhill
+  boostGroundedness:     0.8,
+};
+
 /**
  * Handles terrain-related physics: gravity, suspension, slope collision
  */
@@ -55,54 +102,60 @@ export class TerrainPhysics {
     // When going downhill, truck may be slightly above terrain but still "grounded"
     let baseCompression = Math.max(0, Math.min(1, penetration / 0.2));
     
-    // Check if we're actively following terrain downward (downhill case)
+    // --- Pass 1: terrain-following detection ---
+    // If the truck is slightly above terrain but moving downhill with it,
+    // inject fake compression so it stays "grounded" through the descent.
     let isFollowingTerrain = false;
-    if (track && penetration < 0 && penetration > -0.1 && this.state.velocity.length() > 2) {
+    if (
+      track &&
+      penetration < 0 &&
+      penetration > -DOWNHILL.followMaxGap &&
+      this.state.velocity.length() > DOWNHILL.followMinSpeed
+    ) {
       const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-      const checkDist = 1.5;
       const heightAhead = track.getHeightAt(
-        mesh.position.x + forward.x * checkDist,
-        mesh.position.z + forward.z * checkDist
+        mesh.position.x + forward.x * DOWNHILL.followLookAhead,
+        mesh.position.z + forward.z * DOWNHILL.followLookAhead
       );
       const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
-      
-      // If terrain is dropping ahead and we're moving down with it
-      if (heightAhead < heightHere - 0.3 && this.state.verticalVelocity < -2) {
+
+      if (heightAhead < heightHere - DOWNHILL.followHeightDrop &&
+          this.state.verticalVelocity < DOWNHILL.followVertVelMin) {
         isFollowingTerrain = true;
-        // Fake some compression as if we're on ground
-        baseCompression = 0.3;
+        baseCompression = DOWNHILL.followFakeCompression;
       }
     }
-    
+
     let targetCompression = 0;
     if (baseCompression > 0) {
-      const velocityCompression = Math.max(0, -this.state.verticalVelocity * 0.03);
-      targetCompression = (baseCompression * 0.08) + velocityCompression;
+      const velocityCompression = Math.max(0, -this.state.verticalVelocity * DOWNHILL.velCompressionFactor);
+      targetCompression = (baseCompression * DOWNHILL.compressionBaseScale) + velocityCompression;
     }
-    
-    this.state.suspensionCompression += (targetCompression - this.state.suspensionCompression) * 0.3;
-    this.state.suspensionCompression = Math.max(0, Math.min(0.25, this.state.suspensionCompression));
-    
-    // Calculate groundedness - include "following terrain downhill" case
-    let groundedness = Math.min(1, this.state.suspensionCompression / 0.08);
-    
-    // If we're close to terrain and moving downward, consider grounded even with small gap
-    // This maintains grip when tracking downhill slopes
-    if (groundedness < 0.5 && penetration > -0.3 && this.state.verticalVelocity < -1) {
-      // Check if terrain is dropping ahead of us (downhill)
-      if (track && this.state.velocity.length() > 3) {
-        const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-        const checkDist = 2.0;
-        const heightAhead = track.getHeightAt(
-          mesh.position.x + forward.x * checkDist,
-          mesh.position.z + forward.z * checkDist
-        );
-        const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
-        
-        // If terrain drops ahead and we're descending, maintain groundedness
-        if (heightAhead < heightHere - 0.4) {
-          groundedness = Math.max(groundedness, 0.7); // Good grip while tracking downhill
-        }
+
+    this.state.suspensionCompression += (targetCompression - this.state.suspensionCompression) * DOWNHILL.suspensionSmoothing;
+    this.state.suspensionCompression = Math.max(0, Math.min(DOWNHILL.maxCompression, this.state.suspensionCompression));
+
+    // --- Pass 2: groundedness boost ---
+    // Even if suspension compression is low, keep the truck considered "grounded"
+    // when it is clearly tracking a descending slope.
+    let groundedness = Math.min(1, this.state.suspensionCompression / DOWNHILL.groundednessRef);
+
+    if (
+      groundedness < DOWNHILL.boostGroundedness &&
+      penetration > -DOWNHILL.boostMaxGap &&
+      this.state.verticalVelocity < DOWNHILL.boostVertVelMin &&
+      track &&
+      this.state.velocity.length() > DOWNHILL.boostMinSpeed
+    ) {
+      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+      const heightAhead = track.getHeightAt(
+        mesh.position.x + forward.x * DOWNHILL.boostLookAhead,
+        mesh.position.z + forward.z * DOWNHILL.boostLookAhead
+      );
+      const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
+
+      if (heightAhead < heightHere - DOWNHILL.boostHeightDrop) {
+        groundedness = Math.max(groundedness, DOWNHILL.boostGroundedness);
       }
     }
     

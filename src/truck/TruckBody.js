@@ -1,4 +1,4 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3, SceneLoader } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, SceneLoader, TransformNode } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 // import truckBodyUrl from "../assets/test-body-3.obj?url";
 import truckBodyUrl from "../assets/offroad-truck-v3.obj?url";
@@ -30,6 +30,18 @@ export class TruckBody {
     this.scene   = scene;
     this.shadows = shadows;
 
+
+    // Visual root for the body (chassis, cabin). Follows the physics box
+    // closely but gets a partial terrain correction — allows suspension
+    // bounce while never sinking fully underground.
+    this._visualRoot = new TransformNode("truckBodyRoot", scene);
+    this._visualRoot.parent = parent;
+
+    // Wheel root gets the FULL terrain correction so wheels always
+    // stay above the ground surface.
+    this._wheelRoot = new TransformNode("truckWheelRoot", scene);
+    this._wheelRoot.parent = parent;
+
     this.colors = {
       body:   colors.body   ?? new Color3(0.8, 0.15, 0.05),
       cabin:  colors.cabin  ?? new Color3(0.25, 0.25, 0.3),
@@ -54,8 +66,8 @@ export class TruckBody {
     // ── Wheels ───────────────────────────────────────────────────────────
     //  wheel local positions (relative to physics box centre)
     const wheelDefs = [
-      { id: "FL", x:  1.2, z:  1.4, isFront: true  },
-      { id: "FR", x: -1.2, z:  1.4, isFront: true  },
+      { id: "FL", x:  1.2, z:  1.5, isFront: true  },
+      { id: "FR", x: -1.2, z:  1.5, isFront: true  },
       { id: "RL", x:  1.2, z: -1.2, isFront: false },
       { id: "RR", x: -1.2, z: -1.2, isFront: false },
     ];
@@ -85,16 +97,16 @@ export class TruckBody {
       if (!result.meshes.length) throw new Error('OBJ loaded no meshes');
 
       const mesh  = result.meshes[0];
-      mesh.parent = this.parent;
+      mesh.parent = this._visualRoot;
 
       // ── Transform — adjust these to dial in the fit ───────────────────
       // OBJ axes: X = truck length, Y = height, Z = width.
       // rotation.y = -π/2 maps local-X → world-Z (forward) and local-Z → world-X (side).
       // scaling:  .x controls length (world Z),  .z controls width (world X),  .y controls height.
       // position: .x centers the body (OBJ is offset in Z),  .y lifts it so OBJ-bottom lands at ~0.5.
-      mesh.rotation = new Vector3(-Math.PI / 2, Math.PI / 2, 0);
-      mesh.scaling  = new Vector3(1.38, 1.34, 2.00); // length, height, width
-      mesh.position = new Vector3(0.69, 0.66, 0.0);  // center-X, bottom-Y, center-Z
+      mesh.rotation = new Vector3(-Math.PI / 2, 0, 0);
+      mesh.scaling  = new Vector3(3, 3, 3.00); // length, height, width
+      mesh.position = new Vector3(0, 0.66, 0.0);  // center-X, bottom-Y, center-Z
 
       this._styleMesh(mesh, this.colors.body);
       mesh.receiveShadows = false; // prevents self-shadowing artifacts
@@ -122,11 +134,11 @@ export class TruckBody {
     // Spare sits on the truck bed, leaning forward toward the cab
     // rotation.z = PI/2 orients it like a wheel; rotation.x tilts the top forward
     const tyre = MeshBuilder.CreateCylinder("spare_tyre", {
-      diameter: 1.2, height: 0.5, tessellation: 20,
+      diameter: 1.1, height: 0.4, tessellation: 20,
     }, this.scene);
     tyre.rotation  = new Vector3(0.5, Math.PI, 0); // lean ~32° toward cab
     tyre.position  = new Vector3(0, 1.5, -0.9);
-    tyre.parent    = this.parent;
+    tyre.parent     = this._wheelRoot;
     this._styleMesh(tyre, this.colors.wheel);
     tyre.receiveShadows = false;
     this._parts.push(tyre);
@@ -136,7 +148,7 @@ export class TruckBody {
     }, this.scene);
     rim.rotation = tyre.rotation.clone();
     rim.position = tyre.position.clone();
-    rim.parent   = this.parent;
+    rim.parent   = this._wheelRoot;
     this._styleMesh(rim, this.colors.detail);
     rim.receiveShadows = false;
     this._parts.push(rim);
@@ -145,13 +157,13 @@ export class TruckBody {
   _buildWheel(id, x, y, z) {
     // Tyre (wide cylinder lying on its side)
     const tyre = MeshBuilder.CreateCylinder(`wheel_${id}`, {
-      diameter:     1.2,
-      height:       0.5,
+      diameter:     1.1,
+      height:       0.4,
       tessellation: 20,
     }, this.scene);
     tyre.rotation.z = Math.PI / 2;   // lay cylinder on its side
     tyre.position   = new Vector3(x, y, z);
-    tyre.parent     = this.parent;
+    tyre.parent     = this._wheelRoot;
     this._styleMesh(tyre, this.colors.wheel);
     this._parts.push(tyre);
 
@@ -161,7 +173,7 @@ export class TruckBody {
     }, this.scene);
     rim.rotation.z = Math.PI / 2;
     rim.position   = new Vector3(x, y, z);
-    rim.parent     = this.parent;
+    rim.parent     = this._wheelRoot;
     this._styleMesh(rim, this.colors.detail);
     this._parts.push(rim);
 
@@ -177,7 +189,26 @@ export class TruckBody {
    * @param {number}  speed   - current speed (units/s)
    * @param {number}  dt      - delta time (s)
    */
-  update(state, input, speed, dt) {
+  update(state, input, speed, dt, terrainY = null) {
+    // When the physics box dips below the terrain surface, push the
+    // wheel root fully above ground, and the body root partially —
+    // this lets the body bounce with the physics while the wheels
+    // stay planted on the surface.
+    if (terrainY !== null) {
+      const physY = this.parent.position.y;
+      const minY = terrainY + 0.4; // 0.4 = TRUCK_HALF_HEIGHT
+      const deficit = minY - physY;
+
+      // Wheels: full correction — always above terrain
+      this._wheelRoot.position.y = deficit > 0 ? deficit : 0;
+
+      // Body: allow up to 0.25 units of dip below ground for suspension feel,
+      // but never more than that
+      const bodyAllowance = 0.25;
+      const bodyDeficit = deficit - bodyAllowance;
+      this._visualRoot.position.y = bodyDeficit > 0 ? bodyDeficit : 0;
+    }
+
     this._animateWheels(state, speed, dt, input);
   }
 
@@ -236,6 +267,8 @@ export class TruckBody {
 
   dispose() {
     for (const mesh of this._parts) mesh.dispose();
+    this._visualRoot.dispose();
+    this._wheelRoot.dispose();
     this._parts  = [];
     this._wheels = [];
   }
