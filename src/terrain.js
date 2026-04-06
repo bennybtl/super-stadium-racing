@@ -14,7 +14,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 2.0,    // Baseline
     color: new Color3(0.54, 0.28, 0.08),
     dragMultiplier: 0.8,
-    normalMap: '8648-normal.jpg',
+    normalMap: '6481-normal.jpg',
   },
   LOOSE_DIRT: {
     name: "loose_dirt",
@@ -28,12 +28,12 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.15,    // Very slippery
     color: new Color3(0.34, 0.18, 0.08),
     dragMultiplier: 2.9,    // Slows you down
-    normalMap: '6481-normal.jpg',
+    normalMap: 'mud.png',
   },
   WATER: {
     name: "water",
     gripMultiplier: 0.3,     // Low grip
-    color: new Color3(0.2, 0.4, 0.6),
+    color: new Color3(0.1, 0.3, 1),
     dragMultiplier: 6.0,     // Very high drag
     normalMap: '9110-normal.jpg',
   },
@@ -42,7 +42,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.4,     // Unpredictable rocky surface
     color: new Color3(0.42, 0.30, 0.22), // Dark reddish-brown rock
     dragMultiplier: 5.0,     // Dramatic slowing — holes catch and drag the truck
-    normalMap: '13105-normal.jpg',
+    normalMap: 'rocky.jpg',
   },
 };
 
