@@ -3,6 +3,9 @@
        Individual panels opt back in with pointer-events:auto. -->
   <div class="ui-root">
     <MenuOverlay />
+    <PostRaceOverlay />
+    <PitOverlay />
+    <SeasonFinalOverlay />
     <RaceHUD />
     <DebugPanel />
     <!-- Editor property panels (each self-gates on selectedType) -->
@@ -23,6 +26,9 @@
 
 <script setup>
 import MenuOverlay    from './MenuOverlay.vue';
+import PostRaceOverlay  from './PostRaceOverlay.vue';
+import PitOverlay       from './PitOverlay.vue';
+import SeasonFinalOverlay from './SeasonFinalOverlay.vue';
 import RaceHUD        from './RaceHUD.vue';
 import DebugPanel     from './DebugPanel.vue';
 import CheckpointPanel  from './editor/CheckpointPanel.vue';

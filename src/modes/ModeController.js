@@ -3,6 +3,7 @@ import { RaceMode } from "./RaceMode.js";
 import { EditorMode } from "./EditorMode.js";
 import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
+import { SeasonManager } from "../managers/SeasonManager.js";
 
 /**
  * Owns the engine render loop and coordinates transitions between
@@ -17,6 +18,7 @@ export class ModeController {
     this.menuManager = menuManager;
     this.trackLoader = trackLoader;
     this.currentMode = null;
+    this.seasonManager = null;
   }
 
   /**
@@ -47,7 +49,64 @@ export class ModeController {
 
   /** Called by any mode when the user chooses to exit back to the main menu. */
   exit() {
+    if (this.seasonManager) this.seasonManager.save();
     return this.goToMenu();
+  }
+
+  // ── Season ────────────────────────────────────────────────────────────────
+
+  /** Start a brand-new season. Creates a SeasonManager and launches race 1. */
+  startSeason(lapsPerRace) {
+    this.seasonManager = new SeasonManager();
+    this.seasonManager.start(lapsPerRace);
+    return this._launchCurrentSeasonRace();
+  }
+
+  /**
+   * Advance to the next race in the season (called from Pit screen).
+   * If the season is already complete, shows the final standings.
+   */
+  continueSeason() {
+    if (!this.seasonManager) return this.goToMenu();
+    this.menuManager._store.pitData = null;
+    if (this.seasonManager.isSeasonComplete()) {
+      this.menuManager.showSeasonFinal({
+        standings: this.seasonManager.getStandings(),
+      });
+      return;
+    }
+    return this._launchCurrentSeasonRace();
+  }
+
+  /** Player retires early — clears season state and goes to main menu. */
+  retireFromSeason() {
+    this.seasonManager?.clear();
+    this.seasonManager = null;
+    return this.goToMenu();
+  }
+
+  /**
+   * Build pitData from the current SeasonManager state and show the Pit screen.
+   * Called after the player dismisses the PostRace screen.
+   */
+  goToPit() {
+    if (!this.seasonManager) return;
+    const sm = this.seasonManager;
+    this.menuManager.showPit({
+      raceNumber:       sm.getCurrentRaceIndex(),   // already incremented
+      totalRaces:       sm.getTotalRaces(),
+      nextTrackKey:     sm.getCurrentTrackKey(),
+      nextRaceNumber:   sm.getCurrentRaceNumber(),
+      isSeasonComplete: sm.isSeasonComplete(),
+      standings:        sm.getStandings(),
+    });
+  }
+
+  /** @private */
+  _launchCurrentSeasonRace() {
+    const trackKey = this.seasonManager.getCurrentTrackKey();
+    const laps     = this.seasonManager.getLapsPerRace();
+    return this.goToRace({ trackKey, laps, season: true });
   }
 
   goToRace(config) {

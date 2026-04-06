@@ -8,6 +8,7 @@
         <template v-if="store.screen === 'start'">
           <button class="menu-btn" @click="store.showTrackSelect()">Start Race</button>
           <button class="menu-btn" @click="store.showPracticeTrackSelect()">Practice</button>
+          <button class="menu-btn" @click="store.showSeasonSetup()">Season</button>
           <button class="menu-btn" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-btn" @click="store.settings()">Settings</button>
         </template>
@@ -77,6 +78,18 @@
           <button class="menu-btn menu-btn--back" @click="store.back('start')">Back</button>
         </template>
 
+        <!-- ── Season setup ── -->
+        <template v-else-if="store.screen === 'seasonSetup'">
+          <p class="season-desc">Race on every track. Points awarded each round.<br>Choose laps per race:</p>
+          <button
+            v-for="n in [1, 3, 5]"
+            :key="n"
+            class="menu-btn"
+            @click="store.startSeason(n)"
+          >{{ n }} Lap{{ n > 1 ? 's' : '' }}</button>
+          <button class="menu-btn menu-btn--back" @click="store.back('start')">Back</button>
+        </template>
+
       </div>
     </div>
   </div>
@@ -94,6 +107,7 @@ const title = computed(() => {
     case 'trackSelect':       return 'Select Track';
     case 'lapSelect':         return 'Select Laps';
     case 'editorTrackSelect': return 'Select Track to Edit';
+    case 'seasonSetup':       return 'Season Mode';
     case 'pause':             return 'Paused';
     case 'editorPause':       return 'Track Editor';
     case 'settings':          return 'Settings';
@@ -179,6 +193,13 @@ const title = computed(() => {
 }
 .menu-btn--green:hover {
   background: linear-gradient(to bottom, #66bb6a, #4caf50);
+}
+
+.season-desc {
+  color: #ccc;
+  font-size: 14px;
+  margin: 0 0 10px;
+  line-height: 1.5;
 }
 
 .settings-section {

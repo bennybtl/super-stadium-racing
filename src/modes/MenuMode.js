@@ -35,6 +35,24 @@ export class MenuMode extends BaseMode {
       });
     };
 
+    menuManager.onSeasonStart = (laps) => {
+      menuManager.gameStarted = true;
+      menuManager.hideMenu();
+      this.controller.startSeason(laps);
+    };
+
+    menuManager.onContinueSeason = () => {
+      this.controller.continueSeason();
+    };
+
+    menuManager.onRetireFromSeason = () => {
+      this.controller.retireFromSeason();
+    };
+
+    menuManager.onGoToPit = () => {
+      this.controller.goToPit();
+    };
+
     menuManager.onStartPractice = () => {
       menuManager.gameStarted = true;
       menuManager.hideMenu();

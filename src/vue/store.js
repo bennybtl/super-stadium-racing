@@ -7,6 +7,11 @@ export const useMenuStore = defineStore('menu', () => {
   const screen = ref('start');
   const isPaused = ref(false);
   const trackList = ref([]); // [{ key, name }]
+
+  // Season overlay data (null when not showing)
+  const postRaceData    = ref(null);
+  const pitData         = ref(null);
+  const seasonFinalData = ref(null);
   
   // Settings state
   const truckMode = ref(localStorage.getItem('truckMode') || 'arcade');
@@ -59,14 +64,24 @@ export const useMenuStore = defineStore('menu', () => {
     else if (target === 'trackSelect') _bridge.value.showTrackSelectMenu();
   }
 
+  // ── Season actions (called by Vue overlays) ──────────────────────────────
+  function showSeasonSetup()       { _bridge.value?.showSeasonSetup(); }
+  function startSeason(laps)       { _bridge.value?.onSeasonStart(laps); }
+  function continueSeason()        { _bridge.value?.onContinueSeason(); }
+  function retireFromSeason()      { _bridge.value?.onRetireFromSeason(); }
+  function goToPit()               { _bridge.value?.onGoToPit(); }
+  function exitSeason()            { postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
+
   return {
     screen, isPaused, trackList,
+    postRaceData, pitData, seasonFinalData,
     setBridge,
     showTrackSelect, showPracticeTrackSelect, showEditorTrackSelect, selectTrack,
     startGame, startPractice, startEditor,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
+    showSeasonSetup, startSeason, continueSeason, retireFromSeason, goToPit, exitSeason,
   };
 });
 

@@ -21,10 +21,11 @@ export class RaceMode extends BaseMode {
     super(controller);
     this.inputManager = null;
     this._countdownTimeouts = [];
+    this._dnfTimer = null;
   }
 
-  async setup({ trackKey, laps }) {
-    const { engine, menuManager, trackLoader } = this.controller;
+  async setup({ trackKey, laps, season = false }) {
+    const { engine, menuManager, trackLoader, seasonManager } = this.controller;
     const totalLaps = laps || 3;
 
     const {
@@ -69,10 +70,84 @@ export class RaceMode extends BaseMode {
     let lapStartTime = null;
     let countdownActive = false;
 
+    // -- Finish / DNF tracking (season mode) --
+    const DNF_GRACE_MS = 15_000;
+    const finishOrder  = [];   // truckData entries in finish order
+    let dnfTimer       = null; // started when the first driver begins their last lap
+    let raceEnded      = false;
+
+    // Keep a reference on `this` so teardown() can cancel an in-flight timer
+    const setDnfTimer = (t) => { dnfTimer = t; this._dnfTimer = t; };
+    const clearDnfTimer = () => { clearTimeout(dnfTimer); dnfTimer = null; this._dnfTimer = null; };
+
+    const triggerRaceEnd = () => {
+      if (raceEnded) return;
+      raceEnded = true;
+      if (dnfTimer) { clearDnfTimer(); }
+
+      // Freeze any still-racing trucks in place
+      trucks.forEach(td => {
+        if (!td.gameState.raceFinished) {
+          td.truck.state.velocity = Vector3.Zero();
+          td.truck.state.verticalVelocity = 0;
+        }
+      });
+
+      if (season && seasonManager) {
+        // Build results — finishOrder first, then DNFs in truck-array order
+        const finishedIds = new Set(finishOrder.map(td => td.id));
+        const dnfTrucks   = trucks.filter(td => !finishedIds.has(td.id));
+
+        const resultsArray = [
+          ...finishOrder.map((td, idx) => ({
+            id:               td.id,
+            finishPosition:   idx + 1,
+            totalRaceTimeMs:  td.gameState.totalRaceTime,
+            fastestLapMs:     td.gameState.fastestLap,
+          })),
+          ...dnfTrucks.map((td, idx) => ({
+            id:               td.id,
+            finishPosition:   finishOrder.length + idx + 1,
+            totalRaceTimeMs:  null,
+            fastestLapMs:     null,
+            dnf:              true,
+          })),
+        ];
+
+        const postRaceData = seasonManager.recordRaceResult(resultsArray);
+        console.log('[RaceMode] Season race recorded. Showing post-race screen.');
+        menuManager.showPostRace(postRaceData);
+      } else {
+        // Non-season: just log results to console (existing behaviour)
+        console.log('\n=== RACE FINISHED (non-season) ===');
+        finishOrder.forEach((td, i) => {
+          console.log(`  ${i + 1}. ${td.name} — ${(td.gameState.totalRaceTime / 1000).toFixed(2)}s`);
+        });
+      }
+    };
+
+    const handleDNF = () => {
+      // Any truck that hasn't finished yet is DNF'd in truck-array order
+      trucks
+        .filter(td => !td.gameState.raceFinished)
+        .forEach(td => {
+          td.gameState.finishRace(null); // mark finished without a time
+          finishOrder.push(td);
+          console.log(`[RaceMode] DNF: ${td.name}`);
+        });
+      triggerRaceEnd();
+    };
+
+    // -- Season driver info --
+    const seasonAIDrivers = season && seasonManager ? seasonManager.getAIDrivers() : null;
+    const getAIName  = (i) => seasonAIDrivers ? seasonAIDrivers[i].name : `AI ${i + 1}`;
+    const getAIId    = (i) => seasonAIDrivers ? seasonAIDrivers[i].id   : `ai${i + 1}`;
+    const getAISkill = (i) => seasonAIDrivers ? seasonAIDrivers[i].skillConfig : {};
+
     // -- Trucks --
-    const aiDriver1 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
-    const aiDriver2 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
-    const aiDriver3 = new AIDriver(currentTrack, checkpointManager, wallManager, scene);
+    const aiDriver1 = new AIDriver(currentTrack, checkpointManager, wallManager, scene, getAISkill(0));
+    const aiDriver2 = new AIDriver(currentTrack, checkpointManager, wallManager, scene, getAISkill(1));
+    const aiDriver3 = new AIDriver(currentTrack, checkpointManager, wallManager, scene, getAISkill(2));
 
     const spawn0 = getGridSpawn(0);
     const spawn1 = getGridSpawn(1);
@@ -127,24 +202,24 @@ export class RaceMode extends BaseMode {
         truck: aiTruck1,
         gameState: new GameState(0),
         isPlayer: false,
-        name: 'AI 1',
-        id: 'ai1',
+        name: getAIName(0),
+        id: getAIId(0),
         hasStarted: false,
       },
       {
         truck: aiTruck2,
         gameState: new GameState(0),
         isPlayer: false,
-        name: 'AI 2',
-        id: 'ai2',
+        name: getAIName(1),
+        id: getAIId(1),
         hasStarted: false,
       },
       {
         truck: aiTruck3,
         gameState: new GameState(0),
         isPlayer: false,
-        name: 'AI 3',
-        id: 'ai3',
+        name: getAIName(2),
+        id: getAIId(2),
         hasStarted: false,
       }
     ];
@@ -302,6 +377,9 @@ export class RaceMode extends BaseMode {
       raceStarted = false;
       raceStartTime = null;
       lapStartTime = null;
+      raceEnded = false;
+      finishOrder.length = 0;
+      if (dnfTimer) { clearDnfTimer(); }
       uiManager.hideRaceTimer();
 
       trucks.forEach((truckData, index) => {
@@ -477,11 +555,18 @@ export class RaceMode extends BaseMode {
             );
           }
 
+          // Start the DNF countdown when the first driver begins their final lap
+          if (lapCount === totalLaps - 1 && dnfTimer === null && !raceEnded) {
+            console.log(`[RaceMode] ${truckData.name} started final lap — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
+            setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
+          }
+
           if (lapCount >= totalLaps) {
             const totalTime = currentTime - raceStartTime;
             truckData.gameState.finishRace(totalTime);
             truckData.truck.state.velocity = Vector3.Zero();
             truckData.truck.state.verticalVelocity = 0;
+            finishOrder.push(truckData);
 
             if (truckData.isPlayer) {
               console.log("\n=== RACE FINISHED ===");
@@ -494,6 +579,11 @@ export class RaceMode extends BaseMode {
               console.log(
                 `[${truckData.name}] Finished race! Total time: ${(totalTime / 1000).toFixed(2)}s`
               );
+            }
+
+            // All drivers finished — end race immediately
+            if (finishOrder.length === trucks.length) {
+              triggerRaceEnd();
             }
           }
         }
@@ -511,6 +601,7 @@ export class RaceMode extends BaseMode {
   teardown() {
     this._countdownTimeouts.forEach(clearTimeout);
     this._countdownTimeouts = [];
+    if (this._dnfTimer) { clearTimeout(this._dnfTimer); this._dnfTimer = null; }
     if (this.inputManager) {
       this.inputManager.dispose();
       this.inputManager = null;

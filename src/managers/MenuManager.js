@@ -28,6 +28,9 @@ export class MenuManager {
 
   showStartMenu() {
     this.currentMenu = 'start';
+    this._store.postRaceData = null;
+    this._store.pitData = null;
+    this._store.seasonFinalData = null;
     this._store.screen = 'start';
   }
 
@@ -73,6 +76,35 @@ export class MenuManager {
     this._store.isPaused = true;
   }
 
+  showSeasonSetup() {
+    this.currentMenu = 'seasonSetup';
+    this._store.screen = 'seasonSetup';
+  }
+
+  showPostRace(data) {
+    this.currentMenu = 'postRace';
+    this._store.postRaceData = data;
+    this._store.pitData = null;
+    this._store.seasonFinalData = null;
+    this._store.screen = null; // hide MenuOverlay; PostRaceOverlay gates on postRaceData
+  }
+
+  showPit(data) {
+    this.currentMenu = 'pit';
+    this._store.postRaceData = null;
+    this._store.pitData = data;
+    this._store.seasonFinalData = null;
+    this._store.screen = null;
+  }
+
+  showSeasonFinal(data) {
+    this.currentMenu = 'seasonFinal';
+    this._store.postRaceData = null;
+    this._store.pitData = null;
+    this._store.seasonFinalData = data;
+    this._store.screen = null;
+  }
+
   hideMenu() {
     this.currentMenu = null;
     this.isPaused    = false;
@@ -103,6 +135,12 @@ export class MenuManager {
   onEditorSave()   {}
   onEditorLoad()   { this.showEditorTrackSelect(); }
   onEditorExit()   { this.editorMode = false; this.gameStarted = false; this.showStartMenu(); }
+
+  // Season callbacks — overridden by MenuMode
+  onSeasonStart(_laps) {}
+  onContinueSeason()   {}
+  onRetireFromSeason() {}
+  onGoToPit()          {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────
 
