@@ -6,8 +6,9 @@ An isometric offroad racing game built with Babylon.js and Havok Physics. Featur
 ## Technology Stack
 - **Babylon.js** - 3D rendering engine
 - **Havok Physics** - Physics simulation (MESH shape for ground, BOX for walls/tires)
+- **Vue 3 + Pinia** - Reactive UI layer (menus, editor panels, HUD)
 - **Vite** - Build tool and dev server
-- **Vanilla JavaScript** - No framework, ES modules
+- **ES Modules** - Vanilla JS everywhere except the Vue component layer
 
 ## File Structure
 
@@ -17,25 +18,35 @@ offroad/
 ├── package.json
 ├── vite.config.js
 ├── tracks/                        # JSON track definitions
-│   ├── simple.json
+│   ├── Fandango.json
+│   ├── HuevosGrande.json
 │   ├── hills.json
-│   ├── mudPit.json
-│   ├── rollercoaster.json
-│   ├── bankedTurn.json
-│   └── crossroads.json
+│   └── mudPit.json
 └── src/
     ├── main.js                    # Scene setup, game loop, scene orchestration
     ├── terrain.js                 # Terrain grid, types, physics modifiers
     ├── track.js                   # Track feature definitions + height/terrain queries
     ├── truck.js                   # Legacy factory shim (createTruck / updateTruck)
     ├── ai/
-    │   └── AIDriver.js            # A* pathfinding, stuck detection, respawn
+    │   └── AIDriver.js            # A* pathfinding, skill config, stuck detection, respawn
+    ├── assets/
+    │   └── offroad-truck-v3.obj   # OBJ body mesh (loaded async; box fallback if missing)
+    ├── editor/                    # Editor sub-system (one file per entity type)
+    │   ├── CheckpointEditor.js
+    │   ├── EditorController.js    # Main editor coordinator
+    │   ├── FlagEditor.js
+    │   ├── HillEditor.js
+    │   ├── NormalMapDecalEditor.js
+    │   ├── SquareHillEditor.js
+    │   ├── TerrainShapeEditor.js
+    │   ├── TireStackEditor.js
+    │   └── TrackSignEditor.js
     ├── managers/
-    │   ├── BarrierManager.js      # Track boundary barriers
     │   ├── BezierWallTool.js      # Editor: bezier curve walls
     │   ├── CameraController.js    # Isometric camera + zoom
     │   ├── CheckpointManager.js   # Gate detection, lap counting
-    │   ├── EditorController.js    # In-game track editor coordinator
+    │   ├── FlagManager.js         # Game-mode flag rendering + truck collision
+    │   ├── FlagTool.js            # Editor back-end for flag placement
     │   ├── GameState.js           # Race state machine
     │   ├── InputManager.js        # Keyboard input
     │   ├── MenuManager.js         # Main menu UI
@@ -43,42 +54,59 @@ offroad/
     │   ├── PolyHillTool.js        # Editor: polyline hill manipulation
     │   ├── PolyWallTool.js        # Editor: polyline wall manipulation
     │   ├── TrackLoader.js         # JSON track loading
+    │   ├── TrackSignManager.js    # Game-mode track sign rendering
     │   ├── TireStackManager.js    # Movable tire obstacles
     │   ├── UIManager.js           # HUD elements
     │   └── WallManager.js         # Wall/barrier physics meshes
+    ├── modes/
+    │   ├── BaseMode.js
+    │   ├── EditorMode.js
+    │   ├── MenuMode.js
+    │   ├── ModeController.js
+    │   ├── PracticeMode.js
+    │   ├── RaceMode.js
+    │   ├── SceneBuilder.js        # Shared scene construction (ground, lights, managers)
+    │   └── TestMode.js
     ├── objects/
     │   ├── BezierWall.js          # Bezier curve wall mesh
-    │   ├── Checkpoint.js          # Checkpoint gate mesh
+    │   ├── Checkpoint.js          # Checkpoint gate mesh (terrain-aware barrel heights)
+    │   ├── Flag.js                # Decorative flag with spring-damper bend physics
     │   ├── PolyHill.js            # Polyline hill visual mesh
     │   ├── PolyWall.js            # Polyline wall mesh
     │   ├── TireStack.js           # Tire stack physics object
+    │   ├── TrackSign.js           # Track name sign with DynamicTexture
     │   └── WallSegment.js         # Single wall segment
     ├── vue/                       # Vue 3 UI components
-    │   ├── AppShell.vue           # Main app container
+    │   ├── AppShell.vue           # Main app container — mounts all panels
     │   ├── DebugPanel.vue         # Debug info overlay
     │   ├── MenuOverlay.vue        # Main menu
     │   ├── RaceHUD.vue            # Race status display
     │   ├── main.js                # Vue app bootstrap
-    │   ├── store.js               # Pinia state store
-    │   └── editor/                # Editor UI panels
+    │   ├── store.js               # Pinia state store (menu, race, debug, editor stores)
+    │   └── editor/                # Editor UI panels (one per entity type)
+    │       ├── AddEntityMenu.vue
     │       ├── BezierWallPanel.vue
     │       ├── CheckpointPanel.vue
-    │       ├── EditorPanel.vue
+    │       ├── EditorPanel.vue     # Draggable panel base component
+    │       ├── EditorStatusBar.vue
+    │       ├── FlagPanel.vue
     │       ├── HillPanel.vue
     │       ├── NormalMapDecalPanel.vue
     │       ├── PolyHillPanel.vue
     │       ├── PolyWallPanel.vue
     │       ├── SquareHillPanel.vue
-    │       └── TerrainRectPanel.vue
+    │       ├── TerrainCirclePanel.vue
+    │       ├── TerrainShapePanel.vue
+    │       ├── TerrainRectPanel.vue
+    │       └── TrackSignPanel.vue
     └── truck/
         ├── index.js               # Re-exports Truck class
         ├── truck.js               # Truck class — coordinates all subsystems
         ├── Controls.js            # Steering, acceleration, boost logic
         ├── DriftPhysics.js        # Grip, slip angle, drag
-        ├── EntityPhysics.js       # Havok body sync
         ├── ParticleEffects.js     # Drift smoke, water splash, nitro burst
-        ├── TerrainPhysics.js      # Gravity, suspension spring, slope orientation
-        └── TruckBody.js           # Visual puppet mesh (cabin, wheels, etc.)
+        ├── TerrainPhysics.js      # Gravity, suspension spring, slope orientation, downhill tracking
+        └── TruckBody.js           # Visual puppet: OBJ body + procedural wheels
 ```
 
 ## Core Systems
@@ -99,6 +127,8 @@ Tracks can be built programmatically or loaded from JSON files in `tracks/`.
 - `curvedWall` — arc of box segments approximating a curve
 - `polyWall` — wall defined by an array of `{x, z}` points
 - `tireStack` — movable stack of 3 tires at a world position
+- `flag` — decorative flag on a flexible pole; bends/springs back when hit by trucks
+- `trackSign` — a track name sign (black board, red bold italic text) on a post
 
 **Key Methods:**
 - `getHeightAt(x, z)` — additive sum of all elevation features at a world point
@@ -171,6 +201,9 @@ The `Truck` class in `truck/truck.js` coordinates four physics subsystems:
 - Spring-based terrain collision: `springStrength: 150`, `damping: 7`
 - Returns `{ groundedness, penetration }` each frame
 - `penetration` is direct geometry (not lerped) — use `penetration > -0.3` to gate terrain effects
+- **Downhill tracking** — a `DOWNHILL` config object at the top of the file holds all tuning knobs for two passes that keep the truck grounded on descents:
+  - **Pass 1** (`followMaxGap`, `followHeightDrop`, `followFakeCompression`, …) — injects fake suspension compression when the truck is slightly airborne but clearly following a downward slope
+  - **Pass 2** (`boostMaxGap`, `boostHeightDrop`, `boostGroundedness`, …) — clamps `groundedness` to a minimum value so the truck retains steering grip through the descent
 
 **`DriftPhysics.js`** — horizontal traction
 - `applyGripAndDrift(speed, forward, groundedness)`: early-returns when `groundedness <= 0` (no air correction)
@@ -181,8 +214,11 @@ The `Truck` class in `truck/truck.js` coordinates four physics subsystems:
 - Boost: `boostActive`, `boostTimer`, `boostCount` (max 5), `boostDuration: 3.0s`, `boostAccelMult: 2.5×`, `boostSpeedMult: 1.8×`
 
 **`TruckBody.js`** — visual puppet
-- A separate visible mesh that rides on top of the invisible Havok physics box
-- Animates cabin, wheels, suspension compression, roll
+- Loads `offroad-truck-v3.obj` asynchronously via `SceneLoader.ImportMeshAsync`; falls back to a box mesh if loading fails
+- Uses two `TransformNode` roots parented to the physics box:
+  - `_visualRoot` — body/chassis gets **partial** terrain correction (allows suspension bounce)
+  - `_wheelRoot` — wheels get **full** terrain correction (always stay above ground surface)
+- Animates steering angle, suspension compression, roll
 
 **Key State (on `truck.state`):**
 - `heading` — direction truck faces (radians); 0 = +Z north
@@ -227,6 +263,17 @@ Three independent `ParticleSystem` instances managed per-truck:
 ### 5. AI Driver (`ai/AIDriver.js`)
 Autonomous driver using A* pathfinding on a 160×160 / 2-unit-resolution grid.
 
+**Skill Config:**
+`AIDriver` accepts an optional `skillConfig` object as its fifth constructor argument:
+```js
+new AIDriver(track, checkpointManager, wallManager, scene, {
+  lookAheadDistance: 20,   // Good: 20  OK: 15  Bad: 12
+  maxSpeed:          0.8,  // Good: 0.8 OK: 0.65 Bad: 0.5
+  steeringPrecision: 1.0,  // Good: 1.0 OK: 0.85 Bad: 0.7
+});
+```
+Defaults produce a "good" AI. Reduce values to create slower/sloppier opponents.
+
 **Pathfinding:**
 - Grid cells are marked blocked if they overlap any wall segment (with 2-unit safety margin)
 - A* uses 8-directional movement (diagonal cost = 1.414)
@@ -250,6 +297,7 @@ Autonomous driver using A* pathfinding on a 160×160 / 2-unit-resolution grid.
 - Numbered checkpoints enforce sequential order
 - `lastCheckpointPassed` index prevents double-triggers
 - On lap complete: all checkpoints reset, lap counter increments
+- **Terrain-aware barrels:** each barrel samples terrain height at its own world position (derived from `feature.centerX/Z` + heading offset × `halfWidth`), converting the height difference to a local Y offset so barrels sit correctly on sloped ground
 
 ### 7. Camera (`managers/CameraController.js`)
 - Fixed isometric offset from truck: `(0, 28, -20)`
@@ -260,10 +308,14 @@ Autonomous driver using A* pathfinding on a 160×160 / 2-unit-resolution grid.
 In-game track editor for creating and modifying track features visually.
 
 **Architecture:**
-- `EditorController.js` — main coordinator, manages tool activation/deactivation
-- Tool classes (`PolyHillTool`, `PolyWallTool`, `BezierWallTool`, etc.) — feature-specific manipulation
-- Vue 3 components in `src/vue/editor/` — UI panels for property editing
-- Pinia store (`src/vue/store.js`) — reactive state bridge between UI and editor tools
+- `src/editor/EditorController.js` — main coordinator; handles input (WASD, Delete, Ctrl+Z/Y), pointer picking, undo/redo stack, and delegates everything else to sub-editors
+- One sub-editor per entity type in `src/editor/`: `CheckpointEditor`, `HillEditor`, `SquareHillEditor`, `TerrainShapeEditor`, `NormalMapDecalEditor`, `TireStackEditor`, `FlagEditor`, `TrackSignEditor`
+- Tool classes in `src/managers/` (`PolyHillTool`, `PolyWallTool`, `BezierWallTool`, `MeshGridTool`, `FlagTool`) — feature-specific manipulation that tools share between editor and game
+- Vue 3 components in `src/vue/editor/` — UI panels, all self-gate on `store.selectedType`
+- Pinia store (`src/vue/store.js`) — reactive state bridge between panels and editor tools
+
+**Text input focus:**
+`EditorController.handleKeyDown` bails early when `event.target` is an `<input>` or `<textarea>`, so typing in fields (e.g. TrackSignPanel name input) never triggers WASD/Delete/undo hotkeys.
 
 **Editor Tools:**
 - **PolyHillTool** — polyline hills with control points, radius (rounded corners), height, width
@@ -295,6 +347,42 @@ This preserves Vue 3's reactivity tracking. Replacing the whole object (`store.p
 5. Tool updates feature and rebuilds visual/terrain: `this._rebuildHill(feature)`
 
 **Important:** Rebuild methods should be called immediately (not deferred) when triggered by UI sliders to ensure real-time visual feedback.
+
+### 9. Flag System
+
+**Feature format:**
+```json
+{ "type": "flag", "x": 10, "z": 20, "color": "red" }
+```
+Colors: `"red"` | `"blue"`.
+
+**Runtime (game/practice mode — `FlagManager` + `Flag`):**
+- `FlagManager.createFlag(feature)` creates a `Flag` instance per feature
+- `FlagManager.update(trucks, dt)` is called each frame; detects truck collisions and advances the spring-damper bend simulation
+- `Flag` physics: spring-damper on X and Z axes (`SPRING_K = 26`, `DAMPING = 1.5`, `MAX_BEND ≈ 50°`). The pole pivots at its base — `setPivotPoint` at the bottom. Bend impulse is proportional to truck approach speed.
+
+**Editor (`FlagEditor` + `FlagTool`):**
+- `FlagTool` holds the actual flag meshes and selection state; `FlagEditor` is the thin coordinator used by `EditorController`
+- Flags are added at the camera look-ahead position; WASD moves the selected flag
+
+### 10. Track Sign System
+
+**Feature format:**
+```json
+{ "type": "trackSign", "x": 0, "z": -30, "name": "Track Name", "rotation": 0 }
+```
+`rotation` is in radians (stored); the editor panel displays/accepts degrees.
+
+**Object (`TrackSign`):**
+- Grey post (`height: 2.5`, `diam: 0.25`) + black box board (`10 × 3 × 0.2` world units)
+- Board uses a `DynamicTexture` (512 × 128 px): black fill, red border, red bold italic text
+- Font auto-shrinks if the text overflows the texture width
+- `setName(text)` redraws the texture; `setRotation(radians)` rotates the board; `moveTo(x, z, groundY)` repositions both post and board
+- `backFaceCulling = false` + emissive texture → readable from both sides and in shadows
+
+**Runtime:** `TrackSignManager.createSign(feature)` — purely decorative, no game interaction.
+
+**Editor:** `TrackSignEditor` follows the same pattern as other sub-editors. The `TrackSignPanel.vue` has a styled text `<input>` (red bold italic) and a rotation slider.
 
 ## Coordinate System
 - Origin at track centre; +X = East, +Z = North, +Y = Up
@@ -371,6 +459,11 @@ Editor tool property setters should call `_rebuildHill(feature)` or equivalent i
 1. Add `add___()` method to `Track` class (push to `this.features`)
 2. Add `case` to `getHeightAt()` for elevation
 3. Add `case` to `getTerrainTypeAt()` for terrain type override
+4. Add rendering in `SceneBuilder.js` (game/practice mode)
+5. Add an `XxxEditor.js` in `src/editor/`, a `XxxManager.js` in `src/managers/`, an `XxxPanel.vue` in `src/vue/editor/`
+6. Wire into `EditorController` (activate/deactivate, `_applySnapshot`, pointer pick, `deselectAll`, bridge methods)
+7. Add to `store.js` (reactive state + actions)
+8. Add to `AppShell.vue` and `AddEntityMenu.vue`
 
 ### New track (JSON)
 Place a `.json` file in `tracks/` with a `name` and `features` array. Each feature object mirrors the parameters of the corresponding `add___()` method.
