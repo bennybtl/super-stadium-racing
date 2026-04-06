@@ -85,7 +85,7 @@ export class RaceMode extends BaseMode {
       raceEnded = true;
       if (dnfTimer) { clearDnfTimer(); }
 
-      // Freeze any still-racing trucks in place
+      // Freeze trucks that DNF'd (still moving with no path to finish)
       trucks.forEach(td => {
         if (!td.gameState.raceFinished) {
           td.truck.state.velocity = Vector3.Zero();
@@ -444,10 +444,11 @@ export class RaceMode extends BaseMode {
 
       let playerDebugInfo = null;
       trucks.forEach((truckData) => {
-        if (truckData.gameState.raceFinished) return;
-        const truckInput = truckData.isPlayer
-          ? input
-          : { forward: false, back: false, left: false, right: false };
+        // Finished trucks still get physics updates (zero input) so they coast to a stop
+        const isCoasting = truckData.gameState.raceFinished;
+        const truckInput = (isCoasting || !truckData.isPlayer)
+          ? { forward: false, back: false, left: false, right: false }
+          : input;
         const debugInfo = updateTruck(truckData.truck, truckInput, dt, terrainManager, currentTrack);
         if (truckData.isPlayer) {
           playerDebugInfo = debugInfo;
@@ -564,9 +565,12 @@ export class RaceMode extends BaseMode {
           if (lapCount >= totalLaps) {
             const totalTime = currentTime - raceStartTime;
             truckData.gameState.finishRace(totalTime);
-            truckData.truck.state.velocity = Vector3.Zero();
-            truckData.truck.state.verticalVelocity = 0;
             finishOrder.push(truckData);
+
+            // Stop AI driver from issuing further steering inputs
+            if (!truckData.isPlayer && truckData.truck.aiDriver) {
+              truckData.truck.aiDriver.paused = true;
+            }
 
             // For 1-lap races the "start final lap" trigger never fires, so start
             // the DNF timer here on first finish instead.

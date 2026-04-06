@@ -6,11 +6,12 @@
 
         <!-- ── Start ── -->
         <template v-if="store.screen === 'start'">
-          <button class="menu-btn" @click="store.showTrackSelect()">Start Race</button>
           <button class="menu-btn" @click="store.showPracticeTrackSelect()">Practice</button>
-          <button class="menu-btn" @click="store.showSeasonSetup()">Season</button>
-          <button class="menu-btn" @click="store.showEditorTrackSelect()">Track Editor</button>
-          <button class="menu-btn" @click="store.settings()">Settings</button>
+          <button class="menu-btn" @click="store.showTrackSelect()">Single Race</button>
+          <button class="menu-btn" @click="store.showSeasonSetup()">Start Season</button>
+          <hr>
+          <button class="menu-btn minor" @click="store.showEditorTrackSelect()">Track Editor</button>
+          <button class="menu-btn minor" @click="store.settings()">Settings</button>
         </template>
 
         <!-- ── Track select ── -->
@@ -167,6 +168,10 @@ const title = computed(() => {
   transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   font-family: Arial, sans-serif;
+}
+
+.menu-btn.minor {
+  background: linear-gradient(to bottom, #999999, #555555);
 }
 
 .menu-btn:hover {
