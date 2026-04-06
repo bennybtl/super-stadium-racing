@@ -90,7 +90,7 @@ export class EditorMode extends BaseMode {
     window.rebuildNormalMap = async () => {
       const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
       const { updateCompositeNormalMap } = await import('../shaders/ground-shader.js');
-      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, 160);
+      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, 160);
     };
 
     // Rebuild a specific polyWall (or all polyWalls if feature is null)

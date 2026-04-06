@@ -1,5 +1,53 @@
 {
   "name": "Blank Slate",
   "features": [
+    {
+      "type": "terrainRect",
+      "centerX": 19.5,
+      "centerZ": -22.775213105162592,
+      "width": 17,
+      "depth": 15.5,
+      "terrainType": "mud"
+    },
+    {
+      "type": "terrainRect",
+      "centerX": 20,
+      "centerZ": -4.275213105162592,
+      "width": 17,
+      "depth": 15.5,
+      "terrainType": "loose_dirt"
+    },
+    {
+      "type": "terrainRect",
+      "centerX": 40.5,
+      "centerZ": -4.275213105162592,
+      "width": 17,
+      "depth": 15.5,
+      "terrainType": "packed_dirt"
+    },
+    {
+      "type": "terrainRect",
+      "centerX": 61,
+      "centerZ": -4.275213105162592,
+      "width": 17,
+      "depth": 15.5,
+      "terrainType": "asphalt"
+    },
+    {
+      "type": "terrainRect",
+      "centerX": 61,
+      "centerZ": -22.775213105162592,
+      "width": 17,
+      "depth": 15.5,
+      "terrainType": "water"
+    },
+    {
+      "type": "terrainRect",
+      "centerX": 40.5,
+      "centerZ": -22.775213105162592,
+      "width": 17,
+      "depth": 15.5,
+      "terrainType": "rocky"
+    }
   ]
 }
