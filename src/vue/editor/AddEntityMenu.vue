@@ -16,6 +16,7 @@
         <button class="add-btn"               @click="editor.addNormalMapDecal()">Add Normal Map Decal</button>
         <button class="add-btn"               @click="editor.addTireStack()">Add Tire Stack</button>
         <button class="add-btn add-btn--flag" @click="editor.addFlag()">Add Flag</button>
+        <button class="add-btn add-btn--sign" @click="editor.addTrackSign()">Add Track Sign</button>
         <button class="add-btn add-btn--mesh" @click="editor.addMeshGrid()">Mesh Grid</button>
         <button class="add-btn add-btn--poly" @click="editor.addPolyWall()">Add Poly Wall</button>
         <button class="add-btn add-btn--hill" @click="editor.addPolyHill()">Add Poly Hill</button>
@@ -77,6 +78,8 @@ const editor = useEditorStore();
   transition: filter 0.12s;
 }
 .add-btn:hover { filter: brightness(1.2); }
+.add-btn--sign  { background: #8b0000; }
+.add-btn--sign:hover { background: #cc0000; }
 
 .add-btn--flag   { background: #e74c3c; }
 .add-btn--mesh   { background: #1ec8c8; color: #000; }

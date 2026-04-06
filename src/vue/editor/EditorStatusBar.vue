@@ -6,7 +6,9 @@
       <button class="status-btn status-btn--test" @click="editor.quickTestTrack()">
         🏁 Test Track
       </button>
-
+      <div class="status-hint">
+        pan/move - WASD | rotate - QE | delete - Del | undo - Ctrl+Z | zoom - +/- | move faster - Shift
+      </div>
       <!-- Right: snap controls -->
       <div class="snap-controls">
         <button
@@ -117,6 +119,12 @@ const editor = useEditorStore();
 
 .snap-hint {
   color: #444;
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+}
+
+.status-hint {
+  color: #999;
   font-size: 11px;
   font-family: Arial, sans-serif;
 }

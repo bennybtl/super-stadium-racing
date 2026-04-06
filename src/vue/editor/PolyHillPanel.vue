@@ -14,7 +14,7 @@
       <span>{{ radiusDisplay }}</span>
     </div>
     <input
-      type="range" min="0" max="10" step="0.5"
+      type="range" min="0" max="30" step="0.5"
       :value="editor.polyHill.radius"
       :disabled="!editor.polyHill.canHaveRadius"
       @input="editor.setPolyHillRadius(+$event.target.value)"

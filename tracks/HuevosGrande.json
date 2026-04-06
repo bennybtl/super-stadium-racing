@@ -1,0 +1,625 @@
+{
+  "name": "Huevos Grande",
+  "features": [
+    {
+      "type": "meshGrid",
+      "centerX": 0,
+      "centerZ": 0,
+      "width": 160,
+      "depth": 160,
+      "cols": 9,
+      "rows": 9,
+      "heights": [
+        37,
+        19,
+        5.5,
+        2,
+        2,
+        2,
+        0.5,
+        2,
+        2,
+        34.5,
+        16.5,
+        4.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        32.5,
+        13,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        30,
+        15,
+        24,
+        18,
+        16,
+        14,
+        12,
+        10,
+        14,
+        30,
+        15,
+        23,
+        17,
+        15,
+        15,
+        14,
+        13,
+        14,
+        30,
+        15,
+        22,
+        19,
+        18,
+        17,
+        16,
+        15,
+        15,
+        30,
+        19.5,
+        22,
+        21,
+        20,
+        20,
+        14,
+        14,
+        14,
+        30,
+        21,
+        16,
+        17.5,
+        16.5,
+        15,
+        14.5,
+        12.5,
+        14,
+        30,
+        24.5,
+        17,
+        16,
+        14,
+        13,
+        13,
+        13,
+        14
+      ]
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": 77,
+          "z": 15,
+          "radius": 10
+        },
+        {
+          "x": 77,
+          "z": 74.5,
+          "radius": 15.5
+        },
+        {
+          "x": 39,
+          "z": 74.5,
+          "radius": 0
+        },
+        {
+          "x": 24,
+          "z": 65,
+          "radius": 17
+        },
+        {
+          "x": 12,
+          "z": 77,
+          "radius": 0
+        },
+        {
+          "x": -2,
+          "z": 77,
+          "radius": 0
+        },
+        {
+          "x": -20,
+          "z": 65.5,
+          "radius": 12
+        },
+        {
+          "x": -32,
+          "z": 75,
+          "radius": 0
+        },
+        {
+          "x": -76,
+          "z": 74,
+          "radius": 13
+        },
+        {
+          "x": -73,
+          "z": -73,
+          "radius": 14.5
+        },
+        {
+          "x": 76,
+          "z": -72.5,
+          "radius": 10
+        },
+        {
+          "x": 78.5,
+          "z": 4,
+          "radius": 11.5
+        },
+        {
+          "x": -8,
+          "z": 8,
+          "radius": 5
+        },
+        {
+          "x": -9,
+          "z": 16.5,
+          "radius": 5
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": 51,
+          "z": 37,
+          "radius": 5
+        },
+        {
+          "x": -32,
+          "z": 39,
+          "radius": 10
+        },
+        {
+          "x": -38,
+          "z": -16,
+          "radius": 12.5
+        },
+        {
+          "x": 50,
+          "z": -16,
+          "radius": 5
+        },
+        {
+          "x": 50,
+          "z": -41,
+          "radius": 5
+        },
+        {
+          "x": -39,
+          "z": -41,
+          "radius": 5
+        },
+        {
+          "x": -54.5,
+          "z": -30.5,
+          "radius": 15.5
+        },
+        {
+          "x": -53.5,
+          "z": 48,
+          "radius": 5.5
+        },
+        {
+          "x": -16,
+          "z": 46,
+          "radius": 3.5
+        },
+        {
+          "x": -3,
+          "z": 54,
+          "radius": 0
+        },
+        {
+          "x": 11,
+          "z": 54,
+          "radius": 0
+        },
+        {
+          "x": 24,
+          "z": 44,
+          "radius": 5
+        },
+        {
+          "x": 40,
+          "z": 55,
+          "radius": 5
+        },
+        {
+          "x": 50.5,
+          "z": 55,
+          "radius": 7
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    },
+    {
+      "type": "hill",
+      "centerX": 56,
+      "centerZ": 45.289914757934966,
+      "radius": 9.5,
+      "height": -4,
+      "terrainType": "mud"
+    },
+    {
+      "type": "hill",
+      "centerX": -20,
+      "centerZ": 52,
+      "radius": 10,
+      "height": -3,
+      "terrainType": "water"
+    },
+    {
+      "type": "hill",
+      "centerX": 24,
+      "centerZ": 52,
+      "radius": 10,
+      "height": -3,
+      "terrainType": "water"
+    },
+    {
+      "type": "hill",
+      "centerX": 5,
+      "centerZ": 72,
+      "radius": 10,
+      "height": -3,
+      "terrainType": "water"
+    },
+    {
+      "type": "squareHill",
+      "centerX": -24,
+      "centerZ": -60,
+      "width": 3,
+      "depth": 27,
+      "height": 3,
+      "transition": 6.5,
+      "terrainType": null,
+      "angle": 0
+    },
+    {
+      "type": "hill",
+      "centerX": 45,
+      "centerZ": -50,
+      "radius": 10,
+      "height": -5,
+      "terrainType": "mud"
+    },
+    {
+      "type": "squareHill",
+      "centerX": 13,
+      "centerZ": -4,
+      "width": 16,
+      "depth": 10,
+      "height": -5,
+      "transition": 8.5,
+      "terrainType": "packed_dirt"
+    },
+    {
+      "type": "terrainRect",
+      "centerX": 14,
+      "centerZ": -5,
+      "width": 21,
+      "depth": 22,
+      "terrainType": "water"
+    },
+    {
+      "type": "trackSign",
+      "x": 0,
+      "z": -34.77521310516259,
+      "name": "Heuvos Grande",
+      "rotation": 0
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 76,
+          "z": -42.56512786309753,
+          "radius": 0
+        },
+        {
+          "x": 77.5,
+          "z": -22.56512786309753,
+          "radius": 0
+        },
+        {
+          "x": 75.5,
+          "z": 2.434872136902456,
+          "radius": 10.5
+        },
+        {
+          "x": 31,
+          "z": 4.434872136902456,
+          "radius": 0
+        }
+      ],
+      "height": 3,
+      "width": 8.5,
+      "closed": false
+    },
+    {
+      "type": "squareHill",
+      "centerX": 3,
+      "centerZ": 26.224786894837415,
+      "width": 2,
+      "depth": 19,
+      "height": 1,
+      "transition": 1,
+      "terrainType": null,
+      "angle": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": 13,
+      "centerZ": 27,
+      "width": 2,
+      "depth": 19,
+      "height": 1,
+      "transition": 1,
+      "terrainType": null,
+      "angle": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": 23,
+      "centerZ": 27.224786894837415,
+      "width": 2,
+      "depth": 19,
+      "height": 1,
+      "transition": 1,
+      "terrainType": null,
+      "angle": 0
+    },
+    {
+      "type": "hill",
+      "centerX": 51,
+      "centerZ": 35.289914757934966,
+      "radius": 7,
+      "height": -3.5,
+      "terrainType": "mud"
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -40,
+      "centerZ": 53,
+      "width": 4,
+      "depth": 21,
+      "angle": 91,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 0.1,
+      "repeatV": 1.8,
+      "intensity": 1
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -39.5,
+      "centerZ": 63.724786894837415,
+      "width": 4,
+      "depth": 21,
+      "angle": 78,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 0.1,
+      "repeatV": 1.8,
+      "intensity": 1
+    },
+    {
+      "type": "terrainCircle",
+      "centerX": -6.5,
+      "centerZ": 58.22478689483742,
+      "radius": 8,
+      "terrainType": "mud"
+    },
+    {
+      "type": "terrainCircle",
+      "centerX": 9,
+      "centerZ": 57.72478689483742,
+      "radius": 8,
+      "terrainType": "mud"
+    },
+    {
+      "type": "squareHill",
+      "centerX": -8,
+      "centerZ": -11,
+      "width": 10,
+      "depth": 6,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 3
+    },
+    {
+      "type": "squareHill",
+      "centerX": 38,
+      "centerZ": -2.7752131051625923,
+      "width": 10,
+      "depth": 5,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 3,
+      "heightAtMax": 0
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 3,
+      "centerZ": -57,
+      "heading": -1.5707963267948966,
+      "width": 29,
+      "checkpointNumber": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -40,
+      "centerZ": 61,
+      "heading": 1.5707963267948966,
+      "width": 25,
+      "checkpointNumber": 2
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 64,
+      "centerZ": 45,
+      "heading": -3.141592653589793,
+      "width": 24,
+      "checkpointNumber": 3
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -22,
+      "centerZ": 12,
+      "heading": -3.141592653589793,
+      "width": 25,
+      "checkpointNumber": 4
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 63,
+      "centerZ": -18,
+      "heading": -3.141592653589793,
+      "width": 27,
+      "checkpointNumber": 5
+    },
+    {
+      "type": "tireStack",
+      "x": 56,
+      "z": -52
+    },
+    {
+      "type": "tireStack",
+      "x": 56,
+      "z": -49
+    },
+    {
+      "type": "tireStack",
+      "x": 55,
+      "z": -46
+    },
+    {
+      "type": "tireStack",
+      "x": 53,
+      "z": -43
+    },
+    {
+      "type": "tireStack",
+      "x": 55,
+      "z": -56
+    },
+    {
+      "type": "tireStack",
+      "x": 52,
+      "z": 55
+    },
+    {
+      "type": "tireStack",
+      "x": 55,
+      "z": 55
+    },
+    {
+      "type": "tireStack",
+      "x": 58,
+      "z": 55
+    },
+    {
+      "type": "tireStack",
+      "x": 61,
+      "z": 55
+    },
+    {
+      "type": "tireStack",
+      "x": 63,
+      "z": 52
+    },
+    {
+      "type": "tireStack",
+      "x": 64,
+      "z": 49
+    },
+    {
+      "type": "tireStack",
+      "x": 55,
+      "z": -44
+    },
+    {
+      "type": "tireStack",
+      "x": 56.5,
+      "z": -47.000000000000014
+    },
+    {
+      "type": "tireStack",
+      "x": 51,
+      "z": -60.50000000000001
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -11,
+      "centerZ": 27.5,
+      "width": 4,
+      "depth": 21,
+      "angle": 115,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 0.1,
+      "repeatV": 1.8,
+      "intensity": 1
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -8,
+      "centerZ": 22,
+      "width": 4,
+      "depth": 21,
+      "angle": 135,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 0.1,
+      "repeatV": 1.8,
+      "intensity": 1
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -15.5,
+      "centerZ": -5.5,
+      "width": 4,
+      "depth": 13.5,
+      "angle": 70,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 0.1,
+      "repeatV": 1.8,
+      "intensity": 1
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -12.5,
+      "centerZ": -12.5,
+      "width": 4,
+      "depth": 13.5,
+      "angle": 74,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 0.1,
+      "repeatV": 1.8,
+      "intensity": 1
+    },
+    {
+      "type": "terrainCircle",
+      "centerX": 62.5,
+      "centerZ": -47.5,
+      "terrainType": "loose_dirt",
+      "radius": 8
+    }
+  ]
+}

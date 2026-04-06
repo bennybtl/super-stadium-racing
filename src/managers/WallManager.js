@@ -203,14 +203,6 @@ export class WallManager {
         truck.state.heading = newHeading;
 
         const deg = v => (v * 180 / Math.PI).toFixed(1) + '°';
-        console.debug(
-          `[Wall] COLLISION HEADING SNAP` +
-          ` | truckHeading=${deg(truckH)}` +
-          ` | wallSegHeading=${deg(h)}` +
-          ` | parallel0=${deg(wallParallel0)} (diff=${deg(diff0)})` +
-          ` | parallel1=${deg(wallParallel1)} (diff=${deg(diff1)})` +
-          ` | snappedTo=${deg(newHeading)}`
-        );
       }
     }
 
@@ -228,14 +220,6 @@ export class WallManager {
     if (!seg._lastLogTime || now - seg._lastLogTime > 200) {
       seg._lastLogTime = now;
       const r = (v) => v.toFixed(3);
-      console.debug(
-        `[Wall] ${collisionType} | wallH=${r(h * 180/Math.PI)}°` +
-        ` | localX=${r(localX)} localZ=${r(localZ)} signZ=${signZ}` +
-        ` | halfThick=±${r(halfThick)}` +
-        ` | velBefore=(${r(velXBefore)}, ${r(velZBefore)}) dot=${r(velDotNormal)}` +
-        ` | velAfter=(${r(vel.x)}, ${r(vel.z)})` +
-        ` | cancelled=${didCancel} | correctionZ=${r(correctionZ)}`
-      );
     }
   }
 

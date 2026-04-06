@@ -15,6 +15,7 @@
     <PolyHillPanel />
     <BezierWallPanel />
     <FlagPanel />
+    <TrackSignPanel />
     <AddEntityMenu />
     <EditorStatusBar />
   </div>
@@ -33,6 +34,7 @@ import PolyWallPanel    from './editor/PolyWallPanel.vue';
 import PolyHillPanel    from './editor/PolyHillPanel.vue';
 import BezierWallPanel  from './editor/BezierWallPanel.vue';
 import FlagPanel          from './editor/FlagPanel.vue';
+import TrackSignPanel     from './editor/TrackSignPanel.vue';
 import AddEntityMenu      from './editor/AddEntityMenu.vue';
 import EditorStatusBar    from './editor/EditorStatusBar.vue';
 </script>

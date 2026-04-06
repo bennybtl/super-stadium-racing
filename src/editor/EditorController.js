@@ -10,6 +10,7 @@ import { TerrainShapeEditor } from "./TerrainShapeEditor.js";
 import { NormalMapDecalEditor } from "./NormalMapDecalEditor.js";
 import { TireStackEditor } from "./TireStackEditor.js";
 import { FlagEditor } from "./FlagEditor.js";
+import { TrackSignEditor } from "./TrackSignEditor.js";
 import { useEditorStore } from '../vue/store.js';
 
 /**
@@ -59,6 +60,9 @@ export class EditorController {
 
     // Flag editing (delegated to FlagEditor)
     this.flagEditor = new FlagEditor(this);
+
+    // Track sign editing (delegated to TrackSignEditor)
+    this.trackSignEditor = new TrackSignEditor(this);
 
     // Accumulated raw (pre-snap) position of whatever is being dragged
     this._rawDragPos = null;
@@ -132,6 +136,9 @@ export class EditorController {
     // Initialize flag editor
     this.flagEditor.activate(this.scene, track);
 
+    // Initialize track sign editor
+    this.trackSignEditor.activate(this.scene, track);
+
     // Build editor visuals for any hills already in the track
     this.hillEditor.createVisualsForTrack(track);
     this.squareHillEditor.createVisualsForTrack(track);
@@ -141,6 +148,8 @@ export class EditorController {
     for (const feature of track.features) {
       if (feature.type === 'flag') {
         this.flagEditor.createVisual(feature);
+      } else if (feature.type === 'trackSign') {
+        this.trackSignEditor.createVisual(feature);
       }
     }
 
@@ -229,6 +238,9 @@ export class EditorController {
     // Flag editor
     this.flagEditor.dispose();
 
+    // Track sign editor
+    this.trackSignEditor.dispose();
+
     console.log('[EditorController] Editor mode deactivated');
   }
 
@@ -267,6 +279,7 @@ export class EditorController {
     this.normalMapDecalEditor.deselect();
     this.tireStackEditor.deselect();
     this.flagEditor.deselect();
+    this.trackSignEditor.deselect();
 
     // Dispose all gizmo meshes
     this.hillEditor.dispose();
@@ -277,6 +290,9 @@ export class EditorController {
 
     // Dispose and rebuild flag meshes
     this.flagEditor.clearMeshes();
+
+    // Dispose and rebuild track sign meshes
+    this.trackSignEditor.clearMeshes();
 
     // Restore features
     this.currentTrack.features = JSON.parse(snap);
@@ -289,6 +305,7 @@ export class EditorController {
       else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
       else if (feature.type === 'tireStack') this.tireStackEditor.createVisual(feature);
       else if (feature.type === 'flag') this.flagEditor.createVisual(feature);
+      else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
     }
     // Restore mesh grid gizmos
     this.meshGridTool?.onSnapshotRestored();
@@ -326,7 +343,11 @@ export class EditorController {
 
   handleKeyDown(event) {
     if (!this.isActive) return;
-    
+
+    // Don't intercept keypresses while the user is typing in a text field
+    const tag = event.target?.tagName?.toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+
     // Handle ESC key — deselect first, open menu if nothing selected
     if (event.key === 'Escape') {
       if (this.hillEditor.selected) {
@@ -391,6 +412,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.flagTool?.getSelectedFlag()) {
         this.flagTool.removeSelectedFlag();
+        event.preventDefault();
+      } else if (this.trackSignEditor?.selected) {
+        this.trackSignEditor.deleteSelected();
         event.preventDefault();
       } else if (this.meshGridTool?.activeFeature) {
         this.meshGridTool.deleteMeshGrid();
@@ -587,6 +611,8 @@ export class EditorController {
       delta = this.tireStackEditor.move(movement);
     } else if (this.flagEditor.selected) {
       delta = this.flagEditor.move(movement);
+    } else if (this.trackSignEditor.selected) {
+      delta = this.trackSignEditor.move(movement);
     } else if (this.polyWallTool?.selectedPoint) {
       const d = this.polyWallTool.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
@@ -703,6 +729,17 @@ export class EditorController {
             const wasSelected = this.flagEditor.selected === flagData;
             this.deselectAll();
             if (!wasSelected) this.flagEditor.select(clickedMesh);
+            return;
+          }
+        }
+
+        // Check if clicked mesh is a track sign (board or post)
+        {
+          const signData = this.trackSignEditor.findByMesh(clickedMesh);
+          if (signData) {
+            const wasSelected = this.trackSignEditor.selected === signData;
+            this.deselectAll();
+            if (!wasSelected) this.trackSignEditor.select(signData);
             return;
           }
         }
@@ -883,6 +920,7 @@ export class EditorController {
     this.normalMapDecalEditor.deselect();
     this.tireStackEditor.deselect();
     this.flagEditor.deselect();
+    this.trackSignEditor.deselect();
     this.meshGridTool?.deselectPoint();
     this.polyWallTool?.deselectPoint();
     this.polyHillTool?.deselectPoint();
@@ -890,11 +928,11 @@ export class EditorController {
   }
 
   // ── Poly Wall Vue bridge methods ──
-  changePolyWallRadius(val)     { this.polyWallTool.setPointRadius(val); }
-  changePolyWallHeight(val)     { this.polyWallTool.setHeight(val); }
-  changePolyWallThickness(val)  { this.polyWallTool.setThickness(val); }
-  changePolyWallClosed(val)     { this.polyWallTool.setClosed(val); }
-  insertPolyWallPoint()         { this.polyWallTool.insertPointAfter(); }
+  changePolyWallRadius(val)     { this.polyWallTool.changePolyWallRadius(val); }
+  changePolyWallHeight(val)     { this.polyWallTool.changePolyWallHeight(val); }
+  changePolyWallThickness(val)  { this.polyWallTool.changePolyWallThickness(val); }
+  changePolyWallClosed(val)     { this.polyWallTool.changePolyWallClosed(val); }
+  insertPolyWallPoint()         { this.polyWallTool.insertPolyWallPoint(); }
   deletePolyWallPoint()         { this.polyWallTool.deleteSelectedPoint(); }
   deletePolyWall()              { this.polyWallTool.deletePolyWall(); }
   deselectPolyWall()            { this.polyWallTool.deselectPoint(); }
@@ -921,6 +959,13 @@ export class EditorController {
   // ── Flag Vue bridge methods ──
   changeFlagColor(val) { this.flagEditor.changeColor(val); }
   deleteFlag()         { this.flagEditor.deleteSelected(); }
+
+  // ── Track Sign Vue bridge methods ──
+  addTrackSignEntity()         { this.trackSignEditor.addEntity(); }
+  deselectTrackSign()          { this.trackSignEditor.deselect(); }
+  changeTrackSignName(val)     { this.trackSignEditor.changeName(val); }
+  changeTrackSignRotation(val) { this.trackSignEditor.changeRotation(val); }
+  deleteTrackSign()            { this.trackSignEditor.deleteSelected(); }
 
   /**
    * Dispose of the controller

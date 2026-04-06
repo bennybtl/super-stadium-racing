@@ -226,7 +226,7 @@ export class TerrainPhysics {
     const slopeAngle = slopeDeg * Math.PI / 180;
 
     // Only block upward slopes steeper than 45 degrees
-    const maxSlopeAngle = Math.PI / 4;
+    const maxSlopeAngle = Math.PI / 3;
     if (slopeDeg > 0 && slopeAngle > maxSlopeAngle) {
       // Also skip if the forward sample terrain is below the truck's bottom —
       // the slope is literally below the truck's trajectory (e.g. cresting a hill)

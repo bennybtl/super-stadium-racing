@@ -202,6 +202,12 @@ export const useEditorStore = defineStore('editor', () => {
     color: 'red',
   });
 
+  // ── Track Sign panel ──
+  const trackSign = reactive({
+    name: 'Track Name',
+    rotation: 0,   // degrees
+  });
+
   // ── Test mode (back button) ──
   const testModeActive = ref(false);
   const testModeReturnKey = ref(null);
@@ -303,6 +309,13 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Flag actions ──
   function setFlagColor(val)            { flag.color = val; _bridge.value?.changeFlagColor(val); }
   function deleteFlag()                 { _bridge.value?.deleteFlag(); }
+
+  // ── Track Sign actions ──
+  function setTrackSignName(val)        { trackSign.name = val;     _bridge.value?.changeTrackSignName(val); }
+  function setTrackSignRotation(val)    { trackSign.rotation = val; _bridge.value?.changeTrackSignRotation(val); }
+  function deleteTrackSign()            { _bridge.value?.deleteTrackSign(); }
+  function closeTrackSign()             { _bridge.value?.deselectTrackSign(); }
+
   function setActiveTool(val)           { activeTool.value = val; }
 
   // ── Add-entity menu ──
@@ -323,6 +336,7 @@ export const useEditorStore = defineStore('editor', () => {
   function addPolyWall()       { _bridge.value?.addPolyWallEntity(); }
   function addPolyHill()       { _bridge.value?.addPolyHillEntity(); }
   function addBezierWall()     { _bridge.value?.addBezierWallEntity(); }
+  function addTrackSign()      { _bridge.value?.addTrackSignEntity(); }
 
   return {
     selectedType,
@@ -358,11 +372,14 @@ export const useEditorStore = defineStore('editor', () => {
     insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, closePolyHill,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, closeBezierWall,
-    setFlagColor, deleteFlag, setActiveTool,
+    setFlagColor, deleteFlag,
+    trackSign,
+    setTrackSignName, setTrackSignRotation, deleteTrackSign, closeTrackSign,
+    setActiveTool,
     toggleSnap, cycleSnapSize, quickTestTrack,
     openAddMenu, closeAddMenu, toggleAddMenu,
     addCheckpoint, addHill, addSquareHill, addTerrainRect, addTerrainCircle,
     addNormalMapDecal, addTireStack, addFlag,
-    addMeshGrid, addPolyWall, addPolyHill, addBezierWall,
+    addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign,
   };
 });
