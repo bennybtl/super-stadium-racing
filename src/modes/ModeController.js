@@ -69,6 +69,7 @@ export class ModeController {
   continueSeason() {
     if (!this.seasonManager) return this.goToMenu();
     this.menuManager._store.pitData = null;
+    this.menuManager.hideMenu(); // clear currentMenu so the game loop isn't blocked
     if (this.seasonManager.isSeasonComplete()) {
       this.menuManager.showSeasonFinal({
         standings: this.seasonManager.getStandings(),

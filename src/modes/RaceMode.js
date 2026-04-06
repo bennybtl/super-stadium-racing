@@ -568,6 +568,13 @@ export class RaceMode extends BaseMode {
             truckData.truck.state.verticalVelocity = 0;
             finishOrder.push(truckData);
 
+            // For 1-lap races the "start final lap" trigger never fires, so start
+            // the DNF timer here on first finish instead.
+            if (dnfTimer === null && !raceEnded) {
+              console.log(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
+              setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
+            }
+
             if (truckData.isPlayer) {
               console.log("\n=== RACE FINISHED ===");
               console.log(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
@@ -593,6 +600,7 @@ export class RaceMode extends BaseMode {
     });
 
     // Start the pre-race countdown
+    cameraController.update(playerTruckData.truck.mesh.position); // pre-snap before first frame
     startCountdown();
 
     return scene;

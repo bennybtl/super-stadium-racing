@@ -95,11 +95,12 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 0,
-      "centerZ": -54,
-      "heading": 4.699999999999991,
+      "centerX": -59,
+      "centerZ": -41,
+      "heading": 6.099999999999986,
       "width": 25.5,
-      "checkpointNumber": 1
+      "checkpointNumber": 1,
+      "passedBy": {}
     },
     {
       "type": "squareHill",
@@ -119,15 +120,15 @@
       "centerZ": 28,
       "radius": 4,
       "height": 2.5,
-      "terrainType": "water"
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
-      "centerX": -12,
-      "centerZ": 32,
+      "centerX": -11.5,
+      "centerZ": 33.5,
       "radius": 6,
       "height": 2.5,
-      "terrainType": null
+      "terrainType": "loose_dirt"
     },
     {
       "type": "polyWall",
@@ -290,43 +291,45 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -59,
-      "centerZ": -37,
+      "centerX": -11,
+      "centerZ": -6,
       "heading": 0,
-      "width": 23,
-      "checkpointNumber": 2
+      "width": 15,
+      "checkpointNumber": 2,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
-      "centerX": -11,
-      "centerZ": 2,
-      "heading": 0,
-      "width": 16,
-      "checkpointNumber": 3
+      "centerX": 0,
+      "centerZ": -55,
+      "heading": -1.5707963267948966,
+      "width": 27,
+      "checkpointNumber": 8,
+      "passedBy": {}
     },
     {
       "type": "hill",
-      "centerX": -71,
-      "centerZ": 26.289914757934966,
+      "centerX": -72.5,
+      "centerZ": 26.789914757934966,
       "radius": 3,
       "height": 1,
-      "terrainType": null
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
       "centerX": -67,
       "centerZ": 31.289914757934966,
-      "radius": 4.5,
+      "radius": 5.5,
       "height": 2,
-      "terrainType": null
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
-      "centerX": -70.5,
-      "centerZ": 71.78991475793497,
-      "radius": 4.5,
+      "centerX": -68,
+      "centerZ": 68.78991475793497,
+      "radius": 6,
       "height": 2,
-      "terrainType": null
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
@@ -334,23 +337,23 @@
       "centerZ": 74,
       "radius": 7.5,
       "height": 3,
-      "terrainType": null
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
-      "centerX": -42,
+      "centerX": -43,
       "centerZ": 74,
       "radius": 5.5,
       "height": 1.5,
-      "terrainType": null
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
-      "centerX": 70,
+      "centerX": 68.5,
       "centerZ": 28,
-      "radius": 5.5,
-      "height": 4,
-      "terrainType": null
+      "radius": 7,
+      "height": 2,
+      "terrainType": "loose_dirt"
     },
     {
       "type": "squareHill",
@@ -376,40 +379,40 @@
     },
     {
       "type": "hill",
-      "centerX": 66,
+      "centerX": 68.5,
       "centerZ": -18,
-      "radius": 6,
-      "height": -5,
-      "terrainType": null
+      "radius": 9,
+      "height": -1.5,
+      "terrainType": "mud"
     },
     {
       "type": "hill",
       "centerX": 66,
-      "centerZ": -68,
-      "radius": 8,
-      "height": -5,
-      "terrainType": null
+      "centerZ": -64.5,
+      "radius": 10,
+      "height": -3.5,
+      "terrainType": "mud"
     },
     {
       "type": "hill",
-      "centerX": -70,
+      "centerX": -66.5,
       "centerZ": -56,
       "radius": 5.5,
       "height": -2,
-      "terrainType": "packed_dirt"
+      "terrainType": "mud"
     },
     {
       "type": "hill",
       "centerX": -54,
-      "centerZ": -68,
+      "centerZ": -65,
       "radius": 7.5,
       "height": -2,
-      "terrainType": "packed_dirt"
+      "terrainType": "mud"
     },
     {
       "type": "hill",
       "centerX": -54,
-      "centerZ": -18,
+      "centerZ": -20.5,
       "radius": 6,
       "height": 2,
       "terrainType": "packed_dirt"
@@ -417,7 +420,7 @@
     {
       "type": "hill",
       "centerX": -44,
-      "centerZ": -14,
+      "centerZ": -16,
       "radius": 6,
       "height": 2,
       "terrainType": "packed_dirt"
@@ -442,6 +445,499 @@
       "transition": 0.5,
       "terrainType": null,
       "angle": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": 28,
+      "centerZ": 68.22478689483742,
+      "width": 10,
+      "depth": 10,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 3
+    },
+    {
+      "type": "hill",
+      "centerX": 12,
+      "centerZ": 31.289914757934973,
+      "radius": 10,
+      "height": 1,
+      "terrainType": "loose_dirt"
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 12,
+      "centerZ": 0.7247868948374077,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 12,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 8,
+      "centerZ": -4.775213105162592,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 26,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 15,
+      "centerZ": -4.275213105162592,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 1,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 48.5,
+      "centerZ": 10.224786894837415,
+      "width": 52.5,
+      "depth": 19.5,
+      "angle": 0,
+      "normalMap": "6481-normal.jpg",
+      "repeatU": 0.1,
+      "repeatV": 0.1,
+      "intensity": 0.95
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 39.5,
+      "centerZ": 33.72478689483741,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 99,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 42.5,
+      "centerZ": 28.224786894837408,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 90,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 45.5,
+      "centerZ": 65.22478689483741,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 90,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 42,
+      "centerZ": 72.22478689483741,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 77,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -56,
+      "centerZ": -33.77521310516259,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 134,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "hill",
+      "centerX": 48.5,
+      "centerZ": -62.710085242065034,
+      "radius": 10,
+      "height": 1.5,
+      "terrainType": "loose_dirt"
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": -49,
+      "centerZ": -31.775213105162592,
+      "width": 3.5,
+      "depth": 17.5,
+      "angle": 150,
+      "normalMap": "7632-normal.jpg",
+      "repeatU": 1,
+      "repeatV": 1,
+      "intensity": 0.5
+    },
+    {
+      "type": "squareHill",
+      "centerX": 6,
+      "centerZ": 68.72478689483742,
+      "width": 10,
+      "depth": 10,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 3
+    },
+    {
+      "type": "tireStack",
+      "x": 10,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": 4,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": 4,
+      "z": -26
+    },
+    {
+      "type": "tireStack",
+      "x": 6,
+      "z": -26
+    },
+    {
+      "type": "tireStack",
+      "x": 6,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": 8,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": 8,
+      "z": -26
+    },
+    {
+      "type": "tireStack",
+      "x": 4,
+      "z": -24
+    },
+    {
+      "type": "tireStack",
+      "x": 6,
+      "z": -24
+    },
+    {
+      "type": "tireStack",
+      "x": 4,
+      "z": -22
+    },
+    {
+      "type": "tireStack",
+      "x": 10,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": 8,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": 12,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": 6,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": -12,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": -10,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": -8,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": -6,
+      "z": -30
+    },
+    {
+      "type": "tireStack",
+      "x": -4,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": -6,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": -8,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": -10,
+      "z": -28
+    },
+    {
+      "type": "tireStack",
+      "x": -8,
+      "z": -26
+    },
+    {
+      "type": "tireStack",
+      "x": -6,
+      "z": -26
+    },
+    {
+      "type": "tireStack",
+      "x": -4,
+      "z": -26
+    },
+    {
+      "type": "tireStack",
+      "x": -4,
+      "z": -24
+    },
+    {
+      "type": "tireStack",
+      "x": -4,
+      "z": -22
+    },
+    {
+      "type": "tireStack",
+      "x": -6,
+      "z": -24
+    },
+    {
+      "type": "tireStack",
+      "x": 36,
+      "z": -64
+    },
+    {
+      "type": "tireStack",
+      "x": 34,
+      "z": -64
+    },
+    {
+      "type": "tireStack",
+      "x": 30,
+      "z": -64
+    },
+    {
+      "type": "tireStack",
+      "x": 26,
+      "z": -64
+    },
+    {
+      "type": "tireStack",
+      "x": 22,
+      "z": -64
+    },
+    {
+      "type": "tireStack",
+      "x": 66,
+      "z": -48
+    },
+    {
+      "type": "tireStack",
+      "x": 66,
+      "z": -44
+    },
+    {
+      "type": "tireStack",
+      "x": 66,
+      "z": -32
+    },
+    {
+      "type": "tireStack",
+      "x": 66,
+      "z": -40
+    },
+    {
+      "type": "tireStack",
+      "x": 66,
+      "z": -36
+    },
+    {
+      "type": "tireStack",
+      "x": 66,
+      "z": -52
+    },
+    {
+      "type": "tireStack",
+      "x": -60,
+      "z": 46
+    },
+    {
+      "type": "tireStack",
+      "x": -60,
+      "z": 48
+    },
+    {
+      "type": "tireStack",
+      "x": -60,
+      "z": 50
+    },
+    {
+      "type": "tireStack",
+      "x": -62,
+      "z": 50
+    },
+    {
+      "type": "tireStack",
+      "x": -62,
+      "z": 48
+    },
+    {
+      "type": "tireStack",
+      "x": -62,
+      "z": 46
+    },
+    {
+      "type": "tireStack",
+      "x": -64,
+      "z": 48
+    },
+    {
+      "type": "tireStack",
+      "x": -60,
+      "z": 52
+    },
+    {
+      "type": "tireStack",
+      "x": -60,
+      "z": 44
+    },
+    {
+      "type": "tireStack",
+      "x": -44,
+      "z": -62
+    },
+    {
+      "type": "tireStack",
+      "x": -42,
+      "z": -62
+    },
+    {
+      "type": "tireStack",
+      "x": -38,
+      "z": -62
+    },
+    {
+      "type": "tireStack",
+      "x": -34,
+      "z": -62
+    },
+    {
+      "type": "tireStack",
+      "x": -30,
+      "z": -62
+    },
+    {
+      "type": "tireStack",
+      "x": 70,
+      "z": 36
+    },
+    {
+      "type": "tireStack",
+      "x": 72,
+      "z": 36
+    },
+    {
+      "type": "tireStack",
+      "x": 72,
+      "z": 38
+    },
+    {
+      "type": "tireStack",
+      "x": 74,
+      "z": 40
+    },
+    {
+      "type": "tireStack",
+      "x": 74,
+      "z": 38
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -67,
+      "centerZ": 45,
+      "heading": 0,
+      "width": 16.5,
+      "checkpointNumber": 3,
+      "passedBy": {}
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -2,
+      "centerZ": 69,
+      "heading": 1.550000000000001,
+      "width": 16,
+      "checkpointNumber": 4,
+      "passedBy": {}
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 68,
+      "centerZ": 43,
+      "heading": 3.149999999999997,
+      "width": 14,
+      "checkpointNumber": 5,
+      "passedBy": {}
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 11,
+      "centerZ": 1,
+      "heading": 3.049999999999997,
+      "width": 16.5,
+      "checkpointNumber": 6,
+      "passedBy": {}
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 61,
+      "centerZ": -37,
+      "heading": 3.141592653589793,
+      "width": 24,
+      "checkpointNumber": 7,
+      "passedBy": {}
     }
   ]
 }

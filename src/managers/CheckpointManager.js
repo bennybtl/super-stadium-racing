@@ -42,8 +42,8 @@ export class CheckpointManager {
       const checkpoint = this.checkpointMeshes[i];
       const feature = checkpoint.feature;
       
-      // Initialize passedBy tracking if not exists
-      if (!feature.passedBy) {
+      // Initialize passedBy tracking if not exists or was deserialized from JSON as a plain object
+      if (!(feature.passedBy instanceof Set)) {
         feature.passedBy = new Set();
       }
       
@@ -104,7 +104,7 @@ export class CheckpointManager {
 
   resetForTruck(truckId) {
     for (const cp of this.checkpointMeshes) {
-      if (cp.feature.passedBy) {
+      if (cp.feature.passedBy instanceof Set) {
         cp.feature.passedBy.delete(truckId);
       }
     }

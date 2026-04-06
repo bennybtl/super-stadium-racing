@@ -6,7 +6,7 @@
 const STORAGE_KEY = 'season_state';
 
 /** Ordered race track keys for a season */
-const SEASON_TRACKS = ['Fandango', 'HuevosGrande'];
+const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json'];
 
 /** Championship points by finish position (index 0 = 1st place) */
 const POINTS_TABLE = [10, 5, 3, 1];
@@ -52,7 +52,7 @@ export class SeasonManager {
    */
   start(lapsPerRace = 3) {
     this.state = {
-      tracks: [...SEASON_TRACKS],
+      tracks: SEASON_TRACKS.map(f => f.replace('.json', '')),
       currentRaceIndex: 0,
       lapsPerRace,
       drivers: [

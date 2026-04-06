@@ -39,6 +39,7 @@ export class UIManager {
   updateTimer(milliseconds)          { this._race.timerMs = milliseconds; }
 
   updateDebugPanel(debugInfo, terrainType, slopeAngleDeg = null) {
+    if (!debugInfo) return;
     const d = this._debug.data;
     d.compression    = (debugInfo.compression ?? 0).toFixed(2);
     d.groundedness   = (debugInfo.groundedness ?? 0).toFixed(2);

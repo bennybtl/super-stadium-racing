@@ -48,8 +48,8 @@
         14,
         30,
         15,
-        23,
-        17,
+        23.5,
+        20,
         15,
         15,
         14,
@@ -57,21 +57,21 @@
         14,
         30,
         15,
-        22,
+        24,
+        21.5,
         19,
         18,
         17,
-        16,
         15,
         15,
         30,
         19.5,
+        24,
+        23,
         22,
-        21,
         20,
-        20,
-        14,
-        14,
+        17,
+        15,
         14,
         30,
         21,
@@ -181,8 +181,8 @@
           "radius": 5
         },
         {
-          "x": -32,
-          "z": 39,
+          "x": -36,
+          "z": 37.5,
           "radius": 10
         },
         {
@@ -357,7 +357,7 @@
     },
     {
       "type": "squareHill",
-      "centerX": 3,
+      "centerX": 5.5,
       "centerZ": 26.224786894837415,
       "width": 2,
       "depth": 19,
@@ -369,7 +369,7 @@
     {
       "type": "squareHill",
       "centerX": 13,
-      "centerZ": 27,
+      "centerZ": 26,
       "width": 2,
       "depth": 19,
       "height": 1,
@@ -379,8 +379,8 @@
     },
     {
       "type": "squareHill",
-      "centerX": 23,
-      "centerZ": 27.224786894837415,
+      "centerX": 20,
+      "centerZ": 26,
       "width": 2,
       "depth": 19,
       "height": 1,
@@ -462,7 +462,7 @@
       "centerZ": -57,
       "heading": -1.5707963267948966,
       "width": 29,
-      "checkpointNumber": 1
+      "checkpointNumber": 5
     },
     {
       "type": "checkpoint",
@@ -470,7 +470,7 @@
       "centerZ": 61,
       "heading": 1.5707963267948966,
       "width": 25,
-      "checkpointNumber": 2
+      "checkpointNumber": 1
     },
     {
       "type": "checkpoint",
@@ -478,7 +478,7 @@
       "centerZ": 45,
       "heading": -3.141592653589793,
       "width": 24,
-      "checkpointNumber": 3
+      "checkpointNumber": 2
     },
     {
       "type": "checkpoint",
@@ -486,7 +486,7 @@
       "centerZ": 12,
       "heading": -3.141592653589793,
       "width": 25,
-      "checkpointNumber": 4
+      "checkpointNumber": 3
     },
     {
       "type": "checkpoint",
@@ -494,7 +494,7 @@
       "centerZ": -18,
       "heading": -3.141592653589793,
       "width": 27,
-      "checkpointNumber": 5
+      "checkpointNumber": 4
     },
     {
       "type": "tireStack",
@@ -620,6 +620,17 @@
       "centerZ": -47.5,
       "terrainType": "loose_dirt",
       "radius": 8
+    },
+    {
+      "type": "squareHill",
+      "centerX": 27,
+      "centerZ": 26,
+      "width": 2,
+      "depth": 19,
+      "height": 1,
+      "transition": 1,
+      "terrainType": null,
+      "angle": 0
     }
   ]
 }
