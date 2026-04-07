@@ -11,6 +11,62 @@ const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json'];
 /** Championship points by finish position (index 0 = 1st place) */
 const POINTS_TABLE = [10, 5, 3, 1];
 
+/** Cash earned per championship point */
+const MONEY_PER_POINT = 500;
+
+/**
+ * Available upgrades.
+ * Each level purchased adds `statDelta` to the player truck's state property.
+ */
+export const UPGRADES = [
+  {
+    id: 'topSpeed',
+    label: 'Top Speed',
+    description: 'Raises maximum speed',
+    cost: 1000,
+    maxLevel: 6,
+    statKey: 'maxSpeed',
+    statDelta: 2,        // +2 m/s per level  (base: 25)
+  },
+  {
+    id: 'acceleration',
+    label: 'Acceleration',
+    description: 'Stronger engine, faster response',
+    cost: 750,
+    maxLevel: 6,
+    statKey: 'acceleration',
+    statDelta: 2,        // +2 per level  (base: 13)
+  },
+  {
+    id: 'tires',
+    label: 'Tires',
+    description: 'Better grip through corners',
+    cost: 500,
+    maxLevel: 6,
+    statKey: 'grip',
+    statDelta: 0.006,    // +0.006 per level  (base: 0.03)
+  },
+  {
+    id: 'suspension',
+    label: 'Suspension',
+    description: 'Improved handling and stability',
+    cost: 500,
+    maxLevel: 6,
+    // suspension applies two stat keys — handled specially in applyUpgradesToTruck
+    statKey: 'suspension',
+    statDelta: null,
+  },
+  {
+    id: 'nitro',
+    label: 'Nitro',
+    description: 'Extra boost charge per race',
+    cost: 200,
+    maxLevel: 5,
+    statKey: 'boostCount',
+    statDelta: 1,        // +1 boost per level
+  },
+];
+
 /** AI driver definitions with fixed skill configs */
 const AI_DRIVERS = [
   {
@@ -63,6 +119,8 @@ export class SeasonManager {
           skill: null,
           skillConfig: null,
           totalPoints: 0,
+          balance: 5000,
+          upgrades: {},   // { [upgradeId]: level }
           raceResults: [],
         },
         ...AI_DRIVERS.map(d => ({ ...d, totalPoints: 0, raceResults: [] })),
@@ -149,6 +207,65 @@ export class SeasonManager {
     );
   }
 
+  /** Current player cash balance */
+  getPlayerBalance() {
+    this._requireState();
+    const player = this.state.drivers.find(d => d.isPlayer);
+    return player?.balance ?? 5000;
+  }
+
+  /**
+   * Returns the upgrade catalog enriched with the player's current levels.
+   * @returns {Array}
+   */
+  getUpgrades() {
+    this._requireState();
+    const player = this.state.drivers.find(d => d.isPlayer);
+    const purchased = player?.upgrades ?? {};
+    return UPGRADES.map(u => ({
+      ...u,
+      level: purchased[u.id] ?? 0,
+      affordable: (player?.balance ?? 0) >= u.cost,
+    }));
+  }
+
+  /**
+   * Raw purchased-upgrade map for applying to a truck.
+   * @returns {{ [id: string]: number }}
+   */
+  getPlayerUpgrades() {
+    this._requireState();
+    const player = this.state.drivers.find(d => d.isPlayer);
+    return { ...(player?.upgrades ?? {}) };
+  }
+
+  /**
+   * Purchase one level of an upgrade.
+   * @param {string} upgradeId
+   * @returns {{ ok: boolean, reason?: string }}
+   */
+  purchaseUpgrade(upgradeId) {
+    this._requireState();
+    const upgrade = UPGRADES.find(u => u.id === upgradeId);
+    if (!upgrade) return { ok: false, reason: 'Unknown upgrade' };
+
+    const player = this.state.drivers.find(d => d.isPlayer);
+    if (!player) return { ok: false, reason: 'No player driver' };
+
+    player.upgrades = player.upgrades ?? {};
+    const currentLevel = player.upgrades[upgradeId] ?? 0;
+
+    if (currentLevel >= upgrade.maxLevel) return { ok: false, reason: 'Already maxed' };
+    if (player.balance < upgrade.cost) return { ok: false, reason: 'Insufficient funds' };
+
+    player.balance -= upgrade.cost;
+    player.upgrades[upgradeId] = currentLevel + 1;
+    this.save();
+
+    console.log(`[SeasonManager] Purchased ${upgrade.label} (now level ${player.upgrades[upgradeId]}). Balance: $${player.balance}`);
+    return { ok: true };
+  }
+
   /**
    * Returns all AI driver definitions (id, name, skillConfig).
    * @returns {Array}
@@ -204,6 +321,9 @@ export class SeasonManager {
       const pointsEarned = POINTS_TABLE[pos - 1] ?? 0;
 
       driver.totalPoints += pointsEarned;
+      if (driver.isPlayer) {
+        driver.balance = (driver.balance ?? 5000) + pointsEarned * MONEY_PER_POINT;
+      }
       driver.raceResults.push({
         trackKey,
         finishPosition: pos,
@@ -293,10 +413,16 @@ export class SeasonManager {
         };
       });
 
+    const playerResult = allResults.find(r => this.state.drivers.find(d => d.id === r.id)?.isPlayer);
+    const playerMoneyEarned = playerResult ? (POINTS_TABLE[playerResult.finishPosition - 1] ?? 0) * MONEY_PER_POINT : 0;
+    const playerBalance = this.getPlayerBalance();
+
     return {
       trackKey,
       raceNumber: this.state.currentRaceIndex,      // already incremented
       totalRaces: this.getTotalRaces(),
+      playerMoneyEarned,
+      playerBalance,
       rows,
       standings: standings.map((d, i) => ({
         position: i + 1,

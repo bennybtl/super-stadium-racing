@@ -54,6 +54,11 @@
 
       <div class="divider" />
 
+      <div class="money-earned">
+        💰 +${{ store.postRaceData.playerMoneyEarned.toLocaleString() }}
+        <span class="money-sub">earned this race</span>
+      </div>
+
       <button class="action-btn" @click="store.goToPit()">Head to the Pit →</button>
     </div>
   </div>
@@ -184,6 +189,23 @@ function formatTime(ms) {
 .s-pos  { width: 24px; color: #ff5722; font-weight: bold; }
 .s-name { flex: 1; }
 .s-pts  { color: #4caf50; font-weight: bold; min-width: 60px; text-align: right; }
+
+.money-earned {
+  color: #4caf50;
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 4px 0 20px;
+}
+
+.money-sub {
+  display: block;
+  font-size: 13px;
+  color: #888;
+  font-weight: normal;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
 
 .action-btn {
   display: block;

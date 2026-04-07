@@ -257,7 +257,7 @@ export class TruckBody {
     const mat = new StandardMaterial(`${mesh.name}Mat`, this.scene);
     mat.diffuseColor  = color;
     mat.specularColor = new Color3(0.9, 0.9, 0.9);
-    mat.specularPower = 128;
+    mat.specularPower = 32;
     mesh.material     = mat;
     mesh.receiveShadows = true;
     this.shadows.addShadowCaster(mesh);

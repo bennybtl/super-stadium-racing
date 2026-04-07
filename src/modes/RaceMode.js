@@ -9,6 +9,7 @@ import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HEIGHT, TRUCK_HALF_HEIGHT } from "../constants.js";
 import { BaseMode } from "./BaseMode.js";
+import { UPGRADES } from "../managers/SeasonManager.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -157,6 +158,25 @@ export class RaceMode extends BaseMode {
     const playerTruck = createTruck(scene, shadows, null, null, spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
+
+    // Apply season upgrades to the player truck's base stats
+    if (season && seasonManager) {
+      const purchased = seasonManager.getPlayerUpgrades();
+      for (const upgrade of UPGRADES) {
+        const level = purchased[upgrade.id] ?? 0;
+        if (level === 0) continue;
+        if (upgrade.id === 'suspension') {
+          // Suspension upgrades both spring strength and damping
+          playerTruck.state.springStrength += 20 * level;
+          playerTruck.state.damping        += 1.5 * level;
+        } else if (upgrade.id === 'nitro') {
+          playerTruck.state.boostCount  += upgrade.statDelta * level;
+          playerTruck.state.maxBoosts   += upgrade.statDelta * level;
+        } else {
+          playerTruck.state[upgrade.statKey] += upgrade.statDelta * level;
+        }
+      }
+    }
 
     const aiTruck1 = createTruck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
     aiTruck1.mesh.position.copyFrom(spawn1.pos);

@@ -87,6 +87,15 @@ export class ModeController {
   }
 
   /**
+   * Purchase an upgrade and refresh the pit screen data.
+   */
+  purchaseUpgrade(upgradeId) {
+    if (!this.seasonManager) return;
+    const result = this.seasonManager.purchaseUpgrade(upgradeId);
+    if (result.ok) this.goToPit(); // refresh pitData with updated balance + upgrade levels
+  }
+
+  /**
    * Build pitData from the current SeasonManager state and show the Pit screen.
    * Called after the player dismisses the PostRace screen.
    */
@@ -100,6 +109,8 @@ export class ModeController {
       nextRaceNumber:   sm.getCurrentRaceNumber(),
       isSeasonComplete: sm.isSeasonComplete(),
       standings:        sm.getStandings(),
+      playerBalance:    sm.getPlayerBalance(),
+      upgrades:         sm.getUpgrades(),
     });
   }
 

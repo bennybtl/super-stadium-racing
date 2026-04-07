@@ -79,18 +79,30 @@ export class EditorMode extends BaseMode {
     };
 
     // Slow: paint the canvas texture from terrainManager.grid (call on deselect)
-    window.rebuildTerrainTexture = () => {
+    const _rebuildTerrainTextureNow = () => {
       window.rebuildTerrainGrid();
       const ctx = groundTex.getContext();
       paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
       groundTex.update();
     };
+    let _rebuildTerrainTimer = null;
+    window.rebuildTerrainTexture = (immediate = false) => {
+      if (immediate) { clearTimeout(_rebuildTerrainTimer); _rebuildTerrainTimer = null; _rebuildTerrainTextureNow(); return; }
+      clearTimeout(_rebuildTerrainTimer);
+      _rebuildTerrainTimer = setTimeout(_rebuildTerrainTextureNow, 300);
+    };
 
     // Rebuild composite normal map from normal map decal features
-    window.rebuildNormalMap = async () => {
+    const _rebuildNormalMapNow = async () => {
       const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
       const { updateCompositeNormalMap } = await import('../shaders/ground-shader.js');
       await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, 160);
+    };
+    let _rebuildNormalMapTimer = null;
+    window.rebuildNormalMap = (immediate = false) => {
+      if (immediate) { clearTimeout(_rebuildNormalMapTimer); _rebuildNormalMapTimer = null; _rebuildNormalMapNow(); return; }
+      clearTimeout(_rebuildNormalMapTimer);
+      _rebuildNormalMapTimer = setTimeout(_rebuildNormalMapNow, 300);
     };
 
     // Rebuild a specific polyWall (or all polyWalls if feature is null)

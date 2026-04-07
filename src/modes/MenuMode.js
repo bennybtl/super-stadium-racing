@@ -53,6 +53,10 @@ export class MenuMode extends BaseMode {
       this.controller.goToPit();
     };
 
+    menuManager.onPurchaseUpgrade = (upgradeId) => {
+      this.controller.purchaseUpgrade(upgradeId);
+    };
+
     menuManager.onStartPractice = () => {
       menuManager.gameStarted = true;
       menuManager.hideMenu();

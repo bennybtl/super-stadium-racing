@@ -12,9 +12,39 @@
           Next track: <strong>{{ store.pitData.nextTrackKey }}</strong>
         </div>
 
-        <div class="upgrade-placeholder">
-          <span class="placeholder-label">[ Upgrades ]</span>
-          <span class="coming-soon">coming soon</span>
+        <div class="balance-box">
+          <span class="balance-label">Budget</span>
+          <span class="balance-amount">${{ store.pitData.playerBalance.toLocaleString() }}</span>
+        </div>
+
+        <div class="upgrades">
+          <div
+            v-for="u in store.pitData.upgrades"
+            :key="u.id"
+            class="upgrade-row"
+            :class="{ 'upgrade-row--maxed': u.level >= u.maxLevel }"
+          >
+            <div class="upgrade-info">
+              <span class="upgrade-label">{{ u.label }}</span>
+              <span class="upgrade-desc">{{ u.description }}</span>
+            </div>
+            <div class="upgrade-level">
+              <span
+                v-for="i in u.maxLevel"
+                :key="i"
+                class="pip"
+                :class="{ 'pip--filled': i <= u.level }"
+              />
+            </div>
+            <button
+              class="buy-btn"
+              :disabled="u.level >= u.maxLevel || !u.affordable"
+              @click="store.purchaseUpgrade(u.id)"
+            >
+              <template v-if="u.level >= u.maxLevel">MAX</template>
+              <template v-else>${{ u.cost.toLocaleString() }}</template>
+            </button>
+          </div>
         </div>
 
         <div class="btn-group">
@@ -28,7 +58,6 @@
       </template>
 
       <template v-else>
-        <!-- Season is complete — show final standings teaser -->
         <div class="season-done">Season complete!</div>
         <button class="action-btn" @click="store.continueSeason()">
           Final Standings →
@@ -56,18 +85,16 @@ const store = useMenuStore();
   pointer-events: auto;
   font-family: Arial, sans-serif;
 }
-
 .panel {
   background: rgba(18, 18, 18, 0.98);
   border: 3px solid #ff5722;
   border-radius: 10px;
-  padding: 36px 52px;
-  min-width: 380px;
-  max-width: 520px;
+  padding: 28px 40px;
+  min-width: 420px;
+  max-width: 560px;
   text-align: center;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
 }
-
 .pit-header {
   color: #ff5722;
   font-size: 28px;
@@ -76,7 +103,6 @@ const store = useMenuStore();
   letter-spacing: 4px;
   margin-bottom: 6px;
 }
-
 .pit-sub {
   display: block;
   font-size: 14px;
@@ -85,47 +111,94 @@ const store = useMenuStore();
   margin-top: 4px;
   text-transform: none;
 }
-
 .next-race {
   color: #ccc;
-  font-size: 16px;
-  margin: 20px 0;
+  font-size: 15px;
+  margin: 12px 0 0;
 }
-
-.next-race strong {
-  color: #fff;
+.next-race strong { color: #fff; }
+.balance-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(76, 175, 80, 0.08);
+  border: 1px solid #4caf50;
+  border-radius: 6px;
+  padding: 10px 24px;
+  margin: 14px 0 10px;
 }
-
-.upgrade-placeholder {
+.balance-label {
+  color: #888;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.balance-amount {
+  color: #4caf50;
+  font-size: 30px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+.upgrades {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.upgrade-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  gap: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid #333;
   border-radius: 6px;
-  padding: 18px 24px;
-  margin-bottom: 28px;
+  padding: 9px 12px;
+  text-align: left;
 }
-
-.placeholder-label {
-  color: #555;
-  font-size: 16px;
+.upgrade-row--maxed {
+  border-color: #ff5722;
+  background: rgba(255, 87, 34, 0.06);
+}
+.upgrade-info { flex: 1; min-width: 0; }
+.upgrade-label {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+}
+.upgrade-desc {
+  display: block;
+  color: #777;
+  font-size: 11px;
+  margin-top: 1px;
+}
+.upgrade-level { display: flex; gap: 4px; align-items: center; }
+.pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #333;
+  border: 1px solid #555;
+}
+.pip--filled { background: #ff5722; border-color: #ff7043; }
+.upgrade-row--maxed .pip--filled { background: #4caf50; border-color: #66bb6a; }
+.buy-btn {
+  min-width: 72px;
+  padding: 6px 10px;
+  background: linear-gradient(to bottom, #ff5722, #d84315);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
   letter-spacing: 1px;
+  white-space: nowrap;
+  transition: background 0.12s;
 }
-
-.coming-soon {
-  color: #444;
-  font-size: 12px;
-  font-style: italic;
-}
-
-.btn-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
+.buy-btn:hover:not(:disabled) { background: linear-gradient(to bottom, #ff7043, #ff5722); }
+.buy-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+.btn-group { display: flex; flex-direction: column; gap: 10px; }
 .action-btn {
   background: linear-gradient(to bottom, #ff5722, #d84315);
   color: #fff;
@@ -140,22 +213,16 @@ const store = useMenuStore();
   transition: background 0.15s, transform 0.1s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
-
 .action-btn:hover {
   background: linear-gradient(to bottom, #ff7043, #ff5722);
   transform: translateY(-2px);
 }
-
 .action-btn--retire {
   background: linear-gradient(to bottom, #555, #333);
   font-size: 14px;
   padding: 10px 24px;
 }
-
-.action-btn--retire:hover {
-  background: linear-gradient(to bottom, #777, #555);
-}
-
+.action-btn--retire:hover { background: linear-gradient(to bottom, #777, #555); }
 .season-done {
   color: #4caf50;
   font-size: 22px;

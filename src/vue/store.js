@@ -70,6 +70,7 @@ export const useMenuStore = defineStore('menu', () => {
   function continueSeason()        { _bridge.value?.onContinueSeason(); }
   function retireFromSeason()      { _bridge.value?.onRetireFromSeason(); }
   function goToPit()               { _bridge.value?.onGoToPit(); }
+  function purchaseUpgrade(id)     { _bridge.value?.onPurchaseUpgrade(id); }
   function exitSeason()            { postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
 
   return {
@@ -81,7 +82,7 @@ export const useMenuStore = defineStore('menu', () => {
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
-    showSeasonSetup, startSeason, continueSeason, retireFromSeason, goToPit, exitSeason,
+    showSeasonSetup, startSeason, continueSeason, retireFromSeason, goToPit, purchaseUpgrade, exitSeason,
   };
 });
 
