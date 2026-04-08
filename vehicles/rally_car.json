@@ -9,9 +9,9 @@
     "depth": 2.6
   },
   "wheels": {
-    "trackWidth": 2.0,
-    "frontAxle":  1.25,
-    "rearAxle":  -1.0
+    "trackWidth": 1.75,
+    "frontAxle":  1.35,
+    "rearAxle":  -1.2
   },
   "params": {
     "springStrength": 120,

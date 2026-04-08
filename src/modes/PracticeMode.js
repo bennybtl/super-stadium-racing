@@ -41,7 +41,9 @@ export class PracticeMode extends BaseMode {
     const startCp = checkpointFeatures.find(f => f.checkpointNumber === maxNum) || null;
 
     // Create truck first so we can read its height when calculating spawnPos
-    const playerTruck = createTruck(scene, shadows);
+    const vehicleDef = window.vehicleLoader?.getVehicle('default_truck') ?? null;
+    const playerTruck = createTruck(scene, shadows, null, null, vehicleDef);
+    // const playerTruck = createTruck(scene, shadows);
 
     let spawnPos, heading;
     if (startCp) {
