@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import { createTruck, updateTruck } from "../truck.js";
+import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { buildScene } from "./SceneBuilder.js";
@@ -42,8 +42,7 @@ export class PracticeMode extends BaseMode {
 
     // Create truck first so we can read its height when calculating spawnPos
     const vehicleDef = window.vehicleLoader?.getVehicle('default_truck') ?? null;
-    const playerTruck = createTruck(scene, shadows, null, null, vehicleDef);
-    // const playerTruck = createTruck(scene, shadows);
+    const playerTruck = new Truck(scene, shadows, null, null, vehicleDef);
 
     let spawnPos, heading;
     if (startCp) {
@@ -106,7 +105,7 @@ export class PracticeMode extends BaseMode {
       const input = inputManager.getMovementInput();
             
       wallManager.preUpdate(trucks, dt);
-      const debugInfo = updateTruck(playerTruck, input, dt, terrainManager, currentTrack);
+      const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);
       tireStackManager.update(trucks, dt);
       flagManager.update(trucks, dt);

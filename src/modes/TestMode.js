@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import { createTruck, updateTruck } from "../truck.js";
+import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
@@ -40,7 +40,7 @@ export class TestMode extends BaseMode {
     const maxNum = checkpointFeatures.reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
     const startCp = checkpointFeatures.find(f => f.checkpointNumber === maxNum) || null;
 
-    const playerTruck = createTruck(scene, shadows);
+    const playerTruck = new Truck(scene, shadows);
 
     let spawnPos, heading;
     if (startCp) {
@@ -85,7 +85,7 @@ export class TestMode extends BaseMode {
       const dt = this.getClampedDeltaTime(engine);
       const input = inputManager.getMovementInput();
       wallManager.preUpdate(trucks, dt);
-      updateTruck(playerTruck, input, dt, terrainManager, currentTrack);
+      playerTruck.update(input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);

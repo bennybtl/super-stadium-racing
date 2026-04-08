@@ -1,13 +1,13 @@
 import { Vector3, Color3 } from "@babylonjs/core";
 import { AIDriver } from "../ai/AIDriver.js";
-import { createTruck, updateTruck } from "../truck.js";
+import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
-import { TRUCK_HEIGHT, TRUCK_HALF_HEIGHT } from "../constants.js";
+import { TRUCK_HALF_HEIGHT } from "../constants.js";
 import { BaseMode } from "./BaseMode.js";
 import { UPGRADES } from "../managers/SeasonManager.js";
 
@@ -155,7 +155,7 @@ export class RaceMode extends BaseMode {
     const spawn2 = getGridSpawn(2);
     const spawn3 = getGridSpawn(3);
 
-    const playerTruck = createTruck(scene, shadows);
+    const playerTruck = new Truck(scene, shadows);
     playerTruck.mesh.position.copyFrom(spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
@@ -179,17 +179,17 @@ export class RaceMode extends BaseMode {
       }
     }
 
-    const aiTruck1 = createTruck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
+    const aiTruck1 = new Truck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
     aiTruck1.mesh.position.copyFrom(spawn1.pos);
     aiTruck1.state.heading = spawn1.heading;
     aiTruck1.mesh.rotation.y = spawn1.heading;
 
-    const aiTruck2 = createTruck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2);
+    const aiTruck2 = new Truck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2);
     aiTruck2.mesh.position.copyFrom(spawn2.pos);
     aiTruck2.state.heading = spawn2.heading;
     aiTruck2.mesh.rotation.y = spawn2.heading;
 
-    const aiTruck3 = createTruck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3);
+    const aiTruck3 = new Truck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3);
     aiTruck3.mesh.position.copyFrom(spawn3.pos);
     aiTruck3.state.heading = spawn3.heading;
     aiTruck3.mesh.rotation.y = spawn3.heading;
@@ -341,7 +341,7 @@ export class RaceMode extends BaseMode {
       truck.state.boostActive = false;
       truck.state.boostTimer = 0;
 
-      const body = truck._truckInstance?.physics?.body ?? truck.physics?.body;
+      const body = truck.physics?.body;
       if (body) {
         body.setLinearVelocity(Vector3.Zero());
         body.setAngularVelocity(Vector3.Zero());
@@ -470,7 +470,7 @@ export class RaceMode extends BaseMode {
         const truckInput = (isCoasting || !truckData.isPlayer)
           ? { forward: false, back: false, left: false, right: false }
           : input;
-        const debugInfo = updateTruck(truckData.truck, truckInput, dt, terrainManager, currentTrack);
+        const debugInfo = truckData.truck.update(truckInput, dt, terrainManager, currentTrack);
         if (truckData.isPlayer) {
           playerDebugInfo = debugInfo;
         }
@@ -531,8 +531,8 @@ export class RaceMode extends BaseMode {
           checkpointManager.resetForTruck(truckData.id);
           if (truckData.isPlayer) uiManager.updateCheckpoints(0);
           // Notify AI driver so it recalculates path toward checkpoint #1
-          if (!truckData.isPlayer && truckData.truck.aiDriver) {
-            truckData.truck.aiDriver.onCheckpointPassed(maxCheckpointNumber, {
+          if (!truckData.isPlayer && truckData.truck.driver) {
+            truckData.truck.driver.onCheckpointPassed(maxCheckpointNumber, {
               x: truckData.truck.mesh.position.x,
               z: truckData.truck.mesh.position.z,
             });
@@ -544,8 +544,8 @@ export class RaceMode extends BaseMode {
           checkpointIndex
         );
 
-        if (!truckData.isPlayer && truckData.truck.aiDriver) {
-          truckData.truck.aiDriver.onCheckpointPassed(checkpointResult.index, {
+        if (!truckData.isPlayer && truckData.truck.driver) {
+          truckData.truck.driver.onCheckpointPassed(checkpointResult.index, {
             x: truckData.truck.mesh.position.x,
             z: truckData.truck.mesh.position.z,
           });
@@ -589,8 +589,8 @@ export class RaceMode extends BaseMode {
             finishOrder.push(truckData);
 
             // Stop AI driver from issuing further steering inputs
-            if (!truckData.isPlayer && truckData.truck.aiDriver) {
-              truckData.truck.aiDriver.paused = true;
+            if (!truckData.isPlayer && truckData.truck.driver) {
+              truckData.truck.driver.paused = true;
             }
 
             // For 1-lap races the "start final lap" trigger never fires, so start

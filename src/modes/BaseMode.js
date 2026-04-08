@@ -42,8 +42,8 @@ export class BaseMode {
     truck.state.velocity.setAll(0);
     truck.state.verticalVelocity = 0;
     
-    // Reset physics body (works for both arcade and physics trucks)
-    const body = truck._truckInstance?.physics?.body ?? truck.physics?.body;
+    // Reset physics body
+    const body = truck.physics?.body;
     if (body) {
       body.setLinearVelocity(Vector3.Zero());
       body.setAngularVelocity(Vector3.Zero());

@@ -220,30 +220,3 @@ export class Truck {
     }
   }
 }
-
-// Export legacy factory function for backward compatibility
-export function createTruck(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null) {
-  const truck = new Truck(scene, shadows, diffuseColor, driver, vehicleDef);
-  return {
-    mesh: truck.mesh,
-    state: truck.state,
-    particles: truck.particles.driftParticles,
-    splashParticles: truck.particles.splashParticles,
-    physics: truck.physics,
-    height: truck.height,
-    halfHeight: truck.halfHeight,
-    radius: truck.radius,
-    aiDriver: truck.driver, // Expose AI driver reference
-    _truckInstance: truck  // Store reference for updateTruck
-  };
-}
-
-export function updateTruck(truck, input, deltaTime, terrainManager = null, track = null) {
-  // If we have the new truck instance, use it
-  if (truck._truckInstance) {
-    return truck._truckInstance.update(input, deltaTime, terrainManager, track);
-  }
-  
-  // Fallback: shouldn't reach here with new code
-  throw new Error("Truck instance not found. Use new Truck class.");
-}
