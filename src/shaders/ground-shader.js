@@ -48,7 +48,8 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSi
     imgMap[name] = await _loadNormalMap(name);
   }));
 
-  // Group cells by their normalMap so we can paint each map in one pass
+  // Group cells by their normalMap so we can paint each map in one pass.
+  // Also track per-cell intensity since the same normalMap can have different intensities.
   const cellsByMap = {};
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
@@ -56,29 +57,46 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSi
       const name = cell.normalMap;
       if (!name) continue;
       if (!cellsByMap[name]) cellsByMap[name] = [];
-      cellsByMap[name].push({ col, row });
+      cellsByMap[name].push({ col, row, intensity: cell.normalMapIntensity ?? 1.0 });
     }
   }
 
   // For each unique map, create a repeating pattern scaled to tileSize and
-  // fill every cell that uses it. Because the pattern origin is the canvas
-  // origin (0,0), it tiles continuously across all cell boundaries.
+  // fill every cell that uses it, respecting per-cell intensity via globalAlpha.
+  // Because the pattern origin is the canvas origin (0,0), it tiles continuously
+  // across cell boundaries. Cells with different intensities are drawn separately.
   for (const [name, cells] of Object.entries(cellsByMap)) {
     const img = imgMap[name];
-    if (!img || img.naturalWidth === 0) {
-      ctx.fillStyle = 'rgb(128,128,255)';
-      for (const { col, row } of cells)
-        ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
-      continue;
-    }
 
-    const pattern = ctx.createPattern(img, 'repeat');
-    const scale = tileSize / img.naturalWidth;
-    pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
-    ctx.fillStyle = pattern;
-
+    // First fill all cells with the flat normal (rgb 128,128,255) at full opacity
+    // as a base, then composite the actual texture on top with the correct alpha.
+    ctx.save();
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = 'rgb(128,128,255)';
     for (const { col, row } of cells)
       ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+
+    if (img && img.naturalWidth > 0) {
+      const pattern = ctx.createPattern(img, 'repeat');
+      const scale = tileSize / img.naturalWidth;
+      pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
+      ctx.fillStyle = pattern;
+
+      // Group cells by intensity to minimise globalAlpha state changes
+      const byIntensity = {};
+      for (const c of cells) {
+        const key = c.intensity;
+        if (!byIntensity[key]) byIntensity[key] = [];
+        byIntensity[key].push(c);
+      }
+      for (const [intensity, group] of Object.entries(byIntensity)) {
+        ctx.globalAlpha = Number(intensity);
+        for (const { col, row } of group)
+          ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+      }
+    }
+
+    ctx.restore();
   }
 }
 
@@ -91,7 +109,7 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSi
  * @param {number} worldSize - Size of the world space the texture covers
  * @returns {Promise<DynamicTexture>}
  */
-export async function createCompositeNormalMap(scene, normalMapDecals, terrainManager = null, textureSize = 2048, worldSize = 160) {
+export async function createCompositeNormalMap(scene, normalMapDecals, terrainManager, textureSize = 2048, worldSize = 160) {
   const dynamicTexture = new DynamicTexture(
     'compositeNormalMap',
     { width: textureSize, height: textureSize },
@@ -100,22 +118,7 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
   );
 
   const ctx = dynamicTexture.getContext();
-
-  if (terrainManager) {
-    await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
-  } else {
-    // Legacy fallback: single tiled base
-    const baseImg = await _loadNormalMap('6481-normal.jpg');
-    if (baseImg && baseImg.naturalWidth > 0) {
-      const tileSize = textureSize / 10;
-      for (let y = 0; y < 10; y++)
-        for (let x = 0; x < 10; x++)
-          ctx.drawImage(baseImg, x * tileSize, y * tileSize, tileSize, tileSize);
-    } else {
-      ctx.fillStyle = 'rgb(128,128,255)';
-      ctx.fillRect(0, 0, textureSize, textureSize);
-    }
-  }
+  await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
   
   // If no decals, just return the base
   if (!normalMapDecals || normalMapDecals.length === 0) {
@@ -210,25 +213,10 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
  * @param {TerrainManager} [terrainManager]
  * @param {number} [worldSize]
  */
-export async function updateCompositeNormalMap(dynamicTexture, scene, normalMapDecals, terrainManager = null, worldSize = 160) {
+export async function updateCompositeNormalMap(dynamicTexture, scene, normalMapDecals, terrainManager, worldSize = 160) {
   const textureSize = dynamicTexture.getSize().width;
   const ctx = dynamicTexture.getContext();
-
-  if (terrainManager) {
-    await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
-  } else {
-    // Legacy fallback
-    const baseImg = await _loadNormalMap('6481-normal.jpg');
-    if (baseImg && baseImg.naturalWidth > 0) {
-      const tileSize = textureSize / 10;
-      for (let y = 0; y < 10; y++)
-        for (let x = 0; x < 10; x++)
-          ctx.drawImage(baseImg, x * tileSize, y * tileSize, tileSize, tileSize);
-    } else {
-      ctx.fillStyle = 'rgb(128,128,255)';
-      ctx.fillRect(0, 0, textureSize, textureSize);
-    }
-  }
+  await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
   
   if (!normalMapDecals || normalMapDecals.length === 0) {
     dynamicTexture.update();

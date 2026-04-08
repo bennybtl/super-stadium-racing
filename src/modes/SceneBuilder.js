@@ -25,7 +25,7 @@ import { WallManager } from "../managers/WallManager.js";
 import { TireStackManager } from "../managers/TireStackManager.js";
 import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
-import { paintTerrainTexture } from "../terrain-utils.js";
+import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
 
 /**
  * Builds the shared Babylon scene used by both RaceMode and EditorMode:
@@ -102,8 +102,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   ground.createNormals(true);
 
   const groundMat = new StandardMaterial("groundMat", scene);
-  groundMat.specularColor = new Color3(0.2, 0.2, 0.2);
-  groundMat.specularPower = 10;
+  // specularColor = max highlight colour; the specularTexture scales it per-pixel
+  // so dry terrain stays matte while mud/water cells become shiny/wet.
+  groundMat.specularColor = new Color3(1, 1, 1);
+  groundMat.specularPower = 48; // tighter highlight → wet/glossy look
 
   // -- Ground texture --
   const texSize = 512;
@@ -124,6 +126,20 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Flip texture vertically so canvas Y aligns with world Z
   groundMat.diffuseTexture.vScale = -1;
   groundMat.diffuseTexture.vOffset = 1;
+
+  // -- Specular (wet) map -- bright where mud/water, dark everywhere else
+  const specularTex = new DynamicTexture(
+    "specularTex",
+    { width: texSize, height: texSize },
+    scene
+  );
+  paintTerrainSpecularMap(specularTex.getContext(), terrainManager, pixelsPerCell);
+  specularTex.update();
+  specularTex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  specularTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  specularTex.vScale = -1;
+  specularTex.vOffset = 1;
+  groundMat.specularTexture = specularTex;
   
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
   // Collect all normal map decal features from the track

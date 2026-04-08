@@ -8,6 +8,8 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.2, 0.2, 0.25),
     dragMultiplier: 0.5,
     normalMap: '616-normal.jpg',
+    normalMapIntensity: 0.6, // Subtle road surface texture
+    specular: 0.18,          // Slightly shiny pavement
   },
   PACKED_DIRT: {
     name: "packed_dirt",
@@ -15,6 +17,8 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.54, 0.28, 0.08),
     dragMultiplier: 0.8,
     normalMap: '6481-normal.jpg',
+    normalMapIntensity: 0.8, // Moderate dirt texture
+    specular: 0.13,          // Matte dry dirt
   },
   LOOSE_DIRT: {
     name: "loose_dirt",
@@ -22,6 +26,8 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.69, 0.43, 0.23),
     dragMultiplier: 1.0,
     normalMap: '6481-normal.jpg',
+    normalMapIntensity: 1.0, // Full intensity — rough loose surface
+    specular: 0.13,          // Matte dry dirt
   },
   MUD: {
     name: "mud",
@@ -29,13 +35,17 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.34, 0.18, 0.08),
     dragMultiplier: 2.9,    // Slows you down
     normalMap: 'mud.png',
+    normalMapIntensity: 0.9, // Deep muddy surface detail
+    specular: 0.65,          // Glistening wet mud
   },
   WATER: {
     name: "water",
     gripMultiplier: 0.3,     // Low grip
     color: new Color3(0.1, 0.3, 1),
     dragMultiplier: 6.0,     // Very high drag
-    normalMap: '9110-normal.jpg',
+    normalMap: 'water.jpg',
+    normalMapIntensity: 0.5, // Gentle ripple detail
+    specular: 0.92,          // Highly reflective water surface
   },
   ROCKY: {
     name: "rocky",
@@ -43,6 +53,8 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.42, 0.30, 0.22), // Dark reddish-brown rock
     dragMultiplier: 5.0,     // Dramatic slowing — holes catch and drag the truck
     normalMap: 'rocky.jpg',
+    normalMapIntensity: 1.5, // Strong rocky surface detail
+    specular: 0.14,          // Matte rock
   },
 };
 
