@@ -1,0 +1,33 @@
+{
+  "id": "rally_car",
+  "name": "Rally Car",
+  "modelFile": null,
+  "defaultColor": [0.1, 0.7, 0.15],
+  "physicsBox": {
+    "width": 1.3,
+    "height": 0.65,
+    "depth": 2.6
+  },
+  "wheels": {
+    "trackWidth": 2.0,
+    "frontAxle":  1.25,
+    "rearAxle":  -1.0
+  },
+  "params": {
+    "springStrength": 120,
+    "damping": 8,
+    "maxSpeed": 32,
+    "maxReverseSpeed": -12,
+    "acceleration": 11,
+    "braking": 3,
+    "drag": 3,
+    "turnSpeed": 4.5,
+    "grip": 0.045,
+    "driftThreshold": 0.15,
+    "boostCount": 7,
+    "maxBoosts": 7,
+    "boostDuration": 1.0,
+    "boostAccelMult": 1.8,
+    "boostSpeedMult": 1.4
+  }
+}

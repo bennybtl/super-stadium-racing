@@ -53,7 +53,8 @@ export class TestMode extends BaseMode {
       heading = 0;
     }
 
-    const playerTruck = createTruck(scene, shadows, null, null, spawnPos);
+    const playerTruck = createTruck(scene, shadows);
+    playerTruck.mesh.position.copyFrom(spawnPos);
     playerTruck.state.heading = heading;
     playerTruck.mesh.rotation.y = heading;
 

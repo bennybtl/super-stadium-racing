@@ -48,8 +48,9 @@ export class WallManager {
     for (const truckData of trucks) {
       const truck = truckData.truck ?? truckData;
       if (!truck.mesh || !truck.state) continue;
+      const radius = truck.radius ?? TRUCK_RADIUS;
       for (const seg of this._segments) {
-        this._preClampVelocity(truck, seg, TRUCK_RADIUS, dt);
+        this._preClampVelocity(truck, seg, radius, dt);
       }
     }
   }
@@ -118,7 +119,7 @@ export class WallManager {
       const prevPos = this._prevPositions.get(id) ?? pos.clone();
 
       for (const seg of this._segments) {
-        this._resolveCollision(truck, seg, TRUCK_RADIUS, prevPos);
+        this._resolveCollision(truck, seg, truck.radius ?? TRUCK_RADIUS, prevPos);
       }
 
       // Record resolved position for next frame's swept test

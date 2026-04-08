@@ -25,10 +25,22 @@ export class TruckBody {
    * @param {Object}  shadows - ShadowGenerator
    * @param {Object}  colors  - { body, cabin, wheel, detail }
    */
-  constructor(parent, scene, shadows, colors = {}) {
+  constructor(parent, scene, shadows, colors = {}, geometry = null) {
     this.parent  = parent;
     this.scene   = scene;
     this.shadows = shadows;
+
+    // Wheel geometry — from vehicle def, falling back to defaults matching the OBJ model
+    const g = geometry ?? {};
+    const halfTrack  = (g.trackWidth  ?? 2.4) / 2;
+    const frontAxle  =  g.frontAxle   ?? 1.5;
+    const rearAxle   =  g.rearAxle    ?? -1.2;
+    this._wheelDefs = [
+      { id: "FL", x:  halfTrack, z: frontAxle, isFront: true  },
+      { id: "FR", x: -halfTrack, z: frontAxle, isFront: true  },
+      { id: "RL", x:  halfTrack, z: rearAxle,  isFront: false },
+      { id: "RR", x: -halfTrack, z: rearAxle,  isFront: false },
+    ];
 
 
     // Visual root for the body (chassis, cabin). Follows the physics box
@@ -64,15 +76,7 @@ export class TruckBody {
     this._loadBody();
 
     // ── Wheels ───────────────────────────────────────────────────────────
-    //  wheel local positions (relative to physics box centre)
-    const wheelDefs = [
-      { id: "FL", x:  1.2, z:  1.5, isFront: true  },
-      { id: "FR", x: -1.2, z:  1.5, isFront: true  },
-      { id: "RL", x:  1.2, z: -1.2, isFront: false },
-      { id: "RR", x: -1.2, z: -1.2, isFront: false },
-    ];
-
-    for (const def of wheelDefs) {
+    for (const def of this._wheelDefs) {
       const baseY = 0.20; // tyre radius (0.36) - physics box half-height (0.4)
       const wheel = this._buildWheel(def.id, def.x, baseY, def.z);
       this._wheels.push({
@@ -166,16 +170,6 @@ export class TruckBody {
     tyre.parent     = this._wheelRoot;
     this._styleMesh(tyre, this.colors.wheel);
     this._parts.push(tyre);
-
-    // Rim disc
-    const rim = MeshBuilder.CreateCylinder(`rim_${id}`, {
-      diameter: 0.44, height: 0.12, tessellation: 12,
-    }, this.scene);
-    rim.rotation.z = Math.PI / 2;
-    rim.position   = new Vector3(x, y, z);
-    rim.parent     = this._wheelRoot;
-    this._styleMesh(rim, this.colors.detail);
-    this._parts.push(rim);
 
     // Return the tyre as the primary wheel mesh for animation
     return tyre;

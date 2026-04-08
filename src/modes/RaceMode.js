@@ -155,7 +155,8 @@ export class RaceMode extends BaseMode {
     const spawn2 = getGridSpawn(2);
     const spawn3 = getGridSpawn(3);
 
-    const playerTruck = createTruck(scene, shadows, null, null, spawn0.pos);
+    const playerTruck = createTruck(scene, shadows);
+    playerTruck.mesh.position.copyFrom(spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
 

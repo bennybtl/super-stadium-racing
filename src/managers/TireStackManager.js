@@ -35,7 +35,6 @@ export class TireStackManager {
    */
   update(trucks) {
     // Combined contact radius: truck (≈half-diagonal of 1.5×2.2 box) + stack
-    const CONTACT_DIST   = TRUCK_RADIUS + TIRE_OUTER_RADIUS;
     // Maximum fraction of truck speed lost per hit (capped so we don't reverse the truck)
     const MAX_SLOW       = 0.55;
 
@@ -45,6 +44,8 @@ export class TireStackManager {
       for (const truckData of trucks) {
         const truck = truckData.truck ?? truckData;
         if (!truck.mesh || !truck.state) continue;
+
+        const CONTACT_DIST = (truck.radius ?? TRUCK_RADIUS) + TIRE_OUTER_RADIUS;
 
         const tp  = truck.mesh.position;
         const dx  = sp.x - tp.x;

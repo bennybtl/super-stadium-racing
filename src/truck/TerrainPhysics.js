@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import { TRUCK_HALF_HEIGHT } from "../constants.js";
+import { TRUCK_HALF_HEIGHT as _DEFAULT_HALF_HEIGHT } from "../constants.js";
 
 /**
  * Tunable constants for downhill terrain tracking.
@@ -51,8 +51,9 @@ const DOWNHILL = {
  * Handles terrain-related physics: gravity, suspension, slope collision
  */
 export class TerrainPhysics {
-  constructor(state) {
+  constructor(state, halfHeight = _DEFAULT_HALF_HEIGHT) {
     this.state = state;
+    this.halfHeight = halfHeight;
     this.gravity = -30;
   }
 
@@ -211,7 +212,7 @@ export class TerrainPhysics {
       return mesh.position.add(this.state.velocity.scale(deltaTime));
     }
 
-    const truckBottom = mesh.position.y - TRUCK_HALF_HEIGHT;
+    const truckBottom = mesh.position.y - this.halfHeight;
 
     // Skip slope blocking when the truck is airborne — the slope is below the truck
     const terrainHere = track.getHeightAt(mesh.position.x, mesh.position.z);

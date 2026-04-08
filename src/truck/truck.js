@@ -1,6 +1,5 @@
 import { 
   MeshBuilder, 
-  StandardMaterial, 
   Color3, 
   Vector3,
   PhysicsAggregate,
@@ -12,21 +11,38 @@ import { TerrainPhysics } from "./TerrainPhysics.js";
 import { DriftPhysics } from "./DriftPhysics.js";
 import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
-import { TRUCK_HALF_HEIGHT, TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js";
+import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js"; // used as fallback defaults only
 
 /**
  * Main Truck class that coordinates all truck subsystems
  */
 export class Truck {
-  constructor(scene, shadows, diffuseColor = null, driver = null, spawnPos = null) {
+  constructor(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null) {
     this.scene = scene;
     this.shadows = shadows;
     this.driver = driver; // Optional AI driver
-    this.diffuseColor = diffuseColor ? diffuseColor : new Color3(0.8, 0.2, 0.1);
+    this.vehicleDef = vehicleDef; // Optional vehicle definition from VehicleLoader
+    this.vehicleName = vehicleDef?.name ?? 'Truck';
+
+    // Color priority: explicit arg → vehicleDef defaultColor → built-in default
+    const defColor = vehicleDef?.defaultColor;
+    this.diffuseColor = diffuseColor
+      ? diffuseColor
+      : defColor
+        ? new Color3(defColor[0], defColor[1], defColor[2])
+        : new Color3(0.8, 0.2, 0.1);
+
+    // Physics box dimensions — from vehicleDef, falling back to shared constants
+    const box = vehicleDef?.physicsBox ?? {};
+    this.width      = box.width  ?? TRUCK_WIDTH;
+    this.height     = box.height ?? TRUCK_HEIGHT;
+    this.depth      = box.depth  ?? TRUCK_DEPTH;
+    this.halfHeight = this.height / 2;
+    // Half-diagonal of the XZ footprint — used by wall and tire-stack collision
+    this.radius     = Math.sqrt((this.width / 2) ** 2 + (this.depth / 2) ** 2);
     
     // Create mesh and physics
     this.mesh = this.createMesh();
-    if (spawnPos) this.mesh.position.copyFrom(spawnPos);
     this.physics = this.createPhysics();
     
     // Initialize state
@@ -34,22 +50,19 @@ export class Truck {
     
     // Initialize subsystems
     this.particles = new ParticleEffects(this.mesh, scene);
-    this.terrainPhysics = new TerrainPhysics(this.state);
+    this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
 
     // Visual puppet — sits on top of the invisible physics box
     this.body = new TruckBody(this.mesh, scene, shadows, {
       body:   this.diffuseColor,
-      cabin:  new Color3(0.25, 0.25, 0.3),
-      wheel:  new Color3(0.12, 0.12, 0.12),
-      detail: new Color3(0.75, 0.75, 0.75),
-    });
+    }, vehicleDef?.wheels ?? null);
   }
 
   createMesh() {
-    const mesh = MeshBuilder.CreateBox("truck", { width: TRUCK_WIDTH, height: TRUCK_HEIGHT, depth: TRUCK_DEPTH }, this.scene);
-    mesh.position.y = TRUCK_HALF_HEIGHT;
+    const mesh = MeshBuilder.CreateBox("truck", { width: this.width, height: this.height, depth: this.depth }, this.scene);
+    mesh.position.y = this.halfHeight;
     mesh.isVisible = false;  // visual puppet replaces this
     return mesh;
   }
@@ -67,7 +80,7 @@ export class Truck {
   }
 
   createState() {
-    return {
+    const base = {
       heading: 0,
       velocity: Vector3.Zero(),
       verticalVelocity: 0,
@@ -103,6 +116,15 @@ export class Truck {
       boostAccelMult: 2,
       boostSpeedMult: 1.5,
     };
+
+    // Overlay any params supplied by the vehicle definition
+    if (this.vehicleDef?.params) {
+      Object.assign(base, this.vehicleDef.params);
+      // Keep boostCount in sync with maxBoosts on first load
+      base.boostCount = base.maxBoosts;
+    }
+
+    return base;
   }
 
 
@@ -200,8 +222,8 @@ export class Truck {
 }
 
 // Export legacy factory function for backward compatibility
-export function createTruck(scene, shadows, diffuseColor = null, driver = null, spawnPos = null) {
-  const truck = new Truck(scene, shadows, diffuseColor, driver, spawnPos);
+export function createTruck(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null) {
+  const truck = new Truck(scene, shadows, diffuseColor, driver, vehicleDef);
   return {
     mesh: truck.mesh,
     state: truck.state,

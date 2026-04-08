@@ -1,0 +1,33 @@
+{
+  "id": "default_truck",
+  "name": "Default Truck",
+  "modelFile": null,
+  "defaultColor": [0.8, 0.2, 0.1],
+  "physicsBox": {
+    "width": 1.5,
+    "height": 0.8,
+    "depth": 3.0
+  },
+  "wheels": {
+    "trackWidth": 2.4,
+    "frontAxle":  1.5,
+    "rearAxle":  -1.2
+  },
+  "params": {
+    "springStrength": 150,
+    "damping": 7,
+    "maxSpeed": 25,
+    "maxReverseSpeed": -10,
+    "acceleration": 13,
+    "braking": 2,
+    "drag": 4,
+    "turnSpeed": 3.6,
+    "grip": 0.03,
+    "driftThreshold": 0.1,
+    "boostCount": 5,
+    "maxBoosts": 5,
+    "boostDuration": 1.5,
+    "boostAccelMult": 2,
+    "boostSpeedMult": 1.5
+  }
+}

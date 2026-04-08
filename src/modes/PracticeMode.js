@@ -3,7 +3,6 @@ import { createTruck, updateTruck } from "../truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { buildScene } from "./SceneBuilder.js";
-import { TRUCK_HEIGHT } from "../constants.js";
 import { BaseMode } from "./BaseMode.js";
 
 /**
@@ -41,20 +40,22 @@ export class PracticeMode extends BaseMode {
     const maxNum = checkpointFeatures.reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
     const startCp = checkpointFeatures.find(f => f.checkpointNumber === maxNum) || null;
 
+    // Create truck first so we can read its height when calculating spawnPos
+    const playerTruck = createTruck(scene, shadows);
+
     let spawnPos, heading;
     if (startCp) {
       const h = startCp.heading;
       const x = startCp.centerX + Math.sin(h) * -6;
       const z = startCp.centerZ + Math.cos(h) * -6;
-      spawnPos = new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HEIGHT, z);
+      spawnPos = new Vector3(x, currentTrack.getHeightAt(x, z) + playerTruck.height, z);
       heading = h;
     } else {
-      spawnPos = new Vector3(0, TRUCK_HEIGHT, 0);
+      spawnPos = new Vector3(0, playerTruck.height, 0);
       heading = 0;
     }
 
-    // Create truck
-    const playerTruck = createTruck(scene, shadows, null, null, spawnPos);
+    playerTruck.mesh.position.copyFrom(spawnPos);
     playerTruck.state.heading = heading;
     playerTruck.mesh.rotation.y = heading;
 
