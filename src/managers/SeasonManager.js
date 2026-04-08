@@ -12,7 +12,7 @@ const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json'];
 const POINTS_TABLE = [10, 5, 3, 1];
 
 /** Cash earned per championship point */
-const MONEY_PER_POINT = 500;
+const MONEY_PER_POINT = 100;
 
 /**
  * Available upgrades.
@@ -59,11 +59,10 @@ export const UPGRADES = [
   {
     id: 'nitro',
     label: 'Nitro',
-    description: 'Extra boost charge per race',
+    description: 'Add a boost charge to your pool (max 99, carries over between races)',
     cost: 200,
-    maxLevel: 5,
-    statKey: 'boostCount',
-    statDelta: 1,        // +1 boost per level
+    statKey: null,
+    statDelta: 1,
   },
 ];
 
@@ -119,7 +118,8 @@ export class SeasonManager {
           skill: null,
           skillConfig: null,
           totalPoints: 0,
-          balance: 5000,
+          balance: 0,
+          nitroCount: 5,  // persistent boost pool; starts at truck default
           upgrades: {},   // { [upgradeId]: level }
           raceResults: [],
         },
@@ -222,11 +222,22 @@ export class SeasonManager {
     this._requireState();
     const player = this.state.drivers.find(d => d.isPlayer);
     const purchased = player?.upgrades ?? {};
-    return UPGRADES.map(u => ({
-      ...u,
-      level: purchased[u.id] ?? 0,
-      affordable: (player?.balance ?? 0) >= u.cost,
-    }));
+    return UPGRADES.map(u => {
+      if (u.id === 'nitro') {
+        const count = player?.nitroCount ?? 5;
+        return {
+          ...u,
+          level: count,
+          maxLevel: 99,
+          affordable: (player?.balance ?? 0) >= u.cost && count < 99,
+        };
+      }
+      return {
+        ...u,
+        level: purchased[u.id] ?? 0,
+        affordable: (player?.balance ?? 0) >= u.cost,
+      };
+    });
   }
 
   /**
@@ -236,7 +247,10 @@ export class SeasonManager {
   getPlayerUpgrades() {
     this._requireState();
     const player = this.state.drivers.find(d => d.isPlayer);
-    return { ...(player?.upgrades ?? {}) };
+    return {
+      ...(player?.upgrades ?? {}),
+      nitroCount: player?.nitroCount ?? 5,
+    };
   }
 
   /**
@@ -253,6 +267,19 @@ export class SeasonManager {
     if (!player) return { ok: false, reason: 'No player driver' };
 
     player.upgrades = player.upgrades ?? {};
+
+    // Nitro is a persistent pool — not a level-based upgrade
+    if (upgradeId === 'nitro') {
+      const current = player.nitroCount ?? 5;
+      if (current >= 99) return { ok: false, reason: 'Already at maximum (99)' };
+      if (player.balance < upgrade.cost) return { ok: false, reason: 'Insufficient funds' };
+      player.balance -= upgrade.cost;
+      player.nitroCount = current + 1;
+      this.save();
+      console.log(`[SeasonManager] Purchased Nitro — pool now ${player.nitroCount}. Balance: $${player.balance}`);
+      return { ok: true };
+    }
+
     const currentLevel = player.upgrades[upgradeId] ?? 0;
 
     if (currentLevel >= upgrade.maxLevel) return { ok: false, reason: 'Already maxed' };

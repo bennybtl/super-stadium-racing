@@ -3,7 +3,6 @@
     v-if="editor.selectedType === 'squareHill'"
     title="Square Hill"
     accent-color="#f0a020"
-    default-right="270px"
     @close="editor.closeSquareHill()"
   >
     <!-- Width -->

@@ -89,6 +89,12 @@ export class MenuManager {
     this._store.screen = null; // hide MenuOverlay; PostRaceOverlay gates on postRaceData
   }
 
+  showSingleRaceResults(data) {
+    this.currentMenu = 'singleRaceResults';
+    this._store.singleRaceData = data;
+    this._store.screen = null; // hide MenuOverlay; SingleRaceOverlay gates on singleRaceData
+  }
+
   showPit(data) {
     this.currentMenu = 'pit';
     this._store.postRaceData = null;

@@ -58,6 +58,7 @@ export class TrackLoader {
     });
 
     await Promise.all(loadPromises);
+    this.trackList.sort((a, b) => a.localeCompare(b));
     console.log(`[TrackLoader] Loaded ${this.tracks.size} tracks`);
     return this.tracks;
   }

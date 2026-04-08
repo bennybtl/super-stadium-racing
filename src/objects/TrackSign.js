@@ -6,14 +6,13 @@ import {
   Vector3,
 } from "@babylonjs/core";
 
-const BOARD_W        = 40;    // world units wide
-const BOARD_H        =  10;    // world units tall
-const BOARD_D        =  0.2;  // depth (thin box)
+const BOARD_W        = 36;    // world units wide
+const BOARD_H        =  8;    // world units tall
 const POST_H         =  2.5;  // post height
 const POST_DIAM      =  1;
 const BOARD_CENTER_Y = POST_H + BOARD_H / 2; // height of board centre above ground
 
-const TEX_W = 1024;
+const TEX_W = 512;
 const TEX_H = 256;
 
 export class TrackSign {
@@ -44,9 +43,9 @@ export class TrackSign {
     this.post.material      = postMat;
 
     // ── Board ─────────────────────────────────────────────────────────────
-    this.board = MeshBuilder.CreateBox(
+    this.board = MeshBuilder.CreatePlane(
       `signBoard_${x}_${z}`,
-      { width: BOARD_W, height: BOARD_H, depth: BOARD_D },
+      { width: BOARD_W, height: BOARD_H },
       scene
     );
     this.board.position   = new Vector3(x, groundY + BOARD_CENTER_Y, z);

@@ -139,6 +139,11 @@ export class CheckpointEditor {
     checkpoint.container.position.z = feature.centerZ;
     checkpoint.container.position.y = terrainHeight;
 
+    // Rebuild the world-space decal at the new position (only when snapped coords changed)
+    if (feature.centerX !== prevX || feature.centerZ !== prevZ) {
+      checkpoint.updateDecal(feature.checkpointNumber, checkpoint.isFinish);
+    }
+
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 

@@ -4,7 +4,6 @@ import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
-import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
@@ -72,7 +71,7 @@ export class RaceMode extends BaseMode {
     let countdownActive = false;
 
     // -- Finish / DNF tracking (season mode) --
-    const DNF_GRACE_MS = 15_000;
+    const DNF_GRACE_MS = 45_000;
     const finishOrder  = [];   // truckData entries in finish order
     let dnfTimer       = null; // started when the first driver begins their last lap
     let raceEnded      = false;
@@ -119,11 +118,30 @@ export class RaceMode extends BaseMode {
         console.log('[RaceMode] Season race recorded. Showing post-race screen.');
         menuManager.showPostRace(postRaceData);
       } else {
-        // Non-season: just log results to console (existing behaviour)
-        console.log('\n=== RACE FINISHED (non-season) ===');
-        finishOrder.forEach((td, i) => {
-          console.log(`  ${i + 1}. ${td.name} — ${(td.gameState.totalRaceTime / 1000).toFixed(2)}s`);
-        });
+        // Non-season: show a simple post-race results screen
+        const finishedIds = new Set(finishOrder.map(td => td.id));
+        const dnfTrucks   = trucks.filter(td => !finishedIds.has(td.id));
+        const rows = [
+          ...finishOrder.map((td, idx) => ({
+            id:              td.id,
+            name:            td.name,
+            isPlayer:        td.isPlayer,
+            finishPosition:  idx + 1,
+            totalRaceTimeMs: td.gameState.totalRaceTime,
+            fastestLapMs:    td.gameState.fastestLap,
+            dnf:             false,
+          })),
+          ...dnfTrucks.map((td, idx) => ({
+            id:              td.id,
+            name:            td.name,
+            isPlayer:        td.isPlayer,
+            finishPosition:  finishOrder.length + idx + 1,
+            totalRaceTimeMs: null,
+            fastestLapMs:    null,
+            dnf:             true,
+          })),
+        ];
+        menuManager.showSingleRaceResults({ trackKey, rows });
       }
     };
 
@@ -170,13 +188,13 @@ export class RaceMode extends BaseMode {
           // Suspension upgrades both spring strength and damping
           playerTruck.state.springStrength += 20 * level;
           playerTruck.state.damping        += 1.5 * level;
-        } else if (upgrade.id === 'nitro') {
-          playerTruck.state.boostCount  += upgrade.statDelta * level;
-          playerTruck.state.maxBoosts   += upgrade.statDelta * level;
-        } else {
+        } else if (upgrade.statKey) {
           playerTruck.state[upgrade.statKey] += upgrade.statDelta * level;
         }
       }
+      // Apply persistent nitro pool (carries over between races)
+      playerTruck.state.boostCount = purchased.nitroCount ?? playerTruck.state.boostCount;
+      playerTruck.state.maxBoosts  = purchased.nitroCount ?? playerTruck.state.maxBoosts;
     }
 
     const aiTruck1 = new Truck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
@@ -280,9 +298,6 @@ export class RaceMode extends BaseMode {
     });
 
     inputManager.onReset(() => respawnPlayer());
-
-    // -- Checkpoint arrow --
-    const checkpointArrow = new CheckpointArrow(scene);
 
     // -- Respawn --
     const respawnPlayer = () => {
@@ -496,12 +511,6 @@ export class RaceMode extends BaseMode {
       uiManager.updatePosition(playerTruckData.truck.mesh.position);
       uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
 
-      checkpointArrow.update(
-        playerTruckData.truck.mesh.position,
-        checkpointManager,
-        playerTruckData.gameState.lastCheckpointPassed
-      );
-
       trucks.forEach((truckData) => {
         if (truckData.gameState.raceFinished) return;
 
@@ -577,10 +586,15 @@ export class RaceMode extends BaseMode {
             );
           }
 
-          // Start the DNF countdown when the first driver begins their final lap
+          // Start the DNF countdown when the LAST driver begins their final lap
           if (lapCount === totalLaps - 1 && dnfTimer === null && !raceEnded) {
-            console.log(`[RaceMode] ${truckData.name} started final lap — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
-            setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
+            const driversOnFinalLap = trucks.filter(
+              td => !td.gameState.raceFinished && td.gameState.lapCount >= totalLaps - 1
+            ).length;
+            if (driversOnFinalLap === trucks.length - finishOrder.length) {
+              console.log(`[RaceMode] All remaining drivers on final lap — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
+              setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
+            }
           }
 
           if (lapCount >= totalLaps) {

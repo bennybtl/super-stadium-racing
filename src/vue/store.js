@@ -12,6 +12,7 @@ export const useMenuStore = defineStore('menu', () => {
   const postRaceData    = ref(null);
   const pitData         = ref(null);
   const seasonFinalData = ref(null);
+  const singleRaceData  = ref(null);
   
   // Settings state
   const truckMode = ref(localStorage.getItem('truckMode') || 'arcade');
@@ -72,17 +73,18 @@ export const useMenuStore = defineStore('menu', () => {
   function goToPit()               { _bridge.value?.onGoToPit(); }
   function purchaseUpgrade(id)     { _bridge.value?.onPurchaseUpgrade(id); }
   function exitSeason()            { postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
+  function singleRaceExit()        { singleRaceData.value = null; _bridge.value?.onExit(); }
 
   return {
     screen, isPaused, trackList,
-    postRaceData, pitData, seasonFinalData,
+    postRaceData, pitData, seasonFinalData, singleRaceData,
     setBridge,
     showTrackSelect, showPracticeTrackSelect, showEditorTrackSelect, selectTrack,
     startGame, startPractice, startEditor,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
-    showSeasonSetup, startSeason, continueSeason, retireFromSeason, goToPit, purchaseUpgrade, exitSeason,
+    showSeasonSetup, startSeason, continueSeason, retireFromSeason, goToPit, purchaseUpgrade, exitSeason, singleRaceExit,
   };
 });
 

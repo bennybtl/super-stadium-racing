@@ -34,12 +34,17 @@ export class EditorMode extends BaseMode {
       wallManager,
       shadows,
       flagManager,
+      trackSignManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     // Dispose runtime FlagManager flags – the EditorController's FlagTool
     // creates its own editor-mode flag meshes (without shadows/physics).
     // Keeping both sets causes duplicate meshes and breaks click-selection.
     flagManager.dispose();
+
+    // Dispose runtime TrackSignManager signs for the same reason — the
+    // TrackSignEditor creates its own copies that are tracked for selection.
+    trackSignManager.dispose();
 
     this.scene = scene;
 

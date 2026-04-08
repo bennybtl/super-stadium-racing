@@ -3,6 +3,7 @@
        Individual panels opt back in with pointer-events:auto. -->
   <div class="ui-root">
     <MenuOverlay />
+    <SingleRaceOverlay />
     <PostRaceOverlay />
     <PitOverlay />
     <SeasonFinalOverlay />
@@ -25,8 +26,9 @@
 </template>
 
 <script setup>
-import MenuOverlay    from './MenuOverlay.vue';
-import PostRaceOverlay  from './PostRaceOverlay.vue';
+import MenuOverlay        from './MenuOverlay.vue';
+import SingleRaceOverlay  from './SingleRaceOverlay.vue';
+import PostRaceOverlay    from './PostRaceOverlay.vue';
 import PitOverlay       from './PitOverlay.vue';
 import SeasonFinalOverlay from './SeasonFinalOverlay.vue';
 import RaceHUD        from './RaceHUD.vue';

@@ -164,10 +164,20 @@ export class TerrainPhysics {
     if (groundedness > 0.3 && track) {
       this.updateTerrainOrientation(mesh, track, deltaTime);
     } else {
-      // Smoothly return to flat when airborne
-      const airFactor = 1 - Math.exp(-10 * deltaTime);
-      this.state.terrainPitch += (0 - this.state.terrainPitch) * airFactor;
-      this.state.terrainRoll  += (0 - this.state.terrainRoll)  * airFactor;
+      // Airborne — target the angle of the velocity vector rather than
+      // immediately snapping to flat. This keeps the truck pitched uphill
+      // right after a jump and gradually tilts nose-down as it falls.
+      const hSpeed = Math.sqrt(
+        this.state.velocity.x ** 2 + this.state.velocity.z ** 2
+      );
+      const targetAirPitch = hSpeed > 0.5
+        ? Math.atan2(this.state.verticalVelocity, hSpeed)
+        : 0;
+
+      const pitchFactor = 1 - Math.exp(-1.5 * deltaTime);
+      const rollFactor  = 1 - Math.exp(-2.2 * deltaTime);
+      this.state.terrainPitch += (targetAirPitch - this.state.terrainPitch) * pitchFactor;
+      this.state.terrainRoll  += (0             - this.state.terrainRoll)   * rollFactor;
       mesh.rotation.x = -this.state.terrainPitch;
     }
     
