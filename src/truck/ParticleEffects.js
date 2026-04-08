@@ -1,15 +1,5 @@
 import { Vector3, ParticleSystem, Texture, Color4 } from "@babylonjs/core";
-
-// Drift particle color presets keyed by terrain name
-const DRIFT_COLORS = {
-  default:      { r: 0.40, g: 0.30, b: 0.20 }, // dusty brown (packed dirt)
-  packed_dirt:  { r: 0.40, g: 0.30, b: 0.20 },
-  loose_dirt:   { r: 0.50, g: 0.35, b: 0.18 }, // lighter tan
-  mud:          { r: 0.22, g: 0.16, b: 0.10 }, // dark mud
-  asphalt:      { r: 0.25, g: 0.25, b: 0.25 }, // grey tyre smoke
-  water:        { r: 0.70, g: 0.85, b: 1.00 }, // blue-white spray
-  rocky:        { r: 0.35, g: 0.24, b: 0.16 }, // dark reddish-brown grit
-};
+import { TERRAIN_TYPES } from "../terrain.js";
 
 /**
  * Manages particle effects for the truck (drift smoke and water splash)
@@ -18,12 +8,13 @@ export class ParticleEffects {
   constructor(mesh, scene) {
     this.mesh = mesh;
     this.scene = scene;
-    this.driftParticles = this._createDriftParticles(DRIFT_COLORS.default);
+    this.driftParticles = this._createDriftParticles(TERRAIN_TYPES.PACKED_DIRT.color);
     this.splashParticles = this.createSplashParticles();
     this.nitroParticles = this._createNitroParticles();
     this._currentTerrainName = null;
     this._nitroTimer = 0;
     this._wasBoostActive = false;
+    this._dyingParticles = []; // old drift systems fading out after terrain change
   }
 
   /**
@@ -41,12 +32,12 @@ export class ParticleEffects {
     particles.color2    = new Color4(color.r * 0.75, color.g * 0.75, color.b * 0.75, 0.3);
     particles.colorDead = new Color4(color.r * 0.5,  color.g * 0.5,  color.b * 0.5,  0);
 
-    particles.minSize = 0.5;
-    particles.maxSize = 1.2;
-    particles.minLifeTime = 0.5;
-    particles.maxLifeTime = 0.8;
+    particles.minSize = 1.5;
+    particles.maxSize = 3.2;
+    particles.minLifeTime = 0.75;
+    particles.maxLifeTime = 3.0;
 
-    particles.emitRate = 1;
+    particles.emitRate = 2;
     particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
     particles.gravity = new Vector3(0, -1, 0);
     particles.direction1 = new Vector3(-1, 0.5, -0.5);
@@ -54,7 +45,7 @@ export class ParticleEffects {
     particles.minAngularSpeed = 0;
     particles.maxAngularSpeed = Math.PI;
     particles.minEmitPower = 1;
-    particles.maxEmitPower = 3;
+    particles.maxEmitPower = 4;
     particles.updateSpeed = 0.01;
 
     particles.start();
@@ -67,12 +58,12 @@ export class ParticleEffects {
    */
   setDriftColor(color) {
     const prevRate = this.driftParticles.emitRate;
+    // Stop new emission but keep existing particles alive so they fade out naturally
     this.driftParticles.stop();
-    this.driftParticles.dispose();
+    this._dyingParticles.push(this.driftParticles);
     this.driftParticles = this._createDriftParticles(color);
     this.driftParticles.emitRate = prevRate;
   }
-
   /**
    * Creates a white smoke burst system for the nitro boost.
    * The emitter is set to a fixed world-space position at fire time so
@@ -180,10 +171,19 @@ export class ParticleEffects {
     const terrain = terrainManager ? terrainManager.getTerrainAt(this.mesh.position) : null;
     const terrainName = terrain?.name ?? 'default';
 
-    // Swap drift color when terrain changes
+    // Clean up old drift systems that have fully faded out
+    for (let i = this._dyingParticles.length - 1; i >= 0; i--) {
+      if (this._dyingParticles[i].getActiveCount() === 0) {
+        this._dyingParticles[i].dispose();
+        this._dyingParticles.splice(i, 1);
+      }
+    }
+
+    // Swap drift color when terrain changes — read directly from terrain definition
     if (terrainName !== this._currentTerrainName) {
       this._currentTerrainName = terrainName;
-      const color = DRIFT_COLORS[terrainName] ?? DRIFT_COLORS.default;
+
+      const color = terrain?.smokeColor ?? terrain?.color ?? TERRAIN_TYPES.PACKED_DIRT.color;
       this.setDriftColor(color);
     }
 

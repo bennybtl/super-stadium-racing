@@ -6,6 +6,7 @@ export const TERRAIN_TYPES = {
     name: "asphalt",
     gripMultiplier: 3.5,    // Best grip
     color: new Color3(0.2, 0.2, 0.25),
+    smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     dragMultiplier: 0.5,
     normalMap: '616-normal.jpg',
     normalMapIntensity: 0.6, // Subtle road surface texture
@@ -42,6 +43,7 @@ export const TERRAIN_TYPES = {
     name: "water",
     gripMultiplier: 0.3,     // Low grip
     color: new Color3(0.1, 0.3, 1),
+    smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
     dragMultiplier: 6.0,     // Very high drag
     normalMap: 'water.jpg',
     normalMapIntensity: 0.5, // Gentle ripple detail
