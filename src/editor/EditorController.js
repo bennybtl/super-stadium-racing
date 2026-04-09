@@ -11,6 +11,7 @@ import { NormalMapDecalEditor } from "./NormalMapDecalEditor.js";
 import { TireStackEditor } from "./TireStackEditor.js";
 import { FlagEditor } from "./FlagEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
+import { BannerStringEditor } from "./BannerStringEditor.js";
 import { useEditorStore } from '../vue/store.js';
 
 /**
@@ -63,6 +64,9 @@ export class EditorController {
 
     // Track sign editing (delegated to TrackSignEditor)
     this.trackSignEditor = new TrackSignEditor(this);
+
+    // Banner string editing (delegated to BannerStringEditor)
+    this.bannerStringEditor = new BannerStringEditor(this);
 
     // Accumulated raw (pre-snap) position of whatever is being dragged
     this._rawDragPos = null;
@@ -139,6 +143,9 @@ export class EditorController {
     // Initialize track sign editor
     this.trackSignEditor.activate(this.scene, track);
 
+    // Initialize banner string editor
+    this.bannerStringEditor.activate(this.scene, track);
+
     // Build editor visuals for any hills already in the track
     this.hillEditor.createVisualsForTrack(track);
     this.squareHillEditor.createVisualsForTrack(track);
@@ -150,6 +157,8 @@ export class EditorController {
         this.flagEditor.createVisual(feature);
       } else if (feature.type === 'trackSign') {
         this.trackSignEditor.createVisual(feature);
+      } else if (feature.type === 'bannerString') {
+        this.bannerStringEditor.createVisual(feature);
       }
     }
 
@@ -241,6 +250,9 @@ export class EditorController {
     // Track sign editor
     this.trackSignEditor.dispose();
 
+    // Banner string editor
+    this.bannerStringEditor.dispose();
+
     console.log('[EditorController] Editor mode deactivated');
   }
 
@@ -280,6 +292,7 @@ export class EditorController {
     this.tireStackEditor.deselect();
     this.flagEditor.deselect();
     this.trackSignEditor.deselect();
+    this.bannerStringEditor.deselect();
 
     // Dispose all gizmo meshes
     this.hillEditor.dispose();
@@ -294,6 +307,9 @@ export class EditorController {
     // Dispose and rebuild track sign meshes
     this.trackSignEditor.clearMeshes();
 
+    // Dispose and rebuild banner string meshes
+    this.bannerStringEditor.clearMeshes();
+
     // Restore features
     this.currentTrack.features = JSON.parse(snap);
 
@@ -306,6 +322,7 @@ export class EditorController {
       else if (feature.type === 'tireStack') this.tireStackEditor.createVisual(feature);
       else if (feature.type === 'flag') this.flagEditor.createVisual(feature);
       else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
+      else if (feature.type === 'bannerString') this.bannerStringEditor.createVisual(feature);
     }
     // Restore mesh grid gizmos
     this.meshGridTool?.onSnapshotRestored();
@@ -415,6 +432,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.trackSignEditor?.selected) {
         this.trackSignEditor.deleteSelected();
+        event.preventDefault();
+      } else if (this.bannerStringEditor?.selected) {
+        this.bannerStringEditor.deleteSelected();
         event.preventDefault();
       } else if (this.meshGridTool?.activeFeature) {
         this.meshGridTool.deleteMeshGrid();
@@ -613,6 +633,10 @@ export class EditorController {
       delta = this.flagEditor.move(movement);
     } else if (this.trackSignEditor.selected) {
       delta = this.trackSignEditor.move(movement);
+    } else if (this.bannerStringEditor.selected) {
+      if (this.keys.rotateLeft)  this.bannerStringEditor.rotate( this.rotationSpeed);
+      if (this.keys.rotateRight) this.bannerStringEditor.rotate(-this.rotationSpeed);
+      delta = this.bannerStringEditor.move(movement);
     } else if (this.polyWallTool?.selectedPoint) {
       const d = this.polyWallTool.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
@@ -740,6 +764,17 @@ export class EditorController {
             const wasSelected = this.trackSignEditor.selected === signData;
             this.deselectAll();
             if (!wasSelected) this.trackSignEditor.select(signData);
+            return;
+          }
+        }
+
+        // Check if clicked mesh is a banner string
+        {
+          const bannerData = this.bannerStringEditor.findByMesh(clickedMesh);
+          if (bannerData) {
+            const wasSelected = this.bannerStringEditor.selected === bannerData;
+            this.deselectAll();
+            if (!wasSelected) this.bannerStringEditor.select(bannerData);
             return;
           }
         }
@@ -919,6 +954,7 @@ export class EditorController {
     this.tireStackEditor.deselect();
     this.flagEditor.deselect();
     this.trackSignEditor.deselect();
+    this.bannerStringEditor.deselect();
     this.meshGridTool?.deselectPoint();
     this.polyWallTool?.deselectPoint();
     this.polyHillTool?.deselectPoint();
@@ -964,6 +1000,13 @@ export class EditorController {
   changeTrackSignName(val)     { this.trackSignEditor.changeName(val); }
   changeTrackSignRotation(val) { this.trackSignEditor.changeRotation(val); }
   deleteTrackSign()            { this.trackSignEditor.deleteSelected(); }
+
+  // ── Banner String Vue bridge methods ──
+  addBannerStringEntity()         { this.bannerStringEditor.addEntity(); }
+  deselectBannerString()          { this.bannerStringEditor.deselect(); }
+  changeBannerStringWidth(val)    { this.bannerStringEditor.changeWidth(val); }
+  changeBannerStringPoleHeight(val) { this.bannerStringEditor.changePoleHeight(val); }
+  deleteBannerString()            { this.bannerStringEditor.deleteSelected(); }
 
   /**
    * Dispose of the controller

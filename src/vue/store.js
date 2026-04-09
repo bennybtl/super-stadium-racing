@@ -226,6 +226,13 @@ export const useEditorStore = defineStore('editor', () => {
     rotation: 0,   // degrees
   });
 
+  // ── Banner String panel ──
+  const bannerString = reactive({
+    width: 8,
+    poleHeight: 4.2,
+    heading: 0,   // degrees, display only
+  });
+
   // ── Test mode (back button) ──
   const testModeActive = ref(false);
   const testModeReturnKey = ref(null);
@@ -334,6 +341,12 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteTrackSign()            { _bridge.value?.deleteTrackSign(); }
   function closeTrackSign()             { _bridge.value?.deselectTrackSign(); }
 
+  // ── Banner String actions ──
+  function setBannerStringWidth(val)      { bannerString.width = val;      _bridge.value?.changeBannerStringWidth(val); }
+  function setBannerStringPoleHeight(val) { bannerString.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
+  function deleteBannerString()           { _bridge.value?.deleteBannerString(); }
+  function closeBannerString()            { _bridge.value?.deselectBannerString(); }
+
   function setActiveTool(val)           { activeTool.value = val; }
 
   // ── Add-entity menu ──
@@ -355,6 +368,7 @@ export const useEditorStore = defineStore('editor', () => {
   function addPolyHill()       { _bridge.value?.addPolyHillEntity(); }
   function addBezierWall()     { _bridge.value?.addBezierWallEntity(); }
   function addTrackSign()      { _bridge.value?.addTrackSignEntity(); }
+  function addBannerString()   { _bridge.value?.addBannerStringEntity(); }
 
   return {
     selectedType,
@@ -393,11 +407,13 @@ export const useEditorStore = defineStore('editor', () => {
     setFlagColor, deleteFlag,
     trackSign,
     setTrackSignName, setTrackSignRotation, deleteTrackSign, closeTrackSign,
+    bannerString,
+    setBannerStringWidth, setBannerStringPoleHeight, deleteBannerString, closeBannerString,
     setActiveTool,
     toggleSnap, cycleSnapSize, quickTestTrack,
     openAddMenu, closeAddMenu, toggleAddMenu,
     addCheckpoint, addHill, addSquareHill, addTerrainRect, addTerrainCircle,
     addNormalMapDecal, addTireStack, addFlag,
-    addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign,
+    addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
   };
 });

@@ -35,6 +35,7 @@ export class EditorMode extends BaseMode {
       shadows,
       flagManager,
       trackSignManager,
+      bannerStringManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     // Dispose runtime FlagManager flags – the EditorController's FlagTool
@@ -45,6 +46,9 @@ export class EditorMode extends BaseMode {
     // Dispose runtime TrackSignManager signs for the same reason — the
     // TrackSignEditor creates its own copies that are tracked for selection.
     trackSignManager.dispose();
+
+    // Dispose runtime BannerStringManager banners — BannerStringEditor creates its own.
+    bannerStringManager.dispose();
 
     this.scene = scene;
 
