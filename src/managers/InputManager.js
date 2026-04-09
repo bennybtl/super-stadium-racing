@@ -41,7 +41,7 @@ export class InputManager {
   handleKeyDown(e) {
     // Movement
     if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = true;
-    if (e.code === "KeyS" || e.code === "ArrowDown") this.input.back = true;
+    if (e.code === "ShiftLeft" || e.code === "ArrowDown") this.input.back = true;
     if (e.code === "KeyA" || e.code === "ArrowLeft") this.input.left = true;
     if (e.code === "KeyD" || e.code === "ArrowRight") this.input.right = true;
     
@@ -66,6 +66,11 @@ export class InputManager {
       }
     }
     
+    // Camera mode toggle
+    if (e.code === "KeyC") {
+      this.cameraController.toggleMode();
+    }
+
     // Zoom controls
     if (e.code === "Equal" || e.code === "NumpadAdd") {
       this.cameraController.zoomIn();

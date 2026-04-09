@@ -27,7 +27,7 @@ export class BaseMode {
    * @param {number} maxDt - Maximum allowed deltaTime in seconds (default: 0.020 = 50fps)
    * @returns {number} Clamped deltaTime in seconds
    */
-  getClampedDeltaTime(engine, maxDt = 0.020) {
+  getClampedDeltaTime(engine, maxDt = 0.05) {
     const dt = engine.getDeltaTime() / 1000;
     return Math.min(dt, maxDt);
   }

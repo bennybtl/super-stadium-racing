@@ -1,74 +1,130 @@
-import { Vector3 } from "@babylonjs/core";
-import { FlagTool } from "../managers/FlagTool.js";
+import { Vector3, Color3 } from "@babylonjs/core";
+import { Flag, POLE_HEIGHT } from "../objects/Flag.js";
 
 export class FlagEditor {
   constructor(editor) {
     this.editor = editor;
-    this._tool = null; // created in activate()
+    this.scene = null;
+    this.track = null;
+
+    this.flags = [];
+    this.selectedFlag = null;
   }
 
-  get selected() { return this._tool?.getSelectedFlag() ?? null; }
-  get flags()    { return this._tool?.flags ?? []; }
+  get selected() { return this.selectedFlag; }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   activate(scene, track) {
-    this._tool = new FlagTool(scene, track, this.editor);
+    this.scene = scene;
+    this.track = track;
   }
 
-  /** Clear all flag meshes but keep the tool alive — used by _applySnapshot. */
+  /** Clear all flag meshes but keep scene/track alive — used by _applySnapshot. */
   clearMeshes() {
-    this._tool?.dispose();
+    for (const flag of this.flags) {
+      flag.dispose();
+    }
+    this.flags = [];
+    this.selectedFlag = null;
   }
 
   /** Full cleanup — used by EditorController.deactivate(). */
   dispose() {
-    this._tool?.dispose();
-    this._tool = null;
+    this.clearMeshes();
+    this.scene = null;
+    this.track = null;
   }
 
   // ── Visual creation ────────────────────────────────────────────────────────
 
   createVisual(feature) {
-    this._tool?._createFlagMesh(feature);
+    this._createFlagMesh(feature);
+  }
+
+  _createFlagMesh(feature) {
+    const { x, z, color } = feature;
+    const groundY = this.track.getHeightAt(x, z);
+    const flag = new Flag(x, z, color, groundY, this.scene, null);
+    flag.feature = feature;
+    this.flags.push(flag);
   }
 
   // ── Lookup ─────────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
-    return this._tool?.flags.find(f => f.pole === mesh || f.flag === mesh) ?? null;
+    return this.flags.find(f => f.pole === mesh || f.flag === mesh) ?? null;
   }
 
   // ── Selection ──────────────────────────────────────────────────────────────
 
-  select(mesh) { this._tool?.selectFlag(mesh); }
+  select(mesh) {
+    const flagData = this.flags.find(f => f.pole === mesh || f.flag === mesh);
+    if (!flagData) return;
+
+    if (this.selectedFlag && this.selectedFlag !== flagData) {
+      this.selectedFlag.flag.material.emissiveColor = new Color3(0, 0, 0);
+    }
+
+    this.selectedFlag = flagData;
+    this.selectedFlag.flag.material.emissiveColor = new Color3(0.5, 0.5, 0.5);
+    this.showProperties(flagData);
+  }
 
   deselect() {
-    this._tool?.deselectFlag();
+    if (this.selectedFlag) {
+      this.selectedFlag.flag.material.emissiveColor = new Color3(0, 0, 0);
+      this.selectedFlag = null;
+    }
+    this.hideProperties();
     this.editor._rawDragPos = null;
   }
 
   // ── Movement ───────────────────────────────────────────────────────────────
 
   move(movement) {
-    const selectedFlag = this._tool?.getSelectedFlag();
-    if (!selectedFlag || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    if (!this.selectedFlag || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
     const e = this.editor;
     e.saveSnapshot(true);
-    const { feature } = selectedFlag;
+    const { feature } = this.selectedFlag;
     if (!e._rawDragPos) e._rawDragPos = { x: feature.x, z: feature.z };
     e._rawDragPos.x += movement.x;
     e._rawDragPos.z += movement.z;
     const prevX = feature.x, prevZ = feature.z;
     const newX = e._snap(e._rawDragPos.x);
     const newZ = e._snap(e._rawDragPos.z);
-    this._tool.moveSelectedFlag(newX, newZ);
+    this._moveSelectedFlag(newX, newZ);
     return new Vector3(newX - prevX, 0, newZ - prevZ);
+  }
+
+  _moveSelectedFlag(x, z) {
+    if (!this.selectedFlag) return;
+    this.selectedFlag.feature.x = x;
+    this.selectedFlag.feature.z = z;
+    const groundY = this.track.getHeightAt(x, z);
+    this.selectedFlag.pole.position = new Vector3(x, groundY + POLE_HEIGHT / 2, z);
   }
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
 
-  deleteSelected() { this._tool?.removeSelectedFlag(); }
+  deleteSelected() {
+    if (!this.selectedFlag) return;
+
+    const index = this.track.features.indexOf(this.selectedFlag.feature);
+    if (index > -1) {
+      this.track.features.splice(index, 1);
+    }
+
+    this.selectedFlag.dispose();
+    const flagIndex = this.flags.indexOf(this.selectedFlag);
+    if (flagIndex > -1) {
+      this.flags.splice(flagIndex, 1);
+    }
+
+    this.selectedFlag = null;
+    this.hideProperties();
+    this.editor.saveSnapshot();
+  }
 
   addEntity() {
     const e = this.editor;
@@ -78,9 +134,17 @@ export class FlagEditor {
     const newX = camPos.x + direction.x * 20;
     const newZ = camPos.z + direction.z * 50;
     e.saveSnapshot();
-    this._tool.addFlag(newX, newZ);
+    this._addFlag(e._snap(newX), e._snap(newZ));
     e.deselectAll();
     e.hideAddMenu();
+  }
+
+  _addFlag(x, z) {
+    const color = this.editor._editorStore?.flag?.color || 'red';
+    const feature = { type: "flag", x, z, color };
+    this.track.features.push(feature);
+    this._createFlagMesh(feature);
+    this.editor.saveSnapshot();
   }
 
   // ── Properties (Vue store bridge) ──────────────────────────────────────────
@@ -97,6 +161,10 @@ export class FlagEditor {
       this.editor._editorStore.selectedType = null;
   }
 
-  // Vue bridge
-  changeColor(val) { this._tool?.updateSelectedFlagColor(val); }
+  changeColor(val) {
+    if (!this.selectedFlag) return;
+    this.selectedFlag.feature.color = val;
+    this.selectedFlag.setColor(val);
+    this.editor.saveSnapshot();
+  }
 }

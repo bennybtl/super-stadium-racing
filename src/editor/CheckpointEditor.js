@@ -300,7 +300,12 @@ export class CheckpointEditor {
     if (!this.selected) return;
     const myNum = this.selected.feature.checkpointNumber;
     if (myNum == null) return;
-    const targetNum = myNum + direction;
+    let targetNum = myNum + direction;
+
+    const checkpointCount = this.editor.currentTrack.features.filter(f => f.type === 'checkpoint' && f.checkpointNumber != null).length;
+    if (targetNum < 1) targetNum = checkpointCount; // Wrap around to end
+    if (targetNum > checkpointCount) targetNum = 1; // Wrap around to start
+
     const other = this.editor.currentTrack.features.find(
       f => f.type === 'checkpoint' && f.checkpointNumber === targetNum
     );

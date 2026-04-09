@@ -101,7 +101,7 @@ export class PracticeMode extends BaseMode {
     scene.onBeforeRenderObservable.add(() => {
       if (menuManager.isPaused || document.hidden) return;
 
-      const dt = this.getClampedDeltaTime(engine);
+      const dt = this.getClampedDeltaTime(engine, 0.05);
       const input = inputManager.getMovementInput();
             
       wallManager.preUpdate(trucks, dt);
@@ -109,7 +109,7 @@ export class PracticeMode extends BaseMode {
       wallManager.update(trucks);
       tireStackManager.update(trucks, dt);
       flagManager.update(trucks, dt);
-      cameraController.update(playerTruck.mesh.position);
+      cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
       
       // Update debug panel
       const slopeDegFront = currentTrack.getTerrainSlopeAt(

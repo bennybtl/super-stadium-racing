@@ -1,7 +1,7 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, SceneLoader, TransformNode } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-// import truckBodyUrl from "../assets/test-body-3.obj?url";
 import truckBodyUrl from "../assets/offroad-truck-v3.obj?url";
+import truckTireUrl  from "../assets/truck-tire.obj?url";
 
 // Skip MTL lookup — materials are applied programmatically
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
@@ -78,16 +78,18 @@ export class TruckBody {
     // ── Wheels ───────────────────────────────────────────────────────────
     for (const def of this._wheelDefs) {
       const baseY = 0.20; // tyre radius (0.36) - physics box half-height (0.4)
-      const wheel = this._buildWheel(def.id, def.x, baseY, def.z);
-      this._wheels.push({
-        mesh: wheel,
-        isFront: def.isFront,
-        side: def.x > 0 ? "L" : "R",
-        baseLocalY: baseY,
-      });
+      const entry = { mesh: null, isFront: def.isFront, side: def.x > 0 ? "L" : "R", baseLocalY: baseY };
+      this._wheels.push(entry);
+      this._loadTireMesh({ name: `wheel_${def.id}`, position: new Vector3(def.x, baseY, def.z), entry });
     }
 
-    this._buildSpareTire();
+    // Spare tyre on the truck bed, leaning ~32° toward the cab
+    this._loadTireMesh({
+      name: 'spare_tyre',
+      position: new Vector3(0, 1.5, -0.9),
+      rotation: { x: 0, y: -Math.PI/2, z: -0.9 },
+      root: this._visualRoot,
+    });
   }
 
   async _loadBody() {
@@ -109,7 +111,7 @@ export class TruckBody {
       // scaling:  .x controls length (world Z),  .z controls width (world X),  .y controls height.
       // position: .x centers the body (OBJ is offset in Z),  .y lifts it so OBJ-bottom lands at ~0.5.
       mesh.rotation = new Vector3(-Math.PI / 2, 0, 0);
-      mesh.scaling  = new Vector3(3, 3, 3.00); // length, height, width
+      mesh.scaling  = new Vector3(1, 1, 1); // length, height, width
       mesh.position = new Vector3(0, 0.66, 0.0);  // center-X, bottom-Y, center-Z
 
       this._styleMesh(mesh, this.colors.body);
@@ -134,45 +136,61 @@ export class TruckBody {
     );
   }
 
-  _buildSpareTire() {
-    // Spare sits on the truck bed, leaning forward toward the cab
-    // rotation.z = PI/2 orients it like a wheel; rotation.x tilts the top forward
-    const tyre = MeshBuilder.CreateCylinder("spare_tyre", {
-      diameter: 1.1, height: 0.4, tessellation: 20,
-    }, this.scene);
-    tyre.rotation  = new Vector3(0.5, Math.PI, 0); // lean ~32° toward cab
-    tyre.position  = new Vector3(0, 1.5, -0.9);
-    tyre.parent     = this._wheelRoot;
-    this._styleMesh(tyre, this.colors.wheel);
-    tyre.receiveShadows = false;
-    this._parts.push(tyre);
+  /**
+   * Loads a tyre OBJ and attaches it to the wheel root.
+   * @param {string}          name      - mesh name (used for the cylinder fallback too)
+   * @param {Vector3}         position  - local position on the parent root
+   * @param {Vector3|null}    rotation  - optional rotation (null = upright wheel orientation)
+   * @param {TransformNode}   root      - parent node (defaults to _wheelRoot)
+   * @param {Object|null}     entry     - wheels array entry; entry.mesh is set when loaded
+   */
+  async _loadTireMesh({ name, position, rotation = null, root = this._wheelRoot, entry = null }) {
+    try {
+      const lastSlash = truckTireUrl.lastIndexOf('/');
+      const rootUrl   = truckTireUrl.substring(0, lastSlash + 1);
+      const fileName  = truckTireUrl.substring(lastSlash + 1);
 
-    const rim = MeshBuilder.CreateCylinder("spare_rim", {
-      diameter: 0.44, height: 0.12, tessellation: 12,
-    }, this.scene);
-    rim.rotation = tyre.rotation.clone();
-    rim.position = tyre.position.clone();
-    rim.parent   = this._wheelRoot;
-    this._styleMesh(rim, this.colors.detail);
-    rim.receiveShadows = false;
-    this._parts.push(rim);
-  }
+      const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, this.scene);
+      if (!result.meshes.length) throw new Error('OBJ loaded no meshes');
 
-  _buildWheel(id, x, y, z) {
-    // Tyre (wide cylinder lying on its side)
-    const tyre = MeshBuilder.CreateCylinder(`wheel_${id}`, {
-      diameter:     1.1,
-      height:       0.4,
-      tessellation: 20,
-    }, this.scene);
-    tyre.rotation.z = Math.PI / 2;   // lay cylinder on its side
-    tyre.position   = new Vector3(x, y, z);
-    tyre.parent     = this._wheelRoot;
-    this._styleMesh(tyre, this.colors.wheel);
-    this._parts.push(tyre);
+      const mesh = result.meshes[0];
+      mesh.parent   = root;
+      mesh.position = position;
+      if (rotation) {
+        mesh.rotation.x = rotation.x;
+        mesh.rotation.y = rotation.y;
+        mesh.rotation.z = rotation.z;
+      }
 
-    // Return the tyre as the primary wheel mesh for animation
-    return tyre;
+      if (position.x > 0) {
+        mesh.scaling.x = -1.2; // mirror left-side wheels (OBJ model is right-side)
+      } else {
+        mesh.scaling.x = 1.2;
+      }        
+      mesh.scaling.y = 1.2;
+      mesh.scaling.z = 1.2;
+
+      this._styleMesh(mesh, this.colors.wheel);
+      mesh.receiveShadows = false;
+      this._parts.push(mesh);
+      if (entry) entry.mesh = mesh;
+    } catch (err) {
+      console.warn(`[TruckBody] tire mesh load failed for ${name} — using cylinder fallback:`, err);
+      const tyre = MeshBuilder.CreateCylinder(name, {
+        diameter: 1.1, height: 0.4, tessellation: 20,
+      }, this.scene);
+      if (rotation) {
+        tyre.rotation = rotation.clone();
+      } else {
+        tyre.rotation.z = Math.PI / 2;
+      }
+      tyre.position = position.clone();
+      tyre.parent   = root;
+      this._styleMesh(tyre, this.colors.wheel);
+      tyre.receiveShadows = false;
+      this._parts.push(tyre);
+      if (entry) entry.mesh = tyre;
+    }
   }
 
   // ─── Per-frame update ─────────────────────────────────────────────────────
@@ -207,27 +225,17 @@ export class TruckBody {
   }
 
   _animateWheels(state, speed, dt, input) {
-    // Wheel spin: one full rotation per ~2.26 units travelled (circumference ≈ π×0.72)
-    // const spinDelta = (speed * dt) / (Math.PI * 0.72) * Math.PI * 2;
-
-    // Forward speed sign determines spin direction
-    // const forward = new Vector3(Math.sin(state.heading), 0, Math.cos(state.heading));
-    // const fwdSpeed = state.velocity.dot(forward);
-    // const spinSign = fwdSpeed >= 0 ? 1 : -1;
-
     // Front wheel steer: lerp toward target angle
     const maxSteer = 0.42; // radians
     let targetSteer = input.left ? -maxSteer : input.right ? maxSteer : 0;
     this._steerAngle += (targetSteer - this._steerAngle) * Math.min(1, dt * 8);
 
     for (const w of this._wheels) {
+      if (!w.mesh) continue;
       // Suspension: bob each wheel down when compressed
       // suspensionCompression is 0 (full extend) to ~1 (full compress)
       const susTravel = state.suspensionCompression * 0.12;
       w.mesh.position.y = w.baseLocalY + susTravel;
-
-      // Spin around local X (the torus is rotated so local X is the axle)
-      // w.mesh.rotation.x = (w.mesh.rotation.x ?? 0) + spinSign * spinDelta;
 
       // Steer front wheels around local Y
       if (w.isFront) {

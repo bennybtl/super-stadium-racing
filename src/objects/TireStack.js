@@ -7,7 +7,7 @@ import {
   PhysicsShapeType,
 } from "@babylonjs/core";
 
-const TIRE_OUTER_RADIUS = 0.42; // outer radius of the torus
+const TIRE_OUTER_RADIUS = 0.62; // outer radius of the torus
 const TIRE_TUBE_RADIUS  = 0.14; // thickness of the torus tube
 const TIRE_HEIGHT       = TIRE_TUBE_RADIUS * 2; // how tall one tire sits
 const TIRES_PER_STACK   = 4;
@@ -57,13 +57,13 @@ export class TireStack {
     // Visual torus meshes parented to the body — they move with it for free
     this.tires = [];
     for (let i = 0; i < TIRES_PER_STACK; i++) {
-      const tire = MeshBuilder.CreateTorus(`tire_${x}_${z}_${i}`, {
+      const tire = MeshBuilder.CreateCylinder(`tire_${x}_${z}_${i}`, {
         diameter:     TIRE_OUTER_RADIUS * 2,
-        thickness:    TIRE_TUBE_RADIUS * 2,
+        height:       TIRE_TUBE_RADIUS * 2,
         tessellation: 16,
       }, scene);
 
-      const localY = -stackHeight / 2 + TIRE_TUBE_RADIUS + i * TIRE_HEIGHT;
+      const localY = -stackHeight / 2 + TIRE_TUBE_RADIUS + i * (TIRE_HEIGHT + 0.02);
       tire.position   = new Vector3(0, localY, 0);
       tire.rotation.y = Math.PI / 2; // lay flat
       tire.parent     = this.body;
@@ -90,8 +90,9 @@ export class TireStack {
 
   _applyTireMaterial(mesh) {
     const mat = new StandardMaterial("tireMat", this.scene);
-    mat.diffuseColor  = new Color3(0.08, 0.08, 0.08);
-    mat.specularColor = new Color3(0.05, 0.05, 0.05);
+    mat.diffuseColor  = new Color3(0.8, 0.5, 0.1);
+    mat.specularColor = mat.diffuseColor.clone();
+    mat.specularPower = 32;
     mesh.material = mat;
   }
 }

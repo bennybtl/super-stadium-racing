@@ -46,13 +46,9 @@ offroad/
     │   ├── CameraController.js    # Isometric camera + zoom
     │   ├── CheckpointManager.js   # Gate detection, lap counting
     │   ├── FlagManager.js         # Game-mode flag rendering + truck collision
-    │   ├── FlagTool.js            # Editor back-end for flag placement
     │   ├── GameState.js           # Race state machine
     │   ├── InputManager.js        # Keyboard input
     │   ├── MenuManager.js         # Main menu UI
-    │   ├── MeshGridTool.js        # Editor: mesh grid deformation
-    │   ├── PolyHillTool.js        # Editor: polyline hill manipulation
-    │   ├── PolyWallTool.js        # Editor: polyline wall manipulation
     │   ├── TrackLoader.js         # JSON track loading
     │   ├── TrackSignManager.js    # Game-mode track sign rendering
     │   ├── TireStackManager.js    # Movable tire obstacles
@@ -309,8 +305,7 @@ In-game track editor for creating and modifying track features visually.
 
 **Architecture:**
 - `src/editor/EditorController.js` — main coordinator; handles input (WASD, Delete, Ctrl+Z/Y), pointer picking, undo/redo stack, and delegates everything else to sub-editors
-- One sub-editor per entity type in `src/editor/`: `CheckpointEditor`, `HillEditor`, `SquareHillEditor`, `TerrainShapeEditor`, `NormalMapDecalEditor`, `TireStackEditor`, `FlagEditor`, `TrackSignEditor`
-- Tool classes in `src/managers/` (`PolyHillTool`, `PolyWallTool`, `BezierWallTool`, `MeshGridTool`, `FlagTool`) — feature-specific manipulation that tools share between editor and game
+- One sub-editor per entity type in `src/editor/`: `CheckpointEditor`, `HillEditor`, `SquareHillEditor`, `TerrainShapeEditor`, `NormalMapDecalEditor`, `TireStackEditor`, `FlagEditor`, `TrackSignEditor`, `MeshGridTool`, `PolyHillTool`, `PolyWallTool`, `BezierWallTool`
 - Vue 3 components in `src/vue/editor/` — UI panels, all self-gate on `store.selectedType`
 - Pinia store (`src/vue/store.js`) — reactive state bridge between panels and editor tools
 
@@ -361,8 +356,8 @@ Colors: `"red"` | `"blue"`.
 - `FlagManager.update(trucks, dt)` is called each frame; detects truck collisions and advances the spring-damper bend simulation
 - `Flag` physics: spring-damper on X and Z axes (`SPRING_K = 26`, `DAMPING = 1.5`, `MAX_BEND ≈ 50°`). The pole pivots at its base — `setPivotPoint` at the bottom. Bend impulse is proportional to truck approach speed.
 
-**Editor (`FlagEditor` + `FlagTool`):**
-- `FlagTool` holds the actual flag meshes and selection state; `FlagEditor` is the thin coordinator used by `EditorController`
+**Editor (`FlagEditor`):**
+- `FlagEditor` owns flag meshes, selection state, and all placement/mutation logic directly
 - Flags are added at the camera look-ahead position; WASD moves the selected flag
 
 ### 10. Track Sign System

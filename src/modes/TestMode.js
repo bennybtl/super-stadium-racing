@@ -82,14 +82,14 @@ export class TestMode extends BaseMode {
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
 
-      const dt = this.getClampedDeltaTime(engine);
+      const dt = this.getClampedDeltaTime(engine, 0.05);
       const input = inputManager.getMovementInput();
       wallManager.preUpdate(trucks, dt);
       playerTruck.update(input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);
-      cameraController.update(playerTruck.mesh.position);
+      cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
     });
 
     return scene;

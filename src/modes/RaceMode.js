@@ -635,11 +635,11 @@ export class RaceMode extends BaseMode {
         }
       });
 
-      cameraController.update(playerTruckData.truck.mesh.position);
+      cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt);
     });
 
     // Start the pre-race countdown
-    cameraController.update(playerTruckData.truck.mesh.position); // pre-snap before first frame
+    cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading); // pre-snap before first frame
     startCountdown();
 
     return scene;

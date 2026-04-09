@@ -1,0 +1,149 @@
+{
+  "name": "Big Dukes",
+  "features": [
+    {
+      "type": "squareHill",
+      "centerX": 24,
+      "centerZ": -12,
+      "width": 19,
+      "depth": 26,
+      "transition": 7,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 7,
+      "angle": 180
+    },
+    {
+      "type": "terrainRect",
+      "centerX": -6,
+      "centerZ": -12,
+      "width": 23,
+      "depth": 23,
+      "terrainType": "water"
+    },
+    {
+      "type": "trackSign",
+      "x": 32,
+      "z": -44,
+      "name": "Big Dukes",
+      "rotation": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": -36,
+      "centerZ": -12,
+      "width": 19,
+      "depth": 26,
+      "transition": 7,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 7,
+      "angle": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": -6,
+      "centerZ": -42,
+      "width": 19,
+      "depth": 26,
+      "transition": 7,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 7,
+      "angle": 90
+    },
+    {
+      "type": "squareHill",
+      "centerX": -6,
+      "centerZ": 16,
+      "width": 19,
+      "depth": 26,
+      "transition": 7,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 7,
+      "angle": 270
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": 12.5,
+          "z": -30.06512786309756,
+          "radius": 2
+        },
+        {
+          "x": 12,
+          "z": -52,
+          "radius": 5
+        },
+        {
+          "x": 54,
+          "z": -52,
+          "radius": 5
+        },
+        {
+          "x": 54,
+          "z": -30,
+          "radius": 5
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    },
+    {
+      "type": "hill",
+      "centerX": 66,
+      "centerZ": -46,
+      "radius": 8,
+      "height": 5,
+      "terrainType": null
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -54,
+          "z": 24,
+          "radius": 0
+        },
+        {
+          "x": -50,
+          "z": 12,
+          "radius": 5.5
+        },
+        {
+          "x": -24,
+          "z": 12,
+          "radius": 3
+        },
+        {
+          "x": -22,
+          "z": 48,
+          "radius": 9
+        },
+        {
+          "x": 48,
+          "z": 46,
+          "radius": 7
+        },
+        {
+          "x": 48,
+          "z": 50,
+          "radius": 9
+        },
+        {
+          "x": -48,
+          "z": 52,
+          "radius": 7
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    }
+  ]
+}

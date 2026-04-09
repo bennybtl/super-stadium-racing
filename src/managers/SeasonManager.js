@@ -6,7 +6,7 @@
 const STORAGE_KEY = 'season_state';
 
 /** Ordered race track keys for a season */
-const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json'];
+const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json', 'Sidewinder.json'];
 
 /** Championship points by finish position (index 0 = 1st place) */
 const POINTS_TABLE = [10, 5, 3, 1];

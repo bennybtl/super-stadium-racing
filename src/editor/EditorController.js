@@ -1,7 +1,7 @@
 import { Vector3, PointerEventTypes } from "@babylonjs/core";
-import { MeshGridTool } from "../managers/MeshGridTool.js";
-import { PolyWallTool } from "../managers/PolyWallTool.js";
-import { PolyHillTool } from "../managers/PolyHillTool.js";
+import { MeshGridTool } from "./MeshGridTool.js";
+import { PolyWallTool } from "./PolyWallTool.js";
+import { PolyHillTool } from "./PolyHillTool.js";
 import { BezierWallTool } from "../managers/BezierWallTool.js";
 import { HillEditor } from "./HillEditor.js";
 import { CheckpointEditor } from "./CheckpointEditor.js";
@@ -410,8 +410,8 @@ export class EditorController {
       } else if (this.tireStackEditor.selected) {
         this.tireStackEditor.deleteSelected();
         event.preventDefault();
-      } else if (this.flagTool?.getSelectedFlag()) {
-        this.flagTool.removeSelectedFlag();
+      } else if (this.flagEditor.selected) {
+        this.flagEditor.deleteSelected();
         event.preventDefault();
       } else if (this.trackSignEditor?.selected) {
         this.trackSignEditor.deleteSelected();
@@ -909,8 +909,6 @@ export class EditorController {
   addFlagEntity()              { this.flagEditor.addEntity(); }
   deselectFlag()               { this.flagEditor.deselect(); }
   moveSelectedFlag(movement)   { return this.flagEditor.move(movement); }
-  showFlagProperties(flagData) { this.flagEditor.showProperties(flagData); }
-  hideFlagProperties()         { this.flagEditor.hideProperties(); }
 
   deselectAll() {
     this.checkpointEditor.deselect();
