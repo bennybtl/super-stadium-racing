@@ -1,5 +1,5 @@
 import { Vector3, Color3 } from "@babylonjs/core";
-import { Flag, POLE_HEIGHT } from "../objects/Flag.js";
+import { Flag } from "../objects/Flag.js";
 
 export class FlagEditor {
   constructor(editor) {
@@ -53,13 +53,13 @@ export class FlagEditor {
   // ── Lookup ─────────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
-    return this.flags.find(f => f.pole === mesh || f.flag === mesh) ?? null;
+    return this.flags.find(f => f.containsMesh(mesh)) ?? null;
   }
 
   // ── Selection ──────────────────────────────────────────────────────────────
 
   select(mesh) {
-    const flagData = this.flags.find(f => f.pole === mesh || f.flag === mesh);
+    const flagData = this.flags.find(f => f.containsMesh(mesh));
     if (!flagData) return;
 
     if (this.selectedFlag && this.selectedFlag !== flagData) {
@@ -102,7 +102,7 @@ export class FlagEditor {
     this.selectedFlag.feature.x = x;
     this.selectedFlag.feature.z = z;
     const groundY = this.track.getHeightAt(x, z);
-    this.selectedFlag.pole.position = new Vector3(x, groundY + POLE_HEIGHT / 2, z);
+    this.selectedFlag.moveTo(x, z, groundY);
   }
 
   // ── CRUD ───────────────────────────────────────────────────────────────────

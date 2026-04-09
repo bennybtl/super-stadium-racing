@@ -34,8 +34,8 @@ export class FlagManager {
     if (!dt || dt <= 0) return;
 
     const CONTACT_DIST = TRUCK_RADIUS + COLLISION_RADIUS;
-    /** How strongly the pole bends per unit of truck approach speed */
-    const BEND_IMPULSE_SCALE = 3.0;
+    /** Lateral speed (m/s) → impulse magnitude applied to the pole body */
+    const BEND_IMPULSE_SCALE = 1.2;
 
     for (const flag of this._flags) {
       const fx = flag.x;
@@ -61,11 +61,9 @@ export class FlagManager {
         const approach = vel.x * nx + vel.z * nz;
         if (approach <= 0) continue; // separating
 
-        // Bend the pole AWAY from the truck.
-        // Rotation around X axis tilts in Z direction, and vice versa,
-        // so map the push direction accordingly.
+        // Kick the pole away from the truck
         const impulse = approach * BEND_IMPULSE_SCALE;
-        flag.applyBendImpulse(nz * impulse, -nx * impulse);
+        flag.applyBendImpulse(nx * impulse, nz * impulse);
       }
 
       // Advance spring simulation
