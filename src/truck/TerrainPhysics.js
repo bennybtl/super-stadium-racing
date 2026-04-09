@@ -61,27 +61,6 @@ export class TerrainPhysics {
     // Apply gravity
     this.state.verticalVelocity += this.gravity * deltaTime;
     
-    // Add extra downward force when going downhill to keep truck grounded
-    // if (track && this.state.velocity.length() > 5) {
-    //   const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-    //   const checkDist = 2.0;
-      
-    //   const heightAhead = track.getHeightAt(
-    //     mesh.position.x + forward.x * checkDist,
-    //     mesh.position.z + forward.z * checkDist
-    //   );
-    //   const heightHere = track.getHeightAt(mesh.position.x, mesh.position.z);
-    //   const heightDiff = heightAhead - heightHere;
-      
-    //   // If going downhill (heightDiff < 0), apply extra downward force
-    //   if (heightDiff < -0.25) {
-    //     const slopeFactor = Math.abs(heightDiff) / checkDist;
-    //     const speedFactor = Math.min(1, this.state.velocity.length() / 30);
-    //     const downhillForce = slopeFactor * speedFactor * 120; // Aggressive downward push
-    //     this.state.verticalVelocity -= downhillForce * deltaTime;
-    //   }
-    // }
-    
     // Check terrain collision and apply spring force
     const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
     const truckBottomY = terrainHeight + 0.4; // 0.4 = half truck height
@@ -162,29 +141,20 @@ export class TerrainPhysics {
     
     // Calculate visual pitch/roll when on or near ground
     if (groundedness > 0.3 && track) {
-      this.updateTerrainOrientation(mesh, track, deltaTime);
+      this.updateTerrainOrientation(mesh, track, deltaTime, groundedness);
     } else {
-      // Airborne — target the angle of the velocity vector rather than
-      // immediately snapping to flat. This keeps the truck pitched uphill
-      // right after a jump and gradually tilts nose-down as it falls.
-      const hSpeed = Math.sqrt(
-        this.state.velocity.x ** 2 + this.state.velocity.z ** 2
-      );
-      const targetAirPitch = hSpeed > 0.5
-        ? Math.atan2(this.state.verticalVelocity, hSpeed)
-        : 0;
-
-      const pitchFactor = 1 - Math.exp(-1.5 * deltaTime);
-      const rollFactor  = 1 - Math.exp(-2.2 * deltaTime);
-      this.state.terrainPitch += (targetAirPitch - this.state.terrainPitch) * pitchFactor;
-      this.state.terrainRoll  += (0             - this.state.terrainRoll)   * rollFactor;
+      // Airborne — preserve pitch so the truck keeps the angle it left the
+      // ground with (e.g. nose-up off a ramp). Roll levels out since lateral
+      // lean in the air looks unnatural.
+      const rollFactor = 1 - Math.exp(-2.2 * deltaTime);
+      this.state.terrainRoll += (0 - this.state.terrainRoll) * rollFactor;
       mesh.rotation.x = -this.state.terrainPitch;
     }
     
     return { groundedness, penetration };
   }
 
-  updateTerrainOrientation(mesh, track, deltaTime) {
+  updateTerrainOrientation(mesh, track, deltaTime, groundedness = 1) {
     const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     const right = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
     const slopeCheckDist = 0.3;
@@ -209,10 +179,18 @@ export class TerrainPhysics {
     );
     const targetRoll = Math.atan2(heightRight - heightLeft, slopeCheckDist * 2);
 
-    // Exponential smoothing — frame-rate independent, damps sudden angle spikes
-    const factor = 1 - Math.exp(-10 * deltaTime);
-    this.state.terrainPitch += (targetPitch - this.state.terrainPitch) * factor;
-    this.state.terrainRoll  += (targetRoll  - this.state.terrainRoll)  * factor;
+    // Asymmetric smoothing:
+    //   Increasing pitch  → always fast (climbing a slope).
+    //   Decreasing pitch  → fast when landing (high groundedness snaps to terrain),
+    //                        slow when cresting (preserves the launch angle into the air).
+    const fastFactor = 1 - Math.exp(-10 * deltaTime);
+    const slowFactor = 1 - Math.exp(-1.5 * deltaTime);
+    const pitchDiff = targetPitch - this.state.terrainPitch;
+    const pitchFactor = pitchDiff > 0
+      ? fastFactor
+      : (groundedness > 0.8 ? fastFactor : slowFactor);
+    this.state.terrainPitch += pitchDiff * pitchFactor;
+    this.state.terrainRoll  += (targetRoll - this.state.terrainRoll) * fastFactor;
 
     mesh.rotation.x = -this.state.terrainPitch;
   }
