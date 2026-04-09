@@ -74,6 +74,7 @@ export class PracticeMode extends BaseMode {
     const inputManager = new InputManager(playerTruck, cameraController);
     this.inputManager = inputManager;
     inputManager.onPause(() => menuManager.showPauseMenu());
+    this.setupDebugToggle(inputManager, uiManager);
     inputManager.onReset(() => {
       this.resetTruckPhysics(playerTruck, spawnPos);
       playerTruck.state.heading = heading;

@@ -65,6 +65,7 @@ export class TestMode extends BaseMode {
     const inputManager = new InputManager(playerTruck, cameraController);
     this.inputManager = inputManager;
     inputManager.onPause(() => this._exitToEditor(returnToEditor));
+    this.setupDebugToggle(inputManager, uiManager);
     inputManager.onReset(() => {
       this.resetTruckPhysics(playerTruck, spawnPos);
       playerTruck.state.heading = heading;

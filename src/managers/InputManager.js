@@ -20,6 +20,7 @@ export class InputManager {
     this.onResetCallback = null;
     this.onBoostCallback = null;
     this.onPauseCallback = null;
+    this.onToggleDebugCallback = null;
     
     this.setupEventListeners();
   }
@@ -66,6 +67,11 @@ export class InputManager {
       }
     }
     
+    // Toggle debug panel
+    if (e.code === "Backslash") {
+      if (this.onToggleDebugCallback) this.onToggleDebugCallback();
+    }
+
     // Camera mode toggle
     if (e.code === "KeyC") {
       this.cameraController.toggleMode();
@@ -101,5 +107,9 @@ export class InputManager {
 
   onPause(callback) {
     this.onPauseCallback = callback;
+  }
+
+  onToggleDebug(callback) {
+    this.onToggleDebugCallback = callback;
   }
 }

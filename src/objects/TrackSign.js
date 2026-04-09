@@ -6,8 +6,8 @@ import {
   Vector3,
 } from "@babylonjs/core";
 
-const BOARD_W        = 36;    // world units wide
-const BOARD_H        =  8;    // world units tall
+const BOARD_W        = 24;    // world units wide
+const BOARD_H        =  6;    // world units tall
 const POST_H         =  2.5;  // post height
 const POST_DIAM      =  1;
 const BOARD_CENTER_Y = POST_H + BOARD_H / 2; // height of board centre above ground

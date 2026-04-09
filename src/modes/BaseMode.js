@@ -121,6 +121,13 @@ export class BaseMode {
   }
 
   /**
+   * Wire the \ key to toggle the debug panel via the given inputManager/uiManager pair.
+   */
+  setupDebugToggle(inputManager, uiManager) {
+    inputManager.onToggleDebug(() => uiManager.toggleDebugPanel());
+  }
+
+  /**
    * Base teardown - cleans up common resources.
    * Subclasses should call super.teardown() after their own cleanup.
    */

@@ -23,6 +23,7 @@ export class UIManager {
 
   showDebugPanel()                   { this._debug.visible = true; }
   hideDebugPanel()                   { this._debug.visible = false; }
+  toggleDebugPanel()                 { this._debug.visible = !this._debug.visible; }
 
   showRaceStatusPanel()              { this._race.visible = true; }
   hideRaceStatusPanel()              { this._race.visible = false; }

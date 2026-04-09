@@ -284,6 +284,7 @@ export class RaceMode extends BaseMode {
     this.inputManager = inputManager;
 
     inputManager.onPause(() => menuManager.togglePause());
+    this.setupDebugToggle(inputManager, uiManager);
 
     inputManager.onBoost(() => {
       if (
