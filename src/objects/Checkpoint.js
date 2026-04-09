@@ -148,25 +148,31 @@ export class Checkpoint {
   }
 
   _createDecal(feature, isFinish, scene) {
-    const texSize    = 512;
-    const decalTexture = new DynamicTexture("cpDecalTex", { width: texSize, height: texSize }, scene);
-    const ctx        = decalTexture.getContext();
+    // Finish: square texture + square decal.
+    // Numbered: fixed-height texture/decal (8 world units); width scales with gate so
+    // only the connector lines grow — the box and number stay the same size.
+    const texH = 512;
+    const fixedWorldH = 8;
+    const texW   = isFinish ? texH : Math.max(texH, Math.round(texH * feature.width / fixedWorldH));
+    const decalW = feature.width * (isFinish ? 0.82 : 1.0);
+    const decalH = isFinish ? decalW : fixedWorldH;
 
-    ctx.clearRect(0, 0, texSize, texSize);
+    const decalTexture = new DynamicTexture("cpDecalTex", { width: texW, height: texH }, scene);
+    const ctx          = decalTexture.getContext();
+
+    ctx.clearRect(0, 0, texW, texH);
     if (isFinish) {
-      this._drawFinishDecal(ctx, feature.checkpointNumber, texSize, feature.width);
+      this._drawFinishDecal(ctx, feature.checkpointNumber, texH, feature.width);
     } else {
-      this._drawNumberedDecal(ctx, feature.checkpointNumber, texSize);
+      this._drawNumberedDecal(ctx, feature.checkpointNumber, texW, texH);
     }
     decalTexture.update();
-
-    const decalSize = isFinish ? feature.width * 0.82 : 8;
 
     // Find the ground mesh to project the decal onto
     const ground = scene.getMeshByName("ground");
     if (!ground) {
       // Fallback to flat plane if ground mesh not available
-      return this._createFlatDecal(decalTexture, decalSize, scene);
+      return this._createFlatDecal(decalTexture, decalW, decalH, scene);
     }
 
     // World position on the terrain surface at the checkpoint center
@@ -181,7 +187,7 @@ export class Checkpoint {
     const decal = MeshBuilder.CreateDecal("cpDecal", ground, {
       position: worldPos,
       normal: Vector3.Up(),
-      size: new Vector3(decalSize, decalSize, 10),
+      size: new Vector3(decalW, decalH, 10),
       angle: -feature.heading - Math.PI / 2,
     });
 
@@ -197,8 +203,8 @@ export class Checkpoint {
   }
 
   /** Fallback flat plane decal when the ground mesh isn't available. */
-  _createFlatDecal(decalTexture, decalSize, scene) {
-    const decal = MeshBuilder.CreatePlane("cpDecal", { width: decalSize, height: decalSize }, scene);
+  _createFlatDecal(decalTexture, decalW, decalH, scene) {
+    const decal = MeshBuilder.CreatePlane("cpDecal", { width: decalW, height: decalH }, scene);
     decal.rotation.x = Math.PI / 2;
     decal.position   = new Vector3(0, 0.06, 0);
     decal.parent     = this.container;
@@ -213,26 +219,9 @@ export class Checkpoint {
   }
 
   // ─── Private: decal drawing ───────────────────────────────────────────────
-
-  _drawFinishDecal(ctx, checkpointNumber, texSize, gateWidth) {
-    const cols  = Math.max(2, Math.round(gateWidth / 2.5));
-    const rows  = 3;
-    const rectH = Math.round(texSize * 0.38);
-    const rectY = Math.round((texSize - rectH) / 2);
-    const cellW = texSize / cols;
-    const cellH = cellW;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        ctx.fillStyle = (r + c) % 2 === 0 ? "white" : "transparent";
-        ctx.fillRect(c * cellW, rectY + r * cellH, cellW, cellH);
-      }
-    }
-    this._applyWearEffect(ctx, checkpointNumber, texSize, false);
-  }
-
-  _drawNumberedDecal(ctx, checkpointNumber, texSize) {
-    // Direction triangle above the square
-    const triCX   = texSize / 2;
+  _drawArrowDecal(ctx, texW) {
+        // Direction triangle — fixed size, centered horizontally
+    const triCX   = texW / 2;
     const triTop  = 20, triBase = 120, triHalfW = 70;
     ctx.fillStyle = "white";
     ctx.beginPath();
@@ -241,26 +230,58 @@ export class Checkpoint {
     ctx.lineTo(triCX + triHalfW, triBase);
     ctx.closePath();
     ctx.fill();
+  }
 
-    // Square border
-    const sqTop = 148, sqPad = 136;
-    const sqLeft = sqPad, sqRight = texSize - sqPad, sqBottom = texSize - sqPad;
+  _drawFinishDecal(ctx, checkpointNumber, texW, gateWidth) {
+    this._drawArrowDecal(ctx, texW)
+    const cols  = Math.max(2, Math.round(gateWidth / 2.5));
+    const rows  = 3;
+    const rectH = Math.round(texW * 0.38);
+    const rectY = Math.round((texW - rectH) / 2);
+    const cellW = texW / cols;
+    const cellH = cellW;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        ctx.fillStyle = (r + c) % 2 === 0 ? "white" : "transparent";
+        ctx.fillRect(c * cellW, rectY + r * cellH, cellW, cellH);
+      }
+    }
+    this._applyWearEffect(ctx, checkpointNumber, texW, false);
+  }
+
+  _drawNumberedDecal(ctx, checkpointNumber, texW, texH) {
+    this._drawArrowDecal(ctx, texW)
+
+    // Square border — fixed pixel dimensions, always centered horizontally
+    const sqW = 240, sqH = 228;
+    const sqLeft   = Math.round((texW - sqW) / 2);
+    const sqRight  = sqLeft + sqW;
+    const sqTop    = 148;
+    const sqBottom = sqTop + sqH;
     ctx.strokeStyle = "white";
     ctx.lineWidth   = 18;
-    ctx.strokeRect(sqLeft, sqTop, sqRight - sqLeft, sqBottom - sqTop);
+    ctx.strokeRect(sqLeft, sqTop, sqW, sqH);
+
+    // Horizontal lines from each barrel edge to the square, with padding on both ends
+    const lineThick = 18;
+    const linePad   = 16;
+    const lineY     = Math.round((sqTop + sqBottom) / 2) - lineThick / 2;
+    ctx.fillStyle   = "white";
+    ctx.fillRect(linePad,           lineY, sqLeft  - linePad * 2,          lineThick);
+    ctx.fillRect(sqRight + linePad, lineY, texW - sqRight - linePad * 2,   lineThick);
 
     // Checkpoint number
     ctx.fillStyle    = "white";
     ctx.font         = "bold 210px Arial";
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(checkpointNumber.toString(), texSize / 2, (sqTop + sqBottom + 20) / 2);
+    ctx.fillText(checkpointNumber.toString(), texW / 2, (sqTop + sqBottom + 20) / 2);
 
-    this._applyWearEffect(ctx, checkpointNumber, texSize, true);
+    this._applyWearEffect(ctx, checkpointNumber, texW, true, texH);
   }
 
   /** Punch seeded random holes through the white paint for a worn stencil look. */
-  _applyWearEffect(ctx, seed, texSize, includeScratches) {
+  _applyWearEffect(ctx, seed, texW, includeScratches, texH = texW) {
     const rng = seededRng(seed);
     ctx.globalCompositeOperation = "destination-out";
 
@@ -268,7 +289,7 @@ export class Checkpoint {
     for (let i = 0; i < 2500; i++) {
       const r = rng() * 4.5 + 0.5;
       ctx.beginPath();
-      ctx.arc(rng() * texSize, rng() * texSize, r, 0, Math.PI * 2);
+      ctx.arc(rng() * texW, rng() * texH, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -276,7 +297,7 @@ export class Checkpoint {
     if (includeScratches) {
       for (let i = 0; i < 60; i++) {
         ctx.save();
-        ctx.translate(rng() * texSize, rng() * texSize);
+        ctx.translate(rng() * texW, rng() * texH);
         ctx.rotate(rng() * Math.PI);
         ctx.fillRect(0, 0, rng() * 40 + 8, rng() * 8 + 2);
         ctx.restore();
