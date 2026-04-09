@@ -55,6 +55,7 @@ export class TerrainPhysics {
     this.state = state;
     this.halfHeight = halfHeight;
     this.gravity = -30;
+    this._bumpAccumulator = 0; // distance accumulator for roughness bumps
   }
 
   update(mesh, deltaTime, track) {
@@ -193,6 +194,41 @@ export class TerrainPhysics {
     this.state.terrainRoll  += (targetRoll - this.state.terrainRoll) * fastFactor;
 
     mesh.rotation.x = -this.state.terrainPitch;
+  }
+
+  /**
+   * Apply bump impulses based on terrain roughness.
+   * Bumps fire at fixed world-space intervals (faster speed = more frequent).
+   * Each bump kicks verticalVelocity upward and adds small pitch/roll jitter.
+   *
+   * @param {number} roughness   - terrain roughness 0–1
+   * @param {number} speed       - current horizontal speed
+   * @param {number} groundedness
+   * @param {number} deltaTime
+   */
+  applyRoughnessBumps(roughness, speed, groundedness, deltaTime) {
+    if (roughness <= 0 || groundedness < 0.3) {
+      this._bumpAccumulator = 0;
+      return;
+    }
+
+    // Accumulate time on rough terrain
+    this._bumpAccumulator += deltaTime;
+
+    // One bump every bumpSpacing seconds — more frequent on rougher terrain
+    const bumpSpacing = 0.25 / roughness;
+
+    if (this._bumpAccumulator >= bumpSpacing) {
+      this._bumpAccumulator -= bumpSpacing;
+
+      // Vertical kick — scales with roughness only
+      const vertImpulse = roughness * 3.6 * (0.5 + Math.random() * 0.5);
+      this.state.verticalVelocity += vertImpulse;
+
+      // Visual pitch/roll jitter — small but perceptible
+      this.state.terrainPitch += (Math.random() - 0.5) * roughness * 0.22;
+      this.state.terrainRoll  += (Math.random() - 0.5) * roughness * 0.20;
+    }
   }
 
   checkSteepSlope(mesh, deltaTime, track) {

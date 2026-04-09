@@ -8,6 +8,7 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.2, 0.2, 0.25),
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     dragMultiplier: 0.5,
+    roughness: 0,            // Perfectly smooth
     normalMap: '616-normal.jpg',
     normalMapIntensity: 0.6, // Subtle road surface texture
     specular: 0.18,          // Slightly shiny pavement
@@ -17,6 +18,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 2.0,    // Baseline
     color: new Color3(0.54, 0.28, 0.08),
     dragMultiplier: 0.8,
+    roughness: 0.1,          // Very slight — compacted surface
     normalMap: '6481-normal.jpg',
     normalMapIntensity: 0.8, // Moderate dirt texture
     specular: 0.13,          // Matte dry dirt
@@ -26,6 +28,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.5,    // Slides more
     color: new Color3(0.69, 0.43, 0.23),
     dragMultiplier: 1.0,
+    roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: '6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
     specular: 0.13,          // Matte dry dirt
@@ -35,6 +38,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.15,    // Very slippery
     color: new Color3(0.34, 0.18, 0.08),
     dragMultiplier: 2.9,    // Slows you down
+    roughness: 0.15,         // Sloppy but soft — low-impact bumps
     normalMap: 'mud.png',
     normalMapIntensity: 0.9, // Deep muddy surface detail
     specular: 0.65,          // Glistening wet mud
@@ -45,6 +49,7 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.1, 0.3, 1),
     smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
     dragMultiplier: 6.0,     // Very high drag
+    roughness: 0,            // Smooth surface — drag is the hazard
     normalMap: 'water.jpg',
     normalMapIntensity: 0.5, // Gentle ripple detail
     specular: 0.92,          // Highly reflective water surface
@@ -54,6 +59,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.4,     // Unpredictable rocky surface
     color: new Color3(0.42, 0.30, 0.22), // Dark reddish-brown rock
     dragMultiplier: 5.0,     // Dramatic slowing — holes catch and drag the truck
+    roughness: 0.85,         // Very rough — hard impacts and significant jostling
     normalMap: 'rocky.jpg',
     normalMapIntensity: 1.5, // Strong rocky surface detail
     specular: 0.14,          // Matte rock

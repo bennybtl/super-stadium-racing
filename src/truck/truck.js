@@ -146,14 +146,19 @@ export class Truck {
     // Get terrain modifiers — only apply when wheels are actually on or near the ground
     let terrainGripMultiplier = 1.0;
     let terrainDragMultiplier = 1.0;
+    let terrainRoughness = 0;
     const isGrounded = penetration > -0.3;
     if (terrainManager && isGrounded) {
       const terrain = terrainManager.getTerrainAt(this.mesh.position);
       terrainGripMultiplier = terrain.gripMultiplier;
       terrainDragMultiplier = terrain.dragMultiplier;
+      terrainRoughness = terrain.roughness ?? 0;
     }
 
     const speed = this.state.velocity.length();
+
+    // Apply roughness bumps — vertical impulses + pitch/roll jitter scaled by terrain and speed
+    this.terrainPhysics.applyRoughnessBumps(terrainRoughness, speed, groundedness, deltaTime);
     const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     
     // Calculate speed-based factors
