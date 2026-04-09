@@ -264,7 +264,7 @@ export class Checkpoint {
 
     // Horizontal lines from each barrel edge to the square, with padding on both ends
     const lineThick = 18;
-    const linePad   = 16;
+    const linePad   = 64;
     const lineY     = Math.round((sqTop + sqBottom) / 2) - lineThick / 2;
     ctx.fillStyle   = "white";
     ctx.fillRect(linePad,           lineY, sqLeft  - linePad * 2,          lineThick);
