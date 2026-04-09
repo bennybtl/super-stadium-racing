@@ -1,7 +1,7 @@
 import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
 
 /**
- * MeshGridTool – terrain mesh deformation via a grid of selectable control points.
+ * MeshGridEditor – terrain mesh deformation via a grid of selectable control points.
  *
  * A single `meshGrid` feature is stored in the track's features array.  Each
  * grid intersection is represented by a pickable sphere gizmo; clicking one
@@ -13,7 +13,7 @@ import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core"
  * Height values are stored row-major in `feature.heights[]` and are bilinearly
  * interpolated in `Track.getHeightAt`.
  */
-export class MeshGridTool {
+export class MeshGridEditor {
   constructor(editorController) {
     this.ec           = editorController;   // EditorController reference
     this.scene        = null;

@@ -15,6 +15,7 @@ export class SquareHillEditor {
     // Gizmo bookkeeping
     this.meshes = [];   // { feature, node, mesh }
     this.selected = null;
+    this._terrainDirty = false;
 
     // Materials (created lazily in createMaterials)
     this.material = null;
@@ -171,7 +172,10 @@ export class SquareHillEditor {
     if (this.selected) {
       this.selected.mesh.material = this.material;
       this.hideProperties();
-      window.rebuildTerrainTexture?.();
+      if (this._terrainDirty) {
+        window.rebuildTerrainTexture?.();
+        this._terrainDirty = false;
+      }
       console.log('[SquareHillEditor] Deselected square hill');
       this.selected = null;
       this.editor._rawDragPos = null;
@@ -224,7 +228,9 @@ export class SquareHillEditor {
     this.hideProperties();
     this.selected = null;
 
-    this.rebuildTerrain();
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
     console.log('[SquareHillEditor] Deleted square hill');
   }
 
@@ -268,7 +274,8 @@ export class SquareHillEditor {
   }
 
   rebuildTerrain() {
-    this.updateVisual(this.selected);
+    this._terrainDirty = true;
+    if (this.selected) this.updateVisual(this.selected);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
   }

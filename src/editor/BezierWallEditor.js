@@ -1,7 +1,7 @@
 import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
 
 /**
- * BezierWallTool – place and edit bezierWall features in the track editor.
+ * BezierWallEditor – place and edit bezierWall features in the track editor.
  *
  * Each anchor point is represented by a pickable sphere. Each anchor can have
  * control handles (handleIn/handleOut) that are also represented as spheres
@@ -18,7 +18,7 @@ import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core"
 const POINT_HEIGHT_OFFSET = 0.7;
 const HANDLE_HEIGHT_OFFSET = 0.4;
 
-export class BezierWallTool {
+export class BezierWallEditor {
   constructor(editorController) {
     this.ec = editorController;
     this.scene = null;

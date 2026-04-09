@@ -14,14 +14,14 @@ export class CheckpointEditor {
     // Selection state
     this.selected = null;
 
-    // Highlight material (created lazily in createMaterial)
+    // Highlight material (created lazily in createMaterials)
     this.highlightMaterial = null;
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   /** Create (or recreate) the highlight material for the current scene. */
-  createMaterial() {
+  createMaterials() {
     const scene = this.editor.scene;
     if (!this.highlightMaterial) {
       this.highlightMaterial = new StandardMaterial('highlightMat', scene);

@@ -78,6 +78,7 @@ export class TrackSignEditor {
     e._rawDragPos.z += movement.z;
     const prevX   = feature.x;
     const prevZ   = feature.z;
+
     const newX    = e._snap(e._rawDragPos.x);
     const newZ    = e._snap(e._rawDragPos.z);
     const groundY = this._track.getHeightAt(newX, newZ);

@@ -91,18 +91,21 @@ export class TireStackEditor {
   // ── Movement ───────────────────────────────────────────────────────────────
 
   move(movement) {
-    const e = this.editor;
     if (!this.selected || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    const e = this.editor;
     e.saveSnapshot(true);
     const { feature } = this.selected;
     if (!e._rawDragPos) e._rawDragPos = { x: feature.x, z: feature.z };
     e._rawDragPos.x += movement.x;
     e._rawDragPos.z += movement.z;
-    const prevX = feature.x, prevZ = feature.z;
-    feature.x = e._snap(e._rawDragPos.x);
-    feature.z = e._snap(e._rawDragPos.z);
+    const prevX = feature.x;
+    const prevZ = feature.z;
+    const newX  = e._snap(e._rawDragPos.x);
+    const newZ  = e._snap(e._rawDragPos.z);
+    feature.x = newX;
+    feature.z = newZ;
     this.updateVisual(this.selected);
-    return new Vector3(feature.x - prevX, 0, feature.z - prevZ);
+    return new Vector3(newX - prevX, 0, newZ - prevZ);
   }
 
   // ── CRUD ───────────────────────────────────────────────────────────────────

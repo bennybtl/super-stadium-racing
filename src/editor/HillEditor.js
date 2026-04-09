@@ -12,12 +12,14 @@ export class HillEditor {
     this.editor = editor;
 
     // Gizmo bookkeeping
-    this.meshes = [];          // { feature, node, mesh }
+    this.meshes = [];          // { feature, node, mesh, sphere }
     this.selected = null;
+    this._terrainDirty = false;
 
     // Materials (created lazily in createMaterials)
     this.material = null;
     this.highlightMaterial = null;
+    this.sphereMaterial = null;
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -40,6 +42,11 @@ export class HillEditor {
       this.highlightMaterial.alpha = 0.20;
       this.highlightMaterial.backFaceCulling = false;
     }
+    if (!this.sphereMaterial) {
+      this.sphereMaterial = new StandardMaterial('hillSphereMat', scene);
+      this.sphereMaterial.diffuseColor = new Color3(0.45, 0.45, 0.45);
+      this.sphereMaterial.emissiveColor = new Color3(0.12, 0.07, 0.02);
+    }
   }
 
   /** Build gizmos for every existing hill feature in the track. */
@@ -56,6 +63,7 @@ export class HillEditor {
     for (const d of this.meshes) {
       d.mesh.dispose();
       d.node.dispose();
+      d.sphere?.dispose();
     }
     this.meshes = [];
     this.selected = null;
@@ -127,17 +135,24 @@ export class HillEditor {
       tessellation: 24,
     }, scene);
     mesh.parent = node;
-    mesh.material = this.material;
-    mesh.isPickable = true;
+    mesh.material = this.highlightMaterial;
+    mesh.isPickable = false;
+    mesh.isVisible = false;  // hidden until selected
 
-    const hillData = { feature, node, mesh };
+    // Brown sphere: the always-visible click target
+    const sphere = MeshBuilder.CreateSphere('hillSphere', { diameter: 1.5, segments: 8 }, scene);
+    sphere.position = new Vector3(feature.centerX, terrainH, feature.centerZ);
+    sphere.material = this.sphereMaterial;
+    sphere.isPickable = true;
+
+    const hillData = { feature, node, mesh, sphere };
     this.meshes.push(hillData);
     return hillData;
   }
 
   /** Sync the cone gizmo transform to the feature's current values. */
   updateVisual(hillData) {
-    const { feature, node } = hillData;
+    const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
     const absH = Math.max(0.5, Math.abs(feature.height));
     const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
@@ -147,6 +162,11 @@ export class HillEditor {
     node.scaling.x = feature.radius;
     node.scaling.y = absH;
     node.scaling.z = feature.radius;
+    if (sphere) {
+      sphere.position.x = feature.centerX;
+      sphere.position.y = terrainH;
+      sphere.position.z = feature.centerZ;
+    }
   }
 
   // ── Selection ─────────────────────────────────────────────────────────────
@@ -155,7 +175,10 @@ export class HillEditor {
     this.deselect();
     this.selected = hillData;
     this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
-    hillData.mesh.material = this.highlightMaterial;
+    hillData.sphere.isVisible = false;
+    hillData.sphere.isPickable = false;
+    hillData.mesh.isVisible = true;
+    hillData.mesh.isPickable = true;
     this.showProperties(hillData);
     console.log('[HillEditor] Selected hill at',
       hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
@@ -163,9 +186,15 @@ export class HillEditor {
 
   deselect() {
     if (this.selected) {
-      this.selected.mesh.material = this.material;
+      this.selected.mesh.isVisible = false;
+      this.selected.mesh.isPickable = false;
+      this.selected.sphere.isVisible = true;
+      this.selected.sphere.isPickable = true;
       this.hideProperties();
-      window.rebuildTerrainTexture?.();
+      if (this._terrainDirty) {
+        window.rebuildTerrainTexture?.();
+        this._terrainDirty = false;
+      }
       console.log('[HillEditor] Deselected hill');
       this.selected = null;
       this.editor._rawDragPos = null;
@@ -201,6 +230,7 @@ export class HillEditor {
 
     hillData.mesh.dispose();
     hillData.node.dispose();
+    hillData.sphere?.dispose();
 
     const meshIdx = this.meshes.indexOf(hillData);
     if (meshIdx > -1) this.meshes.splice(meshIdx, 1);
@@ -208,7 +238,9 @@ export class HillEditor {
     this.hideProperties();
     this.selected = null;
 
-    this.rebuildTerrain();
+    window.rebuildTerrain?.();
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
     console.log('[HillEditor] Deleted hill');
   }
 
@@ -242,7 +274,8 @@ export class HillEditor {
   }
 
   rebuildTerrain() {
-    this.updateVisual(this.selected);
+    this._terrainDirty = true;
+    if (this.selected) this.updateVisual(this.selected);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
   }
@@ -276,7 +309,7 @@ export class HillEditor {
   /** Returns the hillData if `mesh` belongs to a hill gizmo, otherwise null. */
   findByMesh(mesh) {
     for (const hillData of this.meshes) {
-      if (mesh === hillData.mesh) return hillData;
+      if (mesh === hillData.mesh || mesh === hillData.sphere) return hillData;
     }
     return null;
   }

@@ -1,8 +1,8 @@
 import { Vector3, PointerEventTypes } from "@babylonjs/core";
-import { MeshGridTool } from "./MeshGridTool.js";
-import { PolyWallTool } from "./PolyWallTool.js";
-import { PolyHillTool } from "./PolyHillTool.js";
-import { BezierWallTool } from "../managers/BezierWallTool.js";
+import { MeshGridEditor } from "./MeshGridEditor.js";
+import { PolyWallEditor } from "./PolyWallEditor.js";
+import { PolyHillEditor } from "./PolyHillEditor.js";
+import { BezierWallEditor } from "./BezierWallEditor.js";
 import { HillEditor } from "./HillEditor.js";
 import { CheckpointEditor } from "./CheckpointEditor.js";
 import { SquareHillEditor } from "./SquareHillEditor.js";
@@ -68,6 +68,18 @@ export class EditorController {
     // Banner string editing (delegated to BannerStringEditor)
     this.bannerStringEditor = new BannerStringEditor(this);
 
+        // Mesh grid terrain editor
+    this.meshGridEditor = new MeshGridEditor(this);
+
+    // Poly wall editing editor
+    this.polyWallEditor = new PolyWallEditor(this);
+
+    // Poly hill editing editor
+    this.polyHillEditor = new PolyHillEditor(this);
+
+    // Bezier wall editing editor
+    this.bezierWallEditor = new BezierWallEditor(this);
+
     // Accumulated raw (pre-snap) position of whatever is being dragged
     this._rawDragPos = null;
 
@@ -83,18 +95,6 @@ export class EditorController {
     
     // Track being edited
     this.currentTrack = null;
-
-    // Mesh grid terrain tool
-    this.meshGridTool = null;
-
-    // Poly wall editing tool
-    this.polyWallTool = null;
-
-    // Poly hill editing tool
-    this.polyHillTool = null;
-
-    // Bezier wall editing tool
-    this.bezierWallTool = null;
 
     // Vue editor store bridge
     this._editorStore = useEditorStore();
@@ -113,14 +113,14 @@ export class EditorController {
     this.camera.position = new Vector3(0, 50, -30);
     this.camera.setTarget(new Vector3(0, 0, 0));
     
-    // Create highlight material for selected checkpoint
-    this.checkpointEditor.createMaterial();
-    
     // Add event listeners
     window.addEventListener('keydown', this.boundKeyDown, true); // Use capture phase
     window.addEventListener('keyup', this.boundKeyUp);
     this.scene.onPointerObservable.add(this.boundPointerDown);
 
+    // Create highlight material for selected checkpoint
+    this.checkpointEditor.createMaterials();
+    
     // Create hill materials (delegated)
     this.hillEditor.createMaterials();
 
@@ -146,6 +146,18 @@ export class EditorController {
     // Initialize banner string editor
     this.bannerStringEditor.activate(this.scene, track);
 
+    // Mesh grid terrain editing editor
+    this.meshGridEditor.activate(this.scene, track);
+
+    // Poly wall editing editor
+    this.polyWallEditor.activate(this.scene, track);
+
+    // Poly hill editing editor
+    this.polyHillEditor.activate(this.scene, track);
+
+    // Bezier wall editing editor
+    this.bezierWallEditor.activate(this.scene, track);
+
     // Build editor visuals for any hills already in the track
     this.hillEditor.createVisualsForTrack(track);
     this.squareHillEditor.createVisualsForTrack(track);
@@ -165,21 +177,6 @@ export class EditorController {
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
 
-    // Mesh grid terrain editing tool
-    this.meshGridTool = new MeshGridTool(this);
-    this.meshGridTool.activate(this.scene, track);
-
-    // Poly wall editing tool
-    this.polyWallTool = new PolyWallTool(this);
-    this.polyWallTool.activate(this.scene, track);
-
-    // Poly hill editing tool
-    this.polyHillTool = new PolyHillTool(this);
-    this.polyHillTool.activate(this.scene, track);
-
-    // Bezier wall editing tool
-    this.bezierWallTool = new BezierWallTool(this);
-    this.bezierWallTool.activate(this.scene, track);
   }
 
   /**
@@ -220,28 +217,28 @@ export class EditorController {
       this._editorStore.setBridge(null);
     }
 
-    // Mesh grid tool
-    if (this.meshGridTool) {
-      this.meshGridTool.deactivate();
-      this.meshGridTool = null;
+    // Mesh grid editor
+    if (this.meshGridEditor) {
+      this.meshGridEditor.deactivate();
+      this.meshGridEditor = null;
     }
 
-    // Poly wall tool
-    if (this.polyWallTool) {
-      this.polyWallTool.deactivate();
-      this.polyWallTool = null;
+    // Poly wall editor
+    if (this.polyWallEditor) {
+      this.polyWallEditor.deactivate();
+      this.polyWallEditor = null;
     }
 
-    // Poly hill tool
-    if (this.polyHillTool) {
-      this.polyHillTool.deactivate();
-      this.polyHillTool = null;
+    // Poly hill editor
+    if (this.polyHillEditor) {
+      this.polyHillEditor.deactivate();
+      this.polyHillEditor = null;
     }
 
-    // Bezier wall tool
-    if (this.bezierWallTool) {
-      this.bezierWallTool.deactivate();
-      this.bezierWallTool = null;
+    // Bezier wall editor
+    if (this.bezierWallEditor) {
+      this.bezierWallEditor.deactivate();
+      this.bezierWallEditor = null;
     }
 
     // Flag editor
@@ -325,15 +322,15 @@ export class EditorController {
       else if (feature.type === 'bannerString') this.bannerStringEditor.createVisual(feature);
     }
     // Restore mesh grid gizmos
-    this.meshGridTool?.onSnapshotRestored();
+    this.meshGridEditor?.onSnapshotRestored();
     // Restore poly wall gizmos
-    this.polyWallTool?.onSnapshotRestored();
+    this.polyWallEditor?.onSnapshotRestored();
     window.rebuildPolyWall?.(null);
     // Restore poly hill gizmos
-    this.polyHillTool?.onSnapshotRestored();
+    this.polyHillEditor?.onSnapshotRestored();
     window.rebuildPolyHill?.(null);
     // Restore bezier wall gizmos
-    this.bezierWallTool?.onSnapshotRestored();
+    this.bezierWallEditor?.onSnapshotRestored();
     window.rebuildBezierWall?.(null);
     // Checkpoints are managed by CheckpointManager — rebuild from features
     // Checkpoints are managed by CheckpointManager — rebuild from features
@@ -436,14 +433,14 @@ export class EditorController {
       } else if (this.bannerStringEditor?.selected) {
         this.bannerStringEditor.deleteSelected();
         event.preventDefault();
-      } else if (this.meshGridTool?.activeFeature) {
-        this.meshGridTool.deleteMeshGrid();
+      } else if (this.meshGridEditor?.activeFeature) {
+        this.meshGridEditor.deleteMeshGrid();
         event.preventDefault();
-      } else if (this.polyWallTool?.selectedPoint) {
-        this.polyWallTool.deleteSelectedPoint();
+      } else if (this.polyWallEditor?.selectedPoint) {
+        this.polyWallEditor.deleteSelectedPoint();
         event.preventDefault();
-      } else if (this.polyHillTool?.selectedPoint) {
-        this.polyHillTool.deleteSelectedPoint();
+      } else if (this.polyHillEditor?.selectedPoint) {
+        this.polyHillEditor.deleteSelectedPoint();
         event.preventDefault();
       }
       return;
@@ -467,8 +464,8 @@ export class EditorController {
       return;
     }
 
-    // Delegate [ / ] to mesh grid tool for height adjustment
-    if (this.meshGridTool?.onKeyDown(event)) {
+    // Delegate [ / ] to mesh grid editor for height adjustment
+    if (this.meshGridEditor?.onKeyDown(event)) {
       event.preventDefault();
       return;
     }
@@ -552,11 +549,11 @@ export class EditorController {
 
     // Flush any deferred poly wall rebuild when a movement key is released
     const movKeys = ['w','s','a','d'];
-    if (movKeys.includes(event.key.toLowerCase()) && this.polyWallTool?.selectedPoint) {
-      this.polyWallTool.endDrag();
+    if (movKeys.includes(event.key.toLowerCase()) && this.polyWallEditor?.selectedPoint) {
+      this.polyWallEditor.endDrag();
     }
-    if (movKeys.includes(event.key.toLowerCase()) && this.polyHillTool?.selectedPoint) {
-      this.polyHillTool.endDrag();
+    if (movKeys.includes(event.key.toLowerCase()) && this.polyHillEditor?.selectedPoint) {
+      this.polyHillEditor.endDrag();
     }
   }
 
@@ -637,17 +634,17 @@ export class EditorController {
       if (this.keys.rotateLeft)  this.bannerStringEditor.rotate( this.rotationSpeed);
       if (this.keys.rotateRight) this.bannerStringEditor.rotate(-this.rotationSpeed);
       delta = this.bannerStringEditor.move(movement);
-    } else if (this.polyWallTool?.selectedPoint) {
-      const d = this.polyWallTool.moveSelectedPoint(movement.x, movement.z);
+    } else if (this.polyWallEditor?.selectedPoint) {
+      const d = this.polyWallEditor.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
-    } else if (this.polyHillTool?.selectedPoint) {
-      const d = this.polyHillTool.moveSelectedPoint(movement.x, movement.z);
+    } else if (this.polyHillEditor?.selectedPoint) {
+      const d = this.polyHillEditor.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
-    } else if (this.bezierWallTool?.selectedAnchor) {
-      const d = this.bezierWallTool.moveSelectedAnchor(movement.x, movement.z);
+    } else if (this.bezierWallEditor?.selectedAnchor) {
+      const d = this.bezierWallEditor.moveSelectedAnchor(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
-    } else if (this.bezierWallTool?.selectedHandle) {
-      const d = this.bezierWallTool.moveSelectedHandle(movement.x, movement.z);
+    } else if (this.bezierWallEditor?.selectedHandle) {
+      const d = this.bezierWallEditor.moveSelectedHandle(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
     } else {
       // Move camera and target together
@@ -669,16 +666,16 @@ export class EditorController {
         const clickedMesh = pickResult.pickedMesh;
 
         // Mesh grid control points take priority
-        if (this.meshGridTool?.onPointerDown(clickedMesh)) return;
+        if (this.meshGridEditor?.onPointerDown(clickedMesh)) return;
 
         // Poly wall control points
-        if (this.polyWallTool?.onPointerDown(clickedMesh)) return;
+        if (this.polyWallEditor?.onPointerDown(clickedMesh)) return;
 
         // Poly hill control points
-        if (this.polyHillTool?.onPointerDown(clickedMesh)) return;
+        if (this.polyHillEditor?.onPointerDown(clickedMesh)) return;
 
         // Bezier wall control points
-        if (this.bezierWallTool?.onPointerDown(clickedMesh)) return;
+        if (this.bezierWallEditor?.onPointerDown(clickedMesh)) return;
         
         // Check if clicked mesh is part of a checkpoint
         {
@@ -825,10 +822,10 @@ export class EditorController {
   toggleAddMenu()     { this._editorStore.toggleAddMenu(); }
   hideAddMenu()       { this._editorStore.closeAddMenu(); }
 
-  addMeshGridEntity()   { this.meshGridTool?.addMeshGridFeature(); this.hideAddMenu(); }
-  addPolyWallEntity()   { this.polyWallTool?.addPolyWallFeature(); this.hideAddMenu(); }
-  addPolyHillEntity()   { this.polyHillTool?.addPolyHillFeature(); this.hideAddMenu(); }
-  addBezierWallEntity() { this.bezierWallTool?.addBezierWallFeature(); this.hideAddMenu(); }
+  addMeshGridEntity()   { this.meshGridEditor?.addMeshGridFeature(); this.hideAddMenu(); }
+  addPolyWallEntity()   { this.polyWallEditor?.addPolyWallFeature(); this.hideAddMenu(); }
+  addPolyHillEntity()   { this.polyHillEditor?.addPolyHillFeature(); this.hideAddMenu(); }
+  addBezierWallEntity() { this.bezierWallEditor?.addBezierWallFeature(); this.hideAddMenu(); }
   
   /**
    * Add a new checkpoint at camera target position
@@ -955,40 +952,40 @@ export class EditorController {
     this.flagEditor.deselect();
     this.trackSignEditor.deselect();
     this.bannerStringEditor.deselect();
-    this.meshGridTool?.deselectPoint();
-    this.polyWallTool?.deselectPoint();
-    this.polyHillTool?.deselectPoint();
-    this.bezierWallTool?.deselectAll();
+    this.meshGridEditor?.deselectPoint();
+    this.polyWallEditor?.deselectPoint();
+    this.polyHillEditor?.deselectPoint();
+    this.bezierWallEditor?.deselectAll();
   }
 
   // ── Poly Wall Vue bridge methods ──
-  changePolyWallRadius(val)     { this.polyWallTool.changePolyWallRadius(val); }
-  changePolyWallHeight(val)     { this.polyWallTool.changePolyWallHeight(val); }
-  changePolyWallThickness(val)  { this.polyWallTool.changePolyWallThickness(val); }
-  changePolyWallClosed(val)     { this.polyWallTool.changePolyWallClosed(val); }
-  insertPolyWallPoint()         { this.polyWallTool.insertPolyWallPoint(); }
-  deletePolyWallPoint()         { this.polyWallTool.deleteSelectedPoint(); }
-  deletePolyWall()              { this.polyWallTool.deletePolyWall(); }
-  deselectPolyWall()            { this.polyWallTool.deselectPoint(); }
+  changePolyWallRadius(val)     { this.polyWallEditor.changePolyWallRadius(val); }
+  changePolyWallHeight(val)     { this.polyWallEditor.changePolyWallHeight(val); }
+  changePolyWallThickness(val)  { this.polyWallEditor.changePolyWallThickness(val); }
+  changePolyWallClosed(val)     { this.polyWallEditor.changePolyWallClosed(val); }
+  insertPolyWallPoint()         { this.polyWallEditor.insertPolyWallPoint(); }
+  deletePolyWallPoint()         { this.polyWallEditor.deleteSelectedPoint(); }
+  deletePolyWall()              { this.polyWallEditor.deletePolyWall(); }
+  deselectPolyWall()            { this.polyWallEditor.deselectPoint(); }
 
   // ── Poly Hill Vue bridge methods ──
-  changePolyHillRadius(val)     { this.polyHillTool.setPointRadius(val); }
-  changePolyHillHeight(val)     { this.polyHillTool.setHeight(val); }
-  changePolyHillWidth(val)      { this.polyHillTool.setWidth(val); }
-  changePolyHillClosed(val)     { this.polyHillTool.setClosed(val); }
-  insertPolyHillPoint()         { this.polyHillTool.insertPointAfter(); }
-  deletePolyHillPoint()         { this.polyHillTool.deleteSelectedPoint(); }
-  deletePolyHill()              { this.polyHillTool.deletePolyHill(); }
-  deselectPolyHill()            { this.polyHillTool.deselectPoint(); }
+  changePolyHillRadius(val)     { this.polyHillEditor.setPointRadius(val); }
+  changePolyHillHeight(val)     { this.polyHillEditor.setHeight(val); }
+  changePolyHillWidth(val)      { this.polyHillEditor.setWidth(val); }
+  changePolyHillClosed(val)     { this.polyHillEditor.setClosed(val); }
+  insertPolyHillPoint()         { this.polyHillEditor.insertPointAfter(); }
+  deletePolyHillPoint()         { this.polyHillEditor.deleteSelectedPoint(); }
+  deletePolyHill()              { this.polyHillEditor.deletePolyHill(); }
+  deselectPolyHill()            { this.polyHillEditor.deselectPoint(); }
 
   // ── Bezier Wall Vue bridge methods ──
-  changeBezierWallHeight(val)   { this.bezierWallTool.changeBezierWallHeight(val); }
-  changeBezierWallThickness(val){ this.bezierWallTool.changeBezierWallThickness(val); }
-  changeBezierWallClosed(val)   { this.bezierWallTool.changeBezierWallClosed(val); }
-  insertBezierWallPoint()       { this.bezierWallTool.insertBezierWallPoint(); }
-  deleteBezierWallPoint()       { this.bezierWallTool.deleteBezierWallPoint(); }
-  deleteBezierWall()            { this.bezierWallTool.deleteBezierWall(); }
-  deselectBezierWall()          { this.bezierWallTool.deselectBezierWall(); }
+  changeBezierWallHeight(val)   { this.bezierWallEditor.changeBezierWallHeight(val); }
+  changeBezierWallThickness(val){ this.bezierWallEditor.changeBezierWallThickness(val); }
+  changeBezierWallClosed(val)   { this.bezierWallEditor.changeBezierWallClosed(val); }
+  insertBezierWallPoint()       { this.bezierWallEditor.insertBezierWallPoint(); }
+  deleteBezierWallPoint()       { this.bezierWallEditor.deleteBezierWallPoint(); }
+  deleteBezierWall()            { this.bezierWallEditor.deleteBezierWall(); }
+  deselectBezierWall()          { this.bezierWallEditor.deselectBezierWall(); }
 
   // ── Flag Vue bridge methods ──
   changeFlagColor(val) { this.flagEditor.changeColor(val); }

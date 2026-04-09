@@ -1,7 +1,7 @@
 import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
 
 /**
- * PolyHillTool – place and edit polyHill features in the track editor.
+ * PolyHillEditor – place and edit polyHill features in the track editor.
  *
  * Each control point is represented by a pickable sphere. Clicking a sphere
  * selects it; WASD moves it (via EditorController camera logic delegation) or
@@ -12,13 +12,13 @@ import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core"
  *   • toggle closed loop
  *   • close the panel (gizmos stay visible)
  *
- * Multiple polyHill features can exist; each gets its own PolyHillTool instance.
+ * Multiple polyHill features can exist; each gets its own PolyHillEditor instance.
  * This tool manages ONE feature at a time (the "active" one). Clicking a gizmo
  * from a different feature switches focus.
  */
 const POINT_HEIGHT_OFFSET = 0.7;
 
-export class PolyHillTool {
+export class PolyHillEditor {
   constructor(editorController) {
     this.ec = editorController;
     this.scene = null;
