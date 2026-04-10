@@ -266,7 +266,7 @@
       "depth": 10,
       "height": -6,
       "transition": 6,
-      "terrainType": null,
+      "terrainType": "mud",
       "angle": 0
     },
     {
@@ -283,7 +283,7 @@
     {
       "type": "squareHill",
       "centerX": 36.5,
-      "centerZ": -68.27521310516258,
+      "centerZ": -70.27521310516258,
       "width": 3,
       "depth": 3,
       "height": 2,
@@ -316,9 +316,9 @@
     {
       "type": "squareHill",
       "centerX": -18,
-      "centerZ": -31.775213105162578,
+      "centerZ": -33.27521310516258,
       "width": 5,
-      "depth": 6,
+      "depth": 10,
       "transition": 2.5,
       "terrainType": null,
       "angle": 0,
@@ -352,9 +352,9 @@
     {
       "type": "checkpoint",
       "centerX": -18,
-      "centerZ": 58,
+      "centerZ": 56,
       "heading": 1.5707963267948966,
-      "width": 27,
+      "width": 30,
       "checkpointNumber": 1
     },
     {
@@ -398,7 +398,7 @@
     {
       "type": "squareHill",
       "centerX": 9.5,
-      "centerZ": -64,
+      "centerZ": -63,
       "width": 2,
       "depth": 22,
       "height": 1.5,
@@ -435,10 +435,10 @@
     },
     {
       "type": "hill",
-      "centerX": -64,
+      "centerX": -62.5,
       "centerZ": 7,
       "radius": 10,
-      "height": 0.5,
+      "height": 1.5,
       "terrainType": null
     },
     {
@@ -531,15 +531,15 @@
     },
     {
       "type": "flag",
-      "x": -45,
-      "z": -46,
-      "color": "red"
+      "x": -49,
+      "z": -47,
+      "color": "blue"
     },
     {
       "type": "flag",
       "x": -48,
-      "z": 36.5,
-      "color": "red"
+      "z": 38,
+      "color": "blue"
     },
     {
       "type": "squareHill",
@@ -556,8 +556,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -20,
-          "z": -38.56512786309755,
+          "x": -17,
+          "z": -40.56512786309755,
           "radius": 0
         },
         {
@@ -567,12 +567,12 @@
         },
         {
           "x": -47,
-          "z": 29.43487213690245,
+          "z": 30.43487213690245,
           "radius": 8.5
         },
         {
           "x": -16.5,
-          "z": 27.43487213690245,
+          "z": 30.93487213690245,
           "radius": 0
         }
       ],

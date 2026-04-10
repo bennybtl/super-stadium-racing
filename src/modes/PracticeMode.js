@@ -2,6 +2,7 @@ import { Vector3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
+import { DebugManager } from "../managers/DebugManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 
@@ -68,13 +69,15 @@ export class PracticeMode extends BaseMode {
     // -- UI --
     const uiManager = new UIManager();
     this.uiManager = uiManager;
-    uiManager.showDebugPanel();
+
+    const debugManager = new DebugManager();
+    this.debugManager = debugManager;
 
     // Input — ESC opens pause menu
     const inputManager = new InputManager(playerTruck, cameraController);
     this.inputManager = inputManager;
     inputManager.onPause(() => menuManager.showPauseMenu());
-    this.setupDebugToggle(inputManager, uiManager);
+    this.setupDebugToggle(inputManager, debugManager);
     inputManager.onReset(() => {
       this.resetTruckPhysics(playerTruck, spawnPos);
       playerTruck.state.heading = heading;
@@ -112,20 +115,7 @@ export class PracticeMode extends BaseMode {
       flagManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
       
-      // Update debug panel
-      const slopeDegFront = currentTrack.getTerrainSlopeAt(
-        playerTruck.mesh.position.x,
-        playerTruck.mesh.position.z,
-        playerTruck.state.heading,
-        1,
-        4
-      );
-      uiManager.updateDebugPanel(
-        debugInfo,
-        terrainManager.getTerrainAt(playerTruck.mesh.position),
-        slopeDegFront
-      );
-      uiManager.updatePosition(playerTruck.mesh.position);
+      debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck);
     });
 
     return scene;
@@ -135,6 +125,10 @@ export class PracticeMode extends BaseMode {
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
+    }
+    if (this.debugManager) {
+      this.debugManager.hide();
+      this.debugManager = null;
     }
     if (this.inputManager) {
       this.inputManager.dispose();

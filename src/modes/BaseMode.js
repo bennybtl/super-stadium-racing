@@ -121,10 +121,10 @@ export class BaseMode {
   }
 
   /**
-   * Wire the \ key to toggle the debug panel via the given inputManager/uiManager pair.
+   * Wire the \ key to toggle the debug panel via a DebugManager.
    */
-  setupDebugToggle(inputManager, uiManager) {
-    inputManager.onToggleDebug(() => uiManager.toggleDebugPanel());
+  setupDebugToggle(inputManager, debugManager) {
+    inputManager.onToggleDebug(() => debugManager.toggle());
   }
 
   /**

@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
+import { useDebugStore } from "../vue/store.js";
 
 /**
  * AIDriver - Autonomous driver that navigates through checkpoints
@@ -55,9 +56,9 @@ export class AIDriver {
     // Pause flag — when true, getInput returns all-false
     this.paused = false;
 
-    // Debug visualization
+    // Debug visualization — enabled state is driven by the global DebugManager store
+    this._debugStore = useDebugStore();
     this.debugLines = [];
-    this.debugEnabled = true;
     
     // Get all checkpoints for reference
     this.checkpoints = this.getCheckpointPositions();
@@ -69,6 +70,9 @@ export class AIDriver {
       this.updateDebugVisualization();
     }
   }
+
+  /** Mirrors the global debug panel toggle (\\ key). */
+  get debugEnabled() { return this._debugStore?.visible ?? false; }
 
   /**
    * Calculate path to next checkpoint from current position

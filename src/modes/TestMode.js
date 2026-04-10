@@ -3,6 +3,7 @@ import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
+import { DebugManager } from "../managers/DebugManager.js";
 
 /**
  * TestMode – lightweight free-drive for testing a track in the editor.
@@ -15,6 +16,7 @@ export class TestMode extends BaseMode {
     super(controller);
     this.inputManager = null;
     this._backBtn = null;
+    this.debugManager = null;
   }
 
   async setup({ trackKey, returnToEditor }) {
@@ -65,7 +67,8 @@ export class TestMode extends BaseMode {
     const inputManager = new InputManager(playerTruck, cameraController);
     this.inputManager = inputManager;
     inputManager.onPause(() => this._exitToEditor(returnToEditor));
-    this.setupDebugToggle(inputManager, uiManager);
+    this.debugManager = new DebugManager();
+    this.setupDebugToggle(inputManager, this.debugManager);
     inputManager.onReset(() => {
       this.resetTruckPhysics(playerTruck, spawnPos);
       playerTruck.state.heading = heading;
@@ -86,11 +89,12 @@ export class TestMode extends BaseMode {
       const dt = this.getClampedDeltaTime(engine, 0.05);
       const input = inputManager.getMovementInput();
       wallManager.preUpdate(trucks, dt);
-      playerTruck.update(input, dt, terrainManager, currentTrack);
+      const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
       wallManager.update(trucks);
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
+      this.debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck);
     });
 
     return scene;
@@ -122,6 +126,10 @@ export class TestMode extends BaseMode {
     if (this._backBtn) {
       this._backBtn.remove();
       this._backBtn = null;
+    }
+    if (this.debugManager) {
+      this.debugManager.hide();
+      this.debugManager = null;
     }
     if (this.inputManager) {
       this.inputManager.dispose();

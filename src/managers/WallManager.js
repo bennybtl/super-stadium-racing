@@ -215,13 +215,6 @@ export class WallManager {
       pos.x += sinH * correctionZ;
       pos.z += cosH * correctionZ;
     }
-
-    // ── Debug logging (once per collision, throttled per segment) ─────────
-    const now = performance.now();
-    if (!seg._lastLogTime || now - seg._lastLogTime > 200) {
-      seg._lastLogTime = now;
-      const r = (v) => v.toFixed(3);
-    }
   }
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
+import { DebugManager } from "../managers/DebugManager.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
@@ -22,6 +23,7 @@ export class RaceMode extends BaseMode {
     this.inputManager = null;
     this._countdownTimeouts = [];
     this._dnfTimer = null;
+    this.debugManager = null;
   }
 
   async setup({ trackKey, laps, season = false }) {
@@ -272,9 +274,12 @@ export class RaceMode extends BaseMode {
     // -- UI --
     const uiManager = new UIManager();
     this.uiManager = uiManager;
-    uiManager.showDebugPanel();
+    // uiManager.showDebugPanel();
     uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
+
+    const debugManager = new DebugManager();
+    this.debugManager = debugManager;
 
     // -- Truck collision --
     const truckCollisionManager = new TruckCollisionManager();
@@ -284,7 +289,7 @@ export class RaceMode extends BaseMode {
     this.inputManager = inputManager;
 
     inputManager.onPause(() => menuManager.togglePause());
-    this.setupDebugToggle(inputManager, uiManager);
+    this.setupDebugToggle(inputManager, debugManager);
 
     inputManager.onBoost(() => {
       if (
@@ -497,19 +502,7 @@ export class RaceMode extends BaseMode {
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);
 
-      const slopeDegFront = currentTrack.getTerrainSlopeAt(
-        playerTruckData.truck.mesh.position.x,
-        playerTruckData.truck.mesh.position.z,
-        playerTruckData.truck.state.heading,
-        1,
-        4
-      );
-      uiManager.updateDebugPanel(
-        playerDebugInfo,
-        terrainManager.getTerrainAt(playerTruckData.truck.mesh.position),
-        slopeDegFront
-      );
-      uiManager.updatePosition(playerTruckData.truck.mesh.position);
+      debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck);
       uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
 
       trucks.forEach((truckData) => {
@@ -657,6 +650,10 @@ export class RaceMode extends BaseMode {
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
+    }
+    if (this.debugManager) {
+      this.debugManager.hide();
+      this.debugManager = null;
     }
     super.teardown();
   }
