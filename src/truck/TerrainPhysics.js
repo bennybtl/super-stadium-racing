@@ -48,6 +48,20 @@ const DOWNHILL = {
 };
 
 /**
+ * Tunable constants for uphill slope deceleration.
+ * The truck's velocity is XZ-only, so climbing a slope doesn't naturally slow it down.
+ * We apply a gravity-derived drag force (g·sin θ) opposing forward motion when ascending.
+ */
+const UPHILL = {
+  // Fraction of g·sin(θ) to apply (0–1). Lower = more arcade, 1 = real physics.
+  gravityScale:    0.55,
+  // Slope angles below this (degrees) are ignored — avoids micro-corrections on flat ground.
+  minSlopeDeg:     2,
+  // Only apply when the truck is at least this grounded.
+  minGroundedness: 0.3,
+};
+
+/**
  * Handles terrain-related physics: gravity, suspension, slope collision
  */
 export class TerrainPhysics {
@@ -229,6 +243,36 @@ export class TerrainPhysics {
       this.state.terrainPitch += (Math.random() - 0.5) * roughness * 0.22;
       this.state.terrainRoll  += (Math.random() - 0.5) * roughness * 0.20;
     }
+  }
+
+  /**
+   * Decelerates the truck when climbing a slope.
+   * Applies g·sin(θ)·scale opposing the current velocity direction.
+   * Call this after acceleration so uphill slopes have their full effect.
+   *
+   * @param {Mesh}   mesh
+   * @param {number} deltaTime
+   * @param {Track}  track
+   * @param {number} groundedness - 0–1 from TerrainPhysics.update()
+   */
+  applyUphillGravity(mesh, deltaTime, track, groundedness) {
+    if (!track || groundedness < UPHILL.minGroundedness) return;
+    const speed = this.state.velocity.length();
+    if (speed < 1.5) return;
+
+    const moveDir = this.state.velocity.clone().normalize();
+    const moveDirHeading = Math.atan2(moveDir.x, moveDir.z);
+    const slopeDeg = track.getTerrainSlopeAt(
+      mesh.position.x, mesh.position.z, moveDirHeading, 1, 3
+    );
+
+    if (slopeDeg <= UPHILL.minSlopeDeg) return;
+
+    const slopeRad = slopeDeg * Math.PI / 180;
+    // F = g · sin(θ) · scale, applied as a speed reduction this frame
+    const decel = Math.abs(this.gravity) * Math.sin(slopeRad) * UPHILL.gravityScale;
+    const newSpeed = Math.max(0, speed - decel * deltaTime);
+    this.state.velocity.scaleInPlace(newSpeed / speed);
   }
 
   checkSteepSlope(mesh, deltaTime, track) {

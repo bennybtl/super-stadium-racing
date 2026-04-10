@@ -169,6 +169,9 @@ export class Truck {
     // Handle input
     this.controls.updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime);
     this.controls.updateAcceleration(input, forward, groundedness, deltaTime);
+
+    // Uphill gravity — decelerate proportional to slope so climbing costs speed
+    this.terrainPhysics.applyUphillGravity(this.mesh, deltaTime, track, groundedness);
     
     // Apply drag
     this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness);
