@@ -16,9 +16,9 @@
         2,
         2,
         2,
-        0.5,
-        2,
-        2,
+        2.5,
+        5,
+        9,
         34.5,
         16.5,
         4.5,
@@ -27,7 +27,7 @@
         0,
         0,
         0,
-        2,
+        5,
         32.5,
         13,
         2,
@@ -81,23 +81,23 @@
         15,
         14.5,
         12.5,
-        14,
+        16,
         30,
         24.5,
         17,
-        16,
+        17,
         14,
+        14.5,
         13,
-        13,
-        13,
-        14
+        16.5,
+        17
       ]
     },
     {
       "type": "polyWall",
       "points": [
         {
-          "x": 77,
+          "x": 72.5,
           "z": 15,
           "radius": 10
         },
@@ -137,13 +137,13 @@
           "radius": 0
         },
         {
-          "x": -76,
+          "x": -78.5,
           "z": 74,
           "radius": 13
         },
         {
-          "x": -73,
-          "z": -73,
+          "x": -79,
+          "z": -65.5,
           "radius": 14.5
         },
         {
@@ -181,7 +181,7 @@
           "radius": 5
         },
         {
-          "x": -36,
+          "x": -36.5,
           "z": 37.5,
           "radius": 10
         },
@@ -206,12 +206,12 @@
           "radius": 5
         },
         {
-          "x": -54.5,
+          "x": -56.5,
           "z": -30.5,
           "radius": 15.5
         },
         {
-          "x": -53.5,
+          "x": -56.5,
           "z": 48,
           "radius": 5.5
         },
@@ -286,9 +286,9 @@
     {
       "type": "squareHill",
       "centerX": -24,
-      "centerZ": -60,
+      "centerZ": -55.5,
       "width": 3,
-      "depth": 27,
+      "depth": 20,
       "height": 3,
       "transition": 6.5,
       "terrainType": null,
@@ -299,7 +299,7 @@
       "centerX": 45,
       "centerZ": -50,
       "radius": 10,
-      "height": -5,
+      "height": -4.5,
       "terrainType": "mud"
     },
     {
@@ -631,6 +631,48 @@
       "transition": 1,
       "terrainType": null,
       "angle": 0
+    },
+    {
+      "type": "normalMapDecal",
+      "centerX": 2,
+      "centerZ": -30.275213105162592,
+      "width": 80,
+      "depth": 22.5,
+      "angle": 0,
+      "normalMap": "6481-normal.jpg",
+      "repeatU": 1.3,
+      "repeatV": 1,
+      "intensity": 0.9
+    },
+    {
+      "type": "terrainCircle",
+      "centerX": 66.5,
+      "centerZ": 23.724786894837408,
+      "terrainType": "rocky",
+      "radius": 7
+    },
+    {
+      "type": "terrainCircle",
+      "centerX": -29.5,
+      "centerZ": 33.22478689483741,
+      "terrainType": "rocky",
+      "radius": 7
+    },
+    {
+      "type": "hill",
+      "centerX": 32,
+      "centerZ": -47,
+      "radius": 10,
+      "height": -3,
+      "terrainType": "mud"
+    },
+    {
+      "type": "bannerString",
+      "x": 63,
+      "z": -18,
+      "heading": 0,
+      "width": 27,
+      "poleHeight": 12
     }
   ]
 }

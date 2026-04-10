@@ -1,6 +1,6 @@
 {
-  "id": "rally_car",
-  "name": "Rally Car",
+  "id": "default_buggy",
+  "name": "Offroad Buggy",
   "modelFile": null,
   "defaultColor": [0.1, 0.7, 0.15],
   "physicsBox": {
@@ -9,21 +9,21 @@
     "depth": 2.6
   },
   "wheels": {
-    "trackWidth": 1.75,
+    "trackWidth": 1.85,
     "frontAxle":  1.35,
-    "rearAxle":  -1.2
+    "rearAxle":  -1.6
   },
   "params": {
     "springStrength": 120,
-    "damping": 8,
+    "damping": 5,
     "maxSpeed": 32,
     "maxReverseSpeed": -12,
-    "acceleration": 11,
+    "acceleration": 17,
     "braking": 3,
     "drag": 3,
     "turnSpeed": 4.5,
-    "grip": 0.045,
-    "driftThreshold": 0.15,
+    "grip": 0.025,
+    "driftThreshold": 0.05,
     "boostCount": 7,
     "maxBoosts": 7,
     "boostDuration": 1.0,
