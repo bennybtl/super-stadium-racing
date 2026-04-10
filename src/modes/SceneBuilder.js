@@ -83,7 +83,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
       const worldZ =
         (row - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
       const terrainType = currentTrack.getTerrainTypeAt(worldX, worldZ);
-      if (terrainType) terrainManager.setTerrainCell(col, row, terrainType);
+      terrainManager.setTerrainCell(col, row, terrainType);
     }
   }
 
@@ -196,6 +196,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainManager,
     ground,
     groundTex,
+    specularTex,
     pixelsPerCell,
     compositeNormalMap,
     checkpointManager,

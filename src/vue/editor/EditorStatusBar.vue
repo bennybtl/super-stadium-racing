@@ -9,6 +9,25 @@
       <div class="status-hint">
         pan/move - WASD | rotate - QE | delete - Del | undo - Ctrl+Z | zoom - +/- | move faster - Shift
       </div>
+
+      <!-- Default terrain picker -->
+      <div class="terrain-picker">
+        <span class="terrain-label">Default Terrain</span>
+        <select
+          class="terrain-select"
+          :value="editor.trackDefaultTerrain"
+          @change="editor.setTrackDefaultTerrain($event.target.value)"
+        >
+          <option value="packed_dirt">Packed Dirt</option>
+          <option value="loose_dirt">Loose Dirt</option>
+          <option value="asphalt">Asphalt</option>
+          <option value="mud">Mud</option>
+          <option value="water">Water</option>
+          <option value="rocky">Rocky</option>
+          <option value="grass">Grass</option>
+        </select>
+      </div>
+
       <!-- Right: snap controls -->
       <div class="snap-controls">
         <button
@@ -128,6 +147,31 @@ const editor = useEditorStore();
   font-size: 11px;
   font-family: Arial, sans-serif;
 }
+
+/* ── Default terrain picker ── */
+.terrain-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.terrain-label {
+  color: #888;
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+  white-space: nowrap;
+}
+.terrain-select {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ccc;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  appearance: auto;
+}
+.terrain-select:hover { border-color: #888; }
 
 /* ── Slide-up transition ── */
 .status-bar-enter-active,

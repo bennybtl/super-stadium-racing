@@ -13,6 +13,7 @@ import { FlagEditor } from "./FlagEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
 import { BannerStringEditor } from "./BannerStringEditor.js";
 import { useEditorStore } from '../vue/store.js';
+import { TERRAIN_TYPES } from '../terrain.js';
 
 /**
  * EditorController - Handles track editing mode
@@ -147,7 +148,7 @@ export class EditorController {
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
-
+    this._editorStore.trackDefaultTerrain = track.defaultTerrainType?.name ?? 'packed_dirt';
   }
 
   /**
@@ -838,6 +839,16 @@ export class EditorController {
   changeHillRadius(val) { this.hillEditor.changeRadius(val); }
   changeHillHeight(val) { this.hillEditor.changeHeight(val); }
   changeHillTerrainType(name) { this.hillEditor.changeTerrainType(name); }
+
+  changeTrackDefaultTerrain(name) {
+    const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === name);
+    if (!key) return;
+    this.saveSnapshot();
+    this.currentTrack.defaultTerrainType = TERRAIN_TYPES[key];
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+    window.rebuildNormalMap?.();
+  }
 
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }
   changeSquareHillDepth(val)        { this.squareHillEditor.changeDepth(val); }

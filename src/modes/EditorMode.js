@@ -1,9 +1,8 @@
 import { VertexBuffer } from "@babylonjs/core";
-import { TERRAIN_TYPES } from "../terrain.js";
 import { EditorController } from "../editor/EditorController.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
-import { paintTerrainTexture } from "../terrain-utils.js";
+import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
 
 /**
  * EditorMode – track editing interface.
@@ -28,6 +27,7 @@ export class EditorMode extends BaseMode {
       terrainManager,
       ground,
       groundTex,
+      specularTex,
       pixelsPerCell,
       compositeNormalMap,
       checkpointManager,
@@ -81,8 +81,7 @@ export class EditorMode extends BaseMode {
           const worldZ =
             (row - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
           const terrainType = currentTrack.getTerrainTypeAt(worldX, worldZ);
-          terrainManager.grid[row * terrainManager.cellsPerSide + col] =
-            terrainType || TERRAIN_TYPES.PACKED_DIRT;
+          terrainManager.grid[row * terrainManager.cellsPerSide + col] = terrainType;
         }
       }
     };
@@ -93,6 +92,8 @@ export class EditorMode extends BaseMode {
       const ctx = groundTex.getContext();
       paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
       groundTex.update();
+      paintTerrainSpecularMap(specularTex.getContext(), terrainManager, pixelsPerCell);
+      specularTex.update();
     };
     let _rebuildTerrainTimer = null;
     window.rebuildTerrainTexture = (immediate = false) => {

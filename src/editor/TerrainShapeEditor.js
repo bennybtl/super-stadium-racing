@@ -1,6 +1,7 @@
 import { StandardMaterial, Color3, Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
 import { TERRAIN_TYPES } from '../terrain.js';
 
+const NODE_POS_Y = 0.15; // height above terrain to place the node (prevents z-fighting)
 /**
  * TerrainShapeEditor — handles terrain shape features (type: 'terrain').
  * Each feature carries a `shape` property ('rect' | 'circle') that controls
@@ -71,7 +72,7 @@ export class TerrainShapeEditor {
     const terrainH = currentTrack ? currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
 
     const node = new TransformNode('terrainShapeNode', scene);
-    node.position = new Vector3(feature.centerX, terrainH + 0.15, feature.centerZ);
+    node.position = new Vector3(feature.centerX, terrainH + NODE_POS_Y, feature.centerZ);
 
     let mesh;
     if (feature.shape === 'rect') {
@@ -105,7 +106,7 @@ export class TerrainShapeEditor {
 
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;
-    node.position.y = terrainH + 0.05;
+    node.position.y = terrainH + NODE_POS_Y;
 
     if (feature.shape === 'rect') {
       node.scaling.x = feature.width;
@@ -183,6 +184,7 @@ export class TerrainShapeEditor {
     this.hideProperties();
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
+    window.rebuildNormalMap?.();
   }
 
   duplicateSelected() {
@@ -299,6 +301,7 @@ export class TerrainShapeEditor {
   rebuildTerrain() {
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
+    window.rebuildNormalMap?.();
     if (this.selected) this.updateVisual(this.selected);
   }
 

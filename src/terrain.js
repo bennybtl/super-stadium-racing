@@ -4,7 +4,7 @@ import { Vector3, Color3 } from "@babylonjs/core";
 export const TERRAIN_TYPES = {
   ASPHALT: {
     name: "asphalt",
-    gripMultiplier: 3.5,    // Best grip
+    gripMultiplier: 4.0,    // Best grip
     color: new Color3(0.2, 0.2, 0.25),
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     dragMultiplier: 0.5,
@@ -56,13 +56,23 @@ export const TERRAIN_TYPES = {
   },
   ROCKY: {
     name: "rocky",
-    gripMultiplier: 0.4,     // Unpredictable rocky surface
+    gripMultiplier: 1.0,     // Unpredictable rocky surface
     color: new Color3(0.42, 0.30, 0.22), // Dark reddish-brown rock
     dragMultiplier: 5.0,     // Dramatic slowing — holes catch and drag the truck
-    roughness: 0.85,         // Very rough — hard impacts and significant jostling
+    roughness: 0.75,         // Very rough — hard impacts and significant jostling
     normalMap: 'rocky.jpg',
     normalMapIntensity: 1.5, // Strong rocky surface detail
     specular: 0.14,          // Matte rock
+  },
+  GRASS: {
+    name: "grass",
+    gripMultiplier: 0.15,     // Slippery, especially when wet
+    color: new Color3(0.05, 0.4, 0.1), // Green grass
+    dragMultiplier: 1.2,     // Slightly slows down
+    roughness: 0.3,          // Slightly rough — soft impacts
+    normalMap: 'grass.jpg',
+    normalMapIntensity: 1.5, // Strong grass surface detail
+    specular: 0.14,          // Matte grass
   },
 };
 
@@ -77,6 +87,14 @@ export class TerrainManager {
     for (let i = 0; i < this.cellsPerSide * this.cellsPerSide; i++) {
       // Default everything to packed dirt
       this.grid[i] = TERRAIN_TYPES.PACKED_DIRT;
+    }
+  }
+
+  // Set terrain type for a specific cell by grid coordinates
+  setTerrainCell(col, row, terrainType) {
+    if (col >= 0 && col < this.cellsPerSide && row >= 0 && row < this.cellsPerSide) {
+      const index = row * this.cellsPerSide + col;
+      this.grid[index] = terrainType;
     }
   }
 
@@ -97,54 +115,4 @@ export class TerrainManager {
     return this.grid[index] || TERRAIN_TYPES.PACKED_DIRT;
   }
 
-  // Set terrain type for a rectangular area
-  setTerrainRect(x, z, width, height, terrainType) {
-    const halfGrid = this.gridSize / 2;
-    const startX = Math.floor((x + halfGrid) / this.cellSize);
-    const startZ = Math.floor((z + halfGrid) / this.cellSize);
-    const endX = Math.floor((x + width + halfGrid) / this.cellSize);
-    const endZ = Math.floor((z + height + halfGrid) / this.cellSize);
-    
-    for (let gz = startZ; gz < endZ; gz++) {
-      for (let gx = startX; gx < endX; gx++) {
-        if (gx >= 0 && gx < this.cellsPerSide && gz >= 0 && gz < this.cellsPerSide) {
-          const index = gz * this.cellsPerSide + gx;
-          this.grid[index] = terrainType;
-        }
-      }
-    }
-  }
-
-  // Set terrain type in a circular area
-  setTerrainCircle(centerX, centerZ, radius, terrainType) {
-    const halfGrid = this.gridSize / 2;
-    const radiusInCells = Math.ceil(radius / this.cellSize);
-    const centerCellX = Math.floor((centerX + halfGrid) / this.cellSize);
-    const centerCellZ = Math.floor((centerZ + halfGrid) / this.cellSize);
-    
-    for (let gz = centerCellZ - radiusInCells; gz <= centerCellZ + radiusInCells; gz++) {
-      for (let gx = centerCellX - radiusInCells; gx <= centerCellX + radiusInCells; gx++) {
-        if (gx >= 0 && gx < this.cellsPerSide && gz >= 0 && gz < this.cellsPerSide) {
-          // Check if cell center is within circle
-          const worldX = (gx - this.cellsPerSide / 2 + 0.5) * this.cellSize;
-          const worldZ = (gz - this.cellsPerSide / 2 + 0.5) * this.cellSize;
-          const dx = worldX - centerX;
-          const dz = worldZ - centerZ;
-          
-          if (dx * dx + dz * dz <= radius * radius) {
-            const index = gz * this.cellsPerSide + gx;
-            this.grid[index] = terrainType;
-          }
-        }
-      }
-    }
-  }
-
-  // Set terrain type for a specific cell by grid coordinates
-  setTerrainCell(col, row, terrainType) {
-    if (col >= 0 && col < this.cellsPerSide && row >= 0 && row < this.cellsPerSide) {
-      const index = row * this.cellsPerSide + col;
-      this.grid[index] = terrainType;
-    }
-  }
 }

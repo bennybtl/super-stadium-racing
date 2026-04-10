@@ -233,6 +233,9 @@ export const useEditorStore = defineStore('editor', () => {
     heading: 0,   // degrees, display only
   });
 
+  // ── Track defaults ──
+  const trackDefaultTerrain = ref('packed_dirt');
+
   // ── Test mode (back button) ──
   const testModeActive = ref(false);
   const testModeReturnKey = ref(null);
@@ -347,6 +350,9 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteBannerString()           { _bridge.value?.deleteBannerString(); }
   function closeBannerString()            { _bridge.value?.deselectBannerString(); }
 
+  function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
+
+  // ── Test mode ──
   function setActiveTool(val)           { activeTool.value = val; }
 
   // ── Add-entity menu ──
@@ -408,6 +414,7 @@ export const useEditorStore = defineStore('editor', () => {
     setTrackSignName, setTrackSignRotation, deleteTrackSign, closeTrackSign,
     bannerString,
     setBannerStringWidth, setBannerStringPoleHeight, deleteBannerString, closeBannerString,
+    trackDefaultTerrain, setTrackDefaultTerrain,
     setActiveTool,
     toggleSnap, cycleSnapSize, quickTestTrack,
     openAddMenu, closeAddMenu, toggleAddMenu,

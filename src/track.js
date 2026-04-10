@@ -9,6 +9,7 @@ export class Track {
   constructor(name = "Untitled Track") {
     this.name = name;
     this.features = [];
+    this.defaultTerrainType = TERRAIN_TYPES.PACKED_DIRT;
   }
 
   // Add a ridge running perpendicular to the X axis (east-west)
@@ -367,7 +368,7 @@ export class Track {
       }
     }
 
-    return null;
+    return this.defaultTerrainType;
   }
 
   // Expand a polyline with optional rounded corners at each point
@@ -473,6 +474,7 @@ export class Track {
 
     return JSON.stringify({
       name: this.name,
+      defaultTerrainType: this.defaultTerrainType?.name ?? 'packed_dirt',
       features: serializedFeatures,
     }, null, 2);
   }
@@ -482,6 +484,12 @@ export class Track {
     const data = JSON.parse(jsonString);
     const track = new Track(data.name);
     
+    if (data.defaultTerrainType) {
+      const key = Object.keys(TERRAIN_TYPES).find(
+        k => TERRAIN_TYPES[k].name === data.defaultTerrainType
+      );
+      if (key) track.defaultTerrainType = TERRAIN_TYPES[key];
+    }
     // Convert features and map terrainType names to TERRAIN_TYPES objects
     track.features = (data.features || []).map(feature => {
       const loaded = { ...feature };
