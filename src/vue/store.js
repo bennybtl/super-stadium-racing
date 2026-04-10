@@ -358,8 +358,7 @@ export const useEditorStore = defineStore('editor', () => {
   function addCheckpoint()     { _bridge.value?.addCheckpoint(); }
   function addHill()           { _bridge.value?.addHillEntity(); }
   function addSquareHill()     { _bridge.value?.addSquareHillEntity(); }
-  function addTerrainRect()    { _bridge.value?.addTerrainRectEntity(); }
-  function addTerrainCircle()  { _bridge.value?.addTerrainCircleEntity(); }
+  function addTerrain()        { _bridge.value?.addTerrainEntity(); }
   function addNormalMapDecal() { _bridge.value?.addNormalMapDecalEntity(); }
   function addTireStack()      { _bridge.value?.addTireStackEntity(); }
   function addFlag()           { _bridge.value?.addFlagEntity(); }
@@ -412,7 +411,7 @@ export const useEditorStore = defineStore('editor', () => {
     setActiveTool,
     toggleSnap, cycleSnapSize, quickTestTrack,
     openAddMenu, closeAddMenu, toggleAddMenu,
-    addCheckpoint, addHill, addSquareHill, addTerrainRect, addTerrainCircle,
+    addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addTireStack, addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
   };

@@ -13,13 +13,14 @@ export class SquareHillEditor {
     this.editor = editor;
 
     // Gizmo bookkeeping
-    this.meshes = [];   // { feature, node, mesh }
+    this.meshes = [];   // { feature, node, mesh, sphere }
     this.selected = null;
     this._terrainDirty = false;
 
     // Materials (created lazily in createMaterials)
     this.material = null;
     this.highlightMaterial = null;
+    this.sphereMaterial = null;
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -39,6 +40,12 @@ export class SquareHillEditor {
     this.highlightMaterial.emissiveColor = new Color3(0.35, 0.25, 0.0);
     this.highlightMaterial.alpha = 0.20;
     this.highlightMaterial.backFaceCulling = false;
+
+    if (!this.sphereMaterial) {
+      this.sphereMaterial = new StandardMaterial('squareHillSphereMat', scene);
+      this.sphereMaterial.diffuseColor = new Color3(0.45, 0.45, 0.45);
+      this.sphereMaterial.emissiveColor = new Color3(0.1, 0.1, 0.1);
+    }
   }
 
   /** Called when editor mode activates — creates materials and initial visuals. */
@@ -52,6 +59,7 @@ export class SquareHillEditor {
     for (const d of this.meshes) {
       d.mesh.dispose();
       d.node.dispose();
+      d.sphere?.dispose();
     }
     this.meshes = [];
     this.selected = null;
@@ -71,6 +79,7 @@ export class SquareHillEditor {
     for (const d of this.meshes) {
       d.mesh.dispose();
       d.node.dispose();
+      d.sphere?.dispose();
     }
     this.meshes = [];
     this.selected = null;
@@ -95,17 +104,24 @@ export class SquareHillEditor {
 
     const mesh = MeshBuilder.CreateBox('squareHillMesh', { size: 1 }, scene);
     mesh.parent = node;
-    mesh.material = this.material;
-    mesh.isPickable = true;
+    mesh.material = this.highlightMaterial;
+    mesh.isPickable = false;
+    mesh.isVisible = false;  // hidden until selected
 
-    const hillData = { feature, node, mesh };
+    // Grey sphere: the always-visible click target
+    const sphere = MeshBuilder.CreateSphere('squareHillSphere', { diameter: 1.5, segments: 8 }, scene);
+    sphere.position = new Vector3(feature.centerX, terrainH, feature.centerZ);
+    sphere.material = this.sphereMaterial;
+    sphere.isPickable = true;
+
+    const hillData = { feature, node, mesh, sphere };
     this.meshes.push(hillData);
     return hillData;
   }
 
   /** Sync the box gizmo transform to the feature's current values. */
   updateVisual(hillData) {
-    const { feature, node } = hillData;
+    const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
     const transition = feature.transition ?? 8;
     const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
@@ -119,6 +135,11 @@ export class SquareHillEditor {
     node.scaling.y  = absH;
     node.scaling.z  = (feature.depth ?? feature.width) + transition * 2;
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
+    if (sphere) {
+      sphere.position.x = feature.centerX;
+      sphere.position.y = terrainH;
+      sphere.position.z = feature.centerZ;
+    }
   }
 
   /** Place a new square hill in front of the camera and select it. */
@@ -161,7 +182,7 @@ export class SquareHillEditor {
   /** Returns the hillData if `mesh` belongs to a square hill gizmo, else null. */
   findByMesh(mesh) {
     for (const hillData of this.meshes) {
-      if (mesh === hillData.mesh) return hillData;
+      if (mesh === hillData.mesh || mesh === hillData.sphere) return hillData;
     }
     return null;
   }
@@ -172,7 +193,10 @@ export class SquareHillEditor {
     this.deselect();
     this.selected = hillData;
     this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
-    hillData.mesh.material = this.highlightMaterial;
+    hillData.sphere.isVisible = false;
+    hillData.sphere.isPickable = false;
+    hillData.mesh.isVisible = true;
+    hillData.mesh.isPickable = true;
     this.showProperties(hillData);
     console.log('[SquareHillEditor] Selected square hill at',
       hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
@@ -180,7 +204,10 @@ export class SquareHillEditor {
 
   deselect() {
     if (this.selected) {
-      this.selected.mesh.material = this.material;
+      this.selected.mesh.isVisible = false;
+      this.selected.mesh.isPickable = false;
+      this.selected.sphere.isVisible = true;
+      this.selected.sphere.isPickable = true;
       this.hideProperties();
       if (this._terrainDirty) {
         window.rebuildTerrainTexture?.();
@@ -231,6 +258,7 @@ export class SquareHillEditor {
 
     hillData.mesh.dispose();
     hillData.node.dispose();
+    hillData.sphere?.dispose();
 
     const meshIdx = this.meshes.indexOf(hillData);
     if (meshIdx > -1) this.meshes.splice(meshIdx, 1);

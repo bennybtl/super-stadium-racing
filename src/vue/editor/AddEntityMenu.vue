@@ -11,7 +11,7 @@
         <button class="add-btn" @click="editor.addCheckpoint()">Checkpoint</button>
         <button class="add-btn" @click="editor.addHill()">Round Hill</button>
         <button class="add-btn" @click="editor.addSquareHill()">Square Hill</button>
-        <button class="add-btn" @click="editor.addTerrainRect()">Terrain Region</button>
+        <button class="add-btn" @click="editor.addTerrain()">Terrain Region</button>
         <button class="add-btn" @click="editor.addMeshGrid()">Mesh Grid</button>
         <button class="add-btn" @click="editor.addPolyWall()">Poly Wall</button>
         <button class="add-btn" @click="editor.addPolyHill()">Poly Hill</button>

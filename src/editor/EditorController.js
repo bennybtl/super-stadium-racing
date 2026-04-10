@@ -281,7 +281,7 @@ export class EditorController {
     for (const feature of this.currentTrack.features) {
       if (feature.type === 'hill') this.hillEditor.createVisual(feature);
       else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
-      else if (feature.type === 'terrainRect' || feature.type === 'terrainCircle') this.terrainShapeEditor.createVisual(feature);
+      else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
       else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
       else if (feature.type === 'tireStack') this.tireStackEditor.createVisual(feature);
       else if (feature.type === 'flag') this.flagEditor.createVisual(feature);
@@ -765,26 +765,13 @@ export class EditorController {
 
   // ─── Terrain Shape Editing (delegated to TerrainShapeEditor) ─────────────
 
-  addTerrainRectEntity()           { this.terrainShapeEditor.addRectEntity(); }
-  addTerrainCircleEntity()         { this.terrainShapeEditor.addCircleEntity(); }
-  createTerrainRectVisual(f)       { return this.terrainShapeEditor.createRectVisual(f); }
-  createTerrainCircleVisual(f)     { return this.terrainShapeEditor.createCircleVisual(f); }
-  updateTerrainRectVisual(d)       { this.terrainShapeEditor.updateRectVisual(d); }
-  updateTerrainCircleVisual(d)     { this.terrainShapeEditor.updateCircleVisual(d); }
-  selectTerrainRect(d)             { this.terrainShapeEditor.select(d); }
-  selectTerrainCircle(d)           { this.terrainShapeEditor.select(d); }
-  deselectTerrainRect()            { this.terrainShapeEditor.deselect(); }
-  deselectTerrainCircle()          { this.terrainShapeEditor.deselect(); }
-  deleteSelectedTerrainRect()      { this.terrainShapeEditor.deleteSelected(); }
-  deleteSelectedTerrainCircle()    { this.terrainShapeEditor.deleteSelected(); }
-  duplicateSelectedTerrainRect()   { this.terrainShapeEditor.duplicateSelected(); }
-  duplicateSelectedTerrainCircle() { this.terrainShapeEditor.duplicateSelected(); }
+  addTerrainEntity()                     { this.terrainShapeEditor.addEntity(); }
   deselectTerrainShape()           { this.terrainShapeEditor.deselect(); }
   duplicateSelectedTerrainShape()  { this.terrainShapeEditor.duplicateSelected(); }
   deleteSelectedTerrainShape()     { this.terrainShapeEditor.deleteSelected(); }
 
-  get selectedTerrainRect()  { return this.terrainShapeEditor.selected?.feature.type === 'terrainRect'   ? this.terrainShapeEditor.selected : null; }
-  get selectedTerrainCircle(){ return this.terrainShapeEditor.selected?.feature.type === 'terrainCircle' ? this.terrainShapeEditor.selected : null; }
+  get selectedTerrainRect()  { return this.terrainShapeEditor.selected?.feature.shape === 'rect'   ? this.terrainShapeEditor.selected : null; }
+  get selectedTerrainCircle(){ return this.terrainShapeEditor.selected?.feature.shape === 'circle' ? this.terrainShapeEditor.selected : null; }
 
   toggleAddMenu()     { this._editorStore.toggleAddMenu(); }
   hideAddMenu()       { this._editorStore.closeAddMenu(); }

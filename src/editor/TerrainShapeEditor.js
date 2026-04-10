@@ -2,17 +2,17 @@ import { StandardMaterial, Color3, Vector3, MeshBuilder, TransformNode } from '@
 import { TERRAIN_TYPES } from '../terrain.js';
 
 /**
- * TerrainShapeEditor — handles both terrainRect and terrainCircle features.
- * A single "selected" pointer covers both shape types; a shape-dropdown in the
- * Vue panel lets the user convert between them at any time.
+ * TerrainShapeEditor — handles terrain shape features (type: 'terrain').
+ * Each feature carries a `shape` property ('rect' | 'circle') that controls
+ * its geometry. All shapes live in a single `meshes` array.
+ * A shape-dropdown in the Vue panel lets the user convert between them.
  */
 export class TerrainShapeEditor {
   constructor(editor) {
     this.editor = editor;
 
-    this.rectMeshes   = [];   // { feature, node, mesh, mat }[]
-    this.circleMeshes = [];   // { feature, node, mesh, mat }[]
-    this.selected     = null; // the currently-selected entry (either array)
+    this.meshes   = [];   // { feature, node, mesh, mat }[]
+    this.selected = null; // the currently-selected entry
 
     this.material          = null;
     this.highlightMaterial = null;
@@ -44,11 +44,9 @@ export class TerrainShapeEditor {
 
   /** Dispose all gizmo meshes and reset state, keeping materials alive (used on snapshot restore). */
   clearMeshes() {
-    for (const d of this.rectMeshes)   { d.mesh.dispose(); d.node.dispose(); }
-    for (const d of this.circleMeshes) { d.mesh.dispose(); d.node.dispose(); }
-    this.rectMeshes   = [];
-    this.circleMeshes = [];
-    this.selected     = null;
+    for (const d of this.meshes) { d.mesh.dispose(); d.node.dispose(); }
+    this.meshes   = [];
+    this.selected = null;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -63,27 +61,30 @@ export class TerrainShapeEditor {
 
   createVisualsForTrack(track) {
     for (const feature of track.features) {
-      if (feature.type === 'terrainRect')   this.createRectVisual(feature);
-      else if (feature.type === 'terrainCircle') this.createCircleVisual(feature);
+      if (feature.type === 'terrain') this.createVisual(feature);
     }
   }
 
-  /** Dispatch to createRectVisual / createCircleVisual by feature.type */
+  /** Create a gizmo mesh for a terrain feature (dispatches on feature.shape). */
   createVisual(feature) {
-    if (feature.type === 'terrainRect')   return this.createRectVisual(feature);
-    if (feature.type === 'terrainCircle') return this.createCircleVisual(feature);
-  }
-
-  createRectVisual(feature) {
     const { scene, currentTrack } = this.editor;
     const terrainH = currentTrack ? currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
-    const node = new TransformNode('terrainRectNode', scene);
-    node.position = new Vector3(feature.centerX, terrainH + 0.05, feature.centerZ);
-    node.scaling  = new Vector3(feature.width, 0.1, feature.depth);
 
-    const mesh = MeshBuilder.CreateBox('terrainRectMesh', { size: 1 }, scene);
+    const node = new TransformNode('terrainShapeNode', scene);
+    node.position = new Vector3(feature.centerX, terrainH + 0.15, feature.centerZ);
+
+    let mesh;
+    if (feature.shape === 'rect') {
+      node.scaling = new Vector3(feature.width, 0.1, feature.depth);
+      mesh = MeshBuilder.CreateBox('terrainShapeMesh', { size: 1 }, scene);
+    } else {
+      mesh = MeshBuilder.CreateDisc('terrainShapeMesh',
+        { radius: feature.radius, tessellation: 48 }, scene);
+      mesh.rotation.x = Math.PI / 2;
+    }
     mesh.parent = node;
-    const mat = this.material.clone('trMat_' + Date.now());
+
+    const mat = this.material.clone('tsMat_' + Date.now());
     const col = this._terrainColorForType(feature.terrainType);
     mat.diffuseColor  = col;
     mat.emissiveColor = col.scale(0.3);
@@ -91,64 +92,36 @@ export class TerrainShapeEditor {
     mesh.isPickable = true;
 
     const data = { feature, node, mesh, mat };
-    this.rectMeshes.push(data);
-    return data;
-  }
-
-  createCircleVisual(feature) {
-    const { scene, currentTrack } = this.editor;
-    const terrainH = currentTrack ? currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
-    const node = new TransformNode('terrainCircleNode', scene);
-    node.position = new Vector3(feature.centerX, terrainH + 0.05, feature.centerZ);
-
-    const mesh = MeshBuilder.CreateDisc('terrainCircleMesh',
-      { radius: feature.radius, tessellation: 48 }, scene);
-    mesh.rotation.x = Math.PI / 2; // lay flat
-    mesh.parent = node;
-    const mat = this.material.clone('tcMat_' + Date.now());
-    const col = this._terrainColorForType(feature.terrainType);
-    mat.diffuseColor  = col;
-    mat.emissiveColor = col.scale(0.3);
-    mesh.material  = mat;
-    mesh.isPickable = true;
-
-    const data = { feature, node, mesh, mat };
-    this.circleMeshes.push(data);
+    this.meshes.push(data);
     return data;
   }
 
   // ── Visual update ────────────────────────────────────────────────────────────
 
-  updateRectVisual(data) {
+  updateVisual(data) {
     const { feature, node, mat } = data;
     const terrainH = this.editor.currentTrack
       ? this.editor.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
-    node.position.x = feature.centerX;
-    node.position.z = feature.centerZ;
-    node.position.y = terrainH + 0.05;
-    node.scaling.x  = feature.width;
-    node.scaling.z  = feature.depth;
-    const col = this._terrainColorForType(feature.terrainType);
-    mat.diffuseColor  = col;
-    mat.emissiveColor = col.scale(0.3);
-  }
 
-  updateCircleVisual(data) {
-    const { feature, node, mesh, mat } = data;
-    const terrainH = this.editor.currentTrack
-      ? this.editor.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;
     node.position.y = terrainH + 0.05;
-    // Recreate disc mesh with updated radius
-    mesh.dispose();
-    const newMesh = MeshBuilder.CreateDisc('terrainCircleMesh',
-      { radius: feature.radius, tessellation: 48 }, this.editor.scene);
-    newMesh.rotation.x = Math.PI / 2;
-    newMesh.parent = node;
-    newMesh.material = mat;
-    newMesh.isPickable = true;
-    data.mesh = newMesh;
+
+    if (feature.shape === 'rect') {
+      node.scaling.x = feature.width;
+      node.scaling.z = feature.depth;
+    } else {
+      // Recreate disc mesh with updated radius; preserve highlight if selected.
+      data.mesh.dispose();
+      const newMesh = MeshBuilder.CreateDisc('terrainShapeMesh',
+        { radius: feature.radius, tessellation: 48 }, this.editor.scene);
+      newMesh.rotation.x = Math.PI / 2;
+      newMesh.parent = node;
+      newMesh.material = this.selected === data ? this.highlightMaterial : mat;
+      newMesh.isPickable = true;
+      data.mesh = newMesh;
+    }
+
     const col = this._terrainColorForType(feature.terrainType);
     mat.diffuseColor  = col;
     mat.emissiveColor = col.scale(0.3);
@@ -157,9 +130,7 @@ export class TerrainShapeEditor {
   // ── Selection ────────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
-    return this.rectMeshes.find(d => d.mesh === mesh)
-        || this.circleMeshes.find(d => d.mesh === mesh)
-        || null;
+    return this.meshes.find(d => d.mesh === mesh) || null;
   }
 
   select(data) {
@@ -201,17 +172,17 @@ export class TerrainShapeEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot();
     const data = this.selected;
-    const arr  = data.feature.type === 'terrainRect' ? this.rectMeshes : this.circleMeshes;
     const idx  = this.editor.currentTrack.features.indexOf(data.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
     data.mesh.dispose();
     data.node.dispose();
-    const meshIdx = arr.indexOf(data);
-    if (meshIdx > -1) arr.splice(meshIdx, 1);
+    const meshIdx = this.meshes.indexOf(data);
+    if (meshIdx > -1) this.meshes.splice(meshIdx, 1);
     this.selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
-    this.rebuildTerrain();
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
   }
 
   duplicateSelected() {
@@ -220,49 +191,28 @@ export class TerrainShapeEditor {
     const src        = this.selected.feature;
     const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
     this.editor.currentTrack.features.push(newFeature);
-    const newData = src.type === 'terrainRect'
-      ? this.createRectVisual(newFeature)
-      : this.createCircleVisual(newFeature);
+    const newData = this.createVisual(newFeature);
     this.deselect();
     this.select(newData);
     this.rebuildTerrain();
   }
 
-  addRectEntity() {
+  addEntity(shape = 'circle') {
     const cam       = this.editor.camera;
     const direction = cam.getTarget().subtract(cam.position).normalize();
-    const newFeature = {
-      type:        'terrainRect',
+    const base = {
+      type:        'terrain',
+      shape,
       centerX:     cam.position.x + direction.x * 20,
       centerZ:     cam.position.z + direction.z * 50,
-      width:       10,
-      depth:       10,
       terrainType: TERRAIN_TYPES.MUD,
     };
+    const newFeature = shape === 'rect'
+      ? { ...base, width: 10, depth: 10 }
+      : { ...base, radius: 8 };
     this.editor.saveSnapshot();
     this.editor.currentTrack.features.push(newFeature);
-    const data = this.createRectVisual(newFeature);
-    this.editor.deselectCheckpoint?.();
-    this.editor.deselectHill?.();
-    this.editor.squareHillEditor.deselect();
-    this.select(data);
-    this.rebuildTerrain();
-    this.editor.hideAddMenu();
-  }
-
-  addCircleEntity() {
-    const cam       = this.editor.camera;
-    const direction = cam.getTarget().subtract(cam.position).normalize();
-    const newFeature = {
-      type:        'terrainCircle',
-      centerX:     cam.position.x + direction.x * 20,
-      centerZ:     cam.position.z + direction.z * 50,
-      radius:      8,
-      terrainType: TERRAIN_TYPES.MUD,
-    };
-    this.editor.saveSnapshot();
-    this.editor.currentTrack.features.push(newFeature);
-    const data = this.createCircleVisual(newFeature);
+    const data = this.createVisual(newFeature);
     this.editor.deselectCheckpoint?.();
     this.editor.deselectHill?.();
     this.editor.squareHillEditor.deselect();
@@ -281,39 +231,34 @@ export class TerrainShapeEditor {
   changeShape(newShape) {
     if (!this.selected) return;
     const feature = this.selected.feature;
-    if ((newShape === 'rect'   && feature.type === 'terrainRect') ||
-        (newShape === 'circle' && feature.type === 'terrainCircle')) return;
+    if (feature.shape === newShape) return;
 
     this.editor.saveSnapshot();
 
-    // Remove old visual from the correct array without going through deselect()
-    // (that would hide the properties panel prematurely).
-    const oldArr = feature.type === 'terrainRect' ? this.rectMeshes : this.circleMeshes;
-    const oldIdx = oldArr.indexOf(this.selected);
-    if (oldIdx > -1) oldArr.splice(oldIdx, 1);
+    // Remove old visual without going through deselect() (that would hide the panel).
+    const idx = this.meshes.indexOf(this.selected);
+    if (idx > -1) this.meshes.splice(idx, 1);
     this.selected.mesh.dispose();
     this.selected.node.dispose();
     this.selected = null;
     this.editor._rawDragPos = null;
 
-    // Mutate feature in-place
+    // Mutate shape in-place (type stays 'terrain')
     if (newShape === 'rect') {
-      const size     = (feature.radius ?? 8) * 2;
-      feature.type   = 'terrainRect';
-      feature.width  = size;
-      feature.depth  = size;
+      const size    = (feature.radius ?? 8) * 2;
+      feature.shape = 'rect';
+      feature.width = size;
+      feature.depth = size;
       delete feature.radius;
     } else {
-      feature.type   = 'terrainCircle';
+      feature.shape  = 'circle';
       feature.radius = Math.max(feature.width ?? 10, feature.depth ?? 10) / 2;
       delete feature.width;
       delete feature.depth;
     }
 
     // Recreate visual and re-select (updates properties panel automatically)
-    const newData = newShape === 'rect'
-      ? this.createRectVisual(feature)
-      : this.createCircleVisual(feature);
+    const newData = this.createVisual(feature);
     this.select(newData);
     this.rebuildTerrain();
   }
@@ -325,9 +270,9 @@ export class TerrainShapeEditor {
     if (!s) return;
     const { feature } = data;
     const ts = s.terrainShape;
-    ts.shape       = feature.type === 'terrainRect' ? 'rect' : 'circle';
+    ts.shape       = feature.shape;
     ts.terrainType = feature.terrainType?.name || 'mud';
-    if (feature.type === 'terrainRect') {
+    if (feature.shape === 'rect') {
       ts.width = feature.width;
       ts.depth = feature.depth;
     } else {
@@ -344,11 +289,9 @@ export class TerrainShapeEditor {
   // ── Dispose ──────────────────────────────────────────────────────────────────
 
   dispose() {
-    for (const d of this.rectMeshes)   { d.mesh.dispose(); d.node.dispose(); }
-    for (const d of this.circleMeshes) { d.mesh.dispose(); d.node.dispose(); }
-    this.rectMeshes   = [];
-    this.circleMeshes = [];
-    this.selected     = null;
+    for (const d of this.meshes) { d.mesh.dispose(); d.node.dispose(); }
+    this.meshes   = [];
+    this.selected = null;
   }
 
   // ── Vue Bridge ───────────────────────────────────────────────────────────────
@@ -356,29 +299,25 @@ export class TerrainShapeEditor {
   rebuildTerrain() {
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
-    if (this.selected.feature.type === 'terrainRect') {
-      this.updateRectVisual(this.selected);
-    } else if (this.selected.feature.type === 'terrainCircle') {
-      this.updateCircleVisual(this.selected);
-    }
+    if (this.selected) this.updateVisual(this.selected);
   }
 
   changeWidth(val) {
-    if (!this.selected || this.selected.feature.type !== 'terrainRect') return;
+    if (!this.selected || this.selected.feature.shape !== 'rect') return;
     this.editor.saveSnapshot(true);
     this.selected.feature.width = val;
     this.rebuildTerrain();
   }
 
   changeDepth(val) {
-    if (!this.selected || this.selected.feature.type !== 'terrainRect') return;
+    if (!this.selected || this.selected.feature.shape !== 'rect') return;
     this.editor.saveSnapshot(true);
     this.selected.feature.depth = val;
     this.rebuildTerrain();
   }
 
   changeRadius(val) {
-    if (!this.selected || this.selected.feature.type !== 'terrainCircle') return;
+    if (!this.selected || this.selected.feature.shape !== 'circle') return;
     this.editor.saveSnapshot(true);
     this.selected.feature.radius = val;
     this.rebuildTerrain();

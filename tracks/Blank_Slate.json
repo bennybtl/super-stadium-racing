@@ -2,52 +2,58 @@
   "name": "Blank Slate",
   "features": [
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": 19.5,
       "centerZ": -22.775213105162592,
       "width": 17,
       "depth": 15.5,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "shape": "rect"
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": 20,
       "centerZ": -4.275213105162592,
       "width": 17,
       "depth": 15.5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "shape": "rect"
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": 40.5,
       "centerZ": -4.275213105162592,
       "width": 17,
       "depth": 15.5,
-      "terrainType": "packed_dirt"
+      "terrainType": "packed_dirt",
+      "shape": "rect"
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": 61,
       "centerZ": -4.275213105162592,
       "width": 17,
       "depth": 15.5,
-      "terrainType": "asphalt"
+      "terrainType": "asphalt",
+      "shape": "rect"
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": 61,
       "centerZ": -22.775213105162592,
       "width": 17,
       "depth": 15.5,
-      "terrainType": "water"
+      "terrainType": "water",
+      "shape": "rect"
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": 40.5,
       "centerZ": -22.775213105162592,
       "width": 17,
       "depth": 15.5,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "shape": "rect"
     }
   ]
 }

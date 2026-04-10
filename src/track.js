@@ -65,26 +65,14 @@ export class Track {
     return this;
   }
 
-  // Add a rectangular area with specific terrain type
-  addTerrainRect(centerX, centerZ, width, depth, terrainType) {
+  addTerrain(centerX, centerZ, width, depth, shape = 'rect', terrainType = 'compactDirt') {
     this.features.push({
-      type: "terrainRect",
+      type: "terrain",
+      shape,
       centerX,
       centerZ,
       width,
       depth,
-      terrainType,
-    });
-    return this;
-  }
-
-  // Add a circular area with specific terrain type
-  addTerrainCircle(centerX, centerZ, radius, terrainType) {
-    this.features.push({
-      type: "terrainCircle",
-      centerX,
-      centerZ,
-      radius,
       terrainType,
     });
     return this;
@@ -341,22 +329,20 @@ export class Track {
           break;
         }
 
-        case "terrainRect": {
-          const halfWidth = feature.width / 2;
-          const halfDepth = feature.depth / 2;
-          if (x >= feature.centerX - halfWidth && x <= feature.centerX + halfWidth &&
-              z >= feature.centerZ - halfDepth && z <= feature.centerZ + halfDepth) {
-            return feature.terrainType;
-          }
-          break;
-        }
-
-        case "terrainCircle": {
-          const dx = x - feature.centerX;
-          const dz = z - feature.centerZ;
-          const distFromCenter = Math.sqrt(dx * dx + dz * dz);
-          if (distFromCenter < feature.radius) {
-            return feature.terrainType;
+        case "terrain": {
+          if (feature.shape === 'rect') {
+            const halfWidth = feature.width / 2;
+            const halfDepth = feature.depth / 2;
+            if (x >= feature.centerX - halfWidth && x <= feature.centerX + halfWidth &&
+                z >= feature.centerZ - halfDepth && z <= feature.centerZ + halfDepth) {
+              return feature.terrainType;
+            }
+          } else if (feature.shape === 'circle') {
+            const dx = x - feature.centerX;
+            const dz = z - feature.centerZ;
+            if (Math.sqrt(dx * dx + dz * dz) < feature.radius) {
+              return feature.terrainType;
+            }
           }
           break;
         }
@@ -499,6 +485,16 @@ export class Track {
     // Convert features and map terrainType names to TERRAIN_TYPES objects
     track.features = (data.features || []).map(feature => {
       const loaded = { ...feature };
+
+      // Migrate legacy terrainRect / terrainCircle to unified terrain+shape format
+      if (loaded.type === 'terrainRect') {
+        loaded.type  = 'terrain';
+        loaded.shape = 'rect';
+      } else if (loaded.type === 'terrainCircle') {
+        loaded.type  = 'terrain';
+        loaded.shape = 'circle';
+      }
+
       if (feature.terrainType && typeof feature.terrainType === 'string') {
         // Convert terrainType name string to TERRAIN_TYPES object
         const terrainKey = Object.keys(TERRAIN_TYPES).find(

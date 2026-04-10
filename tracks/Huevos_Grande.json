@@ -313,12 +313,13 @@
       "terrainType": "packed_dirt"
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": 14,
       "centerZ": -5,
       "width": 21,
       "depth": 22,
-      "terrainType": "water"
+      "terrainType": "water",
+      "shape": "rect"
     },
     {
       "type": "trackSign",
@@ -421,18 +422,20 @@
       "intensity": 1
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": -6.5,
       "centerZ": 58.22478689483742,
       "radius": 8,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "shape": "circle"
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": 9,
       "centerZ": 57.72478689483742,
       "radius": 8,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "shape": "circle"
     },
     {
       "type": "squareHill",
@@ -615,11 +618,12 @@
       "intensity": 1
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": 62.5,
       "centerZ": -47.5,
       "terrainType": "loose_dirt",
-      "radius": 8
+      "radius": 8,
+      "shape": "circle"
     },
     {
       "type": "squareHill",
@@ -645,18 +649,20 @@
       "intensity": 0.9
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": 66.5,
       "centerZ": 23.724786894837408,
       "terrainType": "rocky",
-      "radius": 7
+      "radius": 7,
+      "shape": "circle"
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": -29.5,
       "centerZ": 33.22478689483741,
       "terrainType": "rocky",
-      "radius": 7
+      "radius": 7,
+      "shape": "circle"
     },
     {
       "type": "hill",

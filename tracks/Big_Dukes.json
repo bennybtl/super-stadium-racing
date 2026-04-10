@@ -14,12 +14,13 @@
       "angle": 180
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": -6,
       "centerZ": -12,
       "width": 20.5,
       "depth": 19.5,
-      "terrainType": "water"
+      "terrainType": "water",
+      "shape": "rect"
     },
     {
       "type": "trackSign",
@@ -416,11 +417,12 @@
       "intensity": 0.9
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": -63.5,
       "centerZ": -18.775213105162592,
       "terrainType": "mud",
-      "radius": 9.5
+      "radius": 9.5,
+      "shape": "circle"
     },
     {
       "type": "checkpoint",

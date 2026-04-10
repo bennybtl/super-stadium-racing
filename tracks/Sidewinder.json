@@ -334,11 +334,12 @@
       "terrainType": "mud"
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": -39.5,
       "centerZ": -31.775213105162592,
       "radius": 5.5,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "shape": "circle"
     },
     {
       "type": "checkpoint",
@@ -500,19 +501,21 @@
       "heightAtMax": 0
     },
     {
-      "type": "terrainCircle",
+      "type": "terrain",
       "centerX": 52,
       "centerZ": 12.724786894837415,
       "radius": 11.5,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "shape": "circle"
     },
     {
-      "type": "terrainRect",
+      "type": "terrain",
       "centerX": -66.5,
       "centerZ": 9.724786894837415,
       "width": 18,
       "depth": 31.5,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "shape": "rect"
     },
     {
       "type": "flag",
