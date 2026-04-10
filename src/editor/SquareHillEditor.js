@@ -41,6 +41,22 @@ export class SquareHillEditor {
     this.highlightMaterial.backFaceCulling = false;
   }
 
+  /** Called when editor mode activates — creates materials and initial visuals. */
+  activate(scene, track) {
+    this.createMaterials();
+    this.createVisualsForTrack(track);
+  }
+
+  /** Dispose all gizmo meshes and reset state, keeping materials alive (used on snapshot restore). */
+  clearMeshes() {
+    for (const d of this.meshes) {
+      d.mesh.dispose();
+      d.node.dispose();
+    }
+    this.meshes = [];
+    this.selected = null;
+  }
+
   /** Build gizmos for every existing squareHill feature in the track. */
   createVisualsForTrack(track) {
     for (const feature of track.features) {
@@ -56,12 +72,6 @@ export class SquareHillEditor {
       d.mesh.dispose();
       d.node.dispose();
     }
-    this.meshes = [];
-    this.selected = null;
-  }
-
-  /** Called after undo/redo clears arrays (meshes already disposed by controller). */
-  onSnapshotCleared() {
     this.meshes = [];
     this.selected = null;
   }

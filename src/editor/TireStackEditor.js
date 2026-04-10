@@ -29,6 +29,22 @@ export class TireStackEditor {
     this.highlightMaterial.backFaceCulling = false;
   }
 
+  /** Called when editor mode activates — creates materials and initial visuals. */
+  activate(scene, track) {
+    this.createMaterials();
+    this.createVisualsForTrack(track);
+  }
+
+  /** Dispose all gizmo meshes and reset state, keeping materials alive (used on snapshot restore). */
+  clearMeshes() {
+    for (const d of this.meshes) {
+      d.mesh.dispose();
+      d.node.dispose();
+    }
+    this.meshes = [];
+    this.selected = null;
+  }
+
   // ── Visual creation ────────────────────────────────────────────────────────
 
   createVisualsForTrack(track) {

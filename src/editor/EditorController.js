@@ -121,29 +121,16 @@ export class EditorController {
     // Create highlight material for selected checkpoint
     this.checkpointEditor.createMaterials();
     
-    // Create hill materials (delegated)
-    this.hillEditor.createMaterials();
+    // Activate all gizmo editors (creates materials + initial visuals)
+    this.hillEditor.activate(this.scene, track);
+    this.squareHillEditor.activate(this.scene, track);
+    this.terrainShapeEditor.activate(this.scene, track);
+    this.normalMapDecalEditor.activate(this.scene, track);
+    this.tireStackEditor.activate(this.scene, track);
 
-    // Create square hill materials (delegated)
-    this.squareHillEditor.createMaterials();
-
-    // Create terrain shape materials (rect + circle)
-    this.terrainShapeEditor.createMaterials();
-
-    // Create normal map decal materials
-    this.normalMapDecalEditor.createMaterials();
-
-    // Create tire stack materials (always recreate for the current scene)
-    // Create tire stack materials
-    this.tireStackEditor.createMaterials();
-
-    // Initialize flag editor
+    // Activate all object editors
     this.flagEditor.activate(this.scene, track);
-
-    // Initialize track sign editor
     this.trackSignEditor.activate(this.scene, track);
-
-    // Initialize banner string editor
     this.bannerStringEditor.activate(this.scene, track);
 
     // Mesh grid terrain editing editor
@@ -157,22 +144,6 @@ export class EditorController {
 
     // Bezier wall editing editor
     this.bezierWallEditor.activate(this.scene, track);
-
-    // Build editor visuals for any hills already in the track
-    this.hillEditor.createVisualsForTrack(track);
-    this.squareHillEditor.createVisualsForTrack(track);
-    this.terrainShapeEditor.createVisualsForTrack(track);
-    this.normalMapDecalEditor.createVisualsForTrack(track);
-    this.tireStackEditor.createVisualsForTrack(track);
-    for (const feature of track.features) {
-      if (feature.type === 'flag') {
-        this.flagEditor.createVisual(feature);
-      } else if (feature.type === 'trackSign') {
-        this.trackSignEditor.createVisual(feature);
-      } else if (feature.type === 'bannerString') {
-        this.bannerStringEditor.createVisual(feature);
-      }
-    }
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
@@ -291,20 +262,16 @@ export class EditorController {
     this.trackSignEditor.deselect();
     this.bannerStringEditor.deselect();
 
-    // Dispose all gizmo meshes
-    this.hillEditor.dispose();
-    this.squareHillEditor.dispose();
-    this.terrainShapeEditor.dispose();
-    this.normalMapDecalEditor.dispose();
-    this.tireStackEditor.dispose();
+    // Clear all gizmo meshes (keeps materials alive for re-use)
+    this.hillEditor.clearMeshes();
+    this.squareHillEditor.clearMeshes();
+    this.terrainShapeEditor.clearMeshes();
+    this.normalMapDecalEditor.clearMeshes();
+    this.tireStackEditor.clearMeshes();
 
-    // Dispose and rebuild flag meshes
+    // Clear object editor meshes
     this.flagEditor.clearMeshes();
-
-    // Dispose and rebuild track sign meshes
     this.trackSignEditor.clearMeshes();
-
-    // Dispose and rebuild banner string meshes
     this.bannerStringEditor.clearMeshes();
 
     // Restore features

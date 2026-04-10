@@ -36,6 +36,21 @@ export class TerrainShapeEditor {
     this.highlightMaterial.backFaceCulling = false;
   }
 
+  /** Called when editor mode activates — creates materials and initial visuals. */
+  activate(scene, track) {
+    this.createMaterials();
+    this.createVisualsForTrack(track);
+  }
+
+  /** Dispose all gizmo meshes and reset state, keeping materials alive (used on snapshot restore). */
+  clearMeshes() {
+    for (const d of this.rectMeshes)   { d.mesh.dispose(); d.node.dispose(); }
+    for (const d of this.circleMeshes) { d.mesh.dispose(); d.node.dispose(); }
+    this.rectMeshes   = [];
+    this.circleMeshes = [];
+    this.selected     = null;
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   _terrainColorForType(terrainType) {

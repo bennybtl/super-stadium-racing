@@ -17,6 +17,7 @@ export class TrackSignEditor {
   activate(scene, track) {
     this._scene = scene;
     this._track = track;
+    this.createVisualsForTrack(track);
   }
 
   /** Dispose all meshes but keep the editor alive — used by _applySnapshot. */
@@ -35,6 +36,12 @@ export class TrackSignEditor {
 
   // ── Visual creation ────────────────────────────────────────────────────────
 
+  createVisualsForTrack(track) {
+    for (const feature of track.features) {
+      if (feature.type === 'trackSign') this.createVisual(feature);
+    }
+  }
+
   createVisual(feature) {
     const groundY = this._track.getHeightAt(feature.x, feature.z);
     const sign = new TrackSign(feature, groundY, this._scene);
@@ -52,6 +59,7 @@ export class TrackSignEditor {
 
   select(signObj) {
     this._selected = signObj;
+    this.editor._rawDragPos = { x: signObj.feature.x, z: signObj.feature.z };
     const s = this.editor._editorStore;
     if (!s) return;
     s.trackSign.name     = signObj.feature.name ?? 'Track Name';
@@ -62,6 +70,10 @@ export class TrackSignEditor {
   deselect() {
     this._selected = null;
     this.editor._rawDragPos = null;
+    this.hideProperties();
+  }
+
+  hideProperties() {
     if (this.editor._editorStore?.selectedType === 'trackSign')
       this.editor._editorStore.selectedType = null;
   }
@@ -73,12 +85,10 @@ export class TrackSignEditor {
     const e = this.editor;
     e.saveSnapshot(true);
     const { feature } = this._selected;
-    if (!e._rawDragPos) e._rawDragPos = { x: feature.x, z: feature.z };
     e._rawDragPos.x += movement.x;
     e._rawDragPos.z += movement.z;
     const prevX   = feature.x;
     const prevZ   = feature.z;
-
     const newX    = e._snap(e._rawDragPos.x);
     const newZ    = e._snap(e._rawDragPos.z);
     const groundY = this._track.getHeightAt(newX, newZ);
@@ -105,15 +115,14 @@ export class TrackSignEditor {
 
   deleteSelected() {
     if (!this._selected) return;
+    this.editor.saveSnapshot();
     const idx = this.editor.currentTrack.features.indexOf(this._selected.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
     this._selected.dispose();
     const si = this._signs.indexOf(this._selected);
     if (si > -1) this._signs.splice(si, 1);
     this._selected = null;
-    if (this.editor._editorStore?.selectedType === 'trackSign')
-      this.editor._editorStore.selectedType = null;
-    this.editor.saveSnapshot();
+    this.hideProperties();
   }
 
   // ── Property changes ────────────────────────────────────────────────────────

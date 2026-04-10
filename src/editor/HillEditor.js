@@ -48,7 +48,22 @@ export class HillEditor {
       this.sphereMaterial.emissiveColor = new Color3(0.12, 0.07, 0.02);
     }
   }
+  /** Called when editor mode activates — creates materials and initial visuals. */
+  activate(scene, track) {
+    this.createMaterials();
+    this.createVisualsForTrack(track);
+  }
 
+  /** Dispose all gizmo meshes and reset state, keeping materials alive (used on snapshot restore). */
+  clearMeshes() {
+    for (const d of this.meshes) {
+      d.mesh.dispose();
+      d.node.dispose();
+      d.sphere?.dispose();
+    }
+    this.meshes = [];
+    this.selected = null;
+  }
   /** Build gizmos for every existing hill feature in the track. */
   createVisualsForTrack(track) {
     for (const feature of track.features) {
@@ -67,18 +82,6 @@ export class HillEditor {
     }
     this.meshes = [];
     this.selected = null;
-  }
-
-  /** Called after undo/redo restores a snapshot – clears arrays (meshes already disposed by controller). */
-  onSnapshotCleared() {
-    this.meshes = [];
-  }
-
-  /** Recreate gizmos for hill features after an undo/redo snapshot restore. */
-  onSnapshotRestored(features) {
-    for (const feature of features) {
-      if (feature.type === 'hill') this.createVisual(feature);
-    }
   }
 
   // ── CRUD ──────────────────────────────────────────────────────────────────

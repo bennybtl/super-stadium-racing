@@ -22,6 +22,7 @@ export class BannerStringEditor {
   activate(scene, track) {
     this._scene = scene;
     this._track = track;
+    this.createVisualsForTrack(track);
   }
 
   /** Dispose all meshes but keep the editor alive — used by _applySnapshot. */
@@ -39,6 +40,12 @@ export class BannerStringEditor {
   }
 
   // ── Visual creation ────────────────────────────────────────────────────────
+
+  createVisualsForTrack(track) {
+    for (const feature of track.features) {
+      if (feature.type === 'bannerString') this.createVisual(feature);
+    }
+  }
 
   createVisual(feature) {
     const groundY = this._track.getHeightAt(feature.x, feature.z);
@@ -58,6 +65,7 @@ export class BannerStringEditor {
 
   select(banner) {
     this._selected = banner;
+    this.editor._rawDragPos = { x: banner.feature.x, z: banner.feature.z };
     const s = this.editor._editorStore;
     if (!s) return;
     s.bannerString.width      = banner.feature.width;
@@ -69,9 +77,12 @@ export class BannerStringEditor {
   deselect() {
     this._selected = null;
     this.editor._rawDragPos = null;
-    if (this.editor._editorStore?.selectedType === "bannerString") {
+    this.hideProperties();
+  }
+
+  hideProperties() {
+    if (this.editor._editorStore?.selectedType === "bannerString")
       this.editor._editorStore.selectedType = null;
-    }
   }
 
   // ── Movement ───────────────────────────────────────────────────────────────
@@ -83,7 +94,6 @@ export class BannerStringEditor {
     const e = this.editor;
     e.saveSnapshot(true);
     const { feature } = this._selected;
-    if (!e._rawDragPos) e._rawDragPos = { x: feature.x, z: feature.z };
     e._rawDragPos.x += movement.x;
     e._rawDragPos.z += movement.z;
     const prevX   = feature.x;
@@ -139,15 +149,13 @@ export class BannerStringEditor {
 
   deleteSelected() {
     if (!this._selected) return;
+    this.editor.saveSnapshot();
     const idx = this.editor.currentTrack.features.indexOf(this._selected.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
     this._selected.dispose();
     const bi = this._banners.indexOf(this._selected);
     if (bi > -1) this._banners.splice(bi, 1);
     this._selected = null;
-    if (this.editor._editorStore?.selectedType === "bannerString") {
-      this.editor._editorStore.selectedType = null;
-    }
-    this.editor.saveSnapshot();
+    this.hideProperties();
   }
 }

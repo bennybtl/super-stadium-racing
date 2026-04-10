@@ -8,16 +8,17 @@ export class FlagEditor {
     this.track = null;
 
     this.flags = [];
-    this.selectedFlag = null;
+    this._selected = null;
   }
 
-  get selected() { return this.selectedFlag; }
+  get selected() { return this._selected; }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   activate(scene, track) {
     this.scene = scene;
     this.track = track;
+    this.createVisualsForTrack(track);
   }
 
   /** Clear all flag meshes but keep scene/track alive — used by _applySnapshot. */
@@ -26,7 +27,7 @@ export class FlagEditor {
       flag.dispose();
     }
     this.flags = [];
-    this.selectedFlag = null;
+    this._selected = null;
   }
 
   /** Full cleanup — used by EditorController.deactivate(). */
@@ -37,6 +38,12 @@ export class FlagEditor {
   }
 
   // ── Visual creation ────────────────────────────────────────────────────────
+
+  createVisualsForTrack(track) {
+    for (const feature of track.features) {
+      if (feature.type === 'flag') this._createFlagMesh(feature);
+    }
+  }
 
   createVisual(feature) {
     this._createFlagMesh(feature);
@@ -62,19 +69,20 @@ export class FlagEditor {
     const flagData = this.flags.find(f => f.containsMesh(mesh));
     if (!flagData) return;
 
-    if (this.selectedFlag && this.selectedFlag !== flagData) {
-      this.selectedFlag.flag.material.emissiveColor = new Color3(0, 0, 0);
+    if (this._selected && this._selected !== flagData) {
+      this._selected.flag.material.emissiveColor = new Color3(0, 0, 0);
     }
 
-    this.selectedFlag = flagData;
-    this.selectedFlag.flag.material.emissiveColor = new Color3(0.5, 0.5, 0.5);
+    this._selected = flagData;
+    this.editor._rawDragPos = { x: flagData.feature.x, z: flagData.feature.z };
+    this._selected.flag.material.emissiveColor = new Color3(0.5, 0.5, 0.5);
     this.showProperties(flagData);
   }
 
   deselect() {
-    if (this.selectedFlag) {
-      this.selectedFlag.flag.material.emissiveColor = new Color3(0, 0, 0);
-      this.selectedFlag = null;
+    if (this._selected) {
+      this._selected.flag.material.emissiveColor = new Color3(0, 0, 0);
+      this._selected = null;
     }
     this.hideProperties();
     this.editor._rawDragPos = null;
@@ -83,11 +91,10 @@ export class FlagEditor {
   // ── Movement ───────────────────────────────────────────────────────────────
 
   move(movement) {
-    if (!this.selectedFlag || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
+    if (!this._selected || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
     const e = this.editor;
     e.saveSnapshot(true);
-    const { feature } = this.selectedFlag;
-    if (!e._rawDragPos) e._rawDragPos = { x: feature.x, z: feature.z };
+    const { feature } = this._selected;
     e._rawDragPos.x += movement.x;
     e._rawDragPos.z += movement.z;
     const prevX = feature.x, prevZ = feature.z;
@@ -98,32 +105,32 @@ export class FlagEditor {
   }
 
   _moveSelectedFlag(x, z) {
-    if (!this.selectedFlag) return;
-    this.selectedFlag.feature.x = x;
-    this.selectedFlag.feature.z = z;
+    if (!this._selected) return;
+    this._selected.feature.x = x;
+    this._selected.feature.z = z;
     const groundY = this.track.getHeightAt(x, z);
-    this.selectedFlag.moveTo(x, z, groundY);
+    this._selected.moveTo(x, z, groundY);
   }
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
 
   deleteSelected() {
-    if (!this.selectedFlag) return;
+    if (!this._selected) return;
+    this.editor.saveSnapshot();
 
-    const index = this.track.features.indexOf(this.selectedFlag.feature);
+    const index = this.track.features.indexOf(this._selected.feature);
     if (index > -1) {
       this.track.features.splice(index, 1);
     }
 
-    this.selectedFlag.dispose();
-    const flagIndex = this.flags.indexOf(this.selectedFlag);
+    this._selected.dispose();
+    const flagIndex = this.flags.indexOf(this._selected);
     if (flagIndex > -1) {
       this.flags.splice(flagIndex, 1);
     }
 
-    this.selectedFlag = null;
+    this._selected = null;
     this.hideProperties();
-    this.editor.saveSnapshot();
   }
 
   addEntity() {
@@ -162,9 +169,9 @@ export class FlagEditor {
   }
 
   changeColor(val) {
-    if (!this.selectedFlag) return;
-    this.selectedFlag.feature.color = val;
-    this.selectedFlag.setColor(val);
+    if (!this._selected) return;
+    this._selected.feature.color = val;
+    this._selected.setColor(val);
     this.editor.saveSnapshot();
   }
 }
