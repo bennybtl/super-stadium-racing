@@ -19,15 +19,21 @@ export class VehicleLoader {
    */
   async loadAllVehicles() {
     const modules = import.meta.glob('/vehicles/*.json', { query: '?raw', import: 'default' });
+    // Eagerly resolve OBJ URLs so Vite bundles them and we can look them up by filename
+    const objUrls = import.meta.glob('/vehicles/*.obj', { query: '?url', import: 'default', eager: true });
 
     const loadPromises = Object.entries(modules).map(async ([path, load]) => {
       try {
         const raw = await load();
         const def = JSON.parse(raw);
         const key = def.id ?? path.split('/').pop().replace('.json', '');
+        // Resolve the OBJ URL from the vehicles folder
+        if (def.modelFile) {
+          def.modelUrl = objUrls[`/vehicles/${def.modelFile}`] ?? null;
+        }
         this.vehicles.set(key, def);
         if (!this.vehicleList.includes(key)) this.vehicleList.push(key);
-        console.log(`[VehicleLoader] Loaded vehicle: ${def.name} (${key})`);
+        console.log(`[VehicleLoader] Loaded vehicle: ${def.name} (${key}) modelUrl=${def.modelUrl ?? 'none'}`);
       } catch (err) {
         console.error(`[VehicleLoader] Error loading vehicle ${path}:`, err);
       }

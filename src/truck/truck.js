@@ -57,7 +57,7 @@ export class Truck {
     // Visual puppet — sits on top of the invisible physics box
     this.body = new TruckBody(this.mesh, scene, shadows, {
       body:   this.diffuseColor,
-    }, vehicleDef?.wheels ?? null);
+    }, vehicleDef ?? null);
   }
 
   createMesh() {

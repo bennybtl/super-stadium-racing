@@ -1,7 +1,7 @@
 {
   "id": "default_buggy",
   "name": "Offroad Buggy",
-  "modelFile": null,
+  "modelFile": "default_buggy.obj",
   "defaultColor": [0.1, 0.7, 0.15],
   "physicsBox": {
     "width": 1.3,

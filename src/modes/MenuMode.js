@@ -30,8 +30,9 @@ export class MenuMode extends BaseMode {
       menuManager.gameStarted = true;
       menuManager.hideMenu();
       this.controller.goToRace({
-        trackKey: menuManager.selectedTrack,
-        laps: menuManager.selectedLaps,
+        trackKey:   menuManager.selectedTrack,
+        laps:       menuManager.selectedLaps,
+        vehicleKey: menuManager.selectedVehicle,
       });
     };
 
@@ -61,7 +62,8 @@ export class MenuMode extends BaseMode {
       menuManager.gameStarted = true;
       menuManager.hideMenu();
       this.controller.goToPractice({
-        trackKey: menuManager.selectedTrack,
+        trackKey:   menuManager.selectedTrack,
+        vehicleKey: menuManager.selectedVehicle,
       });
     };
 

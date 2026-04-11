@@ -1,7 +1,7 @@
 {
   "id": "default_truck",
   "name": "Default Truck",
-  "modelFile": null,
+  "modelFile": "default_truck.obj",
   "defaultColor": [0.8, 0.2, 0.1],
   "physicsBox": {
     "width": 1.5,

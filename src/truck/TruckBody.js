@@ -1,6 +1,5 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, SceneLoader, TransformNode } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import truckBodyUrl from "../assets/offroad-truck-v3.obj?url";
 import truckTireUrl  from "../assets/truck-tire.obj?url";
 
 // Skip MTL lookup — materials are applied programmatically
@@ -25,16 +24,19 @@ export class TruckBody {
    * @param {Object}  shadows - ShadowGenerator
    * @param {Object}  colors  - { body, cabin, wheel, detail }
    */
-  constructor(parent, scene, shadows, colors = {}, geometry = null) {
+  constructor(parent, scene, shadows, colors = {}, vehicleDef = null) {
     this.parent  = parent;
     this.scene   = scene;
     this.shadows = shadows;
 
     // Wheel geometry — from vehicle def, falling back to defaults matching the OBJ model
-    const g = geometry ?? {};
+    const g = vehicleDef?.wheels ?? {};
     const halfTrack  = (g.trackWidth  ?? 2.4) / 2;
     const frontAxle  =  g.frontAxle   ?? 1.5;
     const rearAxle   =  g.rearAxle    ?? -1.2;
+
+    // Body OBJ URL — resolved by VehicleLoader and stored on the def
+    this._modelUrl = vehicleDef?.modelUrl ?? null;
     this._wheelDefs = [
       { id: "FL", x:  halfTrack, z: frontAxle, isFront: true  },
       { id: "FR", x: -halfTrack, z: frontAxle, isFront: true  },
@@ -93,11 +95,16 @@ export class TruckBody {
   }
 
   async _loadBody() {
+    if (!this._modelUrl) {
+      console.warn('[TruckBody] No modelUrl on vehicleDef — using box fallback');
+      this._buildBoxBody();
+      return;
+    }
     try {
       // Split the Vite-resolved URL into directory + filename for Babylon's loader
-      const lastSlash = truckBodyUrl.lastIndexOf('/');
-      const rootUrl   = truckBodyUrl.substring(0, lastSlash + 1);
-      const fileName  = truckBodyUrl.substring(lastSlash + 1);
+      const lastSlash = this._modelUrl.lastIndexOf('/');
+      const rootUrl   = this._modelUrl.substring(0, lastSlash + 1);
+      const fileName  = this._modelUrl.substring(lastSlash + 1);
 
       const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, this.scene);
       if (!result.meshes.length) throw new Error('OBJ loaded no meshes');

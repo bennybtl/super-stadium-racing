@@ -116,9 +116,10 @@ export class ModeController {
 
   /** @private */
   _launchCurrentSeasonRace() {
-    const trackKey = this.seasonManager.getCurrentTrackKey();
-    const laps     = this.seasonManager.getLapsPerRace();
-    return this.goToRace({ trackKey, laps, season: true });
+    const trackKey   = this.seasonManager.getCurrentTrackKey();
+    const laps       = this.seasonManager.getLapsPerRace();
+    const vehicleKey = this.menuManager.selectedVehicle;
+    return this.goToRace({ trackKey, laps, season: true, vehicleKey });
   }
 
   goToRace(config) {

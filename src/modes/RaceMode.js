@@ -26,7 +26,7 @@ export class RaceMode extends BaseMode {
     this.debugManager = null;
   }
 
-  async setup({ trackKey, laps, season = false }) {
+  async setup({ trackKey, laps, season = false, vehicleKey = 'default_truck' }) {
     const { engine, menuManager, trackLoader, seasonManager } = this.controller;
     const totalLaps = laps || 3;
 
@@ -175,7 +175,8 @@ export class RaceMode extends BaseMode {
     const spawn2 = getGridSpawn(2);
     const spawn3 = getGridSpawn(3);
 
-    const playerTruck = new Truck(scene, shadows);
+    const playerVehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
+    const playerTruck = new Truck(scene, shadows, null, null, playerVehicleDef);
     playerTruck.mesh.position.copyFrom(spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;

@@ -36,6 +36,17 @@
           <button class="menu-btn menu-btn--back" @click="store.back('trackSelect')">Back</button>
         </template>
 
+        <!-- ── Vehicle select ── -->
+        <template v-else-if="store.screen === 'vehicleSelect'">
+          <button
+            v-for="v in store.vehicleList"
+            :key="v.key"
+            class="menu-btn"
+            @click="store.selectVehicle(v.key)"
+          >{{ v.name }}</button>
+          <button class="menu-btn menu-btn--back" @click="store.vehicleSelectBack()">Back</button>
+        </template>
+
         <!-- ── Practice track select ── -->
         <template v-else-if="store.screen === 'practiceTrackSelect'">
           <button
@@ -107,6 +118,7 @@ const title = computed(() => {
     case 'start':             return 'SUPER Off-Road!';
     case 'trackSelect':       return 'Select Track';
     case 'lapSelect':         return 'Select Laps';
+    case 'vehicleSelect':     return 'Select Vehicle';
     case 'editorTrackSelect': return 'Select Track to Edit';
     case 'seasonSetup':       return 'Season Mode';
     case 'pause':             return 'Paused';

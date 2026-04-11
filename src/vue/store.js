@@ -7,6 +7,7 @@ export const useMenuStore = defineStore('menu', () => {
   const screen = ref('start');
   const isPaused = ref(false);
   const trackList = ref([]); // [{ key, name }]
+  const vehicleList = ref([]); // [{ key, name }]
 
   // Season overlay data (null when not showing)
   const postRaceData    = ref(null);
@@ -29,7 +30,7 @@ export const useMenuStore = defineStore('menu', () => {
   function selectTrack(key) {
     if (!_bridge.value) return;
     _bridge.value.selectedTrack = key;
-    _bridge.value.showLapSelectMenu();
+    _bridge.value.showVehicleSelectMenu('race');
   }
 
   function startGame(laps) {
@@ -47,8 +48,11 @@ export const useMenuStore = defineStore('menu', () => {
   function startPractice(key) {
     if (!_bridge.value) return;
     _bridge.value.selectedTrack = key;
-    _bridge.value.onStartPractice();
+    _bridge.value.showVehicleSelectMenu('practice');
   }
+
+  function selectVehicle(key) { _bridge.value?.selectVehicle(key); }
+  function vehicleSelectBack() { _bridge.value?.onVehicleSelectBack(); }
 
   function resume()       { _bridge.value?.onResume(); }
   function reset()        { _bridge.value?.onReset(); }
@@ -67,7 +71,11 @@ export const useMenuStore = defineStore('menu', () => {
 
   // ── Season actions (called by Vue overlays) ──────────────────────────────
   function showSeasonSetup()       { _bridge.value?.showSeasonSetup(); }
-  function startSeason(laps)       { _bridge.value?.onSeasonStart(laps); }
+  function startSeason(laps) {
+    if (!_bridge.value) return;
+    _bridge.value.selectedLaps = laps;
+    _bridge.value.showVehicleSelectMenu('season');
+  }
   function continueSeason()        { _bridge.value?.onContinueSeason(); }
   function retireFromSeason()      { _bridge.value?.onRetireFromSeason(); }
   function goToPit()               { _bridge.value?.onGoToPit(); }
@@ -76,11 +84,12 @@ export const useMenuStore = defineStore('menu', () => {
   function singleRaceExit()        { singleRaceData.value = null; _bridge.value?.onExit(); }
 
   return {
-    screen, isPaused, trackList,
+    screen, isPaused, trackList, vehicleList,
     postRaceData, pitData, seasonFinalData, singleRaceData,
     setBridge,
     showTrackSelect, showPracticeTrackSelect, showEditorTrackSelect, selectTrack,
     startGame, startPractice, startEditor,
+    selectVehicle, vehicleSelectBack,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,

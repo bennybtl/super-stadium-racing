@@ -16,8 +16,10 @@ export class MenuManager {
     this.editorMode  = false;
 
     // Set by Vue store actions before calling the callbacks below
-    this.selectedTrack = null;
-    this.selectedLaps  = 3;
+    this.selectedTrack   = null;
+    this.selectedLaps    = 3;
+    this.selectedVehicle = 'default_truck';
+    this._vehicleSelectContext = null;
 
     // Connect to Pinia store (Pinia is active because vue/main.js runs first)
     this._store = useMenuStore();
@@ -62,6 +64,33 @@ export class MenuManager {
     this.isPaused = true;
     this._store.screen   = 'editorPause';
     this._store.isPaused = true;
+  }
+
+  showVehicleSelectMenu(context) {
+    this._vehicleSelectContext = context;
+    this.currentMenu = 'vehicleSelect';
+    this._refreshVehicleList();
+    this._store.screen = 'vehicleSelect';
+  }
+
+  selectVehicle(key) {
+    this.selectedVehicle = key;
+    const ctx = this._vehicleSelectContext;
+    if (ctx === 'race') {
+      this.showLapSelectMenu();
+    } else if (ctx === 'practice') {
+      this.onStartPractice();
+    } else if (ctx === 'season') {
+      this.onSeasonStart(this.selectedLaps);
+    }
+  }
+
+  onVehicleSelectBack() {
+    const ctx = this._vehicleSelectContext;
+    if (ctx === 'race')     this.showTrackSelectMenu();
+    else if (ctx === 'practice') this.showPracticeTrackSelect();
+    else if (ctx === 'season')   this.showSeasonSetup();
+    else                         this.showStartMenu();
   }
 
   showSettingsMenu() {
@@ -161,5 +190,10 @@ export class MenuManager {
       const track = window.trackLoader.getTrack(key);
       return { key, name: track?.name ?? key };
     });
+  }
+
+  _refreshVehicleList() {
+    if (!window.vehicleLoader) return;
+    this._store.vehicleList = window.vehicleLoader.getVehicleList();
   }
 }

@@ -18,7 +18,7 @@ export class PracticeMode extends BaseMode {
     this.inputManager = null;
   }
 
-  async setup({ trackKey }) {
+  async setup({ trackKey, vehicleKey = 'default_truck' }) {
     const { engine, menuManager, trackLoader } = this.controller;
 
     const {
@@ -42,7 +42,7 @@ export class PracticeMode extends BaseMode {
     const startCp = checkpointFeatures.find(f => f.checkpointNumber === maxNum) || null;
 
     // Create truck first so we can read its height when calculating spawnPos
-    const vehicleDef = window.vehicleLoader?.getVehicle('default_truck') ?? null;
+    const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     const playerTruck = new Truck(scene, shadows, null, null, vehicleDef);
 
     let spawnPos, heading;
