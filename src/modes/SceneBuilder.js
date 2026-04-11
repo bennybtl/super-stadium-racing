@@ -26,6 +26,7 @@ import { TireStackManager } from "../managers/TireStackManager.js";
 import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { BannerStringManager } from "../managers/BannerStringManager.js";
+import { PickupManager } from "../managers/PickupManager.js";
 import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
 
 /**
@@ -170,6 +171,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const flagManager     = new FlagManager(scene, currentTrack, shadows);
   const trackSignManager = new TrackSignManager(scene, currentTrack);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
+  const pickupManager = new PickupManager(scene, currentTrack, shadows);
   checkpointManager.createCheckpoints();
 
   // Create Tire Stacks, Flags, and Track Signs from track features (must be after ground so we can query heights)
@@ -205,5 +207,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
     flagManager,
     trackSignManager,
     bannerStringManager,
+    pickupManager,
   };
 }

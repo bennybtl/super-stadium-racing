@@ -104,7 +104,7 @@ export class Truck {
       maxReverseSpeed: -10,
       acceleration: 13,
       braking: 2,
-      drag: 4,
+      drag: 0.2,
       turnSpeed: 3.6,
       grip: 0.03,
       driftThreshold: 0.1,

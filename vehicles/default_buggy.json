@@ -23,7 +23,7 @@
     "maxReverseSpeed": -12,
     "acceleration": 17,
     "braking": 3,
-    "drag": 3,
+    "drag": 0.2,
     "turnSpeed": 4.5,
     "grip": 0.025,
     "driftThreshold": 0.05,

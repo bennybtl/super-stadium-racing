@@ -46,9 +46,17 @@ export class DriftPhysics {
 
   applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness = 1) {
     if (speed > 0.1) {
-      // Minimal air resistance when airborne, full drag when grounded
+      // Minimal air resistance when airborne, full drag when grounded.
+      // Three distinct ground states so releasing the brake actually matters:
+      //   accelerating → light drag (0.3)
+      //   coasting (no input) → medium drag (0.45)
+      //   braking (back held) → heavy drag (0.8)
       const airborne = groundedness <= 0;
-      const coastingMultiplier = airborne ? 0.02 : (input.forward ? 0.3 : 0.8);
+      let coastingMultiplier;
+      if (airborne)        coastingMultiplier = 0.02;
+      else if (input.forward) coastingMultiplier = 0.3;
+      else if (input.back)    coastingMultiplier = 0.8;
+      else                    coastingMultiplier = 0.45; // coasting — no input held
       const drag = airborne ? 1.0 : terrainDragMultiplier;
       const naturalDrag = this.state.velocity.scale(-coastingMultiplier * drag * deltaTime);
       this.state.velocity.addInPlace(naturalDrag);

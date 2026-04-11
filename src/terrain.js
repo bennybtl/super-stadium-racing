@@ -58,7 +58,7 @@ export const TERRAIN_TYPES = {
     name: "rocky",
     gripMultiplier: 1.0,     // Unpredictable rocky surface
     color: new Color3(0.42, 0.30, 0.22), // Dark reddish-brown rock
-    dragMultiplier: 5.0,     // Dramatic slowing — holes catch and drag the truck
+    dragMultiplier: 2.5,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
     normalMap: 'rocky.jpg',
     normalMapIntensity: 1.5, // Strong rocky surface detail

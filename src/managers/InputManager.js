@@ -42,7 +42,7 @@ export class InputManager {
   handleKeyDown(e) {
     // Movement
     if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = true;
-    if (e.code === "ShiftLeft" || e.code === "ArrowDown") this.input.back = true;
+    if (e.code === "KeyS" || e.code === "ShiftLeft" || e.code === "ArrowDown") this.input.back = true;
     if (e.code === "KeyA" || e.code === "ArrowLeft") this.input.left = true;
     if (e.code === "KeyD" || e.code === "ArrowRight") this.input.right = true;
     
@@ -88,7 +88,7 @@ export class InputManager {
 
   handleKeyUp(e) {
     if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = false;
-    if (e.code === "KeyS" || e.code === "ArrowDown") this.input.back = false;
+    if (e.code === "KeyS" || e.code === "ShiftLeft" || e.code === "ArrowDown") this.input.back = false;
     if (e.code === "KeyA" || e.code === "ArrowLeft") this.input.left = false;
     if (e.code === "KeyD" || e.code === "ArrowRight") this.input.right = false;
   }

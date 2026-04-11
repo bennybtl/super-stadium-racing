@@ -18,7 +18,7 @@ const DOWNHILL = {
   // --- Suspension compression ---
   velCompressionFactor:  0.03,  // downward velocity contribution to compression
   compressionBaseScale:  0.08,  // scale applied to base compression
-  suspensionSmoothing:   0.3,   // exponential smoothing factor (0–1, higher = snappier)
+  suspensionSmoothing:   0.5,   // exponential smoothing factor (0–1, higher = snappier)
   maxCompression:        0.25,  // maximum suspension compression value
   groundednessRef:       0.08,  // compression at which groundedness reaches 1.0
 
@@ -68,7 +68,7 @@ const SPRING = {
 /** Visual pitch/roll smoothing when grounded or airborne. */
 const ORIENTATION = {
   slopeCheckDist:        1.0,   // forward/right probe distance for slope sampling (m) — wider = smoother over sharp edges
-  fastSmoothingRate:     5,     // exp smoothing rate for fast transitions (s⁻¹)
+  fastSmoothingRate:     10,     // exp smoothing rate for fast transitions (s⁻¹)
   slowSmoothingRate:     1.5,   // exp smoothing rate for slow transitions (s⁻¹)
   fastGroundedness:      0.8,   // groundedness above this uses fast smoothing on descent
   groundednessThreshold: 0.3,   // minimum groundedness to run terrain orientation

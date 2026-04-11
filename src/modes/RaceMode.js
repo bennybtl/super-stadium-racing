@@ -40,6 +40,7 @@ export class RaceMode extends BaseMode {
       wallManager,
       tireStackManager,
       flagManager,
+      pickupManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     this.scene = scene;
@@ -306,6 +307,16 @@ export class RaceMode extends BaseMode {
 
     inputManager.onReset(() => respawnPlayer());
 
+    // -- Pickup collection --
+    pickupManager.onPickupCollected = (type, truckData) => {
+      if (type === 'boost' && truckData.gameState) {
+        truckData.gameState.boostCount++;
+        if (truckData.isPlayer) {
+          uiManager.updateBoosts(truckData.gameState.boostCount);
+        }
+      }
+    };
+
     // -- Respawn --
     const respawnPlayer = () => {
       const truck = playerTruckData.truck;
@@ -442,6 +453,7 @@ export class RaceMode extends BaseMode {
       checkpointManager.rebuild();
       wallManager.rebuild();
       tireStackManager.rebuild();
+      pickupManager.rebuild();
 
       uiManager.updateBoosts(playerTruckData.gameState.boostCount);
       uiManager.updateLaps(0, totalLaps);
@@ -502,6 +514,7 @@ export class RaceMode extends BaseMode {
       truckCollisionManager.update(trucks);
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);
+      pickupManager.update(trucks, dt);
 
       debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck);
       uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
