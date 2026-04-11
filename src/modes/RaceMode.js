@@ -308,6 +308,7 @@ export class RaceMode extends BaseMode {
     inputManager.onReset(() => respawnPlayer());
 
     // -- Pickup collection --
+    pickupManager.spawn(6); // Scatter pickups specifically for the race
     pickupManager.onPickupCollected = (type, truckData) => {
       if (type === 'boost' && truckData.gameState) {
         truckData.gameState.boostCount++;

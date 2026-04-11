@@ -87,14 +87,6 @@ export class TruckBody {
       this._wheels.push(entry);
       this._loadTireMesh({ name: `wheel_${def.id}`, position: new Vector3(def.x, baseY, def.z), entry, scale: def.scale });
     }
-
-    // Spare tyre on the truck bed, leaning ~32° toward the cab
-    this._loadTireMesh({
-      name: 'spare_tyre',
-      position: new Vector3(0, 1.5, -0.9),
-      rotation: { x: 0, y: -Math.PI/2, z: -0.9 },
-      root: this._visualRoot,
-    });
   }
 
   async _loadBody() {

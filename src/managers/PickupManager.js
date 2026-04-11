@@ -68,6 +68,8 @@ export class PickupManager {
 
   /** Returns up to `count` positions spaced at least MIN_PICKUP_DIST apart. */
   _generatePositions(count) {
+    if (count <= 0) return [];
+    
     const positions = [];
     let attempts = 0;
     const maxAttempts = count * 40;
@@ -120,7 +122,14 @@ export class PickupManager {
     }
   }
 
-  // ── Reset ─────────────────────────────────────────────────────────────────
+  // ── Reset & Lifecycle ──────────────────────────────────────────────────
+
+  /** Randomly spawn `count` items across the track, replacing any existing items. */
+  spawn(count = this._count) {
+    this.dispose();
+    this._count = count;
+    this._spawnAll();
+  }
 
   /** Cancel all pending respawn timers and make every pickup visible immediately. */
   rebuild() {

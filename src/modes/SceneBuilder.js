@@ -183,7 +183,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const flagManager     = new FlagManager(scene, currentTrack, shadows);
   const trackSignManager = new TrackSignManager(scene, currentTrack);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
-  const pickupManager = new PickupManager(scene, currentTrack, shadows);
+  const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
   checkpointManager.createCheckpoints();
 
   // Create Tire Stacks, Flags, and Track Signs from track features (must be after ground so we can query heights)

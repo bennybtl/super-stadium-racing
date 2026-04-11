@@ -4,7 +4,10 @@ import {
   Color3,
   Vector3,
   TransformNode,
+  SceneLoader,
 } from "@babylonjs/core";
+import "@babylonjs/loaders/OBJ/index.js";
+import nitroUrl from "../assets/nitro.obj?url";
 
 /**
  * Pickup — a single collectable item floating above the ground.
@@ -64,6 +67,38 @@ export class Pickup {
     ringMat.specularColor = new Color3(1.0, 1.0, 0.5);
     this._ring.material = ringMat;
     shadows.addShadowCaster(this._ring);
+
+    // Try stringing together async nitro.obj load
+    if (type === 'boost') {
+      const lastSlash = nitroUrl.lastIndexOf("/");
+      const rootUrl   = nitroUrl.substring(0, lastSlash + 1);
+      const fileName  = nitroUrl.substring(lastSlash + 1);
+
+      SceneLoader.ImportMeshAsync("", rootUrl, fileName, scene)
+        .then((result) => {
+          if (!result.meshes.length) return;
+
+          // Dispose default primitives and replace with loaded.
+          // Babylon will automatically drop disposed meshes from shadow caster lists.
+          this._core.dispose();
+          this._ring.dispose();
+
+          this._core = result.meshes[0];
+          this._core.parent = this._root;
+          this._ring = null;
+
+          for (const m of result.meshes) {
+            shadows.addShadowCaster(m);
+            // Optionally apply the golden material if it didn't come with one.
+            if (!m.material || m.material.name === "default material") {
+              m.material = coreMat;
+            }
+          }
+        })
+        .catch(e => {
+          console.warn("Could not load nitro.obj, falling back to primitive geo.", e);
+        });
+    }
   }
 
   // ── Public ────────────────────────────────────────────────────────────────
@@ -86,18 +121,31 @@ export class Pickup {
     if (!this.isVisible) return;
     // Gentle vertical bob
     this._root.position.y = this._baseY + Math.sin(this._time * 2.5) * 0.18;
-    // Spin core on two axes for a jewel-tumble effect
-    this._core.rotation.y = this._time * 2.2;
-    this._core.rotation.x = this._time * 0.9;
-    // Counter-rotate ring slowly
-    this._ring.rotation.z = this._time * 1.1;
+    
+    // Animate rotation based on whether we use the default geometry or the custom .obj
+    if (this._core) {
+      if (this._ring) {
+        // Spin default core on two axes for a jewel-tumble effect
+        this._core.rotation.y = this._time * 2.2;
+        this._core.rotation.x = this._time * 0.9;
+      } else {
+        // Just spin the loaded nitro model cleanly on Y, tilted at a 45 degree angle
+        this._core.rotation.x = -Math.PI / 4; 
+        this._core.rotation.y = this._time * 2.2;
+      }
+    }
+    
+    // Counter-rotate default ring slowly
+    if (this._ring) {
+      this._ring.rotation.z = this._time * 1.1;
+    }
   }
 
   dispose() {
-    this._core.material?.dispose();
-    this._ring.material?.dispose();
-    this._core.dispose();
-    this._ring.dispose();
-    this._root.dispose();
+    this._core?.material?.dispose();
+    this._ring?.material?.dispose();
+    this._core?.dispose();
+    this._ring?.dispose();
+    this._root?.dispose();
   }
 }

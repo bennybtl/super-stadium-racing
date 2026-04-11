@@ -32,6 +32,7 @@ export class PracticeMode extends BaseMode {
       flagManager,
       pickupManager,
     } = await buildScene(engine, trackLoader, trackKey);
+    // Note: Pickups are disabled by default via buildScene. We don't spawn them here.
 
     this.scene = scene;
 

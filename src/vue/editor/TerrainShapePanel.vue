@@ -10,7 +10,7 @@
     <select
       class="ep-select"
       :value="editor.terrainShape.shape"
-      @change="editor.setTerrainShapeShape($event.tsarget.value)"
+      @change="editor.setTerrainShapeShape($event.target.value)"
     >
       <option value="rect">Rectangle</option>
       <option value="circle">Circle</option>
