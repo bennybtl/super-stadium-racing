@@ -76,14 +76,16 @@ export class TerrainShapeEditor {
 
     let mesh;
     if (feature.shape === 'rect') {
-      node.scaling   = new Vector3(feature.width, 0.1, feature.depth);
-      node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
       mesh = MeshBuilder.CreateBox('terrainShapeMesh', { size: 1 }, scene);
     } else {
       mesh = MeshBuilder.CreateDisc('terrainShapeMesh',
-        { radius: feature.radius, tessellation: 48 }, scene);
+        { radius: 0.5, tessellation: 48 }, scene);
       mesh.rotation.x = Math.PI / 2;
     }
+    
+    node.scaling = new Vector3(feature.width, feature.shape === 'rect' ? 0.1 : 1, feature.depth);
+    node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
+    
     mesh.parent = node;
 
     const mat = this.material.clone('tsMat_' + Date.now());
@@ -109,21 +111,10 @@ export class TerrainShapeEditor {
     node.position.z = feature.centerZ;
     node.position.y = terrainH + NODE_POS_Y;
 
-    if (feature.shape === 'rect') {
-      node.scaling.x  = feature.width;
-      node.scaling.z  = feature.depth;
-      node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
-    } else {
-      // Recreate disc mesh with updated radius; preserve highlight if selected.
-      data.mesh.dispose();
-      const newMesh = MeshBuilder.CreateDisc('terrainShapeMesh',
-        { radius: feature.radius, tessellation: 48 }, this.editor.scene);
-      newMesh.rotation.x = Math.PI / 2;
-      newMesh.parent = node;
-      newMesh.material = this.selected === data ? this.highlightMaterial : mat;
-      newMesh.isPickable = true;
-      data.mesh = newMesh;
-    }
+    node.scaling.x  = feature.width;
+    node.scaling.y  = feature.shape === 'rect' ? 0.1 : 1;
+    node.scaling.z  = feature.depth;
+    node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
 
     const col = this._terrainColorForType(feature.terrainType);
     mat.diffuseColor  = col;
@@ -211,9 +202,7 @@ export class TerrainShapeEditor {
       centerZ:     cam.position.z + direction.z * 50,
       terrainType: TERRAIN_TYPES.MUD,
     };
-    const newFeature = shape === 'rect'
-      ? { ...base, width: 10, depth: 10, rotation: 0 }
-      : { ...base, radius: 8 };
+    const newFeature = { ...base, width: 10, depth: 10, rotation: 0 };
     this.editor.saveSnapshot();
     this.editor.currentTrack.features.push(newFeature);
     const data = this.createVisual(newFeature);
@@ -248,20 +237,7 @@ export class TerrainShapeEditor {
     this.editor._rawDragPos = null;
 
     // Mutate shape in-place (type stays 'terrain')
-    if (newShape === 'rect') {
-      const size      = (feature.radius ?? 8) * 2;
-      feature.shape   = 'rect';
-      feature.width   = size;
-      feature.depth   = size;
-      feature.rotation = feature.rotation ?? 0;
-      delete feature.radius;
-    } else {
-      feature.shape  = 'circle';
-      feature.radius = Math.max(feature.width ?? 10, feature.depth ?? 10) / 2;
-      delete feature.width;
-      delete feature.depth;
-      delete feature.rotation;
-    }
+    feature.shape = newShape;
 
     // Recreate visual and re-select (updates properties panel automatically)
     const newData = this.createVisual(feature);
@@ -278,13 +254,9 @@ export class TerrainShapeEditor {
     const ts = s.terrainShape;
     ts.shape       = feature.shape;
     ts.terrainType = feature.terrainType?.name || 'mud';
-    if (feature.shape === 'rect') {
-      ts.width    = feature.width;
-      ts.depth    = feature.depth;
-      ts.rotation = feature.rotation ?? 0;
-    } else {
-      ts.radius = feature.radius;
-    }
+    ts.width       = feature.width ?? 10;
+    ts.depth       = feature.depth ?? 10;
+    ts.rotation    = feature.rotation ?? 0;
     s.selectedType = 'terrainShape';
   }
 
@@ -311,39 +283,32 @@ export class TerrainShapeEditor {
   }
 
   changeWidth(val) {
-    if (!this.selected || this.selected.feature.shape !== 'rect') return;
+    if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.width = val;
     this.rebuildTerrain();
   }
 
   changeDepth(val) {
-    if (!this.selected || this.selected.feature.shape !== 'rect') return;
+    if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.depth = val;
     this.rebuildTerrain();
   }
 
   changeRotation(val) {
-    if (!this.selected || this.selected.feature.shape !== 'rect') return;
+    if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.rotation = val;
     this.rebuildTerrain();
   }
 
   rotate(rotStep) {
-    if (!this.selected || this.selected.feature.shape !== 'rect') return;
+    if (!this.selected) return;
     const f = this.selected.feature;
     f.rotation = ((f.rotation ?? 0) + rotStep * 180 / Math.PI + 360) % 360;
     const s = this.editor._editorStore;
     if (s) s.terrainShape.rotation = f.rotation;
-    this.rebuildTerrain();
-  }
-
-  changeRadius(val) {
-    if (!this.selected || this.selected.feature.shape !== 'circle') return;
-    this.editor.saveSnapshot(true);
-    this.selected.feature.radius = val;
     this.rebuildTerrain();
   }
 

@@ -870,7 +870,6 @@ export class EditorController {
   changeTerrainShapeWidth(val)    { this.terrainShapeEditor.changeWidth(val); }
   changeTerrainShapeDepth(val)    { this.terrainShapeEditor.changeDepth(val); }
   changeTerrainShapeRotation(val) { this.terrainShapeEditor.changeRotation(val); }
-  changeTerrainShapeRadius(val)    { this.terrainShapeEditor.changeRadius(val); }
   changeTerrainShapeTerrainType(n) { this.terrainShapeEditor.changeTerrainType(n); }
 
   // ─── Normal Map Decal Editing (delegated to NormalMapDecalEditor) ──────────

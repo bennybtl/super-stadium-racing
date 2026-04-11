@@ -345,9 +345,21 @@ export class Track {
               return feature.terrainType;
             }
           } else if (feature.shape === 'circle') {
+            const radAngle = (feature.rotation ?? 0) * Math.PI / 180;
+            const cosA = Math.cos(radAngle);
+            const sinA = Math.sin(radAngle);
             const dx = x - feature.centerX;
             const dz = z - feature.centerZ;
-            if (Math.sqrt(dx * dx + dz * dz) < feature.radius) {
+            
+            // Reverse rotate the point to local axes
+            const localX =  dx * cosA + dz * sinA;
+            const localZ = -dx * sinA + dz * cosA;
+
+            const hw = (feature.width ?? 10) / 2;
+            const hd = (feature.depth ?? 10) / 2;
+
+            // Standard ellipse formula inside bounds check
+            if ((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd) <= 1) {
               return feature.terrainType;
             }
           }
@@ -507,6 +519,14 @@ export class Track {
       } else if (loaded.type === 'terrainCircle') {
         loaded.type  = 'terrain';
         loaded.shape = 'circle';
+      }
+
+      // Backwards compat for shapes using 'radius' instead of width/depth
+      if (loaded.shape === 'circle' && loaded.radius !== undefined) {
+        loaded.width = loaded.radius * 2;
+        loaded.depth = loaded.radius * 2;
+        loaded.rotation = 0;
+        delete loaded.radius;
       }
 
       if (feature.terrainType && typeof feature.terrainType === 'string') {

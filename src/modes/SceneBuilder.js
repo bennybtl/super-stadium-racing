@@ -63,8 +63,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // -- Shadows --
   // Use CascadedShadowGenerator for huge outdoors over DirectionalLight to map automatically
   const shadows = new CascadedShadowGenerator(2048, sun);
-  shadows.useBlurExponentialShadowMap = true;
-  shadows.blurKernel = 32;
+  shadows.usePercentageCloserFiltering = true;
+  shadows.filteringQuality = 1; // 1 = Medium, 2 = High (for PCF)
   // Automatically configure cascades over the main camera clipping planes
   shadows.lambda = 0.8;
   shadows.cascadeBlendPercentage = 0.1;

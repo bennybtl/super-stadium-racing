@@ -169,13 +169,12 @@ export const useEditorStore = defineStore('editor', () => {
     terrainType: 'none',
   });
 
-  // ── Terrain shape panel (rect + circle) ──
+  // ── Terrain shape panel (rect + circle/ellipse) ──
   const terrainShape = reactive({
     shape: 'rect',
     width: 10,
     depth: 10,
     rotation: 0,
-    radius: 8,
     terrainType: 'mud',
   });
 
@@ -298,7 +297,6 @@ export const useEditorStore = defineStore('editor', () => {
   function setTerrainShapeWidth(val)      { terrainShape.width = val;       _bridge.value?.changeTerrainShapeWidth(val); }
   function setTerrainShapeDepth(val)      { terrainShape.depth = val;       _bridge.value?.changeTerrainShapeDepth(val); }
   function setTerrainShapeRotation(val)   { terrainShape.rotation = val;    _bridge.value?.changeTerrainShapeRotation(val); }
-  function setTerrainShapeRadius(val)     { terrainShape.radius = val;      _bridge.value?.changeTerrainShapeRadius(val); }
   function setTerrainShapeTerrainType(n)  { terrainShape.terrainType = n;   _bridge.value?.changeTerrainShapeTerrainType(n); }
   function duplicateTerrainShape()        { _bridge.value?.duplicateSelectedTerrainShape(); }
   function deleteTerrainShape()           { _bridge.value?.deleteSelectedTerrainShape(); }
@@ -409,7 +407,7 @@ export const useEditorStore = defineStore('editor', () => {
     setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
     setSquareHillHeight, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
-    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation, setTerrainShapeRadius,
+    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation,
     setTerrainShapeTerrainType, duplicateTerrainShape, deleteTerrainShape, closeTerrainShape,
     setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
     setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,

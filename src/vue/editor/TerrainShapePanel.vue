@@ -13,11 +13,11 @@
       @change="editor.setTerrainShapeShape($event.target.value)"
     >
       <option value="rect">Rectangle</option>
-      <option value="circle">Circle</option>
+      <option value="circle">Ellipse</option>
     </select>
 
-    <!-- Rectangle controls -->
-    <template v-if="editor.terrainShape.shape === 'rect'">
+    <!-- Geometry controls -->
+    <template v-if="true">
       <div class="ep-row">
         <span>Width</span>
         <span>{{ editor.terrainShape.width.toFixed(1) }}</span>
@@ -48,20 +48,6 @@
         type="range" min="0" max="360" step="1"
         :value="editor.terrainShape.rotation"
         @input="editor.setTerrainShapeRotation(+$event.target.value)"
-        class="ep-slider"
-      />
-    </template>
-
-    <!-- Circle controls -->
-    <template v-else>
-      <div class="ep-row">
-        <span>Radius</span>
-        <span>{{ editor.terrainShape.radius.toFixed(1) }}</span>
-      </div>
-      <input
-        type="range" min="1" max="40" step="0.5"
-        :value="editor.terrainShape.radius"
-        @input="editor.setTerrainShapeRadius(+$event.target.value)"
         class="ep-slider"
       />
     </template>
