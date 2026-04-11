@@ -585,6 +585,9 @@ export class EditorController {
       if (this.keys.rotateRight) this.squareHillEditor.rotate(-rotStep);
       delta = this.squareHillEditor.move(movement);
     } else if (this.terrainShapeEditor.selected) {
+      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
+      if (this.keys.rotateLeft)  this.terrainShapeEditor.rotate( rotStep);
+      if (this.keys.rotateRight) this.terrainShapeEditor.rotate(-rotStep);
       delta = this.terrainShapeEditor.move(movement);
     } else if (this.normalMapDecalEditor.selected) {
       // Q/E rotates the normal map decal
@@ -597,6 +600,9 @@ export class EditorController {
     } else if (this.flagEditor.selected) {
       delta = this.flagEditor.move(movement);
     } else if (this.trackSignEditor.selected) {
+      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
+      if (this.keys.rotateLeft)  this.trackSignEditor.rotate( rotStep);
+      if (this.keys.rotateRight) this.trackSignEditor.rotate(-rotStep);
       delta = this.trackSignEditor.move(movement);
     } else if (this.bannerStringEditor.selected) {
       if (this.keys.rotateLeft)  this.bannerStringEditor.rotate( this.rotationSpeed);
@@ -861,8 +867,9 @@ export class EditorController {
   changeSquareHillTerrainType(name) { this.squareHillEditor.changeTerrainType(name); }
 
   changeTerrainShapeShape(val)     { this.terrainShapeEditor.changeShape(val); }
-  changeTerrainShapeWidth(val)     { this.terrainShapeEditor.changeWidth(val); }
-  changeTerrainShapeDepth(val)     { this.terrainShapeEditor.changeDepth(val); }
+  changeTerrainShapeWidth(val)    { this.terrainShapeEditor.changeWidth(val); }
+  changeTerrainShapeDepth(val)    { this.terrainShapeEditor.changeDepth(val); }
+  changeTerrainShapeRotation(val) { this.terrainShapeEditor.changeRotation(val); }
   changeTerrainShapeRadius(val)    { this.terrainShapeEditor.changeRadius(val); }
   changeTerrainShapeTerrainType(n) { this.terrainShapeEditor.changeTerrainType(n); }
 

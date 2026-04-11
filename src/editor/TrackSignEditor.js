@@ -140,4 +140,11 @@ export class TrackSignEditor {
     this.editor._editorStore.trackSign.rotation = degrees;
     this.editor.saveSnapshot(true);
   }
+
+  rotate(rotStep) {
+    if (!this._selected) return;
+    const currentDeg = this.editor._editorStore.trackSign.rotation ?? 0;
+    const newDeg     = ((currentDeg + rotStep * 180 / Math.PI) % 360 + 360) % 360;
+    this.changeRotation(newDeg);
+  }
 }

@@ -334,8 +334,14 @@ export class Track {
           if (feature.shape === 'rect') {
             const halfWidth = feature.width / 2;
             const halfDepth = feature.depth / 2;
-            if (x >= feature.centerX - halfWidth && x <= feature.centerX + halfWidth &&
-                z >= feature.centerZ - halfDepth && z <= feature.centerZ + halfDepth) {
+            const wx = x - feature.centerX;
+            const wz = z - feature.centerZ;
+            const angleRad = (feature.rotation ?? 0) * Math.PI / 180;
+            const cosA = Math.cos(angleRad);
+            const sinA = Math.sin(angleRad);
+            const lx =  wx * cosA + wz * sinA;
+            const lz = -wx * sinA + wz * cosA;
+            if (Math.abs(lx) <= halfWidth && Math.abs(lz) <= halfDepth) {
               return feature.terrainType;
             }
           } else if (feature.shape === 'circle') {

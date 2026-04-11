@@ -4,10 +4,12 @@ import {
   DynamicTexture,
   Color3,
   Vector3,
+  Vector4,
 } from "@babylonjs/core";
 
 const BOARD_W        = 24;    // world units wide
 const BOARD_H        =  6;    // world units tall
+const BOARD_D        =  0.6;  // thickness
 const POST_H         =  2.5;  // post height
 const POST_DIAM      =  1;
 const BOARD_CENTER_Y = POST_H + BOARD_H / 2; // height of board centre above ground
@@ -43,9 +45,14 @@ export class TrackSign {
     this.post.material      = postMat;
 
     // ── Board ─────────────────────────────────────────────────────────────
-    this.board = MeshBuilder.CreatePlane(
+    // BabylonJS box face indices: 0=back, 1=front, 2=right, 3=left, 4=top, 5=bottom.
+    // Non-front faces sample UV (0,0)→(0,0) — a single black pixel from the texture background.
+    const faceUV = Array.from({ length: 6 }, () => new Vector4(0, 0, 0, 0));
+    faceUV[1] = new Vector4(0, 0, 1, 1); // front face gets the full texture
+
+    this.board = MeshBuilder.CreateBox(
       `signBoard_${x}_${z}`,
-      { width: BOARD_W, height: BOARD_H },
+      { width: BOARD_W, height: BOARD_H, depth: BOARD_D, faceUV },
       scene
     );
     this.board.position   = new Vector3(x, groundY + BOARD_CENTER_Y, z);
@@ -63,7 +70,6 @@ export class TrackSign {
     const boardMat               = new StandardMaterial(`signBoardMat_${x}_${z}`, scene);
     boardMat.diffuseTexture      = this._texture;
     boardMat.emissiveTexture     = this._texture; // self-lit, readable at night/in shadow
-    boardMat.backFaceCulling     = false;          // readable from both sides
     this.board.material          = boardMat;
   }
 

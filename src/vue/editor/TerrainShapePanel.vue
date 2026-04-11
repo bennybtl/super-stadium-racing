@@ -39,6 +39,17 @@
         @input="editor.setTerrainShapeDepth(+$event.target.value)"
         class="ep-slider"
       />
+
+      <div class="ep-row">
+        <span>Rotation</span>
+        <span>{{ editor.terrainShape.rotation.toFixed(0) }}°</span>
+      </div>
+      <input
+        type="range" min="0" max="360" step="1"
+        :value="editor.terrainShape.rotation"
+        @input="editor.setTerrainShapeRotation(+$event.target.value)"
+        class="ep-slider"
+      />
     </template>
 
     <!-- Circle controls -->

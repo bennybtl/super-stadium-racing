@@ -165,6 +165,7 @@ export const useEditorStore = defineStore('editor', () => {
     shape: 'rect',
     width: 10,
     depth: 10,
+    rotation: 0,
     radius: 8,
     terrainType: 'mud',
   });
@@ -287,6 +288,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setTerrainShapeShape(val)      { terrainShape.shape = val;       _bridge.value?.changeTerrainShapeShape(val); }
   function setTerrainShapeWidth(val)      { terrainShape.width = val;       _bridge.value?.changeTerrainShapeWidth(val); }
   function setTerrainShapeDepth(val)      { terrainShape.depth = val;       _bridge.value?.changeTerrainShapeDepth(val); }
+  function setTerrainShapeRotation(val)   { terrainShape.rotation = val;    _bridge.value?.changeTerrainShapeRotation(val); }
   function setTerrainShapeRadius(val)     { terrainShape.radius = val;      _bridge.value?.changeTerrainShapeRadius(val); }
   function setTerrainShapeTerrainType(n)  { terrainShape.terrainType = n;   _bridge.value?.changeTerrainShapeTerrainType(n); }
   function duplicateTerrainShape()        { _bridge.value?.duplicateSelectedTerrainShape(); }
@@ -398,7 +400,7 @@ export const useEditorStore = defineStore('editor', () => {
     setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
     setSquareHillHeight, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
-    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRadius,
+    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation, setTerrainShapeRadius,
     setTerrainShapeTerrainType, duplicateTerrainShape, deleteTerrainShape, closeTerrainShape,
     setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
     setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,

@@ -76,7 +76,8 @@ export class TerrainShapeEditor {
 
     let mesh;
     if (feature.shape === 'rect') {
-      node.scaling = new Vector3(feature.width, 0.1, feature.depth);
+      node.scaling   = new Vector3(feature.width, 0.1, feature.depth);
+      node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
       mesh = MeshBuilder.CreateBox('terrainShapeMesh', { size: 1 }, scene);
     } else {
       mesh = MeshBuilder.CreateDisc('terrainShapeMesh',
@@ -109,8 +110,9 @@ export class TerrainShapeEditor {
     node.position.y = terrainH + NODE_POS_Y;
 
     if (feature.shape === 'rect') {
-      node.scaling.x = feature.width;
-      node.scaling.z = feature.depth;
+      node.scaling.x  = feature.width;
+      node.scaling.z  = feature.depth;
+      node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
     } else {
       // Recreate disc mesh with updated radius; preserve highlight if selected.
       data.mesh.dispose();
@@ -210,7 +212,7 @@ export class TerrainShapeEditor {
       terrainType: TERRAIN_TYPES.MUD,
     };
     const newFeature = shape === 'rect'
-      ? { ...base, width: 10, depth: 10 }
+      ? { ...base, width: 10, depth: 10, rotation: 0 }
       : { ...base, radius: 8 };
     this.editor.saveSnapshot();
     this.editor.currentTrack.features.push(newFeature);
@@ -247,16 +249,18 @@ export class TerrainShapeEditor {
 
     // Mutate shape in-place (type stays 'terrain')
     if (newShape === 'rect') {
-      const size    = (feature.radius ?? 8) * 2;
-      feature.shape = 'rect';
-      feature.width = size;
-      feature.depth = size;
+      const size      = (feature.radius ?? 8) * 2;
+      feature.shape   = 'rect';
+      feature.width   = size;
+      feature.depth   = size;
+      feature.rotation = feature.rotation ?? 0;
       delete feature.radius;
     } else {
       feature.shape  = 'circle';
       feature.radius = Math.max(feature.width ?? 10, feature.depth ?? 10) / 2;
       delete feature.width;
       delete feature.depth;
+      delete feature.rotation;
     }
 
     // Recreate visual and re-select (updates properties panel automatically)
@@ -275,8 +279,9 @@ export class TerrainShapeEditor {
     ts.shape       = feature.shape;
     ts.terrainType = feature.terrainType?.name || 'mud';
     if (feature.shape === 'rect') {
-      ts.width = feature.width;
-      ts.depth = feature.depth;
+      ts.width    = feature.width;
+      ts.depth    = feature.depth;
+      ts.rotation = feature.rotation ?? 0;
     } else {
       ts.radius = feature.radius;
     }
@@ -316,6 +321,22 @@ export class TerrainShapeEditor {
     if (!this.selected || this.selected.feature.shape !== 'rect') return;
     this.editor.saveSnapshot(true);
     this.selected.feature.depth = val;
+    this.rebuildTerrain();
+  }
+
+  changeRotation(val) {
+    if (!this.selected || this.selected.feature.shape !== 'rect') return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.rotation = val;
+    this.rebuildTerrain();
+  }
+
+  rotate(rotStep) {
+    if (!this.selected || this.selected.feature.shape !== 'rect') return;
+    const f = this.selected.feature;
+    f.rotation = ((f.rotation ?? 0) + rotStep * 180 / Math.PI + 360) % 360;
+    const s = this.editor._editorStore;
+    if (s) s.terrainShape.rotation = f.rotation;
     this.rebuildTerrain();
   }
 
