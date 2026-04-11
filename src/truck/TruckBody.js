@@ -31,17 +31,20 @@ export class TruckBody {
 
     // Wheel geometry — from vehicle def, falling back to defaults matching the OBJ model
     const g = vehicleDef?.wheels ?? {};
-    const halfTrack  = (g.trackWidth  ?? 2.4) / 2;
-    const frontAxle  =  g.frontAxle   ?? 1.5;
-    const rearAxle   =  g.rearAxle    ?? -1.2;
+    const frontHalfTrack = (g.frontTrackWidth ?? g.trackWidth ?? 2.4) / 2;
+    const rearHalfTrack  = (g.rearTrackWidth  ?? g.trackWidth ?? 2.4) / 2;
+    const frontAxle      =  g.frontAxle  ?? 1.5;
+    const rearAxle       =  g.rearAxle   ?? -1.2;
+    const frontScale     =  g.frontScale ?? [1.2, 1.2, 1.2];
+    const rearScale      =  g.rearScale  ?? [1.2, 1.2, 1.2];
 
     // Body OBJ URL — resolved by VehicleLoader and stored on the def
     this._modelUrl = vehicleDef?.modelUrl ?? null;
     this._wheelDefs = [
-      { id: "FL", x:  halfTrack, z: frontAxle, isFront: true  },
-      { id: "FR", x: -halfTrack, z: frontAxle, isFront: true  },
-      { id: "RL", x:  halfTrack, z: rearAxle,  isFront: false },
-      { id: "RR", x: -halfTrack, z: rearAxle,  isFront: false },
+      { id: "FL", x:  frontHalfTrack, z: frontAxle, isFront: true,  scale: frontScale },
+      { id: "FR", x: -frontHalfTrack, z: frontAxle, isFront: true,  scale: frontScale },
+      { id: "RL", x:  rearHalfTrack,  z: rearAxle,  isFront: false, scale: rearScale  },
+      { id: "RR", x: -rearHalfTrack,  z: rearAxle,  isFront: false, scale: rearScale  },
     ];
 
 
@@ -82,7 +85,7 @@ export class TruckBody {
       const baseY = 0.20; // tyre radius (0.36) - physics box half-height (0.4)
       const entry = { mesh: null, isFront: def.isFront, side: def.x > 0 ? "L" : "R", baseLocalY: baseY };
       this._wheels.push(entry);
-      this._loadTireMesh({ name: `wheel_${def.id}`, position: new Vector3(def.x, baseY, def.z), entry });
+      this._loadTireMesh({ name: `wheel_${def.id}`, position: new Vector3(def.x, baseY, def.z), entry, scale: def.scale });
     }
 
     // Spare tyre on the truck bed, leaning ~32° toward the cab
@@ -151,7 +154,7 @@ export class TruckBody {
    * @param {TransformNode}   root      - parent node (defaults to _wheelRoot)
    * @param {Object|null}     entry     - wheels array entry; entry.mesh is set when loaded
    */
-  async _loadTireMesh({ name, position, rotation = null, root = this._wheelRoot, entry = null }) {
+  async _loadTireMesh({ name, position, rotation = null, root = this._wheelRoot, entry = null, scale = [1.2, 1.2, 1.2] }) {
     try {
       const lastSlash = truckTireUrl.lastIndexOf('/');
       const rootUrl   = truckTireUrl.substring(0, lastSlash + 1);
@@ -169,13 +172,9 @@ export class TruckBody {
         mesh.rotation.z = rotation.z;
       }
 
-      if (position.x > 0) {
-        mesh.scaling.x = -1.2; // mirror left-side wheels (OBJ model is right-side)
-      } else {
-        mesh.scaling.x = 1.2;
-      }        
-      mesh.scaling.y = 1.2;
-      mesh.scaling.z = 1.2;
+      mesh.scaling.x = position.x > 0 ? -scale[0] : scale[0]; // mirror left-side wheels
+      mesh.scaling.y = scale[1];
+      mesh.scaling.z = scale[2];
 
       this._styleMesh(mesh, this.colors.wheel);
       mesh.receiveShadows = false;
@@ -208,7 +207,7 @@ export class TruckBody {
    * @param {number}  speed   - current speed (units/s)
    * @param {number}  dt      - delta time (s)
    */
-  update(state, input, speed, dt, terrainY = null) {
+  update(state, input, speed, dt, terrainY = null, groundedness = 0) {
     // When the physics box dips below the terrain surface, push the
     // wheel root fully above ground, and the body root partially —
     // this lets the body bounce with the physics while the wheels
@@ -228,12 +227,20 @@ export class TruckBody {
       this._visualRoot.position.y = bodyDeficit > 0 ? bodyDeficit : 0;
     }
 
+    // Cancel only the drift lean (currentRoll) on the wheel root, not the terrain roll.
+    // parent.rotation.z = terrainRoll + currentRoll (set by DriftPhysics).
+    // Wheels should tilt with the terrain but stay upright relative to it,
+    // so we counter-rotate by currentRoll only.
+    if (groundedness > 0.1) {
+      this._wheelRoot.rotation.z = -(state.currentRoll ?? 0);
+    }
+
     this._animateWheels(state, speed, dt, input);
   }
 
   _animateWheels(state, speed, dt, input) {
     // Front wheel steer: lerp toward target angle
-    const maxSteer = 0.42; // radians
+    const maxSteer = 0.52; // radians
     let targetSteer = input.left ? -maxSteer : input.right ? maxSteer : 0;
     this._steerAngle += (targetSteer - this._steerAngle) * Math.min(1, dt * 8);
 
@@ -241,7 +248,7 @@ export class TruckBody {
       if (!w.mesh) continue;
       // Suspension: bob each wheel down when compressed
       // suspensionCompression is 0 (full extend) to ~1 (full compress)
-      const susTravel = state.suspensionCompression * 0.12;
+      const susTravel = state.suspensionCompression * 0.14;
       w.mesh.position.y = w.baseLocalY + susTravel;
 
       // Steer front wheels around local Y

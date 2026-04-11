@@ -192,7 +192,7 @@ export class Truck {
 
     // Animate visual puppet — pass terrain height so the puppet stays above ground
     const terrainY = track ? track.getHeightAt(this.mesh.position.x, this.mesh.position.z) : null;
-    this.body.update(this.state, input, speed, deltaTime, terrainY);
+    this.body.update(this.state, input, speed, deltaTime, terrainY, groundedness);
     
     // Sync physics body
     this.syncPhysicsBody();

@@ -9,7 +9,10 @@
     "depth": 2.6
   },
   "wheels": {
-    "trackWidth": 1.85,
+    "frontTrackWidth": 2.0,
+    "rearTrackWidth": 2.25,
+    "frontScale": [0.65, 1.0, 1.0],
+    "rearScale": [1.0, 1.2, 1.2],
     "frontAxle":  1.35,
     "rearAxle":  -1.6
   },

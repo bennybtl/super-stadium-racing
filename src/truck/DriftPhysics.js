@@ -72,7 +72,7 @@ export class DriftPhysics {
       const rollFromLateral = lateralSpeed * 0.04;
       const rollFromTurning = turnRate * speed * 0.02;
       this.state.targetRoll = rollFromLateral + rollFromTurning;
-      this.state.targetRoll = Math.max(-0.25, Math.min(0.25, this.state.targetRoll));
+      this.state.targetRoll = Math.max(-0.18, Math.min(0.18, this.state.targetRoll));
     } else {
       this.state.targetRoll = 0;
     }
