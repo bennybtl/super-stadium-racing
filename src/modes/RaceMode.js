@@ -200,17 +200,18 @@ export class RaceMode extends BaseMode {
       playerTruck.state.maxBoosts  = purchased.nitroCount ?? playerTruck.state.maxBoosts;
     }
 
-    const aiTruck1 = new Truck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1);
+    const aiVehicleDef = playerVehicleDef;
+    const aiTruck1 = new Truck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1, aiVehicleDef);
     aiTruck1.mesh.position.copyFrom(spawn1.pos);
     aiTruck1.state.heading = spawn1.heading;
     aiTruck1.mesh.rotation.y = spawn1.heading;
 
-    const aiTruck2 = new Truck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2);
+    const aiTruck2 = new Truck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2, aiVehicleDef);
     aiTruck2.mesh.position.copyFrom(spawn2.pos);
     aiTruck2.state.heading = spawn2.heading;
     aiTruck2.mesh.rotation.y = spawn2.heading;
 
-    const aiTruck3 = new Truck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3);
+    const aiTruck3 = new Truck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3, aiVehicleDef);
     aiTruck3.mesh.position.copyFrom(spawn3.pos);
     aiTruck3.state.heading = spawn3.heading;
     aiTruck3.mesh.rotation.y = spawn3.heading;
