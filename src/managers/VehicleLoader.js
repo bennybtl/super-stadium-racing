@@ -21,6 +21,8 @@ export class VehicleLoader {
     const modules = import.meta.glob('/vehicles/*.json', { query: '?raw', import: 'default' });
     // Eagerly resolve OBJ URLs so Vite bundles them and we can look them up by filename
     const objUrls = import.meta.glob('/vehicles/*.obj', { query: '?url', import: 'default', eager: true });
+    // Eagerly resolve image URLs (png/jpg)
+    const imgUrls = import.meta.glob('/vehicles/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
 
     const loadPromises = Object.entries(modules).map(async ([path, load]) => {
       try {
@@ -30,6 +32,10 @@ export class VehicleLoader {
         // Resolve the OBJ URL from the vehicles folder
         if (def.modelFile) {
           def.modelUrl = objUrls[`/vehicles/${def.modelFile}`] ?? null;
+        }
+        // Resolve the image URL from the vehicles folder
+        if (def.imageFile) {
+          def.imageUrl = imgUrls[`/vehicles/${def.imageFile}`] ?? null;
         }
         this.vehicles.set(key, def);
         if (!this.vehicleList.includes(key)) this.vehicleList.push(key);
@@ -61,6 +67,7 @@ export class VehicleLoader {
     return this.vehicleList.map(key => ({
       key,
       name: this.vehicles.get(key)?.name ?? key,
+      imageUrl: this.vehicles.get(key)?.imageUrl ?? null,
     }));
   }
 }

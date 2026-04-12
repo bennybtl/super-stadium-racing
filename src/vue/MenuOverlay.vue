@@ -38,12 +38,17 @@
 
         <!-- ── Vehicle select ── -->
         <template v-else-if="store.screen === 'vehicleSelect'">
-          <button
-            v-for="v in store.vehicleList"
-            :key="v.key"
-            class="menu-btn"
-            @click="store.selectVehicle(v.key)"
-          >{{ v.name }}</button>
+          <div class="vehicle-grid">
+            <button
+              v-for="v in store.vehicleList"
+              :key="v.key"
+              class="vehicle-btn"
+              @click="store.selectVehicle(v.key)"
+            >
+              <img v-if="v.imageUrl" :src="v.imageUrl" :alt="v.name" class="vehicle-img" />
+              <span class="vehicle-name">{{ v.name }}</span>
+            </button>
+          </div>
           <button class="menu-btn menu-btn--back" @click="store.vehicleSelectBack()">Back</button>
         </template>
 
@@ -278,5 +283,51 @@ const title = computed(() => {
 
 .settings-option.active .option-desc {
   color: rgba(255, 255, 255, 1);
+}
+
+.vehicle-grid {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.vehicle-btn {
+  background: linear-gradient(to bottom, #444, #222);
+  border: 3px solid transparent;
+  border-radius: 12px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 180px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+.vehicle-btn:hover {
+  background: linear-gradient(to bottom, #555, #333);
+  border-color: #ff5722;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(255, 87, 34, 0.3);
+}
+
+.vehicle-img {
+  width: 140px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 15px;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+}
+
+.vehicle-name {
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 </style>
