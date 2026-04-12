@@ -87,8 +87,13 @@ export async function buildScene(engine, trackLoader, trackKey) {
     }
   }
 
+  const trackWidth = currentTrack.width ?? 160;
+  const trackDepth = currentTrack.depth ?? 160;
+  const maxTrackDim = Math.max(trackWidth, trackDepth);
+  const terrainSize = maxTrackDim + 20;
+
   // -- Terrain manager --
-  const terrainManager = new TerrainManager(180, 2);
+  const terrainManager = new TerrainManager(terrainSize, 2);
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const worldX =
@@ -103,7 +108,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // -- Ground mesh --
   const ground = MeshBuilder.CreateGround(
     "ground",
-    { width: 180, height: 180, subdivisions: 90 },
+    { width: terrainSize, height: terrainSize, subdivisions: Math.floor(terrainSize / 2) },
     scene
   );
   const positions = ground.getVerticesData(VertexBuffer.PositionKind);
@@ -161,7 +166,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   
   // Create composite normal map texture that blends base + decals
   const { createCompositeNormalMap } = await import('../shaders/ground-shader.js');
-  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, 2048, 180);
+  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, 2048, terrainSize);
   
   groundMat.bumpTexture = compositeNormalMap;
   groundMat.bumpTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
@@ -177,8 +182,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
   // Ensure rigid wall boundaries block driving off-grid
+  const wallManager = new WallManager(scene, currentTrack, shadows);
+
   const createBorderWall = (name, x, z, width, depth) => {
-    const wall = MeshBuilder.CreateBox(name, { width, height: 40, depth }, scene);
+    const wall = MeshBuilder.CreateBox(name, { width, height: 24, depth }, scene);
     wall.position = new Vector3(x, 0, z); // Center relative to 0 y-height
     
     const mat = new StandardMaterial(name + "Mat", scene);
@@ -187,16 +194,41 @@ export async function buildScene(engine, trackLoader, trackKey) {
     wall.material = mat;
     
     new PhysicsAggregate(wall, PhysicsShapeType.BOX, { mass: 0 }, scene);
+
+    // Also add to wallManager so they show up on the track editor grid and can be optionally hidden
+    let heading, halfLength, halfThick;
+    if (width > depth) {
+      heading = 0;
+      halfLength = width / 2;
+      halfThick = depth / 2;
+    } else {
+      heading = Math.PI / 2;
+      halfLength = depth / 2;
+      halfThick = width / 2;
+    }
+
+    wallManager._walls.push({
+      segments: [{
+        position: { x, z },
+        heading,
+        halfLength,
+        halfThick,
+        friction: 0.1
+      }]
+    });
   };
   
-  createBorderWall("borderNorth", 0,  91, 184, 2);
-  createBorderWall("borderSouth", 0, -91, 184, 2);
-  createBorderWall("borderEast",  91,  0, 2, 180);
-  createBorderWall("borderWest", -91,  0, 2, 180);
+  const paddingX = trackWidth / 2 + 10;
+  const paddingZ = trackDepth / 2 + 10;
+
+  createBorderWall("borderNorth", 0,  paddingZ + 1, trackWidth + 24, 2);
+  createBorderWall("borderSouth", 0, -paddingZ - 1, trackWidth + 24, 2);
+  createBorderWall("borderEast",  paddingX + 1,  0, 2, trackDepth + 20);
+  createBorderWall("borderWest", -paddingX - 1,  0, 2, trackDepth + 20);
 
   // -- Feature managers --
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
-  const wallManager = new WallManager(scene, currentTrack, shadows);
+  // wallManager already created above
   const tireStackManager = new TireStackManager(scene, currentTrack, shadows);
   const flagManager     = new FlagManager(scene, currentTrack, shadows);
   const trackSignManager = new TrackSignManager(scene, currentTrack);

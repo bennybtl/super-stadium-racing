@@ -19,9 +19,9 @@ export const TERRAIN_TYPES = {
     color: new Color3(0.54, 0.28, 0.08),
     dragMultiplier: 0.8,
     roughness: 0.1,          // Very slight — compacted surface
-    normalMap: '6481-normal.jpg',
-    normalMapIntensity: 0.8, // Moderate dirt texture
-    specular: 0.13,          // Matte dry dirt
+    normalMap: 'cloud_h.png',
+    normalMapIntensity: 1.2, // Moderate dirt texture
+    specular: 0.23,          // Matte dry dirt
   },
   LOOSE_DIRT: {
     name: "loose_dirt",

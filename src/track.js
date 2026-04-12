@@ -14,30 +14,6 @@ export class Track {
     this.defaultTerrainType = TERRAIN_TYPES.PACKED_DIRT;
   }
 
-  // Add a ridge running perpendicular to the X axis (east-west)
-  addRidgeEW(centerZ, width, height, terrainType = null) {
-    this.features.push({
-      type: "ridgeEW",
-      centerZ,
-      width,
-      height,
-      terrainType,
-    });
-    return this;
-  }
-
-  // Add a ridge running perpendicular to the Z axis (north-south)
-  addRidgeNS(centerX, width, height, terrainType = null) {
-    this.features.push({
-      type: "ridgeNS",
-      centerX,
-      width,
-      height,
-      terrainType,
-    });
-    return this;
-  }
-
   // Add a circular hill
   addHill(centerX, centerZ, radius, height, terrainType = null) {
     this.features.push({
@@ -169,24 +145,6 @@ export class Track {
 
     for (const feature of this.features) {
       switch (feature.type) {
-        case "ridgeEW": {
-          const distFromRidge = Math.abs(z - feature.centerZ);
-          if (distFromRidge < feature.width) {
-            const t = distFromRidge / feature.width;
-            totalHeight += feature.height * Math.cos(t * Math.PI / 2);
-          }
-          break;
-        }
-
-        case "ridgeNS": {
-          const distFromRidge = Math.abs(x - feature.centerX);
-          if (distFromRidge < feature.width) {
-            const t = distFromRidge / feature.width;
-            totalHeight += feature.height * Math.cos(t * Math.PI / 2);
-          }
-          break;
-        }
-
         case "hill": {
           const dx = x - feature.centerX;
           const dz = z - feature.centerZ;
@@ -306,22 +264,6 @@ export class Track {
       if (!feature.terrainType) continue;
 
       switch (feature.type) {
-        case "ridgeEW": {
-          const distFromRidge = Math.abs(z - feature.centerZ);
-          if (distFromRidge < feature.width) {
-            return feature.terrainType;
-          }
-          break;
-        }
-
-        case "ridgeNS": {
-          const distFromRidge = Math.abs(x - feature.centerX);
-          if (distFromRidge < feature.width) {
-            return feature.terrainType;
-          }
-          break;
-        }
-
         case "hill": {
           const dx = x - feature.centerX;
           const dz = z - feature.centerZ;

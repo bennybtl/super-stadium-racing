@@ -803,9 +803,18 @@ export class EditorController {
   // ─── Grid Snapping ────────────────────────────────────────────────────────
 
   /** Round a world-space coordinate to the current snap grid, if snap is on. */
-  _snap(v) {
+  _snap(v, axis = null) {
     const { snapEnabled, snapSize } = this._editorStore;
-    const clamped = Math.max(-80, Math.min(80, v));
+    
+    // Determine dynamic boundaries from current track
+    let clampMax = 80;
+    if (this.currentTrack) {
+      if (axis === 'x') clampMax = (this.currentTrack.width ?? 160) / 2;
+      else if (axis === 'z') clampMax = (this.currentTrack.depth ?? 160) / 2;
+      else clampMax = Math.max(this.currentTrack.width ?? 160, this.currentTrack.depth ?? 160) / 2;
+    }
+    
+    const clamped = Math.max(-clampMax, Math.min(clampMax, v));
     return snapEnabled ? Math.round(clamped / snapSize) * snapSize : clamped;
   }
 

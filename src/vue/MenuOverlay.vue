@@ -120,7 +120,7 @@ const store = useMenuStore();
 
 const title = computed(() => {
   switch (store.screen) {
-    case 'start':             return 'SUPER Off-Road!';
+    case 'start':             return 'OPEN Off-Road!';
     case 'trackSelect':       return 'Select Track';
     case 'lapSelect':         return 'Select Laps';
     case 'vehicleSelect':     return 'Select Vehicle';
