@@ -151,8 +151,27 @@ export class EditorMode extends BaseMode {
       }
     };
 
+    // Rebuild a specific polyCurb (or all polyCurbs if feature is null)
+    window.rebuildPolyCurb = (targetFeature) => {
+      wallManager._curbs = wallManager._curbs.filter(c => {
+        if (c._feature && (targetFeature === null || c._feature === targetFeature)) {
+          c.dispose?.();
+          return false;
+        }
+        return true;
+      });
+      for (const f of currentTrack.features) {
+        if (f.type === 'polyCurb') {
+          if (targetFeature === null || f === targetFeature) {
+            wallManager.createPolyCurb(f);
+          }
+        }
+      }
+    };
+
     // Poly hills array to track created hills
     const polyHills = [];
+    window.polyHills = polyHills; // exposed so PolyHillEditor can toggle mesh visibility
 
     // Rebuild a specific polyHill (or all polyHills if feature is null)
     window.rebuildPolyHill = async (targetFeature) => {
@@ -170,6 +189,10 @@ export class EditorMode extends BaseMode {
         if (f.type === 'polyHill') {
           if (targetFeature === null || f === targetFeature) {
             const hill = new PolyHill(f, currentTrack, scene, shadows);
+            // Restore visibility if this feature is the currently active hill
+            if (hill.mesh && window.polyHillActiveFeature === f) {
+              hill.mesh.isVisible = true;
+            }
             polyHills.push(hill);
           }
         }
@@ -235,7 +258,10 @@ export class EditorMode extends BaseMode {
     delete window.rebuildNormalMap;
     delete window.rebuildPolyWall;
     delete window.rebuildPolyHill;
+    delete window.polyHills;
+    delete window.polyHillActiveFeature;
     delete window.rebuildBezierWall;
+    delete window.rebuildPolyCurb;
     delete window.quickTestTrack;
 
     // (race HUD visibility is managed by UIManager / Pinia — nothing to restore here)

@@ -130,6 +130,16 @@ export class Track {
     return this;
   }
 
+  // Add a poly curb — a flat, terrain-following strip of alternating red/white
+  // segments along a polyline.  Trucks can drive over curbs (no velocity blocking).
+  // points: array of { x, z, radius? } control points.
+  // height: bump height in metres (default 0.22).
+  // width:  lateral strip width in metres (default 0.9).
+  addPolyCurb(points, height = 0.22, width = 0.9, closed = false) {
+    this.features.push({ type: 'polyCurb', points, height, width, closed });
+    return this;
+  }
+
   getTerrainSlopeAt(x, z, heading, fwdSlopeDist = 1.0, offset = 0) {
     const ox = x + Math.sin(heading) * offset;
     const oz = z + Math.cos(heading) * offset;

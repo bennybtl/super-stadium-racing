@@ -22,6 +22,7 @@
     <TrackSignPanel />
     <BannerStringPanel />
     <ActionZonePanel />
+    <PolyCurbPanel />
     <AddEntityMenu />
     <EditorStatusBar />
   </div>
@@ -47,6 +48,7 @@ import FlagPanel          from './editor/FlagPanel.vue';
 import TrackSignPanel     from './editor/TrackSignPanel.vue';
 import BannerStringPanel  from './editor/BannerStringPanel.vue';
 import ActionZonePanel    from './editor/ActionZonePanel.vue';
+import PolyCurbPanel      from './editor/PolyCurbPanel.vue';
 import AddEntityMenu      from './editor/AddEntityMenu.vue';
 import EditorStatusBar    from './editor/EditorStatusBar.vue';
 </script>

@@ -242,6 +242,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       tireStackManager.createStack(feature);
     } else if (feature.type === "polyWall") {
       wallManager.createPolyWall(feature);
+    } else if (feature.type === "polyCurb") {
+      wallManager.createPolyCurb(feature);
     } else if (feature.type === "flag") {
       flagManager.createFlag(feature);
     } else if (feature.type === "trackSign") {

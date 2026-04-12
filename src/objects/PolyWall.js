@@ -3,8 +3,9 @@ import { WallSegment } from "./WallSegment.js";
 /**
  * Expand a polyline with optional rounded corners at each point.
  * Each point can have a `radius` property (0-10) that creates a circular arc.
+ * Exported so other objects (e.g. PolyCurb) can reuse it.
  */
-function expandPolyline(points, closed = false) {
+export function expandPolyline(points, closed = false) {
   if (points.length < 2) return points;
   
   const out = [];
@@ -39,7 +40,8 @@ function expandPolyline(points, closed = false) {
             
       if (len2 > 0.01) {
         // Clamp radius to not exceed segment lengths
-        const maxRadius = Math.min(len * 0.45, len2 * 0.45);
+        // Use 0.49 (just under 50%) so the two arcs at adjacent corners never overlap.
+        const maxRadius = Math.min(len * 0.49, len2 * 0.49);
         const clampedRadius = Math.min(radius, maxRadius);
                 
         // Normalized direction vectors

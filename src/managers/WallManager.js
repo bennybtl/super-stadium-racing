@@ -1,5 +1,6 @@
 import { PolyWall } from "../objects/PolyWall.js";
 import { BezierWall } from "../objects/BezierWall.js";
+import { PolyCurb } from "../objects/PolyCurb.js";
 import { TRUCK_RADIUS } from "../constants.js";
 
 /**
@@ -22,6 +23,12 @@ export class WallManager {
 
     // Wall objects (PolyWall, BezierWall)
     this._walls = [];
+
+    // Curb objects (PolyCurb) — stored separately so they are never included
+    // in _segments and therefore never trigger velocity-cancellation logic.
+    // Trucks can freely drive over curbs; their visual presence comes from
+    // the WallSegment boxes with alternating red/white material.
+    this._curbs = [];
   }
 
   // ─── Convenience getter — flat list of all WallSegment instances ─────────
@@ -35,6 +42,10 @@ export class WallManager {
 
   createBezierWall(feature) {
     this._walls.push(new BezierWall(feature, this.track, this.scene, this.shadows));
+  }
+
+  createPolyCurb(feature) {
+    this._curbs.push(new PolyCurb(feature, this.track, this.scene, this.shadows));
   }
 
   // ─── Pre-frame velocity clamp (call BEFORE updateTruck) ────────────────
@@ -229,6 +240,7 @@ export class WallManager {
     for (const feature of this.track.features) {
       if (feature.type === "polyWall")   this.createPolyWall(feature);
       if (feature.type === "bezierWall") this.createBezierWall(feature);
+      if (feature.type === "polyCurb")   this.createPolyCurb(feature);
     }
   }
 
@@ -253,5 +265,7 @@ export class WallManager {
   dispose() {
     for (const wall of this._walls) wall.dispose();
     this._walls = [];
+    for (const curb of this._curbs) curb.dispose();
+    this._curbs = [];
   }
 }

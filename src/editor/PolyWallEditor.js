@@ -386,6 +386,19 @@ export class PolyWallEditor {
     );
     store.polyWall.canHaveRadius = canHaveRadius;
     store.polyWall.radius = selectedIdx !== null ? (feature.points[selectedIdx].radius ?? 0) : 0;
+    // Compute the effective max radius for this point (mirrors expandPolyline's 0.49 clamp)
+    if (canHaveRadius && selectedIdx !== null) {
+      const pts = feature.points;
+      const n = pts.length;
+      const prevIdx = isClosed ? (selectedIdx - 1 + n) % n : selectedIdx - 1;
+      const nextIdx = isClosed ? (selectedIdx + 1) % n : selectedIdx + 1;
+      const p0 = pts[prevIdx], p1 = pts[selectedIdx], p2 = pts[nextIdx];
+      const len1 = Math.sqrt((p1.x-p0.x)**2 + (p1.z-p0.z)**2);
+      const len2 = Math.sqrt((p2.x-p1.x)**2 + (p2.z-p1.z)**2);
+      store.polyWall.maxRadius = Math.min(len1, len2) * 0.49;
+    } else {
+      store.polyWall.maxRadius = Infinity;
+    }
     store.polyWall.height = feature.height ?? 2;
     store.polyWall.thickness = feature.thickness ?? 0.5;
     store.polyWall.closed = feature.closed ?? false;

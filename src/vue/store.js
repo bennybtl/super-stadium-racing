@@ -201,6 +201,7 @@ export const useEditorStore = defineStore('editor', () => {
     hasSelection: false,
     canHaveRadius: false,
     radius: 0,
+    maxRadius: Infinity,
     height: 2,
     thickness: 0.5,
     closed: false,
@@ -246,6 +247,17 @@ export const useEditorStore = defineStore('editor', () => {
   const actionZone = reactive({
     zoneType: 'pickupSpawn',
     radius: 15,
+  });
+
+  // ── Poly Curb panel ──
+  const polyCurb = reactive({
+    hasSelection: false,
+    canHaveRadius: false,
+    radius: 0,
+    maxRadius: Infinity,
+    height: 0.22,
+    width: 0.9,
+    closed: false,
   });
 
   // ── Track defaults ──
@@ -371,6 +383,16 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteActionZone()         { _bridge.value?.deleteActionZone(); }
   function closeActionZone()          { _bridge.value?.deselectActionZone(); }
 
+  // ── Poly Curb actions ──
+  function setPolyCurbRadius(val)  { polyCurb.radius = val;  _bridge.value?.changePolyCurbRadius(val); }
+  function setPolyCurbHeight(val)  { polyCurb.height = val;  _bridge.value?.changePolyCurbHeight(val); }
+  function setPolyCurbWidth(val)   { polyCurb.width  = val;  _bridge.value?.changePolyCurbWidth(val); }
+  function setPolyCurbClosed(val)  { polyCurb.closed = val;  _bridge.value?.changePolyCurbClosed(val); }
+  function insertPolyCurbPoint()   { _bridge.value?.insertPolyCurbPoint(); }
+  function deletePolyCurbPoint()   { _bridge.value?.deletePolyCurbPoint(); }
+  function deletePolyCurb()        { _bridge.value?.deletePolyCurb(); }
+  function closePolyCurb()         { _bridge.value?.deselectPolyCurb(); }
+
   function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
 
   // ── Test mode ──
@@ -396,6 +418,7 @@ export const useEditorStore = defineStore('editor', () => {
   function addTrackSign()      { _bridge.value?.addTrackSignEntity(); }
   function addBannerString()   { _bridge.value?.addBannerStringEntity(); }
   function addActionZone()     { _bridge.value?.addActionZoneEntity(); }
+  function addPolyCurb()       { _bridge.value?.addPolyCurbEntity(); }
 
   return {
     selectedType,
@@ -438,6 +461,9 @@ export const useEditorStore = defineStore('editor', () => {
     setBannerStringWidth, setBannerStringPoleHeight, deleteBannerString, closeBannerString,
     actionZone,
     setActionZoneRadius, setActionZoneType, deleteActionZone, closeActionZone,
+    polyCurb,
+    setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed,
+    insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, closePolyCurb,
     trackDefaultTerrain, setTrackDefaultTerrain,
     setActiveTool,
     toggleSnap, cycleSnapSize, quickTestTrack,
@@ -445,6 +471,6 @@ export const useEditorStore = defineStore('editor', () => {
     addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addTireStack, addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
-    addActionZone,
+    addActionZone, addPolyCurb,
   };
 });

@@ -11,7 +11,7 @@
     <!-- Radius -->
     <div class="ep-row">
       <span>Radius</span>
-      <span>{{ radiusDisplay }}</span>
+      <span :style="editor.polyWall.radius > editor.polyWall.maxRadius ? { color: '#ff4444' } : {}">{{ radiusDisplay }}</span>
     </div>
     <input
       type="range" min="0" max="30" step="0.5"

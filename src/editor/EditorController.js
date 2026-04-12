@@ -11,7 +11,10 @@ import { NormalMapDecalEditor } from "./NormalMapDecalEditor.js";
 import { TireStackEditor } from "./TireStackEditor.js";
 import { FlagEditor } from "./FlagEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
-import { BannerStringEditor } from "./BannerStringEditor.js";import { ActionZoneEditor } from './ActionZoneEditor.js';import { useEditorStore } from '../vue/store.js';
+import { BannerStringEditor } from "./BannerStringEditor.js";
+import { ActionZoneEditor } from './ActionZoneEditor.js';
+import { PolyCurbEditor } from './PolyCurbEditor.js';
+import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
 /**
@@ -83,7 +86,8 @@ export class EditorController {
     // Bezier wall editing editor
     this.bezierWallEditor = new BezierWallEditor(this);
 
-    // Accumulated raw (pre-snap) position of whatever is being dragged
+    // Poly curb editing editor
+    this.polyCurbEditor = new PolyCurbEditor(this);
     this._rawDragPos = null;
 
     // Undo / redo stacks (each entry is a JSON string of the features array)
@@ -148,6 +152,9 @@ export class EditorController {
 
     // Bezier wall editing editor
     this.bezierWallEditor.activate(this.scene, track);
+
+    // Poly curb editing editor
+    this.polyCurbEditor.activate(this.scene, track);
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
@@ -214,6 +221,12 @@ export class EditorController {
     if (this.bezierWallEditor) {
       this.bezierWallEditor.deactivate();
       this.bezierWallEditor = null;
+    }
+
+    // Poly curb editor
+    if (this.polyCurbEditor) {
+      this.polyCurbEditor.deactivate();
+      this.polyCurbEditor = null;
     }
 
     // Flag editor
@@ -309,6 +322,9 @@ export class EditorController {
     // Restore bezier wall gizmos
     this.bezierWallEditor?.onSnapshotRestored();
     window.rebuildBezierWall?.(null);
+    // Restore poly curb gizmos
+    this.polyCurbEditor?.onSnapshotRestored();
+    window.rebuildPolyCurb?.(null);
     // Checkpoints are managed by CheckpointManager — rebuild from features
     // Checkpoints are managed by CheckpointManager — rebuild from features
     this.checkpointEditor.rebuildFromFeatures();
@@ -421,6 +437,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.polyHillEditor?.selectedPoint) {
         this.polyHillEditor.deleteSelectedPoint();
+        event.preventDefault();
+      } else if (this.polyCurbEditor?.selectedPoint) {
+        this.polyCurbEditor.deletePolyCurbPoint();
         event.preventDefault();
       }
       return;
@@ -535,6 +554,9 @@ export class EditorController {
     if (movKeys.includes(event.key.toLowerCase()) && this.polyHillEditor?.selectedPoint) {
       this.polyHillEditor.endDrag();
     }
+    if (movKeys.includes(event.key.toLowerCase()) && this.polyCurbEditor?.selectedPoint) {
+      this.polyCurbEditor.endDrag();
+    }
   }
 
   /**
@@ -634,6 +656,9 @@ export class EditorController {
     } else if (this.bezierWallEditor?.selectedHandle) {
       const d = this.bezierWallEditor.moveSelectedHandle(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
+    } else if (this.polyCurbEditor?.selectedPoint) {
+      const d = this.polyCurbEditor.moveSelectedPoint(movement.x, movement.z);
+      delta = new Vector3(d.x, movement.y, d.z);
     } else {
       // Move camera and target together
       delta = movement;
@@ -664,6 +689,9 @@ export class EditorController {
 
         // Bezier wall control points
         if (this.bezierWallEditor?.onPointerDown(clickedMesh)) return;
+
+        // Poly curb control points
+        if (this.polyCurbEditor?.onPointerDown(clickedMesh)) return;
         
         // Check if clicked mesh is part of a checkpoint
         {
@@ -812,6 +840,7 @@ export class EditorController {
   addPolyWallEntity()   { this.polyWallEditor?.addPolyWallFeature(); this.hideAddMenu(); }
   addPolyHillEntity()   { this.polyHillEditor?.addPolyHillFeature(); this.hideAddMenu(); }
   addBezierWallEntity() { this.bezierWallEditor?.addBezierWallFeature(); this.hideAddMenu(); }
+  addPolyCurbEntity()   { this.polyCurbEditor?.addPolyCurbFeature(); this.hideAddMenu(); }
   
   /**
    * Add a new checkpoint at camera target position
@@ -963,6 +992,7 @@ export class EditorController {
     this.polyWallEditor?.deselectPoint();
     this.polyHillEditor?.deselectPoint();
     this.bezierWallEditor?.deselectAll();
+    this.polyCurbEditor?.deselectPolyCurb();
   }
 
   // ── Poly Wall Vue bridge methods ──
@@ -1018,6 +1048,16 @@ export class EditorController {
   changeActionZoneRadius(val)     { this.actionZoneEditor.changeRadius(val); }
   changeActionZoneType(val)       { this.actionZoneEditor.changeZoneType(val); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }
+
+  // ── Poly Curb Vue bridge methods ──
+  changePolyCurbRadius(val)  { this.polyCurbEditor?.changePolyCurbRadius(val); }
+  changePolyCurbHeight(val)  { this.polyCurbEditor?.changePolyCurbHeight(val); }
+  changePolyCurbWidth(val)   { this.polyCurbEditor?.changePolyCurbWidth(val); }
+  changePolyCurbClosed(val)  { this.polyCurbEditor?.changePolyCurbClosed(val); }
+  insertPolyCurbPoint()      { this.polyCurbEditor?.insertPolyCurbPoint(); }
+  deletePolyCurbPoint()      { this.polyCurbEditor?.deletePolyCurbPoint(); }
+  deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
+  deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
 
   /**
    * Dispose of the controller

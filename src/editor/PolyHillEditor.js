@@ -204,13 +204,18 @@ export class PolyHillEditor {
   }
 
   _setActiveHill(hg) {
-    // Dim the previously active hill
+    // Dim + hide the previously active hill
     if (this._activeHill && this._activeHill !== hg) {
       for (const m of this._activeHill.pointMeshes) m.material = this.normalMat;
+      const oldMesh = this._getHillMesh(this._activeHill.feature);
+      if (oldMesh) oldMesh.isVisible = false;
     }
     this._activeHill = hg;
+    window.polyHillActiveFeature = hg?.feature ?? null;
     if (hg) {
       for (const m of hg.pointMeshes) m.material = this.activeMat;
+      const newMesh = this._getHillMesh(hg.feature);
+      if (newMesh) newMesh.isVisible = true;
     }
   }
 
@@ -227,12 +232,18 @@ export class PolyHillEditor {
 
   deselectPoint() {
     if (this.selectedPoint) {
-      const { hg, idx, mesh } = this.selectedPoint;
-      // Restore material (active or normal depending on whether hill is still active)
+      const { hg, mesh } = this.selectedPoint;
       mesh.material = this._activeHill === hg ? this.activeMat : this.normalMat;
       this.selectedPoint = null;
     }
-    this._rawDrag = null;  // clear stale drag origin so next selection starts fresh
+    // Hide and deactivate the active hill (mirrors SquareHillEditor.deselect)
+    if (this._activeHill) {
+      const hillMesh = this._getHillMesh(this._activeHill.feature);
+      if (hillMesh) hillMesh.isVisible = false;
+      this._activeHill = null;
+      window.polyHillActiveFeature = null;
+    }
+    this._rawDrag = null;
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
   }
 
@@ -388,6 +399,11 @@ export class PolyHillEditor {
     if (window.rebuildPolyHill) {
       window.rebuildPolyHill(feature);
     }
+  }
+
+  /** Returns the live PolyHill mesh for a given feature, if it exists. */
+  _getHillMesh(feature) {
+    return window.polyHills?.find(h => h._feature === feature)?.mesh ?? null;
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

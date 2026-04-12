@@ -39,7 +39,7 @@ function expandPolyline(points, closed = false) {
             
       if (len2 > 0.01) {
         // Clamp radius to not exceed segment lengths
-        const maxRadius = Math.min(len * 0.45, len2 * 0.45);
+        const maxRadius = Math.min(len * 0.49, len2 * 0.49);
         const clampedRadius = Math.min(radius, maxRadius);
                 
         // Normalized direction vectors
@@ -144,32 +144,60 @@ export class PolyHill {
     // Build paths at different heights/offsets from the centerline
     const ribbonPaths = [];
     
-    // Helper to calculate perpendicular direction at each point
+    // Helper to calculate the miter offset vector at each point.
+    // Returns { perpX, perpZ, scale } so the caller does:
+    //   x = p.x + perpX * offsetDist * scale
+    // This keeps the ribbon a consistent world-space width at corners.
     const getPerpendicular = (i) => {
       const p = points[i];
-      const prev = points[i === 0 ? (closed ? points.length - 1 : 0) : i - 1];
-      const next = points[(i + 1) % points.length];
-      
-      let dx, dz;
+
       if (i === 0 && !closed) {
-        // First point in open path - use direction to next
-        dx = next.x - p.x;
-        dz = next.z - p.z;
-      } else if (i === points.length - 1 && !closed) {
-        // Last point in open path - use direction from previous
-        dx = p.x - prev.x;
-        dz = p.z - prev.z;
-      } else {
-        // Middle point or closed path - average direction
-        dx = next.x - prev.x;
-        dz = next.z - prev.z;
+        // First point — perpendicular to outgoing segment only
+        const next = points[1];
+        const dx = next.x - p.x, dz = next.z - p.z;
+        const len = Math.sqrt(dx*dx + dz*dz);
+        if (len < 0.001) return { perpX: 0, perpZ: 1, scale: 1 };
+        return { perpX: -dz/len, perpZ: dx/len, scale: 1 };
       }
-      
-      const len = Math.sqrt(dx * dx + dz * dz);
-      if (len < 0.001) return { perpX: 0, perpZ: 1 };
-      
-      // Perpendicular vector (rotated 90 degrees)
-      return { perpX: -dz / len, perpZ: dx / len };
+
+      if (i === points.length - 1 && !closed) {
+        // Last point — perpendicular to incoming segment only
+        const prev = points[i - 1];
+        const dx = p.x - prev.x, dz = p.z - prev.z;
+        const len = Math.sqrt(dx*dx + dz*dz);
+        if (len < 0.001) return { perpX: 0, perpZ: 1, scale: 1 };
+        return { perpX: -dz/len, perpZ: dx/len, scale: 1 };
+      }
+
+      // Interior point — miter join so width stays constant around corners
+      const prevIdx = i === 0 ? points.length - 1 : i - 1;
+      const prev = points[prevIdx];
+      const next = points[(i + 1) % points.length];
+
+      const dx1 = p.x - prev.x, dz1 = p.z - prev.z;
+      const len1 = Math.sqrt(dx1*dx1 + dz1*dz1);
+      const dx2 = next.x - p.x, dz2 = next.z - p.z;
+      const len2 = Math.sqrt(dx2*dx2 + dz2*dz2);
+
+      if (len1 < 0.001 || len2 < 0.001) return { perpX: 0, perpZ: 1, scale: 1 };
+
+      // Unit normals of each adjacent segment (both pointing the same side)
+      const n1x = -dz1/len1, n1z = dx1/len1;
+      const n2x = -dz2/len2, n2z = dx2/len2;
+
+      // Miter direction = average of the two normals, normalised
+      const mx = n1x + n2x, mz = n1z + n2z;
+      const mlen = Math.sqrt(mx*mx + mz*mz);
+      if (mlen < 0.001) return { perpX: n1x, perpZ: n1z, scale: 1 };
+
+      const miterX = mx/mlen, miterZ = mz/mlen;
+
+      // Scale = 1 / cos(halfBendAngle) — restores the true offset distance.
+      // Capped at 5× to avoid runaway spikes at very sharp corners.
+      const dot = miterX * n1x + miterZ * n1z;
+      const scale = Math.min(1 / Math.max(dot, 0.2), 5);
+
+      return { perpX: miterX, perpZ: miterZ, scale };
     };
     
     // Create paths from one side to the other
@@ -181,11 +209,10 @@ export class PolyHill {
       const path = [];
       for (let i = 0; i < points.length; i++) {
         const p = points[i];
-        const { perpX, perpZ } = getPerpendicular(i);
+        const { perpX, perpZ, scale } = getPerpendicular(i);
         
-        const x = p.x + perpX * offsetDist;
-        const z = p.z + perpZ * offsetDist;
-        // Just follow the terrain - the height is already in track.getHeightAt()
+        const x = p.x + perpX * offsetDist * scale;
+        const z = p.z + perpZ * offsetDist * scale;
         const terrainH = track.getHeightAt(x, z);
         
         path.push(new Vector3(x, terrainH, z));
@@ -214,8 +241,10 @@ export class PolyHill {
     mat.diffuseColor = new Color3(1.0, 1.0, 0.3);
     mat.emissiveColor = new Color3(0.3, 0.3, 0.0);
     mat.alpha = 0.25;
+    mat.zOffset = -4; // Bias depth so the overlay never z-fights the ground mesh
     mat.backFaceCulling = false; // Ensure both sides render
     this.mesh.material = mat;
+    this.mesh.isVisible = false;  // hidden until selected in the editor
     this.mesh.receiveShadows = false; // Don't receive shadows when transparent
     
     if (shadows) {
