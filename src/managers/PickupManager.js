@@ -66,18 +66,74 @@ export class PickupManager {
     }
   }
 
-  /** Returns up to `count` positions spaced at least MIN_PICKUP_DIST apart. */
+  /**
+   * Returns up to `count` positions spaced at least MIN_PICKUP_DIST apart.
+   * If the track has one or more "pickupSpawn" action zones, positions are
+   * constrained to those circles; otherwise the full track surface is used.
+   */
   _generatePositions(count) {
     if (count <= 0) return [];
-    
-    const positions = [];
-    let attempts = 0;
+
+    const spawnZones = (this.track?.features ?? []).filter(
+      f => f.type === 'actionZone' && f.zoneType === 'pickupSpawn'
+    );
+
+    return spawnZones.length > 0
+      ? this._generatePositionsInZones(count, spawnZones)
+      : this._generatePositionsRandom(count);
+  }
+
+  /** Scatter positions randomly across the whole track surface (legacy fallback). */
+  _generatePositionsRandom(count) {
+    const positions  = [];
+    let attempts     = 0;
     const maxAttempts = count * 40;
 
     while (positions.length < count && attempts < maxAttempts) {
       attempts++;
       const x = (Math.random() - 0.5) * SPAWN_HALF_EXTENT * 2;
       const z = (Math.random() - 0.5) * SPAWN_HALF_EXTENT * 2;
+
+      const tooClose = positions.some(p => {
+        const dx = p.x - x, dz = p.z - z;
+        return Math.sqrt(dx * dx + dz * dz) < MIN_PICKUP_DIST;
+      });
+      if (!tooClose) positions.push({ x, z });
+    }
+    return positions;
+  }
+
+  /**
+   * Scatter positions within the supplied circular zones.
+   * Zones are weighted by area (radius²) so larger zones receive proportionally
+   * more pickups.  A uniform-disk distribution (√rand · r) is used so points
+   * don't bunch up at the centre.
+   */
+  _generatePositionsInZones(count, zones) {
+    const positions   = [];
+    let attempts      = 0;
+    const maxAttempts = count * 60;
+
+    // Pre-compute cumulative area weights for weighted zone selection
+    const weights = zones.map(z => z.radius * z.radius);
+    const totalWeight = weights.reduce((s, w) => s + w, 0);
+
+    while (positions.length < count && attempts < maxAttempts) {
+      attempts++;
+
+      // Pick a zone weighted by area
+      let pick = Math.random() * totalWeight;
+      let zone = zones[zones.length - 1];
+      for (let i = 0; i < zones.length; i++) {
+        pick -= weights[i];
+        if (pick <= 0) { zone = zones[i]; break; }
+      }
+
+      // Uniform random point inside the zone's circle
+      const angle = Math.random() * Math.PI * 2;
+      const r     = Math.sqrt(Math.random()) * zone.radius;
+      const x     = zone.x + Math.cos(angle) * r;
+      const z     = zone.z + Math.sin(angle) * r;
 
       const tooClose = positions.some(p => {
         const dx = p.x - x, dz = p.z - z;

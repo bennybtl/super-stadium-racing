@@ -11,8 +11,7 @@ import { NormalMapDecalEditor } from "./NormalMapDecalEditor.js";
 import { TireStackEditor } from "./TireStackEditor.js";
 import { FlagEditor } from "./FlagEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
-import { BannerStringEditor } from "./BannerStringEditor.js";
-import { useEditorStore } from '../vue/store.js';
+import { BannerStringEditor } from "./BannerStringEditor.js";import { ActionZoneEditor } from './ActionZoneEditor.js';import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
 /**
@@ -68,6 +67,9 @@ export class EditorController {
 
     // Banner string editing (delegated to BannerStringEditor)
     this.bannerStringEditor = new BannerStringEditor(this);
+
+    // Action zone editing (delegated to ActionZoneEditor)
+    this.actionZoneEditor = new ActionZoneEditor(this);
 
         // Mesh grid terrain editor
     this.meshGridEditor = new MeshGridEditor(this);
@@ -133,6 +135,7 @@ export class EditorController {
     this.flagEditor.activate(this.scene, track);
     this.trackSignEditor.activate(this.scene, track);
     this.bannerStringEditor.activate(this.scene, track);
+    this.actionZoneEditor.activate(this.scene, track);
 
     // Mesh grid terrain editing editor
     this.meshGridEditor.activate(this.scene, track);
@@ -222,6 +225,9 @@ export class EditorController {
     // Banner string editor
     this.bannerStringEditor.dispose();
 
+    // Action zone editor
+    this.actionZoneEditor.dispose();
+
     console.log('[EditorController] Editor mode deactivated');
   }
 
@@ -262,6 +268,7 @@ export class EditorController {
     this.flagEditor.deselect();
     this.trackSignEditor.deselect();
     this.bannerStringEditor.deselect();
+    this.actionZoneEditor.deselect();
 
     // Clear all gizmo meshes (keeps materials alive for re-use)
     this.hillEditor.clearMeshes();
@@ -274,6 +281,7 @@ export class EditorController {
     this.flagEditor.clearMeshes();
     this.trackSignEditor.clearMeshes();
     this.bannerStringEditor.clearMeshes();
+    this.actionZoneEditor.clearMeshes();
 
     // Restore features
     this.currentTrack.features = JSON.parse(snap);
@@ -288,6 +296,7 @@ export class EditorController {
       else if (feature.type === 'flag') this.flagEditor.createVisual(feature);
       else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
       else if (feature.type === 'bannerString') this.bannerStringEditor.createVisual(feature);
+      else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
     }
     // Restore mesh grid gizmos
     this.meshGridEditor?.onSnapshotRestored();
@@ -400,6 +409,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.bannerStringEditor?.selected) {
         this.bannerStringEditor.deleteSelected();
+        event.preventDefault();
+      } else if (this.actionZoneEditor?.selected) {
+        this.actionZoneEditor.deleteSelected();
         event.preventDefault();
       } else if (this.meshGridEditor?.activeFeature) {
         this.meshGridEditor.deleteMeshGrid();
@@ -608,6 +620,8 @@ export class EditorController {
       if (this.keys.rotateLeft)  this.bannerStringEditor.rotate( this.rotationSpeed);
       if (this.keys.rotateRight) this.bannerStringEditor.rotate(-this.rotationSpeed);
       delta = this.bannerStringEditor.move(movement);
+    } else if (this.actionZoneEditor.selected) {
+      delta = this.actionZoneEditor.move(movement);
     } else if (this.polyWallEditor?.selectedPoint) {
       const d = this.polyWallEditor.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
@@ -746,6 +760,17 @@ export class EditorController {
             const wasSelected = this.bannerStringEditor.selected === bannerData;
             this.deselectAll();
             if (!wasSelected) this.bannerStringEditor.select(bannerData);
+            return;
+          }
+        }
+
+        // Check if clicked mesh is an action zone handle
+        {
+          const zoneData = this.actionZoneEditor.findByMesh(clickedMesh);
+          if (zoneData) {
+            const wasSelected = this.actionZoneEditor.selected === zoneData;
+            this.deselectAll();
+            if (!wasSelected) this.actionZoneEditor.select(zoneData);
             return;
           }
         }
@@ -933,6 +958,7 @@ export class EditorController {
     this.flagEditor.deselect();
     this.trackSignEditor.deselect();
     this.bannerStringEditor.deselect();
+    this.actionZoneEditor.deselect();
     this.meshGridEditor?.deselectPoint();
     this.polyWallEditor?.deselectPoint();
     this.polyHillEditor?.deselectPoint();
@@ -985,6 +1011,13 @@ export class EditorController {
   changeBannerStringWidth(val)    { this.bannerStringEditor.changeWidth(val); }
   changeBannerStringPoleHeight(val) { this.bannerStringEditor.changePoleHeight(val); }
   deleteBannerString()            { this.bannerStringEditor.deleteSelected(); }
+
+  // ── Action Zone Vue bridge methods ──
+  addActionZoneEntity()           { this.actionZoneEditor.addEntity(); }
+  deselectActionZone()            { this.actionZoneEditor.deselect(); }
+  changeActionZoneRadius(val)     { this.actionZoneEditor.changeRadius(val); }
+  changeActionZoneType(val)       { this.actionZoneEditor.changeZoneType(val); }
+  deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }
 
   /**
    * Dispose of the controller

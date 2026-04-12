@@ -123,6 +123,13 @@ export class Track {
     return this;
   }
 
+  // Add a circular action zone at a world position.
+  // zoneType: 'pickupSpawn' — tells PickupManager to restrict pickup spawns to this region.
+  addActionZone(x, z, radius = 15, zoneType = 'pickupSpawn') {
+    this.features.push({ type: 'actionZone', zoneType, x, z, radius });
+    return this;
+  }
+
   getTerrainSlopeAt(x, z, heading, fwdSlopeDist = 1.0, offset = 0) {
     const ox = x + Math.sin(heading) * offset;
     const oz = z + Math.cos(heading) * offset;

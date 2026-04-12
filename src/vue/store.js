@@ -242,6 +242,12 @@ export const useEditorStore = defineStore('editor', () => {
     heading: 0,   // degrees, display only
   });
 
+  // ── Action Zone panel ──
+  const actionZone = reactive({
+    zoneType: 'pickupSpawn',
+    radius: 15,
+  });
+
   // ── Track defaults ──
   const trackDefaultTerrain = ref('packed_dirt');
 
@@ -359,6 +365,12 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteBannerString()           { _bridge.value?.deleteBannerString(); }
   function closeBannerString()            { _bridge.value?.deselectBannerString(); }
 
+  // ── Action Zone actions ──
+  function setActionZoneRadius(val)   { actionZone.radius   = val; _bridge.value?.changeActionZoneRadius(val); }
+  function setActionZoneType(val)     { actionZone.zoneType = val; _bridge.value?.changeActionZoneType(val); }
+  function deleteActionZone()         { _bridge.value?.deleteActionZone(); }
+  function closeActionZone()          { _bridge.value?.deselectActionZone(); }
+
   function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
 
   // ── Test mode ──
@@ -383,6 +395,7 @@ export const useEditorStore = defineStore('editor', () => {
   function addBezierWall()     { _bridge.value?.addBezierWallEntity(); }
   function addTrackSign()      { _bridge.value?.addTrackSignEntity(); }
   function addBannerString()   { _bridge.value?.addBannerStringEntity(); }
+  function addActionZone()     { _bridge.value?.addActionZoneEntity(); }
 
   return {
     selectedType,
@@ -423,6 +436,8 @@ export const useEditorStore = defineStore('editor', () => {
     setTrackSignName, setTrackSignRotation, deleteTrackSign, closeTrackSign,
     bannerString,
     setBannerStringWidth, setBannerStringPoleHeight, deleteBannerString, closeBannerString,
+    actionZone,
+    setActionZoneRadius, setActionZoneType, deleteActionZone, closeActionZone,
     trackDefaultTerrain, setTrackDefaultTerrain,
     setActiveTool,
     toggleSnap, cycleSnapSize, quickTestTrack,
@@ -430,5 +445,6 @@ export const useEditorStore = defineStore('editor', () => {
     addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addTireStack, addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
+    addActionZone,
   };
 });

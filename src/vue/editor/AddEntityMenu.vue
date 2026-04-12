@@ -21,6 +21,7 @@
         <button class="add-btn" @click="editor.addTrackSign()">Track Sign</button>
         <button class="add-btn" @click="editor.addFlag()">Flag</button>
         <button class="add-btn" @click="editor.addBannerString()">Banner String</button>
+        <button class="add-btn" @click="editor.addActionZone()">Action Zone</button>
 
         <button class="add-btn add-btn--cancel" @click="editor.closeAddMenu()">Cancel</button>
       </div>

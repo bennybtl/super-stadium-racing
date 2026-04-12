@@ -21,6 +21,7 @@
     <FlagPanel />
     <TrackSignPanel />
     <BannerStringPanel />
+    <ActionZonePanel />
     <AddEntityMenu />
     <EditorStatusBar />
   </div>
@@ -45,6 +46,7 @@ import BezierWallPanel  from './editor/BezierWallPanel.vue';
 import FlagPanel          from './editor/FlagPanel.vue';
 import TrackSignPanel     from './editor/TrackSignPanel.vue';
 import BannerStringPanel  from './editor/BannerStringPanel.vue';
+import ActionZonePanel    from './editor/ActionZonePanel.vue';
 import AddEntityMenu      from './editor/AddEntityMenu.vue';
 import EditorStatusBar    from './editor/EditorStatusBar.vue';
 </script>
