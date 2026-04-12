@@ -70,7 +70,6 @@ export class RaceMode extends BaseMode {
     // -- Race state --
     let raceStarted = false;
     let raceStartTime = null;
-    let lapStartTime = null;
     let countdownActive = false;
 
     // -- Finish / DNF tracking (season mode) --
@@ -420,7 +419,7 @@ export class RaceMode extends BaseMode {
         if (maxCheckpointNumber === 0 && !raceStarted) {
           raceStarted = true;
           raceStartTime = Date.now();
-          lapStartTime = Date.now();
+          trucks.forEach(t => t.lapStartTime = Date.now());
           uiManager.showRaceTimer();
         }
       }, 3000));
@@ -431,7 +430,7 @@ export class RaceMode extends BaseMode {
     const resetGame = () => {
       raceStarted = false;
       raceStartTime = null;
-      lapStartTime = null;
+      trucks.forEach(t => t.lapStartTime = null);
       raceEnded = false;
       finishOrder.length = 0;
       if (dnfTimer) { clearDnfTimer(); }
@@ -537,13 +536,15 @@ export class RaceMode extends BaseMode {
         // Start/finish crossing: start race timer and reset sequence so lap flow begins at CP 1
         if (checkpointIndex === maxCheckpointNumber && !truckData.hasStarted) {
           truckData.hasStarted = true;
+          
           if (!raceStarted) {
             raceStarted = true;
             raceStartTime = Date.now();
-            lapStartTime = Date.now();
             uiManager.showRaceTimer();
             console.log("Race started!");
           }
+          
+          truckData.lapStartTime = Date.now();
           truckData.gameState.lastCheckpointPassed = 0;
           truckData.gameState.checkpointCount = 0;
           checkpointManager.resetForTruck(truckData.id);
@@ -580,8 +581,8 @@ export class RaceMode extends BaseMode {
 
         if (newCount === checkpointManager.getTotalCheckpoints()) {
           const currentTime = Date.now();
-          const lapTime = lapStartTime ? currentTime - lapStartTime : 0;
-          lapStartTime = currentTime;
+          const lapTime = truckData.lapStartTime ? currentTime - truckData.lapStartTime : 0;
+          truckData.lapStartTime = currentTime;
           const lapCount = truckData.gameState.completeLap(lapTime);
           checkpointManager.resetForTruck(truckData.id);
 
