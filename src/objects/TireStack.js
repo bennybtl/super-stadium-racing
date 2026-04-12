@@ -5,7 +5,14 @@ import {
   Vector3,
   PhysicsAggregate,
   PhysicsShapeType,
+  SceneLoader,
+  TransformNode,
 } from "@babylonjs/core";
+import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
+import tireStackUrl from "../assets/tire-stack.obj?url";
+
+OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
+OBJFileLoader.SKIP_MATERIALS = true;
 
 const TIRE_OUTER_RADIUS = 0.62; // outer radius of the torus
 const TIRE_TUBE_RADIUS  = 0.14; // thickness of the torus tube
@@ -29,6 +36,7 @@ export class TireStack {
    */
   constructor(x, z, groundY, scene, shadows) {
     this.scene = scene;
+    this._loadedMeshes = [];
 
     const stackHeight  = TIRES_PER_STACK * TIRE_HEIGHT * 2;
     const stackCentreY = groundY + stackHeight / 2;
@@ -54,25 +62,32 @@ export class TireStack {
     this.aggregate.body.setLinearDamping(0.6);
     this.aggregate.body.setAngularDamping(0.4);
 
-    // Visual torus meshes parented to the body — they move with it for free
-    this.tires = [];
-    for (let i = 0; i < TIRES_PER_STACK; i++) {
-      const tire = MeshBuilder.CreateCylinder(`tire_${x}_${z}_${i}`, {
-        diameter:     TIRE_OUTER_RADIUS * 2,
-        height:       TIRE_TUBE_RADIUS * 2,
-        tessellation: 16,
-      }, scene);
+    // OBJ visual model parented to the physics body so it tumbles with it
+    this._tireMat = new StandardMaterial(`tireStackMat_${x}_${z}`, scene);
+    this._tireMat.diffuseColor  = new Color3(0.8, 0.5, 0.1);
+    this._tireMat.specularColor = new Color3(0.3, 0.2, 0.05);
+    this._tireMat.specularPower = 32;
 
-      const localY = -stackHeight / 2 + TIRE_TUBE_RADIUS + i * (TIRE_HEIGHT + 0.02);
-      tire.position   = new Vector3(0, localY, 0);
-      tire.rotation.y = Math.PI / 2; // lay flat
-      tire.parent     = this.body;
+    // Pivot node: child of body, holds rotation correction so it tumbles with physics
+    this._pivot = new TransformNode(`tireStackPivot_${x}_${z}`, scene);
+    this._pivot.parent     = this.body;
+    this._pivot.position.y = -stackHeight / 2;
+    this._pivot.rotation.x = -Math.PI / 2;
 
-      this._applyTireMaterial(tire);
-      shadows.addShadowCaster(tire);
-      tire.receiveShadows = true;
-      this.tires.push(tire);
-    }
+    // Load once, clone per instance
+    TireStack._getSourceMeshes(scene)
+      .then(sourceMeshes => {
+        for (const src of sourceMeshes) {
+          const m = src.clone(`tireStackMesh_${x}_${z}`, this._pivot);
+          m.isVisible  = true;
+          m.material   = this._tireMat;
+          m.isPickable = false;
+          shadows.addShadowCaster(m);
+          m.receiveShadows = true;
+          this._loadedMeshes.push(m);
+        }
+      })
+      .catch(err => console.warn('[TireStack] Failed to load tire-stack.obj:', err));
   }
 
   get position() {
@@ -81,20 +96,38 @@ export class TireStack {
 
   dispose() {
     this.aggregate.dispose();
-    for (const tire of this.tires) tire.dispose();
+    for (const m of this._loadedMeshes) m.dispose();
+    this._tireMat?.dispose();
+    this._pivot?.dispose();
     this.body.dispose();
-    this.tires = [];
+    this._loadedMeshes = [];
   }
 
-  // ─── Private ─────────────────────────────────────────────────────────────
+  // ─── Static shared loader ─────────────────────────────────────────────────
 
-  _applyTireMaterial(mesh) {
-    const mat = new StandardMaterial("tireMat", this.scene);
-    mat.diffuseColor  = new Color3(0.8, 0.5, 0.1);
-    mat.specularColor = mat.diffuseColor.clone();
-    mat.specularPower = 32;
-    mesh.material = mat;
+  /** Loads the OBJ once and caches hidden source meshes for cloning. */
+  static _getSourceMeshes(scene) {
+    if (!TireStack._sourcePromise) {
+      const lastSlash = tireStackUrl.lastIndexOf('/');
+      const rootUrl   = tireStackUrl.substring(0, lastSlash + 1);
+      const fileName  = tireStackUrl.substring(lastSlash + 1);
+      TireStack._sourcePromise = SceneLoader.ImportMeshAsync('', rootUrl, fileName, scene)
+        .then(result => {
+          for (const m of result.meshes) {
+            m.isVisible  = false;
+            m.isPickable = false;
+          }
+          return result.meshes;
+        });
+    }
+    return TireStack._sourcePromise;
   }
+
+  /** Call this when unloading a scene so the next scene gets a fresh load. */
+  static clearCache() {
+    TireStack._sourcePromise = null;
+  }
+
 }
 
 export { TIRE_OUTER_RADIUS, STACK_MASS };
