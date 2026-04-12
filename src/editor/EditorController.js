@@ -805,7 +805,8 @@ export class EditorController {
   /** Round a world-space coordinate to the current snap grid, if snap is on. */
   _snap(v) {
     const { snapEnabled, snapSize } = this._editorStore;
-    return snapEnabled ? Math.round(v / snapSize) * snapSize : v;
+    const clamped = Math.max(-80, Math.min(80, v));
+    return snapEnabled ? Math.round(clamped / snapSize) * snapSize : clamped;
   }
 
   // ─── Quick Test ───────────────────────────────────────────────────────────

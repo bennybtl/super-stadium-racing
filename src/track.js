@@ -6,8 +6,10 @@ import { TERRAIN_TYPES } from "./terrain.js";
  */
 
 export class Track {
-  constructor(name = "Untitled Track") {
+  constructor(name = "Untitled Track", width = 160, depth = 160) {
     this.name = name;
+    this.width = width;
+    this.depth = depth;
     this.features = [];
     this.defaultTerrainType = TERRAIN_TYPES.PACKED_DIRT;
   }
@@ -492,6 +494,8 @@ export class Track {
 
     return JSON.stringify({
       name: this.name,
+      width: this.width,
+      depth: this.depth,
       defaultTerrainType: this.defaultTerrainType?.name ?? 'packed_dirt',
       features: serializedFeatures,
     }, null, 2);
@@ -500,7 +504,7 @@ export class Track {
   // Load track from JSON string
   static fromJSON(jsonString) {
     const data = JSON.parse(jsonString);
-    const track = new Track(data.name);
+    const track = new Track(data.name, data.width ?? 160, data.depth ?? 160);
     
     if (data.defaultTerrainType) {
       const key = Object.keys(TERRAIN_TYPES).find(

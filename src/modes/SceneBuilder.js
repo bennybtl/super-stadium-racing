@@ -88,7 +88,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   }
 
   // -- Terrain manager --
-  const terrainManager = new TerrainManager(160, 2);
+  const terrainManager = new TerrainManager(180, 2);
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const worldX =
@@ -103,7 +103,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // -- Ground mesh --
   const ground = MeshBuilder.CreateGround(
     "ground",
-    { width: 160, height: 160, subdivisions: 80 },
+    { width: 180, height: 180, subdivisions: 90 },
     scene
   );
   const positions = ground.getVerticesData(VertexBuffer.PositionKind);
@@ -161,7 +161,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   
   // Create composite normal map texture that blends base + decals
   const { createCompositeNormalMap } = await import('../shaders/ground-shader.js');
-  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, 2048, 160);
+  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, 2048, 180);
   
   groundMat.bumpTexture = compositeNormalMap;
   groundMat.bumpTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
@@ -175,6 +175,24 @@ export async function buildScene(engine, trackLoader, trackKey) {
   ground.receiveShadows = true;
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
+
+  // Ensure rigid wall boundaries block driving off-grid
+  const createBorderWall = (name, x, z, width, depth) => {
+    const wall = MeshBuilder.CreateBox(name, { width, height: 40, depth }, scene);
+    wall.position = new Vector3(x, 0, z); // Center relative to 0 y-height
+    
+    const mat = new StandardMaterial(name + "Mat", scene);
+    mat.diffuseColor = new Color3(0.5, 0.5, 0.5);
+    mat.specularColor = new Color3(0.1, 0.1, 0.1);
+    wall.material = mat;
+    
+    new PhysicsAggregate(wall, PhysicsShapeType.BOX, { mass: 0 }, scene);
+  };
+  
+  createBorderWall("borderNorth", 0,  91, 184, 2);
+  createBorderWall("borderSouth", 0, -91, 184, 2);
+  createBorderWall("borderEast",  91,  0, 2, 180);
+  createBorderWall("borderWest", -91,  0, 2, 180);
 
   // -- Feature managers --
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
