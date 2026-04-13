@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { Vector3, MeshBuilder } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 
 /**
  * PolyHillEditor – place and edit polyHill features in the track editor.
@@ -42,19 +43,10 @@ export class PolyHillEditor {
     this.scene = scene;
     this.track = track;
 
-    this.normalMat = new StandardMaterial('phNormal', scene);
-    this.normalMat.diffuseColor = new Color3(0.4, 0.6, 0.2);
-    this.normalMat.emissiveColor = new Color3(0.1, 0.2, 0.05);
-    this.normalMat.alpha = 0.90;
-
-    this.activeMat = new StandardMaterial('phActive', scene);
-    this.activeMat.diffuseColor = new Color3(0.6, 0.8, 0.3);
-    this.activeMat.emissiveColor = new Color3(0.2, 0.3, 0.1);
-    this.activeMat.alpha = 0.90;
-
-    this.highlightMat = new StandardMaterial('phHighlight', scene);
-    this.highlightMat.diffuseColor = new Color3(1.0, 1.0, 0.2);
-    this.highlightMat.emissiveColor = new Color3(0.6, 0.6, 0.0);
+    const m = EditorMaterials.for(scene);
+    this.normalMat    = m.polyHillNode;
+    this.activeMat    = m.polyHillNodeActive;
+    this.highlightMat = m.nodeHighlight;
 
     // Build gizmos for any polyHills already in the track
     for (const f of track.features) {
@@ -66,9 +58,9 @@ export class PolyHillEditor {
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeHill = null;
-    if (this.normalMat) { this.normalMat.dispose(); this.normalMat = null; }
-    if (this.activeMat) { this.activeMat.dispose(); this.activeMat = null; }
-    if (this.highlightMat) { this.highlightMat.dispose(); this.highlightMat = null; }
+    this.normalMat    = null;
+    this.activeMat    = null;
+    this.highlightMat = null;
     this.scene = null;
     this.track = null;
   }

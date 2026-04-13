@@ -1,4 +1,5 @@
-import { StandardMaterial, Color3, Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import { Color3, Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
 const NODE_POS_Y = 0.15; // height above terrain to place the node (prevents z-fighting)
@@ -22,19 +23,9 @@ export class TerrainShapeEditor {
   // ── Materials ───────────────────────────────────────────────────────────────
 
   createMaterials() {
-    const scene = this.editor.scene;
-
-    this.material = new StandardMaterial('terrainShapeMat', scene);
-    this.material.diffuseColor = new Color3(0.2, 0.5, 0.9);
-    this.material.emissiveColor = new Color3(0.04, 0.1, 0.2);
-    this.material.alpha = 0.25;
-    this.material.backFaceCulling = false;
-
-    this.highlightMaterial = new StandardMaterial('terrainShapeHighlightMat', scene);
-    this.highlightMaterial.diffuseColor = new Color3(0.0, 0.9, 1.0);
-    this.highlightMaterial.emissiveColor = new Color3(0.0, 0.3, 0.4);
-    this.highlightMaterial.alpha = 0.35;
-    this.highlightMaterial.backFaceCulling = false;
+    const m = EditorMaterials.for(this.editor.scene);
+    this.material          = m.terrainShape;
+    this.highlightMaterial = m.terrainShapeHighlight;
   }
 
   /** Called when editor mode activates — creates materials and initial visuals. */

@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { Vector3, MeshBuilder } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 
 /**
  * MeshGridEditor – terrain mesh deformation via a grid of selectable control points.
@@ -42,14 +43,9 @@ export class MeshGridEditor {
     this.scene = scene;
     this.track = track;
 
-    this.normalMat = new StandardMaterial('mgNormal', scene);
-    this.normalMat.diffuseColor  = new Color3(0.15, 0.75, 0.75);
-    this.normalMat.emissiveColor = new Color3(0.03, 0.25, 0.25);
-    this.normalMat.alpha = 0.90;
-
-    this.highlightMat = new StandardMaterial('mgHighlight', scene);
-    this.highlightMat.diffuseColor  = new Color3(1.0, 0.85, 0.0);
-    this.highlightMat.emissiveColor = new Color3(0.55, 0.42, 0.0);
+    const m = EditorMaterials.for(scene);
+    this.normalMat    = m.meshGridNode;
+    this.highlightMat = m.meshGridHighlight;
 
     this.createPanel();
     document.addEventListener('wheel', this._boundWheel, { passive: false });
@@ -72,8 +68,8 @@ export class MeshGridEditor {
       document.body.removeChild(this.propertiesPanel);
       this.propertiesPanel = null;
     }
-    if (this.normalMat)    { this.normalMat.dispose();    this.normalMat    = null; }
-    if (this.highlightMat) { this.highlightMat.dispose(); this.highlightMat = null; }
+    this.normalMat    = null;
+    this.highlightMat = null;
     this.activeFeature = null;
     this.selectedPoint = null;
     this.scene = null;

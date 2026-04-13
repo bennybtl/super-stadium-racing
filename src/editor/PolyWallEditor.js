@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { Vector3, MeshBuilder } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 
 /**
  * Editor – place and edit polyWall features in the track editor.
@@ -40,19 +41,10 @@ export class PolyWallEditor {
     this.scene = scene;
     this.track = track;
 
-    this.normalMat = new StandardMaterial('pwNormal', scene);
-    this.normalMat.diffuseColor  = new Color3(0.9, 0.55, 0.05);
-    this.normalMat.emissiveColor = new Color3(0.3, 0.15, 0.0);
-    this.normalMat.alpha = 0.90;
-
-    this.activeMat = new StandardMaterial('pwActive', scene);
-    this.activeMat.diffuseColor  = new Color3(1.0, 0.7, 0.2);
-    this.activeMat.emissiveColor = new Color3(0.4, 0.22, 0.0);
-    this.activeMat.alpha = 0.90;
-
-    this.highlightMat = new StandardMaterial('pwHighlight', scene);
-    this.highlightMat.diffuseColor  = new Color3(1.0, 1.0, 0.2);
-    this.highlightMat.emissiveColor = new Color3(0.6, 0.6, 0.0);
+    const m = EditorMaterials.for(scene);
+    this.normalMat    = m.polyWallNode;
+    this.activeMat    = m.polyWallNodeActive;
+    this.highlightMat = m.nodeHighlight;
 
     // Build gizmos for any polyWalls already in the track
     for (const f of track.features) {
@@ -64,9 +56,9 @@ export class PolyWallEditor {
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeWall = null;
-    if (this.normalMat)    { this.normalMat.dispose();    this.normalMat    = null; }
-    if (this.activeMat)    { this.activeMat.dispose();    this.activeMat    = null; }
-    if (this.highlightMat) { this.highlightMat.dispose(); this.highlightMat = null; }
+    this.normalMat    = null;
+    this.activeMat    = null;
+    this.highlightMat = null;
     this.scene = null;
     this.track = null;
   }

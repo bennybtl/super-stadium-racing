@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3 } from "@babylonjs/core";
+import { Vector3 } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 
 /**
  * CheckpointEditor – encapsulates all checkpoint editing logic that was
@@ -22,21 +23,13 @@ export class CheckpointEditor {
 
   /** Create (or recreate) the highlight material for the current scene. */
   createMaterials() {
-    const scene = this.editor.scene;
-    if (!this.highlightMaterial) {
-      this.highlightMaterial = new StandardMaterial('highlightMat', scene);
-      this.highlightMaterial.diffuseColor = new Color3(0, 1, 1);
-      this.highlightMaterial.emissiveColor = new Color3(0, 0.5, 0.5);
-    }
+    this.highlightMaterial = EditorMaterials.for(this.editor.scene).checkpointHighlight;
   }
 
   /** Dispose highlight material and reset state. */
   dispose() {
     this.deselect();
-    if (this.highlightMaterial) {
-      this.highlightMaterial.dispose();
-      this.highlightMaterial = null;
-    }
+    this.highlightMaterial = null;
   }
 
   /**

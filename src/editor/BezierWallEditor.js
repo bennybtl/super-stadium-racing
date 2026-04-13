@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { Vector3, MeshBuilder } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 
 /**
  * BezierWallEditor – place and edit bezierWall features in the track editor.
@@ -45,28 +46,12 @@ export class BezierWallEditor {
     this.scene = scene;
     this.track = track;
 
-    this.anchorMat = new StandardMaterial('bzAnchor', scene);
-    this.anchorMat.diffuseColor = new Color3(0.2, 0.6, 0.9);
-    this.anchorMat.emissiveColor = new Color3(0.05, 0.15, 0.3);
-    this.anchorMat.alpha = 0.90;
-
-    this.activeAnchorMat = new StandardMaterial('bzActiveAnchor', scene);
-    this.activeAnchorMat.diffuseColor = new Color3(0.3, 0.7, 1.0);
-    this.activeAnchorMat.emissiveColor = new Color3(0.1, 0.25, 0.4);
-    this.activeAnchorMat.alpha = 0.90;
-
-    this.highlightMat = new StandardMaterial('bzHighlight', scene);
-    this.highlightMat.diffuseColor = new Color3(1.0, 1.0, 0.2);
-    this.highlightMat.emissiveColor = new Color3(0.6, 0.6, 0.0);
-
-    this.handleMat = new StandardMaterial('bzHandle', scene);
-    this.handleMat.diffuseColor = new Color3(0.9, 0.5, 0.2);
-    this.handleMat.emissiveColor = new Color3(0.3, 0.15, 0.05);
-    this.handleMat.alpha = 0.85;
-
-    this.handleHighlightMat = new StandardMaterial('bzHandleHL', scene);
-    this.handleHighlightMat.diffuseColor = new Color3(1.0, 0.8, 0.2);
-    this.handleHighlightMat.emissiveColor = new Color3(0.5, 0.3, 0.0);
+    const m = EditorMaterials.for(scene);
+    this.anchorMat          = m.bezierAnchor;
+    this.activeAnchorMat    = m.bezierAnchorActive;
+    this.highlightMat       = m.nodeHighlight;
+    this.handleMat          = m.bezierHandle;
+    this.handleHighlightMat = m.bezierHandleHighlight;
 
     // Build gizmos for any bezierWalls already in the track
     for (const f of track.features) {
@@ -78,11 +63,11 @@ export class BezierWallEditor {
     this._destroyAllGizmos();
     this.deselectAll();
     this._activeWall = null;
-    if (this.anchorMat) { this.anchorMat.dispose(); this.anchorMat = null; }
-    if (this.activeAnchorMat) { this.activeAnchorMat.dispose(); this.activeAnchorMat = null; }
-    if (this.highlightMat) { this.highlightMat.dispose(); this.highlightMat = null; }
-    if (this.handleMat) { this.handleMat.dispose(); this.handleMat = null; }
-    if (this.handleHighlightMat) { this.handleHighlightMat.dispose(); this.handleHighlightMat = null; }
+    this.anchorMat          = null;
+    this.activeAnchorMat    = null;
+    this.highlightMat       = null;
+    this.handleMat          = null;
+    this.handleHighlightMat = null;
     this.scene = null;
     this.track = null;
   }

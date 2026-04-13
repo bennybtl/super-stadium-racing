@@ -1,4 +1,5 @@
-import { StandardMaterial, Color3, Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
+import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 import { TireStack } from "../objects/TireStack.js";
 
 export class TireStackEditor {
@@ -15,23 +16,10 @@ export class TireStackEditor {
   // ── Materials ──────────────────────────────────────────────────────────────
 
   createMaterials() {
-    if (this.material) return;
-
-    // Normal sphere: neutral grey
-    this.material = new StandardMaterial('tireStackSphereMat', this.scene);
-    this.material.diffuseColor  = new Color3(0.6, 0.6, 0.6);
-    this.material.emissiveColor = new Color3(0.1, 0.1, 0.1);
-
-    // Selected sphere: bright orange-yellow
-    this.highlightMaterial = new StandardMaterial('tireStackSphereHighMat', this.scene);
-    this.highlightMaterial.diffuseColor  = new Color3(1.0, 0.7, 0.1);
-    this.highlightMaterial.emissiveColor = new Color3(0.5, 0.3, 0.0);
-
-    // Rubber tires material (applied to OBJ meshes)
-    this.tireMat = new StandardMaterial('tireStackTireMat', this.scene);
-    this.tireMat.diffuseColor  = new Color3(0.8, 0.5, 0.1);
-    this.tireMat.specularColor = new Color3(0.3, 0.2, 0.05);
-    this.tireMat.specularPower = 32;
+    const m = EditorMaterials.for(this.scene);
+    this.material          = m.tireStackHandle;
+    this.highlightMaterial = m.tireStackHandleHighlight;
+    this.tireMat           = m.tireStackTire;
   }
 
   /** Called when editor mode activates — creates materials and initial visuals. */

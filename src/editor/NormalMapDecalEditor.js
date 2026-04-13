@@ -1,4 +1,5 @@
-import { StandardMaterial, Color3, Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import { Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import { EditorMaterials } from './EditorMaterials.js';
 
 /**
  * NormalMapDecalEditor — encapsulates all normal-map decal editing logic.
@@ -17,19 +18,9 @@ export class NormalMapDecalEditor {
   // ── Materials ───────────────────────────────────────────────────────────────
 
   createMaterials() {
-    const scene = this.editor.scene;
-
-    this.material = new StandardMaterial('normalMapDecalMat', scene);
-    this.material.diffuseColor  = new Color3(0.8, 0.4, 0.9);
-    this.material.emissiveColor = new Color3(0.15, 0.08, 0.18);
-    this.material.alpha = 0.30;
-    this.material.backFaceCulling = false;
-
-    this.highlightMaterial = new StandardMaterial('normalMapDecalHighlightMat', scene);
-    this.highlightMaterial.diffuseColor  = new Color3(1.0, 0.5, 1.0);
-    this.highlightMaterial.emissiveColor = new Color3(0.4, 0.2, 0.4);
-    this.highlightMaterial.alpha = 0.40;
-    this.highlightMaterial.backFaceCulling = false;
+    const m = EditorMaterials.for(this.editor.scene);
+    this.material          = m.normalMapDecal;
+    this.highlightMaterial = m.normalMapDecalHighlight;
   }
 
   /** Called when editor mode activates — creates materials and initial visuals. */

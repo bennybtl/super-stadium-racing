@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3, MeshBuilder, TransformNode } from "@babylonjs/core";
+import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
 
 /**
@@ -26,27 +27,10 @@ export class HillEditor {
 
   /** Create (or recreate) shared materials for the current scene. */
   createMaterials() {
-    const scene = this.editor.scene;
-
-    if (!this.material) {
-      this.material = new StandardMaterial('hillMat', scene);
-      this.material.diffuseColor = new Color3(0.25, 0.75, 0.3);
-      this.material.emissiveColor = new Color3(0.04, 0.12, 0.05);
-      this.material.alpha = 0.20;
-      this.material.backFaceCulling = false;
-    }
-    if (!this.highlightMaterial) {
-      this.highlightMaterial = new StandardMaterial('hillHighlightMat', scene);
-      this.highlightMaterial.diffuseColor = new Color3(0.0, 0.9, 0.8);
-      this.highlightMaterial.emissiveColor = new Color3(0.0, 0.35, 0.3);
-      this.highlightMaterial.alpha = 0.20;
-      this.highlightMaterial.backFaceCulling = false;
-    }
-    if (!this.sphereMaterial) {
-      this.sphereMaterial = new StandardMaterial('hillSphereMat', scene);
-      this.sphereMaterial.diffuseColor = new Color3(0.45, 0.45, 0.45);
-      this.sphereMaterial.emissiveColor = new Color3(0.12, 0.07, 0.02);
-    }
+    const m = EditorMaterials.for(this.editor.scene);
+    this.material          = m.hillCone;
+    this.highlightMaterial = m.hillConeHighlight;
+    this.sphereMaterial    = m.handleSphere;
   }
   /** Called when editor mode activates — creates materials and initial visuals. */
   activate(scene, track) {

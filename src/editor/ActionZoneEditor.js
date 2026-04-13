@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { Vector3, MeshBuilder } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 
 /** Height of the zone cylinder gizmo in world units. */
 const CYLINDER_HEIGHT = 8;
@@ -49,47 +50,13 @@ export class ActionZoneEditor {
   }
 
   _createMaterials() {
-    const s = this.scene;
-    if (!this.cylMat) {
-      this.cylMat = new StandardMaterial('azCylMat', s);
-      this.cylMat.diffuseColor   = new Color3(1.0, 0.20, 0.60);
-      this.cylMat.emissiveColor  = new Color3(0.25, 0.04, 0.15);
-      this.cylMat.alpha          = 0.28;
-      this.cylMat.backFaceCulling = false;
-    }
-    if (!this.cylMatHighlight) {
-      this.cylMatHighlight = new StandardMaterial('azCylHighMat', s);
-      this.cylMatHighlight.diffuseColor   = new Color3(1.0, 0.50, 0.80);
-      this.cylMatHighlight.emissiveColor  = new Color3(0.45, 0.15, 0.30);
-      this.cylMatHighlight.alpha          = 0.50;
-      this.cylMatHighlight.backFaceCulling = false;
-    }
-    if (!this.handleMat) {
-      this.handleMat = new StandardMaterial('azHandleMat', s);
-      this.handleMat.diffuseColor  = new Color3(1.0, 0.20, 0.60);
-      this.handleMat.emissiveColor = new Color3(0.40, 0.05, 0.20);
-    }
-
-    // Slow zone — orange/amber warning colour
-    if (!this.slowCylMat) {
-      this.slowCylMat = new StandardMaterial('azSlowCylMat', s);
-      this.slowCylMat.diffuseColor   = new Color3(1.0, 0.55, 0.0);
-      this.slowCylMat.emissiveColor  = new Color3(0.30, 0.12, 0.0);
-      this.slowCylMat.alpha          = 0.28;
-      this.slowCylMat.backFaceCulling = false;
-    }
-    if (!this.slowCylMatHighlight) {
-      this.slowCylMatHighlight = new StandardMaterial('azSlowCylHighMat', s);
-      this.slowCylMatHighlight.diffuseColor   = new Color3(1.0, 0.75, 0.2);
-      this.slowCylMatHighlight.emissiveColor  = new Color3(0.50, 0.25, 0.05);
-      this.slowCylMatHighlight.alpha          = 0.50;
-      this.slowCylMatHighlight.backFaceCulling = false;
-    }
-    if (!this.slowHandleMat) {
-      this.slowHandleMat = new StandardMaterial('azSlowHandleMat', s);
-      this.slowHandleMat.diffuseColor  = new Color3(1.0, 0.55, 0.0);
-      this.slowHandleMat.emissiveColor = new Color3(0.40, 0.18, 0.0);
-    }
+    const m = EditorMaterials.for(this.scene);
+    this.cylMat              = m.zoneCyl;
+    this.cylMatHighlight     = m.zoneCylHighlight;
+    this.handleMat           = m.zoneHandle;
+    this.slowCylMat          = m.slowZoneCyl;
+    this.slowCylMatHighlight = m.slowZoneCylHighlight;
+    this.slowHandleMat       = m.slowZoneHandle;
   }
 
   /** Returns the { cyl, highlight, handle } material set for a given zone type. */

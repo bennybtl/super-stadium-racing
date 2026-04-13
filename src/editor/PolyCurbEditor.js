@@ -1,4 +1,5 @@
-import { Vector3, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { Vector3, MeshBuilder } from "@babylonjs/core";
+import { EditorMaterials } from './EditorMaterials.js';
 
 /**
  * PolyCurbEditor — place and edit polyCurb features in the track editor.
@@ -34,19 +35,10 @@ export class PolyCurbEditor {
     this.scene = scene;
     this.track = track;
 
-    this.normalMat = new StandardMaterial('pcNormal', scene);
-    this.normalMat.diffuseColor  = new Color3(0.15, 0.75, 0.75);
-    this.normalMat.emissiveColor = new Color3(0.04, 0.22, 0.22);
-    this.normalMat.alpha = 0.90;
-
-    this.activeMat = new StandardMaterial('pcActive', scene);
-    this.activeMat.diffuseColor  = new Color3(0.2, 1.0, 0.9);
-    this.activeMat.emissiveColor = new Color3(0.05, 0.40, 0.35);
-    this.activeMat.alpha = 0.90;
-
-    this.highlightMat = new StandardMaterial('pcHighlight', scene);
-    this.highlightMat.diffuseColor  = new Color3(1.0, 1.0, 0.2);
-    this.highlightMat.emissiveColor = new Color3(0.6, 0.6, 0.0);
+    const m = EditorMaterials.for(scene);
+    this.normalMat    = m.polyCurbNode;
+    this.activeMat    = m.polyCurbNodeActive;
+    this.highlightMat = m.nodeHighlight;
 
     for (const f of track.features) {
       if (f.type === 'polyCurb') this._createGizmos(f);
@@ -57,9 +49,9 @@ export class PolyCurbEditor {
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeGizmo = null;
-    if (this.normalMat)    { this.normalMat.dispose();    this.normalMat    = null; }
-    if (this.activeMat)    { this.activeMat.dispose();    this.activeMat    = null; }
-    if (this.highlightMat) { this.highlightMat.dispose(); this.highlightMat = null; }
+    this.normalMat    = null;
+    this.activeMat    = null;
+    this.highlightMat = null;
     this.scene = null;
     this.track = null;
   }
