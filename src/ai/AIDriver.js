@@ -332,30 +332,36 @@ export class AIDriver {
   }
 
   /**
-   * Check if a grid cell is blocked by a wall segment
+   * Check if a grid cell is blocked by a wall or curb segment.
+   * Polycurbs mark track limits — the AI should route around them even
+   * though trucks can physically drive over them.
    */
   isBlocked(gridX, gridZ) {
     if (!this.wallManager) return false;
 
     const worldPos = this.gridToWorld(gridX, gridZ);
-    const safetyMargin = 2; // extra clearance around each wall segment
+    const safetyMargin = 2; // extra clearance around each segment
 
-    for (const seg of this.wallManager.getWallSegments()) {
-      // Transform worldPos into the segment's local space to do AABB test
-      const dx = worldPos.x - seg.x;
-      const dz = worldPos.z - seg.z;
-      const cos = Math.cos(-seg.heading);
-      const sin = Math.sin(-seg.heading);
-      const localX = cos * dx - sin * dz;
-      const localZ = sin * dx + cos * dz;
+    const segmentBlocks = (segments) => {
+      for (const seg of segments) {
+        // Transform worldPos into the segment's local space to do AABB test
+        const dx = worldPos.x - seg.x;
+        const dz = worldPos.z - seg.z;
+        const cos = Math.cos(-seg.heading);
+        const sin = Math.sin(-seg.heading);
+        const localX = cos * dx - sin * dz;
+        const localZ = sin * dx + cos * dz;
 
-      if (Math.abs(localX) < seg.halfLength + safetyMargin &&
-          Math.abs(localZ) < seg.halfDepth  + safetyMargin) {
-        return true;
+        if (Math.abs(localX) < seg.halfLength + safetyMargin &&
+            Math.abs(localZ) < seg.halfDepth  + safetyMargin) {
+          return true;
+        }
       }
-    }
+      return false;
+    };
 
-    return false;
+    return segmentBlocks(this.wallManager.getWallSegments()) ||
+           segmentBlocks(this.wallManager.getCurbSegments());
   }
 
   /**

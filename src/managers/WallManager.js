@@ -259,7 +259,24 @@ export class WallManager {
       heading:    seg.heading,
     }));
   }
-
+  /**
+   * Returns an array of { x, z, halfLength, halfDepth, heading } descriptors
+   * for every curb segment so AIDriver treats polycurbs as pathfinding
+   * obstacles.  Curbs are intentionally excluded from _segments (trucks can
+   * drive over them physically) but they mark the track limits that the AI
+   * should route around.
+   */
+  getCurbSegments() {
+    return this._curbs.flatMap(curb =>
+      curb.segments.map(seg => ({
+        x:          seg.position.x,
+        z:          seg.position.z,
+        halfLength: seg.halfLength,
+        halfDepth:  seg.halfThick,
+        heading:    seg.heading,
+      }))
+    );
+  }
   // ─── Private helpers ─────────────────────────────────────────────────────
 
   dispose() {

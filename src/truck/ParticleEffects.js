@@ -34,8 +34,8 @@ export class ParticleEffects {
 
     particles.minSize = 1.5;
     particles.maxSize = 3.2;
-    particles.minLifeTime = 0.75;
-    particles.maxLifeTime = 3.0;
+    particles.minLifeTime = 0.50;
+    particles.maxLifeTime = 2.0;
 
     particles.emitRate = 2;
     particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
