@@ -28,10 +28,13 @@ export class ActionZoneEditor {
     /** @type {{ feature: object, cyl: import('@babylonjs/core').Mesh, handle: import('@babylonjs/core').Mesh } | null} */
     this._selected = null;
 
-    // Materials — created once, reused
-    this.cylMat          = null;
+    // Materials — created once, reused (per zone type)
+    this.cylMat          = null; // pickupSpawn
     this.cylMatHighlight = null;
     this.handleMat       = null;
+    this.slowCylMat          = null; // slowZone
+    this.slowCylMatHighlight = null;
+    this.slowHandleMat       = null;
   }
 
   get selected() { return this._selected; }
@@ -66,6 +69,36 @@ export class ActionZoneEditor {
       this.handleMat.diffuseColor  = new Color3(1.0, 0.20, 0.60);
       this.handleMat.emissiveColor = new Color3(0.40, 0.05, 0.20);
     }
+
+    // Slow zone — orange/amber warning colour
+    if (!this.slowCylMat) {
+      this.slowCylMat = new StandardMaterial('azSlowCylMat', s);
+      this.slowCylMat.diffuseColor   = new Color3(1.0, 0.55, 0.0);
+      this.slowCylMat.emissiveColor  = new Color3(0.30, 0.12, 0.0);
+      this.slowCylMat.alpha          = 0.28;
+      this.slowCylMat.backFaceCulling = false;
+    }
+    if (!this.slowCylMatHighlight) {
+      this.slowCylMatHighlight = new StandardMaterial('azSlowCylHighMat', s);
+      this.slowCylMatHighlight.diffuseColor   = new Color3(1.0, 0.75, 0.2);
+      this.slowCylMatHighlight.emissiveColor  = new Color3(0.50, 0.25, 0.05);
+      this.slowCylMatHighlight.alpha          = 0.50;
+      this.slowCylMatHighlight.backFaceCulling = false;
+    }
+    if (!this.slowHandleMat) {
+      this.slowHandleMat = new StandardMaterial('azSlowHandleMat', s);
+      this.slowHandleMat.diffuseColor  = new Color3(1.0, 0.55, 0.0);
+      this.slowHandleMat.emissiveColor = new Color3(0.40, 0.18, 0.0);
+    }
+  }
+
+  /** Returns the { cyl, highlight, handle } material set for a given zone type. */
+  _getMaterialsForZoneType(zoneType) {
+    if (zoneType === 'slowZone') {
+      return { cyl: this.slowCylMat, highlight: this.slowCylMatHighlight, handle: this.slowHandleMat };
+    }
+    // Default: pickupSpawn (pink)
+    return { cyl: this.cylMat, highlight: this.cylMatHighlight, handle: this.handleMat };
   }
 
   /** Remove all zone meshes without destroying materials (used on snapshot restore). */
@@ -111,13 +144,14 @@ export class ActionZoneEditor {
     }, this.scene);
     cyl.position   = new Vector3(x, groundY + CYLINDER_HEIGHT / 2, z);
     cyl.scaling    = new Vector3(radius, CYLINDER_HEIGHT, radius);
-    cyl.material   = this.cylMat;
+    const mats = this._getMaterialsForZoneType(feature.zoneType);
+    cyl.material   = mats.cyl;
     cyl.isPickable = false;
 
     // Small sphere at the base — the click / drag target
     const handle = MeshBuilder.CreateSphere('azHandle', { diameter: 1.5, segments: 8 }, this.scene);
     handle.position  = new Vector3(x, groundY + 0.75, z);
-    handle.material  = this.handleMat;
+    handle.material  = mats.handle;
     handle.isPickable = true;
 
     const zoneData = { feature, cyl, handle };
@@ -138,14 +172,14 @@ export class ActionZoneEditor {
       this._selected.cyl.material = this.cylMat;
     }
     this._selected = zoneData;
-    zoneData.cyl.material = this.cylMatHighlight;
+    zoneData.cyl.material = this._getMaterialsForZoneType(zoneData.feature.zoneType).highlight;
     this.editor._rawDragPos = { x: zoneData.feature.x, z: zoneData.feature.z };
     this._showProperties(zoneData);
   }
 
   deselect() {
     if (this._selected) {
-      this._selected.cyl.material = this.cylMat;
+      this._selected.cyl.material = this._getMaterialsForZoneType(this._selected.feature.zoneType).cyl;
       this._selected = null;
     }
     this._hideProperties();
@@ -232,6 +266,10 @@ export class ActionZoneEditor {
   changeZoneType(val) {
     if (!this._selected) return;
     this._selected.feature.zoneType = val;
+    // Swap cylinder and handle materials to match the new zone type
+    const mats = this._getMaterialsForZoneType(val);
+    this._selected.cyl.material    = mats.highlight; // keep highlighted (still selected)
+    this._selected.handle.material = mats.handle;
     this.editor.saveSnapshot();
   }
 }

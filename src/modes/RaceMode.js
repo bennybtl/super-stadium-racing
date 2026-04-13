@@ -477,6 +477,11 @@ export class RaceMode extends BaseMode {
       this.controller.exit();
     };
 
+    // Pre-filter 'slowZone' action zones for per-frame position checks
+    const slowZones = currentTrack.features.filter(
+      f => f.type === 'actionZone' && f.zoneType === 'slowZone'
+    );
+
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
 
@@ -512,6 +517,25 @@ export class RaceMode extends BaseMode {
       });
 
       wallManager.update(trucks);
+
+      // Clamp speed for any truck inside a 'slowZone' action zone
+      if (slowZones.length > 0) {
+        trucks.forEach(({ truck }) => {
+          const pos = truck.mesh.position;
+          const inSlow = slowZones.some(z => {
+            const dx = pos.x - z.x, dz = pos.z - z.z;
+            return (dx * dx + dz * dz) < z.radius * z.radius;
+          });
+          truck.state.slowZoneActive = inSlow;
+          if (inSlow) {
+            const limit = truck.state.slowZoneMaxSpeed;
+            if (truck.state.velocity.length() > limit) {
+              truck.state.velocity.normalize().scaleInPlace(limit);
+            }
+          }
+        });
+      }
+
       truckCollisionManager.update(trucks);
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);

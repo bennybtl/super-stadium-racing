@@ -115,6 +115,10 @@ export class Truck {
       boostDuration: 1.5,
       boostAccelMult: 2,
       boostSpeedMult: 1.5,
+
+      // Slow zone — set each frame by the game loop when inside a 'slowZone' action zone
+      slowZoneActive: false,
+      slowZoneMaxSpeed: 5,
     };
 
     // Overlay any params supplied by the vehicle definition

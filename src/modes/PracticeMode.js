@@ -100,6 +100,11 @@ export class PracticeMode extends BaseMode {
       this.controller.switchToMode('menu');
     };
 
+    // Pre-filter 'slowZone' action zones for per-frame position checks
+    const slowZones = currentTrack.features.filter(
+      f => f.type === 'actionZone' && f.zoneType === 'slowZone'
+    );
+
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
 
@@ -112,6 +117,23 @@ export class PracticeMode extends BaseMode {
             
       wallManager.preUpdate(trucks, dt);
       const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
+
+      // Clamp speed when inside a 'slowZone' action zone
+      if (slowZones.length > 0) {
+        const pos = playerTruck.mesh.position;
+        const inSlow = slowZones.some(z => {
+          const dx = pos.x - z.x, dz = pos.z - z.z;
+          return (dx * dx + dz * dz) < z.radius * z.radius;
+        });
+        playerTruck.state.slowZoneActive = inSlow;
+        if (inSlow) {
+          const limit = playerTruck.state.slowZoneMaxSpeed;
+          if (playerTruck.state.velocity.length() > limit) {
+            playerTruck.state.velocity.normalize().scaleInPlace(limit);
+          }
+        }
+      }
+
       wallManager.update(trucks);
       tireStackManager.update(trucks, dt);
       flagManager.update(trucks, dt);

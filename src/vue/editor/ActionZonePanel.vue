@@ -13,6 +13,7 @@
       @change="editor.setActionZoneType($event.target.value)"
     >
       <option value="pickupSpawn">Pickup Spawn</option>
+      <option value="slowZone">Slow Zone</option>
     </select>
 
     <!-- Radius -->

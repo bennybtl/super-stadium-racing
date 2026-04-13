@@ -105,7 +105,12 @@ export class Controls {
   }
 
   getEffectiveMaxSpeed() {
-    return this.state.maxSpeed * (this.state.boostActive ? this.state.boostSpeedMult : 1.0);
+    const base = this.state.maxSpeed * (this.state.boostActive ? this.state.boostSpeedMult : 1.0);
+    // Inside a slow zone the truck cannot accelerate past the zone limit
+    if (this.state.slowZoneActive) {
+      return Math.min(base, this.state.slowZoneMaxSpeed);
+    }
+    return base;
   }
 
   calculateSpeedFactors(speed, terrainGripMultiplier, groundedness) {
