@@ -119,7 +119,7 @@
     },
     {
       "type": "hill",
-      "centerX": -4,
+      "centerX": -7,
       "centerZ": 28,
       "radius": 4,
       "height": 2.5,
@@ -127,8 +127,8 @@
     },
     {
       "type": "hill",
-      "centerX": -11.5,
-      "centerZ": 33.5,
+      "centerX": -14,
+      "centerZ": 33,
       "radius": 6,
       "height": 2.5,
       "terrainType": "loose_dirt"
@@ -221,12 +221,14 @@
         {
           "x": -20,
           "z": 20,
-          "smoothing": 0
+          "smoothing": 0,
+          "radius": 5.5
         },
         {
           "x": -20,
           "z": -8,
-          "smoothing": 0
+          "smoothing": 0,
+          "radius": 4
         },
         {
           "x": -72,
@@ -615,11 +617,6 @@
     {
       "type": "tireStack",
       "x": 4,
-      "z": -28
-    },
-    {
-      "type": "tireStack",
-      "x": 4,
       "z": -26
     },
     {
@@ -674,11 +671,6 @@
     },
     {
       "type": "tireStack",
-      "x": 6,
-      "z": -30
-    },
-    {
-      "type": "tireStack",
       "x": -12,
       "z": -30
     },
@@ -691,16 +683,6 @@
       "type": "tireStack",
       "x": -8,
       "z": -30
-    },
-    {
-      "type": "tireStack",
-      "x": -6,
-      "z": -30
-    },
-    {
-      "type": "tireStack",
-      "x": -4,
-      "z": -28
     },
     {
       "type": "tireStack",
@@ -749,13 +731,13 @@
     },
     {
       "type": "tireStack",
-      "x": 36,
-      "z": -64
+      "x": 38,
+      "z": -67
     },
     {
       "type": "tireStack",
       "x": 34,
-      "z": -64
+      "z": -65
     },
     {
       "type": "tireStack",
@@ -784,7 +766,7 @@
     },
     {
       "type": "tireStack",
-      "x": 66,
+      "x": 70,
       "z": -32
     },
     {
@@ -794,7 +776,7 @@
     },
     {
       "type": "tireStack",
-      "x": 66,
+      "x": 68,
       "z": -36
     },
     {

@@ -42,7 +42,7 @@ import imgFlagString  from '../assets/flag_string.feature.png';
 import imgTerrain     from '../assets/terrain_region.feature.png';
 import imgMeshGrid    from '../assets/mesh_grid.feature.png';
 // import imgBezierWall  from '../assets/bezier_wall.feature.png';
-// import imgTireStack   from '../assets/tire_stack.feature.png';
+import imgTireStack   from '../assets/tire_stack.feature.png';
 // import imgActionZone  from '../assets/action_zone.feature.png';
 // import imgNormalMap   from '../assets/normal_map_decal.feature.png';
 
@@ -58,8 +58,8 @@ const features = [
   { label: 'Poly Hill',        img: imgPolyHill,      action: () => editor.addPolyHill()       },
   { label: 'Mesh Grid',        img: imgMeshGrid,      action: () => editor.addMeshGrid()       },
   { label: 'Terrain Region',   img: imgTerrain,       action: () => editor.addTerrain()        },
-  { label: 'Normal Map Decal', img: 'imgNormalMap',   action: () => editor.addNormalMapDecal() },
-  { label: 'Tire Stack',       img: 'imgTireStack',   action: () => editor.addTireStack()      },
+  { label: 'Normal Map Decal', img: 'imgNormalMap',     action: () => editor.addNormalMapDecal() },
+  { label: 'Tire Stack',       img: imgTireStack,     action: () => editor.addTireStack()      },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.addTrackSign()      },
   { label: 'Flag',             img: imgFlags,         action: () => editor.addFlag()           },
   { label: 'Banner String',    img: imgFlagString,    action: () => editor.addBannerString()   },
