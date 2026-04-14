@@ -3,7 +3,7 @@ import { Vector3 } from "@babylonjs/core";
 // ─── Grip / drift ────────────────────────────────────────────────────────────
 
 /** Speed below which all slip correction is skipped (avoids divide-by-zero jitter). */
-const MIN_DRIFT_SPEED = 0.1;
+const MIN_DRIFT_SPEED = 15.0;
 
 /** Exponent that controls how sharply grip drops off once slip exceeds the drift threshold.
  *  Higher = grip falls faster, shorter drift, snappier recovery.
@@ -85,7 +85,13 @@ export class DriftPhysics {
 
   applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction = 1.0, isThrottling = false) {
     if (speed <= MIN_DRIFT_SPEED) {
+      // At very low speed, kill lateral velocity entirely so the truck doesn't
+      // creep sideways, and reset all drift state so effects don't linger.
+      const right = new Vector3(forward.z, 0, -forward.x);
+      const forwardVelocity = this.state.velocity.dot(forward);
+      this.state.velocity = forward.scale(forwardVelocity); // strip lateral component
       this.state.slipAngle = 0;
+      this.state.isDrifting = false;
       this.state.isSpinningOut = false;
       return;
     }
