@@ -107,7 +107,7 @@ export class Truck {
       drag: 0.2,
       turnSpeed: 3.6,
       grip: 0.03,
-      driftThreshold: 0.1,
+      driftThreshold: 0.15,
 
       // Boost parameters
       boostCount: 5,
@@ -184,7 +184,7 @@ export class Truck {
     const brakeGripReduction = this.controls.getBrakeGripReduction(input, speed);
     
     // Apply grip and drift physics with brake weight transfer
-    this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction);
+    this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction, input.forward);
     
     // Movement - apply velocity to X/Z position (Y is handled by TerrainPhysics)
     const newPosition = this.terrainPhysics.checkSteepSlope(this.mesh, deltaTime, track);
