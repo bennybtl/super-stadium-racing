@@ -212,19 +212,47 @@ export class Track {
           const c0 = Math.max(0, Math.min(Math.floor(fc), cols - 2));
           const r0 = Math.max(0, Math.min(Math.floor(fr), rows - 2));
           const c1 = c0 + 1, r1 = r0 + 1;
-          // Blend between linear (smoothing=0) and smoothstep (smoothing=1).
-          // Smoothstep gives C1 continuity at cell boundaries, eliminating creases.
+          const tc = fc - c0, tr = fr - r0;
+
+          // Clamped grid sample helper
+          const H = (r, c) => heights[
+            Math.max(0, Math.min(rows - 1, r)) * cols +
+            Math.max(0, Math.min(cols - 1, c))
+          ] ?? 0;
+
+          const bilinear =
+            H(r0, c0) * (1 - tc) * (1 - tr) +
+            H(r0, c1) *      tc  * (1 - tr) +
+            H(r1, c0) * (1 - tc) *      tr  +
+            H(r1, c1) *      tc  *      tr;
+
           const s = feature.smoothing ?? 0;
-          const rawTc = fc - c0, rawTr = fr - r0;
-          const smoothTc = rawTc * rawTc * (3 - 2 * rawTc);
-          const smoothTr = rawTr * rawTr * (3 - 2 * rawTr);
-          const tc = rawTc + (smoothTc - rawTc) * s;
-          const tr = rawTr + (smoothTr - rawTr) * s;
-          totalHeight +=
-            (heights[r0 * cols + c0] ?? 0) * (1 - tc) * (1 - tr) +
-            (heights[r0 * cols + c1] ?? 0) *      tc  * (1 - tr) +
-            (heights[r1 * cols + c0] ?? 0) * (1 - tc) *      tr  +
-            (heights[r1 * cols + c1] ?? 0) *      tc  *      tr;
+          if (s <= 0) {
+            totalHeight += bilinear;
+            break;
+          }
+
+          // Catmull-Rom 1D: interpolates p1→p2 with tangents derived from neighbours.
+          // Unlike smoothstep, tangents match the actual grid slope so there are no
+          // artificial flat spots or S-curve artifacts on steep sections.
+          const cr = (p0, p1, p2, p3, t) => {
+            const t2 = t * t, t3 = t2 * t;
+            return 0.5 * (
+              2 * p1 +
+              (-p0 + p2) * t +
+              (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+              (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+            );
+          };
+
+          // Bicubic: interpolate 4 rows along columns, then interpolate the results.
+          const row0 = cr(H(r0-1,c0-1), H(r0-1,c0), H(r0-1,c1), H(r0-1,c1+1), tc);
+          const row1 = cr(H(r0,  c0-1), H(r0,  c0), H(r0,  c1), H(r0,  c1+1), tc);
+          const row2 = cr(H(r1,  c0-1), H(r1,  c0), H(r1,  c1), H(r1,  c1+1), tc);
+          const row3 = cr(H(r1+1,c0-1), H(r1+1,c0), H(r1+1,c1), H(r1+1,c1+1), tc);
+          const bicubic = cr(row0, row1, row2, row3, tr);
+
+          totalHeight += bilinear + (bicubic - bilinear) * s;
           break;
         }
 
