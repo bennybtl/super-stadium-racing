@@ -265,6 +265,15 @@ export const useEditorStore = defineStore('editor', () => {
     closed: false,
   });
 
+  // ── Bridge panel ──
+  const bridge = reactive({
+    width:     20,
+    depth:     8,
+    height:    5,
+    thickness: 0.4,
+    angle:     0,
+  });
+
   // ── Track defaults ──
   const trackDefaultTerrain = ref('packed_dirt');
 
@@ -398,6 +407,16 @@ export const useEditorStore = defineStore('editor', () => {
   function deletePolyCurb()        { _bridge.value?.deletePolyCurb(); }
   function closePolyCurb()         { _bridge.value?.deselectPolyCurb(); }
 
+  // ── Bridge actions ──
+  function setBridgeWidth(val)     { bridge.width = val;     _bridge.value?.changeBridgeWidth(val); }
+  function setBridgeDepth(val)     { bridge.depth = val;     _bridge.value?.changeBridgeDepth(val); }
+  function setBridgeHeight(val)    { bridge.height = val;    _bridge.value?.changeBridgeHeight(val); }
+  function setBridgeThickness(val) { bridge.thickness = val; _bridge.value?.changeBridgeThickness(val); }
+  function setBridgeAngle(val)     { bridge.angle = val;     _bridge.value?.changeBridgeAngle(val); }
+  function duplicateBridge()       { _bridge.value?.duplicateSelectedBridge(); }
+  function deleteBridge()          { _bridge.value?.deleteBridge(); }
+  function closeBridge()           { _bridge.value?.deselectBridge(); }
+
   // ── Mesh grid actions ──
   function setMeshGridSmoothing(v)   { meshGrid.smoothing = v;  _bridge.value?.changeMeshGridSmoothing(v); }
   function setMeshGridStepSize(v)    { meshGrid.stepSize = v;   _bridge.value?.changeMeshGridStepSize(v); }
@@ -438,6 +457,7 @@ export const useEditorStore = defineStore('editor', () => {
   function addBannerString()   { _bridge.value?.addBannerStringEntity(); }
   function addActionZone()     { _bridge.value?.addActionZoneEntity(); }
   function addPolyCurb()       { _bridge.value?.addPolyCurbEntity(); }
+  function addBridge()         { _bridge.value?.addBridgeEntity(); }
 
   return {
     selectedType,
@@ -483,6 +503,9 @@ export const useEditorStore = defineStore('editor', () => {
     polyCurb,
     setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed,
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, closePolyCurb,
+    bridge,
+    setBridgeWidth, setBridgeDepth, setBridgeHeight, setBridgeThickness, setBridgeAngle,
+    duplicateBridge, deleteBridge, closeBridge,
     trackDefaultTerrain, setTrackDefaultTerrain,
     setActiveTool,
     toggleSnap, cycleSnapSize, quickTestTrack,
@@ -490,7 +513,7 @@ export const useEditorStore = defineStore('editor', () => {
     addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addTireStack, addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
-    addActionZone, addPolyCurb,
+    addActionZone, addPolyCurb, addBridge,
     setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     meshGridAdjustUp, meshGridAdjustDown,

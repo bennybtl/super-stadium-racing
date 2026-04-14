@@ -14,6 +14,7 @@ import { TrackSignEditor } from "./TrackSignEditor.js";
 import { BannerStringEditor } from "./BannerStringEditor.js";
 import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
+import { BridgeEditor } from './BridgeEditor.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
@@ -88,6 +89,9 @@ export class EditorController {
 
     // Poly curb editing editor
     this.polyCurbEditor = new PolyCurbEditor(this);
+
+    // Bridge editing editor
+    this.bridgeEditor = new BridgeEditor(this);
     this._rawDragPos = null;
 
     // Undo / redo stacks (each entry is a JSON string of the features array)
@@ -155,6 +159,9 @@ export class EditorController {
 
     // Poly curb editing editor
     this.polyCurbEditor.activate(this.scene, track);
+
+    // Bridge editing editor
+    this.bridgeEditor.activate(this.scene, track);
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
@@ -241,6 +248,9 @@ export class EditorController {
     // Action zone editor
     this.actionZoneEditor.dispose();
 
+    // Bridge editor
+    this.bridgeEditor.dispose();
+
     console.log('[EditorController] Editor mode deactivated');
   }
 
@@ -282,6 +292,7 @@ export class EditorController {
     this.trackSignEditor.deselect();
     this.bannerStringEditor.deselect();
     this.actionZoneEditor.deselect();
+    this.bridgeEditor.deselect();
 
     // Clear all gizmo meshes (keeps materials alive for re-use)
     this.hillEditor.clearMeshes();
@@ -295,6 +306,7 @@ export class EditorController {
     this.trackSignEditor.clearMeshes();
     this.bannerStringEditor.clearMeshes();
     this.actionZoneEditor.clearMeshes();
+    this.bridgeEditor.clearMeshes();
 
     // Restore features
     this.currentTrack.features = JSON.parse(snap);
@@ -310,6 +322,7 @@ export class EditorController {
       else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
       else if (feature.type === 'bannerString') this.bannerStringEditor.createVisual(feature);
       else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
+      else if (feature.type === 'bridge') this.bridgeEditor.createVisual(feature);
     }
     // Restore mesh grid gizmos
     this.meshGridEditor?.onSnapshotRestored();
@@ -392,6 +405,7 @@ export class EditorController {
       else if (this.terrainShapeEditor.selected) this.terrainShapeEditor.duplicateSelected();
       else if (this.normalMapDecalEditor.selected) this.normalMapDecalEditor.duplicateSelected();
       else if (this.tireStackEditor.selected) this.tireStackEditor.duplicateSelected();
+      else if (this.bridgeEditor.selected) this.bridgeEditor.duplicateSelected();
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -428,6 +442,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.actionZoneEditor?.selected) {
         this.actionZoneEditor.deleteSelected();
+        event.preventDefault();
+      } else if (this.bridgeEditor?.selected) {
+        this.bridgeEditor.deleteSelected();
         event.preventDefault();
       } else if (this.meshGridEditor?.activeFeature) {
         this.meshGridEditor.deleteMeshGrid();
@@ -644,6 +661,11 @@ export class EditorController {
       delta = this.bannerStringEditor.move(movement);
     } else if (this.actionZoneEditor.selected) {
       delta = this.actionZoneEditor.move(movement);
+    } else if (this.bridgeEditor.selected) {
+      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
+      if (this.keys.rotateLeft)  this.bridgeEditor.rotate( rotStep);
+      if (this.keys.rotateRight) this.bridgeEditor.rotate(-rotStep);
+      delta = this.bridgeEditor.move(movement);
     } else if (this.polyWallEditor?.selectedPoint) {
       const d = this.polyWallEditor.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
@@ -799,6 +821,17 @@ export class EditorController {
             const wasSelected = this.actionZoneEditor.selected === zoneData;
             this.deselectAll();
             if (!wasSelected) this.actionZoneEditor.select(zoneData);
+            return;
+          }
+        }
+
+        // Check if clicked mesh is a bridge gizmo
+        {
+          const bridgeData = this.bridgeEditor.findByMesh(clickedMesh);
+          if (bridgeData) {
+            const wasSelected = this.bridgeEditor.selected === bridgeData;
+            this.deselectAll();
+            if (!wasSelected) this.bridgeEditor.select(bridgeData);
             return;
           }
         }
@@ -988,6 +1021,7 @@ export class EditorController {
     this.trackSignEditor.deselect();
     this.bannerStringEditor.deselect();
     this.actionZoneEditor.deselect();
+    this.bridgeEditor?.deselect();
     this.meshGridEditor?.deselectPoint();
     this.polyWallEditor?.deselectPoint();
     this.polyHillEditor?.deselectPoint();
@@ -1044,6 +1078,7 @@ export class EditorController {
 
   // ── Action Zone Vue bridge methods ──
   addActionZoneEntity()           { this.actionZoneEditor.addEntity(); }
+  addBridgeEntity()               { this.bridgeEditor.addEntity(); }
   deselectActionZone()            { this.actionZoneEditor.deselect(); }
   changeActionZoneRadius(val)     { this.actionZoneEditor.changeRadius(val); }
   changeActionZoneType(val)       { this.actionZoneEditor.changeZoneType(val); }
@@ -1058,6 +1093,16 @@ export class EditorController {
   deletePolyCurbPoint()      { this.polyCurbEditor?.deletePolyCurbPoint(); }
   deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
   deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
+
+  // ── Bridge Vue bridge methods ──────────────────────────────────────────────
+  changeBridgeWidth(val)     { this.bridgeEditor?.changeWidth(val); }
+  changeBridgeDepth(val)     { this.bridgeEditor?.changeDepth(val); }
+  changeBridgeHeight(val)    { this.bridgeEditor?.changeHeight(val); }
+  changeBridgeThickness(val) { this.bridgeEditor?.changeThickness(val); }
+  changeBridgeAngle(val)     { this.bridgeEditor?.changeAngle(val); }
+  duplicateSelectedBridge()  { this.bridgeEditor?.duplicateSelected(); }
+  deleteBridge()             { this.bridgeEditor?.deleteSelected(); }
+  deselectBridge()           { this.bridgeEditor?.deselect(); }
 
   // ── Mesh grid bridge ─────────────────────────────────────────────────────
   changeMeshGridSmoothing(v) {

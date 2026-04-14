@@ -112,8 +112,14 @@ export class TerrainPhysics {
     this.state.verticalVelocity += this.gravity * deltaTime;
 
     const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
-    const truckBottomY  = terrainHeight + this.halfHeight;
-    const penetration   = truckBottomY - mesh.position.y;
+    // Check if a bridge deck is directly under the truck and treat it as a raised floor.
+    // Pass truck center Y so getBridgeFloorAt can skip decks the truck is driving under.
+    // Use whichever floor is higher — bridge deck or terrain surface.
+    const bridgeFloor = track ? track.getBridgeFloorAt(mesh.position.x, mesh.position.z, mesh.position.y) : -Infinity;
+    // Adding halfHeight puts the truck CENTER at the correct resting height above the floor.
+    const effectiveFloor = (bridgeFloor > terrainHeight) ? bridgeFloor : terrainHeight;
+    const truckBottomY   = effectiveFloor + this.halfHeight;
+    const penetration    = truckBottomY - mesh.position.y;
 
     this._applySpring(mesh, deltaTime, track, penetration, truckBottomY);
 

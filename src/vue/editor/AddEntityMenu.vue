@@ -64,6 +64,7 @@ const features = [
   { label: 'Flag',             img: imgFlags,         action: () => editor.addFlag()           },
   { label: 'Banner String',    img: imgFlagString,    action: () => editor.addBannerString()   },
   { label: 'Action Zone',      img: 'imgActionZone',  action: () => editor.addActionZone()     },
+  { label: 'Bridge',           img: null,             action: () => editor.addBridge()         },
 ];
 </script>
 

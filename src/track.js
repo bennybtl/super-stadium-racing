@@ -474,6 +474,43 @@ export class Track {
     return out;
   }
 
+  /**
+   * Returns the highest bridge deck Y that is beneath `currentY` at (x, z),
+   * or -Infinity if no bridge covers this XZ position.
+   *
+   * Used by TerrainPhysics so the truck spring lands on the bridge deck
+   * instead of falling through to the ground below.
+   *
+   * @param {number} x
+   * @param {number} z
+   * @param {number} truckCenterY  — truck mesh center Y; used to skip decks the truck is passing under
+   */
+  getBridgeFloorAt(x, z, truckCenterY = Infinity) {
+    let best = -Infinity;
+    for (const feature of this.features) {
+      if (feature.type !== 'bridge') continue;
+      const hw = (feature.width ?? 20) / 2;
+      const hd = (feature.depth ?? 8)  / 2;
+      const angleRad = (feature.angle ?? 0) * Math.PI / 180;
+      const cosA = Math.cos(angleRad);
+      const sinA = Math.sin(angleRad);
+      const dx = x - feature.centerX;
+      const dz = z - feature.centerZ;
+      const lx =  dx * cosA + dz * sinA;
+      const lz = -dx * sinA + dz * cosA;
+      const inFootprint = Math.abs(lx) <= hw && Math.abs(lz) <= hd;
+      if (!inFootprint) continue;
+      const terrainY   = this.getHeightAt(feature.centerX, feature.centerZ);
+      const deckBottom = terrainY + (feature.height ?? 5);
+      const deckTop    = deckBottom + (feature.thickness ?? 0.4);
+      // If the truck center is below the deck's underside, the truck is driving
+      // under the bridge — don't snap it up onto the deck.
+      if (truckCenterY < deckBottom) continue;
+      if (deckTop > best) best = deckTop;
+    }
+    return best;
+  }
+
   // Serialize track to JSON string
   toJSON() {
     // Deep clone features and convert terrainType objects to names

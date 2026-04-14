@@ -132,6 +132,24 @@ export class EditorMaterials {
     }));
   }
 
+  // ── Bridge ────────────────────────────────────────────────────────────────
+
+  /** Translucent brown/tan box gizmo. */
+  get bridgeBox() {
+    return this._get('bridgeBox', s => makeMat('edBridgeBox', s, {
+      diffuse: [0.55, 0.42, 0.22], emissive: [0.1, 0.07, 0.02],
+      alpha: 0.35, backFaceCulling: false,
+    }));
+  }
+
+  /** Translucent orange/tan box gizmo (selected). */
+  get bridgeBoxHighlight() {
+    return this._get('bridgeBoxHighlight', s => makeMat('edBridgeBoxHL', s, {
+      diffuse: [0.9, 0.65, 0.2], emissive: [0.4, 0.25, 0.05],
+      alpha: 0.45, backFaceCulling: false,
+    }));
+  }
+
   // ── Bezier Wall ───────────────────────────────────────────────────────────
 
   /** Blue anchor-point sphere. */

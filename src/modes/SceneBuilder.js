@@ -250,6 +250,27 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (feature.type === "bannerString") {
       bannerStringManager.createBanner(feature);
+    } else if (feature.type === "bridge") {
+      // Solid elevated deck — vehicles can drive over or pass under it.
+      const terrainY  = currentTrack.getHeightAt(feature.centerX, feature.centerZ);
+      const thickness = feature.thickness ?? 0.4;
+      const deckY     = terrainY + (feature.height ?? 5) + thickness / 2;
+
+      const deck = MeshBuilder.CreateBox(
+        `bridge_${feature.centerX}_${feature.centerZ}`,
+        { width: feature.width ?? 20, height: thickness, depth: feature.depth ?? 8 },
+        scene
+      );
+      deck.position  = new Vector3(feature.centerX, deckY, feature.centerZ);
+      deck.rotation.y = ((feature.angle ?? 0) * Math.PI) / 180;
+
+      const bridgeMat = new StandardMaterial(`bridgeMat_${feature.centerX}_${feature.centerZ}`, scene);
+      bridgeMat.diffuseColor  = new Color3(0.52, 0.40, 0.22);
+      bridgeMat.specularColor = new Color3(0.1, 0.1, 0.1);
+      deck.material = bridgeMat;
+      deck.receiveShadows = true;
+      shadows.addShadowCaster(deck);
+      new PhysicsAggregate(deck, PhysicsShapeType.BOX, { mass: 0 }, scene);
     } else if (
       (feature.type === "hill" && feature.height < 0) ||
       (feature.type === "squareHill" && (
