@@ -1,5 +1,5 @@
-import { Color3, Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
-import { EditorMaterials } from './EditorMaterials.js';
+import { Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import { EditorMaterials, FALLBACK_GREY, Color3 } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
 const NODE_POS_Y = 0.15; // height above terrain to place the node (prevents z-fighting)
@@ -44,9 +44,9 @@ export class TerrainShapeEditor {
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   _terrainColorForType(terrainType) {
-    if (!terrainType) return new Color3(0.5, 0.5, 0.5);
+    if (!terrainType) return FALLBACK_GREY;
     const c = terrainType.color;
-    return c instanceof Color3 ? c : new Color3(c.r, c.g, c.b);
+    return (c && typeof c.r === 'number') ? new Color3(c.r, c.g, c.b) : FALLBACK_GREY;
   }
 
   // ── Visual creation ─────────────────────────────────────────────────────────

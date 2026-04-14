@@ -1,5 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
-import { EditorMaterials } from './EditorMaterials.js';
+import { EditorMaterials, LINE_COLOR_BEZIER_WALL } from './EditorMaterials.js';
 
 /**
  * BezierWallEditor – place and edit bezierWall features in the track editor.
@@ -204,7 +204,7 @@ export class BezierWallEditor {
     lines.push(curveLine);
 
     const ls = MeshBuilder.CreateLineSystem(`bzLines_${Date.now()}`, { lines }, this.scene);
-    ls.color = new Color3(0.3, 0.7, 1.0);
+    ls.color = LINE_COLOR_BEZIER_WALL;
     ls.isPickable = false;
     return ls;
   }

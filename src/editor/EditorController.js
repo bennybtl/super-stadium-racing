@@ -1059,6 +1059,25 @@ export class EditorController {
   deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
   deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
 
+  // ── Mesh grid bridge ─────────────────────────────────────────────────────
+  changeMeshGridSmoothing(v) {
+    if (this.meshGridEditor?.activeFeature) {
+      this.meshGridEditor.activeFeature.smoothing = v;
+      window.rebuildTerrain?.();
+    }
+  }
+  changeMeshGridStepSize(v)     { if (this.meshGridEditor) this.meshGridEditor.stepSize = v; }
+  setMeshGridPointHeight(v)     { this.meshGridEditor?.setPointHeightFromStore(v); }
+  meshGridAdjustUp()            { if (this.meshGridEditor) this.meshGridEditor.adjustHeight(this.meshGridEditor.stepSize); }
+  meshGridAdjustDown()          { if (this.meshGridEditor) this.meshGridEditor.adjustHeight(-this.meshGridEditor.stepSize); }
+  applyMeshGridChanges(c, r, w, d) { this.meshGridEditor?.applyGridChanges(c, r, w, d); }
+  flattenMeshGrid()             { this.meshGridEditor?.flattenGrid(); }
+  deleteMeshGrid()              { this.meshGridEditor?.deleteMeshGrid(); }
+  closeMeshGrid() {
+    this.meshGridEditor?.deselectPoint();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
+
   /**
    * Dispose of the controller
    */

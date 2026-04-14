@@ -1,5 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
-import { EditorMaterials } from './EditorMaterials.js';
+import { EditorMaterials, LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
 
 /**
  * PolyHillEditor – place and edit polyHill features in the track editor.
@@ -144,7 +144,7 @@ export class PolyHillEditor {
 
     const lines = [ctrlPts];
     const ls = MeshBuilder.CreateLineSystem(`phLines_${Date.now()}`, { lines }, this.scene);
-    ls.color = new Color3(0.5, 0.8, 0.3);
+    ls.color = LINE_COLOR_POLY_HILL;
     ls.isPickable = false;
     return ls;
   }

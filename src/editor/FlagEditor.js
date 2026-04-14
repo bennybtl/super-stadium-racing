@@ -70,18 +70,18 @@ export class FlagEditor {
     if (!flagData) return;
 
     if (this._selected && this._selected !== flagData) {
-      this._selected.flag.material.emissiveColor = new Color3(0, 0, 0);
+      this._selected.flag.material.emissiveColor = EMISSIVE_BLACK;
     }
 
     this._selected = flagData;
     this.editor._rawDragPos = { x: flagData.feature.x, z: flagData.feature.z };
-    this._selected.flag.material.emissiveColor = new Color3(0.5, 0.5, 0.5);
+    this._selected.flag.material.emissiveColor = EMISSIVE_GREY;
     this.showProperties(flagData);
   }
 
   deselect() {
     if (this._selected) {
-      this._selected.flag.material.emissiveColor = new Color3(0, 0, 0);
+      this._selected.flag.material.emissiveColor = EMISSIVE_BLACK;
       this._selected = null;
     }
     this.hideProperties();

@@ -1,5 +1,21 @@
 import { StandardMaterial, Color3 } from "@babylonjs/core";
 
+export { Color3 };
+
+// ─── Line / emissive Color3 constants ────────────────────────────────────────
+// Used directly on CreateLineSystem .color and on material .emissiveColor.
+// Centralised here so every colour in the editor lives in one file.
+
+export const LINE_COLOR_MESH_GRID   = new Color3(0.15, 0.65, 0.65); // teal
+export const LINE_COLOR_POLY_WALL   = new Color3(1.0,  0.65, 0.1);  // orange
+export const LINE_COLOR_POLY_HILL   = new Color3(0.5,  0.8,  0.3);  // green
+export const LINE_COLOR_POLY_CURB   = new Color3(0.85, 0.1,  0.1);  // red
+export const LINE_COLOR_BEZIER_WALL = new Color3(0.3,  0.7,  1.0);  // blue
+
+export const EMISSIVE_BLACK = new Color3(0, 0, 0);
+export const EMISSIVE_GREY  = new Color3(0.5, 0.5, 0.5);
+export const FALLBACK_GREY  = new Color3(0.5, 0.5, 0.5);
+
 /**
  * EditorMaterials — a lazily-populated registry of all editor gizmo materials.
  *

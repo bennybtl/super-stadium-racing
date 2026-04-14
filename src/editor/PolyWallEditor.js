@@ -1,5 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
-import { EditorMaterials } from './EditorMaterials.js';
+import { EditorMaterials, LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
 
 /**
  * Editor – place and edit polyWall features in the track editor.
@@ -143,7 +143,7 @@ export class PolyWallEditor {
 
     const lines = [ctrlPts];
     const ls = MeshBuilder.CreateLineSystem(`pwLines_${Date.now()}`, { lines }, this.scene);
-    ls.color      = new Color3(1.0, 0.65, 0.1);
+    ls.color      = LINE_COLOR_POLY_WALL;
     ls.isPickable = false;
     return ls;
   }

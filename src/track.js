@@ -212,7 +212,14 @@ export class Track {
           const c0 = Math.max(0, Math.min(Math.floor(fc), cols - 2));
           const r0 = Math.max(0, Math.min(Math.floor(fr), rows - 2));
           const c1 = c0 + 1, r1 = r0 + 1;
-          const tc = fc - c0, tr = fr - r0;
+          // Blend between linear (smoothing=0) and smoothstep (smoothing=1).
+          // Smoothstep gives C1 continuity at cell boundaries, eliminating creases.
+          const s = feature.smoothing ?? 0;
+          const rawTc = fc - c0, rawTr = fr - r0;
+          const smoothTc = rawTc * rawTc * (3 - 2 * rawTc);
+          const smoothTr = rawTr * rawTr * (3 - 2 * rawTr);
+          const tc = rawTc + (smoothTc - rawTc) * s;
+          const tr = rawTr + (smoothTr - rawTr) * s;
           totalHeight +=
             (heights[r0 * cols + c0] ?? 0) * (1 - tc) * (1 - tr) +
             (heights[r0 * cols + c1] ?? 0) *      tc  * (1 - tr) +

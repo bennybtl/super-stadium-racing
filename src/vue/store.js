@@ -191,9 +191,14 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Mesh grid panel ──
   const meshGrid = reactive({
-    rows: 3,
-    cols: 3,
-    visible: false,
+    cols: 9,
+    rows: 9,
+    width: 160,
+    depth: 160,
+    smoothing: 0,
+    stepSize: 0.5,
+    hasSelection: false,
+    pointHeight: 0,
   });
 
   // ── Poly wall panel ──
@@ -393,6 +398,20 @@ export const useEditorStore = defineStore('editor', () => {
   function deletePolyCurb()        { _bridge.value?.deletePolyCurb(); }
   function closePolyCurb()         { _bridge.value?.deselectPolyCurb(); }
 
+  // ── Mesh grid actions ──
+  function setMeshGridSmoothing(v)   { meshGrid.smoothing = v;  _bridge.value?.changeMeshGridSmoothing(v); }
+  function setMeshGridStepSize(v)    { meshGrid.stepSize = v;   _bridge.value?.changeMeshGridStepSize(v); }
+  function setMeshGridPointHeight(v) { meshGrid.pointHeight = v; _bridge.value?.setMeshGridPointHeight(v); }
+  function setMeshGridDensity(v)     { meshGrid.cols = v; meshGrid.rows = v; }
+  function setMeshGridWidth(v)       { meshGrid.width = v; }
+  function setMeshGridDepth(v)       { meshGrid.depth = v; }
+  function meshGridAdjustUp()        { _bridge.value?.meshGridAdjustUp(); }
+  function meshGridAdjustDown()      { _bridge.value?.meshGridAdjustDown(); }
+  function applyMeshGridSettings()   { _bridge.value?.applyMeshGridChanges(meshGrid.cols, meshGrid.rows, meshGrid.width, meshGrid.depth); }
+  function flattenMeshGrid()         { _bridge.value?.flattenMeshGrid(); }
+  function deleteMeshGrid()          { _bridge.value?.deleteMeshGrid(); }
+  function closeMeshGrid()           { _bridge.value?.closeMeshGrid(); }
+
   function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
 
   // ── Test mode ──
@@ -472,5 +491,9 @@ export const useEditorStore = defineStore('editor', () => {
     addNormalMapDecal, addTireStack, addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb,
+    setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
+    setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
+    meshGridAdjustUp, meshGridAdjustDown,
+    applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, closeMeshGrid,
   };
 });

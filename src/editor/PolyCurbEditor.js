@@ -1,5 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
-import { EditorMaterials } from './EditorMaterials.js';
+import { EditorMaterials, LINE_COLOR_POLY_CURB } from './EditorMaterials.js';
 
 /**
  * PolyCurbEditor — place and edit polyCurb features in the track editor.
@@ -126,7 +126,7 @@ export class PolyCurbEditor {
       return new Vector3(pt.x, y + 0.08, pt.z);
     });
     const ls = MeshBuilder.CreateLineSystem(`pcLines_${Date.now()}`, { lines: [pts] }, this.scene);
-    ls.color      = new Color3(0.85, 0.1, 0.1); // red preview line
+    ls.color      = LINE_COLOR_POLY_CURB; // red preview line
     ls.isPickable = false;
     return ls;
   }
