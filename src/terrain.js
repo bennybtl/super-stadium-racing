@@ -46,7 +46,7 @@ export const TERRAIN_TYPES = {
   WATER: {
     name: "water",
     gripMultiplier: 0.3,     // Low grip
-    color: new Color3(0.1, 0.3, 1),
+    color: new Color3(0.34, 0.18, 0.08),
     smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
     dragMultiplier: 6.0,     // Very high drag
     roughness: 0,            // Smooth surface — drag is the hazard
