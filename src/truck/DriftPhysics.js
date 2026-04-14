@@ -2,8 +2,19 @@ import { Vector3 } from "@babylonjs/core";
 
 // ─── Grip / drift ────────────────────────────────────────────────────────────
 
-/** Speed below which all slip correction is skipped (avoids divide-by-zero jitter). */
+/** Speed below which drift physics is skipped when NOT already drifting (avoids jitter at rest). */
 const MIN_DRIFT_SPEED = 15.0;
+
+/** Minimum speed to hold an active drift while on the throttle. */
+const MIN_DRIFT_SPEED_HOLD_THROTTLE = 10.0;
+
+/** Minimum speed to hold an active drift while coasting (off throttle, no brake).
+ *  Low so the drift can bleed out naturally through grip physics rather than
+ *  snapping off at an arbitrary threshold. */
+const MIN_DRIFT_SPEED_HOLD_COAST = 3.0;
+
+/** Minimum speed to hold an active drift while braking — kills it sooner. */
+const MIN_DRIFT_SPEED_HOLD_BRAKE = 12.0;
 
 /** Exponent that controls how sharply grip drops off once slip exceeds the drift threshold.
  *  Higher = grip falls faster, shorter drift, snappier recovery.
@@ -84,10 +95,23 @@ export class DriftPhysics {
   }
 
   applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction = 1.0, isThrottling = false) {
-    if (speed <= MIN_DRIFT_SPEED) {
-      // At very low speed, kill lateral velocity entirely so the truck doesn't
-      // creep sideways, and reset all drift state so effects don't linger.
-      const right = new Vector3(forward.z, 0, -forward.x);
+    // Pick the appropriate minimum speed threshold.
+    // When already drifting, use lower thresholds so the drift can bleed out
+    // naturally through grip rather than snapping off abruptly.
+    // brakeGripReduction < 1.0 indicates the brake is held.
+    const isBraking = brakeGripReduction < 1.0;
+    let minSpeed;
+    if (this.state.isDrifting) {
+      if (isBraking)       minSpeed = MIN_DRIFT_SPEED_HOLD_BRAKE;
+      else if (isThrottling) minSpeed = MIN_DRIFT_SPEED_HOLD_THROTTLE;
+      else                 minSpeed = MIN_DRIFT_SPEED_HOLD_COAST;
+    } else {
+      minSpeed = MIN_DRIFT_SPEED;
+    }
+
+    if (speed <= minSpeed) {
+      // Below threshold: strip lateral velocity and clear drift state so
+      // effects don't linger.
       const forwardVelocity = this.state.velocity.dot(forward);
       this.state.velocity = forward.scale(forwardVelocity); // strip lateral component
       this.state.slipAngle = 0;
