@@ -1079,6 +1079,7 @@ export class EditorController {
   deselectBannerString()          { this.bannerStringEditor.deselect(); }
   changeBannerStringWidth(val)    { this.bannerStringEditor.changeWidth(val); }
   changeBannerStringPoleHeight(val) { this.bannerStringEditor.changePoleHeight(val); }
+  changeBannerStringHeading(val)  { this.bannerStringEditor.changeHeading(val); }
   deleteBannerString()            { this.bannerStringEditor.deleteSelected(); }
   duplicateBannerString()         { this.bannerStringEditor.duplicateSelected(); }
 

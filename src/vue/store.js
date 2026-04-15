@@ -393,6 +393,7 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Banner String actions ──
   function setBannerStringWidth(val)      { bannerString.width = val;      _bridge.value?.changeBannerStringWidth(val); }
   function setBannerStringPoleHeight(val) { bannerString.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
+  function setBannerStringHeading(val)    { bannerString.heading = val;   _bridge.value?.changeBannerStringHeading(val); }
   function deleteBannerString()           { _bridge.value?.deleteBannerString(); }
   function duplicateBannerString()        { _bridge.value?.duplicateBannerString(); }
   function closeBannerString()            { _bridge.value?.deselectBannerString(); }
@@ -506,7 +507,7 @@ export const useEditorStore = defineStore('editor', () => {
     trackSign,
     setTrackSignName, setTrackSignRotation, deleteTrackSign, duplicateTrackSign, closeTrackSign,
     bannerString,
-    setBannerStringWidth, setBannerStringPoleHeight, deleteBannerString, duplicateBannerString, closeBannerString,
+    setBannerStringWidth, setBannerStringPoleHeight, setBannerStringHeading, deleteBannerString, duplicateBannerString, closeBannerString,
     actionZone,
     setActionZoneRadius, setActionZoneType, deleteActionZone, duplicateActionZone, closeActionZone,
     polyCurb,

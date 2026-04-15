@@ -116,6 +116,15 @@ export class BannerStringEditor {
     if (s) s.bannerString.heading = +(newHeading * 180 / Math.PI).toFixed(1);
   }
 
+  changeHeading(degrees) {
+    if (!this._selected) return;
+    this.editor.saveSnapshot(true);
+    const radians = degrees * (Math.PI / 180);
+    this._selected.setHeading(radians);
+    const s = this.editor._editorStore;
+    if (s) s.bannerString.heading = degrees;
+  }
+
   // ── Property changes ────────────────────────────────────────────────────────
 
   changeWidth(val) {

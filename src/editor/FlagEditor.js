@@ -1,6 +1,9 @@
 import { Vector3, Color3 } from "@babylonjs/core";
 import { Flag } from "../objects/Flag.js";
 
+const EMISSIVE_BLACK = new Color3(0, 0, 0);
+const EMISSIVE_GREY  = new Color3(0.4, 0.4, 0.4);
+
 export class FlagEditor {
   constructor(editor) {
     this.editor = editor;

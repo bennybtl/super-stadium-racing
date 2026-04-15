@@ -38,6 +38,14 @@
       <span>Heading</span>
       <span>{{ editor.bannerString.heading }}°</span>
     </div>
+    <input
+      type="range"
+      min="-180"
+      max="180"
+      step="1"
+      :value="editor.bannerString.heading"
+      @input="editor.setBannerStringHeading(+$event.target.value)"
+    />
 
     <div class="ep-hint">WASD to move · Q/E to rotate · Del to delete</div>
 
