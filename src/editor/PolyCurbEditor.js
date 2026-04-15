@@ -373,4 +373,19 @@ export class PolyCurbEditor {
   deletePolyCurbPoint() { this.deleteSelectedPoint(); }
   deletePolyCurb()      { this.deleteActiveCurb(); }
   deselectPolyCurb()    { this.deselectPoint(); }
+
+  duplicatePolyCurb() {
+    if (!this._activeGizmo) return;
+    this.ec.saveSnapshot();
+    const src = this._activeGizmo.feature;
+    const feature = {
+      ...src,
+      points: src.points.map(p => ({ ...p, x: p.x + 5, z: p.z + 5 })),
+    };
+    this.track.features.push(feature);
+    const cg = this._createGizmos(feature);
+    this._setActive(cg);
+    this._syncStore(feature);
+    this._rebuild(feature);
+  }
 }

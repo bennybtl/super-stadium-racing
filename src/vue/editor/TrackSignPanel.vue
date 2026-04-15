@@ -31,9 +31,10 @@
 
     <!-- Hint -->
     <div class="ep-hint">WASD to move · Del to delete</div>
-
-    <!-- Actions -->
-    <button class="ep-btn-del" @click="editor.deleteTrackSign()">Delete Sign</button>
+    <div class="ep-btn-row">
+      <button class="ep-btn-dup" @click="editor.duplicateTrackSign()">Duplicate</button>
+      <button class="ep-btn-del" @click="editor.deleteTrackSign()">Delete</button>
+    </div>
   </EditorPanel>
 </template>
 

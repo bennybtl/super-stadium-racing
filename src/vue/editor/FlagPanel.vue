@@ -29,9 +29,10 @@
 
     <!-- Hint -->
     <div class="ep-hint">WASD to move · Del to delete</div>
-
-    <!-- Actions -->
-    <button class="ep-btn-del" @click="editor.deleteFlag()">Delete Flag</button>
+    <div class="ep-btn-row">
+      <button class="ep-btn-dup" @click="editor.duplicateFlag()">Duplicate</button>
+      <button class="ep-btn-del" @click="editor.deleteFlag()">Delete</button>
+    </div>
   </EditorPanel>
 </template>
 

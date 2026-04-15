@@ -435,4 +435,19 @@ export class PolyWallEditor {
   deletePolyWallPoint() { this.deleteSelectedPoint(); }
   deletePolyWall()      { this.deleteActiveWall(); }
   deselectPolyWall()    { this.deselectPoint(); }
+
+  duplicatePolyWall() {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot();
+    const src = this._activeWall.feature;
+    const feature = {
+      ...src,
+      points: src.points.map(p => ({ ...p, x: p.x + 5, z: p.z + 5 })),
+    };
+    this.track.features.push(feature);
+    const wg = this._createWallGizmos(feature);
+    this._setActiveWall(wg);
+    this._syncStoreToFeature(feature);
+    this._rebuildWall(feature);
+  }
 }

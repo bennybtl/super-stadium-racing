@@ -549,4 +549,20 @@ export class BezierWallEditor {
   deleteBezierWallPoint() { this.deleteSelectedPoint(); }
   deleteBezierWall() { this.deleteActiveWall(); }
   deselectBezierWall() { this.deselectAll(); }
+
+  duplicateBezierWall() {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot();
+    const src = this._activeWall.feature;
+    const feature = {
+      ...src,
+      // handles are relative offsets — only anchor x/z need shifting
+      points: src.points.map(p => ({ ...p, x: p.x + 5, z: p.z + 5 })),
+    };
+    this.track.features.push(feature);
+    const wg = this._createWallGizmos(feature);
+    this._setActiveWall(wg);
+    this._syncStoreToFeature(feature);
+    this._rebuildWall(feature);
+  }
 }

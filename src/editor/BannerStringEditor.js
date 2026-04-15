@@ -158,4 +158,15 @@ export class BannerStringEditor {
     this._selected = null;
     this.hideProperties();
   }
+
+  duplicateSelected() {
+    if (!this._selected) return;
+    this.editor.saveSnapshot();
+    const src = this._selected.feature;
+    const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
+    this.editor.currentTrack.features.push(newFeature);
+    const banner = this.createVisual(newFeature);
+    this.editor.deselectAll();
+    this.select(banner);
+  }
 }

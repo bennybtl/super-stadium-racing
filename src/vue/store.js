@@ -354,6 +354,7 @@ export const useEditorStore = defineStore('editor', () => {
   function insertPolyWallPoint()        { _bridge.value?.insertPolyWallPoint(); }
   function deletePolyWallPoint()        { _bridge.value?.deletePolyWallPoint(); }
   function deletePolyWall()             { _bridge.value?.deletePolyWall(); }
+  function duplicatePolyWall()          { _bridge.value?.duplicatePolyWall(); }
   function closePolyWall()              { _bridge.value?.deselectPolyWall(); }
 
   // ── Poly Hill actions ──
@@ -364,6 +365,7 @@ export const useEditorStore = defineStore('editor', () => {
   function insertPolyHillPoint()        { _bridge.value?.insertPolyHillPoint(); }
   function deletePolyHillPoint()        { _bridge.value?.deletePolyHillPoint(); }
   function deletePolyHill()             { _bridge.value?.deletePolyHill(); }
+  function duplicatePolyHill()          { _bridge.value?.duplicatePolyHill(); }
   function closePolyHill()              { _bridge.value?.deselectPolyHill(); }
 
   // ── Bezier Wall actions ──
@@ -373,28 +375,33 @@ export const useEditorStore = defineStore('editor', () => {
   function insertBezierWallPoint()      { _bridge.value?.insertBezierWallPoint(); }
   function deleteBezierWallPoint()      { _bridge.value?.deleteBezierWallPoint(); }
   function deleteBezierWall()           { _bridge.value?.deleteBezierWall(); }
+  function duplicateBezierWall()        { _bridge.value?.duplicateBezierWall(); }
   function closeBezierWall()            { _bridge.value?.deselectBezierWall(); }
 
   // ── Flag actions ──
   function setFlagColor(val)            { flag.color = val; _bridge.value?.changeFlagColor(val); }
   function deleteFlag()                 { _bridge.value?.deleteFlag(); }
+  function duplicateFlag()              { _bridge.value?.duplicateFlag(); }
 
   // ── Track Sign actions ──
   function setTrackSignName(val)        { trackSign.name = val;     _bridge.value?.changeTrackSignName(val); }
   function setTrackSignRotation(val)    { trackSign.rotation = val; _bridge.value?.changeTrackSignRotation(val); }
   function deleteTrackSign()            { _bridge.value?.deleteTrackSign(); }
+  function duplicateTrackSign()         { _bridge.value?.duplicateTrackSign(); }
   function closeTrackSign()             { _bridge.value?.deselectTrackSign(); }
 
   // ── Banner String actions ──
   function setBannerStringWidth(val)      { bannerString.width = val;      _bridge.value?.changeBannerStringWidth(val); }
   function setBannerStringPoleHeight(val) { bannerString.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
   function deleteBannerString()           { _bridge.value?.deleteBannerString(); }
+  function duplicateBannerString()        { _bridge.value?.duplicateBannerString(); }
   function closeBannerString()            { _bridge.value?.deselectBannerString(); }
 
   // ── Action Zone actions ──
   function setActionZoneRadius(val)   { actionZone.radius   = val; _bridge.value?.changeActionZoneRadius(val); }
   function setActionZoneType(val)     { actionZone.zoneType = val; _bridge.value?.changeActionZoneType(val); }
   function deleteActionZone()         { _bridge.value?.deleteActionZone(); }
+  function duplicateActionZone()      { _bridge.value?.duplicateActionZone(); }
   function closeActionZone()          { _bridge.value?.deselectActionZone(); }
 
   // ── Poly Curb actions ──
@@ -405,6 +412,7 @@ export const useEditorStore = defineStore('editor', () => {
   function insertPolyCurbPoint()   { _bridge.value?.insertPolyCurbPoint(); }
   function deletePolyCurbPoint()   { _bridge.value?.deletePolyCurbPoint(); }
   function deletePolyCurb()        { _bridge.value?.deletePolyCurb(); }
+  function duplicatePolyCurb()     { _bridge.value?.duplicatePolyCurb(); }
   function closePolyCurb()         { _bridge.value?.deselectPolyCurb(); }
 
   // ── Bridge actions ──
@@ -429,6 +437,7 @@ export const useEditorStore = defineStore('editor', () => {
   function applyMeshGridSettings()   { _bridge.value?.applyMeshGridChanges(meshGrid.cols, meshGrid.rows, meshGrid.width, meshGrid.depth); }
   function flattenMeshGrid()         { _bridge.value?.flattenMeshGrid(); }
   function deleteMeshGrid()          { _bridge.value?.deleteMeshGrid(); }
+  function duplicateMeshGrid()       { _bridge.value?.duplicateMeshGrid(); }
   function closeMeshGrid()           { _bridge.value?.closeMeshGrid(); }
 
   function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
@@ -488,21 +497,21 @@ export const useEditorStore = defineStore('editor', () => {
     setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,
     setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,
     setPolyWallRadius, setPolyWallHeight, setPolyWallThickness, setPolyWallClosed,
-    insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, closePolyWall,
+    insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, duplicatePolyWall, closePolyWall,
     setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillClosed,
-    insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, closePolyHill,
+    insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, duplicatePolyHill, closePolyHill,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
-    insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, closeBezierWall,
-    setFlagColor, deleteFlag,
+    insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, duplicateBezierWall, closeBezierWall,
+    setFlagColor, deleteFlag, duplicateFlag,
     trackSign,
-    setTrackSignName, setTrackSignRotation, deleteTrackSign, closeTrackSign,
+    setTrackSignName, setTrackSignRotation, deleteTrackSign, duplicateTrackSign, closeTrackSign,
     bannerString,
-    setBannerStringWidth, setBannerStringPoleHeight, deleteBannerString, closeBannerString,
+    setBannerStringWidth, setBannerStringPoleHeight, deleteBannerString, duplicateBannerString, closeBannerString,
     actionZone,
-    setActionZoneRadius, setActionZoneType, deleteActionZone, closeActionZone,
+    setActionZoneRadius, setActionZoneType, deleteActionZone, duplicateActionZone, closeActionZone,
     polyCurb,
     setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed,
-    insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, closePolyCurb,
+    insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
     bridge,
     setBridgeWidth, setBridgeDepth, setBridgeHeight, setBridgeThickness, setBridgeAngle,
     duplicateBridge, deleteBridge, closeBridge,
@@ -517,6 +526,6 @@ export const useEditorStore = defineStore('editor', () => {
     setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     meshGridAdjustUp, meshGridAdjustDown,
-    applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, closeMeshGrid,
+    applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, duplicateMeshGrid, closeMeshGrid,
   };
 });

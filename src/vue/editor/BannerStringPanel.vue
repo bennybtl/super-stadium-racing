@@ -40,7 +40,10 @@
     </div>
 
     <div class="ep-hint">WASD to move · Q/E to rotate · Del to delete</div>
-    <button class="ep-btn-del" @click="editor.deleteBannerString()">Delete Banner String</button>
+
+    <!-- Actions -->
+    <button class="ep-btn-dup" @click="editor.duplicateBannerString()">Duplicate</button>
+    <button class="ep-btn-del" @click="editor.deleteBannerString()">Delete</button>
   </EditorPanel>
 </template>
 

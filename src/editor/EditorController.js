@@ -1037,6 +1037,7 @@ export class EditorController {
   insertPolyWallPoint()         { this.polyWallEditor.insertPolyWallPoint(); }
   deletePolyWallPoint()         { this.polyWallEditor.deleteSelectedPoint(); }
   deletePolyWall()              { this.polyWallEditor.deletePolyWall(); }
+  duplicatePolyWall()           { this.polyWallEditor.duplicatePolyWall(); }
   deselectPolyWall()            { this.polyWallEditor.deselectPoint(); }
 
   // ── Poly Hill Vue bridge methods ──
@@ -1047,6 +1048,7 @@ export class EditorController {
   insertPolyHillPoint()         { this.polyHillEditor.insertPointAfter(); }
   deletePolyHillPoint()         { this.polyHillEditor.deleteSelectedPoint(); }
   deletePolyHill()              { this.polyHillEditor.deletePolyHill(); }
+  duplicatePolyHill()           { this.polyHillEditor.duplicatePolyHill(); }
   deselectPolyHill()            { this.polyHillEditor.deselectPoint(); }
 
   // ── Bezier Wall Vue bridge methods ──
@@ -1056,11 +1058,13 @@ export class EditorController {
   insertBezierWallPoint()       { this.bezierWallEditor.insertBezierWallPoint(); }
   deleteBezierWallPoint()       { this.bezierWallEditor.deleteBezierWallPoint(); }
   deleteBezierWall()            { this.bezierWallEditor.deleteBezierWall(); }
+  duplicateBezierWall()         { this.bezierWallEditor.duplicateBezierWall(); }
   deselectBezierWall()          { this.bezierWallEditor.deselectBezierWall(); }
 
   // ── Flag Vue bridge methods ──
   changeFlagColor(val) { this.flagEditor.changeColor(val); }
   deleteFlag()         { this.flagEditor.deleteSelected(); }
+  duplicateFlag()      { this.flagEditor.duplicateSelected(); }
 
   // ── Track Sign Vue bridge methods ──
   addTrackSignEntity()         { this.trackSignEditor.addEntity(); }
@@ -1068,6 +1072,7 @@ export class EditorController {
   changeTrackSignName(val)     { this.trackSignEditor.changeName(val); }
   changeTrackSignRotation(val) { this.trackSignEditor.changeRotation(val); }
   deleteTrackSign()            { this.trackSignEditor.deleteSelected(); }
+  duplicateTrackSign()         { this.trackSignEditor.duplicateSelected(); }
 
   // ── Banner String Vue bridge methods ──
   addBannerStringEntity()         { this.bannerStringEditor.addEntity(); }
@@ -1075,6 +1080,7 @@ export class EditorController {
   changeBannerStringWidth(val)    { this.bannerStringEditor.changeWidth(val); }
   changeBannerStringPoleHeight(val) { this.bannerStringEditor.changePoleHeight(val); }
   deleteBannerString()            { this.bannerStringEditor.deleteSelected(); }
+  duplicateBannerString()         { this.bannerStringEditor.duplicateSelected(); }
 
   // ── Action Zone Vue bridge methods ──
   addActionZoneEntity()           { this.actionZoneEditor.addEntity(); }
@@ -1083,6 +1089,7 @@ export class EditorController {
   changeActionZoneRadius(val)     { this.actionZoneEditor.changeRadius(val); }
   changeActionZoneType(val)       { this.actionZoneEditor.changeZoneType(val); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }
+  duplicateActionZone()           { this.actionZoneEditor.duplicateSelected(); }
 
   // ── Poly Curb Vue bridge methods ──
   changePolyCurbRadius(val)  { this.polyCurbEditor?.changePolyCurbRadius(val); }
@@ -1092,6 +1099,7 @@ export class EditorController {
   insertPolyCurbPoint()      { this.polyCurbEditor?.insertPolyCurbPoint(); }
   deletePolyCurbPoint()      { this.polyCurbEditor?.deletePolyCurbPoint(); }
   deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
+  duplicatePolyCurb()        { this.polyCurbEditor?.duplicatePolyCurb(); }
   deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
 
   // ── Bridge Vue bridge methods ──────────────────────────────────────────────
@@ -1118,6 +1126,7 @@ export class EditorController {
   applyMeshGridChanges(c, r, w, d) { this.meshGridEditor?.applyGridChanges(c, r, w, d); }
   flattenMeshGrid()             { this.meshGridEditor?.flattenGrid(); }
   deleteMeshGrid()              { this.meshGridEditor?.deleteMeshGrid(); }
+  duplicateMeshGrid()           { this.meshGridEditor?.duplicateMeshGrid(); }
   closeMeshGrid() {
     this.meshGridEditor?.deselectPoint();
     if (this._editorStore) this._editorStore.selectedType = null;

@@ -31,9 +31,10 @@
 
     <!-- Hint -->
     <div class="ep-hint">WASD to move · Del to delete</div>
-
-    <!-- Delete -->
-    <button class="ep-btn-del" @click="editor.deleteActionZone()">Delete Zone</button>
+    <div class="ep-btn-row">
+      <button class="ep-btn-dup" @click="editor.duplicateActionZone()">Duplicate</button>
+      <button class="ep-btn-del" @click="editor.deleteActionZone()">Delete</button>
+    </div>
   </EditorPanel>
 </template>
 

@@ -54,8 +54,10 @@
     </div>
 
     <hr class="ep-separator" />
-
-    <button class="ep-btn-del" @click="editor.deleteBezierWall()">Delete Wall</button>
+    <div class="ep-btn-row">
+      <button class="ep-btn-dup" @click="editor.duplicateBezierWall()">Duplicate</button>
+      <button class="ep-btn-del" @click="editor.deleteBezierWall()">Delete</button>
+    </div>
   </EditorPanel>
 </template>
 

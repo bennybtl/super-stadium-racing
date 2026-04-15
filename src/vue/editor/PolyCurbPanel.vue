@@ -70,8 +70,10 @@
     </div>
 
     <hr class="ep-separator" />
-
-    <button class="ep-btn-del" @click="editor.deletePolyCurb()">Delete Curb</button>
+    <div class="ep-btn-row">
+      <button class="ep-btn-dup" @click="editor.duplicatePolyCurb()">Duplicate</button>
+      <button class="ep-btn-del" @click="editor.deletePolyCurb()">Delete</button>
+    </div>
   </EditorPanel>
 </template>
 

@@ -207,6 +207,17 @@ export class ActionZoneEditor {
     this._hideProperties();
   }
 
+  duplicateSelected() {
+    if (!this._selected) return;
+    this.editor.saveSnapshot();
+    const src = this._selected.feature;
+    const feature = { ...src, x: src.x + 5, z: src.z + 5 };
+    this.editor.currentTrack.features.push(feature);
+    const zoneData = this._createZoneMeshes(feature);
+    this.deselect();
+    this.select(zoneData);
+  }
+
   // ── Properties (Vue store bridge) ──────────────────────────────────────────
 
   _showProperties(zoneData) {

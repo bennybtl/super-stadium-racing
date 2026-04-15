@@ -125,6 +125,17 @@ export class TrackSignEditor {
     this.hideProperties();
   }
 
+  duplicateSelected() {
+    if (!this._selected) return;
+    this.editor.saveSnapshot();
+    const src = this._selected.feature;
+    const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
+    this.editor.currentTrack.features.push(newFeature);
+    const sign = this.createVisual(newFeature);
+    this.deselect();
+    this.select(sign);
+  }
+
   // ── Property changes ────────────────────────────────────────────────────────
 
   changeName(val) {

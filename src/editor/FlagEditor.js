@@ -133,6 +133,18 @@ export class FlagEditor {
     this.hideProperties();
   }
 
+  duplicateSelected() {
+    if (!this._selected) return;
+    this.editor.saveSnapshot();
+    const src = this._selected.feature;
+    const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
+    this.track.features.push(newFeature);
+    this._createFlagMesh(newFeature);
+    const newFlagData = this.flags[this.flags.length - 1];
+    this.deselect();
+    if (newFlagData?.flag) this.select(newFlagData.flag);
+  }
+
   addEntity() {
     const e = this.editor;
     const camPos    = e.camera.position;

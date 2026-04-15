@@ -11,7 +11,7 @@
       <span>{{ editor.squareHill.width.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="2" max="60" step="1"
+      type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.width"
       @input="editor.setSquareHillWidth(+$event.target.value)"
       class="ep-slider"
@@ -23,7 +23,7 @@
       <span>{{ editor.squareHill.depth.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="2" max="60" step="1"
+      type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.depth"
       @input="editor.setSquareHillDepth(+$event.target.value)"
       class="ep-slider"
@@ -35,7 +35,7 @@
       <span>{{ editor.squareHill.transition.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="1" max="15" step="0.5"
+      type="range" min="0.5" max="15" step="0.5"
       :value="editor.squareHill.transition"
       @input="editor.setSquareHillTransition(+$event.target.value)"
       class="ep-slider"

@@ -366,6 +366,21 @@ export class PolyHillEditor {
     this._rebuildHill(feature);
   }
 
+  duplicatePolyHill() {
+    if (!this._activeHill) return;
+    this.ec.saveSnapshot();
+    const src = this._activeHill.feature;
+    const feature = {
+      ...src,
+      points: src.points.map(p => ({ ...p, x: p.x + 5, z: p.z + 5 })),
+    };
+    this.track.features.push(feature);
+    const hg = this._createHillGizmos(feature);
+    this._setActiveHill(hg);
+    this._syncStoreToFeature(feature);
+    this._rebuildHill(feature);
+  }
+
   // ─── Store sync ───────────────────────────────────────────────────────────
 
   _syncStoreToFeature(feature, selectedIdx = null) {

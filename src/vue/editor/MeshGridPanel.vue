@@ -97,7 +97,10 @@
     <hr class="ep-separator" />
 
     <button class="ep-btn-action" @click="editor.flattenMeshGrid()">Flatten Grid</button>
-    <button class="ep-btn-del"    @click="editor.deleteMeshGrid()">Delete Mesh Grid</button>
+    <div class="ep-btn-row">
+      <button class="ep-btn-dup" @click="editor.duplicateMeshGrid()">Duplicate</button>
+      <button class="ep-btn-del" @click="editor.deleteMeshGrid()">Delete</button>
+    </div>
   </EditorPanel>
 </template>
 

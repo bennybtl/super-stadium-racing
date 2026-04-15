@@ -115,6 +115,24 @@ export class MeshGridEditor {
     window.rebuildTerrainTexture?.();
   }
 
+  duplicateMeshGrid() {
+    if (!this.activeFeature) return;
+    this.ec.saveSnapshot();
+    const src = this.activeFeature;
+    const feature = {
+      ...src,
+      centerX: src.centerX + 10,
+      centerZ: src.centerZ + 10,
+      heights: [...src.heights],
+    };
+    this.track.features.push(feature);
+    this.destroyGizmos();
+    this.activeFeature = feature;
+    this.createGizmos(feature);
+    this._syncToStore(feature);
+    window.rebuildTerrain?.();
+  }
+
   flattenGrid() {
     if (!this.activeFeature) return;
     this.ec.saveSnapshot();
