@@ -221,6 +221,11 @@ export class RaceMode extends BaseMode {
     aiDriver2.setTruck(aiTruck2);
     aiDriver3.setTruck(aiTruck3);
 
+    // Give each AI driver awareness of the other trucks so they can steer around them.
+    aiDriver1.setOtherTrucks([playerTruck, aiTruck2, aiTruck3]);
+    aiDriver2.setOtherTrucks([playerTruck, aiTruck1, aiTruck3]);
+    aiDriver3.setOtherTrucks([playerTruck, aiTruck1, aiTruck2]);
+
     // Re-initialize AI paths to target the start/finish gate (checkpoint N) from grid spawns
     if (maxCheckpointNumber > 0) {
       const initAI = (driver, spawnPos) => {

@@ -1,0 +1,188 @@
+{
+  "name": "Blaster",
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
+  "features": [
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 1,
+          "z": -85.56512786309756,
+          "radius": 0
+        },
+        {
+          "x": -12,
+          "z": -70.56512786309756,
+          "radius": 14
+        },
+        {
+          "x": -11,
+          "z": 64.93487213690244,
+          "radius": 12
+        },
+        {
+          "x": 9,
+          "z": 79.93487213690244,
+          "radius": 0
+        }
+      ],
+      "height": 5,
+      "width": 13.5,
+      "closed": false
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 27.5,
+          "z": -62.56512786309756,
+          "radius": 0
+        },
+        {
+          "x": 19,
+          "z": -50.06512786309756,
+          "radius": 23.5
+        },
+        {
+          "x": 21.5,
+          "z": 37.43487213690245,
+          "radius": 19
+        },
+        {
+          "x": 30.5,
+          "z": 44.93487213690245,
+          "radius": 0
+        }
+      ],
+      "height": 5,
+      "width": 14,
+      "closed": false
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -16,
+          "z": 4,
+          "radius": 1
+        },
+        {
+          "x": -50,
+          "z": 4,
+          "radius": 6
+        },
+        {
+          "x": -50,
+          "z": -12,
+          "radius": 7.5
+        },
+        {
+          "x": -16,
+          "z": -12,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -16,
+          "z": 30,
+          "radius": 0
+        },
+        {
+          "x": -36,
+          "z": 30,
+          "radius": 7.5
+        },
+        {
+          "x": -36,
+          "z": 80,
+          "radius": 8.5
+        },
+        {
+          "x": -80,
+          "z": 80,
+          "radius": 10
+        },
+        {
+          "x": -80,
+          "z": -40,
+          "radius": 10
+        },
+        {
+          "x": -18,
+          "z": -40,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": false
+    },
+    {
+      "type": "hill",
+      "centerX": -56,
+      "centerZ": 0,
+      "radius": 10,
+      "height": 5,
+      "terrainType": null
+    },
+    {
+      "type": "hill",
+      "centerX": -58,
+      "centerZ": 18,
+      "radius": 8,
+      "height": 7,
+      "terrainType": "rocky"
+    },
+    {
+      "type": "hill",
+      "centerX": -62,
+      "centerZ": 34,
+      "radius": 6.5,
+      "height": 7,
+      "terrainType": "rocky"
+    },
+    {
+      "type": "hill",
+      "centerX": -56,
+      "centerZ": 44,
+      "radius": 7.5,
+      "height": 3,
+      "terrainType": null
+    },
+    {
+      "type": "hill",
+      "centerX": -50,
+      "centerZ": 28,
+      "radius": 6.5,
+      "height": 7,
+      "terrainType": "rocky"
+    },
+    {
+      "type": "hill",
+      "centerX": -62,
+      "centerZ": 54,
+      "radius": 7.5,
+      "height": 3,
+      "terrainType": null
+    },
+    {
+      "type": "hill",
+      "centerX": -66,
+      "centerZ": 10,
+      "radius": 7.5,
+      "height": 3,
+      "terrainType": null
+    }
+  ]
+}

@@ -1,6 +1,17 @@
 import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
 import { useDebugStore } from "../vue/store.js";
 
+// ─── Vehicle avoidance ────────────────────────────────────────────────────────
+
+/** Radius (world units) within which another truck triggers avoidance steering. */
+const AVOIDANCE_RADIUS = 10;
+
+/** Maximum lateral distance (world units) the virtual target is nudged sideways. */
+const AVOIDANCE_MAX_PUSH = 6;
+
+/** Trucks further than this behind us are ignored (no need to avoid what we've passed). */
+const AVOIDANCE_IGNORE_BEHIND = 3;
+
 /**
  * AIDriver - Autonomous driver that navigates through checkpoints
  * Uses A* pathfinding to calculate optimal route avoiding obstacles
@@ -55,6 +66,10 @@ export class AIDriver {
     
     // Pause flag — when true, getInput returns all-false
     this.paused = false;
+
+    // Other truck instances used for vehicle-to-vehicle avoidance.
+    // Set via setOtherTrucks() once all trucks have been created.
+    this.otherTrucks = [];
 
     // Debug visualization — enabled state is driven by the global DebugManager store
     this._debugStore = useDebugStore();
@@ -163,6 +178,15 @@ export class AIDriver {
   setTruck(truck) {
     this.truck = truck;
     this.truckMesh = truck.mesh;
+  }
+
+  /**
+   * Provide the list of all OTHER truck instances so this driver can
+   * steer around them.  Call this once after all trucks are created.
+   * @param {Truck[]} trucks  — array of Truck objects (NOT including this driver's own truck)
+   */
+  setOtherTrucks(trucks) {
+    this.otherTrucks = trucks;
   }
 
   /**
@@ -435,10 +459,44 @@ export class AIDriver {
     
     // Current heading vector
     const forward = new Vector3(Math.sin(heading), 0, Math.cos(heading));
+    // Right vector — XZ perpendicular to heading
+    const rightVec = new Vector3(forward.z, 0, -forward.x);
+
+    // ── Vehicle avoidance ──────────────────────────────────────────────────
+    // For each nearby truck, nudge the virtual look-ahead target laterally
+    // away from that truck. The existing steering logic then aims at the
+    // adjusted target, naturally steering around the obstacle.
+    let lateralOffset = 0;
+    for (const other of this.otherTrucks) {
+      if (!other.mesh) continue;
+      const odx = other.mesh.position.x - position.x;
+      const odz = other.mesh.position.z - position.z;
+      const dist = Math.sqrt(odx * odx + odz * odz);
+      if (dist < 0.5 || dist > AVOIDANCE_RADIUS) continue;
+      // Ignore trucks that are clearly behind us
+      const fwdDist = odx * forward.x + odz * forward.z;
+      if (fwdDist < -AVOIDANCE_IGNORE_BEHIND) continue;
+      // Lateral position of the other truck (+ = they are to our right)
+      const latDist = odx * rightVec.x + odz * rightVec.z;
+      // Quadratic fall-off: strongest when very close, zero at AVOIDANCE_RADIUS
+      const weight = Math.pow(1 - dist / AVOIDANCE_RADIUS, 2);
+      lateralOffset -= Math.sign(latDist) * weight * AVOIDANCE_MAX_PUSH;
+    }
+    lateralOffset = Math.max(-AVOIDANCE_MAX_PUSH, Math.min(AVOIDANCE_MAX_PUSH, lateralOffset));
+
+    // Build a virtual target that incorporates the avoidance offset
+    const virtualTarget = {
+      x: targetWaypoint.x + rightVec.x * lateralOffset,
+      z: targetWaypoint.z + rightVec.z * lateralOffset,
+    };
+
+    // Recompute toTarget toward the avoidance-adjusted virtual target
+    const toVirtual = new Vector3(virtualTarget.x - position.x, 0, virtualTarget.z - position.z);
+    toVirtual.normalize();
     
     // Calculate steering angle using cross product
-    const cross = Vector3.Cross(forward, toTarget);
-    const dot = Vector3.Dot(forward, toTarget);
+    const cross = Vector3.Cross(forward, toVirtual);
+    const dot = Vector3.Dot(forward, toVirtual);
     
     // Determine turn direction
     const turnStrength = cross.y;

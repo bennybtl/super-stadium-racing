@@ -214,7 +214,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
         halfLength,
         halfThick,
         friction: 0.1
-      }]
+      }],
+      dispose() {},   // no Babylon meshes — required by WallManager.dispose()
     });
   };
   
