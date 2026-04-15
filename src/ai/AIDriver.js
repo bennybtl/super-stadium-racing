@@ -1,5 +1,6 @@
 import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
 import { useDebugStore } from "../vue/store.js";
+import { TerrainQuery } from "../managers/TerrainQuery.js";
 
 // ─── Vehicle avoidance ────────────────────────────────────────────────────────
 
@@ -27,6 +28,7 @@ export class AIDriver {
     this.checkpointManager = checkpointManager;
     this.wallManager = wallManager;
     this.scene = scene;
+    this._terrainQuery = new TerrainQuery(scene);
     
     // Skill-based parameters (can be customized per AI)
     const {
@@ -560,7 +562,7 @@ export class AIDriver {
     if (this.debugEnabled && this.debugTarget) {
       this.debugTarget.position.x = targetWaypoint.x;
       this.debugTarget.position.z = targetWaypoint.z;
-      this.debugTarget.position.y = this.track.getHeightAt(targetWaypoint.x, targetWaypoint.z) + 2;
+      this.debugTarget.position.y = this._terrainQuery.heightAt(targetWaypoint.x, targetWaypoint.z) + 2;
     }
     
     return input;
@@ -678,7 +680,7 @@ export class AIDriver {
     // Move the truck to the clear position
     this.truckMesh.position.x = spawnPos.x;
     this.truckMesh.position.z = spawnPos.z;
-    this.truckMesh.position.y = this.track.getHeightAt(spawnPos.x, spawnPos.z) + 0.6;
+    this.truckMesh.position.y = this._terrainQuery.heightAt(spawnPos.x, spawnPos.z) + 0.6;
 
     const dx = targetWaypoint.x - spawnPos.x;
     const dz = targetWaypoint.z - spawnPos.z;
@@ -751,7 +753,7 @@ export class AIDriver {
       const wp = this.path[i];
       const sphere = MeshBuilder.CreateSphere(`pathDebug${i}`, { diameter: 0.5 }, this.scene);
       sphere.position.x = wp.x;
-      sphere.position.y = this.track.getHeightAt(wp.x, wp.z) + 1;
+      sphere.position.y = this._terrainQuery.heightAt(wp.x, wp.z) + 1;
       sphere.position.z = wp.z;
       
       const mat = new StandardMaterial(`pathDebugMat${i}`, this.scene);

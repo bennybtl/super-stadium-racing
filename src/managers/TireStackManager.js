@@ -1,6 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { TireStack, TIRE_OUTER_RADIUS, STACK_MASS } from "../objects/TireStack.js";
 import { TRUCK_RADIUS } from "../constants.js";
+import { TerrainQuery } from "./TerrainQuery.js";
 /**
  * TireStackManager — creates and manages movable tire stacks on the track.
  *
@@ -13,6 +14,7 @@ export class TireStackManager {
     this.scene   = scene;
     this.track   = track;
     this.shadows = shadows;
+    this._terrainQuery = new TerrainQuery(scene);
 
     // Array of TireStack instances
     this._stacks = [];
@@ -21,7 +23,7 @@ export class TireStackManager {
   // ─── Creation ────────────────────────────────────────────────────────────
   createStack(feature) {
     const { x, z } = feature;
-    const groundY = this.track.getHeightAt(x, z);
+    const groundY = this._terrainQuery.heightAt(x, z);
     const stack = new TireStack(x, z, groundY, this.scene, this.shadows);
     this._stacks.push(stack);
   }

@@ -127,7 +127,7 @@ export class CheckpointEditor {
     feature.centerX = this.editor._snap(this.editor._rawDragPos.x);
     feature.centerZ = this.editor._snap(this.editor._rawDragPos.z);
 
-    const terrainHeight = this.editor.currentTrack.getHeightAt(feature.centerX, feature.centerZ);
+    const terrainHeight = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     checkpoint.container.position.x = feature.centerX;
     checkpoint.container.position.z = feature.centerZ;
     checkpoint.container.position.y = terrainHeight;
@@ -226,7 +226,7 @@ export class CheckpointEditor {
     const newZ = camPos.z + direction.z * distance;
 
     // Get terrain height
-    const terrainHeight = currentTrack.getHeightAt(newX, newZ);
+    const terrainHeight = this.editor.terrainQuery.heightAt(newX, newZ);
 
     // Find next checkpoint number
     const checkpointFeatures = currentTrack.features.filter(f => f.type === 'checkpoint');

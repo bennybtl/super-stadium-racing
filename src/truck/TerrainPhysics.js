@@ -97,11 +97,17 @@ const STEEP_SLOPE = {
  * Handles terrain-related physics: gravity, suspension, and slope collision.
  */
 export class TerrainPhysics {
-  constructor(state, halfHeight = _DEFAULT_HALF_HEIGHT) {
+  constructor(state, halfHeight = _DEFAULT_HALF_HEIGHT, terrainQuery = null) {
     this.state = state;
     this.halfHeight = halfHeight;
     this.gravity = -30;
     this._bumpAccumulator = 0;
+    this._terrainQuery    = terrainQuery;
+    // Cached results from the most recent castDown — used by updateTerrainOrientation
+    // so the normal is available without a second raycast.
+    this._lastFloorNormal = new Vector3(0, 1, 0);
+    // Last resolved floor Y — exposed so Truck can feed it to TruckBody.
+    this.lastFloorY = 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -111,15 +117,29 @@ export class TerrainPhysics {
   update(mesh, deltaTime, track) {
     this.state.verticalVelocity += this.gravity * deltaTime;
 
-    const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
-    // Check if a bridge deck is directly under the truck and treat it as a raised floor.
-    // Pass truck center Y so getBridgeFloorAt can skip decks the truck is driving under.
-    // Use whichever floor is higher — bridge deck or terrain surface.
-    const bridgeFloor = track ? track.getBridgeFloorAt(mesh.position.x, mesh.position.z, mesh.position.y) : -Infinity;
-    // Adding halfHeight puts the truck CENTER at the correct resting height above the floor.
-    const effectiveFloor = (bridgeFloor > terrainHeight) ? bridgeFloor : terrainHeight;
-    const truckBottomY   = effectiveFloor + this.halfHeight;
-    const penetration    = truckBottomY - mesh.position.y;
+    // Single downward raycast from just above the truck centre.
+    // Firing from the truck's current Y means the ray naturally selects the right surface:
+    //   • on bridge deck  → origin is above the deck → hits the deck
+    //   • under bridge    → origin is below the deck → hits the ground
+    //   • open terrain    → hits the ground mesh
+    // Falls back to the analytical path when no TerrainQuery is available.
+    let effectiveFloor;
+    if (this._terrainQuery) {
+      const hit = this._terrainQuery.castDown(
+        mesh.position.x, mesh.position.z, mesh.position.y + 0.1
+      );
+      effectiveFloor        = hit ? hit.y : 0;
+      this._lastFloorNormal = hit?.normal ?? new Vector3(0, 1, 0);
+    } else {
+      const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
+      const bridgeFloor   = track ? track.getBridgeFloorAt(mesh.position.x, mesh.position.z, mesh.position.y) : -Infinity;
+      effectiveFloor        = (bridgeFloor > terrainHeight) ? bridgeFloor : terrainHeight;
+      this._lastFloorNormal = new Vector3(0, 1, 0);
+    }
+    this.lastFloorY = effectiveFloor;
+
+    const truckBottomY = effectiveFloor + this.halfHeight;
+    const penetration  = truckBottomY - mesh.position.y;
 
     this._applySpring(mesh, deltaTime, track, penetration, truckBottomY);
 
@@ -128,7 +148,7 @@ export class TerrainPhysics {
     const groundedness = this._updateSuspension(mesh, track, penetration);
 
     if (groundedness > ORIENTATION.groundednessThreshold && track) {
-      this.updateTerrainOrientation(mesh, track, deltaTime, groundedness);
+      this.updateTerrainOrientation(mesh, deltaTime, groundedness);
     } else {
       // Airborne: hold whatever orientation the truck had when it left the ground.
       // terrainRoll is applied by DriftPhysics; just keep rotation.x in sync.
@@ -138,23 +158,18 @@ export class TerrainPhysics {
     return { groundedness, penetration };
   }
 
-  updateTerrainOrientation(mesh, track, deltaTime, groundedness = 1) {
+  updateTerrainOrientation(mesh, deltaTime, groundedness = 1) {
     const forward = this._forwardVector();
     const right   = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
-    const d = ORIENTATION.slopeCheckDist;
-    const x = mesh.position.x;
-    const z = mesh.position.z;
 
-    const targetPitch = Math.atan2(
-      track.getHeightAt(x + forward.x * d, z + forward.z * d) -
-      track.getHeightAt(x - forward.x * d, z - forward.z * d),
-      d * 2
-    );
-    const targetRoll = Math.atan2(
-      track.getHeightAt(x + right.x * d, z + right.z * d) -
-      track.getHeightAt(x - right.x * d, z - right.z * d),
-      d * 2
-    );
+    // Derive pitch and roll directly from the surface normal captured by the floor
+    // raycast in update() — one operation replaces four getHeightAt probe calls.
+    // atan2(-n·forward, n.y) gives the slope angle in the forward direction:
+    //   rising slope ahead  → normal tilts backward → positive targetPitch (nose up)
+    //   rising slope right  → normal tilts left      → positive targetRoll
+    const normal     = this._lastFloorNormal;
+    const targetPitch = Math.atan2(-normal.dot(forward), normal.y);
+    const targetRoll  = Math.atan2(-normal.dot(right),   normal.y);
 
     const fastFactor  = 1 - Math.exp(-ORIENTATION.fastSmoothingRate * deltaTime);
     const slowFactor  = 1 - Math.exp(-ORIENTATION.slowSmoothingRate * deltaTime);

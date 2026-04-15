@@ -49,9 +49,7 @@ export class TireStackEditor {
   createVisual(feature) {
     const SPHERE_Y_ABOVE = 2.2;
 
-    const terrainH = this.editor.currentTrack
-      ? this.editor.currentTrack.getHeightAt(feature.x, feature.z)
-      : 0;
+    const terrainH = this.editor.terrainQuery.heightAt(feature.x, feature.z);
 
     // TransformNode holds the OBJ visual at ground level
     const node = new TransformNode('tireStackNode', this.scene);
@@ -84,7 +82,7 @@ export class TireStackEditor {
   updateVisual(stackData) {
     const SPHERE_Y_ABOVE = 2.2;
     const { feature, node, mesh } = stackData;
-    const terrainH = this.editor.currentTrack.getHeightAt(feature.x, feature.z);
+    const terrainH = this.editor.terrainQuery.heightAt(feature.x, feature.z);
     node.position.x = feature.x;
     node.position.y = terrainH;
     node.position.z = feature.z;

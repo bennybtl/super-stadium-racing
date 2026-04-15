@@ -121,7 +121,7 @@ export class PolyWallEditor {
 
   _createPointSphere(feature, idx) {
     const pt = feature.points[idx];
-    const y  = this.track.getHeightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature?.height || 0);
+    const y  = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature?.height || 0);
     const mesh = MeshBuilder.CreateSphere(`pwPt_${idx}_${Date.now()}`, {
       diameter: 1.4,
       segments: 6,
@@ -137,7 +137,7 @@ export class PolyWallEditor {
 
     // Draw the polyline
     const ctrlPts = feature.points.map(pt => {
-      const y = this.track.getHeightAt(pt.x, pt.z) + (feature?.height || 0);
+      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + (feature?.height || 0);
       return new Vector3(pt.x, y + 0.15, pt.z);
     });
 
@@ -171,7 +171,7 @@ export class PolyWallEditor {
     for (let i = 0; i < pointMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = this.track.getHeightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeWall?.feature?.height || 0);
+      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeWall?.feature?.height || 0);
       pointMeshes[i].position.set(pt.x, y + 0.7, pt.z);
     }
     if (rebuildLines) {

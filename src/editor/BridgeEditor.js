@@ -64,7 +64,7 @@ export class BridgeEditor {
   createVisual(feature) {
     const scene    = this.editor.scene;
     const track    = this.editor.currentTrack;
-    const terrainY = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const terrainY = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     const thickness = feature.thickness ?? 0.4;
     const deckY    = terrainY + (feature.height ?? 5) + thickness / 2;
 
@@ -94,7 +94,7 @@ export class BridgeEditor {
   updateVisual(bridgeData) {
     const { feature, node, sphere } = bridgeData;
     const track    = this.editor.currentTrack;
-    const terrainY = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const terrainY = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     const thickness = feature.thickness ?? 0.4;
     const deckY    = terrainY + (feature.height ?? 5) + thickness / 2;
 

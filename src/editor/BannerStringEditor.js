@@ -48,7 +48,7 @@ export class BannerStringEditor {
   }
 
   createVisual(feature) {
-    const groundY = this._track.getHeightAt(feature.x, feature.z);
+    const groundY = this.editor.terrainQuery.heightAt(feature.x, feature.z);
     // No shadows in editor mode
     const banner = new BannerString(feature, groundY, this._scene, null);
     this._banners.push(banner);
@@ -100,7 +100,7 @@ export class BannerStringEditor {
     const prevZ   = feature.z;
     const newX    = e._snap(e._rawDragPos.x);
     const newZ    = e._snap(e._rawDragPos.z);
-    const groundY = this._track.getHeightAt(newX, newZ);
+    const groundY = this.editor.terrainQuery.heightAt(newX, newZ);
     this._selected.moveTo(newX, newZ, groundY);
     return new Vector3(newX - prevX, 0, newZ - prevZ);
   }

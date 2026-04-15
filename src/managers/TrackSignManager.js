@@ -1,4 +1,5 @@
 import { TrackSign } from "../objects/TrackSign.js";
+import { TerrainQuery } from "./TerrainQuery.js";
 
 /**
  * TrackSignManager — creates and renders track name signs in game/practice mode.
@@ -9,10 +10,11 @@ export class TrackSignManager {
     this.scene  = scene;
     this.track  = track;
     this._signs = [];
+    this._terrainQuery = new TerrainQuery(scene);
   }
 
   createSign(feature) {
-    const groundY = this.track.getHeightAt(feature.x, feature.z);
+    const groundY = this._terrainQuery.heightAt(feature.x, feature.z);
     const sign = new TrackSign(feature, groundY, this.scene);
     this._signs.push(sign);
   }

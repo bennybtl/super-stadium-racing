@@ -1,4 +1,5 @@
 import { Pickup } from "../objects/Pickup.js";
+import { TerrainQuery } from "./TerrainQuery.js";
 
 // =============================================================================
 // Tunable constants
@@ -40,6 +41,7 @@ export class PickupManager {
     this.track   = track;
     this.shadows = shadows;
     this._count  = count;
+    this._terrainQuery = new TerrainQuery(scene);
 
     /** @type {Pickup[]} */
     this._pickups = [];
@@ -61,7 +63,7 @@ export class PickupManager {
 
   _spawnAll() {
     for (const { x, z } of this._generatePositions(this._count)) {
-      const groundY = this.track.getHeightAt(x, z);
+      const groundY = this._terrainQuery.heightAt(x, z);
       this._pickups.push(new Pickup(x, z, groundY, 'boost', this.scene, this.shadows));
     }
   }

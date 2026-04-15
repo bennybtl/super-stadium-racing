@@ -78,7 +78,7 @@ export class SquareHillEditor {
     const scene = this.editor.scene;
     const track = this.editor.currentTrack;
     const transition = feature.transition ?? 8;
-    const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     const absH = feature.heightAtMin !== undefined
       ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
       : Math.max(0.5, Math.abs(feature.height ?? 5));
@@ -110,7 +110,7 @@ export class SquareHillEditor {
     const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
     const transition = feature.transition ?? 8;
-    const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     const absH = feature.heightAtMin !== undefined
       ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
       : Math.max(0.5, Math.abs(feature.height ?? 5));

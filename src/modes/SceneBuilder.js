@@ -178,6 +178,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
   
   ground.material = groundMat;
   ground.receiveShadows = true;
+  // Tag so TerrainQuery raycasts can identify this as a driveable surface.
+  ground.metadata = { isTerrain: true };
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
@@ -271,6 +273,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       deck.material = bridgeMat;
       deck.receiveShadows = true;
       shadows.addShadowCaster(deck);
+      // Tag so TerrainQuery raycasts treat this deck as a driveable surface.
+      deck.metadata = { isTerrain: true };
       new PhysicsAggregate(deck, PhysicsShapeType.BOX, { mass: 0 }, scene);
     } else if (
       (feature.type === "hill" && feature.height < 0) ||

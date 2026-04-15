@@ -8,6 +8,7 @@ import {
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
+import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { DriftPhysics } from "./DriftPhysics.js";
 import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
@@ -50,7 +51,8 @@ export class Truck {
     
     // Initialize subsystems
     this.particles = new ParticleEffects(this.mesh, scene);
-    this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight);
+    const terrainQuery = new TerrainQuery(scene);
+    this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight, terrainQuery);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
 
@@ -194,8 +196,9 @@ export class Truck {
     // Update rotation
     this.mesh.rotation.y = this.state.heading;
 
-    // Animate visual puppet — pass terrain height so the puppet stays above ground
-    const terrainY = track ? track.getHeightAt(this.mesh.position.x, this.mesh.position.z) : null;
+    // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
+    // This is the effective surface (bridge deck or ground) rather than just raw terrain.
+    const terrainY = track ? this.terrainPhysics.lastFloorY : null;
     this.body.update(this.state, input, speed, deltaTime, terrainY, groundedness);
     
     // Sync physics body

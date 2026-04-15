@@ -1,4 +1,5 @@
 import { BannerString } from "../objects/BannerString.js";
+import { TerrainQuery } from "./TerrainQuery.js";
 
 /**
  * BannerStringManager — creates and manages decorative banner string features.
@@ -10,10 +11,11 @@ export class BannerStringManager {
     this._track   = track;
     this._shadows = shadows;
     this._banners = [];
+    this._terrainQuery = new TerrainQuery(scene);
   }
 
   createBanner(feature) {
-    const groundY = this._track.getHeightAt(feature.x, feature.z);
+    const groundY = this._terrainQuery.heightAt(feature.x, feature.z);
     const banner  = new BannerString(feature, groundY, this._scene, this._shadows);
     this._banners.push(banner);
     return banner;

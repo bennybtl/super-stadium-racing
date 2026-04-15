@@ -1,6 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { Flag, COLLISION_RADIUS } from "../objects/Flag.js";
 import { TRUCK_RADIUS } from "../constants.js";
+import { TerrainQuery } from "./TerrainQuery.js";
 
 /**
  * FlagManager — creates and manages flag objects on the track.
@@ -11,6 +12,7 @@ export class FlagManager {
     this.scene = scene;
     this.track = track;
     this.shadows = shadows;
+    this._terrainQuery = new TerrainQuery(scene);
 
     // Array of Flag instances
     this._flags = [];
@@ -19,7 +21,7 @@ export class FlagManager {
   // ─── Creation ────────────────────────────────────────────────────────────
   createFlag(feature) {
     const { x, z, color = 'red' } = feature;
-    const groundY = this.track.getHeightAt(x, z);
+    const groundY = this._terrainQuery.heightAt(x, z);
     const flag = new Flag(x, z, color, groundY, this.scene, this.shadows);
     this._flags.push(flag);
   }

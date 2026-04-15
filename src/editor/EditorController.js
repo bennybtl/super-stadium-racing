@@ -1,4 +1,5 @@
 import { Vector3, PointerEventTypes } from "@babylonjs/core";
+import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { MeshGridEditor } from "./MeshGridEditor.js";
 import { PolyWallEditor } from "./PolyWallEditor.js";
 import { PolyHillEditor } from "./PolyHillEditor.js";
@@ -26,6 +27,8 @@ export class EditorController {
     this.camera = camera;
     this.scene = scene;
     this.isActive = false;
+    // Shared raycast-based terrain height service used by all sub-editors.
+    this.terrainQuery = new TerrainQuery(scene);
     
     // Camera movement state
     this.moveSpeed = 0.5;

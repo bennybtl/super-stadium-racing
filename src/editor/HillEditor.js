@@ -142,7 +142,7 @@ export class HillEditor {
     const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
     const absH = Math.max(0.5, Math.abs(feature.height));
-    const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;
     node.position.y = terrainH + absH / 2;

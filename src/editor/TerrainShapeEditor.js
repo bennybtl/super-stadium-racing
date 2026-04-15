@@ -60,7 +60,7 @@ export class TerrainShapeEditor {
   /** Create a gizmo mesh for a terrain feature (dispatches on feature.shape). */
   createVisual(feature) {
     const { scene, currentTrack } = this.editor;
-    const terrainH = currentTrack ? currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
 
     const node = new TransformNode('terrainShapeNode', scene);
     node.position = new Vector3(feature.centerX, terrainH + NODE_POS_Y, feature.centerZ);
@@ -95,8 +95,7 @@ export class TerrainShapeEditor {
 
   updateVisual(data) {
     const { feature, node, mat } = data;
-    const terrainH = this.editor.currentTrack
-      ? this.editor.currentTrack.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
 
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;

@@ -111,7 +111,7 @@ export class PolyCurbEditor {
 
   _createSphere(feature, idx) {
     const pt = feature.points[idx];
-    const y  = this.track.getHeightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature.height ?? 0.22);
+    const y  = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature.height ?? 0.22);
     const mesh = MeshBuilder.CreateSphere(`pcPt_${idx}_${Date.now()}`, { diameter: 1.2, segments: 6 }, this.scene);
     mesh.position  = new Vector3(pt.x, y + 0.6, pt.z);
     mesh.material  = this._activeGizmo?.feature === feature ? this.activeMat : this.normalMat;
@@ -122,7 +122,7 @@ export class PolyCurbEditor {
   _buildLines(feature) {
     if (!feature.points || feature.points.length < 2) return null;
     const pts  = feature.points.map(pt => {
-      const y = this.track.getHeightAt(pt.x, pt.z) + (feature.height ?? 0.22);
+      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + (feature.height ?? 0.22);
       return new Vector3(pt.x, y + 0.08, pt.z);
     });
     const ls = MeshBuilder.CreateLineSystem(`pcLines_${Date.now()}`, { lines: [pts] }, this.scene);
@@ -148,7 +148,7 @@ export class PolyCurbEditor {
     for (let i = 0; i < pointMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = this.track.getHeightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeGizmo?.feature?.height ?? 0.22);
+      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeGizmo?.feature?.height ?? 0.22);
       pointMeshes[i].position.set(pt.x, y + 0.6, pt.z);
     }
     if (rebuildLines) {
