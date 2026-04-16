@@ -56,6 +56,7 @@ const SPRING = {
   proximityThreshold:    0.2,   // spring fires when penetration > -this (m)
   compressionNorm:       0.2,   // penetration depth that saturates base compression (m)
   maxImpulsePerFrame:    3.5,   // max vertical velocity added by spring per frame (m/s)
+  rideHeight:            1.0,  // keep chassis this far above sampled floor (m)
 
   // Slope-tunneling depenetration
   depenetrationMinDepth: 1.2,   // minimum penetration before running tunneling check (m)
@@ -134,14 +135,18 @@ export class TerrainPhysics {
       effectiveFloor        = hit ? hit.y : 0;
       this._lastFloorNormal = hit?.normal ?? new Vector3(0, 1, 0);
     } else {
-      const terrainHeight = track ? track.getHeightAt(mesh.position.x, mesh.position.z) : 0;
-      const bridgeFloor   = track ? track.getBridgeFloorAt(mesh.position.x, mesh.position.z, mesh.position.y) : -Infinity;
-      effectiveFloor        = (bridgeFloor > terrainHeight) ? bridgeFloor : terrainHeight;
+      effectiveFloor        = this._sampleFloorYAt(
+        mesh.position.x,
+        mesh.position.z,
+        mesh.position.y + 0.1,
+        track,
+        0
+      );
       this._lastFloorNormal = new Vector3(0, 1, 0);
     }
     this.lastFloorY = effectiveFloor;
 
-    const truckBottomY = effectiveFloor + this.halfHeight;
+    const truckBottomY = effectiveFloor + this.halfHeight + SPRING.rideHeight;
     const penetration  = truckBottomY - mesh.position.y;
 
     this._applySpring(mesh, deltaTime, track, penetration, truckBottomY);
@@ -234,13 +239,19 @@ export class TerrainPhysics {
    * @param {number} groundedness - 0–1 from update()
    */
   applyUphillGravity(mesh, deltaTime, track, groundedness) {
-    if (!track || groundedness < UPHILL.minGroundedness) return;
+    if ((!track && !this._terrainQuery) || groundedness < UPHILL.minGroundedness) return;
 
     const speed = this.state.velocity.length();
     if (speed < UPHILL.minSpeed) return;
 
-    const slopeDeg = track.getTerrainSlopeAt(
-      mesh.position.x, mesh.position.z, this._moveDirHeading(), 1, 3
+    const slopeDeg = this._sampleSlopeDegAt(
+      mesh.position.x,
+      mesh.position.z,
+      this._moveDirHeading(),
+      1,
+      3,
+      mesh.position.y + 0.1,
+      track
     );
     if (slopeDeg <= UPHILL.minSlopeDeg) return;
 
@@ -254,12 +265,18 @@ export class TerrainPhysics {
    * @returns {Vector3} candidate next position after slope constraint applied
    */
   checkSteepSlope(mesh, deltaTime, track) {
-    if (!track || this.state.velocity.length() <= 0.1) {
+    if ((!track && !this._terrainQuery) || this.state.velocity.length() <= 0.1) {
       return mesh.position.add(this.state.velocity.scale(deltaTime));
     }
 
-    const truckBottom = mesh.position.y - this.halfHeight;
-    const terrainHere = track.getHeightAt(mesh.position.x, mesh.position.z);
+    const truckBottom = mesh.position.y - this.halfHeight - SPRING.rideHeight;
+    const terrainHere = this._sampleFloorYAt(
+      mesh.position.x,
+      mesh.position.z,
+      mesh.position.y + 0.1,
+      track,
+      0
+    );
 
     // Skip when airborne — slope is below the truck's trajectory.
     if (truckBottom > terrainHere + STEEP_SLOPE.airborneGap) {
@@ -267,8 +284,14 @@ export class TerrainPhysics {
     }
 
     const moveDir  = this.state.velocity.clone().normalize();
-    const slopeDeg = track.getTerrainSlopeAt(
-      mesh.position.x, mesh.position.z, Math.atan2(moveDir.x, moveDir.z), 1, 3
+    const slopeDeg = this._sampleSlopeDegAt(
+      mesh.position.x,
+      mesh.position.z,
+      Math.atan2(moveDir.x, moveDir.z),
+      1,
+      3,
+      mesh.position.y + 0.1,
+      track
     );
 
     if (slopeDeg > 0) {
@@ -289,9 +312,12 @@ export class TerrainPhysics {
 
       // Hard block: remove velocity component directed into the slope face.
       if (slopeRad > STEEP_SLOPE.maxAngle) {
-        const terrainAhead = track.getHeightAt(
+        const terrainAhead = this._sampleFloorYAt(
           mesh.position.x + moveDir.x * STEEP_SLOPE.forwardProbe,
-          mesh.position.z + moveDir.z * STEEP_SLOPE.forwardProbe
+          mesh.position.z + moveDir.z * STEEP_SLOPE.forwardProbe,
+          mesh.position.y + 0.1,
+          track,
+          0
         );
         // Skip if terrain ahead is below the truck — we're cresting, not climbing a wall.
         if (terrainAhead >= truckBottom) {
@@ -323,6 +349,37 @@ export class TerrainPhysics {
   }
 
   /**
+   * Resolve drivable floor height at XZ using TerrainQuery when available.
+   * Falls back to analytical terrain + bridge-floor logic.
+   */
+  _sampleFloorYAt(x, z, fromY, track, fallback = 0) {
+    if (this._terrainQuery) {
+      return this._terrainQuery.castDown(x, z, fromY)?.y ?? fallback;
+    }
+
+    if (!track) return fallback;
+    return track.getHeightAt(x, z);
+  }
+
+  /**
+   * Sample signed slope angle in the given heading direction from floor probes.
+   */
+  _sampleSlopeDegAt(x, z, heading, fwdSlopeDist, offset, fromY, track) {
+    const ox  = x + Math.sin(heading) * offset;
+    const oz  = z + Math.cos(heading) * offset;
+    const hx  = ox + Math.sin(heading) * fwdSlopeDist;
+    const hz  = oz + Math.cos(heading) * fwdSlopeDist;
+    const hbx = ox - Math.sin(heading) * fwdSlopeDist;
+    const hbz = oz - Math.cos(heading) * fwdSlopeDist;
+
+    const hAhead = this._sampleFloorYAt(hx,  hz,  fromY, track, 0);
+    const hBack  = this._sampleFloorYAt(hbx, hbz, fromY, track, 0);
+
+    const slopeRad = Math.atan2(hAhead - hBack, fwdSlopeDist * 2);
+    return slopeRad * 180 / Math.PI;
+  }
+
+  /**
    * Apply terrain spring force and slope-tunneling depenetration.
    * Mutates verticalVelocity and mesh.position.y.
    */
@@ -331,7 +388,7 @@ export class TerrainPhysics {
 
     let effectivePenetration = penetration;
 
-    if (penetration > SPRING.depenetrationMinDepth && track) {
+    if (penetration > SPRING.depenetrationMinDepth && (track || this._terrainQuery)) {
       effectivePenetration = this._applyDepenetration(mesh, deltaTime, track, penetration, truckBottomY);
     }
 
@@ -347,8 +404,14 @@ export class TerrainPhysics {
    * Returns the effective penetration remaining after the position correction.
    */
   _applyDepenetration(mesh, deltaTime, track, penetration, truckBottomY) {
-    const slopeAtPos  = track.getTerrainSlopeAt(
-      mesh.position.x, mesh.position.z, this._moveDirHeading(), 1, 3
+    const slopeAtPos  = this._sampleSlopeDegAt(
+      mesh.position.x,
+      mesh.position.z,
+      this._moveDirHeading(),
+      1,
+      3,
+      mesh.position.y + 0.1,
+      track
     );
     if (slopeAtPos >= SPRING.tunnelingSlope) return penetration; // legitimate hill climb
 
@@ -373,22 +436,33 @@ export class TerrainPhysics {
    * @returns {number} groundedness (0–1)
    */
   _updateSuspension(mesh, track, penetration) {
+    const hasSurfaceSampling = !!this._terrainQuery || !!track;
+
     // Base compression from current overlap depth.
     let baseCompression = Math.max(0, Math.min(1, penetration / SPRING.compressionNorm));
 
     // Pass 1: slightly above terrain but moving downhill — inject fake compression
     // so the truck stays "grounded" through the descent.
     if (
-      track &&
+      hasSurfaceSampling &&
       penetration < 0 &&
       penetration > -DOWNHILL.followMaxGap &&
       this.state.velocity.length() > DOWNHILL.followMinSpeed
     ) {
       const forward     = this._forwardVector();
-      const heightHere  = track.getHeightAt(mesh.position.x, mesh.position.z);
-      const heightAhead = track.getHeightAt(
+      const heightHere  = this._sampleFloorYAt(
+        mesh.position.x,
+        mesh.position.z,
+        mesh.position.y + 0.1,
+        track,
+        0
+      );
+      const heightAhead = this._sampleFloorYAt(
         mesh.position.x + forward.x * DOWNHILL.followLookAhead,
-        mesh.position.z + forward.z * DOWNHILL.followLookAhead
+        mesh.position.z + forward.z * DOWNHILL.followLookAhead,
+        mesh.position.y + 0.1,
+        track,
+        heightHere
       );
       if (
         heightAhead < heightHere - DOWNHILL.followHeightDrop &&
@@ -415,14 +489,23 @@ export class TerrainPhysics {
       groundedness < DOWNHILL.boostGroundedness &&
       penetration > -DOWNHILL.boostMaxGap &&
       this.state.verticalVelocity < DOWNHILL.boostVertVelMin &&
-      track &&
+      hasSurfaceSampling &&
       this.state.velocity.length() > DOWNHILL.boostMinSpeed
     ) {
       const forward     = this._forwardVector();
-      const heightHere  = track.getHeightAt(mesh.position.x, mesh.position.z);
-      const heightAhead = track.getHeightAt(
+      const heightHere  = this._sampleFloorYAt(
+        mesh.position.x,
+        mesh.position.z,
+        mesh.position.y + 0.1,
+        track,
+        0
+      );
+      const heightAhead = this._sampleFloorYAt(
         mesh.position.x + forward.x * DOWNHILL.boostLookAhead,
-        mesh.position.z + forward.z * DOWNHILL.boostLookAhead
+        mesh.position.z + forward.z * DOWNHILL.boostLookAhead,
+        mesh.position.y + 0.1,
+        track,
+        heightHere
       );
       if (heightAhead < heightHere - DOWNHILL.boostHeightDrop) {
         groundedness = Math.max(groundedness, DOWNHILL.boostGroundedness);

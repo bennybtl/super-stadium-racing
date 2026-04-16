@@ -1112,6 +1112,17 @@ export class EditorController {
   changeBridgeHeight(val)    { this.bridgeEditor?.changeHeight(val); }
   changeBridgeThickness(val) { this.bridgeEditor?.changeThickness(val); }
   changeBridgeAngle(val)     { this.bridgeEditor?.changeAngle(val); }
+  changeBridgeCollisionWidth(val)     { this.bridgeEditor?.changeCollisionWidth(val); }
+  changeBridgeCollisionDepth(val)     { this.bridgeEditor?.changeCollisionDepth(val); }
+  changeBridgeCollisionThickness(val) { this.bridgeEditor?.changeCollisionThickness(val); }
+  changeBridgeCollisionYOffset(val)   { this.bridgeEditor?.changeCollisionYOffset(val); }
+  changeBridgeCollisionEndCaps(val)         { this.bridgeEditor?.changeCollisionEndCaps(val); }
+  changeBridgeCollisionEndCapsOnDepth(val)  { this.bridgeEditor?.changeCollisionEndCapsOnDepth(val); }
+  changeBridgeCollisionEndCapsOnWidth(val)  { this.bridgeEditor?.changeCollisionEndCapsOnWidth(val); }
+  changeBridgeCollisionEndCapThickness(val) { this.bridgeEditor?.changeCollisionEndCapThickness(val); }
+  changeBridgeCollisionEndCapDrop(val)      { this.bridgeEditor?.changeCollisionEndCapDrop(val); }
+  changeBridgeCollisionEndCapSpanDepth(val) { this.bridgeEditor?.changeCollisionEndCapSpanDepth(val); }
+  changeBridgeCollisionEndCapSpanWidth(val) { this.bridgeEditor?.changeCollisionEndCapSpanWidth(val); }
   duplicateSelectedBridge()  { this.bridgeEditor?.duplicateSelected(); }
   deleteBridge()             { this.bridgeEditor?.deleteSelected(); }
   deselectBridge()           { this.bridgeEditor?.deselect(); }

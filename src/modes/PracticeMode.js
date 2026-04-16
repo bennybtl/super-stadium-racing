@@ -3,6 +3,7 @@ import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { DebugManager } from "../managers/DebugManager.js";
+import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 
@@ -27,7 +28,6 @@ export class PracticeMode extends BaseMode {
       shadows,
       currentTrack,
       terrainManager,
-      wallManager,
       tireStackManager,
       flagManager,
       pickupManager,
@@ -74,6 +74,7 @@ export class PracticeMode extends BaseMode {
 
     const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
+    const staticBodyCollisionManager = new StaticBodyCollisionManager(scene);
 
     // Input — ESC opens pause menu
     const inputManager = new InputManager(playerTruck, cameraController);
@@ -114,8 +115,7 @@ export class PracticeMode extends BaseMode {
 
       const dt = this.getClampedDeltaTime(engine, 0.05);
       const input = inputManager.getMovementInput();
-            
-      wallManager.preUpdate(trucks, dt);
+
       const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
 
       // Clamp speed when inside a 'slowZone' action zone
@@ -134,7 +134,7 @@ export class PracticeMode extends BaseMode {
         }
       }
 
-      wallManager.update(trucks);
+      staticBodyCollisionManager.update(trucks);
       tireStackManager.update(trucks, dt);
       flagManager.update(trucks, dt);
       pickupManager.update(trucks, dt);

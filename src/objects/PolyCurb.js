@@ -80,6 +80,7 @@ export class PolyCurb {
             heading, 0, this.segments.length, 'curb_poly',
             scene, shadows,
             yShiftA, yShiftB,
+            false,
           )
         );
       }

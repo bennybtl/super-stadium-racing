@@ -9,19 +9,25 @@ import { EditorMaterials } from './EditorMaterials.js';
  * separately using squareHill features.
  *
  * Feature data shape:
- *   { type:'bridge', centerX, centerZ, width, depth, height, thickness, angle }
+ *   {
+ *     type:'bridge', centerX, centerZ, width, depth, height, thickness, angle,
+ *     level?,
+ *     collision?: { width?, depth?, thickness?, yOffset? }
+ *   }
  */
 export class BridgeEditor {
   constructor(editor) {
     /** @type {import('./EditorController.js').EditorController} */
     this.editor = editor;
 
-    this.meshes   = [];    // { feature, node, mesh, sphere }
+    this.meshes   = [];    // { feature, node, sphere }
     this.selected = null;
 
     this.material          = null;
     this.highlightMaterial = null;
     this.sphereMaterial    = null;
+    this._pendingRuntimeSync = null;
+    this._pendingFeature = null;
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -46,7 +52,6 @@ export class BridgeEditor {
 
   clearMeshes() {
     for (const d of this.meshes) {
-      d.mesh.dispose();
       d.node.dispose();
       d.sphere?.dispose();
     }
@@ -55,6 +60,11 @@ export class BridgeEditor {
   }
 
   dispose() {
+    if (this._pendingRuntimeSync !== null) {
+      cancelAnimationFrame(this._pendingRuntimeSync);
+      this._pendingRuntimeSync = null;
+      this._pendingFeature = null;
+    }
     this.clearMeshes();
   }
 
@@ -74,18 +84,13 @@ export class BridgeEditor {
     node.scaling  = new Vector3(feature.width ?? 20, thickness, feature.depth ?? 8);
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
 
-    const mesh = MeshBuilder.CreateBox('bridgeMesh', { size: 1 }, scene);
-    mesh.parent   = node;
-    mesh.material = this.material;
-    mesh.isPickable = false;
-
     // Sphere at terrain level — the always-visible click target
     const sphere = MeshBuilder.CreateSphere('bridgeSphere', { diameter: 1.5, segments: 8 }, scene);
     sphere.position = new Vector3(feature.centerX, terrainY, feature.centerZ);
     sphere.material = this.sphereMaterial;
     sphere.isPickable = true;
 
-    const bridgeData = { feature, node, mesh, sphere };
+    const bridgeData = { feature, node, sphere };
     this.meshes.push(bridgeData);
     return bridgeData;
   }
@@ -136,6 +141,7 @@ export class BridgeEditor {
     this.editor.saveSnapshot();
     this.editor.currentTrack.features.push(newFeature);
     const bridgeData = this.createVisual(newFeature);
+    this._scheduleRuntimeSync(null);
 
     this.editor.deselectAll();
     this.select(bridgeData);
@@ -147,7 +153,7 @@ export class BridgeEditor {
 
   findByMesh(mesh) {
     for (const d of this.meshes) {
-      if (mesh === d.sphere || mesh === d.mesh) return d;
+      if (mesh === d.sphere) return d;
     }
     return null;
   }
@@ -157,7 +163,9 @@ export class BridgeEditor {
   select(bridgeData) {
     if (this.selected) this.deselect();
     this.selected = bridgeData;
-    bridgeData.mesh.material = this.highlightMaterial;
+    if (bridgeData.sphere) {
+      bridgeData.sphere.scaling.setAll(1.25);
+    }
     this.showProperties(bridgeData);
     console.log('[BridgeEditor] Selected bridge at',
       bridgeData.feature.centerX.toFixed(1), bridgeData.feature.centerZ.toFixed(1));
@@ -165,7 +173,9 @@ export class BridgeEditor {
 
   deselect() {
     if (!this.selected) return;
-    this.selected.mesh.material = this.material;
+    if (this.selected.sphere) {
+      this.selected.sphere.scaling.setAll(1);
+    }
     this.hideProperties();
     this.selected = null;
     console.log('[BridgeEditor] Deselected bridge');
@@ -206,11 +216,11 @@ export class BridgeEditor {
     const idx = this.editor.currentTrack.features.indexOf(d.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
 
-    d.mesh.dispose();
     d.node.dispose();
     d.sphere?.dispose();
     const mi = this.meshes.indexOf(d);
     if (mi > -1) this.meshes.splice(mi, 1);
+    this._scheduleRuntimeSync(null);
 
     this.hideProperties();
     this.selected = null;
@@ -224,6 +234,7 @@ export class BridgeEditor {
     const copy = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
     this.editor.currentTrack.features.push(copy);
     const newData = this.createVisual(copy);
+    this._scheduleRuntimeSync(null);
     this.deselect();
     this.select(newData);
   }
@@ -234,11 +245,23 @@ export class BridgeEditor {
     const s = this.editor._editorStore;
     if (!s) return;
     const { feature } = bridgeData;
+    const c = feature.collision ?? {};
     s.bridge.width     = feature.width     ?? 20;
     s.bridge.depth     = feature.depth     ?? 8;
     s.bridge.height    = feature.height    ?? 5;
     s.bridge.thickness = feature.thickness ?? 0.4;
     s.bridge.angle     = feature.angle     ?? 0;
+    s.bridge.collisionWidth     = c.width     ?? s.bridge.width;
+    s.bridge.collisionDepth     = c.depth     ?? s.bridge.depth;
+    s.bridge.collisionThickness = c.thickness ?? s.bridge.thickness;
+    s.bridge.collisionYOffset   = c.yOffset   ?? 0;
+    s.bridge.collisionEndCaps         = c.endCaps ?? false;
+    s.bridge.collisionEndCapsOnDepth  = c.endCapsOnDepth ?? true;
+    s.bridge.collisionEndCapsOnWidth  = c.endCapsOnWidth ?? false;
+    s.bridge.collisionEndCapThickness = c.endCapThickness ?? 1.2;
+    s.bridge.collisionEndCapDrop      = c.endCapDrop ?? 30;
+    s.bridge.collisionEndCapSpanDepth = c.endCapSpanDepth ?? c.endCapWidth ?? s.bridge.collisionWidth;
+    s.bridge.collisionEndCapSpanWidth = c.endCapSpanWidth ?? c.endCapDepth ?? s.bridge.collisionDepth;
     s.selectedType = 'bridge';
   }
 
@@ -254,6 +277,7 @@ export class BridgeEditor {
     this.editor.saveSnapshot(true);
     this.selected.feature.width = val;
     this.updateVisual(this.selected);
+    this._scheduleRuntimeSync(this.selected.feature);
   }
 
   changeDepth(val) {
@@ -261,6 +285,7 @@ export class BridgeEditor {
     this.editor.saveSnapshot(true);
     this.selected.feature.depth = val;
     this.updateVisual(this.selected);
+    this._scheduleRuntimeSync(this.selected.feature);
   }
 
   changeHeight(val) {
@@ -268,6 +293,7 @@ export class BridgeEditor {
     this.editor.saveSnapshot(true);
     this.selected.feature.height = val;
     this.updateVisual(this.selected);
+    this._scheduleRuntimeSync(this.selected.feature);
   }
 
   changeThickness(val) {
@@ -275,6 +301,7 @@ export class BridgeEditor {
     this.editor.saveSnapshot(true);
     this.selected.feature.thickness = val;
     this.updateVisual(this.selected);
+    this._scheduleRuntimeSync(this.selected.feature);
   }
 
   changeAngle(val) {
@@ -282,5 +309,101 @@ export class BridgeEditor {
     this.editor.saveSnapshot(true);
     this.selected.feature.angle = val;
     this.updateVisual(this.selected);
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  _ensureCollision() {
+    if (!this.selected) return null;
+    const f = this.selected.feature;
+    if (!f.collision) f.collision = {};
+    return f.collision;
+  }
+
+  _scheduleRuntimeSync(feature = null) {
+    this._pendingFeature = feature ?? this.selected?.feature ?? null;
+    if (this._pendingRuntimeSync !== null) return;
+
+    this._pendingRuntimeSync = requestAnimationFrame(() => {
+      this._pendingRuntimeSync = null;
+      window.rebuildBridge?.(this._pendingFeature ?? null);
+      this._pendingFeature = null;
+    });
+  }
+
+  changeCollisionWidth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().width = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionDepth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().depth = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionThickness(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().thickness = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionYOffset(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().yOffset = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionEndCaps(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().endCaps = !!val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionEndCapsOnDepth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().endCapsOnDepth = !!val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionEndCapsOnWidth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().endCapsOnWidth = !!val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionEndCapThickness(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().endCapThickness = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionEndCapDrop(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().endCapDrop = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionEndCapSpanDepth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().endCapSpanDepth = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeCollisionEndCapSpanWidth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this._ensureCollision().endCapSpanWidth = val;
+    this._scheduleRuntimeSync(this.selected.feature);
   }
 }

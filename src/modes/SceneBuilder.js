@@ -28,6 +28,8 @@ import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { BannerStringManager } from "../managers/BannerStringManager.js";
 import { PickupManager } from "../managers/PickupManager.js";
+import { BridgeManager } from "../managers/BridgeManager.js";
+import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
 
 /**
@@ -41,6 +43,9 @@ import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.j
 export async function buildScene(engine, trackLoader, trackKey) {
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.15, 0.12, 0.1, 1);
+
+  // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
+  const driveSurfaceManager = new DriveSurfaceManager(scene);
 
   // -- Physics --
   const havok = await HavokPhysics();
@@ -178,8 +183,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
   
   ground.material = groundMat;
   ground.receiveShadows = true;
-  // Tag so TerrainQuery raycasts can identify this as a driveable surface.
-  ground.metadata = { isTerrain: true };
+  // Register as canonical drivable surface for TerrainQuery and nav layers.
+  driveSurfaceManager.register(ground, { surfaceType: "ground", level: 0 });
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
@@ -189,6 +194,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const createBorderWall = (name, x, z, width, depth) => {
     const wall = MeshBuilder.CreateBox(name, { width, height: 24, depth }, scene);
     wall.position = new Vector3(x, 0, z); // Center relative to 0 y-height
+    wall.metadata = {
+      ...(wall.metadata ?? {}),
+      truckCollider: true,
+      truckColliderFriction: 0.9,
+    };
     
     const mat = new StandardMaterial(name + "Mat", scene);
     mat.diffuseColor = new Color3(0.5, 0.5, 0.5);
@@ -237,6 +247,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackSignManager = new TrackSignManager(scene, currentTrack);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
+  const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager);
   checkpointManager.createCheckpoints();
 
   // Create Tire Stacks, Flags, and Track Signs from track features (must be after ground so we can query heights)
@@ -254,28 +265,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     } else if (feature.type === "bannerString") {
       bannerStringManager.createBanner(feature);
     } else if (feature.type === "bridge") {
-      // Solid elevated deck — vehicles can drive over or pass under it.
-      const terrainY  = currentTrack.getHeightAt(feature.centerX, feature.centerZ);
-      const thickness = feature.thickness ?? 0.4;
-      const deckY     = terrainY + (feature.height ?? 5) + thickness / 2;
-
-      const deck = MeshBuilder.CreateBox(
-        `bridge_${feature.centerX}_${feature.centerZ}`,
-        { width: feature.width ?? 20, height: thickness, depth: feature.depth ?? 8 },
-        scene
-      );
-      deck.position  = new Vector3(feature.centerX, deckY, feature.centerZ);
-      deck.rotation.y = ((feature.angle ?? 0) * Math.PI) / 180;
-
-      const bridgeMat = new StandardMaterial(`bridgeMat_${feature.centerX}_${feature.centerZ}`, scene);
-      bridgeMat.diffuseColor  = new Color3(0.52, 0.40, 0.22);
-      bridgeMat.specularColor = new Color3(0.1, 0.1, 0.1);
-      deck.material = bridgeMat;
-      deck.receiveShadows = true;
-      shadows.addShadowCaster(deck);
-      // Tag so TerrainQuery raycasts treat this deck as a driveable surface.
-      deck.metadata = { isTerrain: true };
-      new PhysicsAggregate(deck, PhysicsShapeType.BOX, { mass: 0 }, scene);
+      bridgeManager.createBridge(feature);
     } else if (
       (feature.type === "hill" && feature.height < 0) ||
       (feature.type === "squareHill" && (
@@ -341,5 +331,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     trackSignManager,
     bannerStringManager,
     pickupManager,
+    bridgeManager,
+    driveSurfaceManager,
   };
 }

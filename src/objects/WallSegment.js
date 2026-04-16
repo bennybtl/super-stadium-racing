@@ -31,7 +31,23 @@ export class WallSegment {
    * @param {BABYLON.Scene} scene
    * @param {BABYLON.ShadowGenerator} shadows
    */
-  constructor(px, pz, centerY, width, height, depth, heading, friction, index, name, scene, shadows, yShiftA = 0, yShiftB = 0) {
+  constructor(
+    px,
+    pz,
+    centerY,
+    width,
+    height,
+    depth,
+    heading,
+    friction,
+    index,
+    name,
+    scene,
+    shadows,
+    yShiftA = 0,
+    yShiftB = 0,
+    collidable = true,
+  ) {
     this.halfLength = width / 2;
     this.halfThick  = depth / 2;
     this.heading    = heading;
@@ -44,6 +60,13 @@ export class WallSegment {
       : MeshBuilder.CreateBox(name, { width, height, depth }, scene);
     this.mesh.position = new Vector3(px, centerY, pz);
     this.mesh.rotation.y = heading;
+    this.mesh.metadata = {
+      ...(this.mesh.metadata ?? {}),
+      truckCollider: collidable,
+      // WallManager's friction is "bleed" amount. Generic collision manager
+      // expects a velocity retention multiplier.
+      truckColliderFriction: Math.max(0, Math.min(1, 1 - friction)),
+    };
 
     this._applyMaterial(scene, shadows);
 

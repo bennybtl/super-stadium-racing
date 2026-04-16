@@ -6,6 +6,7 @@ import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
+import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
 import { BaseMode } from "./BaseMode.js";
@@ -290,6 +291,7 @@ export class RaceMode extends BaseMode {
 
     // -- Truck collision --
     const truckCollisionManager = new TruckCollisionManager();
+    const staticBodyCollisionManager = new StaticBodyCollisionManager(scene);
 
     // -- Input --
     const inputManager = new InputManager(playerTruckData.truck, cameraController);
@@ -505,7 +507,6 @@ export class RaceMode extends BaseMode {
         ? { forward: false, back: false, left: false, right: false }
         : inputManager.getMovementInput();
 
-      wallManager.preUpdate(trucks, dt);
       truckCollisionManager.preUpdate(trucks, dt);
 
       let playerDebugInfo = null;
@@ -521,7 +522,7 @@ export class RaceMode extends BaseMode {
         }
       });
 
-      wallManager.update(trucks);
+      staticBodyCollisionManager.update(trucks);
 
       // Clamp speed for any truck inside a 'slowZone' action zone
       if (slowZones.length > 0) {

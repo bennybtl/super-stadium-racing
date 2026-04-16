@@ -1,5 +1,6 @@
 import { VertexBuffer } from "@babylonjs/core";
 import { EditorController } from "../editor/EditorController.js";
+import { DebugManager } from "../managers/DebugManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
@@ -15,6 +16,8 @@ export class EditorMode extends BaseMode {
   constructor(controller) {
     super(controller);
     this.editorController = null;
+    this.debugManager = null;
+    this._onEditorDebugKeyDown = null;
   }
 
   async setup({ trackKey }) {
@@ -37,6 +40,7 @@ export class EditorMode extends BaseMode {
       tireStackManager,
       trackSignManager,
       bannerStringManager,
+      bridgeManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     // Dispose runtime FlagManager flags – the EditorController's FlagTool
@@ -58,6 +62,16 @@ export class EditorMode extends BaseMode {
     bannerStringManager.dispose();
 
     this.scene = scene;
+
+    // -- Debug manager (collision geometry + panel in editor mode) --
+    const debugManager = new DebugManager(scene);
+    this.debugManager = debugManager;
+    this._onEditorDebugKeyDown = (event) => {
+      if (event.code !== 'Backslash' || event.repeat) return;
+      debugManager.toggle();
+      event.preventDefault();
+    };
+    window.addEventListener('keydown', this._onEditorDebugKeyDown);
 
     // -- Editor controller --
     const editorController = new EditorController(camera, scene);
@@ -176,6 +190,11 @@ export class EditorMode extends BaseMode {
       }
     };
 
+    // Rebuild a specific bridge (or all bridges if feature is null)
+    window.rebuildBridge = (targetFeature = null) => {
+      bridgeManager.rebuildBridge(targetFeature);
+    };
+
     // Poly hills array to track created hills
     const polyHills = [];
     window.polyHills = polyHills; // exposed so PolyHillEditor can toggle mesh visibility
@@ -246,12 +265,21 @@ export class EditorMode extends BaseMode {
       if (menuManager.isMenuActive() || document.hidden) return;
       const dt = engine.getDeltaTime() / 1000;
       editorController.update(dt);
+      debugManager.updateCollisionDebugOnly();
     });
 
     return scene;
   }
 
   teardown() {
+    if (this._onEditorDebugKeyDown) {
+      window.removeEventListener('keydown', this._onEditorDebugKeyDown);
+      this._onEditorDebugKeyDown = null;
+    }
+    if (this.debugManager) {
+      this.debugManager.hide();
+      this.debugManager = null;
+    }
     if (this.editorController) {
       this.editorController.dispose?.();
       this.editorController = null;

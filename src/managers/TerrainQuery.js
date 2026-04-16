@@ -23,8 +23,8 @@ import { Ray, Vector3 } from "@babylonjs/core";
  *    detail is still captured.
  *
  * Surface tagging (required in SceneBuilder):
- *   ground.metadata      = { isTerrain: true };
- *   bridgeDeck.metadata  = { isTerrain: true };
+ *   preferred: metadata.isDriveSurface = true
+ *   legacy:    metadata.isTerrain = true (still supported)
  *
  * All Ray objects are allocated once and reused every frame.
  */
@@ -45,7 +45,9 @@ export class TerrainQuery {
     // Short downward probe reused for the four cross-pattern height samples.
     this._rayProbe = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 200);
 
-    this._predicate = mesh => mesh.metadata?.isTerrain === true;
+    this._predicate = mesh =>
+      mesh.metadata?.isDriveSurface === true ||
+      mesh.metadata?.isTerrain === true;
   }
 
   /**

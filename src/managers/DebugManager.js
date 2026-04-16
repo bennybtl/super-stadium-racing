@@ -1,4 +1,4 @@
-import { MeshBuilder, Vector3, Color3 } from '@babylonjs/core';
+import { MeshBuilder, Vector3, Color3, StandardMaterial } from '@babylonjs/core';
 import { useDebugStore } from '../vue/store.js';
 
 // Maximum frames kept in the ring buffer (~20 s at 60 fps).
@@ -31,6 +31,8 @@ export class DebugManager {
     this._scene = scene;
     this._normalArrow  = null;  // Lines mesh — created on first show, disposed on hide
     this._trackedTruck = null;  // truck whose physics box we toggled visible
+    this._colliderDebugMat = null;
+    this._colliderDebugState = new Map(); // mesh.uniqueId -> { mesh, isVisible, visibility, material }
 
     // ---- Logger state ----
     this._log        = [];     // ring buffer rows
@@ -136,6 +138,80 @@ export class DebugManager {
       this._trackedTruck.body?.setVisible(true);
       this._trackedTruck = null;
     }
+
+    // Restore collision debug meshes to their original state.
+    for (const saved of this._colliderDebugState.values()) {
+      const mesh = saved.mesh;
+      if (!mesh || mesh.isDisposed()) continue;
+      mesh.isVisible = saved.isVisible;
+      mesh.visibility = saved.visibility;
+      mesh.material = saved.material;
+    }
+    this._colliderDebugState.clear();
+    this._colliderDebugMat?.dispose();
+    this._colliderDebugMat = null;
+  }
+
+  _ensureColliderDebugMaterial() {
+    if (this._colliderDebugMat || !this._scene) return;
+    const mat = new StandardMaterial('dbgTruckColliderMat', this._scene);
+    mat.diffuseColor = new Color3(1.0, 0.15, 0.75);
+    mat.emissiveColor = new Color3(0.9, 0.1, 0.65);
+    mat.alpha = 0.35;
+    mat.wireframe = false;
+    mat.backFaceCulling = false;
+    this._colliderDebugMat = mat;
+  }
+
+  _updateCollisionDebugMeshes() {
+    if (!this._scene) return;
+    this._ensureColliderDebugMaterial();
+
+    const colliders = this._scene.meshes.filter(mesh =>
+      mesh?.metadata?.truckCollider === true &&
+      !mesh.isDisposed() &&
+      mesh.isEnabled()
+    );
+
+    // Add / refresh currently active colliders.
+    for (const mesh of colliders) {
+      if (!this._colliderDebugState.has(mesh.uniqueId)) {
+        this._colliderDebugState.set(mesh.uniqueId, {
+          mesh,
+          isVisible: mesh.isVisible,
+          visibility: mesh.visibility,
+          material: mesh.material,
+        });
+      }
+
+      mesh.isVisible = true;
+      mesh.visibility = 1;
+      mesh.material = this._colliderDebugMat;
+    }
+
+    // Restore meshes that are no longer truck colliders.
+    for (const [id, saved] of this._colliderDebugState.entries()) {
+      const mesh = saved.mesh;
+      if (!mesh || mesh.isDisposed()) {
+        this._colliderDebugState.delete(id);
+        continue;
+      }
+      if (mesh.metadata?.truckCollider === true) continue;
+
+      mesh.isVisible = saved.isVisible;
+      mesh.visibility = saved.visibility;
+      mesh.material = saved.material;
+      this._colliderDebugState.delete(id);
+    }
+  }
+
+  /**
+   * Editor-mode helper: update only static collision debug geometry.
+   * Useful when no Truck/debugInfo is available.
+   */
+  updateCollisionDebugOnly() {
+    if (!this._store.visible) return;
+    this._updateCollisionDebugMeshes();
   }
 
   /**
@@ -147,7 +223,12 @@ export class DebugManager {
    * @param {Truck}  truck         - player truck instance
    */
   update(debugInfo, terrainManager, track, truck) {
-    if (!this._store.visible || !debugInfo) return;
+    if (!this._store.visible) return;
+
+    // Keep collider visualisation in sync while debug is enabled.
+    this._updateCollisionDebugMeshes();
+
+    if (!debugInfo) return;
 
     // ---- 3-D visuals --------------------------------------------------------
     if (truck && truck !== this._trackedTruck) {

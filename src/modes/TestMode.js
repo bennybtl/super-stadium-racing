@@ -4,6 +4,7 @@ import { InputManager } from "../managers/InputManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 import { DebugManager } from "../managers/DebugManager.js";
+import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 
 /**
  * TestMode – lightweight free-drive for testing a track in the editor.
@@ -28,7 +29,6 @@ export class TestMode extends BaseMode {
       shadows,
       currentTrack,
       terrainManager,
-      wallManager,
       tireStackManager,
       flagManager,
     } = await buildScene(engine, trackLoader, trackKey);
@@ -80,6 +80,7 @@ export class TestMode extends BaseMode {
 
     // Simple game loop
     const trucks = [{ truck: playerTruck }];
+    const staticBodyCollisionManager = new StaticBodyCollisionManager(scene);
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
@@ -88,9 +89,8 @@ export class TestMode extends BaseMode {
 
       const dt = this.getClampedDeltaTime(engine, 0.05);
       const input = inputManager.getMovementInput();
-      wallManager.preUpdate(trucks, dt);
       const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
-      wallManager.update(trucks);
+      staticBodyCollisionManager.update(trucks);
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
