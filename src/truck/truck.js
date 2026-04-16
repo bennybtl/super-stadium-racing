@@ -189,7 +189,7 @@ export class Truck {
     this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction, input.forward);
     
     // Movement - apply velocity to X/Z position (Y is handled by TerrainPhysics)
-    const newPosition = this.terrainPhysics.checkSteepSlope(this.mesh, deltaTime, track);
+    const newPosition = this.mesh.position.add(this.terrainPhysics.state.velocity.scale(deltaTime));
     this.mesh.position.x = newPosition.x;
     this.mesh.position.z = newPosition.z;
 

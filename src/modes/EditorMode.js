@@ -41,6 +41,7 @@ export class EditorMode extends BaseMode {
       trackSignManager,
       bannerStringManager,
       bridgeManager,
+      steepSlopeColliderManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     // Dispose runtime FlagManager flags – the EditorController's FlagTool
@@ -91,6 +92,7 @@ export class EditorMode extends BaseMode {
       }
       ground.setVerticesData(VertexBuffer.PositionKind, positions);
       ground.createNormals(true);
+      steepSlopeColliderManager.rebuild();
     };
 
     // Fast: sync terrainManager.grid from track features (no canvas writes)

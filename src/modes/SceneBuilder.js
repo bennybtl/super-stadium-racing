@@ -30,6 +30,7 @@ import { BannerStringManager } from "../managers/BannerStringManager.js";
 import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeManager } from "../managers/BridgeManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
+import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
 
 /**
@@ -248,6 +249,15 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
   const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager);
+  const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
+    enabled: true,
+    sampleStep: 3,
+    maxSlopeDeg: 60,
+    wallAbove: 4,
+    wallBelow: 1,
+    padding: 0.15,
+  });
+  steepSlopeColliderManager.rebuild();
   checkpointManager.createCheckpoints();
 
   // Create Tire Stacks, Flags, and Track Signs from track features (must be after ground so we can query heights)
@@ -332,6 +342,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     bannerStringManager,
     pickupManager,
     bridgeManager,
+    steepSlopeColliderManager,
     driveSurfaceManager,
   };
 }

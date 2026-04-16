@@ -41,6 +41,9 @@ const UPHILL = {
   minSlopeDeg:     2,     // slopes shallower than this are ignored (degrees)
   minGroundedness: 0.3,   // only apply when at least this grounded
   minSpeed:        1.5,   // don't apply at very low speeds (m/s)
+  speedBleedStartDeg: 36, // progressive extra speed bleed starts here (degrees)
+  speedBleedMaxDeg:   60, // reaches full bleed at this slope (degrees)
+  speedBleedScale:    1.5, // fraction of speed shed per second at full bleed
 };
 
 /**
@@ -82,16 +85,6 @@ const ROUGHNESS = {
   vertImpulseScale: 3.6,   // max vertical velocity impulse per bump (m/s)
   pitchJitter:      0.22,  // max pitch jitter per bump (radians × roughness)
   rollJitter:       0.20,  // max roll jitter per bump (radians × roughness)
-};
-
-/** Steep slope blocking — prevents climbing impassable walls. */
-const STEEP_SLOPE = {
-  maxAngle:          Math.PI / 3,  // slopes steeper than this block movement (~60°)
-  speedBleedAngle:   Math.PI / 5,  // progressive speed bleed starts here (~36°)
-  speedBleedScale:   1.5,          // fraction of speed shed per second per unit of normalised excess angle
-  airborneGap:    0.2,             // truck bottom above terrain by this → treat as airborne (m)
-  forwardProbe:   4,               // forward distance to test if slope is below trajectory (m)
-  velocityAbsorb: 0.95,            // fraction of into-slope velocity removed on hard contact
 };
 
 /**
@@ -154,7 +147,6 @@ export class TerrainPhysics {
     mesh.position.y += this.state.verticalVelocity * deltaTime;
 
     const groundedness = this._updateSuspension(mesh, track, penetration);
-
     if (groundedness > ORIENTATION.groundednessThreshold && track) {
       this.updateTerrainOrientation(mesh, deltaTime, groundedness);
     } else {
@@ -255,83 +247,20 @@ export class TerrainPhysics {
     );
     if (slopeDeg <= UPHILL.minSlopeDeg) return;
 
-    const decel    = Math.abs(this.gravity) * Math.sin(slopeDeg * Math.PI / 180) * UPHILL.gravityScale;
-    const newSpeed = Math.max(0, speed - decel * deltaTime);
+    const decel = Math.abs(this.gravity) * Math.sin(slopeDeg * Math.PI / 180) * UPHILL.gravityScale;
+    let newSpeed = Math.max(0, speed - decel * deltaTime);
+
+    // Extra traction-loss bleed on very steep climbs.
+    if (slopeDeg > UPHILL.speedBleedStartDeg) {
+      const bleedFraction = Math.min(
+        1,
+        (slopeDeg - UPHILL.speedBleedStartDeg) /
+        Math.max(0.001, (UPHILL.speedBleedMaxDeg - UPHILL.speedBleedStartDeg))
+      );
+      newSpeed *= Math.max(0, 1 - bleedFraction * UPHILL.speedBleedScale * deltaTime);
+    }
+
     this.state.velocity.scaleInPlace(newSpeed / speed);
-  }
-
-  /**
-   * Block movement into impassable steep slopes.
-   * @returns {Vector3} candidate next position after slope constraint applied
-   */
-  checkSteepSlope(mesh, deltaTime, track) {
-    if ((!track && !this._terrainQuery) || this.state.velocity.length() <= 0.1) {
-      return mesh.position.add(this.state.velocity.scale(deltaTime));
-    }
-
-    const truckBottom = mesh.position.y - this.halfHeight - SPRING.rideHeight;
-    const terrainHere = this._sampleFloorYAt(
-      mesh.position.x,
-      mesh.position.z,
-      mesh.position.y + 0.1,
-      track,
-      0
-    );
-
-    // Skip when airborne — slope is below the truck's trajectory.
-    if (truckBottom > terrainHere + STEEP_SLOPE.airborneGap) {
-      return mesh.position.add(this.state.velocity.scale(deltaTime));
-    }
-
-    const moveDir  = this.state.velocity.clone().normalize();
-    const slopeDeg = this._sampleSlopeDegAt(
-      mesh.position.x,
-      mesh.position.z,
-      Math.atan2(moveDir.x, moveDir.z),
-      1,
-      3,
-      mesh.position.y + 0.1,
-      track
-    );
-
-    if (slopeDeg > 0) {
-      const slopeRad = slopeDeg * Math.PI / 180;
-
-      // Progressive speed bleed: start shedding speed before the hard block angle.
-      // Simulates tyres losing traction / the nose digging in on steep ascents.
-      if (slopeRad > STEEP_SLOPE.speedBleedAngle) {
-        const bleedFraction = Math.min(
-          1,
-          (slopeRad - STEEP_SLOPE.speedBleedAngle) /
-          (STEEP_SLOPE.maxAngle - STEEP_SLOPE.speedBleedAngle)
-        );
-        this.state.velocity.scaleInPlace(
-          1 - bleedFraction * STEEP_SLOPE.speedBleedScale * deltaTime
-        );
-      }
-
-      // Hard block: remove velocity component directed into the slope face.
-      if (slopeRad > STEEP_SLOPE.maxAngle) {
-        const terrainAhead = this._sampleFloorYAt(
-          mesh.position.x + moveDir.x * STEEP_SLOPE.forwardProbe,
-          mesh.position.z + moveDir.z * STEEP_SLOPE.forwardProbe,
-          mesh.position.y + 0.1,
-          track,
-          0
-        );
-        // Skip if terrain ahead is below the truck — we're cresting, not climbing a wall.
-        if (terrainAhead >= truckBottom) {
-          const velocityIntoSlope = this.state.velocity.dot(moveDir);
-          if (velocityIntoSlope > 0) {
-            this.state.velocity.subtractInPlace(
-              moveDir.scale(velocityIntoSlope * STEEP_SLOPE.velocityAbsorb)
-            );
-          }
-        }
-      }
-    }
-
-    return mesh.position.add(this.state.velocity.scale(deltaTime));
   }
 
   // ---------------------------------------------------------------------------
