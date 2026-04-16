@@ -1,8 +1,8 @@
 <template>
   <EditorPanel
     v-if="editor.selectedType === 'hill'"
-    title="Hill"
-    accent-color="#2ecc71"
+    title="Round Hill"
+    accent-color="#909090"
     @close="editor.closeHill()"
   >
     <!-- Radius -->

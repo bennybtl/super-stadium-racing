@@ -78,6 +78,12 @@
       class="ep-slider"
     />
 
+    <button class="ep-btn-action mg-apply-btn" @click="editor.applyMeshGridSettings()">
+      Apply Grid Changes
+    </button>
+
+    <hr class="ep-separator" />
+
     <!-- Smoothing (live) -->
     <div class="ep-row">
       <span>Smoothing</span>
@@ -90,17 +96,13 @@
       class="ep-slider"
     />
 
-    <button class="ep-btn-action mg-apply-btn" @click="editor.applyMeshGridSettings()">
-      Apply Grid Changes
-    </button>
+    <button class="ep-btn-action" @click="editor.flattenMeshGrid()">Flatten Grid</button>
 
     <hr class="ep-separator" />
 
-    <button class="ep-btn-action" @click="editor.flattenMeshGrid()">Flatten Grid</button>
-    <div class="ep-btn-row">
-      <button class="ep-btn-dup" @click="editor.duplicateMeshGrid()">Duplicate</button>
-      <button class="ep-btn-del" @click="editor.deleteMeshGrid()">Delete</button>
-    </div>
+    <!-- Actions -->
+    <button class="ep-btn-dup" @click="editor.duplicateMeshGrid()">Duplicate</button>
+    <button class="ep-btn-del" @click="editor.deleteMeshGrid()">Delete</button>
   </EditorPanel>
 </template>
 

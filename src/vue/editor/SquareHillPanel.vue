@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'squareHill'"
     title="Square Hill"
-    accent-color="#f0a020"
+    accent-color="#909090"
     @close="editor.closeSquareHill()"
   >
     <!-- Width -->

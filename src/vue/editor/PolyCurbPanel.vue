@@ -69,11 +69,11 @@
       />
     </div>
 
-    <hr class="ep-separator" />
-    <div class="ep-btn-row">
-      <button class="ep-btn-dup" @click="editor.duplicatePolyCurb()">Duplicate</button>
-      <button class="ep-btn-del" @click="editor.deletePolyCurb()">Delete</button>
-    </div>
+    <div class="ep-hint">WASD to move</div>
+
+    <!-- Actions -->
+    <button class="ep-btn-dup" @click="editor.duplicatePolyCurb()">Duplicate</button>
+    <button class="ep-btn-del" @click="editor.deletePolyCurb()">Delete</button>
   </EditorPanel>
 </template>
 

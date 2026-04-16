@@ -101,7 +101,7 @@ export class EditorMaterials {
   /** Translucent green cone gizmo. */
   get hillCone() {
     return this._get('hillCone', s => makeMat('edHillCone', s, {
-      diffuse: [0.25, 0.75, 0.3], emissive: [0.04, 0.12, 0.05],
+      diffuse: [0.36, 0.36, 0.36], emissive: [0.09, 0.09, 0.09],
       alpha: 0.20, backFaceCulling: false,
     }));
   }
@@ -109,7 +109,7 @@ export class EditorMaterials {
   /** Translucent teal cone gizmo (selected). */
   get hillConeHighlight() {
     return this._get('hillConeHighlight', s => makeMat('edHillConeHL', s, {
-      diffuse: [0.0, 0.9, 0.8], emissive: [0.0, 0.35, 0.3],
+      diffuse: [0.9, 0.9, 0.9], emissive: [0.3, 0.3, 0.3],
       alpha: 0.20, backFaceCulling: false,
     }));
   }
@@ -119,7 +119,7 @@ export class EditorMaterials {
   /** Translucent gold/tan box gizmo. */
   get squareHillBox() {
     return this._get('squareHillBox', s => makeMat('edSquareHillBox', s, {
-      diffuse: [0.75, 0.55, 0.1], emissive: [0.12, 0.08, 0.01],
+      diffuse: [0.36, 0.36, 0.36], emissive: [0.09, 0.09, 0.09],
       alpha: 0.20, backFaceCulling: false,
     }));
   }
@@ -127,7 +127,7 @@ export class EditorMaterials {
   /** Translucent gold box gizmo (selected). */
   get squareHillBoxHighlight() {
     return this._get('squareHillBoxHighlight', s => makeMat('edSquareHillBoxHL', s, {
-      diffuse: [1.0, 0.8, 0.0], emissive: [0.35, 0.25, 0.0],
+      diffuse: [0.9, 0.9, 0.9], emissive: [0.3, 0.3, 0.3],
       alpha: 0.20, backFaceCulling: false,
     }));
   }

@@ -69,7 +69,7 @@
     </select>
 
     <!-- Hint -->
-    <div class="ep-hint">WASD to move · Del to delete</div>
+    <div class="ep-hint">WASD to move · QE to rotate · Del to delete</div>
 
     <!-- Actions -->
     <button class="ep-btn-dup" @click="editor.duplicateTerrainShape()">Duplicate Shape</button>
