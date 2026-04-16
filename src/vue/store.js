@@ -125,8 +125,16 @@ export const useDebugStore = defineStore('debug', () => {
     compression: '-', groundedness: '-', penetration: '-',
     vvel: '-', speed: '-', grip: '-', slip: '-',
     terrain: '-', slope: '-', x: '0.00', y: '0.00', z: '0.00',
+    nx: '0.000', ny: '1.000', nz: '0.000',
   });
-  return { visible, data };
+  const recording  = ref(false);
+  const frameCount = ref(0);
+  const _bridge = shallowRef(null);
+  function setBridge(mgr) { _bridge.value = mgr; }
+  function startRecording() { _bridge.value?.startRecording(); }
+  function stopRecording()  { _bridge.value?.stopRecording();  }
+  function dumpLog()        { _bridge.value?.dumpLog();        }
+  return { visible, data, recording, frameCount, setBridge, startRecording, stopRecording, dumpLog };
 });
 
 // ─── Editor store ─────────────────────────────────────────────────────────────

@@ -80,12 +80,18 @@ export class TerrainQuery {
     const downMissed = !hit?.hit || !hit.pickedPoint;
     const likelyPenetrated = !downMissed && (fromY - hit.pickedPoint.y) > PENETRATION_THRESHOLD;
 
+    // Track whether we ended up using the upward fallback.
+    // getNormal() on a back-face (upward hit) returns a downward-pointing normal
+    // that will corrupt the blend, so we skip it and use cross-pattern only.
+    let usedUpward = false;
+
     if (downMissed || likelyPenetrated) {
       this._rayUp.origin.set(x, fromY - 0.05, z);
       this._rayUp.length = likelyPenetrated ? (fromY - hit.pickedPoint.y + 1) : 50;
       const upHit = this._scene.pickWithRay(this._rayUp, this._predicate);
       if (upHit?.hit && upHit.pickedPoint) {
         hit = upHit;
+        usedUpward = true;
       } else if (downMissed) {
         return null;
       }
@@ -126,9 +132,9 @@ export class TerrainQuery {
     // Blend cross-pattern normal with the ray's interpolated vertex normal.
     // The vertex normal captures sub-triangle surface detail; the cross-pattern
     // suppresses per-triangle faceting artifacts over bumpy displacement.
-    // Vector3.Normalize() is used (static, returns a fresh instance) to avoid
-    // the DeepImmutable<Vector3> return type from scaleInPlace/normalizeInPlace.
-    const rayNormal = hit.getNormal(true, true);
+    // Skip the blend when the hit came from the upward fallback — getNormal() on
+    // a back-face returns a downward-pointing normal that corrupts the result.
+    const rayNormal = usedUpward ? null : hit.getNormal(true, true);
     const normal = rayNormal
       ? Vector3.Normalize(crossNormal.add(rayNormal).scale(0.5))
       : crossNormal;

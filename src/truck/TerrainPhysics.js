@@ -114,6 +114,9 @@ export class TerrainPhysics {
   // Public API
   // ---------------------------------------------------------------------------
 
+  /** Most-recently resolved terrain surface normal (world space, unit length). */
+  get floorNormal() { return this._lastFloorNormal; }
+
   update(mesh, deltaTime, track) {
     this.state.verticalVelocity += this.gravity * deltaTime;
 
@@ -167,9 +170,22 @@ export class TerrainPhysics {
     // atan2(-n·forward, n.y) gives the slope angle in the forward direction:
     //   rising slope ahead  → normal tilts backward → positive targetPitch (nose up)
     //   rising slope right  → normal tilts left      → positive targetRoll
-    const normal     = this._lastFloorNormal;
-    const targetPitch = Math.atan2(-normal.dot(forward), normal.y);
-    const targetRoll  = Math.atan2(-normal.dot(right),   normal.y);
+    const normal = this._lastFloorNormal;
+
+    // Guard: a surface normal with ny < 0.25 (> ~76° tilt) almost certainly came
+    // from a bad ray hit — back-face, mesh edge, or penetration artifact.  Skip
+    // this frame's orientation update rather than chasing a garbage target.
+    if (normal.y < 0.25) return;
+
+    // Clamp to ±45° so a single corrupt normal can't cause a violent lurch even
+    // if it slips past the guard above.
+    const MAX_TILT = Math.PI / 4;
+    const targetPitch = Math.max(-MAX_TILT, Math.min(MAX_TILT,
+      Math.atan2(-normal.dot(forward), normal.y)
+    ));
+    const targetRoll  = Math.max(-MAX_TILT, Math.min(MAX_TILT,
+      Math.atan2(-normal.dot(right),   normal.y)
+    ));
 
     const fastFactor  = 1 - Math.exp(-ORIENTATION.fastSmoothingRate * deltaTime);
     const slowFactor  = 1 - Math.exp(-ORIENTATION.slowSmoothingRate * deltaTime);

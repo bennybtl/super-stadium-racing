@@ -285,7 +285,7 @@ export class RaceMode extends BaseMode {
     uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
 
-    const debugManager = new DebugManager();
+    const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
 
     // -- Truck collision --

@@ -271,6 +271,14 @@ export class TruckBody {
     this.shadows.addShadowCaster(mesh);
   }
 
+  // ─── Visibility ────────────────────────────────────────────────────────────
+
+  /** Show or hide the entire visual puppet (body + wheels). */
+  setVisible(visible) {
+    this._visualRoot.setEnabled(visible);
+    this._wheelRoot.setEnabled(visible);
+  }
+
   // ─── Disposal ─────────────────────────────────────────────────────────────
 
   dispose() {

@@ -72,7 +72,7 @@ export class PracticeMode extends BaseMode {
     const uiManager = new UIManager();
     this.uiManager = uiManager;
 
-    const debugManager = new DebugManager();
+    const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
 
     // Input — ESC opens pause menu
