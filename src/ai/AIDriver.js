@@ -43,11 +43,6 @@ export class AIDriver {
     this.currentCheckpointTarget = 0;
     this.lastCheckpointPassed = 0;
     
-    // Time-sliced pathfinding state
-    this._pathfindingInProgress = false;
-    this._pathfindingContext = null;
-    this._pathfindingMaxMsPerFrame = 1.0; // max milliseconds per frame for pathfinding
-    
     // Grid for pathfinding (simplified world representation)
     this.gridSize = 160; // Match terrain size
     this.gridResolution = 2; // 2 units per cell
@@ -85,8 +80,8 @@ export class AIDriver {
     // Get all checkpoints for reference
     this.checkpoints = this.getCheckpointPositions();
     
-    // Calculate path to first checkpoint
-    this.calculatePathToNextCheckpoint();
+    // Pre-calculate full path through all checkpoints once at race start
+    this.calculateFullPath();
     
     if (this.debugEnabled && this.scene) {
       this.updateDebugVisualization();
@@ -97,77 +92,74 @@ export class AIDriver {
   get debugEnabled() { return this._debugStore?.visible ?? false; }
 
   /**
-   * Calculate path to next checkpoint from current position
+   * Pre-calculate the full path through every checkpoint once at race start.
+   * Chains synchronous A* calls: start → cp[0] → cp[1] → … → cp[N-1] → (loop back).
+   * The result is stored in this.path and never changes during the race.
+   * this.checkpointPathIndices[i] records the path index where segment i begins,
+   * allowing onCheckpointPassed to quickly advance currentPathIndex.
    */
-  calculatePathToNextCheckpoint(currentPosition = { x: 0, z: 0 }) {
-    if (this.checkpoints.length === 0) {
-      return;
+  calculateFullPath(startPosition = { x: 0, z: 0 }) {
+    if (this.checkpoints.length === 0) return;
+
+    this.path = [];
+    this.checkpointPathIndices = [];
+
+    const APPROACH_DIST = 10;
+    const EXIT_DIST = 10;
+
+    let currentPos = startPosition;
+
+    for (let i = 0; i < this.checkpoints.length; i++) {
+      const cp = this.checkpoints[i];
+      const approachPoint = {
+        x: cp.x - Math.sin(cp.heading) * APPROACH_DIST,
+        z: cp.z - Math.cos(cp.heading) * APPROACH_DIST,
+      };
+
+      const segment = this.findPath(currentPos, approachPoint);
+
+      // Record where this checkpoint's approach segment starts in the full path
+      this.checkpointPathIndices.push(this.path.length);
+
+      // Append segment, skipping the first point (duplicate of previous end) after the first segment
+      if (this.path.length === 0) {
+        this.path.push(...segment);
+      } else {
+        this.path.push(...segment.slice(1));
+      }
+
+      // Next segment begins from this checkpoint's exit point
+      currentPos = {
+        x: cp.x + Math.sin(cp.heading) * EXIT_DIST,
+        z: cp.z + Math.cos(cp.heading) * EXIT_DIST,
+      };
     }
-    
-    // Determine next checkpoint index
-    const nextCheckpointIndex = this.lastCheckpointPassed % this.checkpoints.length;
-    const targetCheckpoint = this.checkpoints[nextCheckpointIndex];
-    
-    // Approach point: a point before the checkpoint aligned with its heading
-    const approachDistance = 10;
-    const approachPoint = {
-      x: targetCheckpoint.x - Math.sin(targetCheckpoint.heading) * approachDistance,
-      z: targetCheckpoint.z - Math.cos(targetCheckpoint.heading) * approachDistance
+
+    // Close the loop: route from the last checkpoint exit back to the first approach
+    const firstCp = this.checkpoints[0];
+    const loopTarget = {
+      x: firstCp.x - Math.sin(firstCp.heading) * APPROACH_DIST,
+      z: firstCp.z - Math.cos(firstCp.heading) * APPROACH_DIST,
     };
-    
-    // Use async pathfinding to avoid frame hiccups
-    this.calculatePathAsync(currentPosition, approachPoint);
-    
-    this.currentCheckpointTarget = nextCheckpointIndex;
-        
+    const loopSegment = this.findPath(currentPos, loopTarget);
+    this.path.push(...loopSegment.slice(1));
+
+    this.currentPathIndex = 0;
+    this.currentCheckpointTarget = 0;
+
     if (this.debugEnabled && this.scene) {
       this.updateDebugVisualization();
     }
   }
 
   /**
-   * Called when AI passes a checkpoint - recalculate path to next
+   * Called when AI passes a checkpoint.
+   * Path is precomputed — just advance the checkpoint target counter.
    */
   onCheckpointPassed(checkpointIndex, currentPosition) {
-    // Grab the gate we just passed before updating lastCheckpointPassed
-    const passedCheckpoint = this.checkpoints[this.currentCheckpointTarget];
-
     this.lastCheckpointPassed = checkpointIndex;
-
-    // Use the exit point as the start of the next path so A* routes
-    // forward from where the truck is actually heading, not backward to
-    // the approach side of the next checkpoint.
-    let pathStartPosition = currentPosition;
-    let exitPoint = null;
-    if (passedCheckpoint) {
-      const exitDistance = 10;
-      exitPoint = {
-        x: passedCheckpoint.x + Math.sin(passedCheckpoint.heading) * exitDistance,
-        z: passedCheckpoint.z + Math.cos(passedCheckpoint.heading) * exitDistance,
-      };
-      pathStartPosition = exitPoint;
-    }
-
-    // Start async pathfinding (non-blocking)
-    this.calculatePathToNextCheckpoint(pathStartPosition);
-
-    // Immediately inject exit blend waypoints while async pathfinding runs
-    // in the background. When pathfinding completes, it will prepend the full path.
-    if (exitPoint) {
-      const exitWaypoints = [exitPoint];
-      const numBlendPoints = 4;
-      for (let i = numBlendPoints; i >= 1; i--) {
-        const t = i / (numBlendPoints + 1);
-        exitWaypoints.push({
-          x: exitPoint.x * t + currentPosition.x * (1 - t),
-          z: exitPoint.z * t + currentPosition.z * (1 - t),
-        });
-      }
-      // Start with exit waypoints while pathfinding computes in background
-      this.path = exitWaypoints;
-      this.currentPathIndex = 0;
-    }
-
+    this.currentCheckpointTarget = checkpointIndex % this.checkpoints.length;
+    // currentPathIndex is advanced naturally by findLookAheadPoint every frame
   }
 
   /**
@@ -317,157 +309,6 @@ export class AIDriver {
   }
 
   /**
-   * Time-sliced pathfinding that runs iteratively over multiple frames
-   * to avoid framerate hiccups on checkpoint passes.
-   * Starts computation and tracks progress via _pathfindingInProgress.
-   */
-  calculatePathAsync(start, goal) {
-    if (this._pathfindingInProgress) {
-      console.warn('[AIDriver] Pathfinding already in progress');
-      return;
-    }
-
-    const startCell = this.worldToGrid(start.x, start.z);
-    const goalCell = this.worldToGrid(goal.x, goal.z);
-
-    if (this.isBlocked(startCell.x, startCell.z)) {
-      startCell.x = this.gridCells / 2;
-      startCell.z = this.gridCells / 2;
-    }
-
-    this._pathfindingContext = {
-      start,
-      goal,
-      startCell,
-      goalCell,
-      openSet: [startCell],
-      cameFrom: new Map(),
-      gScore: new Map(),
-      fScore: new Map(),
-      closedSet: new Set(),
-      key: (x, z) => `${x},${z}`,
-      done: false,
-      resultPath: null,
-    };
-
-    const key = this._pathfindingContext.key;
-    this._pathfindingContext.gScore.set(key(startCell.x, startCell.z), 0);
-    this._pathfindingContext.fScore.set(
-      key(startCell.x, startCell.z),
-      this.heuristic(startCell, goalCell)
-    );
-
-    this._pathfindingInProgress = true;
-  }
-
-  /**
-   * Step through time-sliced pathfinding computation.
-   * Call this every frame while pathfinding is active.
-   */
-  updatePathfinding() {
-    if (!this._pathfindingInProgress || !this._pathfindingContext) {
-      return;
-    }
-
-    const ctx = this._pathfindingContext;
-    const startTime = performance.now();
-
-    // Process up to _pathfindingMaxMsPerFrame milliseconds worth of iterations
-    while (performance.now() - startTime < this._pathfindingMaxMsPerFrame) {
-      if (ctx.openSet.length === 0) {
-        // No path found
-        ctx.resultPath = [ctx.start, ctx.goal];
-        ctx.done = true;
-        break;
-      }
-
-      // Find node with lowest fScore
-      let current = ctx.openSet[0];
-      let currentIndex = 0;
-      for (let i = 1; i < ctx.openSet.length; i++) {
-        const currentF = ctx.fScore.get(ctx.key(current.x, current.z));
-        const nodeF = ctx.fScore.get(ctx.key(ctx.openSet[i].x, ctx.openSet[i].z));
-        if (nodeF !== undefined && (currentF === undefined || nodeF < currentF)) {
-          current = ctx.openSet[i];
-          currentIndex = i;
-        }
-      }
-
-      // Check if reached goal
-      if (Math.abs(current.x - ctx.goalCell.x) <= 1 && Math.abs(current.z - ctx.goalCell.z) <= 1) {
-        ctx.resultPath = this.reconstructPath(ctx.cameFrom, current, ctx.goal);
-        ctx.done = true;
-        break;
-      }
-
-      // Remove current from openSet and add to closed
-      ctx.openSet.splice(currentIndex, 1);
-      ctx.closedSet.add(ctx.key(current.x, current.z));
-
-      // Check neighbors
-      const neighbors = this.getNeighbors(current.x, current.z);
-      for (const neighbor of neighbors) {
-        const neighborKey = ctx.key(neighbor.x, neighbor.z);
-
-        if (ctx.closedSet.has(neighborKey)) {
-          continue;
-        }
-
-        const currentG = ctx.gScore.get(ctx.key(current.x, current.z));
-        if (currentG === undefined) {
-          continue;
-        }
-
-        const tentativeG = currentG + this.distance(current, neighbor);
-        const existingG = ctx.gScore.get(neighborKey);
-
-        if (existingG === undefined || tentativeG < existingG) {
-          ctx.cameFrom.set(neighborKey, current);
-          ctx.gScore.set(neighborKey, tentativeG);
-          ctx.fScore.set(
-            neighborKey,
-            tentativeG + this.heuristic(neighbor, ctx.goalCell)
-          );
-
-          if (!ctx.openSet.some(n => n.x === neighbor.x && n.z === neighbor.z)) {
-            ctx.openSet.push(neighbor);
-          }
-        }
-      }
-
-      // Safety check
-      if (ctx.openSet.length > 1000) {
-        ctx.resultPath = [ctx.start, ctx.goal];
-        ctx.done = true;
-        break;
-      }
-    }
-
-    // If pathfinding completed, finalize and reset state
-    if (ctx.done) {
-      const newPath = ctx.resultPath || [ctx.start, ctx.goal];
-      
-      // If we have exit waypoints (path already has entries), append the new path
-      if (this.path.length > 0) {
-        // Append the computed path to existing exit waypoints
-        this.path.push(...newPath);
-      } else {
-        this.path = newPath;
-      }
-      
-      this.currentPathIndex = 0;
-      this._pathfindingInProgress = false;
-      this._pathfindingContext = null;
-      // console.log(`[AIDriver] Pathfinding completed: ${this.path.length} total waypoints`);
-      
-      // Update debug visualization when pathfinding completes
-      if (this.debugEnabled && this.scene) {
-        this.updateDebugVisualization();
-      }
-    }
-  }
-
-  /**
    * Get valid neighboring cells
    */
   getNeighbors(x, z) {
@@ -580,9 +421,6 @@ export class AIDriver {
    * Get steering input based on current position
    */
   getInput(position, heading, fwdSpeed = 0) {
-    // Continue time-sliced pathfinding computation if active
-    this.updatePathfinding();
-
     // Periodically update debug visualization if enabled
     if (this.debugEnabled && this.scene) {
       if (!this._debugUpdateTimer) this._debugUpdateTimer = 0;
@@ -650,6 +488,16 @@ export class AIDriver {
       z: targetWaypoint.z + rightVec.z * lateralOffset,
     };
 
+    // Drift compensation: measure the truck's current lateral (sideways) velocity
+    // and shift the virtual target in the opposite direction. This makes the AI
+    // pre-steer into the slide rather than reacting after it has already overshot.
+    if (this.truck) {
+      const lateralSpeed = this.truck.state.velocity.dot(rightVec);
+      const DRIFT_COMP_FACTOR = 1.2; // world-units of target shift per m/s of lateral drift
+      virtualTarget.x -= rightVec.x * lateralSpeed * DRIFT_COMP_FACTOR;
+      virtualTarget.z -= rightVec.z * lateralSpeed * DRIFT_COMP_FACTOR;
+    }
+
     // Recompute toTarget toward the avoidance-adjusted virtual target
     const toVirtual = new Vector3(virtualTarget.x - position.x, 0, virtualTarget.z - position.z);
     toVirtual.normalize();
@@ -664,9 +512,12 @@ export class AIDriver {
     // Always steer towards target
     const steeringThreshold = 0.05;
     
-    // Always move forward - never brake or coast, let physics handle the turns
-    // This prevents getting stuck on tight turns where the AI would otherwise stop
-    const shouldMoveForward = true;
+    // Corner braking: scan the path ahead for sharp curvature. If a significant
+    // turn is coming up within braking distance, release throttle so the truck
+    // enters the corner slower and overshoots less due to drift.
+    const cornerAhead = this._scanPathCurvature(this.currentPathIndex, this.lookAheadDistance * 1.5);
+    const BRAKE_ANGLE_THRESHOLD = Math.PI / 3; // 60° of max per-vertex curvature triggers braking
+    const shouldMoveForward = cornerAhead < BRAKE_ANGLE_THRESHOLD;
     const shouldReverse = false;
     
     const isActuallyReversing = fwdSpeed < -0.3;
@@ -857,6 +708,31 @@ export class AIDriver {
     }
     
     // console.log(`[AIDriver] Respawned at (${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(1)}) facing ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
+  }
+
+  /**
+   * Scan the recorded path ahead from `fromIndex`, up to `maxDistance` world units.
+   * Returns the maximum single-vertex heading change (radians) found along that window.
+   * Used by corner-braking logic to decide whether to release throttle before a turn.
+   */
+  _scanPathCurvature(fromIndex, maxDistance) {
+    let accumulated = 0;
+    let maxAngle = 0;
+    for (let i = fromIndex; i < this.path.length - 2; i++) {
+      const p0 = this.path[i];
+      const p1 = this.path[i + 1];
+      const p2 = this.path[i + 2];
+      const segLen = Math.sqrt((p1.x - p0.x) ** 2 + (p1.z - p0.z) ** 2);
+      accumulated += segLen;
+      if (accumulated > maxDistance) break;
+
+      const angle1 = Math.atan2(p1.x - p0.x, p1.z - p0.z);
+      const angle2 = Math.atan2(p2.x - p1.x, p2.z - p1.z);
+      let delta = Math.abs(angle2 - angle1);
+      if (delta > Math.PI) delta = 2 * Math.PI - delta;
+      if (delta > maxAngle) maxAngle = delta;
+    }
+    return maxAngle;
   }
 
   /**
