@@ -207,36 +207,30 @@ export class RaceMode extends BaseMode {
     aiTruck1.state.heading = spawn1.heading;
     aiTruck1.mesh.rotation.y = spawn1.heading;
 
-    const aiTruck2 = new Truck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2, aiVehicleDef);
-    aiTruck2.mesh.position.copyFrom(spawn2.pos);
-    aiTruck2.state.heading = spawn2.heading;
-    aiTruck2.mesh.rotation.y = spawn2.heading;
+    // const aiTruck2 = new Truck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2, aiVehicleDef);
+    // aiTruck2.mesh.position.copyFrom(spawn2.pos);
+    // aiTruck2.state.heading = spawn2.heading;
+    // aiTruck2.mesh.rotation.y = spawn2.heading;
 
-    const aiTruck3 = new Truck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3, aiVehicleDef);
-    aiTruck3.mesh.position.copyFrom(spawn3.pos);
-    aiTruck3.state.heading = spawn3.heading;
-    aiTruck3.mesh.rotation.y = spawn3.heading;
+    // const aiTruck3 = new Truck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3, aiVehicleDef);
+    // aiTruck3.mesh.position.copyFrom(spawn3.pos);
+    // aiTruck3.state.heading = spawn3.heading;
+    // aiTruck3.mesh.rotation.y = spawn3.heading;
 
     // Set truck reference for AI respawn capability
     aiDriver1.setTruck(aiTruck1);
-    aiDriver2.setTruck(aiTruck2);
-    aiDriver3.setTruck(aiTruck3);
+    // aiDriver2.setTruck(aiTruck2);
+    // aiDriver3.setTruck(aiTruck3);
 
     // Give each AI driver awareness of the other trucks so they can steer around them.
-    aiDriver1.setOtherTrucks([playerTruck, aiTruck2, aiTruck3]);
-    aiDriver2.setOtherTrucks([playerTruck, aiTruck1, aiTruck3]);
-    aiDriver3.setOtherTrucks([playerTruck, aiTruck1, aiTruck2]);
+    aiDriver1.setOtherTrucks([playerTruck /*, aiTruck2, aiTruck3 */]);
+    // aiDriver2.setOtherTrucks([playerTruck, aiTruck1, aiTruck3]);
+    // aiDriver3.setOtherTrucks([playerTruck, aiTruck1, aiTruck2]);
 
-    // Re-initialize AI paths to target the start/finish gate (checkpoint N) from grid spawns
-    if (maxCheckpointNumber > 0) {
-      const initAI = (driver, spawnPos) => {
-        driver.lastCheckpointPassed = maxCheckpointNumber - 1;
-        driver.calculatePathToNextCheckpoint({ x: spawnPos.x, z: spawnPos.z });
-      };
-      initAI(aiDriver1, spawn1.pos);
-      initAI(aiDriver2, spawn2.pos);
-      initAI(aiDriver3, spawn3.pos);
-    }
+    // Re-calculate the full precomputed path from each AI's grid spawn position
+    aiDriver1.calculateFullPath({ x: spawn1.pos.x, z: spawn1.pos.z });
+    // aiDriver2.calculateFullPath({ x: spawn2.pos.x, z: spawn2.pos.z });
+    // aiDriver3.calculateFullPath({ x: spawn3.pos.x, z: spawn3.pos.z });
 
     const trucks = [
       {
@@ -255,22 +249,22 @@ export class RaceMode extends BaseMode {
         id: getAIId(0),
         hasStarted: false,
       },
-      {
-        truck: aiTruck2,
-        gameState: new GameState(0),
-        isPlayer: false,
-        name: getAIName(1),
-        id: getAIId(1),
-        hasStarted: false,
-      },
-      {
-        truck: aiTruck3,
-        gameState: new GameState(0),
-        isPlayer: false,
-        name: getAIName(2),
-        id: getAIId(2),
-        hasStarted: false,
-      }
+      // {
+      //   truck: aiTruck2,
+      //   gameState: new GameState(0),
+      //   isPlayer: false,
+      //   name: getAIName(1),
+      //   id: getAIId(1),
+      //   hasStarted: false,
+      // },
+      // {
+      //   truck: aiTruck3,
+      //   gameState: new GameState(0),
+      //   isPlayer: false,
+      //   name: getAIName(2),
+      //   id: getAIId(2),
+      //   hasStarted: false,
+      // }
     ];
 
     const playerTruckData = trucks[0];
@@ -396,7 +390,7 @@ export class RaceMode extends BaseMode {
     };
 
     // -- Countdown --
-    const aiDrivers = [aiDriver1, aiDriver2, aiDriver3];
+    const aiDrivers = [aiDriver1, /* aiDriver2, aiDriver3 */];
 
     const startCountdown = () => {
       this._countdownTimeouts.forEach(clearTimeout);
