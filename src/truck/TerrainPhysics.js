@@ -69,13 +69,22 @@ const SPRING = {
   bleedCap:              0.30,  // max horizontal speed fraction bled per frame
 };
 
-/** Visual pitch/roll smoothing when grounded or airborne. */
+/** Visual roll smoothing when grounded or airborne. */
 const ORIENTATION = {
-  slopeCheckDist:        1.0,   // forward/right probe distance for slope sampling (m) — wider = smoother over sharp edges
-  fastSmoothingRate:     10,     // exp smoothing rate for fast transitions (s⁻¹)
-  slowSmoothingRate:     1.5,   // exp smoothing rate for slow transitions (s⁻¹)
-  fastGroundedness:      0.8,   // groundedness above this uses fast smoothing on descent
+  fastSmoothingRate:     6,     // exp smoothing rate for roll transitions (s⁻¹)
   groundednessThreshold: 0.3,   // minimum groundedness to run terrain orientation
+};
+
+/**
+ * Pitch derived from the truck's velocity vector (vertical vs horizontal).
+ * atan2(verticalVelocity, horizontalSpeed) gives the physical flight angle.
+ */
+const PITCH = {
+  smoothingRate:         8,     // exp smoothing rate when grounded (s⁻¹)
+  airborneSmoothingRate: 1.5,   // much slower rate when airborne — holds launch angle through the arc
+  maxAngle:              0.35,  // clamp to ±20° so bad values can't flip the truck visually
+  minPitchSpeed:         2,     // below this hSpeed (m/s), pitch effect fades to zero
+  pitchSpeedRamp:        6,     // hSpeed at which pitch reaches full effect
 };
 
 /** Vertical/visual jitter impulses over rough terrain. */
@@ -83,7 +92,6 @@ const ROUGHNESS = {
   minGroundedness:  0.3,   // minimum groundedness to apply bumps
   bumpInterval:     0.25,  // base time between bumps (s); divided by roughness
   vertImpulseScale: 3.6,   // max vertical velocity impulse per bump (m/s)
-  pitchJitter:      0.22,  // max pitch jitter per bump (radians × roughness)
   rollJitter:       0.20,  // max roll jitter per bump (radians × roughness)
 };
 
@@ -102,6 +110,8 @@ export class TerrainPhysics {
     this._lastFloorNormal = new Vector3(0, 1, 0);
     // Last resolved floor Y — exposed so Truck can feed it to TruckBody.
     this.lastFloorY = 0;
+    // Smoothed visual pitch derived from velocity vector.
+    this._smoothedPitch = 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -149,53 +159,53 @@ export class TerrainPhysics {
     const groundedness = this._updateSuspension(mesh, track, penetration);
     if (groundedness > ORIENTATION.groundednessThreshold && track) {
       this.updateTerrainOrientation(mesh, deltaTime, groundedness);
-    } else {
-      // Airborne: hold whatever orientation the truck had when it left the ground.
-      // terrainRoll is applied by DriftPhysics; just keep rotation.x in sync.
-      mesh.rotation.x = -this.state.terrainPitch;
     }
+
+    // Pitch: derived from the velocity vector's vertical-vs-horizontal angle.
+    // This ties the visual nose angle directly to the physics trajectory:
+    // nose-up on launch, nose-down on descent, level on flat ground.
+    // The pitch is flipped when reversing so the nose still reads correctly
+    // relative to the direction of travel.
+    const hSpeed = Math.sqrt(
+      this.state.velocity.x * this.state.velocity.x +
+      this.state.velocity.z * this.state.velocity.z
+    );
+    const forward = this._forwardVector();
+    const fwdSign = this.state.velocity.dot(forward) >= 0 ? 1 : -1;
+    const rawPitch = Math.atan2(this.state.verticalVelocity, Math.max(hSpeed, 0.1)) * fwdSign;
+    // Fade pitch out at low horizontal speeds — prevents violent lurches when the
+    // truck drops vertically onto the track with near-zero forward velocity.
+    const pitchWeight = Math.max(0, Math.min(1,
+      (hSpeed - PITCH.minPitchSpeed) / (PITCH.pitchSpeedRamp - PITCH.minPitchSpeed)
+    ));
+    const targetPitch = Math.max(-PITCH.maxAngle, Math.min(PITCH.maxAngle, rawPitch * pitchWeight));
+    // Grounded: track velocity pitch quickly so it reads level on flat terrain.
+    // Airborne: use a slow rate so the nose holds the launch angle through the arc
+    // rather than immediately pitching down as gravity flips verticalVelocity negative.
+    const rate = groundedness > ORIENTATION.groundednessThreshold
+      ? PITCH.smoothingRate
+      : PITCH.airborneSmoothingRate;
+    const pitchFactor = 1 - Math.exp(-rate * deltaTime);
+    this._smoothedPitch += (targetPitch - this._smoothedPitch) * pitchFactor;
+    mesh.rotation.x = -this._smoothedPitch;
 
     return { groundedness, penetration };
   }
 
   updateTerrainOrientation(mesh, deltaTime, groundedness = 1) {
-    const forward = this._forwardVector();
-    const right   = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
-
-    // Derive pitch and roll directly from the surface normal captured by the floor
-    // raycast in update() — one operation replaces four getHeightAt probe calls.
-    // atan2(-n·forward, n.y) gives the slope angle in the forward direction:
-    //   rising slope ahead  → normal tilts backward → positive targetPitch (nose up)
-    //   rising slope right  → normal tilts left      → positive targetRoll
+    const right = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
     const normal = this._lastFloorNormal;
 
-    // Guard: a surface normal with ny < 0.25 (> ~76° tilt) almost certainly came
-    // from a bad ray hit — back-face, mesh edge, or penetration artifact.  Skip
-    // this frame's orientation update rather than chasing a garbage target.
+    // Guard: a surface normal with ny < 0.25 (> ~76° tilt) is likely a bad ray hit.
     if (normal.y < 0.25) return;
 
-    // Clamp to ±45° so a single corrupt normal can't cause a violent lurch even
-    // if it slips past the guard above.
     const MAX_TILT = Math.PI / 4;
-    const targetPitch = Math.max(-MAX_TILT, Math.min(MAX_TILT,
-      Math.atan2(-normal.dot(forward), normal.y)
-    ));
-    const targetRoll  = Math.max(-MAX_TILT, Math.min(MAX_TILT,
-      Math.atan2(-normal.dot(right),   normal.y)
+    const targetRoll = Math.max(-MAX_TILT, Math.min(MAX_TILT,
+      Math.atan2(-normal.dot(right), normal.y)
     ));
 
-    const fastFactor  = 1 - Math.exp(-ORIENTATION.fastSmoothingRate * deltaTime);
-    const slowFactor  = 1 - Math.exp(-ORIENTATION.slowSmoothingRate * deltaTime);
-    const pitchDiff   = targetPitch - this.state.terrainPitch;
-    // Pitch-up (climbing) tracks slope quickly so the body matches the hill.
-    // Pitch-down (descending or landing) uses slow smoothing unless firmly grounded.
-    const pitchFactor = pitchDiff > 0
-      ? fastFactor
-      : (groundedness > ORIENTATION.fastGroundedness ? fastFactor : slowFactor);
-
-    this.state.terrainPitch += pitchDiff * pitchFactor;
-    this.state.terrainRoll  += (targetRoll - this.state.terrainRoll) * fastFactor;
-    mesh.rotation.x = -this.state.terrainPitch;
+    const factor = 1 - Math.exp(-ORIENTATION.fastSmoothingRate * deltaTime);
+    this.state.terrainRoll += (targetRoll - this.state.terrainRoll) * factor;
   }
 
   /**
@@ -218,7 +228,6 @@ export class TerrainPhysics {
 
     this._bumpAccumulator -= interval;
     this.state.verticalVelocity += roughness * ROUGHNESS.vertImpulseScale * (0.5 + Math.random() * 0.5);
-    this.state.terrainPitch     += (Math.random() - 0.5) * roughness * ROUGHNESS.pitchJitter;
     this.state.terrainRoll      += (Math.random() - 0.5) * roughness * ROUGHNESS.rollJitter;
   }
 
@@ -339,11 +348,22 @@ export class TerrainPhysics {
       effectivePenetration = this._applyDepenetration(mesh, deltaTime, track, penetration, truckBottomY);
     }
 
+    // Spring pushes up only when penetrating.
     const springForce   = Math.max(0, effectivePenetration) * this.state.springStrength;
-    const dampingForce  = -this.state.verticalVelocity * this.state.damping;
     const springImpulse = Math.min(springForce * deltaTime, SPRING.maxImpulsePerFrame);
+    this.state.verticalVelocity += springImpulse;
 
-    this.state.verticalVelocity += springImpulse + dampingForce * deltaTime;
+    // Damping: apply across the full proximity zone to kill oscillation.
+    // When penetrating: damp in both directions (standard spring damping).
+    // When in proximity but NOT penetrating: only damp downward velocity
+    // (verticalVelocity < 0) so the truck isn't dragged back when cresting.
+    if (effectivePenetration > 0) {
+      const dampingForce = -this.state.verticalVelocity * this.state.damping;
+      this.state.verticalVelocity += dampingForce * deltaTime;
+    } else if (this.state.verticalVelocity < 0) {
+      const dampingForce = -this.state.verticalVelocity * this.state.damping;
+      this.state.verticalVelocity += dampingForce * deltaTime;
+    }
   }
 
   /**

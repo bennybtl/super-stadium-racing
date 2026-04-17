@@ -92,7 +92,6 @@ export class Truck {
       targetRoll: 0,
       currentRoll: 0,
       terrainRoll: 0,
-      terrainPitch: 0,
       isDrifting: false,
       isSpinningOut: false,
       slipAngle: 0,
@@ -101,7 +100,7 @@ export class Truck {
 
       // Control parameters that can be tweaked for different handling characteristics
       springStrength: 150,
-      damping: 7,
+      damping: 22,
       maxSpeed: 25,
       maxReverseSpeed: -10,
       acceleration: 13,

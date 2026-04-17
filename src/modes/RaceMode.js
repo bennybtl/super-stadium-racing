@@ -12,7 +12,7 @@ import { TRUCK_HALF_HEIGHT } from "../constants.js";
 import { BaseMode } from "./BaseMode.js";
 import { UPGRADES } from "../managers/SeasonManager.js";
 import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
-import { TelemetryPlayer } from "../managers/TelemetryPlayer.js";
+import { setupAIDrivers } from "./setupAIDrivers.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -163,21 +163,8 @@ export class RaceMode extends BaseMode {
       triggerRaceEnd();
     };
 
-    // -- Season driver info --
-    const seasonAIDrivers = season && seasonManager ? seasonManager.getAIDrivers() : null;
-    const getAIName  = (i) => seasonAIDrivers ? seasonAIDrivers[i].name : `AI ${i + 1}`;
-    const getAIId    = (i) => seasonAIDrivers ? seasonAIDrivers[i].id   : `ai${i + 1}`;
-    const getAISkill = (i) => seasonAIDrivers ? seasonAIDrivers[i].skillConfig : {};
-
     // -- Trucks --
-    const aiDriver1 = new AIDriver(currentTrack, checkpointManager, wallManager, scene, getAISkill(0));
-    const aiDriver2 = new AIDriver(currentTrack, checkpointManager, wallManager, scene, getAISkill(1));
-    const aiDriver3 = new AIDriver(currentTrack, checkpointManager, wallManager, scene, getAISkill(2));
-
     const spawn0 = getGridSpawn(0);
-    const spawn1 = getGridSpawn(1);
-    const spawn2 = getGridSpawn(2);
-    const spawn3 = getGridSpawn(3);
 
     const playerVehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     const playerTruck = new Truck(scene, shadows, null, null, playerVehicleDef);
@@ -204,52 +191,48 @@ export class RaceMode extends BaseMode {
       playerTruck.state.maxBoosts  = purchased.nitroCount ?? playerTruck.state.maxBoosts;
     }
 
-    const aiVehicleDef = playerVehicleDef;
-    const aiTruck1 = new Truck(scene, shadows, new Color3(0.2, 0.2, 0.8), aiDriver1, aiVehicleDef);
-    aiTruck1.mesh.position.copyFrom(spawn1.pos);
-    aiTruck1.state.heading = spawn1.heading;
-    aiTruck1.mesh.rotation.y = spawn1.heading;
-
-    // const aiTruck2 = new Truck(scene, shadows, new Color3(0.9, 0.9, 0.9), aiDriver2, aiVehicleDef);
-    // aiTruck2.mesh.position.copyFrom(spawn2.pos);
-    // aiTruck2.state.heading = spawn2.heading;
-    // aiTruck2.mesh.rotation.y = spawn2.heading;
-
-    // const aiTruck3 = new Truck(scene, shadows, new Color3(0.5, 0.5, 0.5), aiDriver3, aiVehicleDef);
-    // aiTruck3.mesh.position.copyFrom(spawn3.pos);
-    // aiTruck3.state.heading = spawn3.heading;
-    // aiTruck3.mesh.rotation.y = spawn3.heading;
-
-    // Set truck reference for AI respawn capability
-    aiDriver1.setTruck(aiTruck1);
-    // aiDriver2.setTruck(aiTruck2);
-    // aiDriver3.setTruck(aiTruck3);
-
-    // Give each AI driver awareness of the other trucks so they can steer around them.
-    aiDriver1.setOtherTrucks([playerTruck /*, aiTruck2, aiTruck3 */]);
-    // aiDriver2.setOtherTrucks([playerTruck, aiTruck1, aiTruck3]);
-    // aiDriver3.setOtherTrucks([playerTruck, aiTruck1, aiTruck2]);
-
-    // Re-calculate the full precomputed path from each AI's grid spawn position
-    aiDriver1.calculateFullPath({ x: spawn1.pos.x, z: spawn1.pos.z });
-    // aiDriver2.calculateFullPath({ x: spawn2.pos.x, z: spawn2.pos.z });
-    // aiDriver3.calculateFullPath({ x: spawn3.pos.x, z: spawn3.pos.z });
-
-    // ── Telemetry ───────────────────────────────────────────────────────────
-    // Collect checkpoint positions for the recorder/player
-    const telemetryCheckpoints = aiDriver1.checkpoints; // already sorted by index
-
-    // Set up recorder for the player truck (activated via UI toggle)
-    const telemetryRecorder = new TelemetryRecorder(trackKey, telemetryCheckpoints);
+    // ── Telemetry ────────────────────────────────────────────────────────────
+    const telemetryRecorder = new TelemetryRecorder(trackKey, /* checkpoints resolved below */ []);
     this.telemetryRecorder = telemetryRecorder;
 
-    // Try to load saved telemetry for this track and pass it to the AI driver(s)
+    // ── AI drivers ───────────────────────────────────────────────────────────
+    // Season driver info helpers — passed into setupAIDrivers so it can name/id each slot
+    const seasonAIDrivers = season && seasonManager ? seasonManager.getAIDrivers() : null;
+    const getAIName  = (i) => seasonAIDrivers ? seasonAIDrivers[i].name : `AI ${i + 1}`;
+    const getAIId    = (i) => seasonAIDrivers ? seasonAIDrivers[i].id   : `ai${i + 1}`;
+    const getAISkill = (i) => seasonAIDrivers ? seasonAIDrivers[i].skillConfig : {};
+
+    const AI_COUNT = 3; // change this to add more AI competitors
+    const { aiTruckDataList, aiDrivers } = setupAIDrivers({
+      count: AI_COUNT,
+      scene,
+      shadows,
+      currentTrack,
+      checkpointManager,
+      wallManager,
+      vehicleDef: playerVehicleDef,
+      playerTruck,
+      getGridSpawn,
+      getAIName,
+      getAIId,
+      getAISkill,
+      trackKey,
+      telemetryCheckpoints: null, // resolved below
+    });
+
+    // Grab the canonical checkpoint list from the first AI driver (already sorted)
+    const telemetryCheckpoints = aiDrivers[0]?.checkpoints ?? [];
+    // Patch the recorder's checkpoint list now that we have it
+    telemetryRecorder._checkpoints = telemetryCheckpoints;
+
+    // If saved telemetry exists, load it into all AI drivers
     const savedTelemetry = window._telemetryStore?.[trackKey] ?? null;
-    if (savedTelemetry) {
-      const player1 = new TelemetryPlayer(trackKey, telemetryCheckpoints);
-      if (player1.loadFromObject(savedTelemetry)) {
-        const waypoints = player1.buildWaypoints();
-        aiDriver1.loadTelemetry(waypoints);
+    if (savedTelemetry && telemetryCheckpoints.length) {
+      const { TelemetryPlayer } = await import("../managers/TelemetryPlayer.js");
+      const tp = new TelemetryPlayer(trackKey, telemetryCheckpoints);
+      if (tp.loadFromObject(savedTelemetry)) {
+        const waypoints = tp.buildWaypoints();
+        aiDrivers.forEach(d => d.loadTelemetry(waypoints));
       }
     }
 
@@ -262,30 +245,7 @@ export class RaceMode extends BaseMode {
         id: "player",
         hasStarted: false,
       },
-      {
-        truck: aiTruck1,
-        gameState: new GameState(0),
-        isPlayer: false,
-        name: getAIName(0),
-        id: getAIId(0),
-        hasStarted: false,
-      },
-      // {
-      //   truck: aiTruck2,
-      //   gameState: new GameState(0),
-      //   isPlayer: false,
-      //   name: getAIName(1),
-      //   id: getAIId(1),
-      //   hasStarted: false,
-      // },
-      // {
-      //   truck: aiTruck3,
-      //   gameState: new GameState(0),
-      //   isPlayer: false,
-      //   name: getAIName(2),
-      //   id: getAIId(2),
-      //   hasStarted: false,
-      // }
+      ...aiTruckDataList,
     ];
 
     const playerTruckData = trucks[0];
@@ -347,9 +307,12 @@ export class RaceMode extends BaseMode {
       const truck = playerTruckData.truck;
       const lastPassed = playerTruckData.gameState.lastCheckpointPassed;
 
-      // Spawn at the last passed checkpoint centre
+      // Spawn at the last passed checkpoint centre.
+      // lastPassed === 0 means the player just crossed the start/finish line and
+      // hasn't reached any mid-track checkpoint yet, so use the start/finish (maxCheckpointNumber).
+      const cpNumberToFind = lastPassed === 0 ? maxCheckpointNumber : lastPassed;
       const lastCp = currentTrack.features.find(
-        (f) => f.type === 'checkpoint' && f.checkpointNumber === lastPassed
+        (f) => f.type === 'checkpoint' && f.checkpointNumber === cpNumberToFind
       );
       let spawnX = lastCp ? lastCp.centerX : truck.mesh.position.x;
       let spawnZ = lastCp ? lastCp.centerZ : truck.mesh.position.z;
@@ -418,8 +381,6 @@ export class RaceMode extends BaseMode {
     };
 
     // -- Countdown --
-    const aiDrivers = [aiDriver1, /* aiDriver2, aiDriver3 */];
-
     const startCountdown = () => {
       this._countdownTimeouts.forEach(clearTimeout);
       this._countdownTimeouts = [];
