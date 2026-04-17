@@ -65,6 +65,7 @@ const features = [
   { label: 'Banner String',    img: imgFlagString,    action: () => editor.addBannerString()   },
   { label: 'Action Zone',      img: 'imgActionZone',  action: () => editor.addActionZone()     },
   { label: 'Bridge',           img: null,             action: () => editor.addBridge()         },
+  { label: 'AI Waypoint',      img: null,             action: () => editor.addAiWaypoint()     },
 ];
 </script>
 

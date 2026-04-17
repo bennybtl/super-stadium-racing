@@ -11,6 +11,8 @@ import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
 import { BaseMode } from "./BaseMode.js";
 import { UPGRADES } from "../managers/SeasonManager.js";
+import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
+import { TelemetryPlayer } from "../managers/TelemetryPlayer.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -25,6 +27,7 @@ export class RaceMode extends BaseMode {
     this._countdownTimeouts = [];
     this._dnfTimer = null;
     this.debugManager = null;
+    this.telemetryRecorder = null;
   }
 
   async setup({ trackKey, laps, season = false, vehicleKey = 'default_truck' }) {
@@ -232,6 +235,24 @@ export class RaceMode extends BaseMode {
     // aiDriver2.calculateFullPath({ x: spawn2.pos.x, z: spawn2.pos.z });
     // aiDriver3.calculateFullPath({ x: spawn3.pos.x, z: spawn3.pos.z });
 
+    // ── Telemetry ───────────────────────────────────────────────────────────
+    // Collect checkpoint positions for the recorder/player
+    const telemetryCheckpoints = aiDriver1.checkpoints; // already sorted by index
+
+    // Set up recorder for the player truck (activated via UI toggle)
+    const telemetryRecorder = new TelemetryRecorder(trackKey, telemetryCheckpoints);
+    this.telemetryRecorder = telemetryRecorder;
+
+    // Try to load saved telemetry for this track and pass it to the AI driver(s)
+    const savedTelemetry = window._telemetryStore?.[trackKey] ?? null;
+    if (savedTelemetry) {
+      const player1 = new TelemetryPlayer(trackKey, telemetryCheckpoints);
+      if (player1.loadFromObject(savedTelemetry)) {
+        const waypoints = player1.buildWaypoints();
+        aiDriver1.loadTelemetry(waypoints);
+      }
+    }
+
     const trucks = [
       {
         truck: playerTruck,
@@ -276,6 +297,8 @@ export class RaceMode extends BaseMode {
     // -- UI --
     const uiManager = new UIManager();
     this.uiManager = uiManager;
+    // Register telemetry recorder with the Vue store so RaceHUD buttons can control it
+    uiManager.setTelemetryRecorder(telemetryRecorder);
     // uiManager.showDebugPanel();
     uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
@@ -323,8 +346,13 @@ export class RaceMode extends BaseMode {
     const respawnPlayer = () => {
       const truck = playerTruckData.truck;
       const lastPassed = playerTruckData.gameState.lastCheckpointPassed;
-      let spawnX = truck.mesh.position.x;
-      let spawnZ = truck.mesh.position.z;
+
+      // Spawn at the last passed checkpoint centre
+      const lastCp = currentTrack.features.find(
+        (f) => f.type === 'checkpoint' && f.checkpointNumber === lastPassed
+      );
+      let spawnX = lastCp ? lastCp.centerX : truck.mesh.position.x;
+      let spawnZ = lastCp ? lastCp.centerZ : truck.mesh.position.z;
 
       const wallSegs = wallManager.getWallSegments();
       const isNearWall = (cx, cz) => {
@@ -544,6 +572,29 @@ export class RaceMode extends BaseMode {
       debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck);
       uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
 
+      // Feed telemetry recorder each frame for the player truck
+      if (telemetryRecorder.recording && raceStarted) {
+        const pt = playerTruckData.truck;
+        const fwdVec = new Vector3(Math.sin(pt.state.heading), 0, Math.cos(pt.state.heading));
+        const fwdSpd = pt.state.velocity.dot(fwdVec);
+        const currentGrip = playerDebugInfo?.terrainGripMultiplier ?? 1;
+        telemetryRecorder.update(
+          { x: pt.mesh.position.x, z: pt.mesh.position.z },
+          fwdSpd,
+          dt * 1000,
+          currentGrip
+        );
+      }
+
+      // Keep each AI truck's last-known terrain grip updated so the telemetry
+      // speed-target scaling in AIDriver can access it without a terrainManager ref.
+      trucks.forEach(td => {
+        if (!td.isPlayer && td.truck.driver) {
+          const terrain = terrainManager.getTerrainAt(td.truck.mesh.position);
+          td.truck._lastTerrainGrip = terrain.gripMultiplier;
+        }
+      });
+
       trucks.forEach((truckData) => {
         if (truckData.gameState.raceFinished) return;
 
@@ -573,7 +624,18 @@ export class RaceMode extends BaseMode {
           truckData.gameState.lastCheckpointPassed = 0;
           truckData.gameState.checkpointCount = 0;
           checkpointManager.resetForTruck(truckData.id);
-          if (truckData.isPlayer) uiManager.updateCheckpoints(0);
+          if (truckData.isPlayer) {
+            uiManager.updateCheckpoints(0);
+            // Auto-start telemetry recording when player crosses the start line
+            if (telemetryRecorder.recording) {
+              telemetryRecorder.onCheckpointPassed(
+                maxCheckpointNumber,
+                { x: truckData.truck.mesh.position.x, z: truckData.truck.mesh.position.z },
+                truckData.truck.state.velocity.dot(new Vector3(Math.sin(truckData.truck.state.heading), 0, Math.cos(truckData.truck.state.heading))),
+                playerDebugInfo?.terrainGripMultiplier ?? 1
+              );
+            }
+          }
           // Notify AI driver so it recalculates path toward checkpoint #1
           if (!truckData.isPlayer && truckData.truck.driver) {
             truckData.truck.driver.onCheckpointPassed(maxCheckpointNumber, {
@@ -593,6 +655,17 @@ export class RaceMode extends BaseMode {
             x: truckData.truck.mesh.position.x,
             z: truckData.truck.mesh.position.z,
           });
+        }
+
+        // Feed mid-lap checkpoint events into the telemetry recorder
+        if (truckData.isPlayer && telemetryRecorder.recording) {
+          const fwdVec = new Vector3(Math.sin(truckData.truck.state.heading), 0, Math.cos(truckData.truck.state.heading));
+          telemetryRecorder.onCheckpointPassed(
+            checkpointResult.index,
+            { x: truckData.truck.mesh.position.x, z: truckData.truck.mesh.position.z },
+            truckData.truck.state.velocity.dot(fwdVec),
+            playerDebugInfo?.terrainGripMultiplier ?? 1
+          );
         }
 
         if (truckData.isPlayer) {

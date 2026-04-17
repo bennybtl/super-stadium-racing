@@ -16,6 +16,7 @@ import { BannerStringEditor } from "./BannerStringEditor.js";
 import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
 import { BridgeEditor } from './BridgeEditor.js';
+import { AiPathEditor } from './AiPathEditor.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
@@ -95,6 +96,13 @@ export class EditorController {
 
     // Bridge editing editor
     this.bridgeEditor = new BridgeEditor(this);
+
+    // AI path waypoint editor
+    this.aiPathEditor = new AiPathEditor(this);
+
+    // AI path placement mode — when true, every terrain click drops a waypoint
+    this._aiPathPlacementMode = false;
+
     this._rawDragPos = null;
 
     // Undo / redo stacks (each entry is a JSON string of the features array)
@@ -165,6 +173,9 @@ export class EditorController {
 
     // Bridge editing editor
     this.bridgeEditor.activate(this.scene, track);
+
+    // AI path waypoint editor
+    this.aiPathEditor.activate(this.scene, track);
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
@@ -254,7 +265,11 @@ export class EditorController {
     // Bridge editor
     this.bridgeEditor.dispose();
 
-    console.log('[EditorController] Editor mode deactivated');
+    // AI path waypoint editor
+    this.aiPathEditor.dispose();
+
+    this._aiPathPlacementMode = false;
+    if (this._editorStore) this._editorStore.aiPathPlacementMode = false;
   }
 
   // ─── Undo / Redo ──────────────────────────────────────────────────────────
@@ -296,6 +311,7 @@ export class EditorController {
     this.bannerStringEditor.deselect();
     this.actionZoneEditor.deselect();
     this.bridgeEditor.deselect();
+    this.aiPathEditor.deselect();
 
     // Clear all gizmo meshes (keeps materials alive for re-use)
     this.hillEditor.clearMeshes();
@@ -327,6 +343,9 @@ export class EditorController {
       else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
       else if (feature.type === 'bridge') this.bridgeEditor.createVisual(feature);
     }
+    // Restore AI path waypoint gizmos
+    this.aiPathEditor.onSnapshotRestored(this.currentTrack);
+
     // Restore mesh grid gizmos
     this.meshGridEditor?.onSnapshotRestored();
     // Restore poly wall gizmos
@@ -373,6 +392,13 @@ export class EditorController {
 
     // Handle ESC key — deselect first, open menu if nothing selected
     if (event.key === 'Escape') {
+      if (this._aiPathPlacementMode) {
+        this._aiPathPlacementMode = false;
+        this._editorStore.aiPathPlacementMode = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (this.hillEditor.selected) {
         this.hillEditor.deselect();
       } else if (this.squareHillEditor.selected) {
@@ -449,6 +475,9 @@ export class EditorController {
       } else if (this.bridgeEditor?.selected) {
         this.bridgeEditor.deleteSelected();
         event.preventDefault();
+      } else if (this.aiPathEditor?.selected) {
+        this.aiPathEditor.deleteSelected();
+        event.preventDefault();
       } else if (this.meshGridEditor?.activeFeature) {
         this.meshGridEditor.deleteMeshGrid();
         event.preventDefault();
@@ -468,6 +497,15 @@ export class EditorController {
     // Handle Space key for add menu
     if (event.key === ' ') {
       this.toggleAddMenu();
+      event.preventDefault();
+      return;
+    }
+
+    // Handle P key — toggle AI path placement mode
+    if (event.key.toLowerCase() === 'p' && !event.ctrlKey && !event.metaKey) {
+      this._aiPathPlacementMode = !this._aiPathPlacementMode;
+      this._editorStore.aiPathPlacementMode = this._aiPathPlacementMode;
+      if (this._aiPathPlacementMode) this.deselectAll();
       event.preventDefault();
       return;
     }
@@ -669,6 +707,8 @@ export class EditorController {
       if (this.keys.rotateLeft)  this.bridgeEditor.rotate( rotStep);
       if (this.keys.rotateRight) this.bridgeEditor.rotate(-rotStep);
       delta = this.bridgeEditor.move(movement);
+    } else if (this.aiPathEditor?.selected) {
+      delta = this.aiPathEditor.move(movement);
     } else if (this.polyWallEditor?.selectedPoint) {
       const d = this.polyWallEditor.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
@@ -698,6 +738,14 @@ export class EditorController {
     
     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
       const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+
+      // AI path placement mode: every click drops a waypoint at the terrain hit point
+      if (this._aiPathPlacementMode) {
+        if (pickResult.hit && pickResult.pickedPoint) {
+          this.aiPathEditor.addPoint(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
+        }
+        return;
+      }
       
       if (pickResult.hit && pickResult.pickedMesh) {
         // Check if clicked mesh is part of a checkpoint
@@ -835,6 +883,17 @@ export class EditorController {
             const wasSelected = this.bridgeEditor.selected === bridgeData;
             this.deselectAll();
             if (!wasSelected) this.bridgeEditor.select(bridgeData);
+            return;
+          }
+        }
+
+        // Check if clicked mesh is an AI path waypoint
+        {
+          const wpData = this.aiPathEditor.findByMesh(clickedMesh);
+          if (wpData) {
+            const wasSelected = this.aiPathEditor.selected === wpData;
+            this.deselectAll();
+            if (!wasSelected) this.aiPathEditor.select(wpData);
             return;
           }
         }
@@ -1025,6 +1084,7 @@ export class EditorController {
     this.bannerStringEditor.deselect();
     this.actionZoneEditor.deselect();
     this.bridgeEditor?.deselect();
+    this.aiPathEditor?.deselect();
     this.meshGridEditor?.deselectPoint();
     this.polyWallEditor?.deselectPoint();
     this.polyHillEditor?.deselectPoint();
@@ -1146,6 +1206,17 @@ export class EditorController {
     this.meshGridEditor?.deselectPoint();
     if (this._editorStore) this._editorStore.selectedType = null;
   }
+
+  // ── AI Path Vue bridge methods ────────────────────────────────────────────
+  addAiWaypointEntity() {
+    // Place new waypoint at the camera's look-at target
+    const target = this.camera.getTarget();
+    this.aiPathEditor.addPoint(target.x, target.z);
+    this.hideAddMenu();
+  }
+  deleteAiWaypoint()   { this.aiPathEditor.deleteSelected(); }
+  clearAiPath()        { this.aiPathEditor.clearAll(); }
+  deselectAiWaypoint() { this.aiPathEditor.deselect(); }
 
   /**
    * Dispose of the controller

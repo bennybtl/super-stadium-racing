@@ -10,6 +10,13 @@
         pan/move - WASD | rotate - QE | delete - Del | undo - Ctrl+Z | zoom - +/- | move faster - Shift
       </div>
 
+      <!-- AI path placement mode banner -->
+      <Transition name="placement-banner">
+        <div v-if="editor.aiPathPlacementMode" class="ai-placement-banner">
+          🗺 <strong>AI Path</strong>: click terrain to place waypoints &nbsp;·&nbsp; <kbd>P</kbd> or <kbd>Esc</kbd> to finish
+        </div>
+      </Transition>
+
       <!-- Default terrain picker -->
       <div class="terrain-picker">
         <span class="terrain-label">Default Terrain</span>
@@ -172,6 +179,40 @@ const editor = useEditorStore();
   appearance: auto;
 }
 .terrain-select:hover { border-color: #888; }
+
+/* ── AI path placement banner ── */
+.ai-placement-banner {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 200, 0, 0.92);
+  color: #1a1200;
+  padding: 6px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  z-index: 200;
+}
+.ai-placement-banner kbd {
+  background: rgba(0,0,0,0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 12px;
+  font-family: monospace;
+}
+.placement-banner-enter-active,
+.placement-banner-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.placement-banner-enter-from,
+.placement-banner-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
+}
 
 /* ── Slide-up transition ── */
 .status-bar-enter-active,

@@ -110,11 +110,40 @@ export const useRaceStore = defineStore('race', () => {
   const countdownText = ref('');
   const countdownVisible = ref(false);
 
+  // Telemetry recording state — driven by RaceMode via the bridge below
+  const telemetryRecording = ref(false);
+  const telemetryHasData   = ref(false);
+  const _bridge = shallowRef(null);
+  function setTelemetryBridge(recorder) { _bridge.value = recorder; }
+  function toggleTelemetry() {
+    if (!_bridge.value) return;
+    if (_bridge.value.recording) {
+      _bridge.value.stop();
+      telemetryRecording.value = false;
+      telemetryHasData.value = true;
+    } else {
+      _bridge.value.start(0);
+      telemetryRecording.value = true;
+      telemetryHasData.value = false;
+    }
+  }
+  function exportTelemetry() {
+    if (!_bridge.value || !telemetryHasData.value) return;
+    const data = _bridge.value.export();
+    // Persist in memory so the AI picks it up next race on the same track
+    if (data) {
+      if (!window._telemetryStore) window._telemetryStore = {};
+      window._telemetryStore[data.trackId] = data;
+    }
+  }
+
   return {
     visible, checkpoints, lap, totalLaps,
     boosts, boostActive,
     timerMs, timerVisible,
     countdownText, countdownVisible,
+    telemetryRecording, telemetryHasData,
+    setTelemetryBridge, toggleTelemetry, exportTelemetry,
   };
 });
 
@@ -299,6 +328,9 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Test mode (back button) ──
   const testModeActive = ref(false);
   const testModeReturnKey = ref(null);
+
+  // ── AI path placement mode indicator ──
+  const aiPathPlacementMode = ref(false);
 
   // ── Vue panel bridge (set to EditorController instance on activate) ──
   const _bridge = shallowRef(null);
@@ -498,6 +530,9 @@ export const useEditorStore = defineStore('editor', () => {
   function addActionZone()     { _bridge.value?.addActionZoneEntity(); }
   function addPolyCurb()       { _bridge.value?.addPolyCurbEntity(); }
   function addBridge()         { _bridge.value?.addBridgeEntity(); }
+  function addAiWaypoint()     { _bridge.value?.addAiWaypointEntity(); }
+  function deleteAiWaypoint()  { _bridge.value?.deleteAiWaypoint(); }
+  function clearAiPath()       { _bridge.value?.clearAiPath(); }
 
   return {
     selectedType,
@@ -557,7 +592,8 @@ export const useEditorStore = defineStore('editor', () => {
     addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addTireStack, addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
-    addActionZone, addPolyCurb, addBridge,
+    addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,
+    aiPathPlacementMode,
     setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     meshGridAdjustUp, meshGridAdjustDown,

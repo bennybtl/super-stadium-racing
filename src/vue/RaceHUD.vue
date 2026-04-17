@@ -6,6 +6,25 @@
     <div class="hud-row" :class="{ 'boost-active': race.boostActive }">
       Nitro: <span class="hud-val">{{ race.boosts }}</span>
     </div>
+
+    <!-- Telemetry controls -->
+    <div class="telemetry-row">
+      <button
+        class="telem-btn"
+        :class="{ recording: race.telemetryRecording }"
+        @click="race.toggleTelemetry()"
+      >
+        {{ race.telemetryRecording ? '⏹ Stop' : '⏺ Record' }}
+      </button>
+      <button
+        v-if="race.telemetryHasData"
+        class="telem-btn export-btn"
+        @click="race.exportTelemetry()"
+      >
+        ⬇ Export
+      </button>
+    </div>
+    <div v-if="race.telemetryRecording" class="telem-indicator">● REC</div>
   </div>
 
   <div v-if="race.countdownVisible" class="countdown-overlay">
@@ -75,6 +94,51 @@ const formattedTime = computed(() => {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.7; }
+}
+
+/* Telemetry controls */
+.telemetry-row {
+  display: flex;
+  gap: 4px;
+  padding: 4px 5px;
+  pointer-events: all;
+}
+
+.telem-btn {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border: 1px solid #555;
+  background: rgba(0,0,0,0.8);
+  color: #aaa;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.telem-btn:hover { background: rgba(60,60,60,0.9); color: #fff; }
+
+.telem-btn.recording {
+  border-color: #f44;
+  color: #f44;
+  animation: recPulse 1s infinite;
+}
+
+.export-btn { border-color: #4af; color: #4af; }
+.export-btn:hover { color: #fff; }
+
+@keyframes recPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.telem-indicator {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: bold;
+  color: #f44;
+  padding: 0 5px 4px;
+  animation: recPulse 1s infinite;
 }
 
 .countdown-overlay {

@@ -42,6 +42,10 @@ export class AIDriver {
     this.currentPathIndex = 0;
     this.currentCheckpointTarget = 0;
     this.lastCheckpointPassed = 0;
+
+    // Telemetry-driven path — when set, this replaces the A* path.
+    // Each entry is { x, z, speed } where speed is the target forward speed.
+    this._usingTelemetry = false;
     
     // Grid for pathfinding (simplified world representation)
     this.gridSize = 160; // Match terrain size
@@ -53,6 +57,9 @@ export class AIDriver {
     this.steeringStrength = steeringPrecision;
     this.maxSpeed = maxSpeed;
     
+    // Smoothed steering (low-pass filter to remove rapid left/right jitter)
+    this._smoothedTurn = 0;
+
     // Stuck detection
     this.stuckTimer = 0;
     this.stuckThreshold = 3000; // 3 seconds in milliseconds
@@ -104,48 +111,107 @@ export class AIDriver {
     this.path = [];
     this.checkpointPathIndices = [];
 
-    const APPROACH_DIST = 10;
-    const EXIT_DIST = 10;
+    // ── Option B: author-placed AI path waypoints ─────────────────────────
+    // If the track JSON contains an `aiPath` feature with ≥ 2 points, use
+    // those as the node list instead of checkpoint centres.  This gives the
+    // track author fine-grained control over the racing line on new tracks
+    // before any telemetry has been recorded.
+    const aiPathFeature = this.track.features?.find(f => f.type === 'aiPath');
+    const authorNodes   = aiPathFeature?.points?.length >= 2 ? aiPathFeature.points : null;
 
-    let currentPos = startPosition;
+    // Waypoint spacing: one point every N world units along each segment.
+    const STEP = 3;
 
-    for (let i = 0; i < this.checkpoints.length; i++) {
-      const cp = this.checkpoints[i];
-      const approachPoint = {
-        x: cp.x - Math.sin(cp.heading) * APPROACH_DIST,
-        z: cp.z - Math.cos(cp.heading) * APPROACH_DIST,
-      };
+    // These are calibrated against the truck's actual physics:
+    //   maxSpeed = 25 u/s, acceleration = 13 u/s², braking force = 2 u/s²,
+    //   DRAG_COASTING = 0.45/frame ≈ 27/s effective decel at speed.
+    // At 18 u/s coasting drag stops the truck in ~18/27 ≈ 0.67 s = ~12 u.
+    // So BASE_SPEED of 18 gives reasonable stopping distance with coast-only braking.
+    const BASE_SPEED = 28 * this.maxSpeed;
+    // Tight hairpin speed — must be low enough that the truck can hold the turn.
+    const MIN_SPEED  =  14 * this.maxSpeed;
+    // Maximum deceleration assumed for backwards-propagation.
+    // Higher value = tighter braking zone = AI brakes later and more aggressively.
+    const MAX_DECEL  = 22; // u/s²  (aggressive combined drag+brake)
 
-      const segment = this.findPath(currentPos, approachPoint);
+    // Build a closed list of node positions and wrap back to the first.
+    const nodes = authorNodes
+      ? [...authorNodes.map(p => ({ x: p.x, z: p.z })), { x: authorNodes[0].x, z: authorNodes[0].z }]
+      : [...this.checkpoints.map(cp => ({ x: cp.x, z: cp.z })), { x: this.checkpoints[0].x, z: this.checkpoints[0].z }];
 
-      // Record where this checkpoint's approach segment starts in the full path
+    const interpolateSegment = (a, b) => {
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const len = Math.sqrt(dx * dx + dz * dz);
+      if (len < 0.001) return [];
+      const steps = Math.max(1, Math.floor(len / STEP));
+      const pts = [];
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps;
+        pts.push({ x: a.x + dx * t, z: a.z + dz * t });
+      }
+      return pts;
+    };
+
+    const turnAngleAt = (i) => {
+      if (i <= 0 || i >= nodes.length - 1) return 0;
+      const prev = nodes[i - 1];
+      const curr = nodes[i];
+      const next = nodes[i + 1];
+      const ax = curr.x - prev.x, az = curr.z - prev.z;
+      const bx = next.x - curr.x, bz = next.z - curr.z;
+      const lenA = Math.sqrt(ax * ax + az * az);
+      const lenB = Math.sqrt(bx * bx + bz * bz);
+      if (lenA < 0.001 || lenB < 0.001) return 0;
+      const dot = (ax * bx + az * bz) / (lenA * lenB);
+      return Math.acos(Math.max(-1, Math.min(1, dot)));
+    };
+
+    const cpSpeeds = nodes.map((_, i) => {
+      const angle = turnAngleAt(i);
+      const t = Math.min(angle / Math.PI, 1);
+      return BASE_SPEED * (1 - t) + MIN_SPEED * t;
+    });
+
+    for (let seg = 0; seg < nodes.length - 1; seg++) {
+      const a = nodes[seg];
+      const b = nodes[seg + 1];
+      const speedA = cpSpeeds[seg];
+      const speedB = cpSpeeds[seg + 1];
+
       this.checkpointPathIndices.push(this.path.length);
 
-      // Append segment, skipping the first point (duplicate of previous end) after the first segment
-      if (this.path.length === 0) {
-        this.path.push(...segment);
-      } else {
-        this.path.push(...segment.slice(1));
+      const pts = interpolateSegment(a, b);
+      const n = pts.length;
+      for (let k = 0; k < n; k++) {
+        const t = n > 1 ? k / (n - 1) : 0;
+        pts[k].speed = speedA + (speedB - speedA) * t;
       }
-
-      // Next segment begins from this checkpoint's exit point
-      currentPos = {
-        x: cp.x + Math.sin(cp.heading) * EXIT_DIST,
-        z: cp.z + Math.cos(cp.heading) * EXIT_DIST,
-      };
+      this.path.push(...pts);
     }
+    this.path.push({ ...nodes[0], speed: cpSpeeds[0] });
 
-    // Close the loop: route from the last checkpoint exit back to the first approach
-    const firstCp = this.checkpoints[0];
-    const loopTarget = {
-      x: firstCp.x - Math.sin(firstCp.heading) * APPROACH_DIST,
-      z: firstCp.z - Math.cos(firstCp.heading) * APPROACH_DIST,
-    };
-    const loopSegment = this.findPath(currentPos, loopTarget);
-    this.path.push(...loopSegment.slice(1));
+    // ── Backwards speed-propagation pass ─────────────────────────────────
+    // Walk the path in reverse.  If a waypoint's target speed is lower than
+    // what the truck could physically reach from the previous waypoint given
+    // MAX_DECEL, reduce the earlier waypoint's speed so the AI starts
+    // slowing down in time rather than arriving at full speed.
+    // v_prev_max² = v_next² + 2 * MAX_DECEL * dist
+    for (let i = this.path.length - 2; i >= 0; i--) {
+      const curr = this.path[i];
+      const next = this.path[i + 1];
+      const dx = next.x - curr.x;
+      const dz = next.z - curr.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const maxAllowed = Math.sqrt(next.speed * next.speed + 2 * MAX_DECEL * dist);
+      if (curr.speed > maxAllowed) curr.speed = maxAllowed;
+    }
 
     this.currentPathIndex = 0;
     this.currentCheckpointTarget = 0;
+
+    const sourceLabel = authorNodes ? `author aiPath (${authorNodes.length} nodes)` : `checkpoints (${this.checkpoints.length} nodes)`;
+    console.log(`[AIDriver] Path built from ${sourceLabel}: ${this.path.length} waypoints.`);
 
     if (this.debugEnabled && this.scene) {
       this.updateDebugVisualization();
@@ -177,6 +243,27 @@ export class AIDriver {
    */
   setOtherTrucks(trucks) {
     this.otherTrucks = trucks;
+  }
+
+  /**
+   * Load a pre-built telemetry waypoint array produced by TelemetryPlayer.
+   * Replaces the A*-generated path with the player-recorded racing line.
+   * Each waypoint must be { x, z, speed }.
+   * @param {object[]|null} waypoints
+   */
+  loadTelemetry(waypoints) {
+    if (!waypoints || waypoints.length === 0) {
+      this._usingTelemetry = false;
+      console.log('[AIDriver] No telemetry; using A* path.');
+      return;
+    }
+    this.path = waypoints; // { x, z, speed }
+    this.currentPathIndex = 0;
+    this._usingTelemetry = true;
+    console.log(`[AIDriver] Telemetry path loaded: ${waypoints.length} waypoints.`);
+    if (this.debugEnabled && this.scene) {
+      this.updateDebugVisualization();
+    }
   }
 
   /**
@@ -488,16 +575,6 @@ export class AIDriver {
       z: targetWaypoint.z + rightVec.z * lateralOffset,
     };
 
-    // Drift compensation: measure the truck's current lateral (sideways) velocity
-    // and shift the virtual target in the opposite direction. This makes the AI
-    // pre-steer into the slide rather than reacting after it has already overshot.
-    if (this.truck) {
-      const lateralSpeed = this.truck.state.velocity.dot(rightVec);
-      const DRIFT_COMP_FACTOR = 1.2; // world-units of target shift per m/s of lateral drift
-      virtualTarget.x -= rightVec.x * lateralSpeed * DRIFT_COMP_FACTOR;
-      virtualTarget.z -= rightVec.z * lateralSpeed * DRIFT_COMP_FACTOR;
-    }
-
     // Recompute toTarget toward the avoidance-adjusted virtual target
     const toVirtual = new Vector3(virtualTarget.x - position.x, 0, virtualTarget.z - position.z);
     toVirtual.normalize();
@@ -507,18 +584,72 @@ export class AIDriver {
     const dot = Vector3.Dot(forward, toVirtual);
     
     // Determine turn direction
-    const turnStrength = cross.y;
+    let turnStrength = cross.y;
+
+    // Spin recovery: if lateral speed greatly exceeds forward speed the truck is
+    // spinning / sliding sideways. Reduce steering authority so the wheels can
+    // regain grip instead of fighting it with full lock.
+    if (this.truck) {
+      const fwd  = Math.abs(this.truck.state.velocity.dot(forward));
+      const lat  = Math.abs(this.truck.state.velocity.dot(rightVec));
+      if (lat > fwd * 1.5 && lat > 5) {
+        // Damp steering proportionally — the more sideways, the less we steer
+        const spinFactor = Math.max(0.15, fwd / lat);
+        turnStrength *= spinFactor;
+      }
+    }
     
+    // Smooth the raw turn signal — lerp at ~8 Hz equivalent to remove frame-to-frame jitter
+    // Alpha ~0.18 per frame at 60 fps gives a ~3-frame rolling average feel
+    const STEER_SMOOTH = 0.18;
+    this._smoothedTurn += (turnStrength - this._smoothedTurn) * STEER_SMOOTH;
+    turnStrength = this._smoothedTurn;
+
     // Always steer towards target
     const steeringThreshold = 0.05;
     
-    // Corner braking: scan the path ahead for sharp curvature. If a significant
-    // turn is coming up within braking distance, release throttle so the truck
-    // enters the corner slower and overshoots less due to drift.
-    const cornerAhead = this._scanPathCurvature(this.currentPathIndex, this.lookAheadDistance * 1.5);
-    const BRAKE_ANGLE_THRESHOLD = Math.PI / 3; // 60° of max per-vertex curvature triggers braking
-    const shouldMoveForward = cornerAhead < BRAKE_ANGLE_THRESHOLD;
-    const shouldReverse = false;
+    // Throttle / brake decision.
+    // When following a telemetry path, compare current speed to the target speed
+    // recorded at the nearest upcoming waypoint — accelerate if below, brake if over.
+    // Without telemetry, fall back to the curvature-scan heuristic.
+    let shouldMoveForward = true;
+    let shouldReverse = false;
+    if (this._usingTelemetry) {
+      // Look a few waypoints ahead for a speed target (gives a small braking preview)
+      const lookWaypoints = 3;
+      let targetSpeed = Infinity;
+      for (let wi = this.currentPathIndex; wi < Math.min(this.currentPathIndex + lookWaypoints, this.path.length); wi++) {
+        const wp = this.path[wi];
+        if (wp.speed !== undefined && wp.speed < targetSpeed) targetSpeed = wp.speed;
+      }
+      if (targetSpeed !== Infinity) {
+        // Scale the recorded speed target by the ratio of current grip to recorded grip.
+        // e.g. if the lap was recorded on packed dirt (grip 2.0) but the AI is now on
+        // mud (grip 0.15), the target speed is reduced proportionally so it brakes earlier.
+        const recordedGrip = this.path[this.currentPathIndex]?.grip ?? 1;
+        if (recordedGrip > 0 && this.truck?._lastTerrainGrip) {
+          targetSpeed *= Math.min(1, this.truck._lastTerrainGrip / recordedGrip);
+        }
+        const SPEED_TOLERANCE = 0.5;
+        shouldMoveForward = fwdSpeed < targetSpeed + SPEED_TOLERANCE;
+        shouldReverse = false;
+      }
+    } else {
+      // Direct-checkpoint path: waypoints carry .speed targets, same as telemetry.
+      // Look far enough ahead to give the truck time to brake.  With STEP=3 and
+      // Shorter look-ahead = AI brakes later for a more aggressive, committed driving style.
+      const lookWaypoints = 12;
+      let targetSpeed = Infinity;
+      for (let wi = this.currentPathIndex; wi < Math.min(this.currentPathIndex + lookWaypoints, this.path.length); wi++) {
+        const wp = this.path[wi];
+        if (wp.speed !== undefined && wp.speed < targetSpeed) targetSpeed = wp.speed;
+      }
+      if (targetSpeed !== Infinity) {
+        const SPEED_TOLERANCE = 0.5;
+        shouldMoveForward = fwdSpeed < targetSpeed + SPEED_TOLERANCE;
+        shouldReverse = false;
+      }
+    }
     
     const isActuallyReversing = fwdSpeed < -0.3;
     const input = {
@@ -678,13 +809,18 @@ export class AIDriver {
    */
   respawnFacingTarget(targetWaypoint) {
     if (!this.truck || !this.truckMesh || !targetWaypoint) return;
-    
-    const currentPos = this.truckMesh.position;
 
-    // Find a clear spawn position by scanning outward from the current position.
-    // First try the nearest unblocked path waypoint behind the truck, then
-    // fall back to a radial sweep if none is found.
-    const spawnPos = this._findClearPosition(currentPos, targetWaypoint);
+    // Prefer to respawn at the last passed checkpoint rather than the current
+    // (possibly off-track) position so the AI re-enters the track cleanly.
+    const lastCp = this.checkpoints[this.lastCheckpointPassed % this.checkpoints.length];
+    const basePos = lastCp
+      ? { x: lastCp.x, z: lastCp.z }
+      : { x: this.truckMesh.position.x, z: this.truckMesh.position.z };
+
+    const spawnPos = this._findClearPosition(
+      new Vector3(basePos.x, this.truckMesh.position.y, basePos.z),
+      targetWaypoint
+    );
 
     // Move the truck to the clear position
     this.truckMesh.position.x = spawnPos.x;

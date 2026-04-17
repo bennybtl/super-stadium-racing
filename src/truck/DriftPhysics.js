@@ -25,17 +25,17 @@ const SLIP_DROPOFF_RATE = 6;
  *  Fraction of lateral speed removed per frame at zero slip — gives tight, responsive
  *  cornering well below the drift threshold.
  *  Tapers linearly down to effectiveGrip at the threshold for a seamless transition. */
-const GRIP_ZONE_CORRECTION = 0.25;
+const GRIP_ZONE_CORRECTION = 0.35;
 
 /** Minimum grip factor at extreme slip angles — prevents total loss of steering authority. */
-const MIN_SLIP_FACTOR = 0.05;
+const MIN_SLIP_FACTOR = 0.09;
 
 /** Hard ceiling on the grip value used in the drift zone.
  *  No matter how grippy a truck is, once slip exceeds the drift threshold the
  *  traction available is capped here — guaranteeing any truck can break loose
  *  and slide.  Higher truck grip still improves cornering in the normal grip zone;
  *  only the drift zone is bounded. */
-const MAX_DRIFT_GRIP = 0.04;
+const MAX_DRIFT_GRIP = 0.13;
 
 /** Multiplier applied to reverse-direction grip so reversing corrects quickly. */
 const REVERSE_GRIP_BOOST = 15;

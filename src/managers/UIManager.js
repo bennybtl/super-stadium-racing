@@ -32,10 +32,20 @@ export class UIManager {
 
   updateTimer(milliseconds)          { this._race.timerMs = milliseconds; }
 
+  /** Register a TelemetryRecorder so the HUD record/export buttons work. */
+  setTelemetryRecorder(recorder) {
+    this._race.telemetryRecording = false;
+    this._race.telemetryHasData   = false;
+    this._race.setTelemetryBridge(recorder);
+  }
+
   /** Call from mode teardown() to reset all HUD state. */
   hideAll() {
     this._race.visible          = false;
     this._race.timerVisible     = false;
     this._race.countdownVisible = false;
+    this._race.telemetryRecording = false;
+    this._race.telemetryHasData   = false;
+    this._race.setTelemetryBridge(null);
   }
 }
