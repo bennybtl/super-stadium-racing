@@ -59,7 +59,7 @@ const SPRING = {
   proximityThreshold:    0.2,   // spring fires when penetration > -this (m)
   compressionNorm:       0.2,   // penetration depth that saturates base compression (m)
   maxImpulsePerFrame:    3.5,   // max vertical velocity added by spring per frame (m/s)
-  rideHeight:            1.0,  // keep chassis this far above sampled floor (m)
+  rideHeight:            0.08,  // keep chassis slightly above sampled floor (m)
 
   // Slope-tunneling depenetration
   depenetrationMinDepth: 1.2,   // minimum penetration before running tunneling check (m)
@@ -275,6 +275,14 @@ export class TerrainPhysics {
   /** Heading angle derived from the current horizontal velocity vector. */
   _moveDirHeading() {
     return Math.atan2(this.state.velocity.x, this.state.velocity.z);
+  }
+
+  /**
+   * Public surface sampler for systems that need drivable floor height
+   * (e.g. visual wheel placement).
+   */
+  sampleSurfaceYAt(x, z, fromY, track, fallback = 0) {
+    return this._sampleFloorYAt(x, z, fromY, track, fallback);
   }
 
   /**

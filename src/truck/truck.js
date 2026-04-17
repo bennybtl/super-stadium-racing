@@ -199,7 +199,9 @@ export class Truck {
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
-    this.body.update(this.state, input, speed, deltaTime, terrainY, groundedness);
+    const sampleSurfaceY = (x, z, fromY, fallback = terrainY ?? 0) =>
+      this.terrainPhysics.sampleSurfaceYAt(x, z, fromY, track, fallback);
+    this.body.update(this.state, input, speed, deltaTime, terrainY, groundedness, sampleSurfaceY);
     
     // Sync physics body
     this.syncPhysicsBody();

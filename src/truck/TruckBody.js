@@ -37,6 +37,11 @@ export class TruckBody {
     const rearAxle       =  g.rearAxle   ?? -1.2;
     const frontScale     =  g.frontScale ?? [1.2, 1.2, 1.2];
     const rearScale      =  g.rearScale  ?? [1.2, 1.2, 1.2];
+    this._wheelRadius    =  g.radius ?? 0.36;
+    this._wheelBaseY     = (g.baseYOffset ?? 0.20);
+    this._wheelMaxDrop   = (g.maxDrop ?? 0.32);
+    this._wheelMaxRise   = (g.maxRise ?? 0.15);
+    this._wheelFollowMinGroundedness = (g.followMinGroundedness ?? 0.2);
 
     // Body OBJ URL — resolved by VehicleLoader and stored on the def
     this._modelUrl = vehicleDef?.modelUrl ?? null;
@@ -82,8 +87,15 @@ export class TruckBody {
 
     // ── Wheels ───────────────────────────────────────────────────────────
     for (const def of this._wheelDefs) {
-      const baseY = 0.20; // tyre radius (0.36) - physics box half-height (0.4)
-      const entry = { mesh: null, isFront: def.isFront, side: def.x > 0 ? "L" : "R", baseLocalY: baseY };
+      const baseY = this._wheelBaseY;
+      const entry = {
+        mesh: null,
+        isFront: def.isFront,
+        side: def.x > 0 ? "L" : "R",
+        baseLocalY: baseY,
+        anchorX: def.x,
+        anchorZ: def.z,
+      };
       this._wheels.push(entry);
       this._loadTireMesh({ name: `wheel_${def.id}`, position: new Vector3(def.x, baseY, def.z), entry, scale: def.scale });
     }
@@ -199,7 +211,7 @@ export class TruckBody {
    * @param {number}  speed   - current speed (units/s)
    * @param {number}  dt      - delta time (s)
    */
-  update(state, input, speed, dt, terrainY = null, groundedness = 0) {
+  update(state, input, speed, dt, terrainY = null, groundedness = 0, sampleSurfaceY = null) {
     // When the physics box dips below the terrain surface, push the
     // wheel root fully above ground, and the body root partially —
     // this lets the body bounce with the physics while the wheels
@@ -227,21 +239,45 @@ export class TruckBody {
       this._wheelRoot.rotation.z = -(state.currentRoll ?? 0);
     }
 
-    this._animateWheels(state, speed, dt, input);
+    let sampledWheelBaseY = null;
+    if (sampleSurfaceY && groundedness >= this._wheelFollowMinGroundedness) {
+      sampledWheelBaseY = new Array(this._wheels.length);
+      const parentY = this.parent.position.y;
+      const wheelRootY = this._wheelRoot.position.y;
+      const fromY = parentY + 2;
+      const world = this.parent.getWorldMatrix();
+
+      for (let i = 0; i < this._wheels.length; i++) {
+        const w = this._wheels[i];
+        const anchorWorld = Vector3.TransformCoordinates(
+          new Vector3(w.anchorX, 0, w.anchorZ),
+          world
+        );
+        const floorY = sampleSurfaceY(anchorWorld.x, anchorWorld.z, fromY, terrainY ?? 0);
+        const targetBaseY = floorY + this._wheelRadius - parentY - wheelRootY;
+        const minBaseY = w.baseLocalY - this._wheelMaxDrop;
+        const maxBaseY = w.baseLocalY + this._wheelMaxRise;
+        sampledWheelBaseY[i] = Math.max(minBaseY, Math.min(maxBaseY, targetBaseY));
+      }
+    }
+
+    this._animateWheels(state, speed, dt, input, sampledWheelBaseY);
   }
 
-  _animateWheels(state, speed, dt, input) {
+  _animateWheels(state, speed, dt, input, sampledWheelBaseY = null) {
     // Front wheel steer: lerp toward target angle
     const maxSteer = 0.52; // radians
     let targetSteer = input.left ? -maxSteer : input.right ? maxSteer : 0;
     this._steerAngle += (targetSteer - this._steerAngle) * Math.min(1, dt * 8);
 
-    for (const w of this._wheels) {
+    for (let i = 0; i < this._wheels.length; i++) {
+      const w = this._wheels[i];
       if (!w.mesh) continue;
       // Suspension: bob each wheel down when compressed
       // suspensionCompression is 0 (full extend) to ~1 (full compress)
       const susTravel = state.suspensionCompression * 0.14;
-      w.mesh.position.y = w.baseLocalY + susTravel;
+      const baseY = sampledWheelBaseY?.[i] ?? (w.baseLocalY - this._wheelMaxDrop);
+      w.mesh.position.y = baseY + susTravel;
 
       // Steer front wheels around local Y
       if (w.isFront) {
@@ -269,14 +305,6 @@ export class TruckBody {
     mesh.material     = mat;
     mesh.receiveShadows = true;
     this.shadows.addShadowCaster(mesh);
-  }
-
-  // ─── Visibility ────────────────────────────────────────────────────────────
-
-  /** Show or hide the entire visual puppet (body + wheels). */
-  setVisible(visible) {
-    this._visualRoot.setEnabled(visible);
-    this._wheelRoot.setEnabled(visible);
   }
 
   // ─── Disposal ─────────────────────────────────────────────────────────────
