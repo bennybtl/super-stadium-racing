@@ -2,6 +2,7 @@
   <!-- All UI layers live here as a pointer-events:none overlay.
        Individual panels opt back in with pointer-events:auto. -->
   <div class="ui-root">
+    <div class="fps-counter">{{ fps }}</div>
     <MenuOverlay />
     <SingleRaceOverlay />
     <PostRaceOverlay />
@@ -31,6 +32,7 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
 import MenuOverlay        from './MenuOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
 import PostRaceOverlay    from './PostRaceOverlay.vue';
@@ -55,6 +57,25 @@ import MeshGridPanel      from './editor/MeshGridPanel.vue';
 import BridgePanel        from './editor/BridgePanel.vue';
 import AddEntityMenu      from './editor/AddEntityMenu.vue';
 import EditorStatusBar    from './editor/EditorStatusBar.vue';
+
+const fps = ref(0);
+let _lastTime = performance.now();
+let _frames = 0;
+let _rafId = null;
+
+const _tick = () => {
+  _frames++;
+  const now = performance.now();
+  if (now - _lastTime >= 500) {
+    fps.value = Math.round(_frames * 1000 / (now - _lastTime));
+    _frames = 0;
+    _lastTime = now;
+  }
+  _rafId = requestAnimationFrame(_tick);
+};
+
+onMounted(() => { _rafId = requestAnimationFrame(_tick); });
+onUnmounted(() => { cancelAnimationFrame(_rafId); });
 </script>
 
 <style scoped>
@@ -64,5 +85,16 @@ import EditorStatusBar    from './editor/EditorStatusBar.vue';
   pointer-events: none;
   z-index: 900;
   font-family: Arial, sans-serif;
+}
+
+.fps-counter {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  color: white;
+  font-size: 13px;
+  font-family: monospace;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  user-select: none;
 }
 </style>

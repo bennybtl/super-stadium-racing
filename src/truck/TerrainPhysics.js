@@ -1,34 +1,42 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT as _DEFAULT_HALF_HEIGHT } from "../constants.js";
 
+const GRAVITY    = -30;           // m/s²
+const DEG_TO_RAD = Math.PI / 180;
+const RAY_OFFSET = 0.1;           // vertical offset above truck centre for raycasts (m)
+const UP         = new Vector3(0, 1, 0);  // world-up — reused to avoid per-frame allocation
+
 // =============================================================================
 // Tunable constants
 // =============================================================================
 
-/** Downhill terrain tracking — how the truck hugs the ground on descents. */
-const DOWNHILL = {
-  // --- Pass 1: terrain-following detection ---
-  followMaxGap:          0.15,  // max gap above terrain to still trigger following (m)
-  followMinSpeed:        2,     // minimum truck speed to check (m/s)
-  followLookAhead:       1.5,   // look-ahead distance for height sample (m)
-  followHeightDrop:      0.3,   // terrain must drop at least this much to trigger (m)
-  followVertVelMin:     -1.5,   // must be descending faster than this (m/s)
-  followFakeCompression: 0.5,   // suspension compression injected when following
+/** Pass 1: detect downhill descent and inject fake compression to stay grounded. */
+const DOWNHILL_FOLLOW = {
+  maxGap:          0.15,  // max gap above terrain to still trigger following (m)
+  minSpeed:        2,     // minimum truck speed to check (m/s)
+  lookAhead:       1.5,   // look-ahead distance for height sample (m)
+  heightDrop:      0.3,   // terrain must drop at least this much to trigger (m)
+  vertVelMin:     -1.5,   // must be descending faster than this (m/s)
+  fakeCompression: 0.5,   // suspension compression injected when following
+};
 
-  // --- Suspension compression ---
-  velCompressionFactor:  0.03,  // downward velocity contribution to compression
-  compressionBaseScale:  0.08,  // scale applied to base compression
-  suspensionSmoothing:   0.5,   // exponential smoothing factor (0–1, higher = snappier)
-  maxCompression:        0.25,  // maximum suspension compression value
-  groundednessRef:       0.08,  // compression at which groundedness reaches 1.0
+/** Suspension compression: converts penetration depth + velocity into a 0–1 value. */
+const SUSPENSION = {
+  velCompressionFactor: 0.03,  // downward velocity contribution to compression
+  compressionBaseScale: 0.08,  // scale applied to base compression
+  smoothing:            0.5,   // exponential smoothing factor (0–1, higher = snappier)
+  maxCompression:       0.25,  // maximum suspension compression value
+  groundednessRef:      0.08,  // compression at which groundedness reaches 1.0
+};
 
-  // --- Pass 2: groundedness boost ---
-  boostMaxGap:           0.4,   // max gap above terrain to still check boost (m)
-  boostVertVelMin:      -0.5,   // must be descending faster than this (m/s)
-  boostMinSpeed:         2,     // minimum truck speed to check (m/s)
-  boostLookAhead:        2.0,   // look-ahead distance for boost check (m)
-  boostHeightDrop:       0.3,   // terrain must drop at least this much to apply boost (m)
-  boostGroundedness:     0.8,   // groundedness clamped to at least this when tracking
+/** Pass 2: boost groundedness when clearly tracking a descending slope. */
+const DOWNHILL_BOOST = {
+  maxGap:       0.4,   // max gap above terrain to still check boost (m)
+  vertVelMin:  -0.5,   // must be descending faster than this (m/s)
+  minSpeed:     2,     // minimum truck speed to check (m/s)
+  lookAhead:    2.0,   // look-ahead distance for boost check (m)
+  heightDrop:   0.3,   // terrain must drop at least this much to apply boost (m)
+  groundedness: 0.8,   // groundedness clamped to at least this when tracking
 };
 
 /**
@@ -82,7 +90,7 @@ const ORIENTATION = {
 const PITCH = {
   smoothingRate:         8,     // exp smoothing rate when grounded (s⁻¹)
   airborneSmoothingRate: 1.5,   // much slower rate when airborne — holds launch angle through the arc
-  maxAngle:              0.35,  // clamp to ±20° so bad values can't flip the truck visually
+  maxAngle:              1.10,  // clamp to ±63° — above the steepest climbable slope (speedBleedMaxDeg=60°)
   minPitchSpeed:         2,     // below this hSpeed (m/s), pitch effect fades to zero
   pitchSpeedRamp:        6,     // hSpeed at which pitch reaches full effect
 };
@@ -102,12 +110,12 @@ export class TerrainPhysics {
   constructor(state, halfHeight = _DEFAULT_HALF_HEIGHT, terrainQuery = null) {
     this.state = state;
     this.halfHeight = halfHeight;
-    this.gravity = -30;
+    this.gravity = GRAVITY;
     this._bumpAccumulator = 0;
     this._terrainQuery    = terrainQuery;
     // Cached results from the most recent castDown — used by updateTerrainOrientation
     // so the normal is available without a second raycast.
-    this._lastFloorNormal = new Vector3(0, 1, 0);
+    this._lastFloorNormal = UP.clone();
     // Last resolved floor Y — exposed so Truck can feed it to TruckBody.
     this.lastFloorY = 0;
     // Smoothed visual pitch derived from velocity vector.
@@ -133,19 +141,19 @@ export class TerrainPhysics {
     let effectiveFloor;
     if (this._terrainQuery) {
       const hit = this._terrainQuery.castDown(
-        mesh.position.x, mesh.position.z, mesh.position.y + 0.1
+        mesh.position.x, mesh.position.z, mesh.position.y + RAY_OFFSET
       );
       effectiveFloor        = hit ? hit.y : 0;
-      this._lastFloorNormal = hit?.normal ?? new Vector3(0, 1, 0);
+      this._lastFloorNormal = hit?.normal ?? UP;
     } else {
       effectiveFloor        = this._sampleFloorYAt(
         mesh.position.x,
         mesh.position.z,
-        mesh.position.y + 0.1,
+        mesh.position.y + RAY_OFFSET,
         track,
         0
       );
-      this._lastFloorNormal = new Vector3(0, 1, 0);
+      this._lastFloorNormal = UP;
     }
     this.lastFloorY = effectiveFloor;
 
@@ -156,43 +164,24 @@ export class TerrainPhysics {
 
     mesh.position.y += this.state.verticalVelocity * deltaTime;
 
-    const groundedness = this._updateSuspension(mesh, track, penetration);
-    if (groundedness > ORIENTATION.groundednessThreshold && track) {
-      this.updateTerrainOrientation(mesh, deltaTime, groundedness);
-    }
-
-    // Pitch: derived from the velocity vector's vertical-vs-horizontal angle.
-    // This ties the visual nose angle directly to the physics trajectory:
-    // nose-up on launch, nose-down on descent, level on flat ground.
-    // The pitch is flipped when reversing so the nose still reads correctly
-    // relative to the direction of travel.
+    // Compute forward vector and horizontal speed once — reused by _updateSuspension and pitch.
     const hSpeed = Math.sqrt(
       this.state.velocity.x * this.state.velocity.x +
       this.state.velocity.z * this.state.velocity.z
     );
     const forward = this._forwardVector();
-    const fwdSign = this.state.velocity.dot(forward) >= 0 ? 1 : -1;
-    const rawPitch = Math.atan2(this.state.verticalVelocity, Math.max(hSpeed, 0.1)) * fwdSign;
-    // Fade pitch out at low horizontal speeds — prevents violent lurches when the
-    // truck drops vertically onto the track with near-zero forward velocity.
-    const pitchWeight = Math.max(0, Math.min(1,
-      (hSpeed - PITCH.minPitchSpeed) / (PITCH.pitchSpeedRamp - PITCH.minPitchSpeed)
-    ));
-    const targetPitch = Math.max(-PITCH.maxAngle, Math.min(PITCH.maxAngle, rawPitch * pitchWeight));
-    // Grounded: track velocity pitch quickly so it reads level on flat terrain.
-    // Airborne: use a slow rate so the nose holds the launch angle through the arc
-    // rather than immediately pitching down as gravity flips verticalVelocity negative.
-    const rate = groundedness > ORIENTATION.groundednessThreshold
-      ? PITCH.smoothingRate
-      : PITCH.airborneSmoothingRate;
-    const pitchFactor = 1 - Math.exp(-rate * deltaTime);
-    this._smoothedPitch += (targetPitch - this._smoothedPitch) * pitchFactor;
-    mesh.rotation.x = -this._smoothedPitch;
+
+    const groundedness = this._updateSuspension(mesh, track, penetration, forward, hSpeed);
+    if (groundedness > ORIENTATION.groundednessThreshold && track) {
+      this.updateTerrainOrientation(mesh, deltaTime);
+    }
+
+    this._updatePitch(mesh, deltaTime, groundedness, forward, hSpeed);
 
     return { groundedness, penetration };
   }
 
-  updateTerrainOrientation(mesh, deltaTime, groundedness = 1) {
+  updateTerrainOrientation(mesh, deltaTime) {
     const right = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
     const normal = this._lastFloorNormal;
 
@@ -251,12 +240,12 @@ export class TerrainPhysics {
       this._moveDirHeading(),
       1,
       3,
-      mesh.position.y + 0.1,
+      mesh.position.y + RAY_OFFSET,
       track
     );
     if (slopeDeg <= UPHILL.minSlopeDeg) return;
 
-    const decel = Math.abs(this.gravity) * Math.sin(slopeDeg * Math.PI / 180) * UPHILL.gravityScale;
+    const decel = Math.abs(this.gravity) * Math.sin(slopeDeg * DEG_TO_RAD) * UPHILL.gravityScale;
     let newSpeed = Math.max(0, speed - decel * deltaTime);
 
     // Extra traction-loss bleed on very steep climbs.
@@ -287,14 +276,6 @@ export class TerrainPhysics {
   }
 
   /**
-   * Public surface sampler for systems that need drivable floor height
-   * (e.g. visual wheel placement).
-   */
-  sampleSurfaceYAt(x, z, fromY, track, fallback = 0) {
-    return this._sampleFloorYAt(x, z, fromY, track, fallback);
-  }
-
-  /**
    * Fast height-only surface sampler for high-frequency visual systems.
    */
   sampleSurfaceYFastAt(x, z, fromY, track, fallback = 0) {
@@ -321,18 +302,20 @@ export class TerrainPhysics {
    * Sample signed slope angle in the given heading direction from floor probes.
    */
   _sampleSlopeDegAt(x, z, heading, fwdSlopeDist, offset, fromY, track) {
-    const ox  = x + Math.sin(heading) * offset;
-    const oz  = z + Math.cos(heading) * offset;
-    const hx  = ox + Math.sin(heading) * fwdSlopeDist;
-    const hz  = oz + Math.cos(heading) * fwdSlopeDist;
-    const hbx = ox - Math.sin(heading) * fwdSlopeDist;
-    const hbz = oz - Math.cos(heading) * fwdSlopeDist;
+    const sinH = Math.sin(heading);
+    const cosH = Math.cos(heading);
+    const ox  = x + sinH * offset;
+    const oz  = z + cosH * offset;
+    const hx  = ox + sinH * fwdSlopeDist;
+    const hz  = oz + cosH * fwdSlopeDist;
+    const hbx = ox - sinH * fwdSlopeDist;
+    const hbz = oz - cosH * fwdSlopeDist;
 
     const hAhead = this._sampleFloorYAt(hx,  hz,  fromY, track, 0);
     const hBack  = this._sampleFloorYAt(hbx, hbz, fromY, track, 0);
 
     const slopeRad = Math.atan2(hAhead - hBack, fwdSlopeDist * 2);
-    return slopeRad * 180 / Math.PI;
+    return slopeRad / DEG_TO_RAD;
   }
 
   /**
@@ -357,12 +340,8 @@ export class TerrainPhysics {
     // When penetrating: damp in both directions (standard spring damping).
     // When in proximity but NOT penetrating: only damp downward velocity
     // (verticalVelocity < 0) so the truck isn't dragged back when cresting.
-    if (effectivePenetration > 0) {
-      const dampingForce = -this.state.verticalVelocity * this.state.damping;
-      this.state.verticalVelocity += dampingForce * deltaTime;
-    } else if (this.state.verticalVelocity < 0) {
-      const dampingForce = -this.state.verticalVelocity * this.state.damping;
-      this.state.verticalVelocity += dampingForce * deltaTime;
+    if (effectivePenetration > 0 || this.state.verticalVelocity < 0) {
+      this.state.verticalVelocity += -this.state.verticalVelocity * this.state.damping * deltaTime;
     }
   }
 
@@ -377,7 +356,7 @@ export class TerrainPhysics {
       this._moveDirHeading(),
       1,
       3,
-      mesh.position.y + 0.1,
+      mesh.position.y + RAY_OFFSET,
       track
     );
     if (slopeAtPos >= SPRING.tunnelingSlope) return penetration; // legitimate hill climb
@@ -398,11 +377,56 @@ export class TerrainPhysics {
   }
 
   /**
+   * Update visual pitch from the velocity vector's vertical-vs-horizontal angle.
+   * Nose-up on launch, nose-down on descent, level on flat ground.
+   * Flipped when reversing so it reads correctly relative to direction of travel.
+   */
+  _updatePitch(mesh, deltaTime, groundedness, forward, hSpeed) {
+    let targetPitch;
+
+    if (groundedness > ORIENTATION.groundednessThreshold) {
+      // Grounded: derive pitch from the terrain normal's forward component.
+      // This mirrors how roll is derived, and correctly reads the hill slope
+      // even when verticalVelocity is near-zero due to spring clamping.
+      const normal = this._lastFloorNormal;
+      if (normal.y >= 0.25) {
+        const MAX_TILT = PITCH.maxAngle;
+        targetPitch = Math.max(-MAX_TILT, Math.min(MAX_TILT,
+          Math.atan2(-normal.dot(forward), normal.y)
+        ));
+      } else {
+        targetPitch = 0;
+      }
+    } else {
+      // Airborne: derive pitch from velocity vector's vertical-vs-horizontal angle.
+      // Nose-up on launch, nose-down on descent. Flipped when reversing.
+      const fwdSign = this.state.velocity.dot(forward) >= 0 ? 1 : -1;
+      const rawPitch = Math.atan2(this.state.verticalVelocity, Math.max(hSpeed, 0.1)) * fwdSign;
+      // Fade pitch out at low horizontal speeds — prevents violent lurches when the
+      // truck drops vertically onto the track with near-zero forward velocity.
+      const pitchWeight = Math.max(0, Math.min(1,
+        (hSpeed - PITCH.minPitchSpeed) / (PITCH.pitchSpeedRamp - PITCH.minPitchSpeed)
+      ));
+      targetPitch = Math.max(-PITCH.maxAngle, Math.min(PITCH.maxAngle, rawPitch * pitchWeight));
+    }
+
+    // Grounded: snap pitch quickly so it tracks the slope.
+    // Airborne: slow rate holds the launch angle through the arc rather than
+    // immediately pitching down as gravity flips verticalVelocity negative.
+    const rate = groundedness > ORIENTATION.groundednessThreshold
+      ? PITCH.smoothingRate
+      : PITCH.airborneSmoothingRate;
+    const pitchFactor = 1 - Math.exp(-rate * deltaTime);
+    this._smoothedPitch += (targetPitch - this._smoothedPitch) * pitchFactor;
+    mesh.rotation.x = -this._smoothedPitch;
+  }
+
+  /**
    * Compute suspension compression and groundedness from the current penetration.
    * Handles both downhill terrain-following passes.
    * @returns {number} groundedness (0–1)
    */
-  _updateSuspension(mesh, track, penetration) {
+  _updateSuspension(mesh, track, penetration, forward, speed) {
     const hasSurfaceSampling = !!this._terrainQuery || !!track;
 
     // Base compression from current overlap depth.
@@ -413,69 +437,67 @@ export class TerrainPhysics {
     if (
       hasSurfaceSampling &&
       penetration < 0 &&
-      penetration > -DOWNHILL.followMaxGap &&
-      this.state.velocity.length() > DOWNHILL.followMinSpeed
+      penetration > -DOWNHILL_FOLLOW.maxGap &&
+      speed > DOWNHILL_FOLLOW.minSpeed
     ) {
-      const forward     = this._forwardVector();
       const heightHere  = this._sampleFloorYAt(
         mesh.position.x,
         mesh.position.z,
-        mesh.position.y + 0.1,
+        mesh.position.y + RAY_OFFSET,
         track,
         0
       );
       const heightAhead = this._sampleFloorYAt(
-        mesh.position.x + forward.x * DOWNHILL.followLookAhead,
-        mesh.position.z + forward.z * DOWNHILL.followLookAhead,
-        mesh.position.y + 0.1,
+        mesh.position.x + forward.x * DOWNHILL_FOLLOW.lookAhead,
+        mesh.position.z + forward.z * DOWNHILL_FOLLOW.lookAhead,
+        mesh.position.y + RAY_OFFSET,
         track,
         heightHere
       );
       if (
-        heightAhead < heightHere - DOWNHILL.followHeightDrop &&
-        this.state.verticalVelocity < DOWNHILL.followVertVelMin
+        heightAhead < heightHere - DOWNHILL_FOLLOW.heightDrop &&
+        this.state.verticalVelocity < DOWNHILL_FOLLOW.vertVelMin
       ) {
-        baseCompression = DOWNHILL.followFakeCompression;
+        baseCompression = DOWNHILL_FOLLOW.fakeCompression;
       }
     }
 
     const targetCompression = baseCompression > 0
-      ? baseCompression * DOWNHILL.compressionBaseScale +
-        Math.max(0, -this.state.verticalVelocity * DOWNHILL.velCompressionFactor)
+      ? baseCompression * SUSPENSION.compressionBaseScale +
+        Math.max(0, -this.state.verticalVelocity * SUSPENSION.velCompressionFactor)
       : 0;
 
     this.state.suspensionCompression +=
-      (targetCompression - this.state.suspensionCompression) * DOWNHILL.suspensionSmoothing;
+      (targetCompression - this.state.suspensionCompression) * SUSPENSION.smoothing;
     this.state.suspensionCompression =
-      Math.max(0, Math.min(DOWNHILL.maxCompression, this.state.suspensionCompression));
+      Math.max(0, Math.min(SUSPENSION.maxCompression, this.state.suspensionCompression));
 
-    let groundedness = Math.min(1, this.state.suspensionCompression / DOWNHILL.groundednessRef);
+    let groundedness = Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
 
     // Pass 2: boost groundedness when clearly tracking a descending slope.
     if (
-      groundedness < DOWNHILL.boostGroundedness &&
-      penetration > -DOWNHILL.boostMaxGap &&
-      this.state.verticalVelocity < DOWNHILL.boostVertVelMin &&
+      groundedness < DOWNHILL_BOOST.groundedness &&
+      penetration > -DOWNHILL_BOOST.maxGap &&
+      this.state.verticalVelocity < DOWNHILL_BOOST.vertVelMin &&
       hasSurfaceSampling &&
-      this.state.velocity.length() > DOWNHILL.boostMinSpeed
+      speed > DOWNHILL_BOOST.minSpeed
     ) {
-      const forward     = this._forwardVector();
       const heightHere  = this._sampleFloorYAt(
         mesh.position.x,
         mesh.position.z,
-        mesh.position.y + 0.1,
+        mesh.position.y + RAY_OFFSET,
         track,
         0
       );
       const heightAhead = this._sampleFloorYAt(
-        mesh.position.x + forward.x * DOWNHILL.boostLookAhead,
-        mesh.position.z + forward.z * DOWNHILL.boostLookAhead,
-        mesh.position.y + 0.1,
+        mesh.position.x + forward.x * DOWNHILL_BOOST.lookAhead,
+        mesh.position.z + forward.z * DOWNHILL_BOOST.lookAhead,
+        mesh.position.y + RAY_OFFSET,
         track,
         heightHere
       );
-      if (heightAhead < heightHere - DOWNHILL.boostHeightDrop) {
-        groundedness = Math.max(groundedness, DOWNHILL.boostGroundedness);
+      if (heightAhead < heightHere - DOWNHILL_BOOST.heightDrop) {
+        groundedness = Math.max(groundedness, DOWNHILL_BOOST.groundedness);
       }
     }
 
