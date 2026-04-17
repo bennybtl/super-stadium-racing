@@ -200,7 +200,7 @@ export class Truck {
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
     const sampleSurfaceY = (x, z, fromY, fallback = terrainY ?? 0) =>
-      this.terrainPhysics.sampleSurfaceYAt(x, z, fromY, track, fallback);
+      this.terrainPhysics.sampleSurfaceYFastAt(x, z, fromY, track, fallback);
     this.body.update(this.state, input, speed, deltaTime, terrainY, groundedness, sampleSurfaceY);
     
     // Sync physics body

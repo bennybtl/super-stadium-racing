@@ -286,6 +286,16 @@ export class TerrainPhysics {
   }
 
   /**
+   * Fast height-only surface sampler for high-frequency visual systems.
+   */
+  sampleSurfaceYFastAt(x, z, fromY, track, fallback = 0) {
+    if (this._terrainQuery?.heightAtFast) {
+      return this._terrainQuery.heightAtFast(x, z, fromY, fallback);
+    }
+    return this._sampleFloorYAt(x, z, fromY, track, fallback);
+  }
+
+  /**
    * Resolve drivable floor height at XZ using TerrainQuery when available.
    * Falls back to analytical terrain + bridge-floor logic.
    */

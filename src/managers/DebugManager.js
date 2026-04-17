@@ -234,11 +234,13 @@ export class DebugManager {
     if (truck && truck !== this._trackedTruck) {
       if (this._trackedTruck) {
         this._trackedTruck.mesh.isVisible = false;
-        this._trackedTruck.body?.setVisible(true);
+        this._trackedTruck.body?._visualRoot && (this._trackedTruck.body._visualRoot.isVisible = true);
+        this._trackedTruck.body?._wheelRoot && (this._trackedTruck.body._wheelRoot.isVisible = true);
       }
       truck.mesh.isVisible = true;
       truck.mesh.showBoundingBox = false;
-      truck.body?.setVisible(false);
+      truck.body?._visualRoot && (truck.body._visualRoot.isVisible = false);
+      truck.body?._wheelRoot && (truck.body._wheelRoot.isVisible = false);
       this._trackedTruck = truck;
     }
 

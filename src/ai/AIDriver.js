@@ -43,6 +43,11 @@ export class AIDriver {
     this.currentCheckpointTarget = 0;
     this.lastCheckpointPassed = 0;
     
+    // Time-sliced pathfinding state
+    this._pathfindingInProgress = false;
+    this._pathfindingContext = null;
+    this._pathfindingMaxMsPerFrame = 1.0; // max milliseconds per frame for pathfinding
+    
     // Grid for pathfinding (simplified world representation)
     this.gridSize = 160; // Match terrain size
     this.gridResolution = 2; // 2 units per cell
@@ -96,7 +101,6 @@ export class AIDriver {
    */
   calculatePathToNextCheckpoint(currentPosition = { x: 0, z: 0 }) {
     if (this.checkpoints.length === 0) {
-      console.warn('[AIDriver] No checkpoints found!');
       return;
     }
     
@@ -111,15 +115,11 @@ export class AIDriver {
       z: targetCheckpoint.z - Math.cos(targetCheckpoint.heading) * approachDistance
     };
     
-    // Build path: approach → checkpoint centre
-    this.path = this.findPath(currentPosition, approachPoint);
-    this.path.push({ x: targetCheckpoint.x, z: targetCheckpoint.z });
+    // Use async pathfinding to avoid frame hiccups
+    this.calculatePathAsync(currentPosition, approachPoint);
     
-    this.currentPathIndex = 0;
     this.currentCheckpointTarget = nextCheckpointIndex;
-    
-    console.log(`[AIDriver] Calculated path to checkpoint #${targetCheckpoint.index} (heading: ${(targetCheckpoint.heading * 180 / Math.PI).toFixed(1)}°) with ${this.path.length} waypoints`);
-    
+        
     if (this.debugEnabled && this.scene) {
       this.updateDebugVisualization();
     }
@@ -148,30 +148,26 @@ export class AIDriver {
       pathStartPosition = exitPoint;
     }
 
+    // Start async pathfinding (non-blocking)
     this.calculatePathToNextCheckpoint(pathStartPosition);
 
-    // Prepend a smooth exit arc so the truck flows through the gate and
-    // curves naturally toward the next checkpoint rather than turning sharply.
+    // Immediately inject exit blend waypoints while async pathfinding runs
+    // in the background. When pathfinding completes, it will prepend the full path.
     if (exitPoint) {
-      // Build intermediate waypoints that blend from the gate's exit heading
-      // toward the first real waypoint of the new path.
-      const firstReal = this.path[0] ?? exitPoint;
-      const exitWaypoints = [];
+      const exitWaypoints = [exitPoint];
       const numBlendPoints = 4;
       for (let i = numBlendPoints; i >= 1; i--) {
-        const t = i / (numBlendPoints + 1); // 1 = near gate, 0 = near firstReal
+        const t = i / (numBlendPoints + 1);
         exitWaypoints.push({
-          x: exitPoint.x * t + firstReal.x * (1 - t),
-          z: exitPoint.z * t + firstReal.z * (1 - t),
+          x: exitPoint.x * t + currentPosition.x * (1 - t),
+          z: exitPoint.z * t + currentPosition.z * (1 - t),
         });
       }
-      // Prepend: [exitPoint, blend1, blend2, blend3, blend4, ...original path]
-      this.path.unshift(...exitWaypoints);
-      this.path.unshift(exitPoint);
+      // Start with exit waypoints while pathfinding computes in background
+      this.path = exitWaypoints;
       this.currentPathIndex = 0;
     }
 
-    console.log(`[AIDriver] Passed checkpoint ${checkpointIndex}, recalculating path...`);
   }
 
   /**
@@ -210,9 +206,7 @@ export class AIDriver {
     
     // Sort by checkpoint number
     checkpoints.sort((a, b) => a.index - b.index);
-    
-    console.log(`[AIDriver] Found ${checkpoints.length} checkpoints:`, checkpoints.map(cp => `#${cp.index} at (${cp.x.toFixed(1)}, ${cp.z.toFixed(1)})`));
-    
+        
     return checkpoints;
   }
 
@@ -320,6 +314,157 @@ export class AIDriver {
     }
     
     return path;
+  }
+
+  /**
+   * Time-sliced pathfinding that runs iteratively over multiple frames
+   * to avoid framerate hiccups on checkpoint passes.
+   * Starts computation and tracks progress via _pathfindingInProgress.
+   */
+  calculatePathAsync(start, goal) {
+    if (this._pathfindingInProgress) {
+      console.warn('[AIDriver] Pathfinding already in progress');
+      return;
+    }
+
+    const startCell = this.worldToGrid(start.x, start.z);
+    const goalCell = this.worldToGrid(goal.x, goal.z);
+
+    if (this.isBlocked(startCell.x, startCell.z)) {
+      startCell.x = this.gridCells / 2;
+      startCell.z = this.gridCells / 2;
+    }
+
+    this._pathfindingContext = {
+      start,
+      goal,
+      startCell,
+      goalCell,
+      openSet: [startCell],
+      cameFrom: new Map(),
+      gScore: new Map(),
+      fScore: new Map(),
+      closedSet: new Set(),
+      key: (x, z) => `${x},${z}`,
+      done: false,
+      resultPath: null,
+    };
+
+    const key = this._pathfindingContext.key;
+    this._pathfindingContext.gScore.set(key(startCell.x, startCell.z), 0);
+    this._pathfindingContext.fScore.set(
+      key(startCell.x, startCell.z),
+      this.heuristic(startCell, goalCell)
+    );
+
+    this._pathfindingInProgress = true;
+  }
+
+  /**
+   * Step through time-sliced pathfinding computation.
+   * Call this every frame while pathfinding is active.
+   */
+  updatePathfinding() {
+    if (!this._pathfindingInProgress || !this._pathfindingContext) {
+      return;
+    }
+
+    const ctx = this._pathfindingContext;
+    const startTime = performance.now();
+
+    // Process up to _pathfindingMaxMsPerFrame milliseconds worth of iterations
+    while (performance.now() - startTime < this._pathfindingMaxMsPerFrame) {
+      if (ctx.openSet.length === 0) {
+        // No path found
+        ctx.resultPath = [ctx.start, ctx.goal];
+        ctx.done = true;
+        break;
+      }
+
+      // Find node with lowest fScore
+      let current = ctx.openSet[0];
+      let currentIndex = 0;
+      for (let i = 1; i < ctx.openSet.length; i++) {
+        const currentF = ctx.fScore.get(ctx.key(current.x, current.z));
+        const nodeF = ctx.fScore.get(ctx.key(ctx.openSet[i].x, ctx.openSet[i].z));
+        if (nodeF !== undefined && (currentF === undefined || nodeF < currentF)) {
+          current = ctx.openSet[i];
+          currentIndex = i;
+        }
+      }
+
+      // Check if reached goal
+      if (Math.abs(current.x - ctx.goalCell.x) <= 1 && Math.abs(current.z - ctx.goalCell.z) <= 1) {
+        ctx.resultPath = this.reconstructPath(ctx.cameFrom, current, ctx.goal);
+        ctx.done = true;
+        break;
+      }
+
+      // Remove current from openSet and add to closed
+      ctx.openSet.splice(currentIndex, 1);
+      ctx.closedSet.add(ctx.key(current.x, current.z));
+
+      // Check neighbors
+      const neighbors = this.getNeighbors(current.x, current.z);
+      for (const neighbor of neighbors) {
+        const neighborKey = ctx.key(neighbor.x, neighbor.z);
+
+        if (ctx.closedSet.has(neighborKey)) {
+          continue;
+        }
+
+        const currentG = ctx.gScore.get(ctx.key(current.x, current.z));
+        if (currentG === undefined) {
+          continue;
+        }
+
+        const tentativeG = currentG + this.distance(current, neighbor);
+        const existingG = ctx.gScore.get(neighborKey);
+
+        if (existingG === undefined || tentativeG < existingG) {
+          ctx.cameFrom.set(neighborKey, current);
+          ctx.gScore.set(neighborKey, tentativeG);
+          ctx.fScore.set(
+            neighborKey,
+            tentativeG + this.heuristic(neighbor, ctx.goalCell)
+          );
+
+          if (!ctx.openSet.some(n => n.x === neighbor.x && n.z === neighbor.z)) {
+            ctx.openSet.push(neighbor);
+          }
+        }
+      }
+
+      // Safety check
+      if (ctx.openSet.length > 1000) {
+        ctx.resultPath = [ctx.start, ctx.goal];
+        ctx.done = true;
+        break;
+      }
+    }
+
+    // If pathfinding completed, finalize and reset state
+    if (ctx.done) {
+      const newPath = ctx.resultPath || [ctx.start, ctx.goal];
+      
+      // If we have exit waypoints (path already has entries), append the new path
+      if (this.path.length > 0) {
+        // Append the computed path to existing exit waypoints
+        this.path.push(...newPath);
+      } else {
+        this.path = newPath;
+      }
+      
+      this.currentPathIndex = 0;
+      this._pathfindingInProgress = false;
+      this._pathfindingContext = null;
+      // console.log(`[AIDriver] Pathfinding completed: ${this.path.length} total waypoints`);
+      
+      // Update debug visualization when pathfinding completes
+      if (this.debugEnabled && this.scene) {
+        this.updateDebugVisualization();
+      }
+    }
   }
 
   /**
@@ -435,6 +580,19 @@ export class AIDriver {
    * Get steering input based on current position
    */
   getInput(position, heading, fwdSpeed = 0) {
+    // Continue time-sliced pathfinding computation if active
+    this.updatePathfinding();
+
+    // Periodically update debug visualization if enabled
+    if (this.debugEnabled && this.scene) {
+      if (!this._debugUpdateTimer) this._debugUpdateTimer = 0;
+      this._debugUpdateTimer++;
+      if (this._debugUpdateTimer >= 10) { // Every 10 frames
+        this.updateDebugVisualization();
+        this._debugUpdateTimer = 0;
+      }
+    }
+
     if (this.paused) {
       return { forward: false, back: false, left: false, right: false };
     }
@@ -698,7 +856,7 @@ export class AIDriver {
       this.truck.physics.body.setAngularVelocity(new Vector3(0, 0, 0));
     }
     
-    console.log(`[AIDriver] Respawned at (${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(1)}) facing ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
+    // console.log(`[AIDriver] Respawned at (${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(1)}) facing ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
   }
 
   /**
@@ -772,8 +930,6 @@ export class AIDriver {
       targetMat.emissiveColor = new Color3(0, 0.5, 0);
       this.debugTarget.material = targetMat;
     }
-    
-    console.log(`[AIDriver] Updated debug visualization with ${this.debugLines.length} markers`);
   }
 }
 

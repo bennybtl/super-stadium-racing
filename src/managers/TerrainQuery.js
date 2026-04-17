@@ -157,6 +157,25 @@ export class TerrainQuery {
     return this.castDown(x, z, fromY)?.y ?? fallback;
   }
 
+  /**
+   * Fast height-only query for high-frequency callers (e.g. wheel visuals).
+   * Uses a single downward ray and optional upward fallback, without normal
+   * smoothing probes.
+   */
+  heightAtFast(x, z, fromY = 500, fallback = 0) {
+    this._rayDown.origin.set(x, fromY, z);
+    this._rayDown.length = fromY + 200;
+
+    let hit = this._scene.pickWithRay(this._rayDown, this._predicate);
+    if (hit?.hit && hit.pickedPoint) return hit.pickedPoint.y;
+
+    // Fallback for penetration/underside cases.
+    this._rayUp.origin.set(x, fromY - 0.05, z);
+    this._rayUp.length = 50;
+    hit = this._scene.pickWithRay(this._rayUp, this._predicate);
+    return (hit?.hit && hit.pickedPoint) ? hit.pickedPoint.y : fallback;
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------

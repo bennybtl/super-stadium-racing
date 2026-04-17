@@ -1,4 +1,4 @@
-import { Matrix, MeshBuilder, Vector3 } from "@babylonjs/core";
+import { Matrix, Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT, TRUCK_RADIUS } from "../constants.js";
 
 const SKIN = 0.03;
@@ -18,30 +18,34 @@ export class StaticBodyCollisionManager {
     this.scene = scene;
     this._prevPositions = new Map();
     this._invWorld = new Matrix();
-    this._probe = MeshBuilder.CreateBox("__truck_collision_probe", { size: 1 }, scene);
-    this._probe.isVisible = false;
-    this._probe.isPickable = false;
-    this._probe.metadata = {
-      ...(this._probe.metadata ?? {}),
-      internalCollisionProbe: true,
-    };
+    this._colliders = [];
   }
 
   dispose() {
-    this._probe?.dispose();
-    this._probe = null;
+    this._colliders = [];
   }
 
   reset() {
     this._prevPositions.clear();
   }
 
+  resetColliderCache() {
+    this._colliders = [];
+  }
+
+  _getColliders() {
+    if (this._colliders.length === 0) {
+      this._colliders = this.scene.meshes.filter(mesh =>
+        mesh?.metadata?.truckCollider === true &&
+        !mesh.isDisposed() &&
+        mesh.isEnabled()
+      );
+    }
+    return this._colliders;
+  }
+
   update(trucks) {
-    const colliders = this.scene.meshes.filter(mesh =>
-      mesh?.metadata?.truckCollider === true &&
-      !mesh.isDisposed() &&
-      mesh.isEnabled()
-    );
+    const colliders = this._getColliders();
 
     if (colliders.length === 0) {
       this._cachePrevPositions(trucks);
@@ -51,7 +55,6 @@ export class StaticBodyCollisionManager {
     for (const truckData of trucks) {
       const truck = truckData.truck ?? truckData;
       if (!truck?.mesh || !truck?.state) continue;
-      this._syncProbeToTruck(truck);
 
       const id = truck.mesh.uniqueId;
       const prevPos = this._prevPositions.get(id) ?? truck.mesh.position.clone();
@@ -59,17 +62,10 @@ export class StaticBodyCollisionManager {
       const halfHeight = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
 
       for (const collider of colliders) {
-        // Babylon broad-phase (bounding-volume test) — cheap reject before
-        // running the custom swept narrow-phase/response below.
-        const intersectsNow = this._probe.intersectsMesh(collider, false);
-
-        this._probe.position.copyFrom(prevPos);
-        const intersectsPrev = this._probe.intersectsMesh(collider, false);
-
-        this._probe.position.copyFrom(truck.mesh.position);
+        // Broad-phase only: swept AABB against collider world bounds.
+        // This is conservative and much cheaper than repeated mesh intersections.
         const intersectsSweep = this._sweptAabbBroadphase(prevPos, truck.mesh.position, radius, halfHeight, collider);
-
-        if (!intersectsNow && !intersectsPrev && !intersectsSweep) continue;
+        if (!intersectsSweep) continue;
         this._resolveTruckVsMesh(truck, prevPos, collider);
       }
 
@@ -83,15 +79,6 @@ export class StaticBodyCollisionManager {
       if (!truck?.mesh) continue;
       this._prevPositions.set(truck.mesh.uniqueId, truck.mesh.position.clone());
     }
-  }
-
-  _syncProbeToTruck(truck) {
-    const radius = truck.radius ?? TRUCK_RADIUS;
-    const halfHeight = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
-    this._probe.position.copyFrom(truck.mesh.position);
-    this._probe.scaling.x = radius * 2;
-    this._probe.scaling.y = halfHeight * 2;
-    this._probe.scaling.z = radius * 2;
   }
 
   _sweptAabbBroadphase(prevPos, curPos, radius, halfHeight, collider) {

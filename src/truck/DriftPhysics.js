@@ -19,7 +19,7 @@ const MIN_DRIFT_SPEED_HOLD_BRAKE = 12.0;
 /** Exponent that controls how sharply grip drops off once slip exceeds the drift threshold.
  *  Higher = grip falls faster, shorter drift, snappier recovery.
  *  Lower  = grip falls slowly, longer floaty drift. */
-const SLIP_DROPOFF_RATE = 5;
+const SLIP_DROPOFF_RATE = 6;
 
 /** Grip correction strength at the low end of the normal-cornering zone.
  *  Fraction of lateral speed removed per frame at zero slip — gives tight, responsive
@@ -50,7 +50,7 @@ const SPINOUT_GRIP_THRESHOLD = 0.01;
 
 /** Fraction of lateral grip retained while on the throttle during a drift.
  *  Lower = rear stays looser under power, slide holds its angle. */
-const THROTTLE_LOOSE_FACTOR = 0.65;
+const THROTTLE_LOOSE_FACTOR = 0.75;
 
 // ─── Drag ────────────────────────────────────────────────────────────────────
 
