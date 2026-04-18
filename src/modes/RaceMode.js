@@ -249,6 +249,13 @@ export class RaceMode extends BaseMode {
     ];
 
     const playerTruckData = trucks[0];
+    aiTruckDataList.forEach((td, i) => {
+      const d = aiDrivers[i];
+      if (!d) return;
+      d.setGameState(td.gameState);
+      d.setRaceContext(td, trucks);
+    });
+
     // Prime lastCheckpointPassed so trucks are ready to cross the start/finish line first
     trucks.forEach(td => {
       td.gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
@@ -274,13 +281,12 @@ export class RaceMode extends BaseMode {
     aiDrivers.forEach(d => d.setStaticBodyCollisionManager(staticBodyCollisionManager));
 
     // -- Input --
-    const inputManager = new InputManager(playerTruckData.truck, cameraController);
-    this.inputManager = inputManager;
+    this.inputManager = new InputManager(playerTruckData.truck, cameraController);
 
-    inputManager.onPause(() => menuManager.togglePause());
-    this.setupDebugToggle(inputManager, debugManager);
+    this.inputManager.onPause(() => menuManager.togglePause());
+    this.setupDebugToggle(this.inputManager, debugManager);
 
-    inputManager.onBoost(() => {
+    this.inputManager.onBoost(() => {
       if (
         playerTruckData.gameState.useBoost() &&
         !playerTruckData.truck.state.boostActive
@@ -319,7 +325,7 @@ export class RaceMode extends BaseMode {
       }
     };
 
-    inputManager.onReset(() => respawnToLastCheckpoint(playerTruckData));
+    this.inputManager.onReset(() => respawnToLastCheckpoint(playerTruckData));
 
     // -- Pickup collection --
     pickupManager.spawn(6); // Scatter pickups specifically for the race
@@ -440,7 +446,7 @@ export class RaceMode extends BaseMode {
 
       const input = countdownActive
         ? { forward: false, back: false, left: false, right: false }
-        : inputManager.getMovementInput();
+        : this.inputManager.getMovementInput();
 
       truckCollisionManager.preUpdate(trucks, dt);
 

@@ -9,10 +9,15 @@ import { TelemetryPlayer } from "../managers/TelemetryPlayer.js";
  */
 const AI_COLORS = [
   new Color3(0.2, 0.2, 0.8), // blue
+  new Color3(0.8, 0.8, 0.2), // yellow
+  new Color3(0.3, 0.3, 0.3), // grey
   new Color3(0.9, 0.9, 0.9), // white
-  new Color3(0.5, 0.5, 0.5), // grey
+  new Color3(0.2, 0.8, 0.8), // cyan
+  new Color3(0.8, 0.2, 0.8), // magenta
+  new Color3(0.8, 0.5, 0.2), // orange
   new Color3(0.8, 0.2, 0.2), // red
   new Color3(0.2, 0.8, 0.2), // green
+  new Color3(0.1, 0.1, 0.1), // black
 ];
 
 /**

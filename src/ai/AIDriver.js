@@ -23,6 +23,16 @@ const STEERING_THRESHOLD = 0.05;
 const PATH_ADVANCE = 5;
 const WAYPOINT_LOOK_BACK  = 5;
 const WAYPOINT_LOOK_AHEAD = 30;
+const BOOST_MIN_SPEED = 8;
+const BOOST_STRAIGHT_MAX_ANGLE = Math.PI / 12; // ~15°
+const BOOST_CLEAR_AHEAD_DIST = 18;
+const BOOST_CLEAR_LATERAL_DIST = 4;
+const BOOST_DECISION_COOLDOWN_MS = 900;
+const BOOST_BASE_CHANCE = 0.1;
+const BOOST_BEHIND_WEIGHT = 0.35;
+const BOOST_STOCK_WEIGHT = 0.25;
+const BOOST_MAX_CHANCE = 0.85;
+const BOOST_STOCK_REF = 4;
 
 /**
  * AIDriver - Autonomous driver that navigates through checkpoints
@@ -31,6 +41,7 @@ const WAYPOINT_LOOK_AHEAD = 30;
  * - lookAheadDistance: How far ahead the AI looks (higher = better planning)
  * - maxSpeed: Speed multiplier (0-1, higher = faster driving)
  * - steeringPrecision: How accurately the AI steers (0-1, higher = better control)
+ * - boost* params: Nitro decision tuning for personality (aggression, safety, and cadence)
  */
 export class AIDriver {
   constructor(track, checkpointManager, wallManager, scene, skillConfig = {}) {
@@ -43,8 +54,19 @@ export class AIDriver {
     // Skill-based parameters (can be customized per AI)
     const {
       lookAheadDistance = 20,  // Good: 20, OK: 15, Bad: 12
-      maxSpeed = 0.8,          // Good: 0.8, OK: 0.65, Bad: 0.5
+      maxSpeed = 0.8,          // Good: 1.0, OK: 0.8, Bad: 0.7
       steeringPrecision = 1.0, // Good: 1.0, OK: 0.85, Bad: 0.7
+      // Boost personality tuning (override per AI for different nitro behavior)
+      boostMinSpeed = BOOST_MIN_SPEED,
+      boostStraightMaxAngle = BOOST_STRAIGHT_MAX_ANGLE,
+      boostClearAheadDist = BOOST_CLEAR_AHEAD_DIST,
+      boostClearLateralDist = BOOST_CLEAR_LATERAL_DIST,
+      boostDecisionCooldownMs = BOOST_DECISION_COOLDOWN_MS,
+      boostBaseChance = BOOST_BASE_CHANCE,
+      boostBehindWeight = BOOST_BEHIND_WEIGHT,
+      boostStockWeight = BOOST_STOCK_WEIGHT,
+      boostMaxChance = BOOST_MAX_CHANCE,
+      boostStockRef = BOOST_STOCK_REF,
     } = skillConfig;
     
     // Path-following state
@@ -66,6 +88,18 @@ export class AIDriver {
     this.lookAheadDistance = lookAheadDistance;
     this.steeringStrength = steeringPrecision;
     this.maxSpeed = maxSpeed;
+
+    // Boost personality parameters
+    this.boostMinSpeed = boostMinSpeed;
+    this.boostStraightMaxAngle = boostStraightMaxAngle;
+    this.boostClearAheadDist = boostClearAheadDist;
+    this.boostClearLateralDist = boostClearLateralDist;
+    this.boostDecisionCooldownMs = boostDecisionCooldownMs;
+    this.boostBaseChance = boostBaseChance;
+    this.boostBehindWeight = boostBehindWeight;
+    this.boostStockWeight = boostStockWeight;
+    this.boostMaxChance = boostMaxChance;
+    this.boostStockRef = Math.max(1, boostStockRef);
     
     // Smoothed steering (low-pass filter to remove rapid left/right jitter)
     this._smoothedTurn = 0;
@@ -106,6 +140,12 @@ export class AIDriver {
     // Static body collision manager — set via setStaticBodyCollisionManager()
     // so respawnFacingTarget can flush prevPos after teleporting.
     this._staticBodyCollisionManager = null;
+
+    // Race context for AI nitro decisions
+    this.gameState = null;
+    this._selfTruckData = null;
+    this._allTruckData = null;
+    this._nextBoostDecisionAtMs = 0;
 
     // Debug visualization — enabled state is driven by the global DebugManager store
     this._debugStore = useDebugStore();
@@ -289,6 +329,21 @@ export class AIDriver {
    */
   setStaticBodyCollisionManager(mgr) {
     this._staticBodyCollisionManager = mgr;
+  }
+
+  /**
+   * Provide this driver's runtime GameState so AI can consume collected boosts.
+   */
+  setGameState(gameState) {
+    this.gameState = gameState;
+  }
+
+  /**
+   * Provide race standings context (self + all trucks) for boost aggressiveness.
+   */
+  setRaceContext(selfTruckData, allTruckData) {
+    this._selfTruckData = selfTruckData;
+    this._allTruckData = allTruckData;
   }
 
   /**
@@ -554,6 +609,8 @@ export class AIDriver {
       left: isActuallyReversing ? turnStrength > STEERING_THRESHOLD : turnStrength < -STEERING_THRESHOLD,
       right: isActuallyReversing ? turnStrength < -STEERING_THRESHOLD : turnStrength > STEERING_THRESHOLD
     };
+
+    this._maybeUseBoost(position, forward, rightVec, fwdSpeed, input);
     
     // Stuck detection — control-input stalls
     // Case A: no throttle intent for too long
@@ -692,6 +749,7 @@ export class AIDriver {
     this.positionStuckTimer = 0;
     this.positionCheckTimer = 0;
     this.lastCheckedPosition = null;
+    this._nextBoostDecisionAtMs = 0;
   }
 
   _respawnFromStuck(targetWaypoint, currentPos) {
@@ -699,6 +757,87 @@ export class AIDriver {
     this.stuckTimer = 0;
     this.positionStuckTimer = 0;
     this.lastCheckedPosition = currentPos;
+  }
+
+  _maybeUseBoost(position, forward, rightVec, fwdSpeed, input) {
+    if (!this.truck || !this.gameState) return;
+    if (this.gameState.boostCount <= 0) return;
+    if (this.truck.state.boostActive) return;
+    if (!input.forward || input.back) return;
+    if (fwdSpeed < this.boostMinSpeed) return;
+
+    const now = Date.now();
+    if (now < this._nextBoostDecisionAtMs) return;
+
+    // Require a relatively straight section ahead.
+    const curvature = this._scanPathCurvature(this.currentPathIndex, this.lookAheadDistance * 2);
+    if (curvature > this.boostStraightMaxAngle) {
+      this._nextBoostDecisionAtMs = now + this.boostDecisionCooldownMs;
+      return;
+    }
+
+    // Require no nearby truck directly in our lane ahead.
+    if (!this._isBoostLaneClear(position, forward, rightVec)) {
+      this._nextBoostDecisionAtMs = now + this.boostDecisionCooldownMs;
+      return;
+    }
+
+    // Boost chance increases when we're behind and when we have more boost stock.
+    const behindFactor = this._estimateBehindFactor();              // 0..1
+    const stockFactor = Math.min(this.gameState.boostCount / this.boostStockRef, 1); // 0..1
+    const chance = Math.min(
+      this.boostBaseChance +
+      this.boostBehindWeight * behindFactor +
+      this.boostStockWeight * stockFactor,
+      this.boostMaxChance
+    );
+
+    if (Math.random() <= chance && this.gameState.useBoost()) {
+      this.truck.state.boostActive = true;
+      this.truck.state.boostTimer = this.truck.state.boostDuration;
+    }
+
+    this._nextBoostDecisionAtMs = now + this.boostDecisionCooldownMs;
+  }
+
+  _isBoostLaneClear(position, forward, rightVec) {
+    for (const other of this.otherTrucks) {
+      if (!other?.mesh) continue;
+      const odx = other.mesh.position.x - position.x;
+      const odz = other.mesh.position.z - position.z;
+      const fwdDist = odx * forward.x + odz * forward.z;
+      if (fwdDist <= 0 || fwdDist > this.boostClearAheadDist) continue;
+
+      const latDist = odx * rightVec.x + odz * rightVec.z;
+      if (Math.abs(latDist) < this.boostClearLateralDist) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  _estimateBehindFactor() {
+    if (!this._selfTruckData?.gameState || !this._allTruckData?.length) return 0;
+
+    const own = this._selfTruckData.gameState;
+    const totalCp = this.checkpoints?.length || 1;
+
+    let best = own;
+    for (const td of this._allTruckData) {
+      if (!td?.gameState) continue;
+      const gs = td.gameState;
+      if (gs.raceFinished) continue;
+      if (gs.lapCount > best.lapCount) {
+        best = gs;
+      } else if (gs.lapCount === best.lapCount && gs.checkpointCount > best.checkpointCount) {
+        best = gs;
+      }
+    }
+
+    const ownProgress = own.lapCount * totalCp + own.checkpointCount;
+    const bestProgress = best.lapCount * totalCp + best.checkpointCount;
+    const gap = Math.max(0, bestProgress - ownProgress);
+    return Math.min(gap / Math.max(3, totalCp), 1);
   }
 
   /**
@@ -878,23 +1017,38 @@ export class AIDriver {
 AIDriver.createGoodDriver = function(track, checkpointManager, wallManager, scene) {
   return new AIDriver(track, checkpointManager, wallManager, scene, {
     lookAheadDistance: 20,
-    maxSpeed: 0.8,
-    steeringPrecision: 1.0
+    maxSpeed: 1.0,
+    steeringPrecision: 1.0,
+    boostBaseChance: 0.16,
+    boostBehindWeight: 0.45,
+    boostStockWeight: 0.30,
+    boostDecisionCooldownMs: 700,
+    boostStraightMaxAngle: Math.PI / 10,
   });
 };
 
 AIDriver.createOkDriver = function(track, checkpointManager, wallManager, scene) {
   return new AIDriver(track, checkpointManager, wallManager, scene, {
     lookAheadDistance: 15,
-    maxSpeed: 0.65,
-    steeringPrecision: 0.85
+    maxSpeed: 0.8,
+    steeringPrecision: 0.85,
+    boostBaseChance: 0.1,
+    boostBehindWeight: 0.35,
+    boostStockWeight: 0.25,
+    boostDecisionCooldownMs: 900,
+    boostStraightMaxAngle: Math.PI / 12,
   });
 };
 
 AIDriver.createBadDriver = function(track, checkpointManager, wallManager, scene) {
   return new AIDriver(track, checkpointManager, wallManager, scene, {
     lookAheadDistance: 12,
-    maxSpeed: 0.5,
-    steeringPrecision: 0.7
+    maxSpeed: 0.7,
+    steeringPrecision: 0.7,
+    boostBaseChance: 0.05,
+    boostBehindWeight: 0.22,
+    boostStockWeight: 0.18,
+    boostDecisionCooldownMs: 1300,
+    boostStraightMaxAngle: Math.PI / 14,
   });
 };

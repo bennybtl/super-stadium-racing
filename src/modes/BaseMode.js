@@ -49,11 +49,6 @@ export class BaseMode {
     staticBodyCollisionManager?.notifyTeleport(truck);
   }
 
-  /** @deprecated Use respawnTruck instead */
-  resetTruckPhysics(truck, position, heading = truck.state.heading) {
-    this.respawnTruck(truck, position, heading);
-  }
-
   /**
    * Setup visibility change handler to pause physics when tab is hidden.
    * This prevents physics accumulation in the background which causes
