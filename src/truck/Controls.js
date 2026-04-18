@@ -16,8 +16,8 @@ export class Controls {
       const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
       const fwdSpeed = this.state.velocity.dot(forward);
       const steerSign = fwdSpeed < 0 ? -1 : 1;
-      if (input.left)  this.state.heading -= steerSign * effectiveTurnSpeed * speedRatio * groundedness * deltaTime;
-      if (input.right) this.state.heading += steerSign * effectiveTurnSpeed * speedRatio * groundedness * deltaTime;
+      if (input.left)  this.state.heading -= steerSign * effectiveTurnSpeed * groundedness * deltaTime;
+      if (input.right) this.state.heading += steerSign * effectiveTurnSpeed * groundedness * deltaTime;
     }
   }
 
@@ -39,19 +39,25 @@ export class Controls {
   }
 
   handleForwardInput(forward, deltaTime) {
+    // Project forward direction onto the surface tangent plane so engine force follows the slope.
+    const normal = this.state.surfaceNormal ?? new Vector3(0, 1, 0);
+    const surfaceFwd = forward.subtract(normal.scale(forward.dot(normal)));
+    const sfLen = surfaceFwd.length();
+    const accelDir = sfLen > 0.001 ? surfaceFwd.scaleInPlace(1 / sfLen) : forward;
+
     const forwardSpeed = this.state.velocity.dot(forward);
     
     if (forwardSpeed < -0.5) {
       // Moving backward - brake and reverse direction
       const brakeForce = this.state.velocity.scale(-5 * deltaTime);
       this.state.velocity.addInPlace(brakeForce);
-      this.state.velocity.addInPlace(forward.scale(this.state.acceleration * 2 * deltaTime));
+      this.state.velocity.addInPlace(accelDir.scale(this.state.acceleration * 2 * deltaTime));
     } else {
       // Apply boost multipliers if active
       const effectiveAcceleration = this.getEffectiveAcceleration();
       const effectiveMaxSpeed = this.getEffectiveMaxSpeed();
       
-      this.state.velocity.addInPlace(forward.scale(effectiveAcceleration * deltaTime));
+      this.state.velocity.addInPlace(accelDir.scale(effectiveAcceleration * deltaTime));
       
       const speed = this.state.velocity.length();
       if (speed > effectiveMaxSpeed) {
@@ -61,6 +67,11 @@ export class Controls {
   }
 
   handleBackwardInput(forward, deltaTime) {
+    const normal = this.state.surfaceNormal ?? new Vector3(0, 1, 0);
+    const surfaceFwd = forward.subtract(normal.scale(forward.dot(normal)));
+    const sfLen = surfaceFwd.length();
+    const accelDir = sfLen > 0.001 ? surfaceFwd.scaleInPlace(1 / sfLen) : forward;
+
     const forwardSpeed = this.state.velocity.dot(forward);
     const speed = this.state.velocity.length();
     
@@ -81,7 +92,7 @@ export class Controls {
       // (this state will be cleared when back input is released)
     } else if (!this.brakingToStop) {
       // Released brake after stop - now can accelerate backward
-      this.state.velocity.addInPlace(forward.scale(this.state.acceleration * -2.5 * deltaTime));
+      this.state.velocity.addInPlace(accelDir.scale(this.state.acceleration * -2.5 * deltaTime));
       
       const reverseSpeed = this.state.velocity.dot(forward);
       if (reverseSpeed < this.state.maxReverseSpeed) {
@@ -113,14 +124,32 @@ export class Controls {
     return base;
   }
 
-  calculateSpeedFactors(speed, terrainGripMultiplier, groundedness) {
+  calculateSpeedFactors(speed, terrainGripMultiplier, groundedness, input) {
     const speedRatio = Math.min(speed / this.state.maxSpeed, 1);
-    const understeerFactor = 1 - (speedRatio * 0.5);
-    const effectiveTurnSpeed = this.state.turnSpeed * understeerFactor;
-    
-    const oversteerFactor = Math.max(0.5, 1 - (speedRatio * 0.3));
-    const effectiveGrip = this.state.grip * oversteerFactor * terrainGripMultiplier * groundedness;
-    
+
+    // Detect acceleration state for weight-transfer model.
+    const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    const fwdSpeed = this.state.velocity.dot(forward);
+    const isAccelerating = !!(input?.forward) && fwdSpeed >= -0.5;
+    const isDecelerating = !!(input?.back)    && fwdSpeed >  0.5;
+
+    // Weight transfer → steering feel:
+    //   Throttle on  → weight shifts to rear  → front loses grip → understeer
+    //   Brake on     → weight shifts to front → rear  loses grip → oversteer
+    //   Coasting     → neutral, just a mild speed-based taper for tire limits
+    // Weight transfer magnitude scales with the vehicle's weightTransfer stat.
+    // Heavier/stiffer trucks shift weight more dramatically under load.
+    const wt = this.state.weightTransfer ?? 1.0;
+    const baseUndersteer     = speedRatio * 0.15;          // tires have finite lateral force
+    const throttleUndersteer = isAccelerating ? speedRatio * 0.15 * wt : 0;
+    const brakeOversteer     = isDecelerating ? speedRatio * 0.15 * wt : 0;
+
+    const steerFactor     = Math.max(0.35, 1 - baseUndersteer - throttleUndersteer + brakeOversteer);
+    const effectiveTurnSpeed = this.state.turnSpeed * steerFactor;
+
+    const lateralGripFactor = Math.max(0.5, 1 - speedRatio * 0.3);
+    const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness;
+
     return { speedRatio, effectiveTurnSpeed, effectiveGrip };
   }
 

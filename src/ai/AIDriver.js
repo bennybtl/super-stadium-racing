@@ -836,7 +836,7 @@ export class AIDriver {
     
     // Reset velocities
     this.truck.state.velocity.set(0, 0, 0);
-    this.truck.state.verticalVelocity = 0;
+    this.truck.state.velocity.y = 0;
     
     if (this.truck.physics && this.truck.physics.body) {
       this.truck.physics.body.setLinearVelocity(new Vector3(0, 0, 0));

@@ -95,7 +95,7 @@ export class RaceMode extends BaseMode {
       trucks.forEach(td => {
         if (!td.gameState.raceFinished) {
           td.truck.state.velocity = Vector3.Zero();
-          td.truck.state.verticalVelocity = 0;
+          td.truck.state.velocity.y = 0;
         }
       });
 
@@ -363,7 +363,7 @@ export class RaceMode extends BaseMode {
       truck.state.heading = spawnHeading;
       truck.mesh.rotation.y = spawnHeading;
       truck.state.velocity.set(0, 0, 0);
-      truck.state.verticalVelocity = 0;
+      truck.state.velocity.y = 0;
       truck.state.boostActive = false;
       truck.state.boostTimer = 0;
 
@@ -396,7 +396,7 @@ export class RaceMode extends BaseMode {
         truckData.truck.state.heading = heading;
         truckData.truck.mesh.rotation.y = heading;
         truckData.truck.state.velocity = Vector3.Zero();
-        truckData.truck.state.verticalVelocity = 0;
+        truckData.truck.state.velocity.y = 0;
         truckData.truck.state.suspensionCompression = 0;
       });
 
@@ -433,7 +433,7 @@ export class RaceMode extends BaseMode {
         truckData.truck.state.heading = heading;
         truckData.truck.mesh.rotation.y = heading;
         truckData.truck.state.velocity = Vector3.Zero();
-        truckData.truck.state.verticalVelocity = 0;
+        truckData.truck.state.velocity.y = 0;
         truckData.truck.state.boostActive = false;
         truckData.truck.state.boostTimer = 0;
         truckData.gameState.reset();

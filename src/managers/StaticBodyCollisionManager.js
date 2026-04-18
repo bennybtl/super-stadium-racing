@@ -205,7 +205,7 @@ export class StaticBodyCollisionManager {
 
           truck.state.velocity.x *= 0.2;
           truck.state.velocity.z *= 0.2;
-          if (truck.state.verticalVelocity > 0) truck.state.verticalVelocity = 0;
+          if (truck.state.velocity.y > 0) truck.state.velocity.y = 0;
         }
       }
     }
@@ -220,11 +220,11 @@ export class StaticBodyCollisionManager {
     const worldNormal = Vector3.TransformNormal(localNormal, world).normalize();
 
     const vel = truck.state.velocity;
-    const velDot = vel.x * worldNormal.x + truck.state.verticalVelocity * worldNormal.y + vel.z * worldNormal.z;
+    const velDot = vel.x * worldNormal.x + vel.y * worldNormal.y + vel.z * worldNormal.z;
     if (velDot < 0) {
       vel.x -= worldNormal.x * velDot;
+      vel.y -= worldNormal.y * velDot;
       vel.z -= worldNormal.z * velDot;
-      truck.state.verticalVelocity -= worldNormal.y * velDot;
 
       const applyFriction = mesh.metadata?.truckColliderApplyFriction !== false;
       if (applyFriction && Math.abs(worldNormal.y) < 0.2) {

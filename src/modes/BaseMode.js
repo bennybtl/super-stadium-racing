@@ -40,7 +40,7 @@ export class BaseMode {
   resetTruckPhysics(truck, position) {
     truck.mesh.position.copyFrom(position);
     truck.state.velocity.setAll(0);
-    truck.state.verticalVelocity = 0;
+    truck.state.velocity.y = 0;
     
     // Reset physics body
     const body = truck.physics?.body;
@@ -97,7 +97,7 @@ export class BaseMode {
           
           // Reset velocities
           truck.state.velocity.setAll(0);
-          truck.state.verticalVelocity = 0;
+          truck.state.velocity.y = 0;
           
           // Reset suspension state
           truck.state.suspensionCompression = 0;

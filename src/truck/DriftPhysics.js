@@ -113,7 +113,9 @@ export class DriftPhysics {
       // Below threshold: strip lateral velocity and clear drift state so
       // effects don't linger.
       const forwardVelocity = this.state.velocity.dot(forward);
+      const vy = this.state.velocity.y;
       this.state.velocity = forward.scale(forwardVelocity); // strip lateral component
+      this.state.velocity.y = vy;
       this.state.slipAngle = 0;
       this.state.isDrifting = false;
       this.state.isSpinningOut = false;
@@ -167,7 +169,9 @@ export class DriftPhysics {
     // is left untouched. When grip is low (drifting) the lateral speed bleeds off
     // slowly, giving a loose, momentum-driven feel rather than a sharp snap-back.
     const newLateralSpeed = lateralSpeed * (1 - gripMultiplier);
+    const vy = this.state.velocity.y;
     this.state.velocity = forward.scale(forwardVelocity).add(right.scale(newLateralSpeed));
+    this.state.velocity.y = vy;
 
     this.state.isSpinningOut = this.state.slipAngle > SPINOUT_SLIP_THRESHOLD && gripMultiplier < SPINOUT_GRIP_THRESHOLD;
     this.state.isDrifting = this.state.slipAngle > driftThresh;
@@ -187,8 +191,9 @@ export class DriftPhysics {
       else if (input.back)    coastingMultiplier = DRAG_BRAKING;
       else                    coastingMultiplier = DRAG_COASTING;
       const drag = airborne ? 1.0 : terrainDragMultiplier;
-      const naturalDrag = this.state.velocity.scale(-coastingMultiplier * drag * deltaTime);
-      this.state.velocity.addInPlace(naturalDrag);
+      const dragFactor = coastingMultiplier * drag * deltaTime;
+      this.state.velocity.x -= this.state.velocity.x * dragFactor;
+      this.state.velocity.z -= this.state.velocity.z * dragFactor;
     }
   }
 

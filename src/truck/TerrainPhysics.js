@@ -40,21 +40,6 @@ const DOWNHILL_BOOST = {
 };
 
 /**
- * Uphill slope deceleration.
- * The truck's velocity is XZ-only so climbing doesn't naturally slow it down.
- * We apply g·sin(θ)·scale opposing the forward direction when ascending.
- */
-const UPHILL = {
-  gravityScale:    0.65,  // fraction of g·sin(θ) to apply (0–1; 1 = fully realistic)
-  minSlopeDeg:     2,     // slopes shallower than this are ignored (degrees)
-  minGroundedness: 0.3,   // only apply when at least this grounded
-  minSpeed:        1.5,   // don't apply at very low speeds (m/s)
-  speedBleedStartDeg: 36, // progressive extra speed bleed starts here (degrees)
-  speedBleedMaxDeg:   60, // reaches full bleed at this slope (degrees)
-  speedBleedScale:    1.5, // fraction of speed shed per second at full bleed
-};
-
-/**
  * Terrain spring and slope-tunneling depenetration.
  *
  * At high speed the truck can penetrate a steep slope face by several metres before
@@ -130,7 +115,7 @@ export class TerrainPhysics {
   get floorNormal() { return this._lastFloorNormal; }
 
   update(mesh, deltaTime, track) {
-    this.state.verticalVelocity += this.gravity * deltaTime;
+    this.state.velocity.y += this.gravity * deltaTime;
 
     // Single downward raycast from just above the truck centre.
     // Firing from the truck's current Y means the ray naturally selects the right surface:
@@ -162,8 +147,6 @@ export class TerrainPhysics {
 
     this._applySpring(mesh, deltaTime, track, penetration, truckBottomY);
 
-    mesh.position.y += this.state.verticalVelocity * deltaTime;
-
     // Compute forward vector and horizontal speed once — reused by _updateSuspension and pitch.
     const hSpeed = Math.sqrt(
       this.state.velocity.x * this.state.velocity.x +
@@ -174,6 +157,26 @@ export class TerrainPhysics {
     const groundedness = this._updateSuspension(mesh, track, penetration, forward, hSpeed);
     if (groundedness > ORIENTATION.groundednessThreshold && track) {
       this.updateTerrainOrientation(mesh, deltaTime);
+    }
+
+    // Keep state.surfaceNormal in sync so other systems (e.g. Controls) can project onto the slope.
+    this.state.surfaceNormal.copyFrom(this._lastFloorNormal);
+
+    const isGrounded = groundedness > ORIENTATION.groundednessThreshold;
+
+    // While grounded, project velocity onto the surface tangent plane.
+    // This strips the into-surface component, naturally giving the correct velocity.y
+    // for any slope angle — and draining excess as the slope flattens.
+    // At liftoff the velocity is already correct; no special crest handling needed.
+    if (isGrounded) {
+      const normal = this._lastFloorNormal;
+      const vIntoSurface = this.state.velocity.dot(normal);
+      if (vIntoSurface < 0) {
+        // Truck is moving into the surface — remove that component
+        this.state.velocity.x -= normal.x * vIntoSurface;
+        this.state.velocity.y -= normal.y * vIntoSurface;
+        this.state.velocity.z -= normal.z * vIntoSurface;
+      }
     }
 
     this._updatePitch(mesh, deltaTime, groundedness, forward, hSpeed);
@@ -216,49 +219,8 @@ export class TerrainPhysics {
     if (this._bumpAccumulator < interval) return;
 
     this._bumpAccumulator -= interval;
-    this.state.verticalVelocity += roughness * ROUGHNESS.vertImpulseScale * (0.5 + Math.random() * 0.5);
+    this.state.velocity.y      += roughness * ROUGHNESS.vertImpulseScale * (0.5 + Math.random() * 0.5);
     this.state.terrainRoll      += (Math.random() - 0.5) * roughness * ROUGHNESS.rollJitter;
-  }
-
-  /**
-   * Decelerate the truck when climbing a slope via g·sin(θ)·scale.
-   * Call after acceleration so uphill gravity has full effect.
-   * @param {Mesh}   mesh
-   * @param {number} deltaTime
-   * @param {Track}  track
-   * @param {number} groundedness - 0–1 from update()
-   */
-  applyUphillGravity(mesh, deltaTime, track, groundedness) {
-    if ((!track && !this._terrainQuery) || groundedness < UPHILL.minGroundedness) return;
-
-    const speed = this.state.velocity.length();
-    if (speed < UPHILL.minSpeed) return;
-
-    const slopeDeg = this._sampleSlopeDegAt(
-      mesh.position.x,
-      mesh.position.z,
-      this._moveDirHeading(),
-      1,
-      3,
-      mesh.position.y + RAY_OFFSET,
-      track
-    );
-    if (slopeDeg <= UPHILL.minSlopeDeg) return;
-
-    const decel = Math.abs(this.gravity) * Math.sin(slopeDeg * DEG_TO_RAD) * UPHILL.gravityScale;
-    let newSpeed = Math.max(0, speed - decel * deltaTime);
-
-    // Extra traction-loss bleed on very steep climbs.
-    if (slopeDeg > UPHILL.speedBleedStartDeg) {
-      const bleedFraction = Math.min(
-        1,
-        (slopeDeg - UPHILL.speedBleedStartDeg) /
-        Math.max(0.001, (UPHILL.speedBleedMaxDeg - UPHILL.speedBleedStartDeg))
-      );
-      newSpeed *= Math.max(0, 1 - bleedFraction * UPHILL.speedBleedScale * deltaTime);
-    }
-
-    this.state.velocity.scaleInPlace(newSpeed / speed);
   }
 
   // ---------------------------------------------------------------------------
@@ -334,14 +296,14 @@ export class TerrainPhysics {
     // Spring pushes up only when penetrating.
     const springForce   = Math.max(0, effectivePenetration) * this.state.springStrength;
     const springImpulse = Math.min(springForce * deltaTime, SPRING.maxImpulsePerFrame);
-    this.state.verticalVelocity += springImpulse;
+    this.state.velocity.y += springImpulse;
 
     // Damping: apply across the full proximity zone to kill oscillation.
     // When penetrating: damp in both directions (standard spring damping).
     // When in proximity but NOT penetrating: only damp downward velocity
-    // (verticalVelocity < 0) so the truck isn't dragged back when cresting.
-    if (effectivePenetration > 0 || this.state.verticalVelocity < 0) {
-      this.state.verticalVelocity += -this.state.verticalVelocity * this.state.damping * deltaTime;
+    // (velocity.y < 0) so the truck isn't dragged back when cresting.
+    if (effectivePenetration > 0 || this.state.velocity.y < 0) {
+      this.state.velocity.y += -this.state.velocity.y * this.state.damping * deltaTime;
     }
   }
 
@@ -371,7 +333,7 @@ export class TerrainPhysics {
     const bleedFactor = Math.min(SPRING.bleedCap, excess * SPRING.bleedRatePerMetre);
     this.state.velocity.scaleInPlace(1 - bleedFactor);
 
-    if (this.state.verticalVelocity < 0) this.state.verticalVelocity = 0;
+    if (this.state.velocity.y < 0) this.state.velocity.y = 0;
 
     return remaining;
   }
@@ -401,7 +363,7 @@ export class TerrainPhysics {
       // Airborne: derive pitch from velocity vector's vertical-vs-horizontal angle.
       // Nose-up on launch, nose-down on descent. Flipped when reversing.
       const fwdSign = this.state.velocity.dot(forward) >= 0 ? 1 : -1;
-      const rawPitch = Math.atan2(this.state.verticalVelocity, Math.max(hSpeed, 0.1)) * fwdSign;
+      const rawPitch = Math.atan2(this.state.velocity.y, Math.max(hSpeed, 0.1)) * fwdSign;
       // Fade pitch out at low horizontal speeds — prevents violent lurches when the
       // truck drops vertically onto the track with near-zero forward velocity.
       const pitchWeight = Math.max(0, Math.min(1,
@@ -456,7 +418,7 @@ export class TerrainPhysics {
       );
       if (
         heightAhead < heightHere - DOWNHILL_FOLLOW.heightDrop &&
-        this.state.verticalVelocity < DOWNHILL_FOLLOW.vertVelMin
+        this.state.velocity.y < DOWNHILL_FOLLOW.vertVelMin
       ) {
         baseCompression = DOWNHILL_FOLLOW.fakeCompression;
       }
@@ -464,7 +426,7 @@ export class TerrainPhysics {
 
     const targetCompression = baseCompression > 0
       ? baseCompression * SUSPENSION.compressionBaseScale +
-        Math.max(0, -this.state.verticalVelocity * SUSPENSION.velCompressionFactor)
+        Math.max(0, -this.state.velocity.y * SUSPENSION.velCompressionFactor)
       : 0;
 
     this.state.suspensionCompression +=
@@ -478,7 +440,7 @@ export class TerrainPhysics {
     if (
       groundedness < DOWNHILL_BOOST.groundedness &&
       penetration > -DOWNHILL_BOOST.maxGap &&
-      this.state.verticalVelocity < DOWNHILL_BOOST.vertVelMin &&
+      this.state.velocity.y < DOWNHILL_BOOST.vertVelMin &&
       hasSurfaceSampling &&
       speed > DOWNHILL_BOOST.minSpeed
     ) {

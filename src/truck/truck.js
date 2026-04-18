@@ -85,7 +85,7 @@ export class Truck {
     const base = {
       heading: 0,
       velocity: Vector3.Zero(),
-      verticalVelocity: 0,
+      surfaceNormal: new Vector3(0, 1, 0),
       onGround: true,
       suspensionCompression: 0,
       suspensionVelocity: 0,
@@ -106,9 +106,13 @@ export class Truck {
       acceleration: 13,
       braking: 2,
       drag: 0.2,
-      turnSpeed: 3.6,
+      turnSpeed: 8.2,
       grip: 0.03,
       driftThreshold: 0.15,
+      // How dramatically weight shifts under acceleration/braking.
+      // Higher = more understeer on throttle, more oversteer on brakes.
+      // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.
+      weightTransfer: 1.0,
 
       // Boost parameters
       boostCount: 5,
@@ -161,36 +165,37 @@ export class Truck {
     }
 
     const speed = this.state.velocity.length();
+    // Horizontal (XZ) speed for steering/grip calculations — excludes velocity.y
+    // so that airborne Y velocity doesn't inflate speedRatio and cause extra understeer.
+    const hSpeed = Math.sqrt(
+      this.state.velocity.x * this.state.velocity.x +
+      this.state.velocity.z * this.state.velocity.z
+    );
 
     // Apply roughness bumps — vertical impulses + pitch/roll jitter scaled by terrain and speed
-    this.terrainPhysics.applyRoughnessBumps(terrainRoughness, speed, groundedness, deltaTime);
+    this.terrainPhysics.applyRoughnessBumps(terrainRoughness, hSpeed, groundedness, deltaTime);
     const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     
-    // Calculate speed-based factors
+    // Calculate speed-based factors (use hSpeed so velocity.y doesn't inflate understeer)
     const { speedRatio, effectiveTurnSpeed, effectiveGrip } = this.controls.calculateSpeedFactors(
-      speed, terrainGripMultiplier, groundedness
+      hSpeed, terrainGripMultiplier, groundedness, input
     );
     
     // Handle input
     this.controls.updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime);
     this.controls.updateAcceleration(input, forward, groundedness, deltaTime);
 
-    // Uphill gravity — decelerate proportional to slope so climbing costs speed
-    this.terrainPhysics.applyUphillGravity(this.mesh, deltaTime, track, groundedness);
-    
     // Apply drag
     this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness);
     
     // Calculate brake grip reduction (weight transfer)
-    const brakeGripReduction = this.controls.getBrakeGripReduction(input, speed);
+    const brakeGripReduction = this.controls.getBrakeGripReduction(input, hSpeed);
     
     // Apply grip and drift physics with brake weight transfer
-    this.driftPhysics.applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction, input.forward);
+    this.driftPhysics.applyGripAndDrift(hSpeed, forward, effectiveGrip, brakeGripReduction, input.forward);
     
-    // Movement - apply velocity to X/Z position (Y is handled by TerrainPhysics)
-    const newPosition = this.mesh.position.add(this.terrainPhysics.state.velocity.scale(deltaTime));
-    this.mesh.position.x = newPosition.x;
-    this.mesh.position.z = newPosition.z;
+    // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)
+    this.mesh.position.addInPlace(this.state.velocity.scale(deltaTime));
 
     // Update rotation
     this.mesh.rotation.y = this.state.heading;
@@ -200,23 +205,23 @@ export class Truck {
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
     const sampleSurfaceY = (x, z, fromY, fallback = terrainY ?? 0) =>
       this.terrainPhysics.sampleSurfaceYFastAt(x, z, fromY, track, fallback);
-    this.body.update(this.state, input, speed, deltaTime, terrainY, groundedness, sampleSurfaceY);
+    this.body.update(this.state, input, hSpeed, deltaTime, terrainY, groundedness, sampleSurfaceY);
     
     // Sync physics body
     this.syncPhysicsBody();
     
     // Update roll
-    this.driftPhysics.updateRoll(this.mesh, speed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
+    this.driftPhysics.updateRoll(this.mesh, hSpeed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
     
     // Update particle effects
-    this.particles.update(this.state, speed, terrainManager, isGrounded, deltaTime);
+    this.particles.update(this.state, hSpeed, terrainManager, isGrounded, deltaTime);
     
     // Return debug info
     return {
       compression: this.state.suspensionCompression,
       groundedness,
       penetration,
-      verticalVelocity: this.state.verticalVelocity,
+      verticalVelocity: this.state.velocity.y,
       speed,
       effectiveGrip,
       slipAngle: this.state.slipAngle,
