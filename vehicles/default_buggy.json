@@ -3,7 +3,12 @@
   "name": "Offroad Buggy",
   "modelFile": "default_buggy.obj",
   "imageFile": "default_buggy.png",
-  "defaultColor": [0.1, 0.7, 0.15],
+  "defaultColor": [0.8, 0.2, 0.5],
+  "bodyTransform": {
+    "position": [0, 0.4, 0.0],
+    "rotation": [-1.5708, 0, 0],
+    "scaling":  [1, 1, 1]
+  },
   "physicsBox": {
     "width": 1.3,
     "height": 0.65,
@@ -20,18 +25,18 @@
   "params": {
     "springStrength": 120,
     "damping": 5,
-    "maxSpeed": 32,
+    "maxSpeed": 30,
     "maxReverseSpeed": -12,
-    "acceleration": 17,
-    "braking": 3,
-    "drag": 0.2,
-    "turnSpeed": 4.5,
-    "grip": 0.025,
-    "driftThreshold": 0.05,
+    "acceleration": 34,
+    "braking": 2,
+    "drag": 4,
+    "turnSpeed": 4.2,
+    "grip": 0.10,
+    "driftThreshold": 0.3,
     "boostCount": 7,
     "maxBoosts": 7,
     "boostDuration": 1.0,
     "boostAccelMult": 1.8,
-    "boostSpeedMult": 1.4
+    "boostSpeedMult": 1.3
   }
 }

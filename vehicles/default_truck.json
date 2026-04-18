@@ -4,6 +4,11 @@
   "modelFile": "default_truck.obj",
   "imageFile": "default_truck.png",
   "defaultColor": [0.8, 0.2, 0.1],
+  "bodyTransform": {
+    "position": [0, 0.66, 0.0],
+    "rotation": [-1.5708, 0, 0],
+    "scaling":  [1, 1, 1]
+  },
   "physicsBox": {
     "width": 1.5,
     "height": 0.8,
@@ -24,7 +29,7 @@
     "drag": 4,
     "turnSpeed": 3.6,
     "grip": 0.12,
-    "driftThreshold": 0.2,
+    "driftThreshold": 0.3,
     "boostCount": 5,
     "maxBoosts": 5,
     "boostDuration": 1.5,

@@ -45,6 +45,12 @@ export class TruckBody {
 
     // Body OBJ URL — resolved by VehicleLoader and stored on the def
     this._modelUrl = vehicleDef?.modelUrl ?? null;
+
+    // Per-vehicle body mesh transform overrides (position, rotation, scaling)
+    const bt = vehicleDef?.bodyTransform ?? {};
+    this._bodyPosition = bt.position ?? [0, 0.66, 0.0];
+    this._bodyRotation = bt.rotation ?? [-Math.PI / 2, 0, 0];
+    this._bodyScaling  = bt.scaling  ?? [1, 1, 1];
     this._wheelDefs = [
       { id: "FL", x:  frontHalfTrack, z: frontAxle, isFront: true,  scale: frontScale },
       { id: "FR", x: -frontHalfTrack, z: frontAxle, isFront: true,  scale: frontScale },
@@ -124,9 +130,9 @@ export class TruckBody {
       // rotation.y = -π/2 maps local-X → world-Z (forward) and local-Z → world-X (side).
       // scaling:  .x controls length (world Z),  .z controls width (world X),  .y controls height.
       // position: .x centers the body (OBJ is offset in Z),  .y lifts it so OBJ-bottom lands at ~0.5.
-      mesh.rotation = new Vector3(-Math.PI / 2, 0, 0);
-      mesh.scaling  = new Vector3(1, 1, 1); // length, height, width
-      mesh.position = new Vector3(0, 0.66, 0.0);  // center-X, bottom-Y, center-Z
+      mesh.rotation = new Vector3(...this._bodyRotation);
+      mesh.scaling  = new Vector3(...this._bodyScaling);
+      mesh.position = new Vector3(...this._bodyPosition);
 
       this._styleMesh(mesh, this.colors.body);
       mesh.receiveShadows = false; // prevents self-shadowing artifacts
