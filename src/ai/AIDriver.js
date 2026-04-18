@@ -746,24 +746,33 @@ export class AIDriver {
    */
   findLookAheadPoint(position) {
     if (this.path.length === 0) return null;
-    
-    // Find closest point on path
-    let closestIndex = 0;
+
+    // Bounded window search: only scan a limited number of waypoints forward (and a
+    // few backward to tolerate trucks being nudged slightly behind their last index).
+    // An unbounded forward scan can snap to a geometrically close waypoint that is
+    // actually much further around the track whenever the path curves back near the
+    // truck's displaced position — causing the AI to suddenly aim at the wrong section.
+    const LOOK_BACK  = 5;
+    const LOOK_AHEAD = 30;
+    const n = this.path.length;
+
+    let closestIndex = this.currentPathIndex;
     let closestDist = Infinity;
-    
-    for (let i = this.currentPathIndex; i < this.path.length; i++) {
+
+    const start = Math.max(0, this.currentPathIndex - LOOK_BACK);
+    const end   = Math.min(n - 1, this.currentPathIndex + LOOK_AHEAD);
+
+    for (let i = start; i <= end; i++) {
       const waypoint = this.path[i];
-      const dist = Math.sqrt(
-        Math.pow(position.x - waypoint.x, 2) + 
-        Math.pow(position.z - waypoint.z, 2)
-      );
-      
+      const dx = position.x - waypoint.x;
+      const dz = position.z - waypoint.z;
+      const dist = dx * dx + dz * dz; // squared — no sqrt needed for comparison
       if (dist < closestDist) {
         closestDist = dist;
         closestIndex = i;
       }
     }
-    
+
     this.currentPathIndex = closestIndex;
     
     // Adaptive look-ahead: use closer waypoints when the path ahead is curved
@@ -819,12 +828,14 @@ export class AIDriver {
       accumulatedDist += segmentDist;
     }
     
-    // If we're near the end of the path, wrap around to the beginning for continuous laps
+    // If we're near the end of the path, wrap around to the beginning for continuous laps.
+    // Do this before the distance walk so the walk can start from index 0 on the next frame.
     if (this.currentPathIndex >= this.path.length - 10) {
       this.currentPathIndex = 0;
+      return this.path[0];
     }
-    
-    // Return last waypoint if we're near the end
+
+    // Return last waypoint if the remaining path is shorter than the look-ahead distance
     return this.path[this.path.length - 1];
   }
 
