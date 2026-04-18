@@ -4,8 +4,7 @@ import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
-import { buildScene } from "./SceneBuilder.js";
-import { BaseMode } from "./BaseMode.js";
+import { DriveMode } from "./DriveMode.js";
 
 /**
  * PracticeMode – free-drive mode for testing and practice.
@@ -13,14 +12,14 @@ import { BaseMode } from "./BaseMode.js";
  * No AI trucks, no countdown, no lap/checkpoint tracking.
  * Just select a track and drive around to test handling and physics.
  */
-export class PracticeMode extends BaseMode {
+export class PracticeMode extends DriveMode {
   constructor(controller) {
     super(controller);
     this.inputManager = null;
   }
 
   async setup({ trackKey, vehicleKey = 'default_truck' }) {
-    const { engine, menuManager, trackLoader } = this.controller;
+    const { engine, menuManager } = this.controller;
 
     const {
       scene,
@@ -31,33 +30,21 @@ export class PracticeMode extends BaseMode {
       tireStackManager,
       flagManager,
       pickupManager,
-    } = await buildScene(engine, trackLoader, trackKey);
+    } = await this.buildDriveScene(trackKey);
     // Note: Pickups are disabled by default via buildScene. We don't spawn them here.
 
     this.scene = scene;
 
     // Spawn just behind the start/finish checkpoint, facing forward
-    const checkpointFeatures = currentTrack.features.filter(
-      f => f.type === 'checkpoint' && f.checkpointNumber != null
-    );
-    const maxNum = checkpointFeatures.reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
-    const startCp = checkpointFeatures.find(f => f.checkpointNumber === maxNum) || null;
+    const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);
 
     // Create truck first so we can read its height when calculating spawnPos
     const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     const playerTruck = new Truck(scene, shadows, null, null, vehicleDef);
 
-    let spawnPos, heading;
-    if (startCp) {
-      const h = startCp.heading;
-      const x = startCp.centerX + Math.sin(h) * -6;
-      const z = startCp.centerZ + Math.cos(h) * -6;
-      spawnPos = new Vector3(x, currentTrack.getHeightAt(x, z) + playerTruck.height, z);
-      heading = h;
-    } else {
-      spawnPos = new Vector3(0, playerTruck.height, 0);
-      heading = 0;
-    }
+    const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);
+    const spawnPos = spawn.pos;
+    const heading = spawn.heading;
 
     playerTruck.mesh.position.copyFrom(spawnPos);
     playerTruck.state.heading = heading;
@@ -98,9 +85,7 @@ export class PracticeMode extends BaseMode {
     };
 
     // Pre-filter 'slowZone' action zones for per-frame position checks
-    const slowZones = currentTrack.features.filter(
-      f => f.type === 'actionZone' && f.zoneType === 'slowZone'
-    );
+    const slowZones = this.getSlowZones(currentTrack);
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
@@ -114,21 +99,7 @@ export class PracticeMode extends BaseMode {
 
       const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
 
-      // Clamp speed when inside a 'slowZone' action zone
-      if (slowZones.length > 0) {
-        const pos = playerTruck.mesh.position;
-        const inSlow = slowZones.some(z => {
-          const dx = pos.x - z.x, dz = pos.z - z.z;
-          return (dx * dx + dz * dz) < z.radius * z.radius;
-        });
-        playerTruck.state.slowZoneActive = inSlow;
-        if (inSlow) {
-          const limit = playerTruck.state.slowZoneMaxSpeed;
-          if (playerTruck.state.velocity.length() > limit) {
-            playerTruck.state.velocity.normalize().scaleInPlace(limit);
-          }
-        }
-      }
+      this.applySlowZones(trucks, slowZones);
 
       staticBodyCollisionManager.update(trucks);
       tireStackManager.update(trucks, dt);
@@ -146,14 +117,6 @@ export class PracticeMode extends BaseMode {
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
-    }
-    if (this.debugManager) {
-      this.debugManager.hide();
-      this.debugManager = null;
-    }
-    if (this.inputManager) {
-      this.inputManager.dispose();
-      this.inputManager = null;
     }
     super.teardown();
   }

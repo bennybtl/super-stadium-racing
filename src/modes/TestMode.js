@@ -1,8 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
-import { buildScene } from "./SceneBuilder.js";
-import { BaseMode } from "./BaseMode.js";
+import { DriveMode } from "./DriveMode.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 
@@ -12,7 +11,7 @@ import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManag
  * No AI trucks, no countdown, no lap/checkpoint tracking.
  * ESC or the on-screen button returns straight to EditorMode.
  */
-export class TestMode extends BaseMode {
+export class TestMode extends DriveMode {
   constructor(controller) {
     super(controller);
     this.inputManager = null;
@@ -21,7 +20,7 @@ export class TestMode extends BaseMode {
   }
 
   async setup({ trackKey, returnToEditor }) {
-    const { engine, trackLoader } = this.controller;
+    const { engine } = this.controller;
 
     const {
       scene,
@@ -31,30 +30,18 @@ export class TestMode extends BaseMode {
       terrainManager,
       tireStackManager,
       flagManager,
-    } = await buildScene(engine, trackLoader, trackKey);
+    } = await this.buildDriveScene(trackKey);
 
     this.scene = scene;
 
     // Spawn just behind the start/finish checkpoint, facing forward
-    const checkpointFeatures = currentTrack.features.filter(
-      f => f.type === 'checkpoint' && f.checkpointNumber != null
-    );
-    const maxNum = checkpointFeatures.reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
-    const startCp = checkpointFeatures.find(f => f.checkpointNumber === maxNum) || null;
+    const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);
 
     const playerTruck = new Truck(scene, shadows);
 
-    let spawnPos, heading;
-    if (startCp) {
-      const h = startCp.heading;
-      const x = startCp.centerX + Math.sin(h) * -6;
-      const z = startCp.centerZ + Math.cos(h) * -6;
-      spawnPos = new Vector3(x, currentTrack.getHeightAt(x, z) + playerTruck.height, z);
-      heading = h;
-    } else {
-      spawnPos = new Vector3(0, playerTruck.height, 0);
-      heading = 0;
-    }
+    const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);
+    const spawnPos = spawn.pos;
+    const heading = spawn.heading;
 
     playerTruck.mesh.position.copyFrom(spawnPos);
     playerTruck.state.heading = heading;
@@ -122,14 +109,6 @@ export class TestMode extends BaseMode {
     if (this._backBtn) {
       this._backBtn.remove();
       this._backBtn = null;
-    }
-    if (this.debugManager) {
-      this.debugManager.hide();
-      this.debugManager = null;
-    }
-    if (this.inputManager) {
-      this.inputManager.dispose();
-      this.inputManager = null;
     }
     super.teardown();
   }

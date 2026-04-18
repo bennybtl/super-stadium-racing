@@ -7,9 +7,8 @@ import { UIManager } from "../managers/UIManager.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
-import { buildScene } from "./SceneBuilder.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
-import { BaseMode } from "./BaseMode.js";
+import { DriveMode } from "./DriveMode.js";
 import { UPGRADES } from "../managers/SeasonManager.js";
 import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
 import { setupAIDrivers } from "./setupAIDrivers.js";
@@ -20,7 +19,9 @@ import { setupAIDrivers } from "./setupAIDrivers.js";
  * Owns the Babylon scene, truck(s), input, UI, checkpoint/lap tracking
  * and the game loop. Delegates scene construction to SceneBuilder.
  */
-export class RaceMode extends BaseMode {
+const DNF_GRACE_MS = 45_000;
+
+export class RaceMode extends DriveMode {
   constructor(controller) {
     super(controller);
     this.inputManager = null;
@@ -31,7 +32,7 @@ export class RaceMode extends BaseMode {
   }
 
   async setup({ trackKey, laps, season = false, vehicleKey = 'default_truck' }) {
-    const { engine, menuManager, trackLoader, seasonManager } = this.controller;
+    const { engine, menuManager, seasonManager } = this.controller;
     const totalLaps = laps || 3;
 
     const {
@@ -45,16 +46,16 @@ export class RaceMode extends BaseMode {
       tireStackManager,
       flagManager,
       pickupManager,
-    } = await buildScene(engine, trackLoader, trackKey);
+    } = await this.buildDriveScene(trackKey);
 
     this.scene = scene;
 
     // -- Starting grid (based on the last/finish checkpoint) --
-    const checkpointFeatures = currentTrack.features.filter(
-      f => f.type === 'checkpoint' && f.checkpointNumber != null
-    );
-    const maxCheckpointNumber = checkpointFeatures.reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
-    const startFinishCp = checkpointFeatures.find(f => f.checkpointNumber === maxCheckpointNumber) || null;
+    const {
+      checkpointFeatures,
+      maxCheckpointNumber,
+      startFinishCp,
+    } = this.getStartFinishInfo(currentTrack);
 
     const getGridSpawn = (index) => {
       if (!startFinishCp) {
@@ -77,7 +78,6 @@ export class RaceMode extends BaseMode {
     let countdownActive = false;
 
     // -- Finish / DNF tracking (season mode) --
-    const DNF_GRACE_MS = 45_000;
     const finishOrder  = [];   // truckData entries in finish order
     let dnfTimer       = null; // started when the first driver begins their last lap
     let raceEnded      = false;
@@ -426,9 +426,7 @@ export class RaceMode extends BaseMode {
     };
 
     // Pre-filter 'slowZone' action zones for per-frame position checks
-    const slowZones = currentTrack.features.filter(
-      f => f.type === 'actionZone' && f.zoneType === 'slowZone'
-    );
+    const slowZones = this.getSlowZones(currentTrack);
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
@@ -465,23 +463,7 @@ export class RaceMode extends BaseMode {
 
       staticBodyCollisionManager.update(trucks);
 
-      // Clamp speed for any truck inside a 'slowZone' action zone
-      if (slowZones.length > 0) {
-        trucks.forEach(({ truck }) => {
-          const pos = truck.mesh.position;
-          const inSlow = slowZones.some(z => {
-            const dx = pos.x - z.x, dz = pos.z - z.z;
-            return (dx * dx + dz * dz) < z.radius * z.radius;
-          });
-          truck.state.slowZoneActive = inSlow;
-          if (inSlow) {
-            const limit = truck.state.slowZoneMaxSpeed;
-            if (truck.state.velocity.length() > limit) {
-              truck.state.velocity.normalize().scaleInPlace(limit);
-            }
-          }
-        });
-      }
+      this.applySlowZones(trucks, slowZones);
 
       truckCollisionManager.update(trucks);
       tireStackManager.update(trucks);
@@ -526,17 +508,15 @@ export class RaceMode extends BaseMode {
 
         if (!checkpointResult?.passed) return;
 
-        const checkpointIndex = checkpointResult.index;
-
         // Start/finish crossing: start race timer and reset sequence so lap flow begins at CP 1
-        if (checkpointIndex === maxCheckpointNumber && !truckData.hasStarted) {
+        if (checkpointResult.index === maxCheckpointNumber && !truckData.hasStarted) {
           truckData.hasStarted = true;
           
           if (!raceStarted) {
             raceStarted = true;
             raceStartTime = Date.now();
             uiManager.showRaceTimer();
-            console.log("Race started!");
+            console.debug("Race started!");
           }
           
           truckData.lapStartTime = Date.now();
@@ -566,7 +546,7 @@ export class RaceMode extends BaseMode {
         }
 
         const newCount = truckData.gameState.incrementCheckpoint(
-          checkpointIndex
+          checkpointResult.index
         );
 
         if (!truckData.isPlayer && truckData.truck.driver) {
@@ -676,17 +656,9 @@ export class RaceMode extends BaseMode {
     this._countdownTimeouts.forEach(clearTimeout);
     this._countdownTimeouts = [];
     if (this._dnfTimer) { clearTimeout(this._dnfTimer); this._dnfTimer = null; }
-    if (this.inputManager) {
-      this.inputManager.dispose();
-      this.inputManager = null;
-    }
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
-    }
-    if (this.debugManager) {
-      this.debugManager.hide();
-      this.debugManager = null;
     }
     super.teardown();
   }
