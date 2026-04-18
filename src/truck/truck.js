@@ -144,7 +144,7 @@ export class Truck {
     if (this.driver) {
       const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
       const fwdSpeed = this.state.velocity.dot(forward);
-      input = this.driver.getInput(this.mesh.position, this.state.heading, fwdSpeed);
+      input = this.driver.getInput(this.mesh.position, this.state.heading, fwdSpeed, deltaTime);
     }
     
     // Update boost timer
