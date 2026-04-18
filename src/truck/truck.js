@@ -113,6 +113,9 @@ export class Truck {
       // Higher = more understeer on throttle, more oversteer on brakes.
       // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.
       weightTransfer: 1.0,
+      // Fraction of turn speed available when stationary (0 = can't spin, 1 = full rate).
+      // Gives an arcade feel when > 0. Tune per vehicle.
+      stationarySpinRate: 0.35,
 
       // Boost parameters
       boostCount: 5,
@@ -129,8 +132,6 @@ export class Truck {
     // Overlay any params supplied by the vehicle definition
     if (this.vehicleDef?.params) {
       Object.assign(base, this.vehicleDef.params);
-      // Keep boostCount in sync with maxBoosts on first load
-      base.boostCount = base.maxBoosts;
     }
 
     return base;
@@ -177,7 +178,7 @@ export class Truck {
     const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     
     // Calculate speed-based factors (use hSpeed so velocity.y doesn't inflate understeer)
-    const { speedRatio, effectiveTurnSpeed, effectiveGrip } = this.controls.calculateSpeedFactors(
+    const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor } = this.controls.calculateSpeedFactors(
       hSpeed, terrainGripMultiplier, groundedness, input
     );
     
@@ -187,12 +188,10 @@ export class Truck {
 
     // Apply drag
     this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness);
-    
-    // Calculate brake grip reduction (weight transfer)
-    const brakeGripReduction = this.controls.getBrakeGripReduction(input, hSpeed);
-    
-    // Apply grip and drift physics with brake weight transfer
-    this.driftPhysics.applyGripAndDrift(hSpeed, forward, effectiveGrip, brakeGripReduction, input.forward);
+
+    // Apply grip and drift physics — rearTractionFactor encodes weight transfer:
+    // throttle loosens rear (mild), braking unloads rear (significant).
+    this.driftPhysics.applyGripAndDrift(hSpeed, forward, effectiveGrip, rearTractionFactor);
     
     // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)
     this.mesh.position.addInPlace(this.state.velocity.scale(deltaTime));

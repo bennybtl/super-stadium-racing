@@ -16,8 +16,15 @@ export class Controls {
       const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
       const fwdSpeed = this.state.velocity.dot(forward);
       const steerSign = fwdSpeed < 0 ? -1 : 1;
-      if (input.left)  this.state.heading -= steerSign * effectiveTurnSpeed * groundedness * deltaTime;
-      if (input.right) this.state.heading += steerSign * effectiveTurnSpeed * groundedness * deltaTime;
+
+      // Stationary spin factor — controls how much turn authority the truck has at rest.
+      // 0 = no turning when stopped, 1 = full turn speed regardless of velocity.
+      // The lerp blends from stationarySpinRate at speed=0 up to 1.0 at full speed.
+      const stationarySpinRate = this.state.stationarySpinRate ?? 0.35;
+      const spinFactor = stationarySpinRate + (1.0 - stationarySpinRate) * speedRatio;
+
+      if (input.left)  this.state.heading -= steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
+      if (input.right) this.state.heading += steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
     }
   }
 
@@ -140,34 +147,25 @@ export class Controls {
     // Weight transfer magnitude scales with the vehicle's weightTransfer stat.
     // Heavier/stiffer trucks shift weight more dramatically under load.
     const wt = this.state.weightTransfer ?? 1.0;
-    const baseUndersteer     = speedRatio * 0.15;          // tires have finite lateral force
-    const throttleUndersteer = isAccelerating ? speedRatio * 0.15 * wt : 0;
+    const baseUndersteer     = speedRatio * 0.10;          // tires have finite lateral force
+    const throttleUndersteer = isAccelerating ? speedRatio * 0.10 * wt : 0;
     const brakeOversteer     = isDecelerating ? speedRatio * 0.15 * wt : 0;
 
-    const steerFactor     = Math.max(0.35, 1 - baseUndersteer - throttleUndersteer + brakeOversteer);
+    const steerFactor     = Math.max(0.40, 1 - baseUndersteer - throttleUndersteer + brakeOversteer);
     const effectiveTurnSpeed = this.state.turnSpeed * steerFactor;
 
     const lateralGripFactor = Math.max(0.5, 1 - speedRatio * 0.3);
     const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness;
 
-    return { speedRatio, effectiveTurnSpeed, effectiveGrip };
-  }
+    // Rear traction factor — how loaded/unloaded the rear axle is due to weight transfer.
+    // Throttle: power can break rear traction loose (mild reduction).
+    // Braking:  weight shifts forward, rear unloads significantly.
+    // These mirror the same wt/speedRatio variables used for steerFactor above,
+    // so the drift model and the steering model share one consistent weight-transfer source.
+    const throttleRearLoose = isAccelerating ? speedRatio * 0.25 * wt : 0;
+    const brakeRearLoose    = isDecelerating ? speedRatio * 0.60 * wt : 0;
+    const rearTractionFactor = Math.max(0.3, 1.0 - throttleRearLoose - brakeRearLoose);
 
-  /**
-   * Calculate grip reduction due to braking (weight transfer to front)
-   * Returns a multiplier for rear grip (0-1)
-   */
-  getBrakeGripReduction(input, speed) {
-    // Only reduce rear grip when braking while moving forward at moderate speed
-    if (!input.back || speed < 3) return 1.0;
-    
-    const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-    const forwardSpeed = this.state.velocity.dot(forward);
-    
-    if (forwardSpeed <= 0.5) return 1.0; // Not moving forward
-    
-    // Reduce rear grip proportional to speed (more weight transfer at higher speeds)
-    const speedFactor = Math.min(speed / this.state.maxSpeed, 1.0);
-    return Math.max(0.3, 1.0 - (speedFactor * 0.6)); // Reduce to 30-100% grip
+    return { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor };
   }
 }

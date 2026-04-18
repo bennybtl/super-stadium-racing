@@ -46,12 +46,6 @@ const SPINOUT_SLIP_THRESHOLD = 0.6;
 /** Grip multiplier below which a spin-out is confirmed (car has lost meaningful traction). */
 const SPINOUT_GRIP_THRESHOLD = 0.01;
 
-// ─── Throttle-drift ───────────────────────────────────────────────────────────
-
-/** Fraction of lateral grip retained while on the throttle during a drift.
- *  Lower = rear stays looser under power, slide holds its angle. */
-const THROTTLE_LOOSE_FACTOR = 0.75;
-
 // ─── Drag ────────────────────────────────────────────────────────────────────
 
 /** Speed below which drag is not applied. */
@@ -94,12 +88,13 @@ export class DriftPhysics {
     this.state = state;
   }
 
-  applyGripAndDrift(speed, forward, effectiveGrip, brakeGripReduction = 1.0, isThrottling = false) {
+  applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0) {
     // Pick the appropriate minimum speed threshold.
     // When already drifting, use lower thresholds so the drift can bleed out
     // naturally through grip rather than snapping off abruptly.
-    // brakeGripReduction < 1.0 indicates the brake is held.
-    const isBraking = brakeGripReduction < 1.0;
+    // rearTractionFactor < 1 when braking (weight forward) — use tighter hold threshold.
+    const isBraking    = rearTractionFactor < 0.85;
+    const isThrottling = rearTractionFactor < 1.0 && !isBraking;
     let minSpeed;
     if (this.state.isDrifting) {
       if (isBraking)       minSpeed = MIN_DRIFT_SPEED_HOLD_BRAKE;
@@ -155,14 +150,15 @@ export class DriftPhysics {
       const t = this.state.slipAngle / driftThresh; // 0 at straight-ahead, 1 at threshold
       gripFactor = GRIP_ZONE_CORRECTION * (1 - t) + driftGrip * t;
     } else {
-      // Drift zone: exponential drop-off — lateral momentum carries
-      const throttleLooseFactor = (isThrottling && !isReversing) ? THROTTLE_LOOSE_FACTOR : 1.0;
+      // Drift zone: exponential drop-off — lateral momentum carries.
+      // rearTractionFactor already encodes both throttle looseness (mild) and
+      // brake rear-unloading (significant), so no separate THROTTLE_LOOSE_FACTOR needed.
       gripFactor = Math.max(MIN_SLIP_FACTOR, Math.exp(-excessSlip * SLIP_DROPOFF_RATE))
-                 * driftGrip * throttleLooseFactor;
+                 * driftGrip;
     }
 
     const reverseGripBoost = isReversing ? REVERSE_GRIP_BOOST : 1;
-    const gripMultiplier = gripFactor * reverseGripBoost * brakeGripReduction;
+    const gripMultiplier = gripFactor * reverseGripBoost * rearTractionFactor;
 
     // Apply grip as lateral-only damping.
     // Only the sideways component decays; the longitudinal (heading-aligned) speed

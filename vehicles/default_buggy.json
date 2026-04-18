@@ -33,6 +33,8 @@
     "turnSpeed": 4.2,
     "grip": 0.10,
     "driftThreshold": 0.3,
+    "weightTransfer": 0.7,
+    "stationarySpinRate": 0.45,
     "boostCount": 7,
     "maxBoosts": 7,
     "boostDuration": 1.0,
