@@ -289,7 +289,34 @@ export class RaceMode extends BaseMode {
       }
     });
 
-    inputManager.onReset(() => respawnPlayer());
+    // -- Respawn --
+    // Teleport a truck to the center of the last checkpoint it physically passed.
+    // Falls back to the player's grid spawn if the race hasn't started yet.
+    const respawnToLastCheckpoint = (truckData) => {
+      if (!truckData.hasStarted) {
+        const { pos, heading } = getGridSpawn(truckData.isPlayer ? 0 : 1);
+        this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
+        return;
+      }
+      const lastCpNum = truckData.gameState.lastCheckpointPassed;
+      const cpFeature = lastCpNum > 0
+        ? checkpointFeatures.find(f => f.checkpointNumber === lastCpNum)
+        : startFinishCp;
+      if (cpFeature) {
+        const y = currentTrack.getHeightAt(cpFeature.centerX, cpFeature.centerZ) + TRUCK_HALF_HEIGHT;
+        this.respawnTruck(
+          truckData.truck,
+          new Vector3(cpFeature.centerX, y, cpFeature.centerZ),
+          cpFeature.heading,
+          staticBodyCollisionManager
+        );
+      } else {
+        const { pos, heading } = getGridSpawn(truckData.isPlayer ? 0 : 1);
+        this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
+      }
+    };
+
+    inputManager.onReset(() => respawnToLastCheckpoint(playerTruckData));
 
     // -- Pickup collection --
     pickupManager.spawn(6); // Scatter pickups specifically for the race
@@ -300,84 +327,6 @@ export class RaceMode extends BaseMode {
           uiManager.updateBoosts(truckData.gameState.boostCount);
         }
       }
-    };
-
-    // -- Respawn --
-    const respawnPlayer = () => {
-      const truck = playerTruckData.truck;
-      const lastPassed = playerTruckData.gameState.lastCheckpointPassed;
-
-      // Spawn at the last passed checkpoint centre.
-      // lastPassed === 0 means the player just crossed the start/finish line and
-      // hasn't reached any mid-track checkpoint yet, so use the start/finish (maxCheckpointNumber).
-      const cpNumberToFind = lastPassed === 0 ? maxCheckpointNumber : lastPassed;
-      const lastCp = currentTrack.features.find(
-        (f) => f.type === 'checkpoint' && f.checkpointNumber === cpNumberToFind
-      );
-      let spawnX = lastCp ? lastCp.centerX : truck.mesh.position.x;
-      let spawnZ = lastCp ? lastCp.centerZ : truck.mesh.position.z;
-
-      const wallSegs = wallManager.getWallSegments();
-      const isNearWall = (cx, cz) => {
-        for (const seg of wallSegs) {
-          const dx = cx - seg.x;
-          const dz = cz - seg.z;
-          const cosH = Math.cos(seg.heading);
-          const sinH = Math.sin(seg.heading);
-          const along = dx * sinH + dz * cosH;
-          const perp = Math.abs(dx * cosH - dz * sinH);
-          if (Math.abs(along) <= seg.halfLength + 1 && perp <= 1.5) return true;
-        }
-        return false;
-      };
-
-      if (isNearWall(spawnX, spawnZ)) {
-        outer: for (let radius = 2; radius <= 12; radius += 2) {
-          for (let a = 0; a < 16; a++) {
-            const angle = (a / 16) * Math.PI * 2;
-            const cx = spawnX + Math.cos(angle) * radius;
-            const cz = spawnZ + Math.sin(angle) * radius;
-            if (!isNearWall(cx, cz)) {
-              spawnX = cx;
-              spawnZ = cz;
-              break outer;
-            }
-          }
-        }
-      }
-
-      const nextFeature = currentTrack.features.find(
-        (f) =>
-          f.type === "checkpoint" && f.checkpointNumber === lastPassed + 1
-      );
-      let spawnHeading = truck.state.heading;
-      if (nextFeature) {
-        spawnHeading = Math.atan2(
-          nextFeature.centerX - spawnX,
-          nextFeature.centerZ - spawnZ
-        );
-      }
-
-      const spawnY = currentTrack.getHeightAt(spawnX, spawnZ) + TRUCK_HALF_HEIGHT;
-      truck.mesh.position.set(spawnX, spawnY, spawnZ);
-      truck.state.heading = spawnHeading;
-      truck.mesh.rotation.y = spawnHeading;
-      truck.state.velocity.set(0, 0, 0);
-      truck.state.velocity.y = 0;
-      truck.state.boostActive = false;
-      truck.state.boostTimer = 0;
-
-      const body = truck.physics?.body;
-      if (body) {
-        body.setLinearVelocity(Vector3.Zero());
-        body.setAngularVelocity(Vector3.Zero());
-      }
-
-      console.log(
-        `[Player] Respawned at (${spawnX.toFixed(1)}, ${spawnZ.toFixed(1)}) ` +
-          `facing ${(spawnHeading * 180 / Math.PI).toFixed(1)}° ` +
-          `(after checkpoint ${lastPassed})`
-      );
     };
 
     // -- Countdown --

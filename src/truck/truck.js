@@ -240,4 +240,25 @@ export class Truck {
       this.physics.body.transformNode.rotation = this.mesh.rotation.clone();
     }
   }
+
+  /**
+   * Teleport the truck to a position and heading, zeroing all motion.
+   * Use this for respawning — no need to destroy and recreate the truck.
+   */
+  teleportTo(position, heading) {
+    this.mesh.position.copyFrom(position);
+    this.state.heading = heading;
+    this.mesh.rotation.y = heading;
+    this.state.velocity.setAll(0);
+    this.state.suspensionCompression = 0;
+    this.state.suspensionVelocity = 0;
+    this.state.boostActive = false;
+    this.state.boostTimer = 0;
+    const body = this.physics?.body;
+    if (body) {
+      body.setLinearVelocity(Vector3.Zero());
+      body.setAngularVelocity(Vector3.Zero());
+    }
+    this.syncPhysicsBody();
+  }
 }

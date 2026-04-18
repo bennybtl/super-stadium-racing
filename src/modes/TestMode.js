@@ -61,7 +61,7 @@ export class TestMode extends BaseMode {
     playerTruck.mesh.rotation.y = heading;
 
     // Reset physics state to prevent gravity accumulation during async scene setup
-    this.resetTruckPhysics(playerTruck, spawnPos);
+    this.respawnTruck(playerTruck, spawnPos, heading);
 
     // Input — ESC goes straight back to editor
     const inputManager = new InputManager(playerTruck, cameraController);
@@ -69,11 +69,7 @@ export class TestMode extends BaseMode {
     inputManager.onPause(() => this._exitToEditor(returnToEditor));
     this.debugManager = new DebugManager();
     this.setupDebugToggle(inputManager, this.debugManager);
-    inputManager.onReset(() => {
-      this.resetTruckPhysics(playerTruck, spawnPos);
-      playerTruck.state.heading = heading;
-      playerTruck.mesh.rotation.y = heading;
-    });
+    inputManager.onReset(() => this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager));
 
     // Back button (top-left)
     this._createBackButton(returnToEditor);

@@ -66,7 +66,7 @@ export class PracticeMode extends BaseMode {
     const trucks = [{ truck: playerTruck }];
 
     // Reset physics state to prevent gravity accumulation during async scene setup
-    this.resetTruckPhysics(playerTruck, spawnPos);
+    this.respawnTruck(playerTruck, spawnPos, heading);
 
     // -- UI --
     const uiManager = new UIManager();
@@ -81,11 +81,7 @@ export class PracticeMode extends BaseMode {
     this.inputManager = inputManager;
     inputManager.onPause(() => menuManager.showPauseMenu());
     this.setupDebugToggle(inputManager, debugManager);
-    inputManager.onReset(() => {
-      this.resetTruckPhysics(playerTruck, spawnPos);
-      playerTruck.state.heading = heading;
-      playerTruck.mesh.rotation.y = heading;
-    });
+    inputManager.onReset(() => this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager));
 
     // Wire up pause callbacks
     menuManager.onResume = () => {

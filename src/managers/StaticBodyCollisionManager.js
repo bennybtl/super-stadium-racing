@@ -29,6 +29,16 @@ export class StaticBodyCollisionManager {
     this._prevPositions.clear();
   }
 
+  /**
+   * Call immediately after teleporting a truck so the swept-AABB broadphase
+   * doesn't treat the teleport as a wall-crossing trajectory.
+   */
+  notifyTeleport(truck) {
+    if (truck?.mesh) {
+      this._prevPositions.set(truck.mesh.uniqueId, truck.mesh.position.clone());
+    }
+  }
+
   resetColliderCache() {
     this._colliders = [];
   }

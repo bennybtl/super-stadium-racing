@@ -33,21 +33,25 @@ export class BaseMode {
   }
 
   /**
-   * Reset a truck's physics state to prevent gravity accumulation.
-   * Call this after truck creation to neutralize any forces accumulated
-   * during async scene setup.
+   * Teleport a truck to a position/heading and flush the collision manager's
+   * stale prevPos so the swept-AABB broadphase doesn't treat the teleport as
+   * a wall-crossing trajectory.
+   *
+   * Use this for every respawn — initial placement after setup AND R-key resets.
+   *
+   * @param {Truck} truck
+   * @param {Vector3} position
+   * @param {number} heading
+   * @param {StaticBodyCollisionManager} [staticBodyCollisionManager]
    */
-  resetTruckPhysics(truck, position) {
-    truck.mesh.position.copyFrom(position);
-    truck.state.velocity.setAll(0);
-    truck.state.velocity.y = 0;
-    
-    // Reset physics body
-    const body = truck.physics?.body;
-    if (body) {
-      body.setLinearVelocity(Vector3.Zero());
-      body.setAngularVelocity(Vector3.Zero());
-    }
+  respawnTruck(truck, position, heading, staticBodyCollisionManager) {
+    truck.teleportTo(position, heading);
+    staticBodyCollisionManager?.notifyTeleport(truck);
+  }
+
+  /** @deprecated Use respawnTruck instead */
+  resetTruckPhysics(truck, position, heading = truck.state.heading) {
+    this.respawnTruck(truck, position, heading);
   }
 
   /**

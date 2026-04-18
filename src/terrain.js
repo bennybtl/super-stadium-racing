@@ -4,7 +4,7 @@ import { Vector3, Color3 } from "@babylonjs/core";
 export const TERRAIN_TYPES = {
   ASPHALT: {
     name: "asphalt",
-    gripMultiplier: 6.0,    // Best grip
+    gripMultiplier: 4.0,    // Best grip
     color: new Color3(0.2, 0.2, 0.25),
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     dragMultiplier: 0.5,

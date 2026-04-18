@@ -7,6 +7,7 @@ export class InputManager {
   constructor(truck, cameraController) {
     this.truck = truck;
     this.cameraController = cameraController;
+    this._disposed = false;
     
     // Movement input state
     this.input = { 
@@ -35,11 +36,13 @@ export class InputManager {
   }
 
   dispose() {
+    this._disposed = true;
     window.removeEventListener("keydown", this.boundKeyDown);
     window.removeEventListener("keyup", this.boundKeyUp);
   }
 
   handleKeyDown(e) {
+    if (this._disposed) return;
     // Movement
     if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = true;
     if (e.code === "KeyS" || e.code === "ShiftLeft" || e.code === "ArrowDown") this.input.back = true;
