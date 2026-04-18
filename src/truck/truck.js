@@ -96,6 +96,8 @@ export class Truck {
   createMesh() {
     const mesh = MeshBuilder.CreateBox("truck", { width: this.width, height: this.height, depth: this.depth }, this.scene);
     mesh.position.y = this.halfHeight;
+    // Force Euler rotation path. If a quaternion is present, Babylon ignores mesh.rotation.
+    mesh.rotationQuaternion = null;
     mesh.isVisible = false;  // visual puppet replaces this
     return mesh;
   }
@@ -170,7 +172,7 @@ export class Truck {
 
 
 
-  update(input, deltaTime, terrainManager = null, track = null, collectDebugInfo = true) {
+  update(input, deltaTime, terrainManager = null, track = null, collectDebugInfo = true, effectsFocusPosition = null) {
     // If AI driver, get input from driver
     if (this.driver) {
       this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
@@ -252,13 +254,30 @@ export class Truck {
       this._particleUpdateInterval <= 0 ||
       this._particleUpdateAccumulator >= this._particleUpdateInterval
     ) {
+      let effectScaleOverride = 1;
+      if (this.driver && effectsFocusPosition) {
+        // Distance-based AI VFX fade: full nearby, fade out toward far range.
+        const dx = this.mesh.position.x - effectsFocusPosition.x;
+        const dz = this.mesh.position.z - effectsFocusPosition.z;
+        const distSq = dx * dx + dz * dz;
+        const near = 45;
+        const far = 110;
+        if (distSq >= far * far) {
+          effectScaleOverride = 0;
+        } else if (distSq > near * near) {
+          const dist = Math.sqrt(distSq);
+          effectScaleOverride = 1 - (dist - near) / (far - near);
+        }
+      }
+
       this.particles.update(
         this.state,
         hSpeed,
         terrainManager,
         isGrounded,
         this._particleUpdateAccumulator,
-        terrain
+        terrain,
+        effectScaleOverride
       );
       this._particleUpdateAccumulator = 0;
     }
@@ -286,16 +305,9 @@ export class Truck {
       const node = this.physics.body.transformNode;
       node.position.copyFrom(this.mesh.position);
 
-      if (this.mesh.rotationQuaternion) {
-        if (!node.rotationQuaternion) {
-          node.rotationQuaternion = this.mesh.rotationQuaternion.clone();
-        } else {
-          node.rotationQuaternion.copyFrom(this.mesh.rotationQuaternion);
-        }
-      } else {
-        node.rotationQuaternion = null;
-        node.rotation.copyFrom(this.mesh.rotation);
-      }
+      // Keep physics transform in Euler mode to match `mesh.rotation` driven by heading.
+      node.rotationQuaternion = null;
+      node.rotation.copyFrom(this.mesh.rotation);
     }
   }
 

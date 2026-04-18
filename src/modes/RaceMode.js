@@ -460,7 +460,8 @@ export class RaceMode extends DriveMode {
           dt,
           terrainManager,
           currentTrack,
-          truckData.isPlayer
+          truckData.isPlayer,
+          playerTruckData.truck.mesh.position
         );
         if (truckData.isPlayer) {
           playerDebugInfo = debugInfo;

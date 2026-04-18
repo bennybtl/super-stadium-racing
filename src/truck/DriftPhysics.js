@@ -66,13 +66,13 @@ const DRAG_AIRBORNE = 0.02;
 // ─── Body roll ────────────────────────────────────────────────────────────────
 
 /** Lateral speed → roll angle scale factor. */
-const ROLL_FROM_LATERAL = 0.04;
+const ROLL_FROM_LATERAL = 0.05;
 
 /** Turn rate → roll angle scale factor (multiplied by speed). */
-const ROLL_FROM_TURNING = 0.02;
+const ROLL_FROM_TURNING = 0.03;
 
-/** Maximum body roll angle in radians (~10°). */
-const MAX_ROLL = 0.18;
+/** Maximum body roll angle in radians (~15°). */
+const MAX_ROLL = 0.24;
 
 /** Roll interpolation speed when grounded. */
 const ROLL_SPEED_GROUNDED = 8;

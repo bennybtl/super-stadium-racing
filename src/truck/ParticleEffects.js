@@ -178,7 +178,8 @@ export class ParticleEffects {
     return splashParticles;
   }
 
-  update(state, speed, terrainManager, isGrounded = true, deltaTime = 0.016, currentTerrain = null) {
+  update(state, speed, terrainManager, isGrounded = true, deltaTime = 0.016, currentTerrain = null, effectScaleOverride = 1) {
+    const effectiveScale = this._qualityScale * Math.max(0, Math.min(1, effectScaleOverride));
     const terrain = currentTerrain ?? (terrainManager ? terrainManager.getTerrainAt(this.mesh.position) : null);
     const terrainName = terrain?.name ?? 'default';
 
@@ -194,7 +195,7 @@ export class ParticleEffects {
     if (speed > 0.5) {
       const driftIntensity = Math.max(0, state.slipAngle - state.driftThreshold);
       const spinoutBoost = state.isSpinningOut ? 2.0 : 1.0;
-      this.driftParticles.emitRate = driftIntensity * 300 * this._qualityScale * spinoutBoost;
+      this.driftParticles.emitRate = driftIntensity * 300 * effectiveScale * spinoutBoost;
     } else {
       this.driftParticles.emitRate = 0;
     }
@@ -202,13 +203,13 @@ export class ParticleEffects {
     // Update splash particles when in water and wheels are on the ground
     const isInWater = terrainName === 'water';
     if (isInWater && isGrounded && speed > 1) {
-      this.splashParticles.emitRate = speed * 80 * this._qualityScale;
+      this.splashParticles.emitRate = speed * 80 * effectiveScale;
     } else {
       this.splashParticles.emitRate = 0;
     }
 
     // Nitro burst: fire a cloud of white smoke the moment boost activates
-    const boostJustStarted = state.boostActive && !this._wasBoostActive;
+    const boostJustStarted = effectiveScale > 0.05 && state.boostActive && !this._wasBoostActive;
     if (boostJustStarted) {
       this._fireNitroBurst(state.heading);
     }
