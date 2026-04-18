@@ -1,38 +1,12 @@
-import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
 import { useDebugStore } from "../vue/store.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
-
-// ─── Vehicle avoidance ────────────────────────────────────────────────────────
-
-/** Radius (world units) within which another truck triggers avoidance steering. */
-const AVOIDANCE_RADIUS = 10;
-
-/** Maximum lateral distance (world units) the virtual target is nudged sideways. */
-const AVOIDANCE_MAX_PUSH = 6;
-
-/** Trucks further than this behind us are ignored (no need to avoid what we've passed). */
-const AVOIDANCE_IGNORE_BEHIND = 3;
-
-const SPEED_TOLERANCE = 0.5;
-
-// Alpha ~0.18 per frame at 60 fps gives a ~3-frame rolling average feel
-const STEERING_SMOOTH = 0.18;
-// Always steer towards target
-const STEERING_THRESHOLD = 0.05;
-
-const PATH_ADVANCE = 5;
-const WAYPOINT_LOOK_BACK  = 5;
-const WAYPOINT_LOOK_AHEAD = 30;
-const BOOST_MIN_SPEED = 8;
-const BOOST_STRAIGHT_MAX_ANGLE = Math.PI / 12; // ~15°
-const BOOST_CLEAR_AHEAD_DIST = 18;
-const BOOST_CLEAR_LATERAL_DIST = 4;
-const BOOST_DECISION_COOLDOWN_MS = 900;
-const BOOST_BASE_CHANCE = 0.1;
-const BOOST_BEHIND_WEIGHT = 0.35;
-const BOOST_STOCK_WEIGHT = 0.25;
-const BOOST_MAX_CHANCE = 0.85;
-const BOOST_STOCK_REF = 4;
+import { AIBoostController, DEFAULT_BOOST_CONFIG } from "./controllers/AIBoostController.js";
+import { AIStuckRecoveryController, DEFAULT_STUCK_CONFIG } from "./controllers/AIStuckRecoveryController.js";
+import { AIPathPlanner } from "./controllers/AIPathPlanner.js";
+import { AISteeringController, DEFAULT_STEERING_CONFIG } from "./controllers/AISteeringController.js";
+import { AIThrottleController, DEFAULT_THROTTLE_CONFIG } from "./controllers/AIThrottleController.js";
+import { AISpawnRecoveryController, DEFAULT_SPAWN_RECOVERY_CONFIG } from "./controllers/AISpawnRecoveryController.js";
+import { AIDebugRenderer } from "./controllers/AIDebugRenderer.js";
 
 /**
  * AIDriver - Autonomous driver that navigates through checkpoints
@@ -41,6 +15,8 @@ const BOOST_STOCK_REF = 4;
  * - lookAheadDistance: How far ahead the AI looks (higher = better planning)
  * - maxSpeed: Speed multiplier (0-1, higher = faster driving)
  * - steeringPrecision: How accurately the AI steers (0-1, higher = better control)
+ * - steering* params: Avoidance and turn smoothing behavior
+ * - throttle* params: Speed-target lookahead and tolerance
  * - boost* params: Nitro decision tuning for personality (aggression, safety, and cadence)
  */
 export class AIDriver {
@@ -57,16 +33,36 @@ export class AIDriver {
       maxSpeed = 0.8,          // Good: 1.0, OK: 0.8, Bad: 0.7
       steeringPrecision = 1.0, // Good: 1.0, OK: 0.85, Bad: 0.7
       // Boost personality tuning (override per AI for different nitro behavior)
-      boostMinSpeed = BOOST_MIN_SPEED,
-      boostStraightMaxAngle = BOOST_STRAIGHT_MAX_ANGLE,
-      boostClearAheadDist = BOOST_CLEAR_AHEAD_DIST,
-      boostClearLateralDist = BOOST_CLEAR_LATERAL_DIST,
-      boostDecisionCooldownMs = BOOST_DECISION_COOLDOWN_MS,
-      boostBaseChance = BOOST_BASE_CHANCE,
-      boostBehindWeight = BOOST_BEHIND_WEIGHT,
-      boostStockWeight = BOOST_STOCK_WEIGHT,
-      boostMaxChance = BOOST_MAX_CHANCE,
-      boostStockRef = BOOST_STOCK_REF,
+      boostMinSpeed = DEFAULT_BOOST_CONFIG.minSpeed,
+      boostStraightMaxAngle = DEFAULT_BOOST_CONFIG.straightMaxAngle,
+      boostClearAheadDist = DEFAULT_BOOST_CONFIG.clearAheadDist,
+      boostClearLateralDist = DEFAULT_BOOST_CONFIG.clearLateralDist,
+      boostDecisionCooldownMs = DEFAULT_BOOST_CONFIG.decisionCooldownMs,
+      boostBaseChance = DEFAULT_BOOST_CONFIG.baseChance,
+      boostBehindWeight = DEFAULT_BOOST_CONFIG.behindWeight,
+      boostStockWeight = DEFAULT_BOOST_CONFIG.stockWeight,
+      boostMaxChance = DEFAULT_BOOST_CONFIG.maxChance,
+      boostStockRef = DEFAULT_BOOST_CONFIG.stockRef,
+
+      // Stuck recovery tuning
+      stuckThreshold = DEFAULT_STUCK_CONFIG.stuckThreshold,
+      positionCheckInterval = DEFAULT_STUCK_CONFIG.positionCheckInterval,
+      positionStuckThreshold = DEFAULT_STUCK_CONFIG.positionStuckThreshold,
+      positionStuckMinDist = DEFAULT_STUCK_CONFIG.positionStuckMinDist,
+      wallPressMaxSpeed = DEFAULT_STUCK_CONFIG.wallPressMaxSpeed,
+
+      // Steering + throttle tuning
+      avoidanceRadius = DEFAULT_STEERING_CONFIG.avoidanceRadius,
+      avoidanceMaxPush = DEFAULT_STEERING_CONFIG.avoidanceMaxPush,
+      avoidanceIgnoreBehind = DEFAULT_STEERING_CONFIG.avoidanceIgnoreBehind,
+      steeringSmooth = DEFAULT_STEERING_CONFIG.steeringSmooth,
+      steeringThreshold = DEFAULT_STEERING_CONFIG.steeringThreshold,
+      speedTolerance = DEFAULT_THROTTLE_CONFIG.speedTolerance,
+      telemetryLookWaypoints = DEFAULT_THROTTLE_CONFIG.telemetryLookWaypoints,
+      pathLookWaypoints = DEFAULT_THROTTLE_CONFIG.pathLookWaypoints,
+
+      // Spawn recovery tuning
+      pathAdvance = DEFAULT_SPAWN_RECOVERY_CONFIG.pathAdvance,
     } = skillConfig;
     
     // Path-following state
@@ -89,35 +85,7 @@ export class AIDriver {
     this.steeringStrength = steeringPrecision;
     this.maxSpeed = maxSpeed;
 
-    // Boost personality parameters
-    this.boostMinSpeed = boostMinSpeed;
-    this.boostStraightMaxAngle = boostStraightMaxAngle;
-    this.boostClearAheadDist = boostClearAheadDist;
-    this.boostClearLateralDist = boostClearLateralDist;
-    this.boostDecisionCooldownMs = boostDecisionCooldownMs;
-    this.boostBaseChance = boostBaseChance;
-    this.boostBehindWeight = boostBehindWeight;
-    this.boostStockWeight = boostStockWeight;
-    this.boostMaxChance = boostMaxChance;
-    this.boostStockRef = Math.max(1, boostStockRef);
-    
-    // Smoothed steering (low-pass filter to remove rapid left/right jitter)
-    this._smoothedTurn = 0;
-
-    // Stuck detection
-    this.stuckTimer = 0;
-    this.stuckThreshold = 3000; // 3 seconds in milliseconds
     this.truckMesh = null; // Will be set after truck creation
-    // Position-based stuck detection: sample every second, trigger if barely moved
-    this.positionCheckTimer = 0;
-    this.positionCheckInterval = 1000; // check every 1 second
-    this.lastCheckedPosition = null;
-    this.positionStuckTimer = 0;
-    this.positionStuckThreshold = 3000; // 3 seconds without movement
-    this.positionStuckMinDist = 1.0;   // must move at least 1 unit per second
-
-    // Wall-press stuck detection: AI is applying throttle but barely moving (pinned against wall)
-    this.wallPressMaxSpeed = 2.5;    // below this forward speed counts as "pressing a wall"
     
     // Pause flag — when true, getInput returns all-false
     this.paused = false;
@@ -127,11 +95,6 @@ export class AIDriver {
     this._inputUpdateInterval = 6; // frames between recalculations (6 ≈ 10 hz @ 60 fps)
     this._inputFrameCounter   = 0;
     this._cachedInput = { forward: true, back: false, left: false, right: false };
-
-    // Pre-allocated scratch vectors — reused every frame to avoid GC pressure.
-    this._fwd    = new Vector3(0, 0, 1);
-    this._right  = new Vector3(1, 0, 0);
-    this._toVirt = new Vector3(0, 0, 1);
 
     // Other truck instances used for vehicle-to-vehicle avoidance.
     // Set via setOtherTrucks() once all trucks have been created.
@@ -143,13 +106,48 @@ export class AIDriver {
 
     // Race context for AI nitro decisions
     this.gameState = null;
-    this._selfTruckData = null;
-    this._allTruckData = null;
-    this._nextBoostDecisionAtMs = 0;
+
+    this._boostController = new AIBoostController(this, {
+      minSpeed: boostMinSpeed,
+      straightMaxAngle: boostStraightMaxAngle,
+      clearAheadDist: boostClearAheadDist,
+      clearLateralDist: boostClearLateralDist,
+      decisionCooldownMs: boostDecisionCooldownMs,
+      baseChance: boostBaseChance,
+      behindWeight: boostBehindWeight,
+      stockWeight: boostStockWeight,
+      maxChance: boostMaxChance,
+      stockRef: boostStockRef,
+    });
+
+    this._stuckRecovery = new AIStuckRecoveryController(this, {
+      stuckThreshold,
+      positionCheckInterval,
+      positionStuckThreshold,
+      positionStuckMinDist,
+      wallPressMaxSpeed,
+    });
+
+    this._pathPlanner = new AIPathPlanner(this);
+    this._steeringController = new AISteeringController(this, {
+      avoidanceRadius,
+      avoidanceMaxPush,
+      avoidanceIgnoreBehind,
+      steeringSmooth,
+      steeringThreshold,
+    });
+    this._throttleController = new AIThrottleController(this, {
+      speedTolerance,
+      telemetryLookWaypoints,
+      pathLookWaypoints,
+    });
+    this._spawnRecovery = new AISpawnRecoveryController(this, {
+      pathAdvance,
+    });
+    this._debugRenderer = new AIDebugRenderer(this);
 
     // Debug visualization — enabled state is driven by the global DebugManager store
     this._debugStore = useDebugStore();
-    this.debugLines = [];
     
     // Get all checkpoints for reference
     this.checkpoints = this.getCheckpointPositions();
@@ -172,129 +170,7 @@ export class AIDriver {
    * allowing onCheckpointPassed to quickly advance currentPathIndex.
    */
   calculateFullPath(startPosition = { x: 0, z: 0 }) {
-    if (this.checkpoints.length === 0) return;
-
-    this.path = [];
-    this.checkpointPathIndices = [];
-
-    // ── Option B: author-placed AI path waypoints ─────────────────────────
-    // If the track JSON contains an `aiPath` feature with ≥ 2 points, use
-    // those as the node list instead of checkpoint centres.  This gives the
-    // track author fine-grained control over the racing line on new tracks
-    // before any telemetry has been recorded.
-    const aiPathFeature = this.track.features?.find(f => f.type === 'aiPath');
-    const authorNodes   = aiPathFeature?.points?.length >= 2 ? aiPathFeature.points : null;
-
-    // Waypoint spacing: one point every N world units along each segment.
-    const STEP = 3;
-
-    // These are calibrated against the truck's actual physics:
-    //   maxSpeed = 25 u/s, acceleration = 13 u/s², braking force = 2 u/s²,
-    //   DRAG_COASTING = 0.45/frame ≈ 27/s effective decel at speed.
-    // At 18 u/s coasting drag stops the truck in ~18/27 ≈ 0.67 s = ~12 u.
-    // So BASE_SPEED of 18 gives reasonable stopping distance with coast-only braking.
-    const BASE_SPEED = 28 * this.maxSpeed;
-    // Tight hairpin speed — must be low enough that the truck can hold the turn.
-    const MIN_SPEED  =  14 * this.maxSpeed;
-    // Maximum deceleration assumed for backwards-propagation.
-    // Higher value = tighter braking zone = AI brakes later and more aggressively.
-    const MAX_DECEL  = 22; // u/s²  (aggressive combined drag+brake)
-
-    // Build a closed list of node positions and wrap back to the first.
-    const nodes = authorNodes
-      ? [...authorNodes.map(p => ({ x: p.x, z: p.z })), { x: authorNodes[0].x, z: authorNodes[0].z }]
-      : [...this.checkpoints.map(cp => ({ x: cp.x, z: cp.z })), { x: this.checkpoints[0].x, z: this.checkpoints[0].z }];
-
-    const interpolateSegment = (a, b) => {
-      const dx = b.x - a.x;
-      const dz = b.z - a.z;
-      const len = Math.sqrt(dx * dx + dz * dz);
-      if (len < 0.001) return [];
-      const steps = Math.max(1, Math.floor(len / STEP));
-      const pts = [];
-      for (let s = 0; s < steps; s++) {
-        const t = s / steps;
-        pts.push({ x: a.x + dx * t, z: a.z + dz * t });
-      }
-      return pts;
-    };
-
-    const turnAngleAt = (i) => {
-      if (i <= 0 || i >= nodes.length - 1) return 0;
-      const prev = nodes[i - 1];
-      const curr = nodes[i];
-      const next = nodes[i + 1];
-      const ax = curr.x - prev.x, az = curr.z - prev.z;
-      const bx = next.x - curr.x, bz = next.z - curr.z;
-      const lenA = Math.sqrt(ax * ax + az * az);
-      const lenB = Math.sqrt(bx * bx + bz * bz);
-      if (lenA < 0.001 || lenB < 0.001) return 0;
-      const dot = (ax * bx + az * bz) / (lenA * lenB);
-      return Math.acos(Math.max(-1, Math.min(1, dot)));
-    };
-
-    const cpSpeeds = nodes.map((_, i) => {
-      const angle = turnAngleAt(i);
-      const t = Math.min(angle / Math.PI, 1);
-      return BASE_SPEED * (1 - t) + MIN_SPEED * t;
-    });
-
-    for (let seg = 0; seg < nodes.length - 1; seg++) {
-      const a = nodes[seg];
-      const b = nodes[seg + 1];
-      const speedA = cpSpeeds[seg];
-      const speedB = cpSpeeds[seg + 1];
-
-      this.checkpointPathIndices.push(this.path.length);
-
-      const pts = interpolateSegment(a, b);
-      const n = pts.length;
-      for (let k = 0; k < n; k++) {
-        const t = n > 1 ? k / (n - 1) : 0;
-        pts[k].speed = speedA + (speedB - speedA) * t;
-      }
-      this.path.push(...pts);
-    }
-    this.path.push({ ...nodes[0], speed: cpSpeeds[0] });
-
-    // ── Backwards speed-propagation pass ─────────────────────────────────
-    // Walk the path in reverse.  If a waypoint's target speed is lower than
-    // what the truck could physically reach from the previous waypoint given
-    // MAX_DECEL, reduce the earlier waypoint's speed so the AI starts
-    // slowing down in time rather than arriving at full speed.
-    // v_prev_max² = v_next² + 2 * MAX_DECEL * dist
-    for (let i = this.path.length - 2; i >= 0; i--) {
-      const curr = this.path[i];
-      const next = this.path[i + 1];
-      const dx = next.x - curr.x;
-      const dz = next.z - curr.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
-      const maxAllowed = Math.sqrt(next.speed * next.speed + 2 * MAX_DECEL * dist);
-      if (curr.speed > maxAllowed) curr.speed = maxAllowed;
-    }
-
-    // ── Precompute per-waypoint segment length and heading ──────────────
-    // segLen: used by findLookAheadPoint's distance walk (avoids per-frame sqrt).
-    // heading: used by the curvature check (avoids per-frame atan2).
-    for (let i = 0; i < this.path.length - 1; i++) {
-      const a = this.path[i];
-      const b = this.path[i + 1];
-      const dx = b.x - a.x, dz = b.z - a.z;
-      a.segLen   = Math.sqrt(dx * dx + dz * dz);
-      a.heading  = Math.atan2(dx, dz);
-    }
-    this.path[this.path.length - 1].segLen  = 0;
-    this.path[this.path.length - 1].heading = this.path[this.path.length - 2]?.heading ?? 0;
-
-    this.currentPathIndex = 0;
-    this.currentCheckpointTarget = 0;
-
-    const sourceLabel = authorNodes ? `author aiPath (${authorNodes.length} nodes)` : `checkpoints (${this.checkpoints.length} nodes)`;
-    console.debug(`[AIDriver] Path built from ${sourceLabel}: ${this.path.length} waypoints.`);
-
-    if (this.debugEnabled && this.scene) {
-      this.updateDebugVisualization();
-    }
+    this._pathPlanner.calculateFullPath(startPosition);
   }
 
   /**
@@ -302,9 +178,7 @@ export class AIDriver {
    * Path is precomputed — just advance the checkpoint target counter.
    */
   onCheckpointPassed(checkpointIndex, currentPosition) {
-    this.lastCheckpointPassed = checkpointIndex;
-    this.currentCheckpointTarget = checkpointIndex % this.checkpoints.length;
-    // currentPathIndex is advanced naturally by findLookAheadPoint every frame
+    this._pathPlanner.onCheckpointPassed(checkpointIndex, currentPosition);
   }
 
   /**
@@ -336,14 +210,14 @@ export class AIDriver {
    */
   setGameState(gameState) {
     this.gameState = gameState;
+    this._boostController.setGameState(gameState);
   }
 
   /**
    * Provide race standings context (self + all trucks) for boost aggressiveness.
    */
   setRaceContext(selfTruckData, allTruckData) {
-    this._selfTruckData = selfTruckData;
-    this._allTruckData = allTruckData;
+    this._boostController.setRaceContext(selfTruckData, allTruckData);
   }
 
   /**
@@ -353,50 +227,14 @@ export class AIDriver {
    * @param {object[]|null} waypoints
    */
   loadTelemetry(waypoints) {
-    if (!waypoints || waypoints.length === 0) {
-      this._usingTelemetry = false;
-      console.debug('[AIDriver] No telemetry; using authored/checkpoint path.');
-      return;
-    }
-    this.path = waypoints; // { x, z, speed }
-    // Precompute segLen and heading so findLookAheadPoint avoids per-frame sqrt/atan2
-    for (let i = 0; i < this.path.length - 1; i++) {
-      const a = this.path[i], b = this.path[i + 1];
-      const dx = b.x - a.x, dz = b.z - a.z;
-      a.segLen  = Math.sqrt(dx * dx + dz * dz);
-      a.heading = Math.atan2(dx, dz);
-    }
-    this.path[this.path.length - 1].segLen  = 0;
-    this.path[this.path.length - 1].heading = this.path[this.path.length - 2]?.heading ?? 0;
-    this.currentPathIndex = 0;
-    this._usingTelemetry = true;
-    console.debug(`[AIDriver] Telemetry path loaded: ${waypoints.length} waypoints.`);
-    if (this.debugEnabled && this.scene) {
-      this.updateDebugVisualization();
-    }
+    this._pathPlanner.loadTelemetry(waypoints);
   }
 
   /**
    * Get checkpoint positions in order
    */
   getCheckpointPositions() {
-    const checkpoints = [];
-    
-    for (const feature of this.track.features) {
-      if (feature.type === "checkpoint") {
-        checkpoints.push({
-          x: feature.centerX,
-          z: feature.centerZ,
-          index: feature.checkpointNumber || 0,
-          heading: feature.heading
-        });
-      }
-    }
-    
-    // Sort by checkpoint number
-    checkpoints.sort((a, b) => a.index - b.index);
-        
-    return checkpoints;
+    return this._pathPlanner.getCheckpointPositions();
   }
 
   /**
@@ -468,14 +306,7 @@ export class AIDriver {
    */
   getInput(position, heading, fwdSpeed = 0, dt = 16.67) {
     // Periodically update debug visualization if enabled
-    if (this.debugEnabled && this.scene) {
-      if (!this._debugUpdateTimer) this._debugUpdateTimer = 0;
-      this._debugUpdateTimer++;
-      if (this._debugUpdateTimer >= 10) { // Every 10 frames
-        this.updateDebugVisualization();
-        this._debugUpdateTimer = 0;
-      }
-    }
+    this._debugRenderer.onFrame();
 
     if (this.paused) {
       return { forward: false, back: false, left: false, right: false };
@@ -499,161 +330,42 @@ export class AIDriver {
       return { forward: true, back: false, left: false, right: false };
     }
     
-    // Current heading vector (scratch — no allocation)
-    this._fwd.copyFromFloats(Math.sin(heading), 0, Math.cos(heading));
-    const forward = this._fwd;
-    // Right vector — XZ perpendicular to heading
-    this._right.copyFromFloats(forward.z, 0, -forward.x);
-    const rightVec = this._right;
+    const { forward, rightVec, turnStrength } = this._steeringController.compute({
+      position,
+      heading,
+      targetWaypoint,
+    });
 
-    // ── Vehicle avoidance ──────────────────────────────────────────────────
-    // For each nearby truck, nudge the virtual look-ahead target laterally
-    // away from that truck. The existing steering logic then aims at the
-    // adjusted target, naturally steering around the obstacle.
-    let lateralOffset = 0;
-    for (const other of this.otherTrucks) {
-      if (!other.mesh) continue;
-      const odx = other.mesh.position.x - position.x;
-      const odz = other.mesh.position.z - position.z;
-      const distSq = odx * odx + odz * odz;
-      if (distSq < 0.25 || distSq > AVOIDANCE_RADIUS * AVOIDANCE_RADIUS) continue;
-      const dist = Math.sqrt(distSq);
-      // Ignore trucks that are clearly behind us
-      const fwdDist = odx * forward.x + odz * forward.z;
-      if (fwdDist < -AVOIDANCE_IGNORE_BEHIND) continue;
-      // Lateral position of the other truck (+ = they are to our right)
-      const latDist = odx * rightVec.x + odz * rightVec.z;
-      // Quadratic fall-off: strongest when very close, zero at AVOIDANCE_RADIUS
-      const weight = Math.pow(1 - dist / AVOIDANCE_RADIUS, 2);
-      lateralOffset -= Math.sign(latDist) * weight * AVOIDANCE_MAX_PUSH;
-    }
-    lateralOffset = Math.max(-AVOIDANCE_MAX_PUSH, Math.min(AVOIDANCE_MAX_PUSH, lateralOffset));
-
-    // Build a virtual target that incorporates the avoidance offset
-    const virtualTarget = {
-      x: targetWaypoint.x + rightVec.x * lateralOffset,
-      z: targetWaypoint.z + rightVec.z * lateralOffset,
-    };
-
-    // Recompute toTarget toward the avoidance-adjusted virtual target (scratch — no allocation)
-    this._toVirt.copyFromFloats(virtualTarget.x - position.x, 0, virtualTarget.z - position.z);
-    this._toVirt.normalize();
-    const toVirtual = this._toVirt;
-    
-    // Calculate steering angle using cross product
-    let { y: turnStrength } = Vector3.Cross(forward, toVirtual);
-    
-    // Spin recovery: if lateral speed greatly exceeds forward speed the truck is
-    // spinning / sliding sideways. Reduce steering authority so the wheels can
-    // regain grip instead of fighting it with full lock.
-    if (this.truck) {
-      const fwd  = Math.abs(this.truck.state.velocity.dot(forward));
-      const lat  = Math.abs(this.truck.state.velocity.dot(rightVec));
-      if (lat > fwd * 1.5 && lat > 5) {
-        // Damp steering proportionally — the more sideways, the less we steer
-        const spinFactor = Math.max(0.15, fwd / lat);
-        turnStrength *= spinFactor;
-      }
-    }
-    
-    // Smooth the raw turn signal — lerp at ~8 Hz equivalent to remove frame-to-frame jitter
-    this._smoothedTurn += (turnStrength - this._smoothedTurn) * STEERING_SMOOTH;
-    turnStrength = this._smoothedTurn;
-    
-    // Throttle / brake decision.
-    // When following a telemetry path, compare current speed to the target speed
-    // recorded at the nearest upcoming waypoint — accelerate if below, brake if over.
-    // Without telemetry, fall back to the curvature-scan heuristic.
-    let shouldMoveForward = true;
-    let shouldReverse = false;
-    if (this._usingTelemetry) {
-      // Look a few waypoints ahead for a speed target (gives a small braking preview)
-      const lookWaypoints = 3;
-      let targetSpeed = Infinity;
-      for (let wi = this.currentPathIndex; wi < Math.min(this.currentPathIndex + lookWaypoints, this.path.length); wi++) {
-        const wp = this.path[wi];
-        if (wp.speed !== undefined && wp.speed < targetSpeed) targetSpeed = wp.speed;
-      }
-      if (targetSpeed !== Infinity) {
-        // Scale the recorded speed target by the ratio of current grip to recorded grip.
-        // e.g. if the lap was recorded on packed dirt (grip 2.0) but the AI is now on
-        // mud (grip 0.15), the target speed is reduced proportionally so it brakes earlier.
-        const recordedGrip = this.path[this.currentPathIndex]?.grip ?? 1;
-        if (recordedGrip > 0 && this.truck?._lastTerrainGrip) {
-          targetSpeed *= Math.min(1, this.truck._lastTerrainGrip / recordedGrip);
-        }
-        shouldMoveForward = fwdSpeed < targetSpeed + SPEED_TOLERANCE;
-        shouldReverse = false;
-      }
-    } else {
-      // Direct-checkpoint path: waypoints carry .speed targets, same as telemetry.
-      // Look far enough ahead to give the truck time to brake.  With STEP=3 and
-      // Shorter look-ahead = AI brakes later for a more aggressive, committed driving style.
-      const lookWaypoints = 12;
-      let targetSpeed = Infinity;
-      for (let wi = this.currentPathIndex; wi < Math.min(this.currentPathIndex + lookWaypoints, this.path.length); wi++) {
-        const wp = this.path[wi];
-        if (wp.speed !== undefined && wp.speed < targetSpeed) targetSpeed = wp.speed;
-      }
-      if (targetSpeed !== Infinity) {
-        shouldMoveForward = fwdSpeed < targetSpeed + SPEED_TOLERANCE;
-        shouldReverse = false;
-      }
-    }
+    const { shouldMoveForward, shouldReverse } = this._throttleController.compute({
+      fwdSpeed,
+    });
     
     const isActuallyReversing = fwdSpeed < -0.3;
     const input = {
       forward: shouldMoveForward,
       back: shouldReverse,
       // When actually moving backward, steering physics is inverted — flip to compensate
-      left: isActuallyReversing ? turnStrength > STEERING_THRESHOLD : turnStrength < -STEERING_THRESHOLD,
-      right: isActuallyReversing ? turnStrength < -STEERING_THRESHOLD : turnStrength > STEERING_THRESHOLD
+      left: isActuallyReversing
+        ? turnStrength > this._steeringController.steeringThreshold
+        : turnStrength < -this._steeringController.steeringThreshold,
+      right: isActuallyReversing
+        ? turnStrength < -this._steeringController.steeringThreshold
+        : turnStrength > this._steeringController.steeringThreshold
     };
 
-    this._maybeUseBoost(position, forward, rightVec, fwdSpeed, input);
-    
-    // Stuck detection — control-input stalls
-    // Case A: no throttle intent for too long
-    // Case B: throttle held but forward speed stays very low (wall press)
+    this._boostController.update({ position, forward, rightVec, fwdSpeed, input });
+
     const currentPos = { x: position.x, z: position.z };
-    const controlStall = (!input.forward && !input.back) ||
-      (input.forward && fwdSpeed < this.wallPressMaxSpeed);
-
-    if (controlStall) {
-      this.stuckTimer += dt;
-      if (this.stuckTimer >= this.stuckThreshold && this.truckMesh) {
-        this._respawnFromStuck(targetWaypoint, currentPos);
-      }
-    } else {
-      this.stuckTimer = 0;
-    }
-
-    // Stuck detection — position hasn't changed in 3 seconds
-    this.positionCheckTimer += dt;
-    if (this.positionCheckTimer >= this.positionCheckInterval) {
-      this.positionCheckTimer = 0;
-      if (this.lastCheckedPosition) {
-        const dx = currentPos.x - this.lastCheckedPosition.x;
-        const dz = currentPos.z - this.lastCheckedPosition.z;
-        const moved = Math.sqrt(dx * dx + dz * dz);
-        if (moved < this.positionStuckMinDist) {
-          this.positionStuckTimer += this.positionCheckInterval;
-          if (this.positionStuckTimer >= this.positionStuckThreshold && this.truckMesh) {
-            this._respawnFromStuck(targetWaypoint, currentPos);
-          }
-        } else {
-          this.positionStuckTimer = 0;
-        }
-      }
-      this.lastCheckedPosition = currentPos;
-    }
+    this._stuckRecovery.update({
+      dt,
+      input,
+      fwdSpeed,
+      currentPos,
+      targetWaypoint,
+    });
     
     // Update debug visualization
-    if (this.debugEnabled && this.debugTarget) {
-      this.debugTarget.position.x = targetWaypoint.x;
-      this.debugTarget.position.z = targetWaypoint.z;
-      this.debugTarget.position.y = this._terrainQuery.heightAt(targetWaypoint.x, targetWaypoint.z) + 2;
-    }
+    this._debugRenderer.updateTarget(targetWaypoint);
 
     this._cachedInput = input;
     return input;
@@ -663,81 +375,7 @@ export class AIDriver {
    * Find waypoint at look-ahead distance
    */
   findLookAheadPoint(position) {
-    if (this.path.length === 0) return null;
-
-    // Bounded window search: only scan a limited number of waypoints forward (and a
-    // few backward to tolerate trucks being nudged slightly behind their last index).
-    // An unbounded forward scan can snap to a geometrically close waypoint that is
-    // actually much further around the track whenever the path curves back near the
-    // truck's displaced position — causing the AI to suddenly aim at the wrong section.
-    const n = this.path.length;
-
-    let closestIndex = this.currentPathIndex;
-    let closestDist = Infinity;
-
-    const start = Math.max(0, this.currentPathIndex - WAYPOINT_LOOK_BACK);
-    const end   = Math.min(n - 1, this.currentPathIndex + WAYPOINT_LOOK_AHEAD);
-
-    for (let i = start; i <= end; i++) {
-      const waypoint = this.path[i];
-      const dx = position.x - waypoint.x;
-      const dz = position.z - waypoint.z;
-      const dist = dx * dx + dz * dz; // squared — no sqrt needed for comparison
-      if (dist < closestDist) {
-        closestDist = dist;
-        closestIndex = i;
-      }
-    }
-
-    this.currentPathIndex = closestIndex;
-    
-    // Adaptive look-ahead: use closer waypoints when the path ahead is curved
-    // This prevents targeting waypoints that are too far to the side on tight turns
-    let adaptiveLookAhead = this.lookAheadDistance;
-    
-    // Check path curvature using precomputed per-waypoint headings (no atan2 per frame)
-    if (closestIndex + 3 < this.path.length) {
-      const angle1 = this.path[closestIndex].heading     ?? 0;
-      const angle2 = this.path[closestIndex + 3].heading ?? 0;
-      let angleDiff = Math.abs(angle2 - angle1);
-      if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
-      
-      // If path curves sharply (> 45 degrees), reduce look-ahead proportionally
-      const sharpTurnAngle = Math.PI / 4; // 45 degrees
-      if (angleDiff > sharpTurnAngle) {
-        const curveFactor = Math.min(angleDiff / Math.PI, 1.0); // 0 to 1
-        adaptiveLookAhead = this.lookAheadDistance * (1.0 - curveFactor * 0.6); // Reduce up to 60%
-        // console.debug(`[AIDriver] Sharp path ahead (${(angleDiff * 180 / Math.PI).toFixed(0)}°), look-ahead: ${adaptiveLookAhead.toFixed(1)}`);
-      }
-    }
-    
-    // Find point at adaptive look-ahead distance (uses precomputed segLen — no sqrt)
-    let accumulatedDist = 0;
-    for (let i = closestIndex; i < this.path.length - 1; i++) {
-      const p1 = this.path[i];
-      const p2 = this.path[i + 1];
-      const segmentDist = p1.segLen ?? Math.sqrt((p2.x-p1.x)**2 + (p2.z-p1.z)**2);
-
-      if (accumulatedDist + segmentDist >= adaptiveLookAhead) {
-        const t = (adaptiveLookAhead - accumulatedDist) / segmentDist;
-        return {
-          x: p1.x + (p2.x - p1.x) * t,
-          z: p1.z + (p2.z - p1.z) * t
-        };
-      }
-
-      accumulatedDist += segmentDist;
-    }
-    
-    // If we're near the end of the path, wrap around to the beginning for continuous laps.
-    // Do this before the distance walk so the walk can start from index 0 on the next frame.
-    if (this.currentPathIndex >= this.path.length - 10) {
-      this.currentPathIndex = 0;
-      return this.path[0];
-    }
-
-    // Return last waypoint if the remaining path is shorter than the look-ahead distance
-    return this.path[this.path.length - 1];
+    return this._pathPlanner.findLookAheadPoint(position);
   }
 
   /**
@@ -745,99 +383,9 @@ export class AIDriver {
    */
   reset() {
     this.currentPathIndex = 0;
-    this.stuckTimer = 0;
-    this.positionStuckTimer = 0;
-    this.positionCheckTimer = 0;
-    this.lastCheckedPosition = null;
-    this._nextBoostDecisionAtMs = 0;
-  }
-
-  _respawnFromStuck(targetWaypoint, currentPos) {
-    this.respawnFacingTarget(targetWaypoint);
-    this.stuckTimer = 0;
-    this.positionStuckTimer = 0;
-    this.lastCheckedPosition = currentPos;
-  }
-
-  _maybeUseBoost(position, forward, rightVec, fwdSpeed, input) {
-    if (!this.truck || !this.gameState) return;
-    if (this.gameState.boostCount <= 0) return;
-    if (this.truck.state.boostActive) return;
-    if (!input.forward || input.back) return;
-    if (fwdSpeed < this.boostMinSpeed) return;
-
-    const now = Date.now();
-    if (now < this._nextBoostDecisionAtMs) return;
-
-    // Require a relatively straight section ahead.
-    const curvature = this._scanPathCurvature(this.currentPathIndex, this.lookAheadDistance * 2);
-    if (curvature > this.boostStraightMaxAngle) {
-      this._nextBoostDecisionAtMs = now + this.boostDecisionCooldownMs;
-      return;
-    }
-
-    // Require no nearby truck directly in our lane ahead.
-    if (!this._isBoostLaneClear(position, forward, rightVec)) {
-      this._nextBoostDecisionAtMs = now + this.boostDecisionCooldownMs;
-      return;
-    }
-
-    // Boost chance increases when we're behind and when we have more boost stock.
-    const behindFactor = this._estimateBehindFactor();              // 0..1
-    const stockFactor = Math.min(this.gameState.boostCount / this.boostStockRef, 1); // 0..1
-    const chance = Math.min(
-      this.boostBaseChance +
-      this.boostBehindWeight * behindFactor +
-      this.boostStockWeight * stockFactor,
-      this.boostMaxChance
-    );
-
-    if (Math.random() <= chance && this.gameState.useBoost()) {
-      this.truck.state.boostActive = true;
-      this.truck.state.boostTimer = this.truck.state.boostDuration;
-    }
-
-    this._nextBoostDecisionAtMs = now + this.boostDecisionCooldownMs;
-  }
-
-  _isBoostLaneClear(position, forward, rightVec) {
-    for (const other of this.otherTrucks) {
-      if (!other?.mesh) continue;
-      const odx = other.mesh.position.x - position.x;
-      const odz = other.mesh.position.z - position.z;
-      const fwdDist = odx * forward.x + odz * forward.z;
-      if (fwdDist <= 0 || fwdDist > this.boostClearAheadDist) continue;
-
-      const latDist = odx * rightVec.x + odz * rightVec.z;
-      if (Math.abs(latDist) < this.boostClearLateralDist) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  _estimateBehindFactor() {
-    if (!this._selfTruckData?.gameState || !this._allTruckData?.length) return 0;
-
-    const own = this._selfTruckData.gameState;
-    const totalCp = this.checkpoints?.length || 1;
-
-    let best = own;
-    for (const td of this._allTruckData) {
-      if (!td?.gameState) continue;
-      const gs = td.gameState;
-      if (gs.raceFinished) continue;
-      if (gs.lapCount > best.lapCount) {
-        best = gs;
-      } else if (gs.lapCount === best.lapCount && gs.checkpointCount > best.checkpointCount) {
-        best = gs;
-      }
-    }
-
-    const ownProgress = own.lapCount * totalCp + own.checkpointCount;
-    const bestProgress = best.lapCount * totalCp + best.checkpointCount;
-    const gap = Math.max(0, bestProgress - ownProgress);
-    return Math.min(gap / Math.max(3, totalCp), 1);
+    this._steeringController.reset();
+    this._stuckRecovery.reset();
+    this._boostController.reset();
   }
 
   /**
@@ -846,97 +394,14 @@ export class AIDriver {
    * rather than toward the waypoint it's already sitting on top of.
    */
   _snapPathIndexToPosition(pos) {
-    if (!this.path || this.path.length === 0) return;
-
-    let bestIdx = 0;
-    let bestDist = Infinity;
-    for (let i = 0; i < this.path.length; i++) {
-      const wp = this.path[i];
-      const dx = wp.x - pos.x;
-      const dz = wp.z - pos.z;
-      const d = dx * dx + dz * dz;
-      if (d < bestDist) {
-        bestDist = d;
-        bestIdx = i;
-      }
-    }
-
-    // Advance a few waypoints so the first target is clearly ahead of the truck,
-    // not right underneath it (which would produce a random steering direction).
-    this.currentPathIndex = (bestIdx + PATH_ADVANCE) % this.path.length;
+    this._spawnRecovery.snapPathIndexToPosition(pos);
   }
 
   /**
    * Respawn truck facing target waypoint, moving it clear of any nearby walls first.
    */
   respawnFacingTarget(targetWaypoint) {
-    if (!this.truck || !this.truckMesh || !targetWaypoint) return;
-
-    // Prefer to respawn at the last passed checkpoint rather than the current
-    // (possibly off-track) position so the AI re-enters the track cleanly.
-    const lastCp = this.checkpoints[this.lastCheckpointPassed % this.checkpoints.length];
-    const basePos = lastCp
-      ? { x: lastCp.x, z: lastCp.z }
-      : { x: this.truckMesh.position.x, z: this.truckMesh.position.z };
-
-    const spawnPos = this._findClearPosition(
-      new Vector3(basePos.x, this.truckMesh.position.y, basePos.z),
-      targetWaypoint
-    );
-
-    // Move the truck to the clear position
-    this.truckMesh.position.x = spawnPos.x;
-    this.truckMesh.position.z = spawnPos.z;
-    this.truckMesh.position.y = this._terrainQuery.heightAt(spawnPos.x, spawnPos.z) + 0.6;
-
-    const dx = targetWaypoint.x - spawnPos.x;
-    const dz = targetWaypoint.z - spawnPos.z;
-    const targetHeading = Math.atan2(dx, dz);
-    
-    this.truckMesh.rotation.y = targetHeading;
-    this.truck.state.heading = targetHeading;
-    
-    // Reset velocities
-    this.truck.state.velocity.set(0, 0, 0);
-    this.truck.state.velocity.y = 0;
-    
-    if (this.truck.physics && this.truck.physics.body) {
-      this.truck.physics.body.setLinearVelocity(new Vector3(0, 0, 0));
-      this.truck.physics.body.setAngularVelocity(new Vector3(0, 0, 0));
-    }
-
-    this._staticBodyCollisionManager?.notifyTeleport(this.truck);
-
-    // Re-snap the path index to the closest waypoint ahead of the new spawn position
-    // so the AI doesn't chase a stale waypoint that routes it through a wall.
-    this._snapPathIndexToPosition(spawnPos);
-
-    // console.debug(`[AIDriver] Respawned at (${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(1)}) facing ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
-  }
-
-  /**
-   * Scan the recorded path ahead from `fromIndex`, up to `maxDistance` world units.
-   * Returns the maximum single-vertex heading change (radians) found along that window.
-   * Used by corner-braking logic to decide whether to release throttle before a turn.
-   */
-  _scanPathCurvature(fromIndex, maxDistance) {
-    let accumulated = 0;
-    let maxAngle = 0;
-    for (let i = fromIndex; i < this.path.length - 2; i++) {
-      const p0 = this.path[i];
-      const p1 = this.path[i + 1];
-      const p2 = this.path[i + 2];
-      const segLen = Math.sqrt((p1.x - p0.x) ** 2 + (p1.z - p0.z) ** 2);
-      accumulated += segLen;
-      if (accumulated > maxDistance) break;
-
-      const angle1 = Math.atan2(p1.x - p0.x, p1.z - p0.z);
-      const angle2 = Math.atan2(p2.x - p1.x, p2.z - p1.z);
-      let delta = Math.abs(angle2 - angle1);
-      if (delta > Math.PI) delta = 2 * Math.PI - delta;
-      if (delta > maxAngle) maxAngle = delta;
-    }
-    return maxAngle;
+    this._spawnRecovery.respawnFacingTarget(targetWaypoint);
   }
 
   /**
@@ -944,72 +409,14 @@ export class AIDriver {
    * Prefers a recent path waypoint; falls back to a radial sweep.
    */
   _findClearPosition(currentPos) {
-    // 1. Walk back along the recorded path to find the nearest unblocked waypoint
-    for (let i = Math.max(0, this.currentPathIndex - 1); i >= 0; i--) {
-      const wp = this.path[i];
-      const cell = this.worldToGrid(wp.x, wp.z);
-      if (!this.isBlocked(cell.x, cell.z)) {
-        // Also verify it's not too far away (don't teleport across the map)
-        const dx = wp.x - currentPos.x;
-        const dz = wp.z - currentPos.z;
-        if (dx * dx + dz * dz < 900) { // 30² = 900
-          return { x: wp.x, z: wp.z };
-        }
-      }
-    }
-
-    // 2. Radial sweep: try increasingly large distances in 16 directions
-    const angles = 16;
-    for (let radius = 2; radius <= 12; radius += 2) {
-      for (let a = 0; a < angles; a++) {
-        const angle = (a / angles) * Math.PI * 2;
-        const candidateX = currentPos.x + Math.cos(angle) * radius;
-        const candidateZ = currentPos.z + Math.sin(angle) * radius;
-        const cell = this.worldToGrid(candidateX, candidateZ);
-        if (this.isValidCell(cell.x, cell.z) && !this.isBlocked(cell.x, cell.z)) {
-          return { x: candidateX, z: candidateZ };
-        }
-      }
-    }
-
-    // 3. Last resort: stay put
-    return { x: currentPos.x, z: currentPos.z };
+    return this._spawnRecovery.findClearPosition(currentPos);
   }
 
   /**
    * Update visual debug representation of path
    */
   updateDebugVisualization() {
-    if (!this.scene || !this.track || !this.debugEnabled) return;
-    
-    // Clean up old debug markers
-    this.debugLines.forEach(mesh => mesh.dispose());
-    this.debugLines = [];
-    
-    // Create spheres along the path
-    for (let i = 0; i < this.path.length; i += 5) { // Every 5th waypoint to reduce clutter
-      const wp = this.path[i];
-      const sphere = MeshBuilder.CreateSphere(`pathDebug${i}`, { diameter: 0.5 }, this.scene);
-      sphere.position.x = wp.x;
-      sphere.position.y = this._terrainQuery.heightAt(wp.x, wp.z) + 1;
-      sphere.position.z = wp.z;
-      
-      const mat = new StandardMaterial(`pathDebugMat${i}`, this.scene);
-      mat.diffuseColor = new Color3(1, 1, 0);
-      mat.emissiveColor = new Color3(0.5, 0.5, 0);
-      sphere.material = mat;
-      
-      this.debugLines.push(sphere);
-    }
-    
-    // Create target marker if it doesn't exist
-    if (!this.debugTarget) {
-      this.debugTarget = MeshBuilder.CreateSphere('aiTarget', { diameter: 1 }, this.scene);
-      const targetMat = new StandardMaterial('aiTargetMat', this.scene);
-      targetMat.diffuseColor = new Color3(0, 1, 0);
-      targetMat.emissiveColor = new Color3(0, 0.5, 0);
-      this.debugTarget.material = targetMat;
-    }
+    this._debugRenderer.updateVisualization();
   }
 }
 
