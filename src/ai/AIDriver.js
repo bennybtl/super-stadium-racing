@@ -72,6 +72,11 @@ export class AIDriver {
     this.positionStuckTimer = 0;
     this.positionStuckThreshold = 3000; // 3 seconds without movement
     this.positionStuckMinDist = 1.0;   // must move at least 1 unit per second
+
+    // Wall-press stuck detection: AI is applying throttle but barely moving (pinned against wall)
+    this.wallPressTimer = 0;
+    this.wallPressThreshold = 3000;  // 3 seconds
+    this.wallPressMaxSpeed = 2.5;    // below this forward speed counts as "pressing a wall"
     
     // Pause flag — when true, getInput returns all-false
     this.paused = false;
@@ -79,6 +84,10 @@ export class AIDriver {
     // Other truck instances used for vehicle-to-vehicle avoidance.
     // Set via setOtherTrucks() once all trucks have been created.
     this.otherTrucks = [];
+
+    // Static body collision manager — set via setStaticBodyCollisionManager()
+    // so respawnFacingTarget can flush prevPos after teleporting.
+    this._staticBodyCollisionManager = null;
 
     // Debug visualization — enabled state is driven by the global DebugManager store
     this._debugStore = useDebugStore();
@@ -243,6 +252,13 @@ export class AIDriver {
    */
   setOtherTrucks(trucks) {
     this.otherTrucks = trucks;
+  }
+
+  /**
+   * Provide the StaticBodyCollisionManager so respawns flush stale prevPos.
+   */
+  setStaticBodyCollisionManager(mgr) {
+    this._staticBodyCollisionManager = mgr;
   }
 
   /**
@@ -668,10 +684,26 @@ export class AIDriver {
         this.respawnFacingTarget(targetWaypoint);
         this.stuckTimer = 0;
         this.positionStuckTimer = 0;
+        this.wallPressTimer = 0;
         this.lastCheckedPosition = currentPos;
       }
     } else {
       this.stuckTimer = 0;
+    }
+
+    // Stuck detection — wall-press case: throttle is on but forward speed is very low
+    // (truck is pinned against a wall or driving along it without making track progress)
+    if (input.forward && fwdSpeed < this.wallPressMaxSpeed) {
+      this.wallPressTimer += 16.67;
+      if (this.wallPressTimer >= this.wallPressThreshold && this.truckMesh) {
+        this.respawnFacingTarget(targetWaypoint);
+        this.wallPressTimer = 0;
+        this.positionStuckTimer = 0;
+        this.stuckTimer = 0;
+        this.lastCheckedPosition = currentPos;
+      }
+    } else {
+      this.wallPressTimer = 0;
     }
 
     // Stuck detection — position hasn't changed in 3 seconds
@@ -688,6 +720,7 @@ export class AIDriver {
             this.respawnFacingTarget(targetWaypoint);
             this.positionStuckTimer = 0;
             this.stuckTimer = 0;
+            this.wallPressTimer = 0;
           }
         } else {
           this.positionStuckTimer = 0;
@@ -805,6 +838,33 @@ export class AIDriver {
   }
 
   /**
+   * Snap currentPathIndex to the closest waypoint to `pos`, then advance it
+   * by a small look-ahead so the AI immediately drives away from the spawn
+   * rather than toward the waypoint it's already sitting on top of.
+   */
+  _snapPathIndexToPosition(pos) {
+    if (!this.path || this.path.length === 0) return;
+
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < this.path.length; i++) {
+      const wp = this.path[i];
+      const dx = wp.x - pos.x;
+      const dz = wp.z - pos.z;
+      const d = dx * dx + dz * dz;
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+
+    // Advance a few waypoints so the first target is clearly ahead of the truck,
+    // not right underneath it (which would produce a random steering direction).
+    const ADVANCE = 5;
+    this.currentPathIndex = (bestIdx + ADVANCE) % this.path.length;
+  }
+
+  /**
    * Respawn truck facing target waypoint, moving it clear of any nearby walls first.
    */
   respawnFacingTarget(targetWaypoint) {
@@ -842,7 +902,13 @@ export class AIDriver {
       this.truck.physics.body.setLinearVelocity(new Vector3(0, 0, 0));
       this.truck.physics.body.setAngularVelocity(new Vector3(0, 0, 0));
     }
-    
+
+    this._staticBodyCollisionManager?.notifyTeleport(this.truck);
+
+    // Re-snap the path index to the closest waypoint ahead of the new spawn position
+    // so the AI doesn't chase a stale waypoint that routes it through a wall.
+    this._snapPathIndexToPosition(spawnPos);
+
     // console.log(`[AIDriver] Respawned at (${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(1)}) facing ${(targetHeading * 180 / Math.PI).toFixed(1)}°`);
   }
 

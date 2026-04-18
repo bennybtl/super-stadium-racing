@@ -270,6 +270,9 @@ export class RaceMode extends BaseMode {
     const truckCollisionManager = new TruckCollisionManager();
     const staticBodyCollisionManager = new StaticBodyCollisionManager(scene);
 
+    // Give AI drivers a reference to the collision manager so respawns flush prevPos
+    aiDrivers.forEach(d => d.setStaticBodyCollisionManager(staticBodyCollisionManager));
+
     // -- Input --
     const inputManager = new InputManager(playerTruckData.truck, cameraController);
     this.inputManager = inputManager;
