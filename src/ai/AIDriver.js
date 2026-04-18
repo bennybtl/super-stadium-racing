@@ -73,7 +73,6 @@ export class AIDriver {
     // Stuck detection
     this.stuckTimer = 0;
     this.stuckThreshold = 3000; // 3 seconds in milliseconds
-    this.lastPosition = null;
     this.truckMesh = null; // Will be set after truck creation
     // Position-based stuck detection: sample every second, trigger if barely moved
     this.positionCheckTimer = 0;
@@ -84,8 +83,6 @@ export class AIDriver {
     this.positionStuckMinDist = 1.0;   // must move at least 1 unit per second
 
     // Wall-press stuck detection: AI is applying throttle but barely moving (pinned against wall)
-    this.wallPressTimer = 0;
-    this.wallPressThreshold = 3000;  // 3 seconds
     this.wallPressMaxSpeed = 2.5;    // below this forward speed counts as "pressing a wall"
     
     // Pause flag — when true, getInput returns all-false
@@ -558,34 +555,20 @@ export class AIDriver {
       right: isActuallyReversing ? turnStrength < -STEERING_THRESHOLD : turnStrength > STEERING_THRESHOLD
     };
     
-    // Stuck detection — no-throttle case
+    // Stuck detection — control-input stalls
+    // Case A: no throttle intent for too long
+    // Case B: throttle held but forward speed stays very low (wall press)
     const currentPos = { x: position.x, z: position.z };
-    if (!input.forward && !input.back) {
+    const controlStall = (!input.forward && !input.back) ||
+      (input.forward && fwdSpeed < this.wallPressMaxSpeed);
+
+    if (controlStall) {
       this.stuckTimer += dt;
       if (this.stuckTimer >= this.stuckThreshold && this.truckMesh) {
-        this.respawnFacingTarget(targetWaypoint);
-        this.stuckTimer = 0;
-        this.positionStuckTimer = 0;
-        this.wallPressTimer = 0;
-        this.lastCheckedPosition = currentPos;
+        this._respawnFromStuck(targetWaypoint, currentPos);
       }
     } else {
       this.stuckTimer = 0;
-    }
-
-    // Stuck detection — wall-press case: throttle is on but forward speed is very low
-    // (truck is pinned against a wall or driving along it without making track progress)
-    if (input.forward && fwdSpeed < this.wallPressMaxSpeed) {
-      this.wallPressTimer += dt;
-      if (this.wallPressTimer >= this.wallPressThreshold && this.truckMesh) {
-        this.respawnFacingTarget(targetWaypoint);
-        this.wallPressTimer = 0;
-        this.positionStuckTimer = 0;
-        this.stuckTimer = 0;
-        this.lastCheckedPosition = currentPos;
-      }
-    } else {
-      this.wallPressTimer = 0;
     }
 
     // Stuck detection — position hasn't changed in 3 seconds
@@ -599,10 +582,7 @@ export class AIDriver {
         if (moved < this.positionStuckMinDist) {
           this.positionStuckTimer += this.positionCheckInterval;
           if (this.positionStuckTimer >= this.positionStuckThreshold && this.truckMesh) {
-            this.respawnFacingTarget(targetWaypoint);
-            this.positionStuckTimer = 0;
-            this.stuckTimer = 0;
-            this.wallPressTimer = 0;
+            this._respawnFromStuck(targetWaypoint, currentPos);
           }
         } else {
           this.positionStuckTimer = 0;
@@ -610,8 +590,6 @@ export class AIDriver {
       }
       this.lastCheckedPosition = currentPos;
     }
-
-    this.lastPosition = currentPos;
     
     // Update debug visualization
     if (this.debugEnabled && this.debugTarget) {
@@ -711,7 +689,16 @@ export class AIDriver {
   reset() {
     this.currentPathIndex = 0;
     this.stuckTimer = 0;
-    this.lastPosition = null;
+    this.positionStuckTimer = 0;
+    this.positionCheckTimer = 0;
+    this.lastCheckedPosition = null;
+  }
+
+  _respawnFromStuck(targetWaypoint, currentPos) {
+    this.respawnFacingTarget(targetWaypoint);
+    this.stuckTimer = 0;
+    this.positionStuckTimer = 0;
+    this.lastCheckedPosition = currentPos;
   }
 
   /**
