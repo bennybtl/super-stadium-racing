@@ -47,17 +47,17 @@ export class AIDriver {
       steeringPrecision = 1.0, // Good: 1.0, OK: 0.85, Bad: 0.7
     } = skillConfig;
     
-    // Pathfinding state
+    // Path-following state
     this.path = [];
     this.currentPathIndex = 0;
     this.currentCheckpointTarget = 0;
     this.lastCheckpointPassed = 0;
 
-    // Telemetry-driven path — when set, this replaces the A* path.
+    // Telemetry-driven path — when set, this replaces the authored/checkpoint path.
     // Each entry is { x, z, speed } where speed is the target forward speed.
     this._usingTelemetry = false;
     
-    // Grid for pathfinding (simplified world representation)
+    // Lightweight occupancy grid used for wall/curb blocked checks.
     this.gridSize = 160; // Match terrain size
     this.gridResolution = 2; // 2 units per cell
     this.gridCells = Math.floor(this.gridSize / this.gridResolution);
@@ -129,8 +129,7 @@ export class AIDriver {
   get debugEnabled() { return this._debugStore?.visible ?? false; }
 
   /**
-   * Pre-calculate the full path through every checkpoint once at race start.
-   * Chains synchronous A* calls: start → cp[0] → cp[1] → … → cp[N-1] → (loop back).
+  * Pre-calculate the full path through every checkpoint once at race start.
    * The result is stored in this.path and never changes during the race.
    * this.checkpointPathIndices[i] records the path index where segment i begins,
    * allowing onCheckpointPassed to quickly advance currentPathIndex.
@@ -297,14 +296,14 @@ export class AIDriver {
 
   /**
    * Load a pre-built telemetry waypoint array produced by TelemetryPlayer.
-   * Replaces the A*-generated path with the player-recorded racing line.
+  * Replaces the authored/checkpoint path with the player-recorded racing line.
    * Each waypoint must be { x, z, speed }.
    * @param {object[]|null} waypoints
    */
   loadTelemetry(waypoints) {
     if (!waypoints || waypoints.length === 0) {
       this._usingTelemetry = false;
-      console.debug('[AIDriver] No telemetry; using A* path.');
+      console.debug('[AIDriver] No telemetry; using authored/checkpoint path.');
       return;
     }
     this.path = waypoints; // { x, z, speed }
@@ -346,140 +345,6 @@ export class AIDriver {
     checkpoints.sort((a, b) => a.index - b.index);
         
     return checkpoints;
-  }
-
-  /**
-   * A* pathfinding from start to goal
-   */
-  findPath(start, goal) {
-    const startCell = this.worldToGrid(start.x, start.z);
-    const goalCell = this.worldToGrid(goal.x, goal.z);
-    
-    // If start cell is blocked, fall back to grid centre
-    if (this.isBlocked(startCell.x, startCell.z)) {
-      startCell.x = this.gridCells / 2;
-      startCell.z = this.gridCells / 2;
-    }
-    
-    const openSet = [startCell];
-    const cameFrom = new Map();
-    const gScore = new Map();
-    const fScore = new Map();
-    const closedSet = new Set();
-    
-    const key = (x, z) => `${x},${z}`;
-    
-    gScore.set(key(startCell.x, startCell.z), 0);
-    fScore.set(key(startCell.x, startCell.z), this.heuristic(startCell, goalCell));
-    
-    let iterations = 0;
-    
-    while (openSet.length > 0) {
-      iterations++;
-      // Find node with lowest fScore
-      let current = openSet[0];
-      let currentIndex = 0;
-      for (let i = 1; i < openSet.length; i++) {
-        const currentF = fScore.get(key(current.x, current.z));
-        const nodeF = fScore.get(key(openSet[i].x, openSet[i].z));
-        if (nodeF !== undefined && (currentF === undefined || nodeF < currentF)) {
-          current = openSet[i];
-          currentIndex = i;
-        }
-      }
-      
-      // Check if reached goal
-      if (Math.abs(current.x - goalCell.x) <= 1 && Math.abs(current.z - goalCell.z) <= 1) {
-        return this.reconstructPath(cameFrom, current, goal);
-      }
-      
-      // Remove current from openSet and add to closed
-      openSet.splice(currentIndex, 1);
-      closedSet.add(key(current.x, current.z));
-      
-      // Check neighbors
-      const neighbors = this.getNeighbors(current.x, current.z);
-      for (const neighbor of neighbors) {
-        const neighborKey = key(neighbor.x, neighbor.z);
-        
-        // Skip if already evaluated
-        if (closedSet.has(neighborKey)) {
-          continue;
-        }
-        
-        const currentG = gScore.get(key(current.x, current.z));
-        if (currentG === undefined) {
-          continue;
-        }
-        
-        const tentativeG = currentG + this.distance(current, neighbor);
-        const existingG = gScore.get(neighborKey);
-        
-        if (existingG === undefined || tentativeG < existingG) {
-          cameFrom.set(neighborKey, current);
-          gScore.set(neighborKey, tentativeG);
-          fScore.set(neighborKey, tentativeG + this.heuristic(neighbor, goalCell));
-          
-          if (!openSet.some(n => n.x === neighbor.x && n.z === neighbor.z)) {
-            openSet.push(neighbor);
-          }
-        }
-      }
-      
-      // Safety check: if openSet gets too large, bail out
-      if (openSet.length > 1000) {
-        console.warn('[AIDriver] Pathfinding exceeded limit, using direct path');
-        return [start, goal];
-      }
-    }
-    
-    // No path found, return direct line
-    console.warn('[AIDriver] No path found, using direct path');
-    return [start, goal];
-  }
-
-  /**
-   * Reconstruct path from A* came-from map
-   */
-  reconstructPath(cameFrom, current, goal) {
-    const path = [goal];
-    const key = (x, z) => `${x},${z}`;
-    
-    while (cameFrom.has(key(current.x, current.z))) {
-      const worldPos = this.gridToWorld(current.x, current.z);
-      path.unshift(worldPos);
-      current = cameFrom.get(key(current.x, current.z));
-    }
-    
-    return path;
-  }
-
-  /**
-   * Get valid neighboring cells
-   */
-  getNeighbors(x, z) {
-    const neighbors = [];
-    const directions = [
-      { x: 0, z: 1 },   // Forward
-      { x: 0, z: -1 },  // Back
-      { x: 1, z: 0 },   // Right
-      { x: -1, z: 0 },  // Left
-      { x: 1, z: 1 },   // Diagonal
-      { x: -1, z: 1 },
-      { x: 1, z: -1 },
-      { x: -1, z: -1 }
-    ];
-    
-    for (const dir of directions) {
-      const nx = x + dir.x;
-      const nz = z + dir.z;
-      
-      if (this.isValidCell(nx, nz) && !this.isBlocked(nx, nz)) {
-        neighbors.push({ x: nx, z: nz });
-      }
-    }
-    
-    return neighbors;
   }
 
   /**
@@ -544,23 +409,6 @@ export class AIDriver {
       x: gridX * this.gridResolution - halfSize + this.gridResolution / 2,
       z: gridZ * this.gridResolution - halfSize + this.gridResolution / 2
     };
-  }
-
-  /**
-   * Heuristic for A* (Euclidean distance)
-   */
-  heuristic(a, b) {
-    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.z - b.z, 2));
-  }
-
-  /**
-   * Distance between adjacent cells
-   */
-  distance(a, b) {
-    // Diagonal moves cost more
-    const dx = Math.abs(a.x - b.x);
-    const dz = Math.abs(a.z - b.z);
-    return (dx + dz === 2) ? 1.414 : 1.0;
   }
 
   /**
