@@ -455,7 +455,13 @@ export class RaceMode extends DriveMode {
         const truckInput = (isCoasting || !truckData.isPlayer)
           ? { forward: false, back: false, left: false, right: false }
           : input;
-        const debugInfo = truckData.truck.update(truckInput, dt, terrainManager, currentTrack);
+        const debugInfo = truckData.truck.update(
+          truckInput,
+          dt,
+          terrainManager,
+          currentTrack,
+          truckData.isPlayer
+        );
         if (truckData.isPlayer) {
           playerDebugInfo = debugInfo;
         }

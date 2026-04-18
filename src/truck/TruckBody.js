@@ -42,6 +42,8 @@ export class TruckBody {
     this._wheelMaxDrop   = (g.maxDrop ?? 0.32);
     this._wheelMaxRise   = (g.maxRise ?? 0.15);
     this._wheelFollowMinGroundedness = (g.followMinGroundedness ?? 0.2);
+    // Cap expensive wheel surface sampling (raycasts) to a fixed cadence.
+    this._wheelSampleInterval = g.surfaceSampleInterval ?? (1 / 10);
 
     // Body OBJ URL — resolved by VehicleLoader and stored on the def
     this._modelUrl = vehicleDef?.modelUrl ?? null;
@@ -79,6 +81,13 @@ export class TruckBody {
 
     this._parts = [];   // all meshes — for disposal
     this._wheels = [];  // { mesh, isFront, side: 'L'|'R', baseLocalY }
+    this._sampledWheelBaseY = [];
+    this._hasWheelSamples = false;
+    this._wheelSampleTimer = 0;
+
+    // Reused temporaries for wheel anchor world transform (avoid per-frame allocs)
+    this._tmpAnchorLocal = new Vector3();
+    this._tmpAnchorWorld = new Vector3();
 
     this._steerAngle = 0;  // current front-wheel steer angle (radians)
 
@@ -105,6 +114,9 @@ export class TruckBody {
       this._wheels.push(entry);
       this._loadTireMesh({ name: `wheel_${def.id}`, position: new Vector3(def.x, baseY, def.z), entry, scale: def.scale });
     }
+
+    // Default to fully extended visual drop until first terrain sample.
+    this._sampledWheelBaseY = this._wheels.map(w => w.baseLocalY - this._wheelMaxDrop);
   }
 
   async _loadBody() {
@@ -245,9 +257,12 @@ export class TruckBody {
       this._wheelRoot.rotation.z = -(state.currentRoll ?? 0);
     }
 
-    let sampledWheelBaseY = null;
+    let sampledWheelBaseY = this._hasWheelSamples ? this._sampledWheelBaseY : null;
     if (sampleSurfaceY && groundedness >= this._wheelFollowMinGroundedness) {
-      sampledWheelBaseY = new Array(this._wheels.length);
+      this._wheelSampleTimer -= dt;
+      const shouldResample = this._wheelSampleTimer <= 0;
+
+      if (shouldResample) {
       const parentY = this.parent.position.y;
       const wheelRootY = this._wheelRoot.position.y;
       const fromY = parentY + 2;
@@ -255,16 +270,22 @@ export class TruckBody {
 
       for (let i = 0; i < this._wheels.length; i++) {
         const w = this._wheels[i];
-        const anchorWorld = Vector3.TransformCoordinates(
-          new Vector3(w.anchorX, 0, w.anchorZ),
-          world
-        );
-        const floorY = sampleSurfaceY(anchorWorld.x, anchorWorld.z, fromY, terrainY ?? 0);
+        this._tmpAnchorLocal.set(w.anchorX, 0, w.anchorZ);
+        Vector3.TransformCoordinatesToRef(this._tmpAnchorLocal, world, this._tmpAnchorWorld);
+        const floorY = sampleSurfaceY(this._tmpAnchorWorld.x, this._tmpAnchorWorld.z, fromY, terrainY ?? 0);
         const targetBaseY = floorY + this._wheelRadius - parentY - wheelRootY;
         const minBaseY = w.baseLocalY - this._wheelMaxDrop;
         const maxBaseY = w.baseLocalY + this._wheelMaxRise;
-        sampledWheelBaseY[i] = Math.max(minBaseY, Math.min(maxBaseY, targetBaseY));
+        this._sampledWheelBaseY[i] = Math.max(minBaseY, Math.min(maxBaseY, targetBaseY));
       }
+
+        sampledWheelBaseY = this._sampledWheelBaseY;
+        this._hasWheelSamples = true;
+        this._wheelSampleTimer = this._wheelSampleInterval;
+      }
+    } else {
+      // Force immediate resample when ground-following becomes active again.
+      this._wheelSampleTimer = 0;
     }
 
     this._animateWheels(state, speed, dt, input, sampledWheelBaseY);

@@ -1,5 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 
+const UP = new Vector3(0, 1, 0);
+
 /**
  * Handles input processing and acceleration/braking
  */
@@ -8,13 +10,15 @@ export class Controls {
     this.state = state;
     this.brakingToStop = false; // Track if we're holding brake at stop
     this.lastBackInput = false;  // Track back button state
+    this._forward = new Vector3();
+    this._surfaceFwd = new Vector3();
   }
 
   updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
     if (groundedness > 0.1) {
       // Invert steering when reversing so the truck turns the natural direction
-      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-      const fwdSpeed = this.state.velocity.dot(forward);
+      this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+      const fwdSpeed = this.state.velocity.dot(this._forward);
       const steerSign = fwdSpeed < 0 ? -1 : 1;
 
       // Stationary spin factor — controls how much turn authority the truck has at rest.
@@ -47,45 +51,77 @@ export class Controls {
 
   handleForwardInput(forward, deltaTime) {
     // Project forward direction onto the surface tangent plane so engine force follows the slope.
-    const normal = this.state.surfaceNormal ?? new Vector3(0, 1, 0);
-    const surfaceFwd = forward.subtract(normal.scale(forward.dot(normal)));
-    const sfLen = surfaceFwd.length();
-    const accelDir = sfLen > 0.001 ? surfaceFwd.scaleInPlace(1 / sfLen) : forward;
+    const normal = this.state.surfaceNormal ?? UP;
+    const fwdDotNormal = forward.dot(normal);
+    this._surfaceFwd.x = forward.x - normal.x * fwdDotNormal;
+    this._surfaceFwd.y = forward.y - normal.y * fwdDotNormal;
+    this._surfaceFwd.z = forward.z - normal.z * fwdDotNormal;
+    const sfLen = Math.sqrt(
+      this._surfaceFwd.x * this._surfaceFwd.x +
+      this._surfaceFwd.y * this._surfaceFwd.y +
+      this._surfaceFwd.z * this._surfaceFwd.z
+    );
+    const accelDir = sfLen > 0.001 ? this._surfaceFwd.scaleInPlace(1 / sfLen) : forward;
 
     const forwardSpeed = this.state.velocity.dot(forward);
     
     if (forwardSpeed < -0.5) {
       // Moving backward - brake and reverse direction
-      const brakeForce = this.state.velocity.scale(-5 * deltaTime);
-      this.state.velocity.addInPlace(brakeForce);
-      this.state.velocity.addInPlace(accelDir.scale(this.state.acceleration * 2 * deltaTime));
+      const brakeScale = -5 * deltaTime;
+      this.state.velocity.x += this.state.velocity.x * brakeScale;
+      this.state.velocity.y += this.state.velocity.y * brakeScale;
+      this.state.velocity.z += this.state.velocity.z * brakeScale;
+
+      const accel = this.state.acceleration * 2 * deltaTime;
+      this.state.velocity.x += accelDir.x * accel;
+      this.state.velocity.y += accelDir.y * accel;
+      this.state.velocity.z += accelDir.z * accel;
     } else {
       // Apply boost multipliers if active
       const effectiveAcceleration = this.getEffectiveAcceleration();
       const effectiveMaxSpeed = this.getEffectiveMaxSpeed();
       
-      this.state.velocity.addInPlace(accelDir.scale(effectiveAcceleration * deltaTime));
+      const accel = effectiveAcceleration * deltaTime;
+      this.state.velocity.x += accelDir.x * accel;
+      this.state.velocity.y += accelDir.y * accel;
+      this.state.velocity.z += accelDir.z * accel;
       
-      const speed = this.state.velocity.length();
-      if (speed > effectiveMaxSpeed) {
-        this.state.velocity.normalize().scaleInPlace(effectiveMaxSpeed);
+      const speedSq =
+        this.state.velocity.x * this.state.velocity.x +
+        this.state.velocity.y * this.state.velocity.y +
+        this.state.velocity.z * this.state.velocity.z;
+      const maxSpeedSq = effectiveMaxSpeed * effectiveMaxSpeed;
+      if (speedSq > maxSpeedSq) {
+        const invLen = effectiveMaxSpeed / Math.sqrt(speedSq);
+        this.state.velocity.x *= invLen;
+        this.state.velocity.y *= invLen;
+        this.state.velocity.z *= invLen;
       }
     }
   }
 
   handleBackwardInput(forward, deltaTime) {
-    const normal = this.state.surfaceNormal ?? new Vector3(0, 1, 0);
-    const surfaceFwd = forward.subtract(normal.scale(forward.dot(normal)));
-    const sfLen = surfaceFwd.length();
-    const accelDir = sfLen > 0.001 ? surfaceFwd.scaleInPlace(1 / sfLen) : forward;
+    const normal = this.state.surfaceNormal ?? UP;
+    const fwdDotNormal = forward.dot(normal);
+    this._surfaceFwd.x = forward.x - normal.x * fwdDotNormal;
+    this._surfaceFwd.y = forward.y - normal.y * fwdDotNormal;
+    this._surfaceFwd.z = forward.z - normal.z * fwdDotNormal;
+    const sfLen = Math.sqrt(
+      this._surfaceFwd.x * this._surfaceFwd.x +
+      this._surfaceFwd.y * this._surfaceFwd.y +
+      this._surfaceFwd.z * this._surfaceFwd.z
+    );
+    const accelDir = sfLen > 0.001 ? this._surfaceFwd.scaleInPlace(1 / sfLen) : forward;
 
     const forwardSpeed = this.state.velocity.dot(forward);
     const speed = this.state.velocity.length();
     
     if (forwardSpeed > 0.5) {
       // Moving forward - apply brakes (reduced from full braking power)
-      const brakeForce = this.state.velocity.scale(-this.state.braking * deltaTime);
-      this.state.velocity.addInPlace(brakeForce);
+      const brakeScale = -this.state.braking * deltaTime;
+      this.state.velocity.x += this.state.velocity.x * brakeScale;
+      this.state.velocity.y += this.state.velocity.y * brakeScale;
+      this.state.velocity.z += this.state.velocity.z * brakeScale;
       
       // Mark that we're braking to stop
       if (speed < 2) {
@@ -99,11 +135,16 @@ export class Controls {
       // (this state will be cleared when back input is released)
     } else if (!this.brakingToStop) {
       // Released brake after stop - now can accelerate backward
-      this.state.velocity.addInPlace(accelDir.scale(this.state.acceleration * -2.5 * deltaTime));
+      const accel = this.state.acceleration * -2.5 * deltaTime;
+      this.state.velocity.x += accelDir.x * accel;
+      this.state.velocity.y += accelDir.y * accel;
+      this.state.velocity.z += accelDir.z * accel;
       
       const reverseSpeed = this.state.velocity.dot(forward);
       if (reverseSpeed < this.state.maxReverseSpeed) {
-        this.state.velocity = forward.scale(this.state.maxReverseSpeed);
+        this.state.velocity.x = forward.x * this.state.maxReverseSpeed;
+        this.state.velocity.y = 0;
+        this.state.velocity.z = forward.z * this.state.maxReverseSpeed;
       }
     }
   }
@@ -135,8 +176,8 @@ export class Controls {
     const speedRatio = Math.min(speed / this.state.maxSpeed, 1);
 
     // Detect acceleration state for weight-transfer model.
-    const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-    const fwdSpeed = this.state.velocity.dot(forward);
+    this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    const fwdSpeed = this.state.velocity.dot(this._forward);
     const isAccelerating = !!(input?.forward) && fwdSpeed >= -0.5;
     const isDecelerating = !!(input?.back)    && fwdSpeed >  0.5;
 

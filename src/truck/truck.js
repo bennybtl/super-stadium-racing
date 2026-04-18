@@ -50,11 +50,42 @@ export class Truck {
     this.state = this.createState();
     
     // Initialize subsystems
-    this.particles = new ParticleEffects(this.mesh, scene);
+    this.particles = new ParticleEffects(this.mesh, scene, {
+      qualityScale: this.driver ? 0.45 : 1,
+    });
     const terrainQuery = new TerrainQuery(scene);
-    this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight, terrainQuery);
+    const terrainPhysicsOptions = this.driver
+      ? { normalSampleInterval: 1 / 30 }
+      : { normalSampleInterval: 0 };
+    this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight, terrainQuery, terrainPhysicsOptions);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
+
+    // Reused hot-path temporaries (avoid per-frame allocations)
+    this._forward = new Vector3();
+    this._surfaceSampleTrack = null;
+    this._surfaceSampleFallback = 0;
+    this._surfaceSampler = (x, z, fromY, fallback = this._surfaceSampleFallback) =>
+      this.terrainPhysics.sampleSurfaceYFastAt(x, z, fromY, this._surfaceSampleTrack, fallback);
+
+    // AI trucks can run particle effect updates at a lower cadence.
+    this._particleUpdateInterval = this.driver ? (1 / 30) : 0;
+    this._particleUpdateAccumulator = 0;
+
+    // Reused debug payload to avoid per-frame object allocation.
+    this._debugInfo = {
+      compression: 0,
+      groundedness: 0,
+      penetration: 0,
+      verticalVelocity: 0,
+      speed: 0,
+      effectiveGrip: 0,
+      slipAngle: 0,
+      terrainGripMultiplier: 1,
+      x: 0,
+      y: 0,
+      z: 0,
+    };
 
     // Visual puppet — sits on top of the invisible physics box
     this.body = new TruckBody(this.mesh, scene, shadows, {
@@ -139,11 +170,11 @@ export class Truck {
 
 
 
-  update(input, deltaTime, terrainManager = null, track = null) {
+  update(input, deltaTime, terrainManager = null, track = null, collectDebugInfo = true) {
     // If AI driver, get input from driver
     if (this.driver) {
-      const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-      const fwdSpeed = this.state.velocity.dot(forward);
+      this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+      const fwdSpeed = this.state.velocity.dot(this._forward);
       input = this.driver.getInput(this.mesh.position, this.state.heading, fwdSpeed, deltaTime);
     }
     
@@ -157,9 +188,10 @@ export class Truck {
     let terrainGripMultiplier = 1.0;
     let terrainDragMultiplier = 1.0;
     let terrainRoughness = 0;
+    let terrain = null;
     const isGrounded = penetration > -0.3;
     if (terrainManager && isGrounded) {
-      const terrain = terrainManager.getTerrainAt(this.mesh.position);
+      terrain = terrainManager.getTerrainAt(this.mesh.position);
       terrainGripMultiplier = terrain.gripMultiplier;
       terrainDragMultiplier = terrain.dragMultiplier;
       terrainRoughness = terrain.roughness ?? 0;
@@ -175,7 +207,7 @@ export class Truck {
 
     // Apply roughness bumps — vertical impulses + pitch/roll jitter scaled by terrain and speed
     this.terrainPhysics.applyRoughnessBumps(terrainRoughness, hSpeed, groundedness, deltaTime);
-    const forward = new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     
     // Calculate speed-based factors (use hSpeed so velocity.y doesn't inflate understeer)
     const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor } = this.controls.calculateSpeedFactors(
@@ -184,17 +216,19 @@ export class Truck {
     
     // Handle input
     this.controls.updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime);
-    this.controls.updateAcceleration(input, forward, groundedness, deltaTime);
+    this.controls.updateAcceleration(input, this._forward, groundedness, deltaTime);
 
     // Apply drag
     this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness);
 
     // Apply grip and drift physics — rearTractionFactor encodes weight transfer:
     // throttle loosens rear (mild), braking unloads rear (significant).
-    this.driftPhysics.applyGripAndDrift(hSpeed, forward, effectiveGrip, rearTractionFactor);
+    this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor);
     
     // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)
-    this.mesh.position.addInPlace(this.state.velocity.scale(deltaTime));
+    this.mesh.position.x += this.state.velocity.x * deltaTime;
+    this.mesh.position.y += this.state.velocity.y * deltaTime;
+    this.mesh.position.z += this.state.velocity.z * deltaTime;
 
     // Update rotation
     this.mesh.rotation.y = this.state.heading;
@@ -202,9 +236,9 @@ export class Truck {
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
-    const sampleSurfaceY = (x, z, fromY, fallback = terrainY ?? 0) =>
-      this.terrainPhysics.sampleSurfaceYFastAt(x, z, fromY, track, fallback);
-    this.body.update(this.state, input, hSpeed, deltaTime, terrainY, groundedness, sampleSurfaceY);
+    this._surfaceSampleTrack = track;
+    this._surfaceSampleFallback = terrainY ?? 0;
+    this.body.update(this.state, input, hSpeed, deltaTime, terrainY, groundedness, this._surfaceSampler);
     
     // Sync physics body
     this.syncPhysicsBody();
@@ -212,31 +246,56 @@ export class Truck {
     // Update roll
     this.driftPhysics.updateRoll(this.mesh, hSpeed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
     
-    // Update particle effects
-    this.particles.update(this.state, hSpeed, terrainManager, isGrounded, deltaTime);
-    
+    // Update particle effects (optionally lower-rate for AI trucks)
+    this._particleUpdateAccumulator += deltaTime;
+    if (
+      this._particleUpdateInterval <= 0 ||
+      this._particleUpdateAccumulator >= this._particleUpdateInterval
+    ) {
+      this.particles.update(
+        this.state,
+        hSpeed,
+        terrainManager,
+        isGrounded,
+        this._particleUpdateAccumulator,
+        terrain
+      );
+      this._particleUpdateAccumulator = 0;
+    }
+
+    if (!collectDebugInfo) return null;
+
     // Return debug info
-    return {
-      compression: this.state.suspensionCompression,
-      groundedness,
-      penetration,
-      verticalVelocity: this.state.velocity.y,
-      speed,
-      effectiveGrip,
-      slipAngle: this.state.slipAngle,
-      terrainGripMultiplier,
-      x: this.mesh.position.x,
-      y: this.mesh.position.y,
-      z: this.mesh.position.z
-    };
+    const debug = this._debugInfo;
+    debug.compression = this.state.suspensionCompression;
+    debug.groundedness = groundedness;
+    debug.penetration = penetration;
+    debug.verticalVelocity = this.state.velocity.y;
+    debug.speed = speed;
+    debug.effectiveGrip = effectiveGrip;
+    debug.slipAngle = this.state.slipAngle;
+    debug.terrainGripMultiplier = terrainGripMultiplier;
+    debug.x = this.mesh.position.x;
+    debug.y = this.mesh.position.y;
+    debug.z = this.mesh.position.z;
+    return debug;
   }
 
   syncPhysicsBody() {
     if (this.physics) {
-      this.physics.body.transformNode.position = this.mesh.position.clone();
-      this.physics.body.transformNode.rotationQuaternion = this.mesh.rotationQuaternion ? 
-        this.mesh.rotationQuaternion.clone() : null;
-      this.physics.body.transformNode.rotation = this.mesh.rotation.clone();
+      const node = this.physics.body.transformNode;
+      node.position.copyFrom(this.mesh.position);
+
+      if (this.mesh.rotationQuaternion) {
+        if (!node.rotationQuaternion) {
+          node.rotationQuaternion = this.mesh.rotationQuaternion.clone();
+        } else {
+          node.rotationQuaternion.copyFrom(this.mesh.rotationQuaternion);
+        }
+      } else {
+        node.rotationQuaternion = null;
+        node.rotation.copyFrom(this.mesh.rotation);
+      }
     }
   }
 

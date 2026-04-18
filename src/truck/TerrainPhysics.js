@@ -92,7 +92,7 @@ const ROUGHNESS = {
  * Handles terrain-related physics: gravity, suspension, and slope collision.
  */
 export class TerrainPhysics {
-  constructor(state, halfHeight = _DEFAULT_HALF_HEIGHT, terrainQuery = null) {
+  constructor(state, halfHeight = _DEFAULT_HALF_HEIGHT, terrainQuery = null, options = null) {
     this.state = state;
     this.halfHeight = halfHeight;
     this.gravity = GRAVITY;
@@ -105,6 +105,12 @@ export class TerrainPhysics {
     this.lastFloorY = 0;
     // Smoothed visual pitch derived from velocity vector.
     this._smoothedPitch = 0;
+    this._forward = new Vector3();
+    this._right = new Vector3();
+
+    // 0 = sample terrain normal every frame. >0 = sample at fixed cadence.
+    this._normalSampleInterval = Math.max(0, options?.normalSampleInterval ?? 0);
+    this._normalSampleTimer = 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -124,21 +130,45 @@ export class TerrainPhysics {
     //   • open terrain    → hits the ground mesh
     // Falls back to the analytical path when no TerrainQuery is available.
     let effectiveFloor;
+    const fromY = mesh.position.y + RAY_OFFSET;
     if (this._terrainQuery) {
-      const hit = this._terrainQuery.castDown(
-        mesh.position.x, mesh.position.z, mesh.position.y + RAY_OFFSET
+      // Height-only query is much cheaper than full normal sampling.
+      effectiveFloor = this._terrainQuery.heightAtFast(
+        mesh.position.x,
+        mesh.position.z,
+        fromY,
+        0
       );
-      effectiveFloor        = hit ? hit.y : 0;
-      this._lastFloorNormal = hit?.normal ?? UP;
+
+      // Optionally throttle full normal sampling for non-player trucks.
+      this._normalSampleTimer -= deltaTime;
+      const shouldSampleNormal =
+        this._normalSampleInterval <= 0 ||
+        this._normalSampleTimer <= 0;
+
+      if (shouldSampleNormal) {
+        const hit = this._terrainQuery.castDown(
+          mesh.position.x,
+          mesh.position.z,
+          fromY
+        );
+        if (hit) {
+          effectiveFloor = hit.y;
+          this._lastFloorNormal.copyFrom(hit.normal ?? UP);
+        } else {
+          this._lastFloorNormal.copyFrom(UP);
+        }
+        this._normalSampleTimer = this._normalSampleInterval;
+      }
     } else {
       effectiveFloor        = this._sampleFloorYAt(
         mesh.position.x,
         mesh.position.z,
-        mesh.position.y + RAY_OFFSET,
+        fromY,
         track,
         0
       );
-      this._lastFloorNormal = UP;
+      this._lastFloorNormal.copyFrom(UP);
     }
     this.lastFloorY = effectiveFloor;
 
@@ -185,7 +215,7 @@ export class TerrainPhysics {
   }
 
   updateTerrainOrientation(mesh, deltaTime) {
-    const right = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
+    this._right.set(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
     const normal = this._lastFloorNormal;
 
     // Guard: a surface normal with ny < 0.25 (> ~76° tilt) is likely a bad ray hit.
@@ -193,7 +223,7 @@ export class TerrainPhysics {
 
     const MAX_TILT = Math.PI / 4;
     const targetRoll = Math.max(-MAX_TILT, Math.min(MAX_TILT,
-      Math.atan2(-normal.dot(right), normal.y)
+      Math.atan2(-normal.dot(this._right), normal.y)
     ));
 
     const factor = 1 - Math.exp(-ORIENTATION.fastSmoothingRate * deltaTime);
@@ -229,7 +259,8 @@ export class TerrainPhysics {
 
   /** Unit vector pointing in the truck's current heading direction. */
   _forwardVector() {
-    return new Vector3(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    return this._forward;
   }
 
   /** Heading angle derived from the current horizontal velocity vector. */
@@ -253,7 +284,7 @@ export class TerrainPhysics {
    */
   _sampleFloorYAt(x, z, fromY, track, fallback = 0) {
     if (this._terrainQuery) {
-      return this._terrainQuery.castDown(x, z, fromY)?.y ?? fallback;
+      return this._terrainQuery.heightAtFast(x, z, fromY, fallback);
     }
 
     if (!track) return fallback;
@@ -394,6 +425,20 @@ export class TerrainPhysics {
     // Base compression from current overlap depth.
     let baseCompression = Math.max(0, Math.min(1, penetration / SPRING.compressionNorm));
 
+    // Reuse downhill probe values between follow/boost passes.
+    let sampledHeightHere = null;
+    const sampleHeightHere = () => {
+      if (sampledHeightHere !== null) return sampledHeightHere;
+      sampledHeightHere = this._sampleFloorYAt(
+        mesh.position.x,
+        mesh.position.z,
+        mesh.position.y + RAY_OFFSET,
+        track,
+        0
+      );
+      return sampledHeightHere;
+    };
+
     // Pass 1: slightly above terrain but moving downhill — inject fake compression
     // so the truck stays "grounded" through the descent.
     if (
@@ -402,13 +447,7 @@ export class TerrainPhysics {
       penetration > -DOWNHILL_FOLLOW.maxGap &&
       speed > DOWNHILL_FOLLOW.minSpeed
     ) {
-      const heightHere  = this._sampleFloorYAt(
-        mesh.position.x,
-        mesh.position.z,
-        mesh.position.y + RAY_OFFSET,
-        track,
-        0
-      );
+      const heightHere  = sampleHeightHere();
       const heightAhead = this._sampleFloorYAt(
         mesh.position.x + forward.x * DOWNHILL_FOLLOW.lookAhead,
         mesh.position.z + forward.z * DOWNHILL_FOLLOW.lookAhead,
@@ -444,13 +483,7 @@ export class TerrainPhysics {
       hasSurfaceSampling &&
       speed > DOWNHILL_BOOST.minSpeed
     ) {
-      const heightHere  = this._sampleFloorYAt(
-        mesh.position.x,
-        mesh.position.z,
-        mesh.position.y + RAY_OFFSET,
-        track,
-        0
-      );
+      const heightHere  = sampleHeightHere();
       const heightAhead = this._sampleFloorYAt(
         mesh.position.x + forward.x * DOWNHILL_BOOST.lookAhead,
         mesh.position.z + forward.z * DOWNHILL_BOOST.lookAhead,

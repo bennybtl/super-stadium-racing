@@ -86,6 +86,9 @@ const ROLL_SPEED_AIRBORNE = 3;
 export class DriftPhysics {
   constructor(state) {
     this.state = state;
+    this._velocityDir = new Vector3();
+    this._right = new Vector3();
+    this._rollRight = new Vector3();
   }
 
   applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0) {
@@ -109,7 +112,8 @@ export class DriftPhysics {
       // effects don't linger.
       const forwardVelocity = this.state.velocity.dot(forward);
       const vy = this.state.velocity.y;
-      this.state.velocity = forward.scale(forwardVelocity); // strip lateral component
+      this.state.velocity.x = forward.x * forwardVelocity;
+      this.state.velocity.z = forward.z * forwardVelocity;
       this.state.velocity.y = vy;
       this.state.slipAngle = 0;
       this.state.isDrifting = false;
@@ -120,18 +124,26 @@ export class DriftPhysics {
     // No traction correction while airborne — effectiveGrip reaches 0 when groundedness = 0
     if (effectiveGrip <= 0) return;
 
-    const velocityDir = this.state.velocity.clone().normalize();
+    const vx = this.state.velocity.x;
+    const vy = this.state.velocity.y;
+    const vz = this.state.velocity.z;
+    const vLen = Math.sqrt(vx * vx + vy * vy + vz * vz);
+    if (vLen <= 1e-6) return;
+    const invVLen = 1 / vLen;
+    this._velocityDir.set(vx * invVLen, vy * invVLen, vz * invVLen);
+
     const forwardVelocity = this.state.velocity.dot(forward);
     const isReversing = forwardVelocity < 0;
 
-    const targetDir = isReversing ? forward.scale(-1) : forward;
-
     // Slip angle: angle between velocity direction and heading direction
-    this.state.slipAngle = Math.acos(Math.max(-1, Math.min(1, targetDir.dot(velocityDir))));
+    const targetDot = isReversing
+      ? -(forward.x * this._velocityDir.x + forward.y * this._velocityDir.y + forward.z * this._velocityDir.z)
+      :  (forward.x * this._velocityDir.x + forward.y * this._velocityDir.y + forward.z * this._velocityDir.z);
+    this.state.slipAngle = Math.acos(Math.max(-1, Math.min(1, targetDot)));
 
     // Right vector — XZ perpendicular to heading
-    const right = new Vector3(forward.z, 0, -forward.x);
-    const lateralSpeed = this.state.velocity.dot(right);
+    this._right.set(forward.z, 0, -forward.x);
+    const lateralSpeed = this.state.velocity.dot(this._right);
 
     // Two-regime grip curve:
     //   Grip zone  (slip ≤ driftThresh): strong correction → normal cornering.
@@ -165,9 +177,10 @@ export class DriftPhysics {
     // is left untouched. When grip is low (drifting) the lateral speed bleeds off
     // slowly, giving a loose, momentum-driven feel rather than a sharp snap-back.
     const newLateralSpeed = lateralSpeed * (1 - gripMultiplier);
-    const vy = this.state.velocity.y;
-    this.state.velocity = forward.scale(forwardVelocity).add(right.scale(newLateralSpeed));
-    this.state.velocity.y = vy;
+    const velocityY = this.state.velocity.y;
+    this.state.velocity.x = forward.x * forwardVelocity + this._right.x * newLateralSpeed;
+    this.state.velocity.z = forward.z * forwardVelocity + this._right.z * newLateralSpeed;
+    this.state.velocity.y = velocityY;
 
     this.state.isSpinningOut = this.state.slipAngle > SPINOUT_SLIP_THRESHOLD && gripMultiplier < SPINOUT_GRIP_THRESHOLD;
     this.state.isDrifting = this.state.slipAngle > driftThresh;
@@ -200,8 +213,8 @@ export class DriftPhysics {
 
     // Calculate target roll based on turning
     if (groundedness > 0.5 && speed > 1) {
-      const right = new Vector3(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
-      const lateralSpeed = this.state.velocity.dot(right);
+      this._rollRight.set(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
+      const lateralSpeed = this.state.velocity.dot(this._rollRight);
       
       let turnRate = 0;
       if (input.left) turnRate = -effectiveTurnSpeed * speedRatio;
