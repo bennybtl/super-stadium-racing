@@ -1,10 +1,11 @@
-import { TRUCK_RADIUS } from "../constants.js";
+import { TRUCK_HALF_HEIGHT, TRUCK_RADIUS } from "../constants.js";
 
 // Two trucks collide when the distance between their centres is less than the
 // sum of their bounding radii.  We treat each truck as a circle (horizontal
 // plane only) with radius TRUCK_RADIUS.
 const COLLISION_DIST = TRUCK_RADIUS * 2.5;
 const COLLISION_DIST_SQ = COLLISION_DIST * COLLISION_DIST;
+const VERTICAL_CONTACT_SLOP = 0.1;
 const RESTITUTION = 0.35; // 0 = perfectly inelastic, 1 = perfectly elastic
 const FRICTION = 0.075;    // fraction of tangential speed bled off on impact
 
@@ -37,6 +38,8 @@ export class TruckCollisionManager {
         const posB = tB.mesh.position;
         const velA = tA.state.velocity;
         const velB = tB.state.velocity;
+
+        if (!this._hasVerticalContact(tA, tB, posA, posB)) continue;
 
         const dx = posA.x - posB.x;
         const dz = posA.z - posB.z;
@@ -92,6 +95,8 @@ export class TruckCollisionManager {
     const posA = tA.mesh.position;
     const posB = tB.mesh.position;
 
+    if (!this._hasVerticalContact(tA, tB, posA, posB)) return;
+
     const dx = posA.x - posB.x;
     const dz = posA.z - posB.z;
     const distSq = dx * dx + dz * dz;
@@ -130,5 +135,12 @@ export class TruckCollisionManager {
     velA.z -= tz * relVelT * FRICTION;
     velB.x += tx * relVelT * FRICTION;
     velB.z += tz * relVelT * FRICTION;
+  }
+
+  _hasVerticalContact(tA, tB, posA, posB) {
+    const halfA = tA.halfHeight ?? TRUCK_HALF_HEIGHT;
+    const halfB = tB.halfHeight ?? TRUCK_HALF_HEIGHT;
+    const maxCenterDeltaY = halfA + halfB + VERTICAL_CONTACT_SLOP;
+    return Math.abs(posA.y - posB.y) <= maxCenterDeltaY;
   }
 }
