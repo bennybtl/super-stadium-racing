@@ -113,7 +113,8 @@ export class EditorController {
     // Bind event handlers
     this.boundKeyDown = this.handleKeyDown.bind(this);
     this.boundKeyUp = this.handleKeyUp.bind(this);
-    this.boundPointerDown = this.handlePointerDown.bind(this);
+    this.boundPointerEvent = this.handlePointerEvent.bind(this);
+    this._mouseDrag = null;
     
     // Track being edited
     this.currentTrack = null;
@@ -138,7 +139,7 @@ export class EditorController {
     // Add event listeners
     window.addEventListener('keydown', this.boundKeyDown, true); // Use capture phase
     window.addEventListener('keyup', this.boundKeyUp);
-    this.scene.onPointerObservable.add(this.boundPointerDown);
+    this.scene.onPointerObservable.add(this.boundPointerEvent);
 
     // Create highlight material for selected checkpoint
     this.checkpointEditor.createMaterials();
@@ -193,7 +194,8 @@ export class EditorController {
     // Remove event listeners
     window.removeEventListener('keydown', this.boundKeyDown, true);
     window.removeEventListener('keyup', this.boundKeyUp);
-    this.scene.onPointerObservable.removeCallback(this.boundPointerDown);
+    this.scene.onPointerObservable.removeCallback(this.boundPointerEvent);
+    this._mouseDrag = null;
     
     // Reset key states
     Object.keys(this.keys).forEach(key => this.keys[key] = false);
@@ -733,6 +735,111 @@ export class EditorController {
     this.camera.setTarget(currentTarget.add(delta));
   }
 
+  handlePointerEvent(pointerInfo) {
+    if (!this.isActive) return;
+
+    if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+      this.handlePointerDown(pointerInfo);
+
+      const world = this._pointerWorldXZ();
+      if (world && this._hasDraggableSelection()) {
+        this._mouseDrag = { x: world.x, z: world.z };
+        this.polyWallEditor?.beginDrag?.();
+        this.polyCurbEditor?.beginDrag?.();
+        this.bezierWallEditor?.beginDrag?.();
+      }
+      return;
+    }
+
+    if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+      if (!this._mouseDrag || !this._hasDraggableSelection()) return;
+      const world = this._pointerWorldXZ();
+      if (!world) return;
+
+      const dx = world.x - this._mouseDrag.x;
+      const dz = world.z - this._mouseDrag.z;
+      this._mouseDrag = world;
+
+      if (Math.abs(dx) < 1e-6 && Math.abs(dz) < 1e-6) return;
+      this._moveSelectedByPointerDelta(dx, dz);
+      return;
+    }
+
+    if (pointerInfo.type === PointerEventTypes.POINTERUP) {
+      this._mouseDrag = null;
+      this.polyWallEditor?.endDrag?.();
+      this.polyHillEditor?.endDrag?.();
+      this.polyCurbEditor?.endDrag?.();
+      this.bezierWallEditor?.endDrag?.();
+    }
+  }
+
+  _pointerWorldXZ() {
+    const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+    if (pick?.hit && pick.pickedPoint) {
+      return { x: pick.pickedPoint.x, z: pick.pickedPoint.z };
+    }
+
+    const ray = this.scene.createPickingRay(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      undefined,
+      this.camera
+    );
+    const dirY = ray.direction.y;
+    if (Math.abs(dirY) < 1e-6) return null;
+    const t = -ray.origin.y / dirY;
+    if (t < 0) return null;
+    return {
+      x: ray.origin.x + ray.direction.x * t,
+      z: ray.origin.z + ray.direction.z * t,
+    };
+  }
+
+  _hasDraggableSelection() {
+    return !!(
+      this.checkpointEditor.selected ||
+      this.hillEditor.selected ||
+      this.squareHillEditor.selected ||
+      this.terrainShapeEditor.selected ||
+      this.normalMapDecalEditor.selected ||
+      this.tireStackEditor.selected ||
+      this.flagEditor.selected ||
+      this.trackSignEditor.selected ||
+      this.bannerStringEditor.selected ||
+      this.actionZoneEditor.selected ||
+      this.bridgeEditor?.selected ||
+      this.aiPathEditor?.selected ||
+      this.polyWallEditor?.selectedPoint ||
+      this.polyHillEditor?.selectedPoint ||
+      this.bezierWallEditor?.selectedAnchor ||
+      this.bezierWallEditor?.selectedHandle ||
+      this.polyCurbEditor?.selectedPoint
+    );
+  }
+
+  _moveSelectedByPointerDelta(dx, dz) {
+    const movement = new Vector3(dx, 0, dz);
+
+    if (this.checkpointEditor.selected) this.checkpointEditor.move(movement);
+    else if (this.hillEditor.selected) this.hillEditor.move(movement);
+    else if (this.squareHillEditor.selected) this.squareHillEditor.move(movement);
+    else if (this.terrainShapeEditor.selected) this.terrainShapeEditor.move(movement);
+    else if (this.normalMapDecalEditor.selected) this.normalMapDecalEditor.move(movement);
+    else if (this.tireStackEditor.selected) this.tireStackEditor.move(movement);
+    else if (this.flagEditor.selected) this.flagEditor.move(movement);
+    else if (this.trackSignEditor.selected) this.trackSignEditor.move(movement);
+    else if (this.bannerStringEditor.selected) this.bannerStringEditor.move(movement);
+    else if (this.actionZoneEditor.selected) this.actionZoneEditor.move(movement);
+    else if (this.bridgeEditor?.selected) this.bridgeEditor.move(movement);
+    else if (this.aiPathEditor?.selected) this.aiPathEditor.move(movement);
+    else if (this.polyWallEditor?.selectedPoint) this.polyWallEditor.moveSelectedPoint(dx, dz);
+    else if (this.polyHillEditor?.selectedPoint) this.polyHillEditor.moveSelectedPoint(dx, dz);
+    else if (this.bezierWallEditor?.selectedAnchor) this.bezierWallEditor.moveSelectedAnchor(dx, dz);
+    else if (this.bezierWallEditor?.selectedHandle) this.bezierWallEditor.moveSelectedHandle(dx, dz);
+    else if (this.polyCurbEditor?.selectedPoint) this.polyCurbEditor.moveSelectedPoint(dx, dz);
+  }
+
   handlePointerDown(pointerInfo) {
     if (!this.isActive) return;
     
@@ -1152,6 +1259,9 @@ export class EditorController {
   deselectActionZone()            { this.actionZoneEditor.deselect(); }
   changeActionZoneRadius(val)     { this.actionZoneEditor.changeRadius(val); }
   changeActionZoneType(val)       { this.actionZoneEditor.changeZoneType(val); }
+  changeActionZoneShape(val)      { this.actionZoneEditor.changeShape(val); }
+  insertActionZonePoint()         { this.actionZoneEditor.insertPoint(); }
+  deleteActionZonePoint()         { this.actionZoneEditor.deletePoint(); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }
   duplicateActionZone()           { this.actionZoneEditor.duplicateSelected(); }
 

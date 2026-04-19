@@ -86,6 +86,7 @@ export class PracticeMode extends DriveMode {
 
     // Pre-filter 'slowZone' action zones for per-frame position checks
     const slowZones = this.getSlowZones(currentTrack);
+    const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
@@ -100,6 +101,19 @@ export class PracticeMode extends DriveMode {
       const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
 
       this.applySlowZones(trucks, slowZones);
+
+      const oobRemaining = this.updateOutOfBoundsCountdown({
+        truckId: 'player',
+        truck: playerTruck,
+        outOfBoundsZones,
+        dt,
+        durationSec: 5,
+        onTimeout: () => {
+          this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
+        },
+      });
+      if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
+      else uiManager.showOutOfBoundsCountdown(oobRemaining);
 
       staticBodyCollisionManager.update(trucks);
       tireStackManager.update(trucks, dt);

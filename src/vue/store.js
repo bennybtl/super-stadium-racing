@@ -118,6 +118,8 @@ export const useRaceStore = defineStore('race', () => {
   const timerVisible = ref(false);
   const countdownText = ref('');
   const countdownVisible = ref(false);
+  const oobCountdownVisible = ref(false);
+  const oobCountdownSeconds = ref(0);
 
   // Telemetry recording state — driven by RaceMode via the bridge below
   const telemetryRecording = ref(false);
@@ -151,6 +153,7 @@ export const useRaceStore = defineStore('race', () => {
     boosts, boostActive,
     timerMs, timerVisible,
     countdownText, countdownVisible,
+    oobCountdownVisible, oobCountdownSeconds,
     telemetryRecording, telemetryHasData,
     setTelemetryBridge, toggleTelemetry, exportTelemetry,
   };
@@ -297,7 +300,10 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Action Zone panel ──
   const actionZone = reactive({
     zoneType: 'pickupSpawn',
+    shape: 'circle',
     radius: 15,
+    pointCount: 0,
+    selectedPointIndex: -1,
   });
 
   // ── Poly Curb panel ──
@@ -461,6 +467,9 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Action Zone actions ──
   function setActionZoneRadius(val)   { actionZone.radius   = val; _bridge.value?.changeActionZoneRadius(val); }
   function setActionZoneType(val)     { actionZone.zoneType = val; _bridge.value?.changeActionZoneType(val); }
+  function setActionZoneShape(val)    { actionZone.shape    = val; _bridge.value?.changeActionZoneShape(val); }
+  function insertActionZonePoint()    { _bridge.value?.insertActionZonePoint(); }
+  function deleteActionZonePoint()    { _bridge.value?.deleteActionZonePoint(); }
   function deleteActionZone()         { _bridge.value?.deleteActionZone(); }
   function duplicateActionZone()      { _bridge.value?.duplicateActionZone(); }
   function closeActionZone()          { _bridge.value?.deselectActionZone(); }
@@ -583,7 +592,9 @@ export const useEditorStore = defineStore('editor', () => {
     bannerString,
     setBannerStringWidth, setBannerStringPoleHeight, setBannerStringHeading, deleteBannerString, duplicateBannerString, closeBannerString,
     actionZone,
-    setActionZoneRadius, setActionZoneType, deleteActionZone, duplicateActionZone, closeActionZone,
+    setActionZoneRadius, setActionZoneType, setActionZoneShape,
+    insertActionZonePoint, deleteActionZonePoint,
+    deleteActionZone, duplicateActionZone, closeActionZone,
     polyCurb,
     setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed,
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,

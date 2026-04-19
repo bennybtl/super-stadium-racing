@@ -117,7 +117,7 @@ export class PickupManager {
     const maxAttempts = count * 60;
 
     // Pre-compute cumulative area weights for weighted zone selection
-    const weights = zones.map(z => z.radius * z.radius);
+    const weights = zones.map(z => Math.max(1, this._zoneArea(z)));
     const totalWeight = weights.reduce((s, w) => s + w, 0);
 
     while (positions.length < count && attempts < maxAttempts) {
@@ -131,11 +131,8 @@ export class PickupManager {
         if (pick <= 0) { zone = zones[i]; break; }
       }
 
-      // Uniform random point inside the zone's circle
-      const angle = Math.random() * Math.PI * 2;
-      const r     = Math.sqrt(Math.random()) * zone.radius;
-      const x     = zone.x + Math.cos(angle) * r;
-      const z     = zone.z + Math.sin(angle) * r;
+      const { x, z } = this._randomPointInZone(zone);
+      if (!Number.isFinite(x) || !Number.isFinite(z)) continue;
 
       const tooClose = positions.some(p => {
         const dx = p.x - x, dz = p.z - z;
@@ -144,6 +141,74 @@ export class PickupManager {
       if (!tooClose) positions.push({ x, z });
     }
     return positions;
+  }
+
+  _zoneArea(zone) {
+    if (zone?.shape === 'polygon' && Array.isArray(zone.points) && zone.points.length >= 3) {
+      // Shoelace area
+      let area = 0;
+      const pts = zone.points;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        area += (pts[j].x * pts[i].z) - (pts[i].x * pts[j].z);
+      }
+      return Math.abs(area) * 0.5;
+    }
+    const r = Math.max(0, zone?.radius ?? 0);
+    return Math.PI * r * r;
+  }
+
+  _pointInZone(x, z, zone) {
+    if (zone?.shape === 'polygon' && Array.isArray(zone.points) && zone.points.length >= 3) {
+      let inside = false;
+      const pts = zone.points;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const xi = pts[i].x;
+        const zi = pts[i].z;
+        const xj = pts[j].x;
+        const zj = pts[j].z;
+        const intersects = ((zi > z) !== (zj > z))
+          && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-8) + xi);
+        if (intersects) inside = !inside;
+      }
+      return inside;
+    }
+    const dx = x - (zone?.x ?? 0);
+    const dz = z - (zone?.z ?? 0);
+    const r = Math.max(0, zone?.radius ?? 0);
+    return (dx * dx + dz * dz) <= r * r;
+  }
+
+  _randomPointInZone(zone) {
+    if (zone?.shape === 'polygon' && Array.isArray(zone.points) && zone.points.length >= 3) {
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const p of zone.points) {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minZ = Math.min(minZ, p.z);
+        maxZ = Math.max(maxZ, p.z);
+      }
+
+      for (let i = 0; i < 30; i++) {
+        const x = minX + Math.random() * (maxX - minX);
+        const z = minZ + Math.random() * (maxZ - minZ);
+        if (this._pointInZone(x, z, zone)) return { x, z };
+      }
+
+      // Fallback: polygon centroid
+      let sx = 0, sz = 0;
+      for (const p of zone.points) {
+        sx += p.x;
+        sz += p.z;
+      }
+      return { x: sx / zone.points.length, z: sz / zone.points.length };
+    }
+
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * (zone?.radius ?? 0);
+    return {
+      x: (zone?.x ?? 0) + Math.cos(angle) * r,
+      z: (zone?.z ?? 0) + Math.sin(angle) * r,
+    };
   }
 
   // ── Per-frame ─────────────────────────────────────────────────────────────

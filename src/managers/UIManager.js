@@ -27,6 +27,16 @@ export class UIManager {
   }
   hideCountdown()                    { this._race.countdownVisible = false; }
 
+  showOutOfBoundsCountdown(secondsRemaining) {
+    this._race.oobCountdownSeconds = Math.max(0, Math.ceil(secondsRemaining));
+    this._race.oobCountdownVisible = true;
+  }
+
+  hideOutOfBoundsCountdown() {
+    this._race.oobCountdownVisible = false;
+    this._race.oobCountdownSeconds = 0;
+  }
+
   showRaceTimer()                    { this._race.timerVisible = true; }
   hideRaceTimer()                    { this._race.timerVisible = false; }
 
@@ -44,6 +54,8 @@ export class UIManager {
     this._race.visible          = false;
     this._race.timerVisible     = false;
     this._race.countdownVisible = false;
+    this._race.oobCountdownVisible = false;
+    this._race.oobCountdownSeconds = 0;
     this._race.telemetryRecording = false;
     this._race.telemetryHasData   = false;
     this._race.setTelemetryBridge(null);

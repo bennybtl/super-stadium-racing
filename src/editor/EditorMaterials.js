@@ -356,4 +356,29 @@ export class EditorMaterials {
       diffuse: [1.0, 0.55, 0.0], emissive: [0.40, 0.18, 0.0],
     }));
   }
+
+  // ── Action Zone — Out of Bounds ─────────────────────────────────────────
+
+  /** Translucent red cylinder. */
+  get outOfBoundsZoneCyl() {
+    return this._get('outOfBoundsZoneCyl', s => makeMat('edOutOfBoundsZoneCyl', s, {
+      diffuse: [0.95, 0.1, 0.1], emissive: [0.35, 0.05, 0.05],
+      alpha: 0.28, backFaceCulling: false,
+    }));
+  }
+
+  /** Translucent bright-red cylinder (selected). */
+  get outOfBoundsZoneCylHighlight() {
+    return this._get('outOfBoundsZoneCylHL', s => makeMat('edOutOfBoundsZoneCylHL', s, {
+      diffuse: [1.0, 0.35, 0.35], emissive: [0.55, 0.12, 0.12],
+      alpha: 0.5, backFaceCulling: false,
+    }));
+  }
+
+  /** Red handle sphere. */
+  get outOfBoundsZoneHandle() {
+    return this._get('outOfBoundsZoneHandle', s => makeMat('edOutOfBoundsZoneHandle', s, {
+      diffuse: [0.95, 0.1, 0.1], emissive: [0.45, 0.08, 0.08],
+    }));
+  }
 }

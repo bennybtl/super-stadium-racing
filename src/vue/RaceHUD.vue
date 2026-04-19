@@ -32,6 +32,13 @@
       {{ race.countdownText }}
     </span>
   </div>
+
+  <div v-if="race.oobCountdownVisible" class="oob-overlay">
+    <div class="oob-card">
+      <div class="oob-label">OUT OF BOUNDS</div>
+      <div class="oob-value">RESPAWN IN {{ race.oobCountdownSeconds }}</div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -157,5 +164,35 @@ const formattedTime = computed(() => {
   text-shadow: 0 0 80px rgba(255, 200, 0, 0.7), 6px 6px 0 rgba(0, 0, 0, 0.8);
   line-height: 1;
   user-select: none;
+}
+
+.oob-overlay {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.oob-card {
+  background: rgba(110, 0, 0, 0.75);
+  border: 1px solid rgba(255, 160, 160, 0.5);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-align: center;
+  box-shadow: 0 0 14px rgba(255, 40, 40, 0.35);
+  font-family: 'Courier New', monospace;
+}
+
+.oob-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+.oob-value {
+  font-size: 16px;
+  font-weight: bold;
 }
 </style>

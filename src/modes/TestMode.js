@@ -67,12 +67,25 @@ export class TestMode extends DriveMode {
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
+    const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
 
       const dt = this.getClampedDeltaTime(engine, 0.05);
       const input = inputManager.getMovementInput();
       const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
+
+      this.updateOutOfBoundsCountdown({
+        truckId: 'player',
+        truck: playerTruck,
+        outOfBoundsZones,
+        dt,
+        durationSec: 5,
+        onTimeout: () => {
+          this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
+        },
+      });
+
       staticBodyCollisionManager.update(trucks);
       tireStackManager.update(trucks);
       flagManager.update(trucks, dt);

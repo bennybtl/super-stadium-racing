@@ -11,6 +11,11 @@ import { buildScene } from "./SceneBuilder.js";
  * - slow-zone lookup and per-frame clamping
  */
 export class DriveMode extends BaseMode {
+  constructor(controller) {
+    super(controller);
+    this._oobStateByTruckId = new Map();
+  }
+
   /**
    * Build a driving scene for this mode from the selected track.
    */
@@ -82,6 +87,44 @@ export class DriveMode extends BaseMode {
     );
   }
 
+  /** Resolve all out-of-bounds action zones from track features. */
+  getOutOfBoundsZones(track) {
+    return track.features.filter(
+      f => f.type === "actionZone" && f.zoneType === "outOfBounds"
+    );
+  }
+
+  _isPointInPolygon(x, z, points) {
+    if (!points || points.length < 3) return false;
+    let inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+      const xi = points[i].x;
+      const zi = points[i].z;
+      const xj = points[j].x;
+      const zj = points[j].z;
+
+      const intersects = ((zi > z) !== (zj > z))
+        && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-8) + xi);
+      if (intersects) inside = !inside;
+    }
+    return inside;
+  }
+
+  isPointInActionZone(x, z, zone) {
+    if (!zone) return false;
+
+    if (zone.shape === 'polygon' && Array.isArray(zone.points)) {
+      return this._isPointInPolygon(x, z, zone.points);
+    }
+
+    const cx = zone.x ?? 0;
+    const cz = zone.z ?? 0;
+    const r = Math.max(0, zone.radius ?? 0);
+    const dx = x - cx;
+    const dz = z - cz;
+    return (dx * dx + dz * dz) < r * r;
+  }
+
   /**
    * Clamp speed for trucks inside any slow zone.
    * `trucks` accepts either Truck instances or truckData objects with `.truck`.
@@ -94,11 +137,7 @@ export class DriveMode extends BaseMode {
       if (!truck?.mesh || !truck?.state) continue;
 
       const pos = truck.mesh.position;
-      const inSlow = slowZones.some(z => {
-        const dx = pos.x - z.x;
-        const dz = pos.z - z.z;
-        return (dx * dx + dz * dz) < z.radius * z.radius;
-      });
+      const inSlow = slowZones.some(z => this.isPointInActionZone(pos.x, pos.z, z));
 
       truck.state.slowZoneActive = inSlow;
       if (!inSlow) continue;
@@ -108,5 +147,60 @@ export class DriveMode extends BaseMode {
         truck.state.velocity.normalize().scaleInPlace(limit);
       }
     }
+  }
+
+  /**
+   * Shared out-of-bounds countdown/respawn logic.
+   * Returns remaining seconds (float) while active, or null when inactive.
+   */
+  updateOutOfBoundsCountdown({
+    truckId,
+    truck,
+    outOfBoundsZones,
+    dt,
+    durationSec = 5,
+    graceSecAfterRespawn = 1.5,
+    onTimeout,
+  }) {
+    if (!truck?.mesh || !outOfBoundsZones?.length) return null;
+
+    const nowMs = performance.now();
+    let state = this._oobStateByTruckId.get(truckId);
+    if (!state) {
+      state = {
+        remainingSec: durationSec,
+        inZone: false,
+        immuneUntilMs: 0,
+      };
+      this._oobStateByTruckId.set(truckId, state);
+    }
+
+    const pos = truck.mesh.position;
+    const inZoneNow = outOfBoundsZones.some(z => this.isPointInActionZone(pos.x, pos.z, z));
+
+    if (nowMs < state.immuneUntilMs) {
+      state.inZone = false;
+      state.remainingSec = durationSec;
+      return null;
+    }
+
+    if (!inZoneNow) {
+      state.inZone = false;
+      state.remainingSec = durationSec;
+      return null;
+    }
+
+    state.inZone = true;
+    state.remainingSec = Math.max(0, state.remainingSec - dt);
+
+    if (state.remainingSec <= 0) {
+      onTimeout?.();
+      state.remainingSec = durationSec;
+      state.inZone = false;
+      state.immuneUntilMs = nowMs + graceSecAfterRespawn * 1000;
+      return null;
+    }
+
+    return state.remainingSec;
   }
 }
