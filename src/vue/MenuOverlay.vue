@@ -77,6 +77,13 @@
 
         <!-- ── In-game pause ── -->
         <template v-else-if="store.screen === 'pause'">
+          <ul class="menu-list">
+            <li><b>ESC:</b> to toggle this menu</li>
+            <li><b>W:</b> Gas</li>
+            <li><b>S/Left Shift:</b> Brake/Reverse</li>
+            <li><b>A,D:</b> Steering</li>
+            <li><b>Q:</b> Use Nitro</li>
+          </ul>
           <button class="menu-btn" @click="store.resume()">Resume</button>
           <button class="menu-btn" @click="store.reset()">Reset</button>
           <button class="menu-btn menu-btn--back" @click="store.exit()">Exit</button>
@@ -279,6 +286,14 @@ const title = computed(() => {
 .option-desc {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.8);
+}
+
+.menu-list {
+  list-style: none;
+  padding-left: 20px;
+  text-align: left;
+  color: #ccc;
+  margin: 10px 0;
 }
 
 .settings-option.active .option-desc {

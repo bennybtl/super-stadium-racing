@@ -41,7 +41,11 @@ export class Controls {
     }
     this.lastBackInput = input.back;
 
-    if (input.forward) {
+    // Boost is treated as its own propulsion source: if active, keep driving
+    // forward even when throttle is released (unless player/AI is braking).
+    const boostProvidesThrottle = this.state.boostActive && !input.back;
+
+    if (input.forward || boostProvidesThrottle) {
       this.brakingToStop = false; // Clear if accelerating forward
       this.handleForwardInput(forward, deltaTime);
     } else if (input.back) {

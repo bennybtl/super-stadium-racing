@@ -1,5 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
+import { AIDriver } from "../ai/AIDriver.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
@@ -200,6 +201,13 @@ export class RaceMode extends DriveMode {
     const getAIName  = (i) => seasonAIDrivers ? seasonAIDrivers[i].name : `AI ${i + 1}`;
     const getAIId    = (i) => seasonAIDrivers ? seasonAIDrivers[i].id   : `ai${i + 1}`;
     const getAISkill = (i) => seasonAIDrivers ? seasonAIDrivers[i].skillConfig : {};
+    const getAIDriver = (i) => {
+      if (seasonAIDrivers) return null;
+      const slot = i % 3;
+      if (slot === 0) return AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
+      if (slot === 1) return AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
+      return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
+    };
 
     const AI_COUNT = 3; // change this to add more AI competitors
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({
@@ -215,6 +223,7 @@ export class RaceMode extends DriveMode {
       getAIName,
       getAIId,
       getAISkill,
+      getAIDriver,
       trackKey,
       telemetryCheckpoints: null, // resolved below
     });

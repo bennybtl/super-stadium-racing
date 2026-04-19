@@ -75,8 +75,8 @@ export class AIBoostController {
       this._debug('already-boosting', 'Skipping boost: boost already active');
       return;
     }
-    if (!input.forward || input.back) {
-      this._debug('bad-input', `Skipping boost: input forward=${!!input.forward} back=${!!input.back}`);
+    if (input.back) {
+      this._debug('bad-input', `Skipping boost: braking/reverse input active (back=${!!input.back})`);
       return;
     }
     if (fwdSpeed < this.minSpeed) {

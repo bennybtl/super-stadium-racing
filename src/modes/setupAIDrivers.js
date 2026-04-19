@@ -35,6 +35,7 @@ const AI_COLORS = [
  * @param {Function} opts.getAIName      (i) => string
  * @param {Function} opts.getAIId        (i) => string
  * @param {Function} opts.getAISkill     (i) => skillConfig object
+ * @param {Function} [opts.getAIDriver]  (i) => AIDriver instance (optional preset factory)
  * @param {string}   opts.trackKey       Track key for telemetry lookup.
  * @param {Array}    opts.telemetryCheckpoints  Checkpoint list for telemetry replay.
  *
@@ -55,6 +56,7 @@ export function setupAIDrivers({
   getAIName,
   getAIId,
   getAISkill,
+  getAIDriver,
   trackKey,
   telemetryCheckpoints,
 }) {
@@ -66,12 +68,14 @@ export function setupAIDrivers({
   const aiTrucks  = [];
 
   for (let i = 0; i < count; i++) {
-    const driver = new AIDriver(
+    const skillConfig = getAISkill(i);
+    const presetDriver = typeof getAIDriver === 'function' ? getAIDriver(i) : null;
+    const driver = presetDriver ?? new AIDriver(
       currentTrack,
       checkpointManager,
       wallManager,
       scene,
-      getAISkill(i),
+      skillConfig,
     );
 
     const color  = AI_COLORS[i % AI_COLORS.length];
