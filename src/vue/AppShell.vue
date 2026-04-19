@@ -3,6 +3,7 @@
        Individual panels opt back in with pointer-events:auto. -->
   <div class="ui-root">
     <div class="fps-counter">{{ fps }}</div>
+    <LoadingOverlay />
     <MenuOverlay />
     <SingleRaceOverlay />
     <PostRaceOverlay />
@@ -34,6 +35,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import MenuOverlay        from './MenuOverlay.vue';
+import LoadingOverlay     from './LoadingOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
 import PostRaceOverlay    from './PostRaceOverlay.vue';
 import PitOverlay       from './PitOverlay.vue';

@@ -26,6 +26,10 @@ export class ModeController {
    * mode and start rendering its scene (if it returns one).
    */
   async switchTo(ModeClass, config = {}) {
+    const modeName = ModeClass?.name ?? 'Mode';
+    const loadingLabel = modeName.replace(/Mode$/, '') || 'Scene';
+    this.menuManager.showLoading(`Loading ${loadingLabel}…`);
+
     if (this.currentMode) {
       this.currentMode.teardown();
       this.currentMode = null;
@@ -36,10 +40,14 @@ export class ModeController {
     const mode = new ModeClass(this);
     this.currentMode = mode;
 
-    const scene = await mode.setup(config);
+    try {
+      const scene = await mode.setup(config);
 
-    if (scene) {
-      this.engine.runRenderLoop(() => scene.render());
+      if (scene) {
+        this.engine.runRenderLoop(() => scene.render());
+      }
+    } finally {
+      this.menuManager.hideLoading();
     }
   }
 

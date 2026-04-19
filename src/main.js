@@ -19,12 +19,16 @@ window.vehicleLoader = vehicleLoader;
 
 const controller = new ModeController(engine, menuManager, trackLoader);
 
+menuManager.showLoading('Loading tracks and vehicles…');
+
 Promise.all([
   trackLoader.loadAllTracks(),
   vehicleLoader.loadAllVehicles(),
 ]).then(() => {
   console.log("Tracks and vehicles loaded, starting game");
   controller.switchTo(MenuMode);
+}).finally(() => {
+  menuManager.hideLoading();
 });
 
 window.addEventListener("resize", () => engine.resize());

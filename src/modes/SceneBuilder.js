@@ -99,7 +99,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const terrainSize = maxTrackDim + 20;
 
   // -- Terrain manager --
-  const terrainManager = new TerrainManager(terrainSize, 2);
+  // Use 1m terrain cells for smoother visual blending between terrain types.
+  // Physics still samples from this grid, but the finer resolution reduces
+  // visible blockiness and better matches authored terrain feature boundaries.
+  const terrainManager = new TerrainManager(terrainSize, 1);
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const worldX =
@@ -133,7 +136,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
   groundMat.specularPower = 48; // tighter highlight → wet/glossy look
 
   // -- Ground texture --
-  const texSize = 512;
+  // Keep this divisible by terrainManager.cellsPerSide (40) to avoid
+  // floor/ceil cell raster overlap seams in terrain texture painting.
+  const texSize = 2000;
   const groundTex = new DynamicTexture(
     "groundTex",
     { width: texSize, height: texSize },
@@ -142,7 +147,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const ctx = groundTex.getContext();
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
-  paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
+  await paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
 
   groundTex.update();
   groundMat.diffuseTexture = groundTex;

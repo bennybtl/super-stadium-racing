@@ -14,6 +14,8 @@ export const useMenuStore = defineStore('menu', () => {
   const pitData         = ref(null);
   const seasonFinalData = ref(null);
   const singleRaceData  = ref(null);
+  const loadingVisible = ref(false);
+  const loadingMessage = ref('Loading…');
   
   // Settings state
   const truckMode = ref(localStorage.getItem('truckMode') || 'arcade');
@@ -83,9 +85,15 @@ export const useMenuStore = defineStore('menu', () => {
   function exitSeason()            { postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
   function singleRaceExit()        { singleRaceData.value = null; _bridge.value?.onExit(); }
 
+  function setLoading(visible, message = null) {
+    loadingVisible.value = !!visible;
+    if (typeof message === 'string' && message.length) loadingMessage.value = message;
+  }
+
   return {
     screen, isPaused, trackList, vehicleList,
     postRaceData, pitData, seasonFinalData, singleRaceData,
+    loadingVisible, loadingMessage,
     setBridge,
     showTrackSelect, showPracticeTrackSelect, showEditorTrackSelect, selectTrack,
     startGame, startPractice, startEditor,
@@ -94,6 +102,7 @@ export const useMenuStore = defineStore('menu', () => {
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
     showSeasonSetup, startSeason, continueSeason, retireFromSeason, goToPit, purchaseUpgrade, exitSeason, singleRaceExit,
+    setLoading,
   };
 });
 

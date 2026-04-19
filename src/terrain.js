@@ -17,16 +17,20 @@ export const TERRAIN_TYPES = {
     name: "packed_dirt",
     gripMultiplier: 2.0,    // Baseline
     color: new Color3(0.54, 0.28, 0.08),
+    diffuseTexture: '702f91fc-f75b-405a-a707-ff31e4a1803d.png',
+    diffuseTextureWorldUnitsPerTile: 10,
+    diffuseTextureBlendMode: 'soft-light',
+    diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.8,
     roughness: 0.1,          // Very slight — compacted surface
     normalMap: 'cloud_h-normal.png',
-    normalMapIntensity: 1.2, // Moderate dirt texture
-    specular: 0.23,          // Matte dry dirt
+    normalMapIntensity: 1.5, // Moderate dirt texture
+    specular: 0.13,          // Matte dry dirt
   },
   LOOSE_DIRT: {
     name: "loose_dirt",
     gripMultiplier: 0.5,    // Slides more
-    color: new Color3(0.69, 0.43, 0.23),
+    color: new Color3(0.60, 0.34, 0.14),
     dragMultiplier: 1.0,
     roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: '6481-normal.jpg',
@@ -41,7 +45,7 @@ export const TERRAIN_TYPES = {
     roughness: 0.15,         // Sloppy but soft — low-impact bumps
     normalMap: 'mud.png',
     normalMapIntensity: 0.9, // Deep muddy surface detail
-    specular: 0.65,          // Glistening wet mud
+    specular: 0.4,          // Glistening wet mud
   },
   WATER: {
     name: "water",

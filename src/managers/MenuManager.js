@@ -147,6 +147,14 @@ export class MenuManager {
     this._store.isPaused = false;
   }
 
+  showLoading(message = 'Loading…') {
+    this._store.setLoading(true, message);
+  }
+
+  hideLoading() {
+    this._store.setLoading(false);
+  }
+
   togglePause() {
     if (this.editorMode) {
       if (this.isPaused) this.onEditorResume();

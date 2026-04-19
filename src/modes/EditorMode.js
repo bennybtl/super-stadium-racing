@@ -110,10 +110,10 @@ export class EditorMode extends BaseMode {
     };
 
     // Slow: paint the canvas texture from terrainManager.grid (call on deselect)
-    const _rebuildTerrainTextureNow = () => {
+    const _rebuildTerrainTextureNow = async () => {
       window.rebuildTerrainGrid();
       const ctx = groundTex.getContext();
-      paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
+      await paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
       groundTex.update();
       paintTerrainSpecularMap(specularTex.getContext(), terrainManager, pixelsPerCell);
       specularTex.update();
