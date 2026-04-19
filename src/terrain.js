@@ -1,11 +1,12 @@
-import { Vector3, Color3 } from "@babylonjs/core";
+import { Color3 } from "@babylonjs/core";
+import { TERRAIN_COLORS } from "./constants";
 
 // Terrain types with their properties
 export const TERRAIN_TYPES = {
   ASPHALT: {
     name: "asphalt",
     gripMultiplier: 4.0,    // Best grip
-    color: new Color3(0.2, 0.2, 0.25),
+    color: TERRAIN_COLORS.asphalt,
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     dragMultiplier: 0.5,
     roughness: 0,            // Perfectly smooth
@@ -16,7 +17,7 @@ export const TERRAIN_TYPES = {
   PACKED_DIRT: {
     name: "packed_dirt",
     gripMultiplier: 2.0,    // Baseline
-    color: new Color3(0.54, 0.28, 0.08),
+    color: TERRAIN_COLORS.packed_dirt,
     diffuseTexture: '702f91fc-f75b-405a-a707-ff31e4a1803d.png',
     diffuseTextureWorldUnitsPerTile: 10,
     diffuseTextureBlendMode: 'soft-light',
@@ -30,7 +31,7 @@ export const TERRAIN_TYPES = {
   LOOSE_DIRT: {
     name: "loose_dirt",
     gripMultiplier: 0.5,    // Slides more
-    color: new Color3(0.60, 0.34, 0.14),
+    color: TERRAIN_COLORS.loose_dirt,
     dragMultiplier: 1.0,
     roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: '6481-normal.jpg',
@@ -40,7 +41,7 @@ export const TERRAIN_TYPES = {
   MUD: {
     name: "mud",
     gripMultiplier: 0.15,    // Very slippery
-    color: new Color3(0.34, 0.18, 0.08),
+    color: TERRAIN_COLORS.mud,
     dragMultiplier: 2.9,    // Slows you down
     roughness: 0.15,         // Sloppy but soft — low-impact bumps
     normalMap: 'mud.png',
@@ -50,7 +51,7 @@ export const TERRAIN_TYPES = {
   WATER: {
     name: "water",
     gripMultiplier: 0.3,     // Low grip
-    color: new Color3(0.34, 0.18, 0.08),
+    color: TERRAIN_COLORS.water,
     smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
     dragMultiplier: 6.0,     // Very high drag
     roughness: 0,            // Smooth surface — drag is the hazard
@@ -61,7 +62,7 @@ export const TERRAIN_TYPES = {
   ROCKY: {
     name: "rocky",
     gripMultiplier: 1.0,     // Unpredictable rocky surface
-    color: new Color3(0.42, 0.30, 0.22), // Dark reddish-brown rock
+    color: TERRAIN_COLORS.rocky, // Dark reddish-brown rock
     dragMultiplier: 2.5,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
     normalMap: 'rocky.jpg',
@@ -71,7 +72,7 @@ export const TERRAIN_TYPES = {
   GRASS: {
     name: "grass",
     gripMultiplier: 0.15,     // Slippery, especially when wet
-    color: new Color3(0.05, 0.4, 0.1), // Green grass
+    color: TERRAIN_COLORS.grass, // Green grass
     dragMultiplier: 1.2,     // Slightly slows down
     roughness: 0.3,          // Slightly rough — soft impacts
     normalMap: 'grass.jpg',

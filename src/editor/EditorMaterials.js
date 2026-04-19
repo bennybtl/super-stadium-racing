@@ -1,4 +1,5 @@
 import { StandardMaterial, Color3 } from "@babylonjs/core";
+import { basicColors } from "../constants";
 
 export { Color3 };
 
@@ -6,15 +7,14 @@ export { Color3 };
 // Used directly on CreateLineSystem .color and on material .emissiveColor.
 // Centralised here so every colour in the editor lives in one file.
 
-export const LINE_COLOR_MESH_GRID   = new Color3(0.15, 0.65, 0.65); // teal
-export const LINE_COLOR_POLY_WALL   = new Color3(1.0,  0.65, 0.1);  // orange
-export const LINE_COLOR_POLY_HILL   = new Color3(0.5,  0.8,  0.3);  // green
-export const LINE_COLOR_POLY_CURB   = new Color3(0.85, 0.1,  0.1);  // red
-export const LINE_COLOR_BEZIER_WALL = new Color3(0.3,  0.7,  1.0);  // blue
-
-export const EMISSIVE_BLACK = new Color3(0, 0, 0);
-export const EMISSIVE_GREY  = new Color3(0.5, 0.5, 0.5);
-export const FALLBACK_GREY  = new Color3(0.5, 0.5, 0.5);
+export const LINE_COLOR_MESH_GRID   = basicColors.teal.diffuse; // teal
+export const LINE_COLOR_POLY_WALL   = basicColors.orange.diffuse;  // orange
+export const LINE_COLOR_POLY_HILL   = basicColors.green.diffuse;  // green
+export const LINE_COLOR_POLY_CURB   = basicColors.red.diffuse;  // red
+export const LINE_COLOR_BEZIER_WALL = basicColors.blue.diffuse;  // blue
+export const EMISSIVE_BLACK         = basicColors.black.emissive; // very dark grey (not pure black, so it shows up in the dark)
+export const EMISSIVE_GREY          = basicColors.gray.emissive;
+export const FALLBACK_GREY          = basicColors.gray.diffuse;
 
 /**
  * EditorMaterials — a lazily-populated registry of all editor gizmo materials.
@@ -33,8 +33,17 @@ export const FALLBACK_GREY  = new Color3(0.5, 0.5, 0.5);
 
 function makeMat(name, scene, { diffuse, emissive, alpha, backFaceCulling } = {}) {
   const mat = new StandardMaterial(name, scene);
-  if (diffuse)  mat.diffuseColor  = new Color3(...diffuse);
-  if (emissive) mat.emissiveColor = new Color3(...emissive);
+  const toColor3 = (value) => {
+    if (!value) return null;
+    if (value instanceof Color3) return value;
+    if (Array.isArray(value) && value.length >= 3) return new Color3(value[0], value[1], value[2]);
+    return null;
+  };
+
+  const diffuseColor = toColor3(diffuse);
+  const emissiveColor = toColor3(emissive);
+  if (diffuseColor) mat.diffuseColor = diffuseColor;
+  if (emissiveColor) mat.emissiveColor = emissiveColor;
   if (alpha !== undefined) mat.alpha = alpha;
   if (backFaceCulling !== undefined) mat.backFaceCulling = backFaceCulling;
   return mat;
@@ -77,14 +86,14 @@ export class EditorMaterials {
    */
   get nodeHighlight() {
     return this._get('nodeHighlight', s => makeMat('edNodeHighlight', s, {
-      diffuse: [1.0, 1.0, 0.2], emissive: [0.6, 0.6, 0.0],
+      diffuse: basicColors.yellow.diffuse, emissive: basicColors.yellow.emissive,
     }));
   }
 
   /** Neutral dark-grey sphere — the click-target handle for round/square hills. */
   get handleSphere() {
     return this._get('handleSphere', s => makeMat('edHandleSphere', s, {
-      diffuse: [0.45, 0.45, 0.45], emissive: [0.1, 0.1, 0.1],
+      diffuse: basicColors.gray.diffuse, emissive: basicColors.gray.emissive,
     }));
   }
 
@@ -92,42 +101,42 @@ export class EditorMaterials {
 
   get checkpointHighlight() {
     return this._get('checkpointHighlight', s => makeMat('edCheckpointHL', s, {
-      diffuse: [0.0, 1.0, 1.0], emissive: [0.0, 0.5, 0.5],
+      diffuse: basicColors.yellow.diffuse, emissive: basicColors.yellow.emissive,
     }));
   }
 
   // ── Round Hill ────────────────────────────────────────────────────────────
 
-  /** Translucent green cone gizmo. */
+  /** Translucent gray cone gizmo. */
   get hillCone() {
     return this._get('hillCone', s => makeMat('edHillCone', s, {
-      diffuse: [0.36, 0.36, 0.36], emissive: [0.09, 0.09, 0.09],
+      diffuse: basicColors.gray.diffuse, emissive: basicColors.gray.emissive,
       alpha: 0.20, backFaceCulling: false,
     }));
   }
 
-  /** Translucent teal cone gizmo (selected). */
+  /** Translucent gray cone gizmo (selected). */
   get hillConeHighlight() {
     return this._get('hillConeHighlight', s => makeMat('edHillConeHL', s, {
-      diffuse: [0.9, 0.9, 0.9], emissive: [0.3, 0.3, 0.3],
+      diffuse: basicColors.gray.diffuse, emissive: basicColors.gray.emissive,
       alpha: 0.20, backFaceCulling: false,
     }));
   }
 
   // ── Square Hill ───────────────────────────────────────────────────────────
 
-  /** Translucent gold/tan box gizmo. */
+  /** Translucent gray box gizmo. */
   get squareHillBox() {
     return this._get('squareHillBox', s => makeMat('edSquareHillBox', s, {
-      diffuse: [0.36, 0.36, 0.36], emissive: [0.09, 0.09, 0.09],
+      diffuse: basicColors.gray.diffuse, emissive: basicColors.gray.emissive,
       alpha: 0.20, backFaceCulling: false,
     }));
   }
 
-  /** Translucent gold box gizmo (selected). */
+  /** Translucent gray box gizmo (selected). */
   get squareHillBoxHighlight() {
     return this._get('squareHillBoxHighlight', s => makeMat('edSquareHillBoxHL', s, {
-      diffuse: [0.9, 0.9, 0.9], emissive: [0.3, 0.3, 0.3],
+      diffuse: basicColors.gray.diffuse, emissive: basicColors.gray.emissive,
       alpha: 0.20, backFaceCulling: false,
     }));
   }
@@ -137,15 +146,15 @@ export class EditorMaterials {
   /** Translucent brown/tan box gizmo. */
   get bridgeBox() {
     return this._get('bridgeBox', s => makeMat('edBridgeBox', s, {
-      diffuse: [0.55, 0.42, 0.22], emissive: [0.1, 0.07, 0.02],
-      alpha: 0.35, backFaceCulling: false,
+      diffuse: basicColors.brown.diffuse, emissive: basicColors.brown.emissive,
+      alpha: 0.25, backFaceCulling: false,
     }));
   }
 
   /** Translucent orange/tan box gizmo (selected). */
   get bridgeBoxHighlight() {
     return this._get('bridgeBoxHighlight', s => makeMat('edBridgeBoxHL', s, {
-      diffuse: [0.9, 0.65, 0.2], emissive: [0.4, 0.25, 0.05],
+      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
       alpha: 0.45, backFaceCulling: false,
     }));
   }
@@ -155,28 +164,28 @@ export class EditorMaterials {
   /** Blue anchor-point sphere. */
   get bezierAnchor() {
     return this._get('bezierAnchor', s => makeMat('edBezierAnchor', s, {
-      diffuse: [0.2, 0.6, 0.9], emissive: [0.05, 0.15, 0.3], alpha: 0.90,
+      diffuse: basicColors.blue.diffuse, emissive: basicColors.blue.emissive, alpha: 0.50,
     }));
   }
 
   /** Bright blue anchor-point sphere (active wall). */
   get bezierAnchorActive() {
     return this._get('bezierAnchorActive', s => makeMat('edBezierAnchorActive', s, {
-      diffuse: [0.3, 0.7, 1.0], emissive: [0.1, 0.25, 0.4], alpha: 0.90,
+      diffuse: basicColors.blue.diffuse, emissive: basicColors.blue.emissive, alpha: 0.90,
     }));
   }
 
   /** Orange control-handle sphere. */
   get bezierHandle() {
     return this._get('bezierHandle', s => makeMat('edBezierHandle', s, {
-      diffuse: [0.9, 0.5, 0.2], emissive: [0.3, 0.15, 0.05], alpha: 0.85,
+      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive, alpha: 0.50,
     }));
   }
 
   /** Bright orange-yellow control-handle sphere (selected). */
   get bezierHandleHighlight() {
     return this._get('bezierHandleHighlight', s => makeMat('edBezierHandleHL', s, {
-      diffuse: [1.0, 0.8, 0.2], emissive: [0.5, 0.3, 0.0],
+      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive, alpha: 0.90,
     }));
   }
 
@@ -185,14 +194,15 @@ export class EditorMaterials {
   /** Teal grid-node sphere. */
   get meshGridNode() {
     return this._get('meshGridNode', s => makeMat('edMeshGridNode', s, {
-      diffuse: [0.15, 0.75, 0.75], emissive: [0.03, 0.25, 0.25], alpha: 0.90,
+      diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive,
+      alpha: 0.90,
     }));
   }
 
   /** Amber grid-node sphere (selected). */
   get meshGridHighlight() {
     return this._get('meshGridHighlight', s => makeMat('edMeshGridHL', s, {
-      diffuse: [1.0, 0.85, 0.0], emissive: [0.55, 0.42, 0.0],
+      diffuse: basicColors.yellow.diffuse, emissive: basicColors.yellow.emissive,
     }));
   }
 
@@ -201,7 +211,7 @@ export class EditorMaterials {
   /** Translucent purple disc. */
   get normalMapDecal() {
     return this._get('normalMapDecal', s => makeMat('edNormalMapDecal', s, {
-      diffuse: [0.8, 0.4, 0.9], emissive: [0.15, 0.08, 0.18],
+      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
       alpha: 0.30, backFaceCulling: false,
     }));
   }
@@ -209,7 +219,7 @@ export class EditorMaterials {
   /** Translucent magenta disc (selected). */
   get normalMapDecalHighlight() {
     return this._get('normalMapDecalHL', s => makeMat('edNormalMapDecalHL', s, {
-      diffuse: [1.0, 0.5, 1.0], emissive: [0.4, 0.2, 0.4],
+      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
       alpha: 0.40, backFaceCulling: false,
     }));
   }
@@ -219,14 +229,14 @@ export class EditorMaterials {
   /** Teal node sphere (inactive wall). */
   get polyCurbNode() {
     return this._get('polyCurbNode', s => makeMat('edPolyCurbNode', s, {
-      diffuse: [0.15, 0.75, 0.75], emissive: [0.04, 0.22, 0.22], alpha: 0.90,
+      diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive, alpha: 0.50,
     }));
   }
 
   /** Bright teal node sphere (active wall). */
   get polyCurbNodeActive() {
     return this._get('polyCurbNodeActive', s => makeMat('edPolyCurbNodeActive', s, {
-      diffuse: [0.2, 1.0, 0.9], emissive: [0.05, 0.40, 0.35], alpha: 0.90,
+      diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive, alpha: 0.90,
     }));
   }
 
@@ -235,14 +245,14 @@ export class EditorMaterials {
   /** Olive-green node sphere (inactive hill). */
   get polyHillNode() {
     return this._get('polyHillNode', s => makeMat('edPolyHillNode', s, {
-      diffuse: [0.4, 0.6, 0.2], emissive: [0.1, 0.2, 0.05], alpha: 0.90,
+      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive, alpha: 0.50,
     }));
   }
 
   /** Bright green node sphere (active hill). */
   get polyHillNodeActive() {
     return this._get('polyHillNodeActive', s => makeMat('edPolyHillNodeActive', s, {
-      diffuse: [0.6, 0.8, 0.3], emissive: [0.2, 0.3, 0.1], alpha: 0.90,
+      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive, alpha: 0.90,
     }));
   }
 
@@ -312,7 +322,7 @@ export class EditorMaterials {
   /** Translucent hot-pink cylinder. */
   get zoneCyl() {
     return this._get('zoneCyl', s => makeMat('edZoneCyl', s, {
-      diffuse: [1.0, 0.20, 0.60], emissive: [0.25, 0.04, 0.15],
+      diffuse: basicColors.pink.diffuse, emissive: basicColors.pink.emissive,
       alpha: 0.28, backFaceCulling: false,
     }));
   }
@@ -320,7 +330,7 @@ export class EditorMaterials {
   /** Translucent bright-pink cylinder (selected). */
   get zoneCylHighlight() {
     return this._get('zoneCylHL', s => makeMat('edZoneCylHL', s, {
-      diffuse: [1.0, 0.50, 0.80], emissive: [0.45, 0.15, 0.30],
+      diffuse: basicColors.pink.diffuse, emissive: basicColors.pink.emissive,
       alpha: 0.50, backFaceCulling: false,
     }));
   }
@@ -328,7 +338,7 @@ export class EditorMaterials {
   /** Hot-pink handle sphere. */
   get zoneHandle() {
     return this._get('zoneHandle', s => makeMat('edZoneHandle', s, {
-      diffuse: [1.0, 0.20, 0.60], emissive: [0.40, 0.05, 0.20],
+      diffuse: basicColors.pink.diffuse, emissive: basicColors.pink.emissive,
     }));
   }
 
@@ -337,7 +347,7 @@ export class EditorMaterials {
   /** Translucent amber cylinder. */
   get slowZoneCyl() {
     return this._get('slowZoneCyl', s => makeMat('edSlowZoneCyl', s, {
-      diffuse: [1.0, 0.55, 0.0], emissive: [0.30, 0.12, 0.0],
+      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
       alpha: 0.28, backFaceCulling: false,
     }));
   }
@@ -345,7 +355,7 @@ export class EditorMaterials {
   /** Translucent bright-amber cylinder (selected). */
   get slowZoneCylHighlight() {
     return this._get('slowZoneCylHL', s => makeMat('edSlowZoneCylHL', s, {
-      diffuse: [1.0, 0.75, 0.2], emissive: [0.50, 0.25, 0.05],
+      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
       alpha: 0.50, backFaceCulling: false,
     }));
   }
@@ -353,7 +363,7 @@ export class EditorMaterials {
   /** Amber handle sphere. */
   get slowZoneHandle() {
     return this._get('slowZoneHandle', s => makeMat('edSlowZoneHandle', s, {
-      diffuse: [1.0, 0.55, 0.0], emissive: [0.40, 0.18, 0.0],
+      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
     }));
   }
 
@@ -362,7 +372,7 @@ export class EditorMaterials {
   /** Translucent red cylinder. */
   get outOfBoundsZoneCyl() {
     return this._get('outOfBoundsZoneCyl', s => makeMat('edOutOfBoundsZoneCyl', s, {
-      diffuse: [0.95, 0.1, 0.1], emissive: [0.35, 0.05, 0.05],
+      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
       alpha: 0.28, backFaceCulling: false,
     }));
   }
@@ -370,7 +380,7 @@ export class EditorMaterials {
   /** Translucent bright-red cylinder (selected). */
   get outOfBoundsZoneCylHighlight() {
     return this._get('outOfBoundsZoneCylHL', s => makeMat('edOutOfBoundsZoneCylHL', s, {
-      diffuse: [1.0, 0.35, 0.35], emissive: [0.55, 0.12, 0.12],
+      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
       alpha: 0.5, backFaceCulling: false,
     }));
   }
@@ -378,7 +388,7 @@ export class EditorMaterials {
   /** Red handle sphere. */
   get outOfBoundsZoneHandle() {
     return this._get('outOfBoundsZoneHandle', s => makeMat('edOutOfBoundsZoneHandle', s, {
-      diffuse: [0.95, 0.1, 0.1], emissive: [0.45, 0.08, 0.08],
+      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
     }));
   }
 }

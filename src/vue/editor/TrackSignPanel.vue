@@ -37,7 +37,7 @@
       :value="editor.trackSign.brandImage"
       @change="editor.setTrackSignBrandImage($event.target.value)"
     >
-      <option v-for="brand in brandOptions" :key="brand.value" :value="brand.value">{{ brand.label }}</option>
+      <option v-for="brand in TRACK_SIGN_BRANDS" :key="brand.value" :value="brand.value">{{ brand.label }}</option>
     </select>
 
     <!-- Background -->
@@ -48,7 +48,11 @@
       @change="editor.setTrackSignBackground($event.target.value)"
     >
       <option value="black">Black</option>
+      <option value="gray">Gray</option>
       <option value="white">White</option>
+      <option value="red">Red</option>
+      <option value="blue">Blue</option>
+      <option value="yellow">Yellow</option>
     </select>
 
     <!-- Width -->
@@ -81,7 +85,7 @@
       <span>{{ editor.trackSign.heightOffset.toFixed(1) }} m</span>
     </div>
     <input
-      type="range" min="-1" max="6" step="0.1"
+      type="range" min="0" max="10" step="0.1"
       :value="editor.trackSign.heightOffset"
       @input="editor.setTrackSignHeightOffset(+$event.target.value)"
       class="ep-slider"
@@ -111,13 +115,9 @@
 <script setup>
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
+import { TRACK_SIGN_BRANDS } from '../../constants.js';
 
 const editor = useEditorStore();
-const brandOptions = [
-  { value: 'energizer-racing.png', label: 'Energizer Racing' },
-  { value: 'turbo-king.png', label: 'Turbo King' },
-  { value: 'ultra-grip.png', label: 'Ultra Grip' },
-];
 </script>
 
 <style scoped>

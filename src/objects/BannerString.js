@@ -7,10 +7,11 @@ import {
   Mesh,
   VertexData,
 } from "@babylonjs/core";
+import { basicColors } from "../constants.js";
 
 const DEFAULT_POLE_HEIGHT = 4.2;
-const POLE_RADIUS     = 0.08;
-const STRING_RADIUS   = 0.025;
+const POLE_RADIUS     = 0.16;
+const STRING_RADIUS   = 0.05;
 // Match the standalone Flag banner dimensions exactly
 const FLAG_W          = 1.5;
 const FLAG_H          = 1.6;
@@ -29,9 +30,9 @@ function catenaryOffset(t, sag) {
 
 // Alternating pennant colours: red, blue, yellow
 const FLAG_COLORS = [
-  new Color3(0.82, 0.10, 0.10),
-  new Color3(0.12, 0.28, 0.85),
-  new Color3(0.85, 0.75, 0.05),
+  basicColors.red.diffuse,
+  basicColors.blue.diffuse,
+  basicColors.yellow.diffuse,
 ];
 
 /**
@@ -77,8 +78,8 @@ export class BannerString {
 
     // Shared pole / rope material
     const poleMat = new StandardMaterial("bannerPoleMat", scene);
-    poleMat.diffuseColor  = new Color3(0.28, 0.22, 0.16);
-    poleMat.specularColor = new Color3(0.08, 0.08, 0.08);
+    poleMat.diffuseColor  = basicColors.brown.diffuse;
+    poleMat.specularColor = basicColors.brown.emissive;
 
     // Two vertical poles
     for (const side of [half, -half]) {

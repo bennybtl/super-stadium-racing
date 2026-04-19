@@ -1,5 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
-import { TrackSign, TRACK_SIGN_BRANDS } from "../objects/TrackSign.js";
+import { TrackSign } from "../objects/TrackSign.js";
+import { TRACK_SIGN_BRANDS } from "../constants.js";
 
 export class TrackSignEditor {
   constructor(editor) {
@@ -65,7 +66,7 @@ export class TrackSignEditor {
     s.trackSign.name     = signObj.feature.name ?? 'Track Name';
     s.trackSign.rotation = Math.round((signObj.feature.rotation ?? 0) * (180 / Math.PI));
     s.trackSign.contentType = signObj.feature.contentType ?? 'text';
-    s.trackSign.brandImage = signObj.feature.brandImage ?? TRACK_SIGN_BRANDS[0];
+    s.trackSign.brandImage = signObj.feature.brandImage ?? TRACK_SIGN_BRANDS[0].value;
     s.trackSign.background = signObj.feature.background ?? 'black';
     s.trackSign.scale = signObj.feature.scale ?? 1;
     s.trackSign.heightOffset = signObj.feature.heightOffset ?? 0;
@@ -118,7 +119,7 @@ export class TrackSignEditor {
       name: 'Track Name',
       rotation: 0,
       contentType: 'text',
-      brandImage: TRACK_SIGN_BRANDS[0],
+      brandImage: TRACK_SIGN_BRANDS[0].value,
       background: 'black',
       scale: 1,
       heightOffset: 0,
@@ -180,9 +181,8 @@ export class TrackSignEditor {
 
   changeBackground(val) {
     if (!this._selected) return;
-    const next = val === 'white' ? 'white' : 'black';
-    this._selected.setBackground(next);
-    this.editor._editorStore.trackSign.background = next;
+    this._selected.setBackground(val);
+    this.editor._editorStore.trackSign.background = val;
     this.editor.saveSnapshot(true);
   }
 

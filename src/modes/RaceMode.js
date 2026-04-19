@@ -1,5 +1,4 @@
-import { Vector3, Color3 } from "@babylonjs/core";
-import { AIDriver } from "../ai/AIDriver.js";
+import { Vector3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";

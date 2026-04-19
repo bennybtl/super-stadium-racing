@@ -1,23 +1,22 @@
-import { Color3 } from "@babylonjs/core";
 import { AIDriver } from "../ai/AIDriver.js";
 import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { TelemetryPlayer } from "../managers/TelemetryPlayer.js";
-
+import { basicColors } from "../constants.js";
 /**
  * AI driver colour palette — cycled through for each AI slot.
  */
 const AI_COLORS = [
-  new Color3(0.2, 0.2, 0.8), // blue
-  new Color3(0.8, 0.8, 0.2), // yellow
-  new Color3(0.3, 0.3, 0.3), // grey
-  new Color3(0.9, 0.9, 0.9), // white
-  new Color3(0.2, 0.8, 0.8), // cyan
-  new Color3(0.8, 0.2, 0.8), // magenta
-  new Color3(0.8, 0.5, 0.2), // orange
-  new Color3(0.8, 0.2, 0.2), // red
-  new Color3(0.2, 0.8, 0.2), // green
-  new Color3(0.1, 0.1, 0.1), // black
+  basicColors.blue.diffuse,
+  basicColors.yellow.diffuse,
+  basicColors.gray.diffuse,
+  basicColors.white.diffuse,
+  basicColors.cyan.diffuse,
+  basicColors.magenta.diffuse,
+  basicColors.orange.diffuse,
+  basicColors.red.diffuse,
+  basicColors.green.diffuse,
+  basicColors.black.diffuse,
 ];
 
 /**

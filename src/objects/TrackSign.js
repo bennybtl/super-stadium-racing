@@ -3,27 +3,22 @@ import {
   StandardMaterial,
   DynamicTexture,
   TransformNode,
-  Color3,
   Vector3,
 } from "@babylonjs/core";
 
+import { basicColors } from "../constants.js";
+
 const BASE_BANNER_W = 10;
 const BANNER_H = 2.2;
-const POLE_H = 4.8;
-const POLE_DIAM = 0.18;
-const BANNER_TOP_MARGIN = 0.25;
+const POLE_H = 2.2;
+const POLE_DIAM = 0.16;
+const BANNER_TOP_MARGIN = 0;
 const BANNER_CENTER_Y = POLE_H - BANNER_TOP_MARGIN - BANNER_H / 2;
 const MIN_BANNER_W = 4;
 const MAX_BANNER_W = 40;
 
 const TEX_W = 1024;
 const TEX_H = 256;
-
-export const TRACK_SIGN_BRANDS = [
-  'energizer-racing.png',
-  'turbo-king.png',
-  'ultra-grip.png',
-];
 
 const _brandImageCache = new Map();
 
@@ -63,7 +58,7 @@ export class TrackSign {
     feature.name = feature.name ?? 'Track Name';
     feature.rotation = feature.rotation ?? 0;
     feature.contentType = feature.contentType ?? 'text';
-    feature.brandImage = feature.brandImage ?? TRACK_SIGN_BRANDS[0];
+    feature.brandImage = feature.brandImage ?? 'energizer-racing.png';
     feature.background = feature.background ?? 'black';
     feature.scale = feature.scale ?? 1;
     feature.heightOffset = feature.heightOffset ?? 0;
@@ -76,8 +71,8 @@ export class TrackSign {
     this.container.scaling = new Vector3(feature.scale, feature.scale, feature.scale);
 
     this._poleMat = new StandardMaterial(`signPoleMat_${x}_${z}`, scene);
-    this._poleMat.diffuseColor = new Color3(0.22, 0.22, 0.22);
-    this._poleMat.specularColor = new Color3(0.08, 0.08, 0.08);
+    this._poleMat.diffuseColor = basicColors.black.diffuse;
+    this._poleMat.specularColor = basicColors.black.emissive;
 
     const half = feature.width / 2;
 
@@ -106,12 +101,24 @@ export class TrackSign {
     this.banner = MeshBuilder.CreatePlane(`signBanner_${x}_${z}`, {
       width: BASE_BANNER_W,
       height: BANNER_H,
-      sideOrientation: 2,
+      sideOrientation: 0,
     }, scene);
     this.banner.parent = this.container;
-    this.banner.position = new Vector3(0, BANNER_CENTER_Y + feature.heightOffset, 0);
+    this.banner.position = new Vector3(0, BANNER_CENTER_Y + feature.heightOffset, 0.01);
     this.banner.isPickable = true;
     this._shadows?.addShadowCaster?.(this.banner);
+
+    // Opaque back sheet so the sign is not see-through from behind.
+    this.bannerBack = MeshBuilder.CreatePlane(`signBannerBack_${x}_${z}`, {
+      width: BASE_BANNER_W,
+      height: BANNER_H,
+      sideOrientation: 0,
+    }, scene);
+    this.bannerBack.parent = this.container;
+    this.bannerBack.position = new Vector3(0, BANNER_CENTER_Y + feature.heightOffset, -0.01);
+    this.bannerBack.rotation.y = Math.PI;
+    this.bannerBack.isPickable = true;
+    this._shadows?.addShadowCaster?.(this.bannerBack);
 
     this._texture = new DynamicTexture(
       `signTex_${x}_${z}`,
@@ -123,9 +130,15 @@ export class TrackSign {
     this._bannerMat = new StandardMaterial(`signBannerMat_${x}_${z}`, scene);
     this._bannerMat.diffuseTexture = this._texture;
     this._bannerMat.emissiveTexture = this._texture;
-    this._bannerMat.specularColor = new Color3(0.06, 0.06, 0.06);
-    this._bannerMat.backFaceCulling = false;
+    this._bannerMat.specularColor = basicColors.black.emissive;
+    this._bannerMat.backFaceCulling = true;
     this.banner.material = this._bannerMat;
+
+    this._bannerBackMat = new StandardMaterial(`signBannerBackMat_${x}_${z}`, scene);
+    this._bannerBackMat.specularColor = basicColors.black.emissive;
+    this._bannerBackMat.backFaceCulling = true;
+    this.bannerBack.material = this._bannerBackMat;
+    this._updateBackFaceColor();
 
       this._applyHeightOffsetVisual();
       this._applyWidthVisual();
@@ -137,6 +150,7 @@ export class TrackSign {
       this.leftPole.position.x = -half;
       this.rightPole.position.x = half;
       this.banner.scaling.x = width / BASE_BANNER_W;
+      this.bannerBack.scaling.x = width / BASE_BANNER_W;
     }
   _applyHeightOffsetVisual() {
     const h = this.feature.heightOffset ?? 0;
@@ -150,6 +164,13 @@ export class TrackSign {
     this.rightPole.position.y = poleHeight / 2;
 
     this.banner.position.y = BANNER_CENTER_Y + h;
+    this.bannerBack.position.y = BANNER_CENTER_Y + h;
+  }
+
+  _updateBackFaceColor() {
+    const { diffuse, emissive } = basicColors[this.feature.background] || basicColors.black;
+    this._bannerBackMat.diffuseColor = diffuse;
+    this._bannerBackMat.emissiveColor = emissive;
   }
 
   // ─── Content rendering ────────────────────────────────────────────────────
@@ -160,7 +181,8 @@ export class TrackSign {
     const drawId = ++this._drawRequestId;
     const texture = this._texture;
     const ctx = texture.getContext();
-    const bg = this.feature.background === 'white' ? '#ffffff' : '#000000';
+    const bg = (basicColors[this.feature.background]?.diffuse ?? basicColors.black.diffuse).toHexString();
+
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, TEX_W, TEX_H);
 
@@ -261,6 +283,7 @@ export class TrackSign {
 
   setBackground(background) {
     this.feature.background = background;
+    this._updateBackFaceColor();
     this._drawContent();
   }
 
@@ -296,7 +319,7 @@ export class TrackSign {
   }
 
   containsMesh(mesh) {
-    return mesh === this.banner || mesh === this.leftPole || mesh === this.rightPole;
+    return mesh === this.banner || mesh === this.bannerBack || mesh === this.leftPole || mesh === this.rightPole;
   }
 
   dispose() {
@@ -304,8 +327,10 @@ export class TrackSign {
     this._drawRequestId++;
     this._texture?.dispose();
     this._bannerMat?.dispose();
+    this._bannerBackMat?.dispose();
     this._poleMat?.dispose();
     this.banner?.dispose();
+    this.bannerBack?.dispose();
     this.leftPole?.dispose();
     this.rightPole?.dispose();
     this.container?.dispose();

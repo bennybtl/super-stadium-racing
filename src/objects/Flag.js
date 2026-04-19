@@ -6,6 +6,7 @@ import {
   Vector3,
   VertexData,
 } from "@babylonjs/core";
+import { basicColors } from "../constants";
 
 export const POLE_HEIGHT = 8.5;
 export const POLE_RADIUS = 0.1;
@@ -75,8 +76,8 @@ export class Flag {
     this.pole.isPickable = true;
 
     const poleMat = new StandardMaterial(`poleMat_${x}_${z}`, scene);
-    poleMat.diffuseColor  = new Color3(1, 1, 1);
-    poleMat.specularColor = new Color3(0.2, 0.2, 0.2);
+    poleMat.diffuseColor  = basicColors.gray.diffuse;
+    poleMat.specularColor = basicColors.gray.emissive;
     this.pole.material = poleMat;
 
     // ── Flag banner parented to pole ─────────────────────────────────
@@ -171,8 +172,8 @@ export class Flag {
 
     mesh.isPickable = true;
     const mat = new StandardMaterial(`flagMat_${x}_${z}`, scene);
-    mat.diffuseColor    = color === 'red' ? new Color3(0.9, 0.1, 0.1) : new Color3(0.1, 0.3, 0.9);
-    mat.specularColor   = new Color3(0.1, 0.1, 0.1);
+    mat.diffuseColor    = color === 'red' ? basicColors.red.diffuse : basicColors.blue.diffuse;
+    mat.specularColor   = basicColors.gray.emissive;
     mat.backFaceCulling = false;
     mesh.material = mat;
     return mesh;
@@ -187,8 +188,8 @@ export class Flag {
   setColor(color) {
     this.color = color;
     this.flag.material.diffuseColor = color === 'red'
-      ? new Color3(0.9, 0.1, 0.1)
-      : new Color3(0.1, 0.3, 0.9);
+      ? basicColors.red.diffuse
+      : basicColors.blue.diffuse;
   }
 
   dispose() {
