@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import { TrackSign } from "../objects/TrackSign.js";
+import { TrackSign, TRACK_SIGN_BRANDS } from "../objects/TrackSign.js";
 
 export class TrackSignEditor {
   constructor(editor) {
@@ -52,7 +52,7 @@ export class TrackSignEditor {
   // ── Lookup ─────────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
-    return this._signs.find(s => s.board === mesh || s.post === mesh) ?? null;
+    return this._signs.find(s => s.containsMesh(mesh)) ?? null;
   }
 
   // ── Selection ──────────────────────────────────────────────────────────────
@@ -64,6 +64,12 @@ export class TrackSignEditor {
     if (!s) return;
     s.trackSign.name     = signObj.feature.name ?? 'Track Name';
     s.trackSign.rotation = Math.round((signObj.feature.rotation ?? 0) * (180 / Math.PI));
+    s.trackSign.contentType = signObj.feature.contentType ?? 'text';
+    s.trackSign.brandImage = signObj.feature.brandImage ?? TRACK_SIGN_BRANDS[0];
+    s.trackSign.background = signObj.feature.background ?? 'black';
+    s.trackSign.scale = signObj.feature.scale ?? 1;
+    s.trackSign.heightOffset = signObj.feature.heightOffset ?? 0;
+    s.trackSign.width = signObj.feature.width ?? 10;
     s.selectedType = 'trackSign';
   }
 
@@ -105,7 +111,19 @@ export class TrackSignEditor {
     const direction = camTarget.subtract(camPos).normalize();
     const newX      = camPos.x + direction.x * 20;
     const newZ      = camPos.z + direction.z * 50;
-    const feature   = { type: 'trackSign', x: newX, z: newZ, name: 'Track Name', rotation: 0 };
+    const feature   = {
+      type: 'trackSign',
+      x: newX,
+      z: newZ,
+      name: 'Track Name',
+      rotation: 0,
+      contentType: 'text',
+      brandImage: TRACK_SIGN_BRANDS[0],
+      background: 'black',
+      scale: 1,
+      heightOffset: 0,
+      width: 10,
+    };
     e.currentTrack.features.push(feature);
     this.createVisual(feature);
     e.saveSnapshot();
@@ -142,6 +160,51 @@ export class TrackSignEditor {
     if (!this._selected) return;
     this._selected.setName(val);
     this.editor._editorStore.trackSign.name = val;
+    this.editor.saveSnapshot(true);
+  }
+
+  changeContentType(val) {
+    if (!this._selected) return;
+    const next = val === 'brand' ? 'brand' : 'text';
+    this._selected.setContentType(next);
+    this.editor._editorStore.trackSign.contentType = next;
+    this.editor.saveSnapshot(true);
+  }
+
+  changeBrandImage(val) {
+    if (!this._selected) return;
+    this._selected.setBrandImage(val);
+    this.editor._editorStore.trackSign.brandImage = val;
+    this.editor.saveSnapshot(true);
+  }
+
+  changeBackground(val) {
+    if (!this._selected) return;
+    const next = val === 'white' ? 'white' : 'black';
+    this._selected.setBackground(next);
+    this.editor._editorStore.trackSign.background = next;
+    this.editor.saveSnapshot(true);
+  }
+
+  changeScale(val) {
+    if (!this._selected) return;
+    this._selected.setScale(val);
+    this.editor._editorStore.trackSign.scale = val;
+    this.editor.saveSnapshot(true);
+  }
+
+  changeHeightOffset(val) {
+    if (!this._selected) return;
+    const g = this.editor.terrainQuery.heightAt(this._selected.feature.x, this._selected.feature.z);
+    this._selected.setHeightOffset(val, g);
+    this.editor._editorStore.trackSign.heightOffset = val;
+    this.editor.saveSnapshot(true);
+  }
+
+  changeWidth(val) {
+    if (!this._selected) return;
+    this._selected.setWidth(val);
+    this.editor._editorStore.trackSign.width = val;
     this.editor.saveSnapshot(true);
   }
 

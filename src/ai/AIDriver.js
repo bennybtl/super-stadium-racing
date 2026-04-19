@@ -305,7 +305,7 @@ export class AIDriver {
   /**
    * Get steering input based on current position
    */
-  getInput(position, heading, fwdSpeed = 0, dt = 16.67) {
+  getInput(position, heading, fwdSpeed = 0, dt = 0.01667) {
     // Periodically update debug visualization if enabled
     this._debugRenderer.onFrame();
 

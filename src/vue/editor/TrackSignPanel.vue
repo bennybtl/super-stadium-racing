@@ -5,16 +5,86 @@
     accent-color="#cc0000"
     @close="editor.closeTrackSign()"
   >
+    <!-- Content type -->
+    <div class="ep-label">Content</div>
+    <select
+      class="ep-select"
+      :value="editor.trackSign.contentType"
+      @change="editor.setTrackSignContentType($event.target.value)"
+    >
+      <option value="text">Custom Text</option>
+      <option value="brand">Brand Logo</option>
+    </select>
+
     <!-- Name -->
-    <div class="ep-row">
+    <div v-if="editor.trackSign.contentType === 'text'" class="ep-row">
       <span>Sign Text</span>
     </div>
     <input
+      v-if="editor.trackSign.contentType === 'text'"
       class="sign-name-input"
       type="text"
       :value="editor.trackSign.name"
       @input="editor.setTrackSignName($event.target.value)"
       placeholder="Track Name"
+    />
+
+    <!-- Brand image -->
+    <div v-if="editor.trackSign.contentType === 'brand'" class="ep-label">Brand Logo</div>
+    <select
+      v-if="editor.trackSign.contentType === 'brand'"
+      class="ep-select"
+      :value="editor.trackSign.brandImage"
+      @change="editor.setTrackSignBrandImage($event.target.value)"
+    >
+      <option v-for="brand in brandOptions" :key="brand.value" :value="brand.value">{{ brand.label }}</option>
+    </select>
+
+    <!-- Background -->
+    <div class="ep-label">Background</div>
+    <select
+      class="ep-select"
+      :value="editor.trackSign.background"
+      @change="editor.setTrackSignBackground($event.target.value)"
+    >
+      <option value="black">Black</option>
+      <option value="white">White</option>
+    </select>
+
+    <!-- Width -->
+    <div class="ep-row">
+      <span>Width</span>
+      <span>{{ editor.trackSign.width.toFixed(1) }} m</span>
+    </div>
+    <input
+      type="range" min="4" max="30" step="0.5"
+      :value="editor.trackSign.width"
+      @input="editor.setTrackSignWidth(+$event.target.value)"
+      class="ep-slider"
+    />
+
+    <!-- Scale -->
+    <div class="ep-row">
+      <span>Scale</span>
+      <span>{{ editor.trackSign.scale.toFixed(2) }}x</span>
+    </div>
+    <input
+      type="range" min="0.4" max="2.5" step="0.05"
+      :value="editor.trackSign.scale"
+      @input="editor.setTrackSignScale(+$event.target.value)"
+      class="ep-slider"
+    />
+
+    <!-- Height -->
+    <div class="ep-row">
+      <span>Height Offset</span>
+      <span>{{ editor.trackSign.heightOffset.toFixed(1) }} m</span>
+    </div>
+    <input
+      type="range" min="-1" max="6" step="0.1"
+      :value="editor.trackSign.heightOffset"
+      @input="editor.setTrackSignHeightOffset(+$event.target.value)"
+      class="ep-slider"
     />
 
     <!-- Rotation -->
@@ -43,6 +113,11 @@ import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
 
 const editor = useEditorStore();
+const brandOptions = [
+  { value: 'energizer-racing.png', label: 'Energizer Racing' },
+  { value: 'turbo-king.png', label: 'Turbo King' },
+  { value: 'ultra-grip.png', label: 'Ultra Grip' },
+];
 </script>
 
 <style scoped>

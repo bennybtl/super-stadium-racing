@@ -6,16 +6,17 @@ import { TerrainQuery } from "./TerrainQuery.js";
  * No game logic needed; signs are purely decorative.
  */
 export class TrackSignManager {
-  constructor(scene, track) {
+  constructor(scene, track, shadows = null) {
     this.scene  = scene;
     this.track  = track;
+    this.shadows = shadows;
     this._signs = [];
     this._terrainQuery = new TerrainQuery(scene);
   }
 
   createSign(feature) {
     const groundY = this._terrainQuery.heightAt(feature.x, feature.z);
-    const sign = new TrackSign(feature, groundY, this.scene);
+    const sign = new TrackSign(feature, groundY, this.scene, this.shadows);
     this._signs.push(sign);
   }
 

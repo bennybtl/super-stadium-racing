@@ -1241,6 +1241,12 @@ export class EditorController {
   deselectTrackSign()          { this.trackSignEditor.deselect(); }
   changeTrackSignName(val)     { this.trackSignEditor.changeName(val); }
   changeTrackSignRotation(val) { this.trackSignEditor.changeRotation(val); }
+  changeTrackSignContentType(val) { this.trackSignEditor.changeContentType(val); }
+  changeTrackSignBrandImage(val) { this.trackSignEditor.changeBrandImage(val); }
+  changeTrackSignBackground(val) { this.trackSignEditor.changeBackground(val); }
+  changeTrackSignScale(val) { this.trackSignEditor.changeScale(val); }
+  changeTrackSignHeightOffset(val) { this.trackSignEditor.changeHeightOffset(val); }
+  changeTrackSignWidth(val) { this.trackSignEditor.changeWidth(val); }
   deleteTrackSign()            { this.trackSignEditor.deleteSelected(); }
   duplicateTrackSign()         { this.trackSignEditor.duplicateSelected(); }
 

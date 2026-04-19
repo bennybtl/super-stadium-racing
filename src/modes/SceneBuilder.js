@@ -250,7 +250,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // wallManager already created above
   const tireStackManager = new TireStackManager(scene, currentTrack, shadows);
   const flagManager     = new FlagManager(scene, currentTrack, shadows);
-  const trackSignManager = new TrackSignManager(scene, currentTrack);
+  const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
   const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager);

@@ -288,6 +288,12 @@ export const useEditorStore = defineStore('editor', () => {
   const trackSign = reactive({
     name: 'Track Name',
     rotation: 0,   // degrees
+    contentType: 'text', // 'text' | 'brand'
+    brandImage: 'energizer-racing.png',
+    background: 'black', // 'black' | 'white'
+    scale: 1,
+    heightOffset: 0,
+    width: 10,
   });
 
   // ── Banner String panel ──
@@ -452,6 +458,12 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Track Sign actions ──
   function setTrackSignName(val)        { trackSign.name = val;     _bridge.value?.changeTrackSignName(val); }
   function setTrackSignRotation(val)    { trackSign.rotation = val; _bridge.value?.changeTrackSignRotation(val); }
+  function setTrackSignContentType(val) { trackSign.contentType = val; _bridge.value?.changeTrackSignContentType(val); }
+  function setTrackSignBrandImage(val)  { trackSign.brandImage = val; _bridge.value?.changeTrackSignBrandImage(val); }
+  function setTrackSignBackground(val)  { trackSign.background = val; _bridge.value?.changeTrackSignBackground(val); }
+  function setTrackSignScale(val)       { trackSign.scale = val; _bridge.value?.changeTrackSignScale(val); }
+  function setTrackSignHeightOffset(val){ trackSign.heightOffset = val; _bridge.value?.changeTrackSignHeightOffset(val); }
+  function setTrackSignWidth(val)       { trackSign.width = val; _bridge.value?.changeTrackSignWidth(val); }
   function deleteTrackSign()            { _bridge.value?.deleteTrackSign(); }
   function duplicateTrackSign()         { _bridge.value?.duplicateTrackSign(); }
   function closeTrackSign()             { _bridge.value?.deselectTrackSign(); }
@@ -588,7 +600,10 @@ export const useEditorStore = defineStore('editor', () => {
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, duplicateBezierWall, closeBezierWall,
     setFlagColor, deleteFlag, duplicateFlag,
     trackSign,
-    setTrackSignName, setTrackSignRotation, deleteTrackSign, duplicateTrackSign, closeTrackSign,
+    setTrackSignName, setTrackSignRotation,
+    setTrackSignContentType, setTrackSignBrandImage, setTrackSignBackground,
+    setTrackSignScale, setTrackSignHeightOffset, setTrackSignWidth,
+    deleteTrackSign, duplicateTrackSign, closeTrackSign,
     bannerString,
     setBannerStringWidth, setBannerStringPoleHeight, setBannerStringHeading, deleteBannerString, duplicateBannerString, closeBannerString,
     actionZone,

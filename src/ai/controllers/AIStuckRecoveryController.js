@@ -35,6 +35,8 @@ export class AIStuckRecoveryController {
   }
 
   update({ dt, input, fwdSpeed, currentPos, targetWaypoint }) {
+    const dtMs = dt * 1000;
+
     // Stuck detection — control-input stalls
     // Case A: no throttle intent for too long
     // Case B: throttle held but forward speed stays very low (wall press)
@@ -42,7 +44,7 @@ export class AIStuckRecoveryController {
       (input.forward && fwdSpeed < this.wallPressMaxSpeed);
 
     if (controlStall) {
-      this.stuckTimer += dt;
+      this.stuckTimer += dtMs;
       if (this.stuckTimer >= this.stuckThreshold && this.driver.truckMesh) {
         this._respawnFromStuck(targetWaypoint, currentPos);
       }
@@ -51,7 +53,7 @@ export class AIStuckRecoveryController {
     }
 
     // Stuck detection — position hasn't changed in N ms
-    this.positionCheckTimer += dt;
+    this.positionCheckTimer += dtMs;
     if (this.positionCheckTimer >= this.positionCheckInterval) {
       this.positionCheckTimer = 0;
       if (this.lastCheckedPosition) {
