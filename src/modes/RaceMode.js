@@ -576,11 +576,6 @@ export class RaceMode extends DriveMode {
 
         if (truckData.isPlayer) {
           uiManager.updateCheckpoints(newCount);
-        } else {
-          console.log(
-            `[${truckData.name}] Passed checkpoint ${checkpointResult.index}, ` +
-              `count: ${newCount}/${checkpointManager.getTotalCheckpoints()}`
-          );
         }
 
         if (newCount === checkpointManager.getTotalCheckpoints()) {

@@ -118,6 +118,7 @@ export class AIDriver {
       stockWeight: boostStockWeight,
       maxChance: boostMaxChance,
       stockRef: boostStockRef,
+      debug: false,
     });
 
     this._stuckRecovery = new AIStuckRecoveryController(this, {

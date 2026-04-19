@@ -1,14 +1,16 @@
 export const DEFAULT_BOOST_CONFIG = {
   minSpeed: 8,
   straightMaxAngle: Math.PI / 12, // ~15°
-  clearAheadDist: 18,
+  clearAheadDist: 15,
   clearLateralDist: 4,
-  decisionCooldownMs: 900,
+  decisionCooldownMs: 600,
   baseChance: 0.1,
   behindWeight: 0.35,
   stockWeight: 0.25,
   maxChance: 0.85,
   stockRef: 4,
+  debug: false,
+  debugLogIntervalMs: 1200,
 };
 
 /**
@@ -33,8 +35,15 @@ export class AIBoostController {
     this.stockWeight = config.stockWeight ?? DEFAULT_BOOST_CONFIG.stockWeight;
     this.maxChance = config.maxChance ?? DEFAULT_BOOST_CONFIG.maxChance;
     this.stockRef = Math.max(1, config.stockRef ?? DEFAULT_BOOST_CONFIG.stockRef);
+    this.debug = config.debug ?? DEFAULT_BOOST_CONFIG.debug;
+    this.debugLogIntervalMs = Math.max(
+      0,
+      config.debugLogIntervalMs ?? DEFAULT_BOOST_CONFIG.debugLogIntervalMs
+    );
 
     this._nextBoostDecisionAtMs = 0;
+    this._lastDebugAtByKey = new Map();
+    this._lastBoostBlocker = null;
   }
 
   setGameState(gameState) {
@@ -48,30 +57,62 @@ export class AIBoostController {
 
   reset() {
     this._nextBoostDecisionAtMs = 0;
+    this._lastBoostBlocker = null;
   }
 
   update({ position, forward, rightVec, fwdSpeed, input }) {
     const truck = this.driver.truck;
 
-    if (!truck || !this.gameState) return;
-    if (this.gameState.boostCount <= 0) return;
-    if (truck.state.boostActive) return;
-    if (!input.forward || input.back) return;
-    if (fwdSpeed < this.minSpeed) return;
+    if (!truck || !this.gameState) {
+      this._debug('missing-state', 'Skipping boost: missing truck or gameState');
+      return;
+    }
+    if (this.gameState.boostCount <= 0) {
+      this._debug('no-boost-stock', 'Skipping boost: no boosts left');
+      return;
+    }
+    if (truck.state.boostActive) {
+      this._debug('already-boosting', 'Skipping boost: boost already active');
+      return;
+    }
+    if (!input.forward || input.back) {
+      this._debug('bad-input', `Skipping boost: input forward=${!!input.forward} back=${!!input.back}`);
+      return;
+    }
+    if (fwdSpeed < this.minSpeed) {
+      this._debug('too-slow', `Skipping boost: speed ${fwdSpeed.toFixed(2)} < min ${this.minSpeed.toFixed(2)}`);
+      return;
+    }
 
     const now = Date.now();
-    if (now < this._nextBoostDecisionAtMs) return;
+    if (now < this._nextBoostDecisionAtMs) {
+      this._debug('cooldown', `Skipping boost: cooldown ${(this._nextBoostDecisionAtMs - now)}ms remaining`);
+      return;
+    }
 
     const curvature = this.driver._pathPlanner.scanPathCurvature(
       this.driver.currentPathIndex,
       this.driver.lookAheadDistance * 2
     );
     if (curvature > this.straightMaxAngle) {
+      this._debug(
+        'curvature',
+        `Skipping boost: curvature ${curvature.toFixed(3)} > limit ${this.straightMaxAngle.toFixed(3)}`
+      );
       this._nextBoostDecisionAtMs = now + this.decisionCooldownMs;
       return;
     }
 
     if (!this._isBoostLaneClear(position, forward, rightVec)) {
+      if (this._lastBoostBlocker) {
+        const b = this._lastBoostBlocker;
+        this._debug(
+          'lane-blocked',
+          `Skipping boost: lane blocked by ${b.name} (fwd=${b.fwdDist.toFixed(1)}m lat=${b.latDist.toFixed(1)}m)`
+        );
+      } else {
+        this._debug('lane-blocked', 'Skipping boost: lane blocked');
+      }
       this._nextBoostDecisionAtMs = now + this.decisionCooldownMs;
       return;
     }
@@ -84,16 +125,26 @@ export class AIBoostController {
       this.stockWeight * stockFactor,
       this.maxChance
     );
+    const roll = Math.random();
 
-    if (Math.random() <= chance && this.gameState.useBoost()) {
+    this._debug(
+      'decision',
+      `Boost decision: chance=${chance.toFixed(3)} roll=${roll.toFixed(3)} behind=${behindFactor.toFixed(3)} stock=${stockFactor.toFixed(3)}`
+    );
+
+    if (roll <= chance && this.gameState.useBoost()) {
       truck.state.boostActive = true;
       truck.state.boostTimer = truck.state.boostDuration;
+      this._debug('boost-fired', `BOOST ACTIVATED. remaining=${this.gameState.boostCount}`, true);
+    } else {
+      this._debug('boost-no-fire', 'Decision did not fire boost');
     }
 
     this._nextBoostDecisionAtMs = now + this.decisionCooldownMs;
   }
 
   _isBoostLaneClear(position, forward, rightVec) {
+    this._lastBoostBlocker = null;
     for (const other of this.driver.otherTrucks) {
       if (!other?.mesh) continue;
       const odx = other.mesh.position.x - position.x;
@@ -103,10 +154,29 @@ export class AIBoostController {
 
       const latDist = odx * rightVec.x + odz * rightVec.z;
       if (Math.abs(latDist) < this.clearLateralDist) {
+        this._lastBoostBlocker = {
+          name: other.name || other.mesh.name || 'truck',
+          fwdDist,
+          latDist,
+        };
         return false;
       }
     }
     return true;
+  }
+
+  _debug(key, message, force = false) {
+    if (!this.debug) return;
+
+    const now = Date.now();
+    if (!force && this.debugLogIntervalMs > 0) {
+      const last = this._lastDebugAtByKey.get(key) ?? 0;
+      if (now - last < this.debugLogIntervalMs) return;
+      this._lastDebugAtByKey.set(key, now);
+    }
+
+    const name = this.selfTruckData?.name || this.driver?.name || 'AI';
+    console.log(`[AIBoostController:${name}] ${message}`);
   }
 
   _estimateBehindFactor() {

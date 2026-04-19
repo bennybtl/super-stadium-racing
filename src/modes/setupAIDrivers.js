@@ -118,7 +118,7 @@ export function setupAIDrivers({
   // ── Build truckData entries (ready for the `trucks` array) ────────────
   const aiTruckDataList = aiTrucks.map(({ truck }, i) => ({
     truck,
-    gameState: new GameState(0),
+    gameState: new GameState(truck.state.maxBoosts ?? 5),
     isPlayer: false,
     name: getAIName(i),
     id:   getAIId(i),

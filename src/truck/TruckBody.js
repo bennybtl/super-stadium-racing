@@ -201,7 +201,6 @@ export class TruckBody {
       const visualMeshes = result.meshes.filter(m => m.getTotalVertices?.() > 0);
       if (!visualMeshes.length) throw new Error('OBJ loaded no visual meshes');
 
-      console.log(visualMeshes)
       visualMeshes[0].parent = wheelNode; // attach the first mesh to the node, others will be re-parented below
       visualMeshes[1].parent = wheelNode; // attach the second mesh to the node, others will be re-parented below
       this._styleMesh(visualMeshes[0], this.colors.wheel, {
