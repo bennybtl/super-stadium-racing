@@ -325,12 +325,14 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Bridge panel ──
   const bridge = reactive({
-    width:        20,
-    depth:        8,
-    height:       5,
-    thickness:    0.4,
-    angle:        0,
-    materialType: 'packed_dirt',
+    width:            20,
+    depth:            8,
+    height:           5,
+    thickness:        0.4,
+    angle:            0,
+    materialType:     'packed_dirt',
+    transitionEnabled: true,
+    transitionDepth:  10,
     collisionEndCaps: false,
     collisionEndCapsOnDepth: true,
     collisionEndCapsOnWidth: false,
@@ -499,6 +501,8 @@ export const useEditorStore = defineStore('editor', () => {
   function setBridgeThickness(val) { bridge.thickness = val; _bridge.value?.changeBridgeThickness(val); }
   function setBridgeAngle(val)     { bridge.angle = val;     _bridge.value?.changeBridgeAngle(val); }
   function setBridgeMaterialType(val) { bridge.materialType = val; _bridge.value?.changeBridgeMaterialType(val); }
+  function setBridgeTransitionEnabled(val) { bridge.transitionEnabled = val; _bridge.value?.changeBridgeTransitionEnabled(val); }
+  function setBridgeTransitionDepth(val)   { bridge.transitionDepth = val;   _bridge.value?.changeBridgeTransitionDepth(val); }
   function setBridgeCollisionEndCaps(val)         { bridge.collisionEndCaps = val;         _bridge.value?.changeBridgeCollisionEndCaps(val); }
   function setBridgeCollisionEndCapsOnDepth(val)  { bridge.collisionEndCapsOnDepth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnDepth(val); }
   function setBridgeCollisionEndCapsOnWidth(val)  { bridge.collisionEndCapsOnWidth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnWidth(val); }
@@ -605,7 +609,7 @@ export const useEditorStore = defineStore('editor', () => {
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
     bridge,
     setBridgeWidth, setBridgeDepth, setBridgeHeight, setBridgeThickness, setBridgeAngle,
-    setBridgeMaterialType,
+    setBridgeMaterialType, setBridgeTransitionEnabled, setBridgeTransitionDepth,
     setBridgeCollisionEndCaps, setBridgeCollisionEndCapsOnDepth, setBridgeCollisionEndCapsOnWidth,
     setBridgeCollisionEndCapThickness, setBridgeCollisionEndCapDrop,
     duplicateBridge, deleteBridge, closeBridge,

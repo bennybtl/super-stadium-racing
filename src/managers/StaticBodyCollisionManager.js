@@ -75,6 +75,13 @@ export class StaticBodyCollisionManager {
         // Broad-phase only: swept AABB against collider world bounds.
         // This is conservative and much cheaper than repeated mesh intersections.
         const intersectsSweep = this._sweptAabbBroadphase(prevPos, truck.mesh.position, radius, halfHeight, collider);
+        if (collider.metadata?.truckColliderDebug) {
+          console.debug(
+            `[StaticBodyCollisionManager] collider check`,
+            collider.name,
+            { intersectsSweep, truckPos: truck.mesh.position.asArray?.() ?? truck.mesh.position, colliderMin: collider.getBoundingInfo().boundingBox.minimumWorld.asArray?.(), colliderMax: collider.getBoundingInfo().boundingBox.maximumWorld.asArray?.() }
+          );
+        }
         if (!intersectsSweep) continue;
         this._resolveTruckVsMesh(truck, prevPos, collider);
       }
@@ -141,6 +148,13 @@ export class StaticBodyCollisionManager {
     if (mesh.metadata?.truckColliderIgnoreTop === true) {
       const TOP_EPS = 0.05;
       if (prevLocal.y >= maxY - TOP_EPS && curLocal.y >= maxY - TOP_EPS) {
+        if (mesh.metadata?.truckColliderDebug) {
+          console.debug(`[StaticBodyCollisionManager] ignore top skip`, mesh.name, {
+            prevLocalY: prevLocal.y,
+            curLocalY: curLocal.y,
+            maxY,
+          });
+        }
         return;
       }
     }
@@ -221,6 +235,16 @@ export class StaticBodyCollisionManager {
     }
 
     truck.mesh.position.copyFrom(newWorld);
+
+    if (mesh.metadata?.truckColliderDebug) {
+      console.debug(`[StaticBodyCollisionManager] resolved collision`, mesh.name, {
+        axis,
+        sign,
+        newWorld: newWorld.asArray?.() ?? newWorld,
+        prevPos: prevPos.asArray?.() ?? prevPos,
+        curPos: truck.mesh.position.asArray?.() ?? truck.mesh.position,
+      });
+    }
 
     const localNormal =
       axis === "x" ? new Vector3(sign, 0, 0) :

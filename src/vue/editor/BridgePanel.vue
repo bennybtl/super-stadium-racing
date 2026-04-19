@@ -81,6 +81,31 @@
       <option value="grass">Grass</option>
     </select>
 
+    <!-- Bridge transitions -->
+    <div class="ep-row">
+      <label class="ep-check-row">
+        <span>Enable Transitions</span>
+        <input
+          type="checkbox"
+          :checked="editor.bridge.transitionEnabled"
+          @change="editor.setBridgeTransitionEnabled($event.target.checked)"
+        />
+      </label>
+    </div>
+
+    <template v-if="editor.bridge.transitionEnabled">
+      <div class="ep-row">
+        <span>Transition Depth</span>
+        <span>{{ editor.bridge.transitionDepth.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="4" max="30" step="0.5"
+        :value="editor.bridge.transitionDepth"
+        @input="editor.setBridgeTransitionDepth(+$event.target.value)"
+        class="ep-slider"
+      />
+    </template>
+
     <div class="ep-hint">Collision end caps</div>
     <div class="ep-row">
       <label class="ep-check-row">

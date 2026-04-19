@@ -18,6 +18,7 @@ export class BridgeManager {
     const terrainY = this.track.getHeightAt(feature.centerX, feature.centerZ);
     const bridge = new Bridge(
       feature,
+      this.track,
       terrainY,
       this.scene,
       this.shadows,
