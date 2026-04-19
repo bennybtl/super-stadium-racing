@@ -1,6 +1,6 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, SceneLoader, TransformNode } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import truckTireUrl  from "../assets/truck-tire.obj?url";
+import truckTireUrl  from "../assets/truck-tire-2.obj?url";
 
 // Skip MTL lookup — materials are applied programmatically
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
@@ -76,6 +76,7 @@ export class TruckBody {
       body:   colors.body   ?? new Color3(0.8, 0.15, 0.05),
       cabin:  colors.cabin  ?? new Color3(0.25, 0.25, 0.3),
       wheel:  colors.wheel  ?? new Color3(0.12, 0.12, 0.12),
+      rim:    colors.rim    ?? new Color3(1.0, 0.85, 0.12),
       detail: colors.detail ?? new Color3(0.7, 0.7, 0.7),
     };
 
@@ -177,6 +178,18 @@ export class TruckBody {
    * @param {Object|null}     entry     - wheels array entry; entry.mesh is set when loaded
    */
   async _loadTireMesh({ name, position, rotation = null, root = this._wheelRoot, entry = null, scale = [1.2, 1.2, 1.2] }) {
+    const wheelNode = new TransformNode(`${name}_root`, this.scene);
+    wheelNode.parent = root;
+    wheelNode.position.copyFrom(position);
+    if (rotation) {
+      wheelNode.rotation.x = rotation.x;
+      wheelNode.rotation.y = rotation.y;
+      wheelNode.rotation.z = rotation.z;
+    }
+    wheelNode.scaling.x = position.x > 0 ? -scale[0] : scale[0]; // mirror left-side wheels
+    wheelNode.scaling.y = scale[1];
+    wheelNode.scaling.z = scale[2];
+
     try {
       const lastSlash = truckTireUrl.lastIndexOf('/');
       const rootUrl   = truckTireUrl.substring(0, lastSlash + 1);
@@ -185,23 +198,22 @@ export class TruckBody {
       const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, this.scene);
       if (!result.meshes.length) throw new Error('OBJ loaded no meshes');
 
-      const mesh = result.meshes[0];
-      mesh.parent   = root;
-      mesh.position = position;
-      if (rotation) {
-        mesh.rotation.x = rotation.x;
-        mesh.rotation.y = rotation.y;
-        mesh.rotation.z = rotation.z;
-      }
+      const visualMeshes = result.meshes.filter(m => m.getTotalVertices?.() > 0);
+      if (!visualMeshes.length) throw new Error('OBJ loaded no visual meshes');
 
-      mesh.scaling.x = position.x > 0 ? -scale[0] : scale[0]; // mirror left-side wheels
-      mesh.scaling.y = scale[1];
-      mesh.scaling.z = scale[2];
+      console.log(visualMeshes)
+      visualMeshes[0].parent = wheelNode; // attach the first mesh to the node, others will be re-parented below
+      visualMeshes[1].parent = wheelNode; // attach the second mesh to the node, others will be re-parented below
+      this._styleMesh(visualMeshes[0], this.colors.wheel, {
+        specularColor: new Color3(0.02, 0.02, 0.02),
+        specularPower: 8,
+      });
+      this._styleMesh(visualMeshes[1], this.colors.rim);
+      visualMeshes[0].receiveShadows = false;
+      visualMeshes[1].receiveShadows = false;
+      this._parts.push(...visualMeshes);
 
-      this._styleMesh(mesh, this.colors.wheel);
-      mesh.receiveShadows = false;
-      this._parts.push(mesh);
-      if (entry) entry.mesh = mesh;
+      if (entry) entry.mesh = wheelNode;
     } catch (err) {
       console.warn(`[TruckBody] tire mesh load failed for ${name} — using cylinder fallback:`, err);
       const tyre = MeshBuilder.CreateCylinder(name, {
@@ -212,12 +224,15 @@ export class TruckBody {
       } else {
         tyre.rotation.z = Math.PI / 2;
       }
-      tyre.position = position.clone();
-      tyre.parent   = root;
-      this._styleMesh(tyre, this.colors.wheel);
+      tyre.position.setAll(0);
+      tyre.parent   = wheelNode;
+      this._styleMesh(tyre, this.colors.wheel, {
+        specularColor: new Color3(0.02, 0.02, 0.02),
+        specularPower: 8,
+      });
       tyre.receiveShadows = false;
       this._parts.push(tyre);
-      if (entry) entry.mesh = tyre;
+      if (entry) entry.mesh = wheelNode;
     }
   }
 
@@ -324,11 +339,11 @@ export class TruckBody {
     return mesh;
   }
 
-  _styleMesh(mesh, color) {
+  _styleMesh(mesh, color, options = {}) {
     const mat = new StandardMaterial(`${mesh.name}Mat`, this.scene);
     mat.diffuseColor  = color;
-    mat.specularColor = new Color3(0.9, 0.9, 0.9);
-    mat.specularPower = 32;
+    mat.specularColor = options.specularColor ?? new Color3(0.9, 0.9, 0.9);
+    mat.specularPower = options.specularPower ?? 32;
     mesh.material     = mat;
     mesh.receiveShadows = true;
     this.shadows.addShadowCaster(mesh);
