@@ -133,7 +133,7 @@ export class SteepSlopeColliderManager {
     );
     mesh.position = new Vector3(
       (minX + maxX) * 0.5,
-      (bottom + top) * 0.5,
+      bottom,
       (minZ + maxZ) * 0.5
     );
     mesh.isVisible = false;
