@@ -7,7 +7,7 @@
         🏁 Test Track
       </button>
       <div class="status-hint">
-        pan/move - WASD | rotate - QE | delete - Del | undo - Ctrl+Z | zoom - +/- | move faster - Shift
+        Pan/Move: W,A,S,D | Rotate: Q,E | Delete: Del | Undo: Ctrl+Z | Zoom: +/- | Move Faster: Shift
       </div>
 
       <!-- AI path placement mode banner -->

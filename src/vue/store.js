@@ -325,22 +325,17 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Bridge panel ──
   const bridge = reactive({
-    width:     20,
-    depth:     8,
-    height:    5,
-    thickness: 0.4,
-    angle:     0,
-    collisionWidth: 20,
-    collisionDepth: 8,
-    collisionThickness: 0.4,
-    collisionYOffset: 0,
+    width:        20,
+    depth:        8,
+    height:       5,
+    thickness:    0.4,
+    angle:        0,
+    materialType: 'packed_dirt',
     collisionEndCaps: false,
     collisionEndCapsOnDepth: true,
     collisionEndCapsOnWidth: false,
     collisionEndCapThickness: 1.2,
     collisionEndCapDrop: 30,
-    collisionEndCapSpanDepth: 20,
-    collisionEndCapSpanWidth: 8,
   });
 
   // ── Track defaults ──
@@ -503,17 +498,12 @@ export const useEditorStore = defineStore('editor', () => {
   function setBridgeHeight(val)    { bridge.height = val;    _bridge.value?.changeBridgeHeight(val); }
   function setBridgeThickness(val) { bridge.thickness = val; _bridge.value?.changeBridgeThickness(val); }
   function setBridgeAngle(val)     { bridge.angle = val;     _bridge.value?.changeBridgeAngle(val); }
-  function setBridgeCollisionWidth(val)     { bridge.collisionWidth = val;     _bridge.value?.changeBridgeCollisionWidth(val); }
-  function setBridgeCollisionDepth(val)     { bridge.collisionDepth = val;     _bridge.value?.changeBridgeCollisionDepth(val); }
-  function setBridgeCollisionThickness(val) { bridge.collisionThickness = val; _bridge.value?.changeBridgeCollisionThickness(val); }
-  function setBridgeCollisionYOffset(val)   { bridge.collisionYOffset = val;   _bridge.value?.changeBridgeCollisionYOffset(val); }
+  function setBridgeMaterialType(val) { bridge.materialType = val; _bridge.value?.changeBridgeMaterialType(val); }
   function setBridgeCollisionEndCaps(val)         { bridge.collisionEndCaps = val;         _bridge.value?.changeBridgeCollisionEndCaps(val); }
   function setBridgeCollisionEndCapsOnDepth(val)  { bridge.collisionEndCapsOnDepth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnDepth(val); }
   function setBridgeCollisionEndCapsOnWidth(val)  { bridge.collisionEndCapsOnWidth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnWidth(val); }
   function setBridgeCollisionEndCapThickness(val) { bridge.collisionEndCapThickness = val; _bridge.value?.changeBridgeCollisionEndCapThickness(val); }
   function setBridgeCollisionEndCapDrop(val)      { bridge.collisionEndCapDrop = val;      _bridge.value?.changeBridgeCollisionEndCapDrop(val); }
-  function setBridgeCollisionEndCapSpanDepth(val) { bridge.collisionEndCapSpanDepth = val; _bridge.value?.changeBridgeCollisionEndCapSpanDepth(val); }
-  function setBridgeCollisionEndCapSpanWidth(val) { bridge.collisionEndCapSpanWidth = val; _bridge.value?.changeBridgeCollisionEndCapSpanWidth(val); }
   function duplicateBridge()       { _bridge.value?.duplicateSelectedBridge(); }
   function deleteBridge()          { _bridge.value?.deleteBridge(); }
   function closeBridge()           { _bridge.value?.deselectBridge(); }
@@ -615,10 +605,9 @@ export const useEditorStore = defineStore('editor', () => {
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
     bridge,
     setBridgeWidth, setBridgeDepth, setBridgeHeight, setBridgeThickness, setBridgeAngle,
-    setBridgeCollisionWidth, setBridgeCollisionDepth, setBridgeCollisionThickness, setBridgeCollisionYOffset,
+    setBridgeMaterialType,
     setBridgeCollisionEndCaps, setBridgeCollisionEndCapsOnDepth, setBridgeCollisionEndCapsOnWidth,
     setBridgeCollisionEndCapThickness, setBridgeCollisionEndCapDrop,
-    setBridgeCollisionEndCapSpanDepth, setBridgeCollisionEndCapSpanWidth,
     duplicateBridge, deleteBridge, closeBridge,
     trackDefaultTerrain, setTrackDefaultTerrain,
     setActiveTool,

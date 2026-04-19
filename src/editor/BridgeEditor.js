@@ -35,7 +35,7 @@ export class BridgeEditor {
   createMaterials() {
     const m = EditorMaterials.for(this.editor.scene);
     this.material          = m.bridgeBox;
-    this.highlightMaterial = m.bridgeBoxHighlight;
+    this.highlightMaterial = m.nodeHighlight;
     this.sphereMaterial    = m.handleSphere;
   }
 
@@ -136,6 +136,7 @@ export class BridgeEditor {
       height:    5,
       thickness: 0.4,
       angle:     0,
+      materialType: 'packed_dirt',
     };
 
     this.editor.saveSnapshot();
@@ -164,7 +165,9 @@ export class BridgeEditor {
     if (this.selected) this.deselect();
     this.selected = bridgeData;
     if (bridgeData.sphere) {
-      bridgeData.sphere.scaling.setAll(1.25);
+      // set color to nodeHighlight
+      bridgeData.sphere.material = this.highlightMaterial;
+
     }
     this.showProperties(bridgeData);
     console.log('[BridgeEditor] Selected bridge at',
@@ -174,7 +177,7 @@ export class BridgeEditor {
   deselect() {
     if (!this.selected) return;
     if (this.selected.sphere) {
-      this.selected.sphere.scaling.setAll(1);
+      this.selected.sphere.material = this.handleSphere;
     }
     this.hideProperties();
     this.selected = null;
@@ -251,17 +254,12 @@ export class BridgeEditor {
     s.bridge.height    = feature.height    ?? 5;
     s.bridge.thickness = feature.thickness ?? 0.4;
     s.bridge.angle     = feature.angle     ?? 0;
-    s.bridge.collisionWidth     = c.width     ?? s.bridge.width;
-    s.bridge.collisionDepth     = c.depth     ?? s.bridge.depth;
-    s.bridge.collisionThickness = c.thickness ?? s.bridge.thickness;
-    s.bridge.collisionYOffset   = c.yOffset   ?? 0;
+    s.bridge.materialType = feature.materialType ?? 'packed_dirt';
     s.bridge.collisionEndCaps         = c.endCaps ?? false;
     s.bridge.collisionEndCapsOnDepth  = c.endCapsOnDepth ?? true;
     s.bridge.collisionEndCapsOnWidth  = c.endCapsOnWidth ?? false;
     s.bridge.collisionEndCapThickness = c.endCapThickness ?? 1.2;
     s.bridge.collisionEndCapDrop      = c.endCapDrop ?? 30;
-    s.bridge.collisionEndCapSpanDepth = c.endCapSpanDepth ?? c.endCapWidth ?? s.bridge.collisionWidth;
-    s.bridge.collisionEndCapSpanWidth = c.endCapSpanWidth ?? c.endCapDepth ?? s.bridge.collisionDepth;
     s.selectedType = 'bridge';
   }
 
@@ -312,6 +310,13 @@ export class BridgeEditor {
     this._scheduleRuntimeSync(this.selected.feature);
   }
 
+  changeMaterialType(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.materialType = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
   _ensureCollision() {
     if (!this.selected) return null;
     const f = this.selected.feature;
@@ -328,34 +333,6 @@ export class BridgeEditor {
       window.rebuildBridge?.(this._pendingFeature ?? null);
       this._pendingFeature = null;
     });
-  }
-
-  changeCollisionWidth(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot(true);
-    this._ensureCollision().width = val;
-    this._scheduleRuntimeSync(this.selected.feature);
-  }
-
-  changeCollisionDepth(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot(true);
-    this._ensureCollision().depth = val;
-    this._scheduleRuntimeSync(this.selected.feature);
-  }
-
-  changeCollisionThickness(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot(true);
-    this._ensureCollision().thickness = val;
-    this._scheduleRuntimeSync(this.selected.feature);
-  }
-
-  changeCollisionYOffset(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot(true);
-    this._ensureCollision().yOffset = val;
-    this._scheduleRuntimeSync(this.selected.feature);
   }
 
   changeCollisionEndCaps(val) {
@@ -390,20 +367,6 @@ export class BridgeEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this._ensureCollision().endCapDrop = val;
-    this._scheduleRuntimeSync(this.selected.feature);
-  }
-
-  changeCollisionEndCapSpanDepth(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot(true);
-    this._ensureCollision().endCapSpanDepth = val;
-    this._scheduleRuntimeSync(this.selected.feature);
-  }
-
-  changeCollisionEndCapSpanWidth(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot(true);
-    this._ensureCollision().endCapSpanWidth = val;
     this._scheduleRuntimeSync(this.selected.feature);
   }
 }

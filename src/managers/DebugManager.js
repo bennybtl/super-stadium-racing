@@ -135,7 +135,7 @@ export class DebugManager {
     }
     if (this._trackedTruck) {
       this._trackedTruck.mesh.isVisible = false;
-      this._trackedTruck.body?.setVisible(true);
+      // this._trackedTruck.body?.setVisible(true);
       this._trackedTruck = null;
     }
 

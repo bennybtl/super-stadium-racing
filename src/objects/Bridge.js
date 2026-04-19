@@ -6,6 +6,7 @@ import {
   PhysicsAggregate,
   PhysicsShapeType,
 } from "@babylonjs/core";
+import { TERRAIN_TYPES } from "../terrain.js";
 
 /**
  * Bridge — runtime bridge deck mesh + static physics body.
@@ -30,13 +31,9 @@ export class Bridge {
     const deckY = terrainY + (feature.height ?? 5) + thickness / 2;
     const angleY = ((feature.angle ?? 0) * Math.PI) / 180;
 
-    // Optional collision proxy overrides. When omitted, collision follows the
-    // same dimensions as the visible bridge (backward-compatible behavior).
     const collision = feature.collision ?? {};
-    const collisionWidth = collision.width ?? feature.width ?? 20;
-    const collisionDepth = collision.depth ?? feature.depth ?? 8;
-    const collisionThickness = collision.thickness ?? thickness;
-    const collisionYOffset = collision.yOffset ?? 0;
+    const width = feature.width ?? 20;
+    const depth = feature.depth ?? 8;
     const driveColliderFriction = collision.friction ?? 1.0;
     const driveColliderApplyFriction = collision.applyFriction ?? false;
     // End-caps are an opt-in safety feature. Default off so bridges remain
@@ -45,38 +42,21 @@ export class Bridge {
     const endCapsOnDepth = collision.endCapsOnDepth ?? true;
     const endCapsOnWidth = collision.endCapsOnWidth ?? false;
 
-    // Visible deck mesh (render only).
+    // Visible bridge deck. This mesh is also the collision body.
     this.mesh = MeshBuilder.CreateBox(
       `bridge_render_${feature.centerX}_${feature.centerZ}`,
       {
-        width: feature.width ?? 20,
+        width,
         height: thickness,
-        depth: feature.depth ?? 8,
+        depth,
       },
       scene
     );
     this.mesh.position = new Vector3(feature.centerX, deckY, feature.centerZ);
     this.mesh.rotation.y = angleY;
-
-    // Drivable/collision proxy mesh (physics + raycast surface).
-    this.driveMesh = MeshBuilder.CreateBox(
-      `bridge_drive_${feature.centerX}_${feature.centerZ}`,
-      {
-        width: collisionWidth,
-        height: collisionThickness,
-        depth: collisionDepth,
-      },
-      scene
-    );
-    this.driveMesh.position = new Vector3(
-      feature.centerX,
-      deckY + collisionYOffset,
-      feature.centerZ
-    );
-    this.driveMesh.rotation.y = angleY;
-    this.driveMesh.isVisible = false;
-    this.driveMesh.metadata = {
-      ...(this.driveMesh.metadata ?? {}),
+    this.mesh.isPickable = true;
+    this.mesh.metadata = {
+      ...(this.mesh.metadata ?? {}),
       truckCollider: true,
       truckColliderFriction: driveColliderFriction,
       truckColliderApplyFriction: driveColliderApplyFriction,
@@ -86,17 +66,28 @@ export class Bridge {
     };
 
     this._collisionVolume = {
-      x: this.driveMesh.position.x,
-      y: this.driveMesh.position.y,
-      z: this.driveMesh.position.z,
+      x: this.mesh.position.x,
+      y: this.mesh.position.y,
+      z: this.mesh.position.z,
       heading: angleY,
-      halfWidth: collisionWidth / 2,
-      halfHeight: collisionThickness / 2,
-      halfDepth: collisionDepth / 2,
+      halfWidth: width / 2,
+      halfHeight: thickness / 2,
+      halfDepth: depth / 2,
     };
 
-    // Ensure the proxy participates in TerrainQuery raycasts.
-    this.driveMesh.isPickable = true;
+    const materialTypeName = feature.materialType ?? 'packed_dirt';
+    const terrainType = Object.values(TERRAIN_TYPES).find(t => t.name === materialTypeName) || TERRAIN_TYPES.PACKED_DIRT;
+    this._material = new StandardMaterial(
+      `bridgeMat_${feature.centerX}_${feature.centerZ}`,
+      scene
+    );
+    this._material.diffuseColor = terrainType.color ?? new Color3(0.52, 0.40, 0.22);
+    this._material.specularColor = new Color3(
+      terrainType.specular ?? 0.13,
+      terrainType.specular ?? 0.13,
+      terrainType.specular ?? 0.13
+    );
+    this.mesh.material = this._material;
 
     // Optional end-cap blockers: thin vertical planes at each bridge end that
     // extend downward through terrain. These prevent uphill under-bridge
@@ -108,26 +99,25 @@ export class Bridge {
       const endCapPad = collision.endCapPad ?? 0.4;
       const endCapFriction = collision.endCapFriction ?? 1.0;
       const endCapApplyFriction = collision.endCapApplyFriction ?? false;
-      // Backward-compat: endCapWidth controls span for depth-end caps.
-      const endCapSpanDepth = (collision.endCapSpanDepth ?? collision.endCapWidth ?? collisionWidth) + endCapPad;
-      const endCapSpanWidth = (collision.endCapSpanWidth ?? collision.endCapDepth ?? collisionDepth) + endCapPad;
+      const endCapSpanAtDepthEnds = width + endCapPad;
+      const endCapSpanAtWidthSides = depth + endCapPad;
 
       const dirDepthX = Math.sin(angleY);      // local +Z axis
       const dirDepthZ = Math.cos(angleY);
       const dirWidthX = Math.cos(angleY);      // local +X axis
       const dirWidthZ = -Math.sin(angleY);
-      const baseY = this.driveMesh.position.y - collisionThickness / 2;
+      const baseY = this.mesh.position.y - thickness / 2;
       const capCenterY = baseY - endCapDrop / 2;
 
       const createEndCap = (sign, axis) => {
         const isDepthCap = axis === "depth";
-        const capWidth = isDepthCap ? endCapSpanDepth : endCapThickness;
-        const capDepth = isDepthCap ? endCapThickness : endCapSpanWidth;
+        const capWidth = isDepthCap ? endCapSpanAtDepthEnds : endCapThickness;
+        const capDepth = isDepthCap ? endCapThickness : endCapSpanAtWidthSides;
         // Position caps so their thickness extends inward under the bridge
         // (flush with the outer edge), rather than protruding outward.
         const endOffset = isDepthCap
-          ? collisionDepth / 2 - endCapThickness / 2
-          : collisionWidth / 2 - endCapThickness / 2;
+          ? depth / 2 - endCapThickness / 2
+          : width / 2 - endCapThickness / 2;
         const dirX = isDepthCap ? dirDepthX : dirWidthX;
         const dirZ = isDepthCap ? dirDepthZ : dirWidthZ;
 
@@ -142,9 +132,9 @@ export class Bridge {
         );
 
         cap.position = new Vector3(
-          this.driveMesh.position.x + dirX * endOffset * sign,
+          this.mesh.position.x + dirX * endOffset * sign,
           capCenterY,
-          this.driveMesh.position.z + dirZ * endOffset * sign,
+          this.mesh.position.z + dirZ * endOffset * sign,
         );
         cap.rotation.y = angleY;
         cap.isVisible = false;
@@ -169,33 +159,25 @@ export class Bridge {
       }
     }
 
-    this._material = new StandardMaterial(
-      `bridgeMat_${feature.centerX}_${feature.centerZ}`,
-      scene
-    );
-    this._material.diffuseColor = new Color3(0.52, 0.40, 0.22);
-    this._material.specularColor = new Color3(0.1, 0.1, 0.1);
-    this.mesh.material = this._material;
-
     this.mesh.receiveShadows = true;
     shadows?.addShadowCaster(this.mesh);
 
-    // Register proxy as drivable surface for raycasts and future nav layers.
+    // Register bridge mesh as drivable surface for raycasts and future nav layers.
     if (this._driveSurfaceManager) {
-      this._driveSurfaceManager.register(this.driveMesh, {
+      this._driveSurfaceManager.register(this.mesh, {
         surfaceType: "bridge",
         level: feature.level ?? 1,
       });
     } else {
       // Fallback path used by old call sites.
-      this.driveMesh.metadata = {
-        ...(this.driveMesh.metadata ?? {}),
+      this.mesh.metadata = {
+        ...(this.mesh.metadata ?? {}),
         isTerrain: true,
       };
     }
 
     this.aggregate = new PhysicsAggregate(
-      this.driveMesh,
+      this.mesh,
       PhysicsShapeType.BOX,
       { mass: 0 },
       scene
@@ -203,21 +185,20 @@ export class Bridge {
   }
 
   getCollisionVolume() {
-    if (!this._collisionVolume || !this.driveMesh) return null;
+    if (!this._collisionVolume || !this.mesh) return null;
 
-    this._collisionVolume.x = this.driveMesh.position.x;
-    this._collisionVolume.y = this.driveMesh.position.y;
-    this._collisionVolume.z = this.driveMesh.position.z;
+    this._collisionVolume.x = this.mesh.position.x;
+    this._collisionVolume.y = this.mesh.position.y;
+    this._collisionVolume.z = this.mesh.position.z;
     return this._collisionVolume;
   }
 
   dispose() {
-    this._driveSurfaceManager?.unregisterByMesh(this.driveMesh);
+    this._driveSurfaceManager?.unregisterByMesh(this.mesh);
     this.aggregate?.dispose();
     this._material?.dispose();
     for (const cap of this._endCaps ?? []) cap.dispose();
     this._endCaps = [];
-    this.driveMesh?.dispose();
     this.mesh?.dispose();
   }
 }
