@@ -43,8 +43,8 @@ export class PolyWallEditor {
 
     const m = EditorMaterials.for(scene);
     this.normalMat    = m.polyWallNode;
-    this.activeMat    = m.polyWallNodeActive;
-    this.highlightMat = m.nodeHighlight;
+    this.activeMat    = m.polyWallNode;
+    this.highlightMat = m.polyWallNodeActive;
 
     // Build gizmos for any polyWalls already in the track
     for (const f of track.features) {

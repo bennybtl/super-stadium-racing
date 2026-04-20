@@ -8,7 +8,7 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders/OBJ/index.js";
 import nitroUrl from "../assets/nitro.obj?url";
-
+import { basicColors } from "../constants.js";
 /**
  * Pickup — a single collectable item floating above the ground.
  *
@@ -46,8 +46,8 @@ export class Pickup {
     this._core.parent = this._root;
 
     const coreMat = new StandardMaterial(`pickupCoreMat_${x}_${z}`, scene);
-    coreMat.diffuseColor  = new Color3(1.0, 0.85, 0.0);
-    coreMat.emissiveColor = new Color3(0.6, 0.35, 0.0);
+    coreMat.diffuseColor  = basicColors.blue.diffuse
+    coreMat.emissiveColor = basicColors.blue.emissive;
     coreMat.specularColor = new Color3(1.0, 1.0, 0.5);
     coreMat.specularPower = 16;
     this._core.material = coreMat;
@@ -62,9 +62,8 @@ export class Pickup {
     this._ring.parent = this._root;
 
     const ringMat = new StandardMaterial(`pickupRingMat_${x}_${z}`, scene);
-    ringMat.diffuseColor  = new Color3(1.0, 0.95, 0.1);
-    ringMat.emissiveColor = new Color3(0.5, 0.3, 0.0);
-    ringMat.specularColor = new Color3(1.0, 1.0, 0.5);
+    ringMat.diffuseColor  = basicColors.blue.diffuse;
+    ringMat.emissiveColor = basicColors.blue.emissive;
     this._ring.material = ringMat;
     shadows.addShadowCaster(this._ring);
 

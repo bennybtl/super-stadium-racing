@@ -422,41 +422,47 @@ export class AIDriver {
 }
 
 // Static factory methods for creating AI drivers with preset skill levels
-AIDriver.createGoodDriver = function(track, checkpointManager, wallManager, scene) {
-  return new AIDriver(track, checkpointManager, wallManager, scene, {
+export const AI_SKILL_PRESETS = {
+  good: {
     lookAheadDistance: 20,
-    maxSpeed: 1.0,
+    maxSpeed: 1.1,
     steeringPrecision: 1.0,
     boostBaseChance: 0.16,
-    boostBehindWeight: 0.45,
+    boostBehindWeight: 0.40,
     boostStockWeight: 0.30,
-    boostDecisionCooldownMs: 700,
+    boostDecisionCooldownMs: 600,
     boostStraightMaxAngle: Math.PI / 10,
-  });
+  },
+  ok: {
+    lookAheadDistance: 18,
+    maxSpeed: 1.0,
+    steeringPrecision: 0.9,
+    boostBaseChance: 0.14,
+    boostBehindWeight: 0.36,
+    boostStockWeight: 0.25,
+    boostDecisionCooldownMs: 800,
+    boostStraightMaxAngle: Math.PI / 11,
+  },
+  bad: {
+    lookAheadDistance: 16,
+    maxSpeed: 0.9,
+    steeringPrecision: 0.8,
+    boostBaseChance: 0.12,
+    boostBehindWeight: 0.32,
+    boostStockWeight: 0.20,
+    boostDecisionCooldownMs: 700,
+    boostStraightMaxAngle: Math.PI / 12,
+  },
+};
+
+AIDriver.createGoodDriver = function(track, checkpointManager, wallManager, scene) {
+  return new AIDriver(track, checkpointManager, wallManager, scene, AI_SKILL_PRESETS.good);
 };
 
 AIDriver.createOkDriver = function(track, checkpointManager, wallManager, scene) {
-  return new AIDriver(track, checkpointManager, wallManager, scene, {
-    lookAheadDistance: 15,
-    maxSpeed: 0.8,
-    steeringPrecision: 0.85,
-    boostBaseChance: 0.1,
-    boostBehindWeight: 0.35,
-    boostStockWeight: 0.25,
-    boostDecisionCooldownMs: 900,
-    boostStraightMaxAngle: Math.PI / 12,
-  });
+  return new AIDriver(track, checkpointManager, wallManager, scene, AI_SKILL_PRESETS.ok);
 };
 
 AIDriver.createBadDriver = function(track, checkpointManager, wallManager, scene) {
-  return new AIDriver(track, checkpointManager, wallManager, scene, {
-    lookAheadDistance: 12,
-    maxSpeed: 0.7,
-    steeringPrecision: 0.7,
-    boostBaseChance: 0.05,
-    boostBehindWeight: 0.22,
-    boostStockWeight: 0.18,
-    boostDecisionCooldownMs: 1300,
-    boostStraightMaxAngle: Math.PI / 14,
-  });
+  return new AIDriver(track, checkpointManager, wallManager, scene, AI_SKILL_PRESETS.bad);
 };

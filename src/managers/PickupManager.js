@@ -6,10 +6,10 @@ import { TerrainQuery } from "./TerrainQuery.js";
 // =============================================================================
 
 /** Horizontal distance (m) at which a truck collects a pickup. */
-const COLLECT_RADIUS = 1.8;
+const COLLECT_RADIUS = 2.4;
 
 /** Milliseconds before a collected pickup reappears. */
-const RESPAWN_DELAY_MS = 8_000;
+const RESPAWN_DELAY_MS = 10_000;
 
 /** Default number of pickups to scatter across the track. */
 const DEFAULT_COUNT = 6;

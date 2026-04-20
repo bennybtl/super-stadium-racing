@@ -8,6 +8,8 @@ const STORAGE_KEY = 'season_state';
 /** Ordered race track keys for a season */
 const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json', 'Sidewinder.json'];
 
+import { AI_SKILL_PRESETS } from "../ai/AIDriver.js";
+
 /** Championship points by finish position (index 0 = 1st place) */
 const POINTS_TABLE = [10, 5, 3, 1];
 
@@ -73,21 +75,21 @@ const AI_DRIVERS = [
     name: 'Crusher',
     isPlayer: false,
     skill: 'hard',
-    skillConfig: { lookAheadDistance: 20, maxSpeed: 0.8, steeringPrecision: 1.0 },
+    skillConfig: AI_SKILL_PRESETS.good,
   },
   {
     id: 'ai2',
     name: 'Wheels',
     isPlayer: false,
     skill: 'medium',
-    skillConfig: { lookAheadDistance: 15, maxSpeed: 0.65, steeringPrecision: 0.85 },
+    skillConfig: AI_SKILL_PRESETS.ok,
   },
   {
     id: 'ai3',
     name: 'Dusty',
     isPlayer: false,
     skill: 'easy',
-    skillConfig: { lookAheadDistance: 12, maxSpeed: 0.5, steeringPrecision: 0.7 },
+    skillConfig: AI_SKILL_PRESETS.bad,
   },
 ];
 

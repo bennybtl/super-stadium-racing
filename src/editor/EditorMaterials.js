@@ -1,5 +1,6 @@
 import { StandardMaterial, Color3 } from "@babylonjs/core";
 import { basicColors } from "../constants";
+import { diffusionProfile } from "@babylonjs/core/Shaders/ShadersInclude/diffusionProfile";
 
 export { Color3 };
 
@@ -261,14 +262,16 @@ export class EditorMaterials {
   /** Orange node sphere (inactive wall). */
   get polyWallNode() {
     return this._get('polyWallNode', s => makeMat('edPolyWallNode', s, {
-      diffuse: [0.9, 0.55, 0.05], emissive: [0.3, 0.15, 0.0], alpha: 0.90,
+      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
+      alpha: 0.50,
     }));
   }
 
   /** Bright orange node sphere (active wall). */
   get polyWallNodeActive() {
     return this._get('polyWallNodeActive', s => makeMat('edPolyWallNodeActive', s, {
-      diffuse: [1.0, 0.7, 0.2], emissive: [0.4, 0.22, 0.0], alpha: 0.90,
+      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
+      alpha: 0.90,
     }));
   }
 

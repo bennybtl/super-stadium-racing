@@ -1,5 +1,8 @@
 {
   "name": "Huevos Grande",
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
   "features": [
     {
       "type": "meshGrid",
@@ -91,7 +94,8 @@
         13,
         16.5,
         17
-      ]
+      ],
+      "smoothing": 0.8
     },
     {
       "type": "polyWall",
@@ -147,6 +151,11 @@
           "radius": 14.5
         },
         {
+          "x": -24,
+          "z": -69,
+          "radius": 0
+        },
+        {
           "x": 76,
           "z": -72.5,
           "radius": 10
@@ -167,7 +176,7 @@
           "radius": 5
         }
       ],
-      "height": 2,
+      "height": 3,
       "thickness": 0.5,
       "friction": 0.1,
       "closed": true
@@ -181,12 +190,12 @@
           "radius": 5
         },
         {
-          "x": -36.5,
-          "z": 37.5,
+          "x": -38,
+          "z": 39,
           "radius": 10
         },
         {
-          "x": -38,
+          "x": -39.5,
           "z": -16,
           "radius": 12.5
         },
@@ -323,10 +332,16 @@
     },
     {
       "type": "trackSign",
-      "x": 0,
-      "z": -34.77521310516259,
+      "x": 2,
+      "z": -39.27521310516259,
       "name": "Heuvos Grande",
-      "rotation": 0
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "scale": 2.05,
+      "heightOffset": 1.2,
+      "width": 10.5
     },
     {
       "type": "polyHill",
@@ -425,28 +440,32 @@
       "type": "terrain",
       "centerX": -6.5,
       "centerZ": 58.22478689483742,
-      "radius": 8,
       "terrainType": "mud",
-      "shape": "circle"
+      "shape": "circle",
+      "width": 16,
+      "depth": 16,
+      "rotation": 0
     },
     {
       "type": "terrain",
       "centerX": 9,
       "centerZ": 57.72478689483742,
-      "radius": 8,
       "terrainType": "mud",
-      "shape": "circle"
+      "shape": "circle",
+      "width": 16,
+      "depth": 16,
+      "rotation": 0
     },
     {
       "type": "squareHill",
-      "centerX": -8,
+      "centerX": -9.5,
       "centerZ": -11,
       "width": 10,
       "depth": 6,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3
+      "heightAtMax": 3.5
     },
     {
       "type": "squareHill",
@@ -456,7 +475,7 @@
       "depth": 5,
       "transition": 4,
       "terrainType": null,
-      "heightAtMin": 3,
+      "heightAtMin": 4,
       "heightAtMax": 0
     },
     {
@@ -472,23 +491,23 @@
       "centerX": -40,
       "centerZ": 61,
       "heading": 1.5707963267948966,
-      "width": 25,
+      "width": 26.5,
       "checkpointNumber": 1
     },
     {
       "type": "checkpoint",
-      "centerX": 64,
-      "centerZ": 45,
+      "centerX": 62.832858560489214,
+      "centerZ": 45.14165932540356,
       "heading": -3.141592653589793,
-      "width": 24,
+      "width": 22.5,
       "checkpointNumber": 2
     },
     {
       "type": "checkpoint",
-      "centerX": -22,
-      "centerZ": 12,
+      "centerX": -23.418302385158782,
+      "centerZ": 12.681062414972615,
       "heading": -3.141592653589793,
-      "width": 25,
+      "width": 28.5,
       "checkpointNumber": 3
     },
     {
@@ -622,8 +641,10 @@
       "centerX": 62.5,
       "centerZ": -47.5,
       "terrainType": "loose_dirt",
-      "radius": 8,
-      "shape": "circle"
+      "shape": "circle",
+      "width": 16,
+      "depth": 16,
+      "rotation": 0
     },
     {
       "type": "squareHill",
@@ -639,7 +660,7 @@
     {
       "type": "normalMapDecal",
       "centerX": 2,
-      "centerZ": -30.275213105162592,
+      "centerZ": -26.775213105162592,
       "width": 80,
       "depth": 22.5,
       "angle": 0,
@@ -653,16 +674,20 @@
       "centerX": 66.5,
       "centerZ": 23.724786894837408,
       "terrainType": "rocky",
-      "radius": 7,
-      "shape": "circle"
+      "shape": "circle",
+      "width": 14,
+      "depth": 14,
+      "rotation": 0
     },
     {
       "type": "terrain",
       "centerX": -29.5,
       "centerZ": 33.22478689483741,
       "terrainType": "rocky",
-      "radius": 7,
-      "shape": "circle"
+      "shape": "circle",
+      "width": 14,
+      "depth": 14,
+      "rotation": 0
     },
     {
       "type": "hill",
@@ -679,6 +704,83 @@
       "heading": 0,
       "width": 27,
       "poleHeight": 12
+    },
+    {
+      "type": "aiPath",
+      "points": [
+        {
+          "x": -3,
+          "z": -56.5
+        },
+        {
+          "x": -41.205490509551154,
+          "z": -55.27808010317742
+        },
+        {
+          "x": -69.54452048476269,
+          "z": -26.756347913039342
+        },
+        {
+          "x": -70.60896587149708,
+          "z": 47.688851555797626
+        },
+        {
+          "x": -49.11,
+          "z": 66.22
+        },
+        {
+          "x": -19.45,
+          "z": 63.3
+        },
+        {
+          "x": 12.612874151433344,
+          "z": 60.64496135158769
+        },
+        {
+          "x": 60.582441920738056,
+          "z": 66.42205833303518
+        },
+        {
+          "x": 68.2774401076137,
+          "z": 45.11717511337754
+        },
+        {
+          "x": 58.863617013957494,
+          "z": 26.23479277996098
+        },
+        {
+          "x": 1.1210105219068751,
+          "z": 28.53033827176485
+        },
+        {
+          "x": -16.70488332533128,
+          "z": 34.084097734311094
+        },
+        {
+          "x": -27.52835888361879,
+          "z": 11.573020696732595
+        },
+        {
+          "x": -21.393704743303008,
+          "z": 0.5415297601612075
+        },
+        {
+          "x": 37.6323513745975,
+          "z": -12.841880486189575
+        },
+        {
+          "x": 61.130747448672714,
+          "z": -15.871522940607484
+        },
+        {
+          "x": 68.75379418538859,
+          "z": -52.79757475868819
+        },
+        {
+          "x": 50.9481573812279,
+          "z": -65.21693065634851
+        }
+      ]
     }
   ]
 }
