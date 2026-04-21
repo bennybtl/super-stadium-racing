@@ -1,42 +1,42 @@
 <template>
-  <div v-if="race.visible" class="race-status-panel">
-    <div v-if="race.timerVisible" class="race-timer">{{ formattedTime }}</div>
-    <div class="hud-row">Checkpoints: <span class="hud-val">{{ race.checkpoints }}</span></div>
-    <div class="hud-row">Lap: <span class="hud-val">{{ race.lap }}</span>/{{ race.totalLaps }}</div>
-    <div class="hud-row" :class="{ 'boost-active': race.boostActive }">
-      Nitro: <span class="hud-val">{{ race.boosts }}</span>
+  <div v-if="race.visible" class="fixed bottom-2.5 right-2.5 flex flex-col items-end gap-0 bg-black/70 pointer-events-none">
+    <div v-if="race.timerVisible" class="w-full bg-black/80 text-[#00ff00] font-mono text-2xl font-bold p-1">{{ formattedTime }}</div>
+    <div class="w-full text-[#999] font-mono text-base font-bold p-1">Checkpoints: <span>{{ race.checkpoints }}</span></div>
+    <div class="w-full text-[#999] font-mono text-base font-bold p-1">Lap: <span>{{ race.lap }}</span>/{{ race.totalLaps }}</div>
+    <div class="w-full p-1" :class="race.boostActive ? 'text-yellow-300 shadow-[0_0_20px_rgba(255,255,0,0.75)] animate-pulse' : 'text-[#999]'">
+      Nitro: <span>{{ race.boosts }}</span>
     </div>
 
     <!-- Telemetry controls -->
-    <div class="telemetry-row">
+    <div class="flex gap-1 p-1 pointer-events-auto">
       <button
-        class="telem-btn"
-        :class="{ recording: race.telemetryRecording }"
+        class="font-mono text-xs font-bold px-2 py-1 border border-slate-600 bg-black/80 text-slate-300 rounded-sm transition hover:bg-slate-800 hover:text-white"
+        :class="race.telemetryRecording ? 'border-red-500 text-red-500 animate-pulse' : ''"
         @click="race.toggleTelemetry()"
       >
         {{ race.telemetryRecording ? '⏹ Stop' : '⏺ Record' }}
       </button>
       <button
         v-if="race.telemetryHasData"
-        class="telem-btn export-btn"
+        class="font-mono text-xs font-bold px-2 py-1 border border-sky-500 bg-black/80 text-sky-400 rounded-sm transition hover:bg-slate-800 hover:text-white"
         @click="race.exportTelemetry()"
       >
         ⬇ Export
       </button>
     </div>
-    <div v-if="race.telemetryRecording" class="telem-indicator">● REC</div>
+    <div v-if="race.telemetryRecording" class="font-mono text-xs font-bold text-red-500 px-1 pb-1 animate-pulse">● REC</div>
   </div>
 
-  <div v-if="race.countdownVisible" class="countdown-overlay">
-    <span class="countdown-text" :style="{ color: race.countdownText === 'GO!' ? '#00ff44' : '#ffffff' }">
+  <div v-if="race.countdownVisible" class="fixed inset-0 flex items-center justify-center pointer-events-none">
+    <span class="text-[20vw] font-black text-white drop-shadow-[0_0_80px_rgba(255,200,0,0.7)] leading-none select-none" :style="{ color: race.countdownText === 'GO!' ? '#00ff44' : '#ffffff' }">
       {{ race.countdownText }}
     </span>
   </div>
 
-  <div v-if="race.oobCountdownVisible" class="oob-overlay">
-    <div class="oob-card">
-      <div class="oob-label">OUT OF BOUNDS</div>
-      <div class="oob-value">RESPAWN IN {{ race.oobCountdownSeconds }}</div>
+  <div v-if="race.oobCountdownVisible" class="fixed top-[90px] left-1/2 -translate-x-1/2 pointer-events-none">
+    <div class="bg-[#6e0000]/75 border border-[#ffa0a0]/50 text-white px-3 py-2 rounded-xl text-center shadow-[0_0_14px_rgba(255,40,40,0.35)] font-mono">
+      <div class="text-[11px] tracking-[1px] opacity-90">OUT OF BOUNDS</div>
+      <div class="text-base font-bold">RESPAWN IN {{ race.oobCountdownSeconds }}</div>
     </div>
   </div>
 </template>
@@ -56,143 +56,3 @@ const formattedTime = computed(() => {
 });
 </script>
 
-<style scoped>
-.race-status-panel {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0;
-  background: rgba(0, 0, 0, 0.7);
-  pointer-events: none;
-}
-
-.race-timer {
-  width: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  color: #00ff00;
-  font-family: 'Courier New', monospace;
-  font-size: 24px;
-  font-weight: bold;
-  padding: 5px;
-}
-
-.hud-row {
-  width: 100%;
-  color: #999;
-  font-family: 'Courier New', monospace;
-  font-size: 16px;
-  font-weight: bold;
-  padding: 5px;
-}
-
-.hud-val {
-  color: inherit;
-}
-
-.boost-active {
-  color: #ff0;
-  box-shadow: 0 0 20px #ff0;
-  animation: pulse 0.3s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.7; }
-}
-
-/* Telemetry controls */
-.telemetry-row {
-  display: flex;
-  gap: 4px;
-  padding: 4px 5px;
-  pointer-events: all;
-}
-
-.telem-btn {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 3px 8px;
-  border: 1px solid #555;
-  background: rgba(0,0,0,0.8);
-  color: #aaa;
-  cursor: pointer;
-  border-radius: 2px;
-}
-
-.telem-btn:hover { background: rgba(60,60,60,0.9); color: #fff; }
-
-.telem-btn.recording {
-  border-color: #f44;
-  color: #f44;
-  animation: recPulse 1s infinite;
-}
-
-.export-btn { border-color: #4af; color: #4af; }
-.export-btn:hover { color: #fff; }
-
-@keyframes recPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
-}
-
-.telem-indicator {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  font-weight: bold;
-  color: #f44;
-  padding: 0 5px 4px;
-  animation: recPulse 1s infinite;
-}
-
-.countdown-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.countdown-text {
-  font-size: 20vw;
-  font-family: 'Arial Black', Arial, sans-serif;
-  font-weight: 900;
-  text-shadow: 0 0 80px rgba(255, 200, 0, 0.7), 6px 6px 0 rgba(0, 0, 0, 0.8);
-  line-height: 1;
-  user-select: none;
-}
-
-.oob-overlay {
-  position: fixed;
-  top: 90px;
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.oob-card {
-  background: rgba(110, 0, 0, 0.75);
-  border: 1px solid rgba(255, 160, 160, 0.5);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-align: center;
-  box-shadow: 0 0 14px rgba(255, 40, 40, 0.35);
-  font-family: 'Courier New', monospace;
-}
-
-.oob-label {
-  font-size: 11px;
-  letter-spacing: 1px;
-  opacity: 0.9;
-}
-
-.oob-value {
-  font-size: 16px;
-  font-weight: bold;
-}
-</style>

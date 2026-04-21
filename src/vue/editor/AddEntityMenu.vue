@@ -2,26 +2,28 @@
   <Transition name="add-menu">
     <div
       v-if="editor.addMenuOpen"
-      class="add-menu-backdrop"
+      class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70"
       @mousedown.self="editor.closeAddMenu()"
     >
-      <div class="add-menu" @mousedown.stop>
-        <h2 class="add-menu-title">Add Feature</h2>
+      <div class="w-[min(780px,90vw)] max-h-[90vh] overflow-y-auto rounded-[1rem] border-2 border-sky-500 bg-slate-950/95 p-6 shadow-xl shadow-black/40" @mousedown.stop>
+        <h2 class="mb-5 text-center text-xl font-bold uppercase tracking-[0.22em] text-white">Add Feature</h2>
 
-        <div class="feature-grid">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <button
             v-for="item in features"
             :key="item.label"
-            class="feature-btn"
+            class="flex flex-col items-center gap-3 rounded-2xl border-2 border-transparent bg-gradient-to-b from-slate-800 to-slate-900 px-4 py-4 text-white shadow-[0_3px_10px_rgba(0,0,0,0.4)] transition-all duration-150 hover:border-sky-500 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(74,158,255,0.25)]"
             @click="item.action(); editor.closeAddMenu()"
           >
-            <img v-if="item.img" :src="item.img" :alt="item.label" class="feature-img" />
-            <div v-else class="feature-img feature-img--placeholder" />
-            <span class="feature-name">{{ item.label }}</span>
+            <img v-if="item.img" :src="item.img" :alt="item.label" class="h-[75px] w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
+            <div v-else class="h-[75px] w-full rounded-xl bg-white/5" />
+            <span class="text-[11px] uppercase tracking-[0.05em] text-center text-white leading-5">{{ item.label }}</span>
           </button>
         </div>
 
-        <button class="cancel-btn" @click="editor.closeAddMenu()">Cancel</button>
+        <button class="mt-4 w-full rounded-xl bg-slate-800 px-4 py-2 text-sm font-sans text-slate-200 transition hover:bg-slate-700" @click="editor.closeAddMenu()">
+          Cancel
+        </button>
       </div>
     </div>
   </Transition>
@@ -70,102 +72,6 @@ const features = [
 </script>
 
 <style scoped>
-.add-menu-backdrop {
-  position: fixed;
-  inset: 0;
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.add-menu {
-  background: rgba(0, 0, 0, 0.92);
-  border: 2px solid #4a9eff;
-  border-radius: 12px;
-  padding: 24px;
-  max-height: 90vh;
-  overflow-y: auto;
-  max-width: 780px;
-  width: 90vw;
-}
-
-.add-menu-title {
-  color: white;
-  margin: 0 0 18px 0;
-  font-family: Arial, sans-serif;
-  font-size: 20px;
-  text-align: center;
-  letter-spacing: 1px;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.feature-btn {
-  background: linear-gradient(to bottom, #2a3a55, #1a2535);
-  border: 2px solid transparent;
-  border-radius: 10px;
-  padding: 12px 8px 10px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s ease;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-}
-
-.feature-btn:hover {
-  background: linear-gradient(to bottom, #3a4e70, #263450);
-  border-color: #4a9eff;
-  transform: translateY(-3px);
-  box-shadow: 0 6px 18px rgba(74, 158, 255, 0.25);
-}
-
-.feature-img {
-  width: 150px;
-  height: 75px;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-}
-.feature-img--placeholder {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-}
-
-.feature-name {
-  color: white;
-  font-size: 11px;
-  font-family: Arial, sans-serif;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  line-height: 1.3;
-}
-
-.cancel-btn {
-  display: block;
-  width: 100%;
-  padding: 10px;
-  margin-top: 4px;
-  background: #444;
-  color: #ccc;
-  border: none;
-  border-radius: 7px;
-  cursor: pointer;
-  font-size: 14px;
-  font-family: Arial, sans-serif;
-  transition: background 0.12s;
-}
-.cancel-btn:hover { background: #555; }
-
-/* Transition */
 .add-menu-enter-active, .add-menu-leave-active {
   transition: opacity 0.15s, transform 0.15s;
 }

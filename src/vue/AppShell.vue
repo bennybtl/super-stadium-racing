@@ -1,8 +1,10 @@
 <template>
-  <!-- All UI layers live here as a pointer-events:none overlay.
-       Individual panels opt back in with pointer-events:auto. -->
-  <div class="ui-root">
-    <div class="fps-counter">{{ fps }}</div>
+  <!-- All UI layers live here as a pointer-events-none overlay.
+       Individual panels opt back in with pointer-events-auto. -->
+  <div class="fixed inset-0 pointer-events-none z-[900] font-sans">
+    <div class="absolute top-2.5 right-3.5 text-white text-[13px] font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] select-none">
+      {{ fps }}
+    </div>
     <LoadingOverlay />
     <MenuOverlay />
     <SingleRaceOverlay />
@@ -38,18 +40,18 @@ import MenuOverlay        from './MenuOverlay.vue';
 import LoadingOverlay     from './LoadingOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
 import PostRaceOverlay    from './PostRaceOverlay.vue';
-import PitOverlay       from './PitOverlay.vue';
+import PitOverlay         from './PitOverlay.vue';
 import SeasonFinalOverlay from './SeasonFinalOverlay.vue';
-import RaceHUD        from './RaceHUD.vue';
-import DebugPanel     from './DebugPanel.vue';
-import CheckpointPanel  from './editor/CheckpointPanel.vue';
-import HillPanel        from './editor/HillPanel.vue';
-import SquareHillPanel  from './editor/SquareHillPanel.vue';
+import RaceHUD            from './RaceHUD.vue';
+import DebugPanel         from './DebugPanel.vue';
+import CheckpointPanel    from './editor/CheckpointPanel.vue';
+import HillPanel          from './editor/HillPanel.vue';
+import SquareHillPanel    from './editor/SquareHillPanel.vue';
 import TerrainShapePanel  from './editor/TerrainShapePanel.vue';
 import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
-import PolyWallPanel    from './editor/PolyWallPanel.vue';
-import PolyHillPanel    from './editor/PolyHillPanel.vue';
-import BezierWallPanel  from './editor/BezierWallPanel.vue';
+import PolyWallPanel      from './editor/PolyWallPanel.vue';
+import PolyHillPanel      from './editor/PolyHillPanel.vue';
+import BezierWallPanel    from './editor/BezierWallPanel.vue';
 import FlagPanel          from './editor/FlagPanel.vue';
 import TrackSignPanel     from './editor/TrackSignPanel.vue';
 import BannerStringPanel  from './editor/BannerStringPanel.vue';
@@ -79,24 +81,3 @@ const _tick = () => {
 onMounted(() => { _rafId = requestAnimationFrame(_tick); });
 onUnmounted(() => { cancelAnimationFrame(_rafId); });
 </script>
-
-<style scoped>
-.ui-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 900;
-  font-family: Arial, sans-serif;
-}
-
-.fps-counter {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  color: white;
-  font-size: 13px;
-  font-family: monospace;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-  user-select: none;
-}
-</style>

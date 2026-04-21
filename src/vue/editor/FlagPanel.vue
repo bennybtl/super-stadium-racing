@@ -2,15 +2,14 @@
   <EditorPanel
     v-if="editor.selectedType === 'flag'"
     title="Flag"
-    accent-color="#e74c3c"
     @close="closeFlag()"
   >
     <!-- Color -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Color</span>
       <span>{{ editor.flag.color }}</span>
     </div>
-    <div class="ep-btn-row">
+    <div class="flex gap-2 mb-3">
       <button 
         class="color-btn red" 
         :class="{ active: editor.flag.color === 'red' }"
@@ -28,11 +27,11 @@
     </div>
 
     <!-- Hint -->
-    <div class="ep-hint">WASD to move · Del to delete</div>
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Del to delete</div>
 
     <!-- Actions -->
-    <button class="ep-btn-dup" @click="editor.duplicateFlag()">Duplicate</button>
-    <button class="ep-btn-del" @click="editor.deleteFlag()">Delete</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateFlag()">Duplicate</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteFlag()">Delete</button>
   </EditorPanel>
 </template>
 

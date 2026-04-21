@@ -1,8 +1,8 @@
 <template>
-  <div v-if="menu.loadingVisible" class="loading-overlay">
-    <div class="loading-card">
-      <div class="spinner" aria-hidden="true"></div>
-      <div class="loading-text">{{ menu.loadingMessage || 'Loading…' }}</div>
+  <div v-if="menu.loadingVisible" class="absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/60 backdrop-blur-sm">
+    <div class="flex flex-col items-center gap-2 p-4 rounded-xl bg-black/70 border border-white/10">
+      <div class="w-8 h-8 rounded-full border-4 border-white/25 border-t-white animate-spin" aria-hidden="true"></div>
+      <div class="text-white text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)] select-none">{{ menu.loadingMessage || 'Loading…' }}</div>
     </div>
   </div>
 </template>
@@ -13,48 +13,3 @@ import { useMenuStore } from './store.js';
 const menu = useMenuStore();
 </script>
 
-<style scoped>
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  background: rgba(18, 14, 12, 0.45);
-  backdrop-filter: blur(2px);
-}
-
-.loading-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.spinner {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.25);
-  border-top-color: #fff;
-  animation: spin 0.8s linear infinite;
-}
-
-.loading-text {
-  color: #fff;
-  font-size: 14px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-  user-select: none;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-</style>

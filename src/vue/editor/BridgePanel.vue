@@ -2,11 +2,10 @@
   <EditorPanel
     v-if="editor.selectedType === 'bridge'"
     title="Bridge"
-    accent-color="#c87830"
     @close="editor.closeBridge()"
   >
     <!-- Width -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Width</span>
       <span>{{ editor.bridge.width.toFixed(1) }}</span>
     </div>
@@ -14,11 +13,11 @@
       type="range" min="2" max="60" step="0.5"
       :value="editor.bridge.width"
       @input="editor.setBridgeWidth(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Depth -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Depth</span>
       <span>{{ editor.bridge.depth.toFixed(1) }}</span>
     </div>
@@ -26,11 +25,11 @@
       type="range" min="2" max="30" step="0.5"
       :value="editor.bridge.depth"
       @input="editor.setBridgeDepth(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Height above terrain -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Height</span>
       <span>{{ editor.bridge.height.toFixed(1) }}</span>
     </div>
@@ -38,11 +37,11 @@
       type="range" min="0.5" max="20" step="0.25"
       :value="editor.bridge.height"
       @input="editor.setBridgeHeight(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Thickness -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Thickness</span>
       <span>{{ editor.bridge.thickness.toFixed(2) }}</span>
     </div>
@@ -50,11 +49,11 @@
       type="range" min="0.1" max="2.0" step="0.05"
       :value="editor.bridge.thickness"
       @input="editor.setBridgeThickness(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Angle -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Angle</span>
       <span>{{ Math.round(editor.bridge.angle) }}°</span>
     </div>
@@ -62,13 +61,13 @@
       type="range" min="-180" max="180" step="1"
       :value="editor.bridge.angle"
       @input="editor.setBridgeAngle(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Surface Material -->
-    <div class="ep-label">Surface</div>
+    <div class="text-[12px] mb-1">Surface</div>
     <select
-      class="ep-select"
+      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.bridge.materialType"
       @change="editor.setBridgeMaterialType($event.target.value)"
     >
@@ -82,8 +81,8 @@
     </select>
 
     <!-- Bridge transitions -->
-    <div class="ep-row">
-      <label class="ep-check-row">
+    <div class="flex justify-between mb-1 text-[12px]">
+      <label class="flex items-center gap-2">
         <span>Enable Transitions</span>
         <input
           type="checkbox"
@@ -94,7 +93,7 @@
     </div>
 
     <template v-if="editor.bridge.transitionEnabled">
-      <div class="ep-row">
+      <div class="flex justify-between mb-1 text-[12px]">
         <span>Transition Depth</span>
         <span>{{ editor.bridge.transitionDepth.toFixed(1) }}</span>
       </div>
@@ -102,13 +101,13 @@
         type="range" min="4" max="30" step="0.5"
         :value="editor.bridge.transitionDepth"
         @input="editor.setBridgeTransitionDepth(+$event.target.value)"
-        class="ep-slider"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
 
-    <div class="ep-hint">Collision end caps</div>
-    <div class="ep-row">
-      <label class="ep-check-row">
+    <div class="text-[10px] text-slate-400 mb-3">Collision end caps</div>
+    <div class="flex justify-between mb-1 text-[12px]">
+      <label class="flex items-center gap-2">
         <span>Enable End Caps</span>
         <input
           type="checkbox"
@@ -119,8 +118,8 @@
     </div>
 
     <template v-if="editor.bridge.collisionEndCaps">
-      <div class="ep-row">
-        <label class="ep-check-row">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <label class="flex items-center gap-2">
           <span>Caps On Depth Ends</span>
           <input
             type="checkbox"
@@ -129,8 +128,8 @@
           />
         </label>
       </div>
-      <div class="ep-row">
-        <label class="ep-check-row">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <label class="flex items-center gap-2">
           <span>Caps On Width Sides</span>
           <input
             type="checkbox"
@@ -139,7 +138,7 @@
           />
         </label>
       </div>
-      <div class="ep-row">
+      <div class="flex justify-between mb-1 text-[12px]">
         <span>End Cap Thickness</span>
         <span>{{ editor.bridge.collisionEndCapThickness.toFixed(2) }}</span>
       </div>
@@ -147,10 +146,10 @@
         type="range" min="0.5" max="6.0" step="0.5"
         :value="editor.bridge.collisionEndCapThickness"
         @input="editor.setBridgeCollisionEndCapThickness(+$event.target.value)"
-        class="ep-slider"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
-      <div class="ep-row">
+      <div class="flex justify-between mb-1 text-[12px]">
         <span>End Cap Drop</span>
         <span>{{ editor.bridge.collisionEndCapDrop.toFixed(1) }}</span>
       </div>
@@ -158,17 +157,17 @@
         type="range" min="2" max="80" step="2"
         :value="editor.bridge.collisionEndCapDrop"
         @input="editor.setBridgeCollisionEndCapDrop(+$event.target.value)"
-        class="ep-slider"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
     </template>
 
     <!-- Hint -->
-    <div class="ep-hint">WASD to move · Q/E to rotate · Del to delete</div>
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <button class="ep-btn-dup" @click="editor.duplicateBridge()">Duplicate Bridge</button>
-    <button class="ep-btn-del" @click="editor.deleteBridge()">Delete Bridge</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateBridge()">Duplicate Bridge</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteBridge()">Delete Bridge</button>
   </EditorPanel>
 </template>
 

@@ -1,43 +1,44 @@
 <template>
-  <div v-if="store.pitData" class="overlay">
-    <div class="panel">
+  <div v-if="store.pitData" class="fixed inset-0 bg-black/88 flex items-center justify-center z-[1100] pointer-events-auto font-sans">
+    <div class="bg-slate-950/98 border-[3px] border-[#ff5722] rounded-[10px] p-7 min-w-[420px] max-w-[560px] text-center shadow-[0_12px_48px_rgba(0,0,0,0.7)]">
 
-      <div class="pit-header">
+      <div class="text-[#ff5722] text-2xl font-bold uppercase tracking-[4px] mb-2">
         🔧 PIT LANE
-        <span class="pit-sub">Race {{ store.pitData.raceNumber }} of {{ store.pitData.totalRaces }}</span>
+        <span class="block text-sm text-slate-400 uppercase tracking-[2px] mt-1 normal-case">Race {{ store.pitData.raceNumber }} of {{ store.pitData.totalRaces }}</span>
       </div>
 
       <template v-if="!store.pitData.isSeasonComplete">
-        <div class="next-race">
-          Next track: <strong>{{ store.pitData.nextTrackKey }}</strong>
+        <div class="text-[#ccc] text-sm mb-3">
+          Next track: <strong class="text-white">{{ store.pitData.nextTrackKey }}</strong>
         </div>
 
-        <div class="balance-box">
-          <span class="balance-label">Budget</span>
-          <span class="balance-amount">${{ store.pitData.playerBalance.toLocaleString() }}</span>
+        <div class="flex flex-col items-center bg-emerald-500/10 border border-emerald-500 rounded-xl px-6 py-3 my-3">
+          <span class="text-slate-400 text-[11px] uppercase tracking-[2px]">Budget</span>
+          <span class="text-emerald-400 text-3xl font-bold tracking-[2px]">${{ store.pitData.playerBalance.toLocaleString() }}</span>
         </div>
 
-        <div class="upgrades">
+        <div class="flex flex-col gap-3 mb-4">
           <div
             v-for="u in store.pitData.upgrades"
             :key="u.id"
-            class="upgrade-row"
-            :class="{ 'upgrade-row--maxed': u.level >= u.maxLevel }"
+            class="rounded-xl border border-slate-700 bg-white/5 p-3 text-left flex items-center gap-3"
+            :class="u.level >= u.maxLevel ? 'border-orange-500 bg-orange-500/10' : ''"
           >
-            <div class="upgrade-info">
-              <span class="upgrade-label">{{ u.label }}</span>
-              <span class="upgrade-desc">{{ u.description }}</span>
+            <div class="flex-1 min-w-0">
+              <span class="block text-white text-sm font-semibold">{{ u.label }}</span>
+              <span class="block text-slate-400 text-xs mt-1">{{ u.description }}</span>
             </div>
-            <div class="upgrade-level">
+            <div class="flex items-center gap-2">
               <span
                 v-for="i in u.maxLevel"
                 :key="i"
-                class="pip"
-                :class="{ 'pip--filled': i <= u.level }"
+                class="h-2.5 w-2.5 rounded-full border border-slate-600"
+                :class="i <= u.level ? 'bg-orange-500 border-orange-500' : 'bg-slate-800'"
               />
             </div>
             <button
-              class="buy-btn"
+              class="min-w-[72px] px-3 py-2 rounded-md font-bold text-sm uppercase tracking-[1px] transition duration-150 ease-in-out"
+              :class="u.level >= u.maxLevel || !u.affordable ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : 'bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 hover:from-[#ff7043] hover:to-[#ff5722]'"
               :disabled="u.level >= u.maxLevel || !u.affordable"
               @click="store.purchaseUpgrade(u.id)"
             >
@@ -47,19 +48,19 @@
           </div>
         </div>
 
-        <div class="btn-group">
-          <button class="action-btn" @click="store.continueSeason()">
+        <div class="flex flex-col gap-3">
+          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-8 py-4 text-base font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition duration-150 ease-in-out hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.continueSeason()">
             Continue to Race {{ store.pitData.nextRaceNumber }}
           </button>
-          <button class="action-btn action-btn--retire" @click="store.retireFromSeason()">
+          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-8 py-4 text-sm font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition duration-150 ease-in-out hover:from-slate-600 hover:to-slate-700" @click="store.retireFromSeason()">
             Retire from Season
           </button>
         </div>
       </template>
 
       <template v-else>
-        <div class="season-done">Season complete!</div>
-        <button class="action-btn" @click="store.continueSeason()">
+        <div class="text-emerald-400 text-2xl font-bold mb-5 tracking-[2px]">Season complete!</div>
+        <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-8 py-4 text-base font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition duration-150 ease-in-out hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.continueSeason()">
           Final Standings →
         </button>
       </template>
@@ -73,161 +74,3 @@ import { useMenuStore } from './store.js';
 const store = useMenuStore();
 </script>
 
-<style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.88);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  pointer-events: auto;
-  font-family: Arial, sans-serif;
-}
-.panel {
-  background: rgba(18, 18, 18, 0.98);
-  border: 3px solid #ff5722;
-  border-radius: 10px;
-  padding: 28px 40px;
-  min-width: 420px;
-  max-width: 560px;
-  text-align: center;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
-}
-.pit-header {
-  color: #ff5722;
-  font-size: 28px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  margin-bottom: 6px;
-}
-.pit-sub {
-  display: block;
-  font-size: 14px;
-  color: #888;
-  letter-spacing: 2px;
-  margin-top: 4px;
-  text-transform: none;
-}
-.next-race {
-  color: #ccc;
-  font-size: 15px;
-  margin: 12px 0 0;
-}
-.next-race strong { color: #fff; }
-.balance-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: rgba(76, 175, 80, 0.08);
-  border: 1px solid #4caf50;
-  border-radius: 6px;
-  padding: 10px 24px;
-  margin: 14px 0 10px;
-}
-.balance-label {
-  color: #888;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-.balance-amount {
-  color: #4caf50;
-  font-size: 30px;
-  font-weight: bold;
-  letter-spacing: 2px;
-}
-.upgrades {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 18px;
-}
-.upgrade-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid #333;
-  border-radius: 6px;
-  padding: 9px 12px;
-  text-align: left;
-}
-.upgrade-row--maxed {
-  border-color: #ff5722;
-  background: rgba(255, 87, 34, 0.06);
-}
-.upgrade-info { flex: 1; min-width: 0; }
-.upgrade-label {
-  display: block;
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
-}
-.upgrade-desc {
-  display: block;
-  color: #777;
-  font-size: 11px;
-  margin-top: 1px;
-}
-.upgrade-level { display: flex; gap: 4px; align-items: center; }
-.pip {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #333;
-  border: 1px solid #555;
-}
-.pip--filled { background: #ff5722; border-color: #ff7043; }
-.upgrade-row--maxed .pip--filled { background: #4caf50; border-color: #66bb6a; }
-.buy-btn {
-  min-width: 72px;
-  padding: 6px 10px;
-  background: linear-gradient(to bottom, #ff5722, #d84315);
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  font-size: 13px;
-  font-weight: bold;
-  cursor: pointer;
-  letter-spacing: 1px;
-  white-space: nowrap;
-  transition: background 0.12s;
-}
-.buy-btn:hover:not(:disabled) { background: linear-gradient(to bottom, #ff7043, #ff5722); }
-.buy-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-.btn-group { display: flex; flex-direction: column; gap: 10px; }
-.action-btn {
-  background: linear-gradient(to bottom, #ff5722, #d84315);
-  color: #fff;
-  border: none;
-  padding: 14px 32px;
-  font-size: 17px;
-  font-weight: bold;
-  border-radius: 6px;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-.action-btn:hover {
-  background: linear-gradient(to bottom, #ff7043, #ff5722);
-  transform: translateY(-2px);
-}
-.action-btn--retire {
-  background: linear-gradient(to bottom, #555, #333);
-  font-size: 14px;
-  padding: 10px 24px;
-}
-.action-btn--retire:hover { background: linear-gradient(to bottom, #777, #555); }
-.season-done {
-  color: #4caf50;
-  font-size: 22px;
-  font-weight: bold;
-  margin: 20px 0;
-  letter-spacing: 2px;
-}
-</style>

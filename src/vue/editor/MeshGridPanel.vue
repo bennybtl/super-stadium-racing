@@ -2,13 +2,12 @@
   <EditorPanel
     v-if="editor.selectedType === 'meshGrid'"
     title="Mesh Grid"
-    accent-color="#1ec8c8"
     default-right="20px"
     default-top="80px"
     @close="editor.closeMeshGrid()"
   >
     <!-- Point Height -->
-    <div class="ep-label">Point Height</div>
+    <div class="text-[12px] mb-1">Point Height</div>
     <input
       class="mg-height-input"
       type="number"
@@ -24,7 +23,7 @@
     />
 
     <!-- Step Size -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Step Size</span>
       <span>{{ editor.meshGrid.stepSize.toFixed(1) }}</span>
     </div>
@@ -32,18 +31,18 @@
       type="range" min="0.1" max="5" step="0.1"
       :value="editor.meshGrid.stepSize"
       @input="editor.setMeshGridStepSize(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <div class="ep-hint">
+    <div class="text-[10px] text-slate-400 mb-3">
       Click a sphere to select it · scroll wheel · ↑ / ↓ · [ / ] to nudge
     </div>
 
-    <hr class="ep-separator" />
-    <div class="ep-section-title">Grid Settings</div>
+    <hr class="border-t border-slate-700 my-4" />
+    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Grid Settings</div>
 
     <!-- Density -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Density (cols × rows)</span>
       <span>{{ editor.meshGrid.cols }} × {{ editor.meshGrid.rows }}</span>
     </div>
@@ -51,11 +50,11 @@
       type="range" min="3" max="25" step="2"
       :value="editor.meshGrid.cols"
       @input="editor.setMeshGridDensity(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Width -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Width</span>
       <span>{{ editor.meshGrid.width }}</span>
     </div>
@@ -63,11 +62,11 @@
       type="range" min="20" max="160" step="10"
       :value="editor.meshGrid.width"
       @input="editor.setMeshGridWidth(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Depth -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Depth</span>
       <span>{{ editor.meshGrid.depth }}</span>
     </div>
@@ -75,17 +74,17 @@
       type="range" min="20" max="160" step="10"
       :value="editor.meshGrid.depth"
       @input="editor.setMeshGridDepth(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <button class="ep-btn-action mg-apply-btn" @click="editor.applyMeshGridSettings()">
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.applyMeshGridSettings()">
       Apply Grid Changes
     </button>
 
-    <hr class="ep-separator" />
+    <hr class="border-t border-slate-700 my-4" />
 
     <!-- Smoothing (live) -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Smoothing</span>
       <span>{{ editor.meshGrid.smoothing.toFixed(2) }}</span>
     </div>
@@ -93,16 +92,16 @@
       type="range" min="0" max="1" step="0.05"
       :value="editor.meshGrid.smoothing"
       @input="editor.setMeshGridSmoothing(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <button class="ep-btn-action" @click="editor.flattenMeshGrid()">Flatten Grid</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.flattenMeshGrid()">Flatten Grid</button>
 
-    <hr class="ep-separator" />
+    <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->
-    <button class="ep-btn-dup" @click="editor.duplicateMeshGrid()">Duplicate</button>
-    <button class="ep-btn-del" @click="editor.deleteMeshGrid()">Delete</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateMeshGrid()">Duplicate</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteMeshGrid()">Delete</button>
   </EditorPanel>
 </template>
 
@@ -131,11 +130,4 @@ const editor = useEditorStore();
   opacity: 0.4;
   cursor: default;
 }
-.mg-apply-btn {
-  font-weight: bold;
-  background: #1ec8c8 !important;
-  color: #000 !important;
-  margin-bottom: 0;
-}
-.mg-apply-btn:hover { background: #2de0e0 !important; }
 </style>

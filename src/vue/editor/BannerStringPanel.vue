@@ -2,11 +2,10 @@
   <EditorPanel
     v-if="editor.selectedType === 'bannerString'"
     title="Banner String"
-    accent-color="#e8aa22"
     @close="editor.closeBannerString()"
   >
     <!-- Width -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Width</span>
       <span>{{ editor.bannerString.width }} m</span>
     </div>
@@ -20,7 +19,7 @@
     />
 
     <!-- Pole Height -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Pole Height</span>
       <span>{{ editor.bannerString.poleHeight }} m</span>
     </div>
@@ -34,7 +33,7 @@
     />
 
     <!-- Heading -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Heading</span>
       <span>{{ editor.bannerString.heading }}°</span>
     </div>
@@ -47,11 +46,11 @@
       @input="editor.setBannerStringHeading(+$event.target.value)"
     />
 
-    <div class="ep-hint">WASD to move · Q/E to rotate · Del to delete</div>
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <button class="ep-btn-dup" @click="editor.duplicateBannerString()">Duplicate</button>
-    <button class="ep-btn-del" @click="editor.deleteBannerString()">Delete</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateBannerString()">Duplicate</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteBannerString()">Delete</button>
   </EditorPanel>
 </template>
 

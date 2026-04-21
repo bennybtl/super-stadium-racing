@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    min-height: 100%;
+  }
+  body {
+    @apply bg-black overflow-hidden font-sans;
+  }
+  #vue-app {
+    @apply pointer-events-none;
+  }
+}

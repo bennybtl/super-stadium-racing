@@ -2,11 +2,10 @@
   <EditorPanel
     v-if="editor.selectedType === 'squareHill'"
     title="Square Hill"
-    accent-color="#909090"
     @close="editor.closeSquareHill()"
   >
     <!-- Width -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Width</span>
       <span>{{ editor.squareHill.width.toFixed(1) }}</span>
     </div>
@@ -14,11 +13,11 @@
       type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.width"
       @input="editor.setSquareHillWidth(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Depth -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Depth</span>
       <span>{{ editor.squareHill.depth.toFixed(1) }}</span>
     </div>
@@ -26,11 +25,11 @@
       type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.depth"
       @input="editor.setSquareHillDepth(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Transition -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Transition</span>
       <span>{{ editor.squareHill.transition.toFixed(1) }}</span>
     </div>
@@ -38,11 +37,11 @@
       type="range" min="0.5" max="15" step="0.5"
       :value="editor.squareHill.transition"
       @input="editor.setSquareHillTransition(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Angle -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Angle</span>
       <span>{{ editor.squareHill.angle.toFixed(0) }}°</span>
     </div>
@@ -50,19 +49,19 @@
       type="range" min="0" max="359" step="1"
       :value="editor.squareHill.angle"
       @input="editor.setSquareHillAngle(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Mode toggle: Flat | Sloped -->
-    <div class="ep-label">Mode</div>
-    <div class="ep-btn-row">
-      <button class="ep-mode-btn" :style="modeStyle(false)" @click="editor.setSquareHillMode(false)">Flat</button>
-      <button class="ep-mode-btn" :style="modeStyle(true)"  @click="editor.setSquareHillMode(true)">Sloped</button>
+    <div class="text-[12px] mb-1">Mode</div>
+    <div class="flex gap-2 mb-3">
+      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(false)" @click="editor.setSquareHillMode(false)">Flat</button>
+      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(true)"  @click="editor.setSquareHillMode(true)">Sloped</button>
     </div>
 
     <!-- Flat section -->
     <template v-if="!editor.squareHill.slopeMode">
-      <div class="ep-row">
+      <div class="flex justify-between mb-1 text-[12px]">
         <span>Height</span>
         <span>{{ editor.squareHill.height.toFixed(1) }}</span>
       </div>
@@ -70,13 +69,13 @@
         type="range" min="-15" max="20" step="0.5"
         :value="editor.squareHill.height"
         @input="editor.setSquareHillHeight(+$event.target.value)"
-        class="ep-slider"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
 
     <!-- Sloped section -->
     <template v-else>
-      <div class="ep-row">
+      <div class="flex justify-between mb-1 text-[12px]">
         <span>Height (− edge)</span>
         <span>{{ editor.squareHill.heightAtMin.toFixed(1) }}</span>
       </div>
@@ -84,9 +83,9 @@
         type="range" min="-15" max="20" step="0.5"
         :value="editor.squareHill.heightAtMin"
         @input="editor.setSquareHillHeightMin(+$event.target.value)"
-        class="ep-slider"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
-      <div class="ep-row">
+      <div class="flex justify-between mb-1 text-[12px]">
         <span>Height (+ edge)</span>
         <span>{{ editor.squareHill.heightAtMax.toFixed(1) }}</span>
       </div>
@@ -94,14 +93,14 @@
         type="range" min="-15" max="20" step="0.5"
         :value="editor.squareHill.heightAtMax"
         @input="editor.setSquareHillHeightMax(+$event.target.value)"
-        class="ep-slider"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
 
     <!-- Surface -->
-    <div class="ep-label">Surface</div>
+    <div class="text-[12px] mb-1">Surface</div>
     <select
-      class="ep-select"
+      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.squareHill.terrainType"
       @change="editor.setSquareHillTerrainType($event.target.value)"
     >
@@ -115,11 +114,11 @@
     </select>
 
     <!-- Hint -->
-    <div class="ep-hint">WASD to move · Q/E to rotate · Del to delete</div>
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <button class="ep-btn-dup" @click="editor.duplicateSquareHill()">Duplicate Square Hill</button>
-    <button class="ep-btn-del" @click="editor.deleteSquareHill()">Delete Square Hill</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateSquareHill()">Duplicate Square Hill</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteSquareHill()">Delete Square Hill</button>
   </EditorPanel>
 </template>
 

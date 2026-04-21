@@ -2,13 +2,12 @@
   <EditorPanel
     v-if="editor.selectedType === 'trackSign'"
     title="Track Sign"
-    accent-color="#cc0000"
     @close="editor.closeTrackSign()"
   >
     <!-- Content type -->
-    <div class="ep-label">Content</div>
+    <div class="text-[12px] mb-1">Content</div>
     <select
-      class="ep-select"
+      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.trackSign.contentType"
       @change="editor.setTrackSignContentType($event.target.value)"
     >
@@ -17,7 +16,7 @@
     </select>
 
     <!-- Name -->
-    <div v-if="editor.trackSign.contentType === 'text'" class="ep-row">
+    <div v-if="editor.trackSign.contentType === 'text'" class="flex justify-between mb-1 text-[12px]">
       <span>Sign Text</span>
     </div>
     <input
@@ -30,10 +29,10 @@
     />
 
     <!-- Brand image -->
-    <div v-if="editor.trackSign.contentType === 'brand'" class="ep-label">Brand Logo</div>
+    <div v-if="editor.trackSign.contentType === 'brand'" class="text-[12px] mb-1">Brand Logo</div>
     <select
       v-if="editor.trackSign.contentType === 'brand'"
-      class="ep-select"
+      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.trackSign.brandImage"
       @change="editor.setTrackSignBrandImage($event.target.value)"
     >
@@ -41,9 +40,9 @@
     </select>
 
     <!-- Background -->
-    <div class="ep-label">Background</div>
+    <div class="text-[12px] mb-1">Background</div>
     <select
-      class="ep-select"
+      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.trackSign.background"
       @change="editor.setTrackSignBackground($event.target.value)"
     >
@@ -56,7 +55,7 @@
     </select>
 
     <!-- Width -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Width</span>
       <span>{{ editor.trackSign.width.toFixed(1) }} m</span>
     </div>
@@ -64,11 +63,11 @@
       type="range" min="4" max="30" step="0.5"
       :value="editor.trackSign.width"
       @input="editor.setTrackSignWidth(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Scale -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Scale</span>
       <span>{{ editor.trackSign.scale.toFixed(2) }}x</span>
     </div>
@@ -76,11 +75,11 @@
       type="range" min="0.4" max="2.5" step="0.05"
       :value="editor.trackSign.scale"
       @input="editor.setTrackSignScale(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Height -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Height Offset</span>
       <span>{{ editor.trackSign.heightOffset.toFixed(1) }} m</span>
     </div>
@@ -88,11 +87,11 @@
       type="range" min="0" max="10" step="0.1"
       :value="editor.trackSign.heightOffset"
       @input="editor.setTrackSignHeightOffset(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Rotation -->
-    <div class="ep-row">
+    <div class="flex justify-between mb-1 text-[12px]">
       <span>Rotation</span>
       <span>{{ editor.trackSign.rotation }}°</span>
     </div>
@@ -100,15 +99,15 @@
       type="range" min="-180" max="180" step="1"
       :value="editor.trackSign.rotation"
       @input="editor.setTrackSignRotation(+$event.target.value)"
-      class="ep-slider"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
     <!-- Hint -->
-    <div class="ep-hint">WASD to move · QE to rotate · Del to delete</div>
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <button class="ep-btn-dup" @click="editor.duplicateTrackSign()">Duplicate</button>
-    <button class="ep-btn-del" @click="editor.deleteTrackSign()">Delete</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateTrackSign()">Duplicate</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteTrackSign()">Delete</button>
   </EditorPanel>
 </template>
 

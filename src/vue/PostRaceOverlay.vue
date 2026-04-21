@@ -1,65 +1,69 @@
 <template>
-  <div v-if="store.postRaceData" class="overlay">
-    <div class="panel">
+  <div v-if="store.postRaceData" class="fixed inset-0 bg-black/90 flex items-center justify-center z-[1100] pointer-events-auto">
+    <div class="bg-slate-950/95 border-3 border-orange-500 rounded-3xl p-10 min-w-[560px] max-w-[720px] shadow-[0_12px_48px_rgba(0,0,0,0.7)]">
 
-      <h2 class="section-title">
+      <h2 class="text-orange-400 uppercase tracking-[0.28em] text-sm text-center mb-4">
         Race Results — {{ store.postRaceData.trackKey }}
-        <span class="subtitle">(Race {{ store.postRaceData.raceNumber }} of {{ store.postRaceData.totalRaces }})</span>
+        <span class="block text-xs text-slate-400 tracking-[0.18em] mt-1">(Race {{ store.postRaceData.raceNumber }} of {{ store.postRaceData.totalRaces }})</span>
       </h2>
 
-      <!-- Results table -->
-      <table class="results-table">
+      <table class="w-full border-collapse text-sm text-slate-200">
         <thead>
-          <tr>
-            <th>Pos</th>
-            <th>Driver</th>
-            <th>Race Time</th>
-            <th>Best Lap</th>
-            <th>Pts</th>
-            <th>Total</th>
+          <tr class="text-slate-400 text-[11px] uppercase tracking-[0.2em]">
+            <th class="py-2 px-3 text-left border-b border-slate-800">Pos</th>
+            <th class="py-2 px-3 text-left border-b border-slate-800">Driver</th>
+            <th class="py-2 px-3 text-left border-b border-slate-800">Race Time</th>
+            <th class="py-2 px-3 text-left border-b border-slate-800">Best Lap</th>
+            <th class="py-2 px-3 text-left border-b border-slate-800">Pts</th>
+            <th class="py-2 px-3 text-left border-b border-slate-800">Total</th>
           </tr>
         </thead>
         <tbody>
           <tr
             v-for="row in store.postRaceData.rows"
             :key="row.id"
-            :class="{ 'row--player': row.isPlayer, 'row--dnf': row.dnf }"
+            class="transition-colors"
+            :class="{
+              'bg-orange-500/10 text-white': row.isPlayer,
+              'text-slate-500': row.dnf,
+            }"
           >
-            <td class="pos">{{ row.finishPosition }}</td>
-            <td class="name">{{ row.name }}<span v-if="row.dnf" class="dnf-badge">DNF</span></td>
-            <td>{{ formatTime(row.totalRaceTimeMs) }}</td>
-            <td>{{ formatTime(row.fastestLapMs) }}</td>
-            <td class="pts">+{{ row.pointsEarned }}</td>
-            <td class="total">{{ row.totalPoints }}</td>
+            <td class="py-2 px-3 font-semibold text-orange-400">{{ row.finishPosition }}</td>
+            <td class="py-2 px-3">{{ row.name }}<span v-if="row.dnf" class="ml-2 inline-flex items-center rounded-md bg-slate-900 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-red-400">DNF</span></td>
+            <td class="py-2 px-3">{{ formatTime(row.totalRaceTimeMs) }}</td>
+            <td class="py-2 px-3">{{ formatTime(row.fastestLapMs) }}</td>
+            <td class="py-2 px-3 font-semibold text-emerald-400">+{{ row.pointsEarned }}</td>
+            <td class="py-2 px-3 font-semibold text-slate-100">{{ row.totalPoints }}</td>
           </tr>
         </tbody>
       </table>
 
-      <div class="divider" />
+      <div class="my-5 border-t border-slate-800"></div>
 
-      <!-- Championship standings -->
-      <h2 class="section-title">Championship Standings</h2>
-      <div class="standings">
+      <h2 class="text-orange-400 uppercase tracking-[0.28em] text-sm text-center mb-4">Championship Standings</h2>
+      <div class="flex flex-col gap-2">
         <div
           v-for="s in store.postRaceData.standings"
           :key="s.id"
-          class="standing-row"
-          :class="{ 'standing-row--player': s.isPlayer }"
+          class="flex items-center gap-3 rounded-xl px-3 py-2 bg-slate-900/70 text-slate-300"
+          :class="{ 'bg-orange-500/10 text-white font-semibold': s.isPlayer }"
         >
-          <span class="s-pos">{{ s.position }}.</span>
-          <span class="s-name">{{ s.name }}</span>
-          <span class="s-pts">{{ s.totalPoints }} pts</span>
+          <span class="w-6 font-semibold text-orange-400">{{ s.position }}.</span>
+          <span class="flex-1">{{ s.name }}</span>
+          <span class="min-w-[60px] text-right font-semibold text-emerald-400">{{ s.totalPoints }} pts</span>
         </div>
       </div>
 
-      <div class="divider" />
+      <div class="my-5 border-t border-slate-800"></div>
 
-      <div class="money-earned">
+      <div class="text-2xl font-semibold tracking-[0.12em] text-emerald-400">
         💰 +${{ store.postRaceData.playerMoneyEarned.toLocaleString() }}
-        <span class="money-sub">earned this race</span>
+        <span class="block text-xs text-slate-400 mt-1">earned this race</span>
       </div>
 
-      <button class="action-btn" @click="store.goToPit()">Head to the Pit →</button>
+      <button class="mx-auto mt-6 block rounded-2xl bg-gradient-to-b from-orange-500 to-orange-700 px-10 py-3 text-lg font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-orange-950/30 transition hover:from-orange-400 hover:to-orange-600" @click="store.goToPit()">
+        Head to the Pit →
+      </button>
     </div>
   </div>
 </template>
@@ -77,155 +81,3 @@ function formatTime(ms) {
   return `${m}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
 }
 </script>
-
-<style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.88);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  pointer-events: auto;
-  font-family: Arial, sans-serif;
-}
-
-.panel {
-  background: rgba(18, 18, 18, 0.98);
-  border: 3px solid #ff5722;
-  border-radius: 10px;
-  padding: 32px 48px;
-  min-width: 560px;
-  max-width: 720px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
-}
-
-.section-title {
-  color: #ff5722;
-  font-size: 20px;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  margin: 0 0 16px;
-  text-align: center;
-}
-
-.subtitle {
-  display: block;
-  font-size: 13px;
-  color: #aaa;
-  letter-spacing: 1px;
-  margin-top: 4px;
-}
-
-.results-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
-  color: #ddd;
-}
-
-.results-table th {
-  color: #888;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 6px 8px;
-  text-align: left;
-  border-bottom: 1px solid #333;
-}
-
-.results-table td {
-  padding: 8px 8px;
-  border-bottom: 1px solid #222;
-}
-
-.results-table .pos   { font-weight: bold; color: #ff5722; width: 32px; }
-.results-table .pts   { color: #4caf50; font-weight: bold; }
-.results-table .total { font-weight: bold; color: #fff; }
-
-.row--player td { color: #fff; background: rgba(255, 87, 34, 0.08); }
-.row--dnf   td { color: #666; }
-
-.dnf-badge {
-  margin-left: 8px;
-  background: #5a1a1a;
-  color: #f44;
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 1px;
-  vertical-align: middle;
-}
-
-.divider {
-  border: none;
-  border-top: 1px solid #333;
-  margin: 20px 0;
-}
-
-.standings {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.standing-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  border-radius: 5px;
-  color: #bbb;
-  font-size: 15px;
-}
-
-.standing-row--player {
-  background: rgba(255, 87, 34, 0.12);
-  color: #fff;
-  font-weight: bold;
-}
-
-.s-pos  { width: 24px; color: #ff5722; font-weight: bold; }
-.s-name { flex: 1; }
-.s-pts  { color: #4caf50; font-weight: bold; min-width: 60px; text-align: right; }
-
-.money-earned {
-  color: #4caf50;
-  font-size: 26px;
-  font-weight: bold;
-  letter-spacing: 2px;
-  margin: 4px 0 20px;
-}
-
-.money-sub {
-  display: block;
-  font-size: 13px;
-  color: #888;
-  font-weight: normal;
-  letter-spacing: 1px;
-  margin-top: 2px;
-}
-
-.action-btn {
-  display: block;
-  margin: 0 auto;
-  background: linear-gradient(to bottom, #ff5722, #d84315);
-  color: #fff;
-  border: none;
-  padding: 14px 40px;
-  font-size: 18px;
-  font-weight: bold;
-  border-radius: 6px;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.action-btn:hover {
-  background: linear-gradient(to bottom, #ff7043, #ff5722);
-  transform: translateY(-2px);
-}
-</style>
