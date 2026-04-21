@@ -204,7 +204,7 @@ export class Bridge {
           truckCollider: true,
           truckColliderFriction: driveColliderFriction,
           truckColliderApplyFriction: driveColliderApplyFriction,
-          truckColliderDebug: true,
+          truckColliderDebug: false,
           ...(ignoreTop ? { truckColliderIgnoreTop: true } : {}),
         };
         return collider;

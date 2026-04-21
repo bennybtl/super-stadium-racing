@@ -1,9 +1,15 @@
 {
   "id": "default_truck",
   "name": "Default Truck",
-  "modelFile": "default_truck.obj",
+  "modelFile": "truck-assembly-v1.obj",
   "imageFile": "default_truck.png",
   "defaultColor": [0.8, 0.2, 0.1],
+  "meshColors": {
+    "truck-assembly-v1_truck-assembly-v1": [0.0, 0.0, 0.0],
+    "truck-assembly-v1.001_truck-assembly-v1.001": [1.0, 1.0, 0.0],
+    "truck-assembly-v1.007_truck-assembly-v1.007": [0.7, 0.7, 0.7],
+    "truck-assembly-v1.008_truck-assembly-v1.008": [0.7, 0.7, 0.7]
+  },
   "bodyTransform": {
     "position": [0, 0.66, 0.0],
     "rotation": [-1.5708, 0, 0],

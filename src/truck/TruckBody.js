@@ -28,6 +28,7 @@ export class TruckBody {
     this.parent  = parent;
     this.scene   = scene;
     this.shadows = shadows;
+    this.vehicleDef = vehicleDef;
 
     // Wheel geometry — from vehicle def, falling back to defaults matching the OBJ model
     const g = vehicleDef?.wheels ?? {};
@@ -51,6 +52,7 @@ export class TruckBody {
     // Per-vehicle body mesh transform overrides (position, rotation, scaling)
     const bt = vehicleDef?.bodyTransform ?? {};
     this._bodyPosition = bt.position ?? [0, 0.66, 0.0];
+    this._bodyYOffset = this._bodyPosition[1] ?? 0;
     this._bodyRotation = bt.rotation ?? [-Math.PI / 2, 0, 0];
     this._bodyScaling  = bt.scaling  ?? [1, 1, 1];
     this._wheelDefs = [
@@ -135,21 +137,25 @@ export class TruckBody {
       const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, this.scene);
       if (!result.meshes.length) throw new Error('OBJ loaded no meshes');
 
-      const mesh  = result.meshes[0];
-      mesh.parent = this._visualRoot;
+      const visibleMeshes = result.meshes.filter(m => typeof m.getTotalVertices === 'function' && m.getTotalVertices() > 0);
+      if (!visibleMeshes.length) throw new Error('OBJ loaded no visual meshes');
 
-      // ── Transform — adjust these to dial in the fit ───────────────────
-      // OBJ axes: X = truck length, Y = height, Z = width.
-      // rotation.y = -π/2 maps local-X → world-Z (forward) and local-Z → world-X (side).
-      // scaling:  .x controls length (world Z),  .z controls width (world X),  .y controls height.
-      // position: .x centers the body (OBJ is offset in Z),  .y lifts it so OBJ-bottom lands at ~0.5.
-      mesh.rotation = new Vector3(...this._bodyRotation);
-      mesh.scaling  = new Vector3(...this._bodyScaling);
-      mesh.position = new Vector3(...this._bodyPosition);
+      // Apply the overall body transform on the visual root so imported meshes
+      // inherit the same orientation, scaling, and position.
+      this._visualRoot.rotation = new Vector3(...this._bodyRotation);
+      this._visualRoot.scaling  = new Vector3(...this._bodyScaling);
+      this._visualRoot.position = new Vector3(...this._bodyPosition);
 
-      this._styleMesh(mesh, this.colors.body);
-      mesh.receiveShadows = false; // prevents self-shadowing artifacts
-      this._parts.push(mesh);
+      for (const mesh of result.meshes) {
+        mesh.parent = this._visualRoot;
+      }
+
+      for (const mesh of visibleMeshes) {
+        const color = this._meshColorFor(mesh);
+        this._styleMesh(mesh, color);
+        mesh.receiveShadows = false; // prevents self-shadowing artifacts
+        this._parts.push(mesh);
+      }
     } catch (err) {
       console.warn('[TruckBody] body mesh load failed — using box fallback:', err);
       this._buildBoxBody();
@@ -260,7 +266,7 @@ export class TruckBody {
       // but never more than that
       const bodyAllowance = 0.25;
       const bodyDeficit = deficit - bodyAllowance;
-      this._visualRoot.position.y = bodyDeficit > 0 ? bodyDeficit : 0;
+      this._visualRoot.position.y = (bodyDeficit > 0 ? bodyDeficit : 0) + this._bodyYOffset;
     }
 
     // Cancel only the drift lean (currentRoll) on the wheel root, not the terrain roll.
@@ -336,6 +342,39 @@ export class TruckBody {
     this._styleMesh(mesh, color);
     this._parts.push(mesh);
     return mesh;
+  }
+
+  _meshColorFor(mesh) {
+    const rawColorMap = this.vehicleDef?.meshColors ?? this.vehicleDef?.meshColorMap ?? {};
+    if (rawColorMap && typeof rawColorMap === 'object') {
+      if (rawColorMap[mesh.name] != null) {
+        return this._parseColor(rawColorMap[mesh.name]);
+      }
+      for (const key of Object.keys(rawColorMap)) {
+        if (mesh.name.includes(key)) {
+          return this._parseColor(rawColorMap[key]);
+        }
+      }
+    }
+    return this.colors.body;
+  }
+
+  _parseColor(value) {
+    if (Array.isArray(value) && value.length === 3) {
+      return new Color3(value[0], value[1], value[2]);
+    }
+    if (typeof value === 'string') {
+      const hex = value.trim().replace(/^#/, '');
+      if (/^[0-9A-Fa-f]{6}$/.test(hex)) {
+        const intValue = parseInt(hex, 16);
+        return new Color3(
+          ((intValue >> 16) & 0xff) / 255,
+          ((intValue >> 8) & 0xff) / 255,
+          (intValue & 0xff) / 255
+        );
+      }
+    }
+    return this.colors.body;
   }
 
   _styleMesh(mesh, color, options = {}) {

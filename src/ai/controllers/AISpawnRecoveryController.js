@@ -39,7 +39,9 @@ export class AISpawnRecoveryController {
     const d = this.driver;
     if (!d.truck || !d.truckMesh || !targetWaypoint) return;
 
-    const lastCp = d.checkpoints[d.lastCheckpointPassed % d.checkpoints.length];
+    const lastCp = (d.lastCheckpointPassed > 0 && d.lastCheckpointPassed <= d.checkpoints.length)
+      ? d.checkpoints[d.lastCheckpointPassed - 1]
+      : null;
     const basePos = lastCp
       ? { x: lastCp.x, z: lastCp.z }
       : { x: d.truckMesh.position.x, z: d.truckMesh.position.z };
