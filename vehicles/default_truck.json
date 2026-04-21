@@ -1,6 +1,6 @@
 {
   "id": "default_truck",
-  "name": "Default Truck",
+  "name": "2WD Truck",
   "modelFile": "truck-assembly-v1.obj",
   "imageFile": "default_truck.png",
   "defaultColor": [0.8, 0.2, 0.1],

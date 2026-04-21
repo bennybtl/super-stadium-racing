@@ -1,4 +1,5 @@
 import { useMenuStore } from '../vue/store.js';
+import { SEASON_TRACKS } from './SeasonManager.js';
 
 /**
  * MenuManager – thin bridge between game logic (ModeController / modes) and
@@ -19,11 +20,14 @@ export class MenuManager {
     this.selectedTrack   = null;
     this.selectedLaps    = 3;
     this.selectedVehicle = 'default_truck';
-    this._vehicleSelectContext = null;
+    this.selectedPlayerColor = null;
 
     // Connect to Pinia store (Pinia is active because vue/main.js runs first)
     this._store = useMenuStore();
     this._store.setBridge(this);
+    this._store.selectedTrack = this.selectedTrack;
+    this._store.selectedLaps = this.selectedLaps;
+    this._store.selectedVehicle = this.selectedVehicle;
   }
 
   // ── Public navigation (called by modes) ──────────────────────────────────
@@ -34,23 +38,6 @@ export class MenuManager {
     this._store.pitData = null;
     this._store.seasonFinalData = null;
     this._store.screen = 'start';
-  }
-
-  showTrackSelectMenu() {
-    this.currentMenu = 'trackSelect';
-    this._refreshTrackList();
-    this._store.screen = 'trackSelect';
-  }
-
-  showLapSelectMenu() {
-    this.currentMenu = 'lapSelect';
-    this._store.screen = 'lapSelect';
-  }
-
-  showPracticeTrackSelect() {
-    this.currentMenu = 'practiceTrackSelect';
-    this._refreshTrackList();
-    this._store.screen = 'practiceTrackSelect';
   }
 
   showEditorTrackSelect() {
@@ -66,31 +53,67 @@ export class MenuManager {
     this._store.isPaused = true;
   }
 
-  showVehicleSelectMenu(context) {
-    this._vehicleSelectContext = context;
-    this.currentMenu = 'vehicleSelect';
+  showPitMenu(mode = 'singleRace') {
+    this._refreshTrackList();
     this._refreshVehicleList();
-    this._store.screen = 'vehicleSelect';
+    if (!this.selectedLaps) {
+      this.selectedLaps = 3;
+    }
+    this._store.selectedLaps = this.selectedLaps;
+
+    const isSeasonStart = mode === 'season';
+    const nextTrackKey = isSeasonStart
+      ? SEASON_TRACKS[0].replace('.json', '')
+      : this.selectedTrack;
+    const nextTrackName = isSeasonStart
+      ? window.trackLoader?.getTrack(nextTrackKey)?.name ?? nextTrackKey
+      : this._store.trackList.find(t => t.key === this.selectedTrack)?.name ?? this.selectedTrack;
+
+    if (!isSeasonStart && !this.selectedTrack && this._store.trackList.length > 0) {
+      this.selectedTrack = this._store.trackList[0]?.key ?? null;
+      this._store.selectedTrack = this.selectedTrack;
+    }
+
+    this.currentMenu = 'pit';
+    this._store.postRaceData = null;
+    this._store.pitData = {
+      pitMode:          isSeasonStart ? 'seasonStart' : mode,
+      raceNumber:       1,
+      totalRaces:       isSeasonStart ? SEASON_TRACKS.length : 1,
+      nextTrackKey,
+      trackName:        nextTrackName,
+      laps:             this.selectedLaps,
+      isSeason:         isSeasonStart,
+      isSeasonComplete: false,
+      standings:        [],
+      playerBalance:    0,
+      upgrades:         [],
+      selectedColorKey: this.selectedPlayerColor,
+    };
+    this._store.seasonFinalData = null;
+    this._store.screen = null;
   }
 
-  selectVehicle(key) {
+  setSelectedVehicle(key) {
     this.selectedVehicle = key;
-    const ctx = this._vehicleSelectContext;
-    if (ctx === 'race') {
-      this.showLapSelectMenu();
-    } else if (ctx === 'practice') {
-      this.onStartPractice();
-    } else if (ctx === 'season') {
-      this.onSeasonStart(this.selectedLaps);
+    this._store.selectedVehicle = key;
+  }
+
+  setSelectedTrack(key) {
+    this.selectedTrack = key;
+    this._store.selectedTrack = key;
+    if (this._store.pitData) {
+      this._store.pitData.trackName = this._store.trackList.find(t => t.key === key)?.name ?? key;
+      this._store.pitData.nextTrackKey = key;
     }
   }
 
-  onVehicleSelectBack() {
-    const ctx = this._vehicleSelectContext;
-    if (ctx === 'race')     this.showTrackSelectMenu();
-    else if (ctx === 'practice') this.showPracticeTrackSelect();
-    else if (ctx === 'season')   this.showSeasonSetup();
-    else                         this.showStartMenu();
+  setSelectedLaps(laps) {
+    this.selectedLaps = laps;
+    this._store.selectedLaps = laps;
+    if (this._store.pitData) {
+      this._store.pitData.laps = laps;
+    }
   }
 
   showSettingsMenu() {
@@ -103,11 +126,6 @@ export class MenuManager {
     this.isPaused = true;
     this._store.screen   = 'pause';
     this._store.isPaused = true;
-  }
-
-  showSeasonSetup() {
-    this.currentMenu = 'seasonSetup';
-    this._store.screen = 'seasonSetup';
   }
 
   showPostRace(data) {
@@ -125,9 +143,15 @@ export class MenuManager {
   }
 
   showPit(data) {
+    this._refreshVehicleList();
     this.currentMenu = 'pit';
     this._store.postRaceData = null;
-    this._store.pitData = data;
+    this._store.pitData = {
+      pitMode:          data.pitMode ?? (data.isSeason ? 'season' : 'singleRace'),
+      ...data,
+      selectedColorKey: this.selectedPlayerColor,
+      selectedVehicleKey: this.selectedVehicle,
+    };
     this._store.seasonFinalData = null;
     this._store.screen = null;
   }
@@ -180,10 +204,18 @@ export class MenuManager {
   onEditorExit()   { this.editorMode = false; this.gameStarted = false; this.showStartMenu(); }
 
   // Season callbacks — overridden by MenuMode
+  setSelectedPlayerColor(colorKey) {
+    this.selectedPlayerColor = colorKey;
+    if (this._store?.pitData) {
+      this._store.pitData.selectedColorKey = colorKey;
+    }
+  }
+
   onSeasonStart(_laps) {}
   onContinueSeason()   {}
   onRetireFromSeason() {}
   onGoToPit()          {}
+  onStartSingleRace()  {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────
 

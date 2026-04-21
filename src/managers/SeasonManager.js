@@ -6,7 +6,7 @@
 const STORAGE_KEY = 'season_state';
 
 /** Ordered race track keys for a season */
-const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json', 'Sidewinder.json'];
+export const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json', 'Sidewinder.json'];
 
 import { AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 

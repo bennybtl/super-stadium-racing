@@ -7,7 +7,7 @@ import { UIManager } from "../managers/UIManager.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
-import { TRUCK_HALF_HEIGHT } from "../constants.js";
+import { TRUCK_HALF_HEIGHT, basicColors } from "../constants.js";
 import { DriveMode } from "./DriveMode.js";
 import { UPGRADES } from "../managers/SeasonManager.js";
 import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
@@ -31,7 +31,7 @@ export class RaceMode extends DriveMode {
     this.telemetryRecorder = null;
   }
 
-  async setup({ trackKey, laps, season = false, vehicleKey = 'default_truck' }) {
+  async setup({ trackKey, laps, season = false, vehicleKey = 'default_truck', playerColorKey = null }) {
     const { engine, menuManager, seasonManager } = this.controller;
     const totalLaps = laps || 3;
 
@@ -167,7 +167,8 @@ export class RaceMode extends DriveMode {
     const spawn0 = getGridSpawn(0);
 
     const playerVehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
-    const playerTruck = new Truck(scene, shadows, null, null, playerVehicleDef);
+    const playerColor = playerColorKey ? basicColors[playerColorKey]?.diffuse : null;
+    const playerTruck = new Truck(scene, shadows, playerColor, null, playerVehicleDef);
     playerTruck.mesh.position.copyFrom(spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
@@ -226,6 +227,7 @@ export class RaceMode extends DriveMode {
       getAIDriver,
       trackKey,
       telemetryCheckpoints: null, // resolved below
+      excludeColorKey: playerColorKey,
     });
 
     // Grab the canonical checkpoint list from the first AI driver (already sorted)
@@ -617,17 +619,6 @@ export class RaceMode extends DriveMode {
             );
           }
 
-          // Start the DNF countdown when the LAST driver begins their final lap
-          if (lapCount === totalLaps - 1 && dnfTimer === null && !raceEnded) {
-            const driversOnFinalLap = trucks.filter(
-              td => !td.gameState.raceFinished && td.gameState.lapCount >= totalLaps - 1
-            ).length;
-            if (driversOnFinalLap === trucks.length - finishOrder.length) {
-              console.log(`[RaceMode] All remaining drivers on final lap — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
-              setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
-            }
-          }
-
           if (lapCount >= totalLaps) {
             const totalTime = currentTime - raceStartTime;
             truckData.gameState.finishRace(totalTime);
@@ -640,7 +631,7 @@ export class RaceMode extends DriveMode {
 
             // For 1-lap races the "start final lap" trigger never fires, so start
             // the DNF timer here on first finish instead.
-            if (dnfTimer === null && !raceEnded) {
+            if (dnfTimer === null && !raceEnded && finishOrder.length < trucks.length) {
               console.log(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
               setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
             }

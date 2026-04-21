@@ -4,19 +4,19 @@ import { GameState } from "../managers/GameState.js";
 import { TelemetryPlayer } from "../managers/TelemetryPlayer.js";
 import { basicColors } from "../constants.js";
 /**
- * AI driver colour palette — cycled through for each AI slot.
+ * AI driver colour palette keys — cycled through for each AI slot.
  */
-const AI_COLORS = [
-  basicColors.blue.diffuse,
-  basicColors.yellow.diffuse,
-  basicColors.gray.diffuse,
-  basicColors.white.diffuse,
-  basicColors.cyan.diffuse,
-  basicColors.magenta.diffuse,
-  basicColors.orange.diffuse,
-  basicColors.red.diffuse,
-  basicColors.green.diffuse,
-  basicColors.black.diffuse,
+const AI_COLOR_KEYS = [
+  'blue',
+  'yellow',
+  'gray',
+  'white',
+  'cyan',
+  'magenta',
+  'orange',
+  'red',
+  'green',
+  'black',
 ];
 
 /**
@@ -59,6 +59,7 @@ export function setupAIDrivers({
   getAIDriver,
   trackKey,
   telemetryCheckpoints,
+  excludeColorKey = null,
 }) {
   // Grid slot 0 is reserved for the player; AI starts at slot 1.
   const AI_GRID_OFFSET = 1;
@@ -66,6 +67,11 @@ export function setupAIDrivers({
   // ── Create drivers and trucks ──────────────────────────────────────────
   const aiDrivers = [];
   const aiTrucks  = [];
+
+  const availableAIColors = AI_COLOR_KEYS
+    .filter(key => key !== excludeColorKey)
+    .map(key => basicColors[key]?.diffuse)
+    .filter(Boolean);
 
   for (let i = 0; i < count; i++) {
     const skillConfig = getAISkill(i);
@@ -78,7 +84,7 @@ export function setupAIDrivers({
       skillConfig,
     );
 
-    const color  = AI_COLORS[i % AI_COLORS.length];
+    const color  = availableAIColors[i % availableAIColors.length];
     const spawn  = getGridSpawn(AI_GRID_OFFSET + i);
     const truck  = new Truck(scene, shadows, color, driver, vehicleDef);
     truck.mesh.position.copyFrom(spawn.pos);

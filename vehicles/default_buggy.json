@@ -1,6 +1,6 @@
 {
   "id": "default_buggy",
-  "name": "Offroad Buggy",
+  "name": "2WD Buggy",
   "modelFile": "default_buggy.obj",
   "imageFile": "default_buggy.png",
   "defaultColor": [0.8, 0.2, 0.5],

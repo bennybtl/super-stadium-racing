@@ -27,17 +27,13 @@ export class MenuMode extends BaseMode {
     this.scene = scene;
 
     menuManager.onStartGame = () => {
-      menuManager.gameStarted = true;
       menuManager.hideMenu();
-      this.controller.goToRace({
-        trackKey:   menuManager.selectedTrack,
-        laps:       menuManager.selectedLaps,
-        vehicleKey: menuManager.selectedVehicle,
-      });
+      this.controller.showSingleRacePit();
     };
 
     menuManager.onSeasonStart = (laps) => {
       menuManager.gameStarted = true;
+      menuManager._store.pitData = null;
       menuManager.hideMenu();
       this.controller.startSeason(laps);
     };
@@ -60,10 +56,23 @@ export class MenuMode extends BaseMode {
 
     menuManager.onStartPractice = () => {
       menuManager.gameStarted = true;
+      menuManager._store.pitData = null;
       menuManager.hideMenu();
       this.controller.goToPractice({
         trackKey:   menuManager.selectedTrack,
         vehicleKey: menuManager.selectedVehicle,
+      });
+    };
+
+    menuManager.onStartSingleRace = () => {
+      menuManager.gameStarted = true;
+      menuManager._store.pitData = null;
+      menuManager.hideMenu();
+      this.controller.goToRace({
+        trackKey:        menuManager.selectedTrack,
+        laps:            menuManager.selectedLaps,
+        vehicleKey:      menuManager.selectedVehicle,
+        playerColorKey:  menuManager.selectedPlayerColor,
       });
     };
 

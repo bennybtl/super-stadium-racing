@@ -32,8 +32,7 @@ export class AIPathPlanner {
     return checkpoints;
   }
 
-  calculateFullPath(startPosition = { x: 0, z: 0 }) {
-    void startPosition;
+  calculateFullPath(startPosition = null) {
     const d = this.driver;
     if (d.checkpoints.length === 0) return;
 
@@ -124,11 +123,26 @@ export class AIPathPlanner {
     d.path[d.path.length - 1].segLen = 0;
     d.path[d.path.length - 1].heading = d.path[d.path.length - 2]?.heading ?? 0;
 
-    d.currentPathIndex = 0;
     d.currentCheckpointTarget = 0;
+    d.currentPathIndex = 0;
+
+    if (startPosition && typeof startPosition.x === 'number' && typeof startPosition.z === 'number') {
+      let bestIndex = 0;
+      let bestDistSq = Infinity;
+      for (let i = 0; i < d.path.length; i++) {
+        const dx = d.path[i].x - startPosition.x;
+        const dz = d.path[i].z - startPosition.z;
+        const distSq = dx * dx + dz * dz;
+        if (distSq < bestDistSq) {
+          bestDistSq = distSq;
+          bestIndex = i;
+        }
+      }
+      d.currentPathIndex = bestIndex;
+    }
 
     const sourceLabel = authorNodes ? `author aiPath (${authorNodes.length} nodes)` : `checkpoints (${d.checkpoints.length} nodes)`;
-    console.debug(`[AIDriver] Path built from ${sourceLabel}: ${d.path.length} waypoints.`);
+    console.debug(`[AIDriver] Path built from ${sourceLabel}: ${d.path.length} waypoints. startPos=${startPosition.x.toFixed(2)},${startPosition.z.toFixed(2)} idx=${d.currentPathIndex}`);
 
     if (d.debugEnabled && d.scene) {
       d.updateDebugVisualization();

@@ -6,61 +6,12 @@
 
         <!-- ── Start ── -->
         <template v-if="store.screen === 'start'">
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showPracticeTrackSelect()">Practice</button>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showTrackSelect()">Single Race</button>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showSeasonSetup()">Start Season</button>
+          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showPitMenu('practice')">Practice</button>
+          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showPitMenu()">Single Race</button>
+          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showPitMenu('season')">Start Season</button>
           <hr>
           <button class="bg-gradient-to-b from-[#999999] to-[#555555] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#bbbbbb] hover:to-[#777777]" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="bg-gradient-to-b from-[#999999] to-[#555555] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#bbbbbb] hover:to-[#777777]" @click="store.settings()">Settings</button>
-        </template>
-
-        <!-- ── Track select ── -->
-        <template v-else-if="store.screen === 'trackSelect'">
-          <button
-            v-for="t in store.trackList"
-            :key="t.key"
-            class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
-            @click="store.selectTrack(t.key)"
-          >{{ t.name }}</button>
-          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.back('start')">Back</button>
-        </template>
-
-        <!-- ── Lap select ── -->
-        <template v-else-if="store.screen === 'lapSelect'">
-          <button
-            v-for="n in [1, 3, 5, 10]"
-            :key="n"
-            class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
-            @click="store.startGame(n)"
-          >{{ n }} Lap{{ n > 1 ? 's' : '' }}</button>
-          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.back('trackSelect')">Back</button>
-        </template>
-
-        <!-- ── Vehicle select ── -->
-        <template v-else-if="store.screen === 'vehicleSelect'">
-          <div class="flex flex-wrap justify-center gap-5 mb-5">
-            <button
-              v-for="v in store.vehicleList"
-              :key="v.key"
-              class="bg-gradient-to-b from-[#444] to-[#222] border-[3px] border-transparent rounded-[12px] p-4 cursor-pointer transition-all duration-200 flex flex-col items-center w-[180px] shadow-[0_5px_15px_rgba(0,0,0,0.4)] hover:bg-[#555] hover:border-[#ff5722] hover:-translate-y-1 hover:shadow-[0_8px_25px_rgba(255,87,34,0.3)]"
-              @click="store.selectVehicle(v.key)"
-            >
-              <img v-if="v.imageUrl" :src="v.imageUrl" :alt="v.name" class="w-[140px] h-[100px] object-contain mb-4 drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]" />
-              <span class="text-white text-[18px] font-bold uppercase tracking-[1px]">{{ v.name }}</span>
-            </button>
-          </div>
-          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.vehicleSelectBack()">Back</button>
-        </template>
-
-        <!-- ── Practice track select ── -->
-        <template v-else-if="store.screen === 'practiceTrackSelect'">
-          <button
-            v-for="t in store.trackList"
-            :key="t.key"
-            class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
-            @click="store.startPractice(t.key)"
-          >{{ t.name }}</button>
-          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.back('start')">Back</button>
         </template>
 
         <!-- ── Editor track select ── -->
@@ -102,18 +53,6 @@
           <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.back('start')">Back</button>
         </template>
 
-        <!-- ── Season setup ── -->
-        <template v-else-if="store.screen === 'seasonSetup'">
-          <p class="text-[#ccc] text-sm mb-2 leading-6">Race on every track. Points awarded each round.<br>Choose laps per race:</p>
-          <button
-            v-for="n in [1, 3, 5]"
-            :key="n"
-            class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
-            @click="store.startSeason(n)"
-          >{{ n }} Lap{{ n > 1 ? 's' : '' }}</button>
-          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.back('start')">Back</button>
-        </template>
-
       </div>
     </div>
   </div>
@@ -128,11 +67,7 @@ const store = useMenuStore();
 const title = computed(() => {
   switch (store.screen) {
     case 'start':             return 'OPEN Off-Road!';
-    case 'trackSelect':       return 'Select Track';
-    case 'lapSelect':         return 'Select Laps';
-    case 'vehicleSelect':     return 'Select Vehicle';
     case 'editorTrackSelect': return 'Select Track to Edit';
-    case 'seasonSetup':       return 'Season Mode';
     case 'pause':             return 'Paused';
     case 'editorPause':       return 'Track Editor';
     case 'settings':          return 'Settings';

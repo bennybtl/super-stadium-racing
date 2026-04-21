@@ -67,7 +67,7 @@ export class ModeController {
   startSeason(lapsPerRace) {
     this.seasonManager = new SeasonManager();
     this.seasonManager.start(lapsPerRace);
-    return this._launchCurrentSeasonRace();
+    return this.showSeasonPit();
   }
 
   /**
@@ -111,10 +111,11 @@ export class ModeController {
     if (!this.seasonManager) return;
     const sm = this.seasonManager;
     this.menuManager.showPit({
-      raceNumber:       sm.getCurrentRaceIndex(),   // already incremented
+      raceNumber:       sm.getCurrentRaceNumber(),
       totalRaces:       sm.getTotalRaces(),
       nextTrackKey:     sm.getCurrentTrackKey(),
       nextRaceNumber:   sm.getCurrentRaceNumber(),
+      isSeason:         true,
       isSeasonComplete: sm.isSeasonComplete(),
       standings:        sm.getStandings(),
       playerBalance:    sm.getPlayerBalance(),
@@ -127,7 +128,47 @@ export class ModeController {
     const trackKey   = this.seasonManager.getCurrentTrackKey();
     const laps       = this.seasonManager.getLapsPerRace();
     const vehicleKey = this.menuManager.selectedVehicle;
-    return this.goToRace({ trackKey, laps, season: true, vehicleKey });
+    const playerColorKey = this.menuManager.selectedPlayerColor;
+    return this.goToRace({ trackKey, laps, season: true, vehicleKey, playerColorKey });
+  }
+
+  showSeasonPit() {
+    if (!this.seasonManager) return;
+    const sm = this.seasonManager;
+    this.menuManager.showPit({
+      raceNumber:       sm.getCurrentRaceNumber(),
+      totalRaces:       sm.getTotalRaces(),
+      nextTrackKey:     sm.getCurrentTrackKey(),
+      nextRaceNumber:   sm.getCurrentRaceNumber(),
+      isSeason:         true,
+      isSeasonComplete: sm.isSeasonComplete(),
+      standings:        sm.getStandings(),
+      playerBalance:    sm.getPlayerBalance(),
+      upgrades:         sm.getUpgrades(),
+    });
+  }
+
+  showSingleRacePit() {
+    const trackKey = this.menuManager.selectedTrack;
+    if (!trackKey) return;
+
+    const trackName = window.trackLoader?.getTrack(trackKey)?.name ?? trackKey;
+    const vehicleName = window.vehicleLoader?.getVehicle(this.menuManager.selectedVehicle)?.name ?? this.menuManager.selectedVehicle;
+
+    this.menuManager.showPit({
+      raceNumber:       1,
+      totalRaces:       1,
+      nextTrackKey:     trackKey,
+      trackName,
+      laps:             this.menuManager.selectedLaps,
+      nextRaceNumber:   1,
+      isSeason:         false,
+      isSeasonComplete: false,
+      standings:        [],
+      playerBalance:    0,
+      upgrades:         [],
+      vehicleName,
+    });
   }
 
   goToRace(config) {

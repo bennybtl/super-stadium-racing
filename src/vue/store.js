@@ -8,6 +8,9 @@ export const useMenuStore = defineStore('menu', () => {
   const isPaused = ref(false);
   const trackList = ref([]); // [{ key, name }]
   const vehicleList = ref([]); // [{ key, name }]
+  const selectedTrack = ref(null);
+  const selectedLaps = ref(3);
+  const selectedVehicle = ref('default_truck');
 
   // Season overlay data (null when not showing)
   const postRaceData    = ref(null);
@@ -25,21 +28,7 @@ export const useMenuStore = defineStore('menu', () => {
   function setBridge(manager) { _bridge.value = manager; }
 
   // ── Actions called by Vue components ──
-  function showTrackSelect()       { _bridge.value?.showTrackSelectMenu(); }
-  function showPracticeTrackSelect() { _bridge.value?.showPracticeTrackSelect(); }
   function showEditorTrackSelect() { _bridge.value?.showEditorTrackSelect(); }
-
-  function selectTrack(key) {
-    if (!_bridge.value) return;
-    _bridge.value.selectedTrack = key;
-    _bridge.value.showVehicleSelectMenu('race');
-  }
-
-  function startGame(laps) {
-    if (!_bridge.value) return;
-    _bridge.value.selectedLaps = laps;
-    _bridge.value.onStartGame();
-  }
 
   function startEditor(key) {
     if (!_bridge.value) return;
@@ -47,14 +36,13 @@ export const useMenuStore = defineStore('menu', () => {
     _bridge.value.onStartEditor();
   }
 
-  function startPractice(key) {
-    if (!_bridge.value) return;
-    _bridge.value.selectedTrack = key;
-    _bridge.value.showVehicleSelectMenu('practice');
+  function selectPlayerVehicle(key) { if (!_bridge.value) return; _bridge.value.setSelectedVehicle(key); }
+  function setSelectedTrack(key) { if (!_bridge.value) return; _bridge.value.setSelectedTrack(key); }
+  function setSelectedLaps(laps) { if (!_bridge.value) return; _bridge.value.setSelectedLaps(laps); }
+  function showPitMenu(mode = 'singleRace') { _bridge.value?.showPitMenu(mode); }
+  function startPracticeMode() {
+    _bridge.value?.onStartPractice();
   }
-
-  function selectVehicle(key) { _bridge.value?.selectVehicle(key); }
-  function vehicleSelectBack() { _bridge.value?.onVehicleSelectBack(); }
 
   function resume()       { _bridge.value?.onResume(); }
   function reset()        { _bridge.value?.onReset(); }
@@ -68,20 +56,18 @@ export const useMenuStore = defineStore('menu', () => {
   function back(target) {
     if (!_bridge.value) return;
     if (target === 'start')            _bridge.value.showStartMenu();
-    else if (target === 'trackSelect') _bridge.value.showTrackSelectMenu();
   }
 
   // ── Season actions (called by Vue overlays) ──────────────────────────────
-  function showSeasonSetup()       { _bridge.value?.showSeasonSetup(); }
-  function startSeason(laps) {
-    if (!_bridge.value) return;
-    _bridge.value.selectedLaps = laps;
-    _bridge.value.showVehicleSelectMenu('season');
+  function startSeasonMode() {
+    _bridge.value?.onSeasonStart(selectedLaps.value);
   }
   function continueSeason()        { _bridge.value?.onContinueSeason(); }
   function retireFromSeason()      { _bridge.value?.onRetireFromSeason(); }
   function goToPit()               { _bridge.value?.onGoToPit(); }
   function purchaseUpgrade(id)     { _bridge.value?.onPurchaseUpgrade(id); }
+  function selectPlayerColor(key)  { if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
+  function startSingleRace()        { _bridge.value?.onStartSingleRace(); }
   function exitSeason()            { postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
   function singleRaceExit()        { singleRaceData.value = null; _bridge.value?.onExit(); }
 
@@ -91,17 +77,17 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   return {
-    screen, isPaused, trackList, vehicleList,
+    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedVehicle,
     postRaceData, pitData, seasonFinalData, singleRaceData,
     loadingVisible, loadingMessage,
     setBridge,
-    showTrackSelect, showPracticeTrackSelect, showEditorTrackSelect, selectTrack,
-    startGame, startPractice, startEditor,
-    selectVehicle, vehicleSelectBack,
+    showEditorTrackSelect,
+    startEditor,
+    selectPlayerVehicle, setSelectedTrack, setSelectedLaps, showPitMenu, startPracticeMode,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
-    showSeasonSetup, startSeason, continueSeason, retireFromSeason, goToPit, purchaseUpgrade, exitSeason, singleRaceExit,
+    continueSeason, retireFromSeason, goToPit, purchaseUpgrade, selectPlayerColor, startSingleRace, startSeasonMode, exitSeason, singleRaceExit,
     setLoading,
   };
 });
