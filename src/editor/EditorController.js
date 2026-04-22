@@ -100,10 +100,9 @@ export class EditorController {
     // AI path waypoint editor
     this.aiPathEditor = new AiPathEditor(this);
 
-    // AI path placement mode — when true, every terrain click drops a waypoint
-    this._aiPathPlacementMode = false;
-
     this._rawDragPos = null;
+    this._aiPathMouseDownSelectedWaypoint = null;
+    this._aiPathMouseDownMoved = false;
 
     // Undo / redo stacks (each entry is a JSON string of the features array)
     this._undoStack = [];
@@ -269,9 +268,6 @@ export class EditorController {
 
     // AI path waypoint editor
     this.aiPathEditor.dispose();
-
-    this._aiPathPlacementMode = false;
-    if (this._editorStore) this._editorStore.aiPathPlacementMode = false;
   }
 
   // ─── Undo / Redo ──────────────────────────────────────────────────────────
@@ -394,9 +390,8 @@ export class EditorController {
 
     // Handle ESC key — deselect first, open menu if nothing selected
     if (event.key === 'Escape') {
-      if (this._aiPathPlacementMode) {
-        this._aiPathPlacementMode = false;
-        this._editorStore.aiPathPlacementMode = false;
+      if (this._editorStore?.selectedType === 'aiPath') {
+        this.closeAiPath();
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -503,11 +498,9 @@ export class EditorController {
       return;
     }
 
-    // Handle P key — toggle AI path placement mode
+    // Handle P key — open AI path editor
     if (event.key.toLowerCase() === 'p' && !event.ctrlKey && !event.metaKey) {
-      this._aiPathPlacementMode = !this._aiPathPlacementMode;
-      this._editorStore.aiPathPlacementMode = this._aiPathPlacementMode;
-      if (this._aiPathPlacementMode) this.deselectAll();
+      this.openAiPath();
       event.preventDefault();
       return;
     }
@@ -760,12 +753,21 @@ export class EditorController {
       const dz = world.z - this._mouseDrag.z;
       this._mouseDrag = world;
 
+      if (this._aiPathMouseDownSelectedWaypoint) {
+        this._aiPathMouseDownMoved = true;
+      }
+
       if (Math.abs(dx) < 1e-6 && Math.abs(dz) < 1e-6) return;
       this._moveSelectedByPointerDelta(dx, dz);
       return;
     }
 
     if (pointerInfo.type === PointerEventTypes.POINTERUP) {
+      if (this._aiPathMouseDownSelectedWaypoint && !this._aiPathMouseDownMoved) {
+        this.closeAiPath();
+      }
+      this._aiPathMouseDownSelectedWaypoint = null;
+      this._aiPathMouseDownMoved = false;
       this._mouseDrag = null;
       this.polyWallEditor?.endDrag?.();
       this.polyHillEditor?.endDrag?.();
@@ -846,8 +848,24 @@ export class EditorController {
     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
       const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
 
-      // AI path placement mode: every click drops a waypoint at the terrain hit point
-      if (this._aiPathPlacementMode) {
+        // AI path panel open: click terrain to add waypoints, click existing point to select it.
+      if (this._editorStore?.selectedType === 'aiPath') {
+        if (pickResult.hit && pickResult.pickedMesh) {
+          const clickedMesh = pickResult.pickedMesh;
+          const wpData = this.aiPathEditor.findByMesh(clickedMesh);
+          if (wpData) {
+            if (this.aiPathEditor.selected === wpData) {
+              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
+              this._aiPathMouseDownMoved = false;
+              if (this._editorStore) this._editorStore.selectedType = 'aiPath';
+              return;
+            }
+            this.deselectAll();
+            this.aiPathEditor.select(wpData);
+            if (this._editorStore) this._editorStore.selectedType = 'aiPath';
+            return;
+          }
+        }
         if (pickResult.hit && pickResult.pickedPoint) {
           this.aiPathEditor.addPoint(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
         }
@@ -998,9 +1016,15 @@ export class EditorController {
         {
           const wpData = this.aiPathEditor.findByMesh(clickedMesh);
           if (wpData) {
-            const wasSelected = this.aiPathEditor.selected === wpData;
+            if (this.aiPathEditor.selected === wpData) {
+              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
+              this._aiPathMouseDownMoved = false;
+              if (this._editorStore) this._editorStore.selectedType = 'aiPath';
+              return;
+            }
             this.deselectAll();
-            if (!wasSelected) this.aiPathEditor.select(wpData);
+            this.aiPathEditor.select(wpData);
+            if (this._editorStore) this._editorStore.selectedType = 'aiPath';
             return;
           }
         }
@@ -1317,6 +1341,19 @@ export class EditorController {
   duplicateMeshGrid()           { this.meshGridEditor?.duplicateMeshGrid(); }
   closeMeshGrid() {
     this.meshGridEditor?.deselectPoint();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
+
+  // ── AI Path helper methods ───────────────────────────────────────────────
+  openAiPath() {
+    if (this._editorStore) {
+      this._editorStore.selectedType = 'aiPath';
+      this.aiPathEditor.deselect();
+    }
+  }
+
+  closeAiPath() {
+    this.aiPathEditor.deselect();
     if (this._editorStore) this._editorStore.selectedType = null;
   }
 

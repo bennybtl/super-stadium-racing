@@ -2,17 +2,17 @@
   <Transition name="add-menu">
     <div
       v-if="editor.addMenuOpen"
-      class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70"
+      class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 pointer-events-auto"
       @mousedown.self="editor.closeAddMenu()"
     >
       <div class="w-[min(780px,90vw)] max-h-[90vh] overflow-y-auto rounded-[1rem] border-2 border-sky-500 bg-slate-950/95 p-6 shadow-xl shadow-black/40" @mousedown.stop>
         <h2 class="mb-5 text-center text-xl font-bold uppercase tracking-[0.22em] text-white">Add Feature</h2>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <button
             v-for="item in features"
             :key="item.label"
-            class="flex flex-col items-center gap-3 rounded-2xl border-2 border-transparent bg-gradient-to-b from-slate-800 to-slate-900 px-4 py-4 text-white shadow-[0_3px_10px_rgba(0,0,0,0.4)] transition-all duration-150 hover:border-sky-500 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(74,158,255,0.25)]"
+            class="flex flex-col items-center gap-3 rounded-2xl border-2 border-transparent bg-gradient-to-b from-slate-800 to-slate-900 px-2 py-2 text-white shadow-[0_3px_10px_rgba(0,0,0,0.4)] transition-all duration-150 hover:border-sky-500 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(74,158,255,0.25)]"
             @click="item.action(); editor.closeAddMenu()"
           >
             <img v-if="item.img" :src="item.img" :alt="item.label" class="h-[75px] w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
@@ -43,9 +43,11 @@ import imgTrackSign   from '../assets/track_sign.feature.png';
 import imgFlagString  from '../assets/flag_string.feature.png';
 import imgTerrain     from '../assets/terrain_region.feature.png';
 import imgMeshGrid    from '../assets/mesh_grid.feature.png';
-// import imgBezierWall  from '../assets/bezier_wall.feature.png';
 import imgTireStack   from '../assets/tire_stack.feature.png';
-// import imgActionZone  from '../assets/action_zone.feature.png';
+import imgActionZone  from '../assets/action_zone.feature.png';
+import imgBridge      from '../assets/bridge.feature.png';
+import imgAiPath      from '../assets/ai_path.feature.png';
+
 // import imgNormalMap   from '../assets/normal_map_decal.feature.png';
 
 const editor = useEditorStore();
@@ -53,21 +55,19 @@ const editor = useEditorStore();
 const features = [
   { label: 'Checkpoint',       img: imgCheckpoint,    action: () => editor.addCheckpoint()     },
   { label: 'Poly Wall',        img: imgPolyWall,      action: () => editor.addPolyWall()       },
-  // { label: 'Bezier Wall',      img: imgBezierWall,    action: () => editor.addBezierWall()     },
   { label: 'Poly Curb',        img: imgPolyCurb,      action: () => editor.addPolyCurb()       },
   { label: 'Round Hill',       img: imgRoundHill,     action: () => editor.addHill()           },
   { label: 'Square Hill',      img: imgSquareHill,    action: () => editor.addSquareHill()     },
   { label: 'Poly Hill',        img: imgPolyHill,      action: () => editor.addPolyHill()       },
   { label: 'Mesh Grid',        img: imgMeshGrid,      action: () => editor.addMeshGrid()       },
   { label: 'Terrain Region',   img: imgTerrain,       action: () => editor.addTerrain()        },
-  { label: 'Normal Map Decal', img: 'imgNormalMap',     action: () => editor.addNormalMapDecal() },
   { label: 'Tire Stack',       img: imgTireStack,     action: () => editor.addTireStack()      },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.addTrackSign()      },
   { label: 'Flag',             img: imgFlags,         action: () => editor.addFlag()           },
   { label: 'Banner String',    img: imgFlagString,    action: () => editor.addBannerString()   },
-  { label: 'Action Zone',      img: 'imgActionZone',  action: () => editor.addActionZone()     },
-  { label: 'Bridge',           img: null,             action: () => editor.addBridge()         },
-  { label: 'AI Waypoint',      img: null,             action: () => editor.addAiWaypoint()     },
+  { label: 'Action Zone',      img: imgActionZone,  action: () => editor.addActionZone()     },
+  { label: 'Bridge',           img: imgBridge,             action: () => editor.addBridge()         },
+  { label: 'AI Path',          img: imgAiPath,             action: () => editor.openAiPath()        },
 ];
 </script>
 

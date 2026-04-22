@@ -34,6 +34,7 @@
             <li><b>S/Left Shift:</b> Brake/Reverse</li>
             <li><b>A,D:</b> Steering</li>
             <li><b>Q:</b> Use Nitro</li>
+            <li><b>R:</b> Reset to last checkpoint</li>
           </ul>
           <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.resume()">Resume</button>
           <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.reset()">Reset</button>

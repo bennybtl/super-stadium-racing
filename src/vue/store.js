@@ -333,8 +333,16 @@ export const useEditorStore = defineStore('editor', () => {
   const testModeActive = ref(false);
   const testModeReturnKey = ref(null);
 
-  // ── AI path placement mode indicator ──
-  const aiPathPlacementMode = ref(false);
+  // ── AI path editor panel actions ──
+  function openAiPath() {
+    selectedType.value = 'aiPath';
+    _bridge.value?.deselectAiWaypoint?.();
+  }
+
+  function closeAiPath() {
+    _bridge.value?.deselectAiWaypoint?.();
+    selectedType.value = null;
+  }
 
   // ── Vue panel bridge (set to EditorController instance on activate) ──
   const _bridge = shallowRef(null);
@@ -607,7 +615,7 @@ export const useEditorStore = defineStore('editor', () => {
     addNormalMapDecal, addTireStack, addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,
-    aiPathPlacementMode,
+    openAiPath, closeAiPath,
     setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     meshGridAdjustUp, meshGridAdjustDown,

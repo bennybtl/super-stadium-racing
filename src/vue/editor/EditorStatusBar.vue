@@ -10,13 +10,6 @@
         Pan/Move: W,A,S,D | Rotate: Q,E | Delete: Del | Undo: Ctrl+Z | Zoom: +/- | Move Faster: Shift
       </div>
 
-      <!-- AI path placement mode banner -->
-      <Transition name="placement-banner">
-        <div v-if="editor.aiPathPlacementMode" class="fixed top-14 left-1/2 -translate-x-1/2 rounded-xl bg-amber-400/90 text-slate-950 px-4 py-2 text-[13px] font-sans pointer-events-none whitespace-nowrap shadow-xl shadow-black/40 z-[200]">
-          🗺 <strong>AI Path</strong>: click terrain to place waypoints &nbsp;·&nbsp; <kbd>P</kbd> or <kbd>Esc</kbd> to finish
-        </div>
-      </Transition>
-
       <!-- Default terrain picker -->
       <div class="flex items-center gap-2">
         <span class="text-slate-500 text-[11px] font-sans whitespace-nowrap">Default Terrain</span>
@@ -63,23 +56,6 @@ const editor = useEditorStore();
 </script>
 
 <style scoped>
-.ai-placement-banner kbd {
-  background: rgba(0,0,0,0.15);
-  border-radius: 3px;
-  padding: 1px 5px;
-  font-size: 12px;
-  font-family: monospace;
-}
-.placement-banner-enter-active,
-.placement-banner-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.placement-banner-enter-from,
-.placement-banner-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-6px);
-}
-
 /* ── Slide-up transition ── */
 .status-bar-enter-active,
 .status-bar-leave-active {
