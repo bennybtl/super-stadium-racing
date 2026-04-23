@@ -312,8 +312,8 @@ export class PolyHillEditor {
   deleteSelectedPoint() {
     if (!this.selectedPoint) return;
     const { hg, idx } = this.selectedPoint;
-    // Keep minimum 4 points
-    if (hg.feature.points.length <= 4) return;
+    // Keep minimum 2 points
+    if (hg.feature.points.length <= 2) return;
 
     this.ec.saveSnapshot();
     hg.feature.points.splice(idx, 1);
@@ -388,6 +388,7 @@ export class PolyHillEditor {
     const store = this.ec._editorStore;
     store.selectedType = 'polyHill';
     store.polyHill.hasSelection = selectedIdx !== null;
+    store.polyHill.canDeletePoint = selectedIdx !== null && feature.points.length > 2;
     store.polyHill.radius = selectedIdx !== null ? (feature.points[selectedIdx]?.radius ?? 0) : 0;
     store.polyHill.canHaveRadius = selectedIdx !== null && this._canHaveRadius(feature, selectedIdx);
     store.polyHill.height = feature.height ?? 3;

@@ -20,10 +20,9 @@ export class CameraController {
     this.zoomStep = 0.1;
 
     // Camera mode
-    this.mode = 'fixed'; // 'fixed' | 'chase'
+    this.mode = 'fixed'; // 'fixed' | 'chase' | 'chase-low''
 
     // Smoothed heading for chase cam (avoids jarring snaps)
-    this._smoothHeading = 0;
   }
 
   toggleMode() {
@@ -31,7 +30,7 @@ export class CameraController {
     const next = (modes.indexOf(this.mode) + 1) % modes.length;
     this.mode = modes[next];
     // Snap smoothed heading to current on mode switch to avoid a sweep-in from stale value
-    // (heading gets passed on the next update call, so we reset to 0 and let it catch up)
+    this._smoothHeading = 0;
   }
 
   update(targetPosition, heading = 0, dt = 1/60) {

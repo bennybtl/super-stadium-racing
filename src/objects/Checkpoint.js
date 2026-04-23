@@ -153,16 +153,16 @@ export class Checkpoint {
     // only the connector lines grow — the box and number stay the same size.
     const texH = 512;
     const fixedWorldH = 8;
-    const texW   = isFinish ? texH : Math.max(texH, Math.round(texH * feature.width / fixedWorldH));
-    const decalW = feature.width * (isFinish ? 0.82 : 1.0);
-    const decalH = isFinish ? decalW : fixedWorldH;
+    const texW   =  Math.max(texH, Math.round(texH * feature.width / fixedWorldH));
+    const decalW = feature.width;
+    const decalH = fixedWorldH;
 
     const decalTexture = new DynamicTexture("cpDecalTex", { width: texW, height: texH }, scene);
     const ctx          = decalTexture.getContext();
 
     ctx.clearRect(0, 0, texW, texH);
     if (isFinish) {
-      this._drawFinishDecal(ctx, feature.checkpointNumber, texH, feature.width);
+      this._drawFinishDecal(ctx, feature.checkpointNumber, texW, texH);
     } else {
       this._drawNumberedDecal(ctx, feature.checkpointNumber, texW, texH);
     }
@@ -219,10 +219,12 @@ export class Checkpoint {
   }
 
   // ─── Private: decal drawing ───────────────────────────────────────────────
-  _drawArrowDecal(ctx, texW) {
-        // Direction triangle — fixed size, centered horizontally
+  _drawArrowDecal(ctx, texW, baseWidth = 240) {
+    // Direction triangle — fixed size, centered horizontally
     const triCX   = texW / 2;
-    const triTop  = 20, triBase = 120, triHalfW = 70;
+    const triTop  = 20;
+    const triBase = 120;
+    const triHalfW = baseWidth / 2;
     ctx.fillStyle = "white";
     ctx.beginPath();
     ctx.moveTo(triCX, triTop);
@@ -232,20 +234,25 @@ export class Checkpoint {
     ctx.fill();
   }
 
-  _drawFinishDecal(ctx, checkpointNumber, texW, gateWidth) {
-    this._drawArrowDecal(ctx, texW)
-    const cols  = Math.max(2, Math.round(gateWidth / 2.5));
-    const rows  = 3;
-    const rectH = Math.round(texW * 0.38);
-    const rectY = Math.round((texW - rectH) / 2);
-    const cellW = texW / cols;
+  _drawFinishDecal(ctx, checkpointNumber, texW, texH) {
+    const rectW = texW;
+    const rectX = 0;
+    const rectY = 196;
+
+    this._drawArrowDecal(ctx, texW, 240);
+
+    const cols = Math.max(2, Math.round(rectW / 38));
+    const rows = 3;
+    const cellW = rectW / cols;
     const cellH = cellW;
+
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         ctx.fillStyle = (r + c) % 2 === 0 ? "white" : "transparent";
-        ctx.fillRect(c * cellW, rectY + r * cellH, cellW, cellH);
+        ctx.fillRect(rectX + c * cellW, rectY + r * cellH, cellW, cellH);
       }
     }
+
     this._applyWearEffect(ctx, checkpointNumber, texW, false);
   }
 

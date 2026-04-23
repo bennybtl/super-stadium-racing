@@ -117,6 +117,7 @@ export class EditorController {
     
     // Track being edited
     this.currentTrack = null;
+    this.gizmosVisible = true;
 
     // Vue editor store bridge
     this._editorStore = useEditorStore();
@@ -179,6 +180,7 @@ export class EditorController {
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
+    this.setGizmosVisible(true);
     this._editorStore.trackDefaultTerrain = track.defaultTerrainType?.name ?? 'packed_dirt';
   }
 
@@ -1373,5 +1375,96 @@ export class EditorController {
    */
   dispose() {
     this.deactivate();
+  }
+
+  toggleGizmosVisible() {
+    this.setGizmosVisible(!this.gizmosVisible);
+  }
+
+  setGizmosVisible(visible) {
+    this.gizmosVisible = visible;
+    if (this._editorStore) this._editorStore.gizmosVisible = visible;
+
+    const setMeshVisibility = (item, props) => {
+      for (const prop of props) {
+        const mesh = item?.[prop];
+        if (mesh && typeof mesh.isVisible === 'boolean') mesh.isVisible = visible;
+      }
+    };
+
+    const setListVisibility = (items, props) => {
+      for (const item of items || []) setMeshVisibility(item, props);
+    };
+
+    setListVisibility(this.hillEditor?.meshes, ['node', 'mesh', 'sphere']);
+    setListVisibility(this.squareHillEditor?.meshes, ['node', 'mesh', 'sphere']);
+    setListVisibility(this.terrainShapeEditor?.meshes, ['node', 'mesh']);
+    setListVisibility(this.normalMapDecalEditor?.meshes, ['node', 'mesh']);
+    setListVisibility(this.tireStackEditor?.meshes, ['node', 'mesh']);
+    setListVisibility(this.bridgeEditor?.meshes, ['node', 'sphere']);
+
+    if (this.meshGridEditor) {
+      for (const p of this.meshGridEditor.pointMeshes || []) {
+        if (p.mesh) p.mesh.isVisible = visible;
+      }
+      if (this.meshGridEditor.lineSystem) this.meshGridEditor.lineSystem.isVisible = visible;
+    }
+
+    if (this.actionZoneEditor) {
+      for (const z of this.actionZoneEditor.zones || []) {
+        if (z.cyl) z.cyl.isVisible = visible;
+        if (z.handle) z.handle.isVisible = visible;
+        for (const p of z.pointHandles || []) {
+          if (p) p.isVisible = visible;
+        }
+        if (z.lineSystem) z.lineSystem.isVisible = visible;
+      }
+    }
+
+    if (this.polyWallEditor) {
+      for (const wg of this.polyWallEditor._wallGizmos || []) {
+        for (const m of wg.pointMeshes || []) {
+          if (m) m.isVisible = visible;
+        }
+        if (wg.lineSystem) wg.lineSystem.isVisible = visible;
+      }
+    }
+
+    if (this.polyHillEditor) {
+      for (const hg of this.polyHillEditor._hillGizmos || []) {
+        for (const m of hg.pointMeshes || []) {
+          if (m) m.isVisible = visible;
+        }
+        if (hg.lineSystem) hg.lineSystem.isVisible = visible;
+      }
+    }
+
+    if (this.polyCurbEditor) {
+      for (const cg of this.polyCurbEditor._curbGizmos || []) {
+        for (const m of cg.pointMeshes || []) {
+          if (m) m.isVisible = visible;
+        }
+        if (cg.lineSystem) cg.lineSystem.isVisible = visible;
+      }
+    }
+
+    if (this.bezierWallEditor) {
+      for (const wg of this.bezierWallEditor._wallGizmos || []) {
+        for (const m of wg.anchorMeshes || []) {
+          if (m) m.isVisible = visible;
+        }
+        for (const hm of wg.handleMeshes || []) {
+          if (hm?.mesh) hm.mesh.isVisible = visible;
+        }
+        if (wg.lineSystem) wg.lineSystem.isVisible = visible;
+      }
+    }
+
+    if (this.aiPathEditor) {
+      for (const h of this.aiPathEditor.handles || []) {
+        if (h.mesh) h.mesh.isVisible = visible;
+      }
+      if (this.aiPathEditor.lineMesh) this.aiPathEditor.lineMesh.isVisible = visible;
+    }
   }
 }

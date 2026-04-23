@@ -25,8 +25,23 @@
 
     <div class="text-[10px] text-slate-400 mb-3">WASD to move selected point</div>
 
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.insertPolyHillPoint()">Insert Point After</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deletePolyHillPoint()">Delete Point</button>
+    <button
+      class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500 disabled:opacity-50"
+      :disabled="!editor.polyHill.hasSelection"
+      @click="editor.insertPolyHillPoint()"
+    >
+      Insert Point After
+    </button>
+    <button
+      class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500 disabled:opacity-50"
+      :disabled="!editor.polyHill.canDeletePoint"
+      @click="editor.deletePolyHillPoint()"
+    >
+      Delete Point
+    </button>
+    <div v-if="editor.polyHill.hasSelection && !editor.polyHill.canDeletePoint" class="text-[10px] text-slate-400 mb-3" style="color: #ff9800;">
+      A hill must have more than 2 points before a point can be deleted.
+    </div>
 
     <hr class="border-t border-slate-700 my-4" />
 

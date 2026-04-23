@@ -176,6 +176,7 @@ export const useEditorStore = defineStore('editor', () => {
   // Snap
   const snapEnabled = ref(false);
   const snapSize = ref(1);
+  const gizmosVisible = ref(true);
 
   // ── Checkpoint panel ──
   const checkpoint = reactive({
@@ -251,6 +252,7 @@ export const useEditorStore = defineStore('editor', () => {
   const polyHill = reactive({
     hasSelection: false,
     canHaveRadius: false,
+    canDeletePoint: false,
     radius: 0,
     height: 3,
     width: 5,
@@ -355,6 +357,7 @@ export const useEditorStore = defineStore('editor', () => {
   const isEditorActive = computed(() => _bridge.value !== null);
   function toggleSnap()    { snapEnabled.value = !snapEnabled.value; }
   function cycleSnapSize() { const idx = snapSizes.indexOf(snapSize.value); snapSize.value = snapSizes[(idx + 1) % snapSizes.length]; snapEnabled.value = true; }
+  function toggleGizmosVisible() { gizmosVisible.value = !gizmosVisible.value; _bridge.value?.toggleGizmosVisible(); }
   function quickTestTrack() { _bridge.value?.quickTestTrack(); }
 
   // ── Checkpoint actions ──
@@ -609,6 +612,7 @@ export const useEditorStore = defineStore('editor', () => {
     duplicateBridge, deleteBridge, closeBridge,
     trackDefaultTerrain, setTrackDefaultTerrain,
     setActiveTool,
+    gizmosVisible, toggleGizmosVisible,
     toggleSnap, cycleSnapSize, quickTestTrack,
     openAddMenu, closeAddMenu, toggleAddMenu,
     addCheckpoint, addHill, addSquareHill, addTerrain,
