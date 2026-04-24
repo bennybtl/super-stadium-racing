@@ -80,6 +80,15 @@ const ROLL_SPEED_GROUNDED = 8;
 /** Roll interpolation speed when airborne (slower recovery). */
 const ROLL_SPEED_AIRBORNE = 3;
 
+/** Pitch offset smoothing speed from weight transfer. */
+const PITCH_WEIGHT_TRANSFER_SPEED = 5;
+
+/** Pitch from throttle/brake weight transfer. */
+const PITCH_FROM_WEIGHT_TRANSFER = {
+  throttle: -0.1,  // rear squat / nose up
+  brake:    0.1,   // nose dive
+};
+
 /**
  * Handles drift physics, grip, drag, and velocity management
  */
@@ -89,6 +98,7 @@ export class DriftPhysics {
     this._velocityDir = new Vector3();
     this._right = new Vector3();
     this._rollRight = new Vector3();
+    this._currentPitchOffset = 0;
   }
 
   applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0) {
@@ -207,28 +217,59 @@ export class DriftPhysics {
   }
 
   updateRoll(mesh, speed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime) {
-    // Apply combined roll (terrain + turn-based)
-    const combinedRoll = (this.state.terrainRoll || 0) + this.state.currentRoll;
-    mesh.rotation.z = combinedRoll;
-
     // Calculate target roll based on turning
-    if (groundedness > 0.5 && speed > 1) {
+    let lateralSpeed = 0;
+    let turnRate = 0;
+    let rollFromLateral = 0;
+    let rollFromTurning = 0;
+
+    if (groundedness > 0.2 && speed > 1) {
       this._rollRight.set(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
-      const lateralSpeed = this.state.velocity.dot(this._rollRight);
-      
-      let turnRate = 0;
+      lateralSpeed = this.state.velocity.dot(this._rollRight);
+
       if (input.left) turnRate = -effectiveTurnSpeed * speedRatio;
       if (input.right) turnRate = effectiveTurnSpeed * speedRatio;
-      
-      const rollFromLateral = lateralSpeed * ROLL_FROM_LATERAL;
-      const rollFromTurning = turnRate * speed * ROLL_FROM_TURNING;
+
+      rollFromLateral = lateralSpeed * ROLL_FROM_LATERAL;
+      rollFromTurning = turnRate * speed * ROLL_FROM_TURNING;
       this.state.targetRoll = rollFromLateral + rollFromTurning;
       this.state.targetRoll = Math.max(-MAX_ROLL, Math.min(MAX_ROLL, this.state.targetRoll));
     } else {
       this.state.targetRoll = 0;
     }
-    
-    const rollSpeed = groundedness > 0.5 ? ROLL_SPEED_GROUNDED : ROLL_SPEED_AIRBORNE;
+
+    const rollSpeed = groundedness > 0.2 ? ROLL_SPEED_GROUNDED : ROLL_SPEED_AIRBORNE;
     this.state.currentRoll += (this.state.targetRoll - this.state.currentRoll) * rollSpeed * deltaTime;
+
+    // Apply combined roll (terrain + turn-based)
+    const combinedRoll = (this.state.terrainRoll || 0) + this.state.currentRoll;
+    mesh.rotation.z = combinedRoll;
+    console.log("[DriftPhysics] updateRoll", {
+      speed,
+      groundedness,
+      speedRatio,
+      inputLeft: input.left,
+      inputRight: input.right,
+      lateralSpeed,
+      turnRate,
+      rollFromLateral,
+      rollFromTurning,
+      targetRoll: this.state.targetRoll,
+      currentRoll: this.state.currentRoll,
+      terrainRoll: this.state.terrainRoll,
+      combinedRoll,
+      meshRotationZ: mesh.rotation.z,
+    });
+
+    // Add a small front/rear pitch offset based on weight transfer from throttle/brake.
+    // Smooth it so the visual pitch transitions naturally.
+    let targetPitchOffset = 0;
+    if (groundedness > 0.2 && speed > 1) {
+      const wt = this.state.weightTransfer ?? 1.0;
+      if (input.forward) targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.throttle * speedRatio * wt;
+      if (input.back)    targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.brake    * speedRatio * wt;
+    }
+    this._currentPitchOffset += (targetPitchOffset - this._currentPitchOffset) * Math.min(1, PITCH_WEIGHT_TRANSFER_SPEED * deltaTime);
+    mesh.rotation.x += this._currentPitchOffset;
   }
 }

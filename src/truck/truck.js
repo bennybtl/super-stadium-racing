@@ -235,21 +235,18 @@ export class Truck {
     // Update rotation
     this.mesh.rotation.y = this.state.heading;
 
+    // Update roll before syncing the physics body so visual lean is live this frame.
+    this.driftPhysics.updateRoll(this.mesh, hSpeed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
+
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
     this._surfaceSampleTrack = track;
     this._surfaceSampleFallback = terrainY ?? 0;
     this.body.update(this.state, input, hSpeed, deltaTime, terrainY, groundedness, this._surfaceSampler);
-    
+
     // Sync physics body
     this.syncPhysicsBody();
-    
-    // Update roll
-    this.driftPhysics.updateRoll(this.mesh, hSpeed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
-    
-    // Update particle effects (optionally lower-rate for AI trucks)
-    this._particleUpdateAccumulator += deltaTime;
     if (
       this._particleUpdateInterval <= 0 ||
       this._particleUpdateAccumulator >= this._particleUpdateInterval
@@ -306,8 +303,10 @@ export class Truck {
       node.position.copyFrom(this.mesh.position);
 
       // Keep physics transform in Euler mode to match `mesh.rotation` driven by heading.
+      // Only copy heading for collision orientation; visual roll/pitch is purely cosmetic.
       node.rotationQuaternion = null;
-      node.rotation.copyFrom(this.mesh.rotation);
+      console.log("[Truck.syncPhysicsBody] mesh.rotation", this.mesh.rotation, "physics rotation.y", this.mesh.rotation.y);
+      node.rotation.y = this.mesh.rotation.y;
     }
   }
 
