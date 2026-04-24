@@ -247,10 +247,13 @@ export class Truck {
 
     // Sync physics body
     this.syncPhysicsBody();
+    this._particleUpdateAccumulator += deltaTime;
     if (
       this._particleUpdateInterval <= 0 ||
       this._particleUpdateAccumulator >= this._particleUpdateInterval
     ) {
+      const particleDt = this._particleUpdateAccumulator;
+      this._particleUpdateAccumulator = 0;
       let effectScaleOverride = 1;
       if (this.driver && effectsFocusPosition) {
         // Distance-based AI VFX fade: full nearby, fade out toward far range.
@@ -272,7 +275,7 @@ export class Truck {
         hSpeed,
         terrainManager,
         isGrounded,
-        this._particleUpdateAccumulator,
+        particleDt,
         terrain,
         effectScaleOverride
       );
