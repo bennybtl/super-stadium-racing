@@ -487,6 +487,7 @@ export class RaceMode extends DriveMode {
         truckId: 'player',
         truck: playerTruckData.truck,
         outOfBoundsZones,
+        track: currentTrack,
         dt,
         durationSec: 5,
         onTimeout: () => {

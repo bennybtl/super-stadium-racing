@@ -106,6 +106,7 @@ export class PracticeMode extends DriveMode {
         truckId: 'player',
         truck: playerTruck,
         outOfBoundsZones,
+        track: currentTrack,
         dt,
         durationSec: 5,
         onTimeout: () => {
