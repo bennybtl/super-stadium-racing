@@ -47,6 +47,7 @@ export class WallSegment {
     yShiftA = 0,
     yShiftB = 0,
     collidable = true,
+    collisionHeight = null,
   ) {
     this.halfLength = width / 2;
     this.halfThick  = depth / 2;
@@ -55,13 +56,28 @@ export class WallSegment {
     this._index     = index;
 
     this._sheared = Math.abs(yShiftA) > 0.001 || Math.abs(yShiftB) > 0.001;
-    this.mesh = this._sheared
+    const visualMesh = this._sheared
       ? this._createParallelogramMesh(name, width, height, depth, yShiftA, yShiftB, scene)
       : MeshBuilder.CreateBox(name, { width, height, depth }, scene);
-    this.mesh.position = new Vector3(px, centerY, pz);
-    this.mesh.rotation.y = heading;
-    this.mesh.metadata = {
-      ...(this.mesh.metadata ?? {}),
+    visualMesh.position = new Vector3(px, centerY, pz);
+    visualMesh.rotation.y = heading;
+
+    const physicalHeight = collisionHeight != null ? Number(collisionHeight) : Number(height);
+    const physicalMesh = this._sheared
+      ? this._createParallelogramMesh(`${name}_collision`, width, physicalHeight, depth, yShiftA, yShiftB, scene)
+      : MeshBuilder.CreateBox(`${name}_collision`, { width, height: physicalHeight, depth }, scene);
+    const physicalCenterY = centerY + (physicalHeight - height) / 2;
+    physicalMesh.position = new Vector3(px, physicalCenterY, pz);
+    physicalMesh.rotation.y = heading;
+    physicalMesh.isVisible = false;
+    physicalMesh.isPickable = false;
+
+    this.mesh = visualMesh;
+    this._collisionMesh = physicalMesh;
+
+    const colliderMesh = this._collisionMesh;
+    colliderMesh.metadata = {
+      ...(colliderMesh.metadata ?? {}),
       truckCollider: collidable,
       // WallManager's friction is "bleed" amount. Generic collision manager
       // expects a velocity retention multiplier.
@@ -70,7 +86,7 @@ export class WallSegment {
 
     this._applyMaterial(scene, shadows);
 
-    this._aggregate = new PhysicsAggregate(this.mesh, PhysicsShapeType.BOX, {
+    this._aggregate = new PhysicsAggregate(colliderMesh, PhysicsShapeType.BOX, {
       mass: 0,
       restitution: 0.2,
       friction: 0.8,
@@ -84,6 +100,7 @@ export class WallSegment {
   dispose() {
     if (this._aggregate) this._aggregate.dispose();
     this.mesh.dispose();
+    if (this._collisionMesh) this._collisionMesh.dispose();
   }
 
   // ─── Private ─────────────────────────────────────────────────────────────

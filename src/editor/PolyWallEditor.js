@@ -69,7 +69,7 @@ export class PolyWallEditor {
     const cam = this.ec.camera;
     const dir = cam.getTarget().subtract(cam.position).normalize();
     const cx  = cam.position.x + dir.x * 30;
-    const cz  = cam.position.z + dir.z * 30;
+    const cz  = cam.position.z + dir.z * 60;
 
     const feature = {
       type:      'polyWall',
@@ -79,10 +79,11 @@ export class PolyWallEditor {
         { x: cx + 10, z: cz - 5, radius: 0 },
         { x: cx + 20, z: cz + 5, radius: 0 },
       ],
-      height:    2,
-      thickness: 0.5,
-      friction:  0.1,
-      closed:    false,
+      height:          2,
+      collisionHeight: 2,
+      thickness:       0.5,
+      friction:        0.1,
+      closed:          false,
     };
 
     this.ec.saveSnapshot();
@@ -392,6 +393,7 @@ export class PolyWallEditor {
       store.polyWall.maxRadius = Infinity;
     }
     store.polyWall.height = feature.height ?? 2;
+    store.polyWall.collisionHeight = feature.collisionHeight ?? feature.height ?? 2;
     store.polyWall.thickness = feature.thickness ?? 0.5;
     store.polyWall.closed = feature.closed ?? false;
   }
@@ -399,21 +401,29 @@ export class PolyWallEditor {
   // Called by EditorController (bridge from Vue store actions)
   changePolyWallRadius(val) {
     if (!this.selectedPoint) return;
-    console.log(`[PolyWallTool] changePolyWallRadius: idx=${this.selectedPoint.idx}, val=${val}`);
-    console.log(`[PolyWallTool] Feature has ${this.selectedPoint.wg.feature.points.length} points`);
-    console.log(`[PolyWallTool] All point radii:`, this.selectedPoint.wg.feature.points.map((p, i) => `${i}:${p.radius ?? 0}`).join(', '));
     this.ec.saveSnapshot(true);
     this.selectedPoint.wg.feature.points[this.selectedPoint.idx].radius = val;
-    console.log(`[PolyWallTool] Updated point radius to:`, this.selectedPoint.wg.feature.points[this.selectedPoint.idx].radius);
-    console.log(`[PolyWallTool] All point radii after:`, this.selectedPoint.wg.feature.points.map((p, i) => `${i}:${p.radius ?? 0}`).join(', '));
     this._updatePointPositions(this.selectedPoint.wg);
     this._rebuildWall(this.selectedPoint.wg.feature);
   }
 
   changePolyWallHeight(val) {
     if (!this._activeWall) return;
+    const feature = this._activeWall.feature;
+    const prevHeight = Number(feature.height ?? 2);
+    const prevCollisionHeight = Number(feature.collisionHeight ?? prevHeight);
     this.ec.saveSnapshot(true);
-    this._activeWall.feature.height = val;
+    feature.height = Number(val);
+    if (feature.collisionHeight === undefined || Math.abs(prevCollisionHeight - prevHeight) < 1e-6) {
+      feature.collisionHeight = Number(val);
+    }
+    this._rebuildWall(feature);
+  }
+
+  changePolyWallCollisionHeight(val) {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot(true);
+    this._activeWall.feature.collisionHeight = Number(val);
     this._rebuildWall(this._activeWall.feature);
   }
 

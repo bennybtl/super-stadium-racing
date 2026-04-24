@@ -104,6 +104,7 @@ export class Track {
       type: "polyWall",
       points,
       height,
+      collisionHeight: height,
       thickness,
       friction,
     });

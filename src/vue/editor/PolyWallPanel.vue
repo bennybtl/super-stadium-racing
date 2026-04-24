@@ -45,6 +45,19 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Collision Barrier Height -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Collision Height</span>
+      <span>{{ editor.polyWall.collisionHeight.toFixed(1) }}</span>
+    </div>
+    <input
+      type="range" min="0.5" max="12" step="0.5"
+      :value="editor.polyWall.collisionHeight"
+      @input="editor.setPolyWallCollisionHeight(+$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+    <div class="text-[10px] text-slate-400 mb-3">Collision height defaults to the visual height unless adjusted separately.</div>
+
     <!-- Thickness -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Thickness</span>

@@ -244,6 +244,7 @@ export const useEditorStore = defineStore('editor', () => {
     radius: 0,
     maxRadius: Infinity,
     height: 2,
+    collisionHeight: 2,
     thickness: 0.5,
     closed: false,
   });
@@ -414,9 +415,10 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Poly Wall actions ──
   function setPolyWallRadius(val)       { polyWall.radius = val;     _bridge.value?.changePolyWallRadius(val); }
-  function setPolyWallHeight(val)       { polyWall.height = val;     _bridge.value?.changePolyWallHeight(val); }
-  function setPolyWallThickness(val)    { polyWall.thickness = val;  _bridge.value?.changePolyWallThickness(val); }
-  function setPolyWallClosed(val)       { polyWall.closed = val;     _bridge.value?.changePolyWallClosed(val); }
+  function setPolyWallHeight(val)          { polyWall.height = val;          _bridge.value?.changePolyWallHeight(val); }
+  function setPolyWallCollisionHeight(val) { polyWall.collisionHeight = val; _bridge.value?.changePolyWallCollisionHeight(val); }
+  function setPolyWallThickness(val)       { polyWall.thickness = val;       _bridge.value?.changePolyWallThickness(val); }
+  function setPolyWallClosed(val)          { polyWall.closed = val;          _bridge.value?.changePolyWallClosed(val); }
   function insertPolyWallPoint()        { _bridge.value?.insertPolyWallPoint(); }
   function deletePolyWallPoint()        { _bridge.value?.deletePolyWallPoint(); }
   function deletePolyWall()             { _bridge.value?.deletePolyWall(); }
@@ -583,7 +585,7 @@ export const useEditorStore = defineStore('editor', () => {
     setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
     setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,
     setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,
-    setPolyWallRadius, setPolyWallHeight, setPolyWallThickness, setPolyWallClosed,
+    setPolyWallRadius, setPolyWallHeight, setPolyWallCollisionHeight, setPolyWallThickness, setPolyWallClosed,
     insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, duplicatePolyWall, closePolyWall,
     setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillClosed,
     insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, duplicatePolyHill, closePolyHill,

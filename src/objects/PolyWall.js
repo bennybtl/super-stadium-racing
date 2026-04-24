@@ -124,7 +124,11 @@ export class PolyWall {
   constructor(feature, track, scene, shadows) {
     this.segments = [];
     this._feature = feature;   // stored so the editor can identify this wall
-    const { height, thickness, friction = 0.1, closed = false } = feature;
+    const visualHeight = Number(feature.height ?? 2);
+    const collisionHeight = Number(feature.collisionHeight ?? visualHeight);
+    const thickness = Number(feature.thickness ?? 0.5);
+    const friction = Number(feature.friction ?? 0.1);
+    const closed = feature.closed ?? false;
     const rawPoints = feature.points;
     if (!rawPoints || rawPoints.length < 2) return;
 
@@ -164,18 +168,19 @@ export class PolyWall {
         const yB = track.getHeightAt(px + dirX * half, pz + dirZ * half);
 
         // Parallelogram: each end matches its local terrain height
-        const avgY    = (yA + yB) / 2;
-        const totalH  = height + SKIRT;
-        const centerY = avgY + (height - SKIRT) / 2;
+        const avgY       = (yA + yB) / 2;
+        const visualTotalH = visualHeight + SKIRT;
+        const visualCenterY = avgY + (visualHeight - SKIRT) / 2;
+        const collisionTotalH = collisionHeight + SKIRT;
         const yShiftA = (yA - yB) / 2;   // vertical offset at −X (start) end
         const yShiftB = (yB - yA) / 2;   // vertical offset at +X (end) end
 
         // Tiny overlap prevents gaps between segments
         const segW = segLen * 1.02;
         this.segments.push(
-          new WallSegment(px, pz, centerY, segW, totalH, thickness,
+          new WallSegment(px, pz, visualCenterY, segW, visualTotalH, thickness,
             heading, friction, this.segments.length, "wall_poly", scene, shadows,
-            yShiftA, yShiftB)
+            yShiftA, yShiftB, true, collisionTotalH)
         );
       }
     }

@@ -1226,10 +1226,11 @@ export class EditorController {
   }
 
   // ── Poly Wall Vue bridge methods ──
-  changePolyWallRadius(val)     { this.polyWallEditor.changePolyWallRadius(val); }
-  changePolyWallHeight(val)     { this.polyWallEditor.changePolyWallHeight(val); }
-  changePolyWallThickness(val)  { this.polyWallEditor.changePolyWallThickness(val); }
-  changePolyWallClosed(val)     { this.polyWallEditor.changePolyWallClosed(val); }
+  changePolyWallRadius(val)          { this.polyWallEditor.changePolyWallRadius(val); }
+  changePolyWallHeight(val)          { this.polyWallEditor.changePolyWallHeight(val); }
+  changePolyWallCollisionHeight(val) { this.polyWallEditor.changePolyWallCollisionHeight(val); }
+  changePolyWallThickness(val)       { this.polyWallEditor.changePolyWallThickness(val); }
+  changePolyWallClosed(val)          { this.polyWallEditor.changePolyWallClosed(val); }
   insertPolyWallPoint()         { this.polyWallEditor.insertPolyWallPoint(); }
   deletePolyWallPoint()         { this.polyWallEditor.deleteSelectedPoint(); }
   deletePolyWall()              { this.polyWallEditor.deletePolyWall(); }
