@@ -190,11 +190,23 @@ export class DriveMode extends BaseMode {
 
     const nowMs = performance.now();
     let state = this._oobStateByTruckId.get(truckId);
+
+    const logOobUpdate = () => {
+      const shouldLog = state.lastLoggedInZone !== state.inZone
+        || Math.abs(state.remainingSec - state.lastLoggedRemainingSec) >= 0.5
+        || state.remainingSec <= 0;
+      if (!shouldLog) return;
+
+      state.lastLoggedInZone = state.inZone;
+      state.lastLoggedRemainingSec = state.remainingSec;
+    };
     if (!state) {
       state = {
         remainingSec: durationSec,
         inZone: false,
         immuneUntilMs: 0,
+        lastLoggedRemainingSec: durationSec,
+        lastLoggedInZone: false,
       };
       this._oobStateByTruckId.set(truckId, state);
     }
@@ -213,11 +225,13 @@ export class DriveMode extends BaseMode {
     if (!inZoneNow) {
       state.inZone = false;
       state.remainingSec = durationSec;
+      logOobUpdate();
       return null;
     }
 
     state.inZone = true;
     state.remainingSec = Math.max(0, state.remainingSec - dt);
+    logOobUpdate();
 
     if (state.remainingSec <= 0) {
       onTimeout?.();

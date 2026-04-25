@@ -325,7 +325,7 @@ export class EditorMaterials {
   /** Translucent hot-pink cylinder. */
   get zoneCyl() {
     return this._get('zoneCyl', s => makeMat('edZoneCyl', s, {
-      diffuse: basicColors.pink.diffuse, emissive: basicColors.pink.emissive,
+      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
       alpha: 0.28, backFaceCulling: false,
     }));
   }
@@ -333,7 +333,7 @@ export class EditorMaterials {
   /** Translucent bright-pink cylinder (selected). */
   get zoneCylHighlight() {
     return this._get('zoneCylHL', s => makeMat('edZoneCylHL', s, {
-      diffuse: basicColors.pink.diffuse, emissive: basicColors.pink.emissive,
+      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
       alpha: 0.50, backFaceCulling: false,
     }));
   }
@@ -341,7 +341,7 @@ export class EditorMaterials {
   /** Hot-pink handle sphere. */
   get zoneHandle() {
     return this._get('zoneHandle', s => makeMat('edZoneHandle', s, {
-      diffuse: basicColors.pink.diffuse, emissive: basicColors.pink.emissive,
+      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
     }));
   }
 

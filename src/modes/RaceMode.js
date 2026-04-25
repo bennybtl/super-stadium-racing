@@ -492,19 +492,24 @@ export class RaceMode extends DriveMode {
 
       this.applySlowZones(trucks, slowZones);
 
-      const oobRemaining = this.updateOutOfBoundsCountdown({
-        truckId: 'player',
-        truck: playerTruckData.truck,
-        outOfBoundsZones,
-        track: currentTrack,
-        dt,
-        durationSec: 5,
-        onTimeout: () => {
-          respawnToLastCheckpoint(playerTruckData);
-        },
+      trucks.forEach((truckData) => {
+        const oobRemaining = this.updateOutOfBoundsCountdown({
+          truckId: truckData.id,
+          truck: truckData.truck,
+          outOfBoundsZones,
+          track: currentTrack,
+          dt,
+          durationSec: truckData.isPlayer ? 5 : 2,
+          onTimeout: () => {
+            respawnToLastCheckpoint(truckData);
+          },
+        });
+
+        if (truckData.isPlayer) {
+          if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
+          else uiManager.showOutOfBoundsCountdown(oobRemaining);
+        }
       });
-      if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
-      else uiManager.showOutOfBoundsCountdown(oobRemaining);
 
       truckCollisionManager.update(trucks);
       tireStackManager.update(trucks);
