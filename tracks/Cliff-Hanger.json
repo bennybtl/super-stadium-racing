@@ -203,7 +203,7 @@
         {
           "x": 80,
           "z": -80,
-          "radius": 10.5
+          "radius": 23
         },
         {
           "x": 78,
@@ -224,7 +224,8 @@
       "height": 2,
       "thickness": 0.5,
       "friction": 0.1,
-      "closed": true
+      "closed": true,
+      "collisionHeight": 10
     },
     {
       "type": "polyWall",
@@ -253,7 +254,8 @@
       "height": 2,
       "thickness": 0.5,
       "friction": 0.1,
-      "closed": true
+      "closed": true,
+      "collisionHeight": 2
     },
     {
       "type": "polyWall",
@@ -282,7 +284,8 @@
       "height": 8,
       "thickness": 1,
       "friction": 0.1,
-      "closed": true
+      "closed": true,
+      "collisionHeight": 8
     },
     {
       "type": "polyWall",
@@ -311,7 +314,8 @@
       "height": 8,
       "thickness": 1,
       "friction": 0.1,
-      "closed": true
+      "closed": true,
+      "collisionHeight": 8
     },
     {
       "type": "polyWall",
@@ -340,7 +344,8 @@
       "height": 8,
       "thickness": 1,
       "friction": 0.1,
-      "closed": true
+      "closed": true,
+      "collisionHeight": 8
     },
     {
       "type": "polyHill",
@@ -366,7 +371,8 @@
       "centerZ": -67.7100852420677,
       "heading": -1.550000000000001,
       "width": 18,
-      "checkpointNumber": 6
+      "checkpointNumber": 6,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -374,7 +380,8 @@
       "centerZ": -41.210085242067706,
       "heading": 0.17453292519943295,
       "width": 25.5,
-      "checkpointNumber": 1
+      "checkpointNumber": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -382,7 +389,8 @@
       "centerZ": 14.761936182483453,
       "heading": 0,
       "width": 20.5,
-      "checkpointNumber": 2
+      "checkpointNumber": 2,
+      "passedBy": {}
     },
     {
       "type": "tireStack",
@@ -395,7 +403,8 @@
       "centerZ": 64.78991475793497,
       "heading": 0.9599310885968813,
       "width": 26.5,
-      "checkpointNumber": 3
+      "checkpointNumber": 3,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -403,15 +412,17 @@
       "centerZ": 62.77721352301725,
       "heading": 2.2689280275926285,
       "width": 29.5,
-      "checkpointNumber": 4
+      "checkpointNumber": 4,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
       "centerX": 63.5,
-      "centerZ": -68.21008524206503,
+      "centerZ": -65.71008524206503,
       "heading": -2.356194490192345,
-      "width": 28,
-      "checkpointNumber": 5
+      "width": 22,
+      "checkpointNumber": 5,
+      "passedBy": {}
     },
     {
       "type": "terrain",
@@ -453,8 +464,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -14.783917514790296,
-          "z": -54.94307817283727,
+          "x": 4.216082485209704,
+          "z": -47.94307817283727,
           "radius": 0
         },
         {
@@ -513,8 +524,8 @@
     },
     {
       "type": "tireStack",
-      "x": -71.5,
-      "z": 29.7247868948374
+      "x": -71.51111816161503,
+      "z": 29.22556890811112
     },
     {
       "type": "tireStack",
@@ -565,6 +576,253 @@
       "type": "tireStack",
       "x": 37.5,
       "z": 58.7247868948374
+    },
+    {
+      "type": "aiPath",
+      "points": [
+        {
+          "x": -50.81868538553903,
+          "z": -72.66132859218537
+        },
+        {
+          "x": -70.94,
+          "z": -45.78
+        },
+        {
+          "x": -48.88,
+          "z": -18.56
+        },
+        {
+          "x": 10.02,
+          "z": -14.51
+        },
+        {
+          "x": 37.49,
+          "z": 3.96
+        },
+        {
+          "x": 25.35110608852369,
+          "z": 25.03165397533139
+        },
+        {
+          "x": -12.48,
+          "z": 33.28
+        },
+        {
+          "x": -51.75,
+          "z": 31.33
+        },
+        {
+          "x": -66.66707691041918,
+          "z": 52.82001037648386
+        },
+        {
+          "x": -49.59,
+          "z": 72.2
+        },
+        {
+          "x": 37.79311012906012,
+          "z": 68.55031237408227
+        },
+        {
+          "x": 62.4,
+          "z": 61.7
+        },
+        {
+          "x": 70.14,
+          "z": 45.23
+        },
+        {
+          "x": 72.21474001999245,
+          "z": -50.31567324581408
+        },
+        {
+          "x": 46.17853996886481,
+          "z": -74.32946086075482
+        },
+        {
+          "x": 5.531363586716839,
+          "z": -69.9241914960019
+        }
+      ]
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "outOfBounds",
+      "shape": "polygon",
+      "x": -39.24016793851613,
+      "z": 1.7855407883973649,
+      "radius": 15,
+      "points": [
+        {
+          "x": -80,
+          "z": -16.995381761981175
+        },
+        {
+          "x": -71.52045322622301,
+          "z": -5.88762567456385
+        },
+        {
+          "x": 18.459093547553977,
+          "z": -5.043518943530838
+        },
+        {
+          "x": 16.860519986088423,
+          "z": 16.883174239558247
+        },
+        {
+          "x": -80,
+          "z": 19.97105608250444
+        }
+      ]
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -62.010994364454234,
+      "z": 62.73870746529003,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 27.44852491552675,
+      "z": 28.71226118816574,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -60.0828954826017,
+      "z": -23.12554590318308,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 25.431760374029153,
+      "z": -25.292793298261046,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "outOfBounds",
+      "shape": "polygon",
+      "x": -39.23403130141985,
+      "z": 52.50678407933983,
+      "radius": 13,
+      "points": [
+        {
+          "x": -52.72417683834399,
+          "z": 49.22467177727315
+        },
+        {
+          "x": -26.045225452956956,
+          "z": 49.77271213306693
+        },
+        {
+          "x": -26.19929055881685,
+          "z": 55.67848720519988
+        },
+        {
+          "x": -51.96743235556157,
+          "z": 55.35126520181935
+        }
+      ]
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 63.98941500828215,
+      "centerZ": -65.5,
+      "terrainType": "loose_dirt",
+      "width": 22.5,
+      "depth": 24.5,
+      "rotation": 0
+    },
+    {
+      "type": "trackSign",
+      "x": -27.500812946159776,
+      "z": 5.224786894837408,
+      "name": "Cliff-Hanger!",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "scale": 1.55,
+      "heightOffset": 2.1,
+      "width": 17
+    },
+    {
+      "type": "trackSign",
+      "x": 2.503127479867132,
+      "z": -0.2756969285969006,
+      "name": "Cliff-Hanger!",
+      "rotation": 0.12217304763960307,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "background": "gray",
+      "scale": 1.75,
+      "heightOffset": 0.7,
+      "width": 14
+    },
+    {
+      "type": "trackSign",
+      "x": -54.99706861534867,
+      "z": -2.2746200614491983,
+      "name": "Cliff-Hanger!",
+      "rotation": -0.15707963267948966,
+      "contentType": "brand",
+      "brandImage": "rally-master.png",
+      "background": "gray",
+      "scale": 1.75,
+      "heightOffset": 1.3,
+      "width": 12
+    },
+    {
+      "type": "trackSign",
+      "x": -39.5,
+      "z": 52.224786894837415,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "power-lube.png",
+      "background": "yellow",
+      "scale": 2.5,
+      "heightOffset": 1.3,
+      "width": 10
+    },
+    {
+      "type": "bannerString",
+      "x": -65.27155434150455,
+      "z": 50.8993949197997,
+      "heading": 0,
+      "width": 24,
+      "poleHeight": 12
+    },
+    {
+      "type": "bannerString",
+      "x": 29.068272819672146,
+      "z": 14.975194177074158,
+      "heading": 0,
+      "width": 25,
+      "poleHeight": 10
     }
   ]
 }

@@ -308,7 +308,6 @@ export class Truck {
       // Keep physics transform in Euler mode to match `mesh.rotation` driven by heading.
       // Only copy heading for collision orientation; visual roll/pitch is purely cosmetic.
       node.rotationQuaternion = null;
-      console.log("[Truck.syncPhysicsBody] mesh.rotation", this.mesh.rotation, "physics rotation.y", this.mesh.rotation.y);
       node.rotation.y = this.mesh.rotation.y;
     }
   }

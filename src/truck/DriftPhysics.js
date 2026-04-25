@@ -244,22 +244,6 @@ export class DriftPhysics {
     // Apply combined roll (terrain + turn-based)
     const combinedRoll = (this.state.terrainRoll || 0) + this.state.currentRoll;
     mesh.rotation.z = combinedRoll;
-    console.log("[DriftPhysics] updateRoll", {
-      speed,
-      groundedness,
-      speedRatio,
-      inputLeft: input.left,
-      inputRight: input.right,
-      lateralSpeed,
-      turnRate,
-      rollFromLateral,
-      rollFromTurning,
-      targetRoll: this.state.targetRoll,
-      currentRoll: this.state.currentRoll,
-      terrainRoll: this.state.terrainRoll,
-      combinedRoll,
-      meshRotationZ: mesh.rotation.z,
-    });
 
     // Add a small front/rear pitch offset based on weight transfer from throttle/brake.
     // Smooth it so the visual pitch transitions naturally.
