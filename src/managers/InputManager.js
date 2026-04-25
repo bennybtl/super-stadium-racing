@@ -22,6 +22,7 @@ export class InputManager {
     this.onBoostCallback = null;
     this.onPauseCallback = null;
     this.onToggleDebugCallback = null;
+    this.onTogglePhotoModeCallback = null;
     
     this.setupEventListeners();
   }
@@ -45,7 +46,7 @@ export class InputManager {
     if (this._disposed) return;
     // Movement
     if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = true;
-    if (e.code === "KeyS" || e.code === "ShiftLeft" || e.code === "ArrowDown") this.input.back = true;
+    if (e.code === "KeyS" || e.code === "Space" || e.code === "ArrowDown") this.input.back = true;
     if (e.code === "KeyA" || e.code === "ArrowLeft") this.input.left = true;
     if (e.code === "KeyD" || e.code === "ArrowRight") this.input.right = true;
     
@@ -80,6 +81,13 @@ export class InputManager {
       this.cameraController.toggleMode();
     }
 
+    // Screenshot camera toggle
+    if (e.code === "KeyP") {
+      if (this.onTogglePhotoModeCallback) {
+        this.onTogglePhotoModeCallback();
+      }
+    }
+
     // Zoom controls
     if (e.code === "Equal" || e.code === "NumpadAdd") {
       this.cameraController.zoomIn();
@@ -91,7 +99,7 @@ export class InputManager {
 
   handleKeyUp(e) {
     if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = false;
-    if (e.code === "KeyS" || e.code === "ShiftLeft" || e.code === "ArrowDown") this.input.back = false;
+    if (e.code === "KeyS" || e.code === "Space" || e.code === "ArrowDown") this.input.back = false;
     if (e.code === "KeyA" || e.code === "ArrowLeft") this.input.left = false;
     if (e.code === "KeyD" || e.code === "ArrowRight") this.input.right = false;
   }
@@ -106,6 +114,10 @@ export class InputManager {
 
   onBoost(callback) {
     this.onBoostCallback = callback;
+  }
+
+  onTogglePhotoMode(callback) {
+    this.onTogglePhotoModeCallback = callback;
   }
 
   onPause(callback) {

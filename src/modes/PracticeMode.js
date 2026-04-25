@@ -64,9 +64,11 @@ export class PracticeMode extends DriveMode {
     const staticBodyCollisionManager = new StaticBodyCollisionManager(scene);
 
     // Input — ESC opens pause menu
+    this.cameraController = cameraController;
     const inputManager = new InputManager(playerTruck, cameraController);
     this.inputManager = inputManager;
     inputManager.onPause(() => menuManager.showPauseMenu());
+    inputManager.onTogglePhotoMode(() => this.togglePhotoMode());
     this.setupDebugToggle(inputManager, debugManager);
     inputManager.onReset(() => this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager));
 
@@ -93,9 +95,17 @@ export class PracticeMode extends DriveMode {
 
     // Simple game loop
     scene.onBeforeRenderObservable.add(() => {
-      if (menuManager.isPaused || document.hidden) return;
+      if (document.hidden) return;
 
       const dt = this.getClampedDeltaTime(engine, 0.05);
+      if (this._photoModeActive) {
+        const input = inputManager.getMovementInput();
+        this.cameraController.moveFreeCamera(input, dt);
+        this.cameraController.update();
+        return;
+      }
+      if (menuManager.isPaused) return;
+
       const input = inputManager.getMovementInput();
 
       const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);

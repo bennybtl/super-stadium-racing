@@ -291,9 +291,11 @@ export class RaceMode extends DriveMode {
     aiDrivers.forEach(d => d.setStaticBodyCollisionManager(staticBodyCollisionManager));
 
     // -- Input --
+    this.cameraController = cameraController;
     this.inputManager = new InputManager(playerTruckData.truck, cameraController);
 
     this.inputManager.onPause(() => menuManager.togglePause());
+    this.inputManager.onTogglePhotoMode(() => this.togglePhotoMode());
     this.setupDebugToggle(this.inputManager, debugManager);
 
     this.inputManager.onBoost(() => {
@@ -444,10 +446,17 @@ export class RaceMode extends DriveMode {
 
     // -- Game loop --
     scene.onBeforeRenderObservable.add(() => {
-      if (menuManager.isMenuActive() || document.hidden) return;
+      if (document.hidden) return;
 
       // Use 50ms cap for race mode (more generous than default 20ms)
       const dt = this.getClampedDeltaTime(engine, 0.05);
+      if (this._photoModeActive) {
+        const input = this.inputManager.getMovementInput();
+        this.cameraController.moveFreeCamera(input, dt);
+        this.cameraController.update();
+        return;
+      }
+      if (menuManager.isMenuActive()) return;
 
       if (raceStarted && raceStartTime !== null) {
         uiManager.updateTimer(Date.now() - raceStartTime);

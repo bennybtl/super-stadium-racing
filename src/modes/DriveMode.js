@@ -14,6 +14,8 @@ export class DriveMode extends BaseMode {
   constructor(controller) {
     super(controller);
     this._oobStateByTruckId = new Map();
+    this.cameraController = null;
+    this._photoModeActive = false;
   }
 
   /**
@@ -24,15 +26,28 @@ export class DriveMode extends BaseMode {
     return buildScene(engine, trackLoader, trackKey);
   }
 
+  togglePhotoMode() {
+    if (!this.cameraController) return;
+    this._photoModeActive = !this._photoModeActive;
+    this.cameraController.toggleFreeMode();
+    console.log(
+      `[DriveMode] Screenshot camera ${this._photoModeActive ? 'enabled' : 'disabled'} - WASD to move, +/- to zoom, P to toggle`
+    );
+  }
+
   teardown() {
-    if (!this.inputManager) {
+    if (this.inputManager) {
       this.inputManager.dispose();
       this.inputManager = null;
     }
-    this.inputManager.dispose();
-    this.inputManager = null;
 
-    if (!this.debugManager) {
+    if (this.cameraController && this._photoModeActive) {
+      this.cameraController.toggleFreeMode();
+      this._photoModeActive = false;
+    }
+    this.cameraController = null;
+
+    if (this.debugManager) {
       this.debugManager.hide();
       this.debugManager = null;
     }

@@ -10,17 +10,15 @@ export const basicColors = {
   black: { diffuse: new Color3(0.04, 0.04, 0.04), emissive: new Color3(0.0, 0.0, 0.0) },  // X
   gray: { diffuse: new Color3(0.45, 0.45, 0.45), emissive: new Color3(0.1, 0.1, 0.1) },  // X
   white: { diffuse: new Color3(0.95, 0.95, 0.95), emissive: new Color3(0.04, 0.04, 0.04) }, // X
-  red: { diffuse: new Color3(1.0, 0.35, 0.35), emissive: new Color3(0.55, 0.12, 0.12) },  // X
-  blue: { diffuse: new Color3(0.2, 0.6, 0.9), emissive: new Color3(0.05, 0.15, 0.3) },  // X
-  yellow: { diffuse: new Color3(1.0, 1.0, 0.2), emissive: new Color3(0.6, 0.6, 0.0) },  // X
-  cyan: { diffuse: new Color3(0.0, 1.0, 1.0), emissive: new Color3(0.0, 0.5, 0.5) },  // X
-  teal: { diffuse: new Color3(0.2, 1.0, 0.9), emissive: new Color3(0.05, 0.40, 0.35) }, // X
-  magenta: { diffuse: new Color3(1.0, 0.5, 1.0), emissive: new Color3(0.4, 0.2, 0.4) }, // X
-  orange: { diffuse: new Color3(0.9, 0.5, 0.2), emissive: new Color3(0.3, 0.15, 0.05) },
-  green: { diffuse: new Color3(0.6, 0.8, 0.3), emissive: new Color3(.2, 0.3, 0.1) },  // X
-  purple: { diffuse: new Color3(0.8, 0.4, 0.9), emissive: new Color3(0.15, 0.08, 0.18) }, // X
-  pink: { diffuse: new Color3(1.0, 0.20, 0.60), emissive: new Color3(0.25, 0.04, 0.15) }, // X
   brown: { diffuse: new Color3(0.28, 0.22, 0.16), emissive: new Color3(0.08, 0.08, 0.08) },
+  red: { diffuse: new Color3(1.0, 0.35, 0.35), emissive: new Color3(0.55, 0.12, 0.12) },  // X
+  orange: { diffuse: new Color3(1.0, 0.6, 0.3), emissive: new Color3(0.3, 0.15, 0.05) },
+  yellow: { diffuse: new Color3(1.0, 1.0, 0.2), emissive: new Color3(0.6, 0.6, 0.0) },  // X
+  green: { diffuse: new Color3(0.6, 0.8, 0.3), emissive: new Color3(.2, 0.3, 0.1) },  // X
+  teal: { diffuse: new Color3(0.2, 1.0, 0.9), emissive: new Color3(0.05, 0.40, 0.35) }, // X
+  blue: { diffuse: new Color3(0.2, 0.6, 0.9), emissive: new Color3(0.05, 0.15, 0.3) },  // X
+  purple: { diffuse: new Color3(0.8, 0.4, 0.9), emissive: new Color3(0.15, 0.08, 0.18) }, // X
+  magenta: { diffuse: new Color3(1.0, 0.3, 0.7), emissive: new Color3(0.4, 0.2, 0.4) }, // X
 };
 
 export const TERRAIN_COLORS = {

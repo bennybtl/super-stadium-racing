@@ -51,6 +51,7 @@ export class TrackLoader {
         const track = Track.fromJSON(rawJson);
         this.tracks.set(key, track);
         if (!this.trackList.includes(key)) this.trackList.push(key);
+        console.log(this.trackList)
         console.log(`[TrackLoader] Loaded track: ${track.name} (${key})`);
       } catch (error) {
         console.error(`[TrackLoader] Error loading track ${path}:`, error);

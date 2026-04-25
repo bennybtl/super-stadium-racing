@@ -12,6 +12,7 @@ export class Track {
     this.depth = depth;
     this.features = [];
     this.defaultTerrainType = TERRAIN_TYPES.PACKED_DIRT;
+    this.image = null;
   }
 
   // Add a circular hill
@@ -526,6 +527,7 @@ export class Track {
 
     return JSON.stringify({
       name: this.name,
+      image: this.image ?? undefined,
       width: this.width,
       depth: this.depth,
       defaultTerrainType: this.defaultTerrainType?.name ?? 'packed_dirt',
@@ -537,6 +539,7 @@ export class Track {
   static fromJSON(jsonString) {
     const data = JSON.parse(jsonString);
     const track = new Track(data.name, data.width ?? 160, data.depth ?? 160);
+    track.image = data.image ?? null;
     
     if (data.defaultTerrainType) {
       const key = Object.keys(TERRAIN_TYPES).find(
