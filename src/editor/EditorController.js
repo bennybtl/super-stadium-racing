@@ -844,13 +844,24 @@ export class EditorController {
     else if (this.polyCurbEditor?.selectedPoint) this.polyCurbEditor.moveSelectedPoint(dx, dz);
   }
 
+  _handleMeshSelection(clickedMesh, editor, selectFn = null) {
+    const featureData = editor.findByMesh(clickedMesh);
+    if (!featureData) return false;
+    const wasSelected = editor.selected === featureData;
+    if (!wasSelected) {
+      this.deselectAll();
+      (selectFn ?? ((data) => editor.select(data)))(featureData);
+    }
+    return true;
+  }
+
   handlePointerDown(pointerInfo) {
     if (!this.isActive) return;
     
     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
       const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
 
-        // AI path panel open: click terrain to add waypoints, click existing point to select it.
+      // AI path panel open: click terrain to add waypoints, click existing point to select it.
       if (this._editorStore?.selectedType === 'aiPath') {
         if (pickResult.hit && pickResult.pickedMesh) {
           const clickedMesh = pickResult.pickedMesh;
@@ -875,7 +886,6 @@ export class EditorController {
       }
       
       if (pickResult.hit && pickResult.pickedMesh) {
-        // Check if clicked mesh is part of a checkpoint
         const clickedMesh = pickResult.pickedMesh;
 
         // Mesh grid control points take priority
@@ -892,126 +902,23 @@ export class EditorController {
 
         // Poly curb control points
         if (this.polyCurbEditor?.onPointerDown(clickedMesh)) return;
-        
-        // Check if clicked mesh is part of a checkpoint
-        {
-          const cpData = this.checkpointEditor.findByMesh(clickedMesh);
-          if (cpData) {
-            const wasSelected = this.checkpointEditor.selected === cpData;
-            this.deselectAll();
-            if (!wasSelected) this.checkpointEditor.select(cpData);
-            return;
-          }
-        }
 
-        // Check if clicked mesh is a hill gizmo
-        {
-          const hillData = this.hillEditor.findByMesh(clickedMesh);
-          if (hillData) {
-            const wasSelected = this.hillEditor.selected === hillData;
-            this.deselectAll();
-            if (!wasSelected) this.hillEditor.select(hillData);
-            return;
-          }
-        }
+        const clickHandlers = [
+          { editor: this.checkpointEditor },
+          { editor: this.hillEditor },
+          { editor: this.squareHillEditor },
+          { editor: this.terrainShapeEditor },
+          { editor: this.normalMapDecalEditor },
+          { editor: this.tireStackEditor },
+          { editor: this.flagEditor, selectFn: () => this.flagEditor.select(clickedMesh) },
+          { editor: this.trackSignEditor },
+          { editor: this.bannerStringEditor },
+          { editor: this.actionZoneEditor },
+          { editor: this.bridgeEditor },
+        ];
 
-        // Check if clicked mesh is a square hill gizmo
-        {
-          const hillData = this.squareHillEditor.findByMesh(clickedMesh);
-          if (hillData) {
-            const wasSelected = this.squareHillEditor.selected === hillData;
-            this.deselectAll();
-            if (!wasSelected) this.squareHillEditor.select(hillData);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is a terrain shape (rect or circle)
-        {
-          const shapeData = this.terrainShapeEditor.findByMesh(clickedMesh);
-          if (shapeData) {
-            const wasSelected = this.terrainShapeEditor.selected === shapeData;
-            this.deselectAll();
-            if (!wasSelected) this.terrainShapeEditor.select(shapeData);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is a normal map decal gizmo
-        {
-          const decalData = this.normalMapDecalEditor.findByMesh(clickedMesh);
-          if (decalData) {
-            const wasSelected = this.normalMapDecalEditor.selected === decalData;
-            this.deselectAll();
-            if (!wasSelected) this.normalMapDecalEditor.select(decalData);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is a tire stack gizmo
-        {
-          const stackData = this.tireStackEditor.findByMesh(clickedMesh);
-          if (stackData) {
-            const wasSelected = this.tireStackEditor.selected === stackData;
-            this.deselectAll();
-            if (!wasSelected) this.tireStackEditor.select(stackData);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is a flag (pole or flag mesh)
-        {
-          const flagData = this.flagEditor.findByMesh(clickedMesh);
-          if (flagData) {
-            const wasSelected = this.flagEditor.selected === flagData;
-            this.deselectAll();
-            if (!wasSelected) this.flagEditor.select(clickedMesh);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is a track sign (board or post)
-        {
-          const signData = this.trackSignEditor.findByMesh(clickedMesh);
-          if (signData) {
-            const wasSelected = this.trackSignEditor.selected === signData;
-            this.deselectAll();
-            if (!wasSelected) this.trackSignEditor.select(signData);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is a banner string
-        {
-          const bannerData = this.bannerStringEditor.findByMesh(clickedMesh);
-          if (bannerData) {
-            const wasSelected = this.bannerStringEditor.selected === bannerData;
-            this.deselectAll();
-            if (!wasSelected) this.bannerStringEditor.select(bannerData);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is an action zone handle
-        {
-          const zoneData = this.actionZoneEditor.findByMesh(clickedMesh);
-          if (zoneData) {
-            const wasSelected = this.actionZoneEditor.selected === zoneData;
-            this.deselectAll();
-            if (!wasSelected) this.actionZoneEditor.select(zoneData);
-            return;
-          }
-        }
-
-        // Check if clicked mesh is a bridge gizmo
-        {
-          const bridgeData = this.bridgeEditor.findByMesh(clickedMesh);
-          if (bridgeData) {
-            const wasSelected = this.bridgeEditor.selected === bridgeData;
-            this.deselectAll();
-            if (!wasSelected) this.bridgeEditor.select(bridgeData);
-            return;
-          }
+        for (const handler of clickHandlers) {
+          if (this._handleMeshSelection(clickedMesh, handler.editor, handler.selectFn)) return;
         }
 
         // Check if clicked mesh is an AI path waypoint
