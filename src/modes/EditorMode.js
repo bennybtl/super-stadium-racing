@@ -129,7 +129,7 @@ export class EditorMode extends BaseMode {
     const _rebuildNormalMapNow = async () => {
       const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
       const { updateCompositeNormalMap } = await import('../shaders/ground-shader.js');
-      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, 160);
+      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, terrainManager.gridSize);
     };
     let _rebuildNormalMapTimer = null;
     window.rebuildNormalMap = (immediate = false) => {

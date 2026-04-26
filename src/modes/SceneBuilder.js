@@ -177,7 +177,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   
   // Create composite normal map texture that blends base + decals
   const { createCompositeNormalMap } = await import('../shaders/ground-shader.js');
-  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, 2048, terrainSize);
+  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, texSize, terrainSize);
   
   groundMat.bumpTexture = compositeNormalMap;
   groundMat.bumpTexture.wrapU = Texture.CLAMP_ADDRESSMODE;

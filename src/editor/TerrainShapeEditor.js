@@ -15,9 +15,13 @@ export class TerrainShapeEditor {
 
     this.meshes   = [];   // { feature, node, mesh, mat }[]
     this.selected = null; // the currently-selected entry
+    this._terrainGridRebuildTimer = null;
 
     this.material          = null;
     this.highlightMaterial = null;
+
+    // Cache for terrain heights
+    this._terrainHeightCache = new Map();
   }
 
   // ── Materials ───────────────────────────────────────────────────────────────
@@ -60,7 +64,7 @@ export class TerrainShapeEditor {
   /** Create a gizmo mesh for a terrain feature (dispatches on feature.shape). */
   createVisual(feature) {
     const { scene, currentTrack } = this.editor;
-    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
+    const terrainH = this._getCachedTerrainHeight(feature.centerX, feature.centerZ);
 
     const node = new TransformNode('terrainShapeNode', scene);
     node.position = new Vector3(feature.centerX, terrainH + NODE_POS_Y, feature.centerZ);
@@ -73,16 +77,18 @@ export class TerrainShapeEditor {
         { radius: 0.5, tessellation: 48 }, scene);
       mesh.rotation.x = Math.PI / 2;
     }
-    
+
     node.scaling = new Vector3(feature.width, feature.shape === 'rect' ? 0.1 : 1, feature.depth);
     node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
-    
+
     mesh.parent = node;
 
     const mat = this.material.clone('tsMat_' + Date.now());
     const col = this._terrainColorForType(feature.terrainType);
     mat.diffuseColor  = col;
-    mat.emissiveColor = col.scale(0.3);
+    mat.emissiveColor = col.scale(0.5); // Increase emissive intensity
+    mat.specularColor = new Color3(0.1, 0.1, 0.1); // Reduce specular highlights
+    mat.disableLighting = false; // Ensure lighting is enabled
     mesh.material  = mat;
     mesh.isPickable = true;
 
@@ -95,7 +101,7 @@ export class TerrainShapeEditor {
 
   updateVisual(data) {
     const { feature, node, mat } = data;
-    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
+    const terrainH = this._getCachedTerrainHeight(feature.centerX, feature.centerZ);
 
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;
@@ -133,20 +139,54 @@ export class TerrainShapeEditor {
     this.hideProperties();
   }
 
+  _scheduleTerrainGridRebuild() {
+    if (this._terrainGridRebuildTimer) clearTimeout(this._terrainGridRebuildTimer);
+    this._terrainGridRebuildTimer = setTimeout(() => {
+      this._terrainGridRebuildTimer = null;
+      window.rebuildTerrainGrid?.();
+    }, 50);
+  }
+
+  _flushTerrainGridRebuild() {
+    if (!this._terrainGridRebuildTimer) return false;
+    clearTimeout(this._terrainGridRebuildTimer);
+    this._terrainGridRebuildTimer = null;
+    window.rebuildTerrainGrid?.();
+    return true;
+  }
+
   // ── Movement ─────────────────────────────────────────────────────────────────
 
   move(movement) {
     if (!this.selected || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
-    this.editor.saveSnapshot(true);
     const { feature } = this.selected;
     if (!this.editor._rawDragPos)
       this.editor._rawDragPos = { x: feature.centerX, z: feature.centerZ };
-    this.editor._rawDragPos.x += movement.x;
-    this.editor._rawDragPos.z += movement.z;
+
+    const nextRawX = this.editor._rawDragPos.x + movement.x;
+    const nextRawZ = this.editor._rawDragPos.z + movement.z;
+    const nextX = this.editor._snap(nextRawX);
+    const nextZ = this.editor._snap(nextRawZ);
+
+    if (nextX === feature.centerX && nextZ === feature.centerZ) {
+      this.editor._rawDragPos.x = nextRawX;
+      this.editor._rawDragPos.z = nextRawZ;
+      return new Vector3(0, 0, 0);
+    }
+
+    this.editor.saveSnapshot(true);
+    this.editor._rawDragPos.x = nextRawX;
+    this.editor._rawDragPos.z = nextRawZ;
+
     const prevX = feature.centerX, prevZ = feature.centerZ;
-    feature.centerX = this.editor._snap(this.editor._rawDragPos.x);
-    feature.centerZ = this.editor._snap(this.editor._rawDragPos.z);
-    this.rebuildTerrain();
+    feature.centerX = nextX;
+    feature.centerZ = nextZ;
+
+    this.updateVisual(this.selected);
+    this._scheduleTerrainGridRebuild();
+    window.rebuildTerrainTexture?.();
+    window.rebuildNormalMap?.();
+
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
@@ -258,6 +298,10 @@ export class TerrainShapeEditor {
   // ── Dispose ──────────────────────────────────────────────────────────────────
 
   dispose() {
+    if (this._terrainGridRebuildTimer) {
+      clearTimeout(this._terrainGridRebuildTimer);
+      this._terrainGridRebuildTimer = null;
+    }
     for (const d of this.meshes) { d.mesh.dispose(); d.node.dispose(); }
     this.meshes   = [];
     this.selected = null;
@@ -266,7 +310,8 @@ export class TerrainShapeEditor {
   // ── Vue Bridge ───────────────────────────────────────────────────────────────
 
   rebuildTerrain() {
-    window.rebuildTerrainGrid?.();
+    const flushed = this._flushTerrainGridRebuild();
+    if (!flushed) window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
     window.rebuildNormalMap?.();
     if (this.selected) this.updateVisual(this.selected);
@@ -308,5 +353,17 @@ export class TerrainShapeEditor {
     const entry = Object.values(TERRAIN_TYPES).find(t => t.name === name);
     this.selected.feature.terrainType = entry || null;
     this.rebuildTerrain();
+  }
+
+  // Helper to get cached terrain height
+  _getCachedTerrainHeight(x, z) {
+    const key = `${x},${z}`;
+    if (this._terrainHeightCache.has(key)) {
+      return this._terrainHeightCache.get(key);
+    }
+
+    const height = this.editor.terrainQuery.heightAt(x, z);
+    this._terrainHeightCache.set(key, height);
+    return height;
   }
 }

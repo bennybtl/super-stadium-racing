@@ -43,12 +43,14 @@ function _getDiffuseTextureEntry(filename) {
 /**
  * Paint terrain texture from terrainManager grid to a canvas context.
  * Adds random noise for visual variation.
+ * Skips blending during editing mode for performance but applies terrain color.
  * 
  * @param {CanvasRenderingContext2D} ctx - Canvas context from DynamicTexture
  * @param {TerrainManager} terrainManager - Terrain manager with grid data
  * @param {number} pixelsPerCell - How many pixels represent one terrain cell
+ * @param {boolean} isEditing - Whether the terrain is in editing mode
  */
-export async function paintTerrainTexture(ctx, terrainManager, pixelsPerCell) {
+export async function paintTerrainTexture(ctx, terrainManager, pixelsPerCell, isEditing = false) {
   const n = terrainManager.cellsPerSide;
   const xEdges = new Array(n + 1);
   const yEdges = new Array(n + 1);
@@ -59,31 +61,11 @@ export async function paintTerrainTexture(ctx, terrainManager, pixelsPerCell) {
   const canvasWidth = xEdges[n];
   const canvasHeight = yEdges[n];
 
-  // Optional textured overlay layers for any terrain type.
-  // Terrain cells can define:
-  //   diffuseTexture: 'filename.png'
-  //   diffuseTextureWorldUnitsPerTile: number (optional, default 10)
-  //   diffuseTextureBlendMode: Canvas globalCompositeOperation (optional, default 'source-over')
-  //   diffuseTextureOpacity: number 0..1 (optional, default 1)
-  const texturedTerrainByName = new Map();
-  for (const cell of terrainManager.grid) {
-    if (!cell?.name || !cell?.diffuseTexture || texturedTerrainByName.has(cell.name)) continue;
-    texturedTerrainByName.set(cell.name, cell);
-  }
-
-  // Wait for diffuse textures before painting so first render already shows them.
-  const textureEntries = [...texturedTerrainByName.values()]
-    .map(cell => _getDiffuseTextureEntry(cell.diffuseTexture))
-    .filter(Boolean);
-  await Promise.all(textureEntries.map(e => e.promise));
-
-  // Pass 1: paint the color base (all terrains), including boundary blends.
   for (let row = 0; row < n; row++) {
     for (let col = 0; col < n; col++) {
-      const index = row * n + col;
-      const cell = terrainManager.grid[index];
+      const cell = terrainManager.grid[row * n + col];
+      if (!cell) continue;
 
-      const { r: cr, g: cg, b: cb } = cell.color;
       const x0 = xEdges[col];
       const y0 = yEdges[row];
       const cellW = Math.max(1, xEdges[col + 1] - x0);
@@ -91,13 +73,22 @@ export async function paintTerrainTexture(ctx, terrainManager, pixelsPerCell) {
       const blendWidthX = cellW;
       const blendWidthY = cellH;
 
-      // Fetch the four axis-aligned neighbours (null at grid edges)
+      // Apply terrain color directly during editing mode
+      if (isEditing) {
+        const r = Math.round((cell.color?.r ?? 0) * 255);
+        const g = Math.round((cell.color?.g ?? 0) * 255);
+        const b = Math.round((cell.color?.b ?? 0) * 255);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(x0, y0, cellW, cellH);
+        continue;
+      }
+
+      // Blending logic for non-editing mode
       const rCell = col + 1 < n ? terrainManager.grid[row * n + col + 1] : null;
       const lCell = col > 0     ? terrainManager.grid[row * n + col - 1] : null;
       const bCell = row + 1 < n ? terrainManager.grid[(row + 1) * n + col] : null;
       const aCell = row > 0     ? terrainManager.grid[(row - 1) * n + col] : null;
 
-      // Only blend toward neighbours that are a different terrain type
       const rDiff = rCell && rCell !== cell;
       const lDiff = lCell && lCell !== cell;
       const bDiff = bCell && bCell !== cell;
@@ -106,14 +97,16 @@ export async function paintTerrainTexture(ctx, terrainManager, pixelsPerCell) {
 
       for (let py = 0; py < cellH; py++) {
         for (let pxx = 0; pxx < cellW; pxx++) {
-          let blendR = cr * 255, blendG = cg * 255, blendB = cb * 255;
+          let blendR = cell.color.r * 255;
+          let blendG = cell.color.g * 255;
+          let blendB = cell.color.b * 255;
           let totalWeight = 1.0;
 
           if (anyBlend) {
-            const distR = cellW - 1 - pxx; // pixels from right edge
-            const distL = pxx;           // pixels from left edge
-            const distB = cellH - 1 - py;  // pixels from bottom edge
-            const distA = py;            // pixels from top edge
+            const distR = cellW - 1 - pxx;
+            const distL = pxx;
+            const distB = cellH - 1 - py;
+            const distA = py;
 
             if (rDiff && distR < blendWidthX) {
               const w = 1 - distR / blendWidthX;
@@ -145,69 +138,20 @@ export async function paintTerrainTexture(ctx, terrainManager, pixelsPerCell) {
             }
           }
 
-          // const noise = (Math.random() - 0.5) * 18;
-          const noise = 0;
-          const r = Math.max(0, Math.min(255, blendR / totalWeight + noise));
-          const g = Math.max(0, Math.min(255, blendG / totalWeight + noise * 0.9));
-          const b = Math.max(0, Math.min(255, blendB / totalWeight + noise * 0.8));
-          ctx.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+          const r = Math.round(Math.max(0, Math.min(255, blendR / totalWeight)));
+          const g = Math.round(Math.max(0, Math.min(255, blendG / totalWeight)));
+          const b = Math.round(Math.max(0, Math.min(255, blendB / totalWeight)));
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
           ctx.fillRect(x0 + pxx, y0 + py, 1, 1);
         }
       }
     }
   }
 
-  // Soften hard cell boundaries from the terrain grid before textured overlays.
-  // Radius scales with cell pixel size so it stays subtle across resolutions.
-  _applyCanvasBlur(ctx, canvasWidth, canvasHeight, Math.max(1, Math.min(4, pixelsPerCell * 0.08)));
-
-  // Pass 2: paint optional diffuse textures over their terrain cells.
-  // This lets blend modes combine texture detail with the color base.
-  const validBlendModes = new Set([
-    'source-over', 'multiply', 'overlay', 'screen', 'soft-light',
-    'hard-light', 'darken', 'lighten', 'color-burn', 'color-dodge',
-    'difference', 'exclusion'
-  ]);
-
-  for (const [terrainName, terrainCell] of texturedTerrainByName) {
-    const textureEntry = _getDiffuseTextureEntry(terrainCell.diffuseTexture);
-    const isLoaded = !!(textureEntry?.loaded && textureEntry.img?.naturalWidth > 0);
-    if (!isLoaded) continue;
-
-    const worldUnitsPerTile = terrainCell.diffuseTextureWorldUnitsPerTile ?? 10;
-    const tileSize = pixelsPerCell * (worldUnitsPerTile / terrainManager.cellSize);
-    const pattern = ctx.createPattern(textureEntry.img, 'repeat');
-    const scale = tileSize / textureEntry.img.naturalWidth;
-    pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
-
-    const blendMode = validBlendModes.has(terrainCell.diffuseTextureBlendMode)
-      ? terrainCell.diffuseTextureBlendMode
-      : 'source-over';
-    const opacity = Math.max(0, Math.min(1, terrainCell.diffuseTextureOpacity ?? 1));
-
-    ctx.save();
-    ctx.globalCompositeOperation = blendMode;
-    ctx.globalAlpha = opacity;
-    ctx.fillStyle = pattern;
-
-    for (let row = 0; row < n; row++) {
-      for (let col = 0; col < n; col++) {
-        const cell = terrainManager.grid[row * n + col];
-        if (cell?.name !== terrainName) continue;
-        const x0 = xEdges[col];
-        const y0 = yEdges[row];
-        const cellW = Math.max(1, xEdges[col + 1] - x0);
-        const cellH = Math.max(1, yEdges[row + 1] - y0);
-        ctx.fillRect(x0, y0, cellW, cellH);
-      }
-    }
-
-    ctx.restore();
+  // Apply blur only in non-editing mode
+  if (!isEditing) {
+    _applyCanvasBlur(ctx, canvasWidth, canvasHeight, Math.max(1, Math.min(4, pixelsPerCell * 0.08)));
   }
-
-  // Final tiny soften pass to reduce visible square seams where optional
-  // textured overlays begin/end at terrain boundaries.
-  _applyCanvasBlur(ctx, canvasWidth, canvasHeight, Math.max(0.5, Math.min(1.5, pixelsPerCell * 0.02)));
 }
 
 /**

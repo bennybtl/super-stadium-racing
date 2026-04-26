@@ -254,6 +254,7 @@ export async function updateCompositeNormalMap(dynamicTexture, scene, normalMapD
     ctx.save();
     ctx.translate(canvasCenterX, canvasCenterY);
     ctx.rotate(angle * Math.PI / 180);
+    ctx.scale(-1, 1); // Flip horizontally in local space to match texture orientation
     
     // Calculate tile size in canvas pixels
     const tilePixelWidth = canvasWidth / repeatU;
