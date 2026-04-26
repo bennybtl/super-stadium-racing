@@ -273,6 +273,15 @@ export const useEditorStore = defineStore('editor', () => {
     color: 'red',
   });
 
+  // ── Decoration panel (flags + banner strings)
+  const decoration = reactive({
+    type: 'flag',
+    color: 'red',
+    width: 8,
+    poleHeight: 4.2,
+    heading: 0,
+  });
+
   // ── Track Sign panel ──
   const trackSign = reactive({
     name: 'Track Name',
@@ -451,6 +460,16 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteFlag()                 { _bridge.value?.deleteFlag(); }
   function duplicateFlag()              { _bridge.value?.duplicateFlag(); }
 
+  function setDecorationType(val)        { decoration.type = val; _bridge.value?.changeDecorationType(val); }
+  function setDecorationColor(val)       { decoration.color = val; _bridge.value?.changeFlagColor(val); }
+  function setDecorationWidth(val)       { decoration.width = val; _bridge.value?.changeBannerStringWidth(val); }
+  function setDecorationPoleHeight(val)  { decoration.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
+  function setDecorationHeading(val)     { decoration.heading = val; _bridge.value?.changeBannerStringHeading(val); }
+  function deleteDecoration()            { _bridge.value?.deleteSelectedDecoration(); }
+  function duplicateDecoration()         { _bridge.value?.duplicateSelectedDecoration(); }
+  function closeDecoration()             { _bridge.value?.deselectDecoration(); }
+  function addDecoration()               { _bridge.value?.addDecorationEntity(); }
+
   // ── Track Sign actions ──
   function setTrackSignName(val)        { trackSign.name = val;     _bridge.value?.changeTrackSignName(val); }
   function setTrackSignRotation(val)    { trackSign.rotation = val; _bridge.value?.changeTrackSignRotation(val); }
@@ -592,6 +611,10 @@ export const useEditorStore = defineStore('editor', () => {
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, duplicateBezierWall, closeBezierWall,
     setFlagColor, deleteFlag, duplicateFlag,
+    decoration,
+    setDecorationType, setDecorationColor, setDecorationWidth,
+    setDecorationPoleHeight, setDecorationHeading, deleteDecoration,
+    duplicateDecoration, closeDecoration, addDecoration,
     trackSign,
     setTrackSignName, setTrackSignRotation,
     setTrackSignContentType, setTrackSignBrandImage, setTrackSignBackground,

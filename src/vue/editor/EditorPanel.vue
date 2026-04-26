@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="visible"
-    class="fixed bg-slate-950/95 rounded-2xl z-50 min-w-[240px] text-white pointer-events-auto shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+    class="editor-panel fixed bg-slate-950/95 rounded-2xl z-50 min-w-[240px] text-white pointer-events-auto shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
     :style="panelStyle"
     @mousedown.stop
   >
@@ -39,7 +39,8 @@ const pos       = ref({ x: 0, y: 0 });
 let   dragStart = null;
 
 function startDrag(e) {
-  const panel = e.currentTarget.closest('.editor-panel');
+  const panel = e.currentTarget.closest('.editor-panel') || e.currentTarget.parentElement;
+  if (!panel) return;
   const rect  = panel.getBoundingClientRect();
   dragStart   = { mouseX: e.clientX, mouseY: e.clientY, panelX: rect.left, panelY: rect.top };
   if (!dragged.value) {

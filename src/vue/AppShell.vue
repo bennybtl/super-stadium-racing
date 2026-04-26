@@ -22,9 +22,8 @@
     <PolyWallPanel />
     <PolyHillPanel />
     <BezierWallPanel />
-    <FlagPanel />
+    <DecorationsPanel />
     <TrackSignPanel />
-    <BannerStringPanel />
     <ActionZonePanel />
     <PolyCurbPanel />
     <MeshGridPanel />
@@ -53,9 +52,8 @@ import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
 import PolyWallPanel      from './editor/PolyWallPanel.vue';
 import PolyHillPanel      from './editor/PolyHillPanel.vue';
 import BezierWallPanel    from './editor/BezierWallPanel.vue';
-import FlagPanel          from './editor/FlagPanel.vue';
+import DecorationsPanel   from './editor/DecorationsPanel.vue';
 import TrackSignPanel     from './editor/TrackSignPanel.vue';
-import BannerStringPanel  from './editor/BannerStringPanel.vue';
 import ActionZonePanel    from './editor/ActionZonePanel.vue';
 import PolyCurbPanel      from './editor/PolyCurbPanel.vue';
 import MeshGridPanel      from './editor/MeshGridPanel.vue';

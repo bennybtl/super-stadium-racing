@@ -40,7 +40,6 @@ import imgSquareHill  from '../assets/square_hill.feature.png';
 import imgCheckpoint  from '../assets/checkpoint.feature.png';
 import imgFlags       from '../assets/flags.feature.png';
 import imgTrackSign   from '../assets/track_sign.feature.png';
-import imgFlagString  from '../assets/flag_string.feature.png';
 import imgTerrain     from '../assets/terrain_region.feature.png';
 import imgMeshGrid    from '../assets/mesh_grid.feature.png';
 import imgTireStack   from '../assets/tire_stack.feature.png';
@@ -63,9 +62,8 @@ const features = [
   { label: 'Terrain Region',   img: imgTerrain,       action: () => editor.addTerrain()        },
   { label: 'Tire Stack',       img: imgTireStack,     action: () => editor.addTireStack()      },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.addTrackSign()      },
-  { label: 'Flag',             img: imgFlags,         action: () => editor.addFlag()           },
-  { label: 'Banner String',    img: imgFlagString,    action: () => editor.addBannerString()   },
-  { label: 'Action Zone',      img: imgActionZone,  action: () => editor.addActionZone()     },
+  { label: 'Decoration',       img: imgFlags,         action: () => editor.addDecoration()     },
+  { label: 'Action Zone',      img: imgActionZone,     action: () => editor.addActionZone()     },
   { label: 'Bridge',           img: imgBridge,             action: () => editor.addBridge()         },
   { label: 'AI Path',          img: imgAiPath,             action: () => editor.openAiPath()        },
 ];

@@ -10,9 +10,8 @@ import { SquareHillEditor } from "./SquareHillEditor.js";
 import { TerrainShapeEditor } from "./TerrainShapeEditor.js";
 import { NormalMapDecalEditor } from "./NormalMapDecalEditor.js";
 import { TireStackEditor } from "./TireStackEditor.js";
-import { FlagEditor } from "./FlagEditor.js";
+import { DecorationsEditor } from "./DecorationsEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
-import { BannerStringEditor } from "./BannerStringEditor.js";
 import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
 import { BridgeEditor } from './BridgeEditor.js';
@@ -67,14 +66,11 @@ export class EditorController {
     // Tire stack editing (delegated to TireStackEditor)
     this.tireStackEditor = new TireStackEditor(this);
 
-    // Flag editing (delegated to FlagEditor)
-    this.flagEditor = new FlagEditor(this);
+    // Decorations editing (flags + banner strings)
+    this.decorationsEditor = new DecorationsEditor(this);
 
     // Track sign editing (delegated to TrackSignEditor)
     this.trackSignEditor = new TrackSignEditor(this);
-
-    // Banner string editing (delegated to BannerStringEditor)
-    this.bannerStringEditor = new BannerStringEditor(this);
 
     // Action zone editing (delegated to ActionZoneEditor)
     this.actionZoneEditor = new ActionZoneEditor(this);
@@ -152,9 +148,8 @@ export class EditorController {
     this.tireStackEditor.activate(this.scene, track);
 
     // Activate all object editors
-    this.flagEditor.activate(this.scene, track);
+    this.decorationsEditor.activate(this.scene, track);
     this.trackSignEditor.activate(this.scene, track);
-    this.bannerStringEditor.activate(this.scene, track);
     this.actionZoneEditor.activate(this.scene, track);
 
     // Mesh grid terrain editing editor
@@ -253,14 +248,11 @@ export class EditorController {
       this.polyCurbEditor = null;
     }
 
-    // Flag editor
-    this.flagEditor.dispose();
+    // Decorations editor
+    this.decorationsEditor.dispose();
 
     // Track sign editor
     this.trackSignEditor.dispose();
-
-    // Banner string editor
-    this.bannerStringEditor.dispose();
 
     // Action zone editor
     this.actionZoneEditor.dispose();
@@ -306,9 +298,8 @@ export class EditorController {
     this.terrainShapeEditor.deselect();
     this.normalMapDecalEditor.deselect();
     this.tireStackEditor.deselect();
-    this.flagEditor.deselect();
+    this.decorationsEditor.deselect();
     this.trackSignEditor.deselect();
-    this.bannerStringEditor.deselect();
     this.actionZoneEditor.deselect();
     this.bridgeEditor.deselect();
     this.aiPathEditor.deselect();
@@ -321,9 +312,8 @@ export class EditorController {
     this.tireStackEditor.clearMeshes();
 
     // Clear object editor meshes
-    this.flagEditor.clearMeshes();
+    this.decorationsEditor.clearMeshes();
     this.trackSignEditor.clearMeshes();
-    this.bannerStringEditor.clearMeshes();
     this.actionZoneEditor.clearMeshes();
     this.bridgeEditor.clearMeshes();
 
@@ -337,9 +327,8 @@ export class EditorController {
       else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
       else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
       else if (feature.type === 'tireStack') this.tireStackEditor.createVisual(feature);
-      else if (feature.type === 'flag') this.flagEditor.createVisual(feature);
+      else if (feature.type === 'flag' || feature.type === 'bannerString') this.decorationsEditor.createVisual(feature);
       else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
-      else if (feature.type === 'bannerString') this.bannerStringEditor.createVisual(feature);
       else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
       else if (feature.type === 'bridge') this.bridgeEditor.createVisual(feature);
     }
@@ -459,14 +448,11 @@ export class EditorController {
       } else if (this.tireStackEditor.selected) {
         this.tireStackEditor.deleteSelected();
         event.preventDefault();
-      } else if (this.flagEditor.selected) {
-        this.flagEditor.deleteSelected();
+      } else if (this.decorationsEditor.selected) {
+        this.decorationsEditor.deleteSelected();
         event.preventDefault();
       } else if (this.trackSignEditor?.selected) {
         this.trackSignEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.bannerStringEditor?.selected) {
-        this.bannerStringEditor.deleteSelected();
         event.preventDefault();
       } else if (this.actionZoneEditor?.selected) {
         this.actionZoneEditor.deleteSelected();
@@ -686,17 +672,15 @@ export class EditorController {
       delta = this.normalMapDecalEditor.move(movement);
     } else if (this.tireStackEditor.selected) {
       delta = this.tireStackEditor.move(movement);
-    } else if (this.flagEditor.selected) {
-      delta = this.flagEditor.move(movement);
+    } else if (this.decorationsEditor.selected) {
+      if (this.keys.rotateLeft)  this.decorationsEditor.rotate(this.rotationSpeed);
+      if (this.keys.rotateRight) this.decorationsEditor.rotate(-this.rotationSpeed);
+      delta = this.decorationsEditor.move(movement);
     } else if (this.trackSignEditor.selected) {
       const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
       if (this.keys.rotateLeft)  this.trackSignEditor.rotate( rotStep);
       if (this.keys.rotateRight) this.trackSignEditor.rotate(-rotStep);
       delta = this.trackSignEditor.move(movement);
-    } else if (this.bannerStringEditor.selected) {
-      if (this.keys.rotateLeft)  this.bannerStringEditor.rotate( this.rotationSpeed);
-      if (this.keys.rotateRight) this.bannerStringEditor.rotate(-this.rotationSpeed);
-      delta = this.bannerStringEditor.move(movement);
     } else if (this.actionZoneEditor.selected) {
       delta = this.actionZoneEditor.move(movement);
     } else if (this.bridgeEditor.selected) {
@@ -808,9 +792,8 @@ export class EditorController {
       this.terrainShapeEditor.selected ||
       this.normalMapDecalEditor.selected ||
       this.tireStackEditor.selected ||
-      this.flagEditor.selected ||
+      this.decorationsEditor.selected ||
       this.trackSignEditor.selected ||
-      this.bannerStringEditor.selected ||
       this.actionZoneEditor.selected ||
       this.bridgeEditor?.selected ||
       this.aiPathEditor?.selected ||
@@ -831,9 +814,8 @@ export class EditorController {
     else if (this.terrainShapeEditor.selected) this.terrainShapeEditor.move(movement);
     else if (this.normalMapDecalEditor.selected) this.normalMapDecalEditor.move(movement);
     else if (this.tireStackEditor.selected) this.tireStackEditor.move(movement);
-    else if (this.flagEditor.selected) this.flagEditor.move(movement);
+    else if (this.decorationsEditor.selected) this.decorationsEditor.move(movement);
     else if (this.trackSignEditor.selected) this.trackSignEditor.move(movement);
-    else if (this.bannerStringEditor.selected) this.bannerStringEditor.move(movement);
     else if (this.actionZoneEditor.selected) this.actionZoneEditor.move(movement);
     else if (this.bridgeEditor?.selected) this.bridgeEditor.move(movement);
     else if (this.aiPathEditor?.selected) this.aiPathEditor.move(movement);
@@ -910,9 +892,8 @@ export class EditorController {
           { editor: this.terrainShapeEditor },
           { editor: this.normalMapDecalEditor },
           { editor: this.tireStackEditor },
-          { editor: this.flagEditor, selectFn: () => this.flagEditor.select(clickedMesh) },
+          { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
-          { editor: this.bannerStringEditor },
           { editor: this.actionZoneEditor },
           { editor: this.bridgeEditor },
         ];
@@ -1106,11 +1087,17 @@ export class EditorController {
 
   get selectedTireStack()          { return this.tireStackEditor.selected; }
 
-  // ─── Flag Editing (delegated to FlagEditor) ─────────────────────────────
+  // ─── Decorations Editing (flags + banner strings) ────────────────────────
 
-  addFlagEntity()              { this.flagEditor.addEntity(); }
-  deselectFlag()               { this.flagEditor.deselect(); }
-  moveSelectedFlag(movement)   { return this.flagEditor.move(movement); }
+  addDecorationEntity()            { this.decorationsEditor.addEntity(); }
+  duplicateSelectedDecoration()    { return this.decorationsEditor.duplicateSelected(); }
+  deleteSelectedDecoration()       { return this.decorationsEditor.deleteSelected(); }
+  deselectDecoration()             { this.decorationsEditor.deselect(); }
+  changeDecorationType(val)        { if (this._editorStore) this._editorStore.decoration.type = val; this.decorationsEditor.changeType(val); }
+  changeDecorationColor(val)       { this.decorationsEditor.changeColor(val); }
+  changeDecorationWidth(val)       { this.decorationsEditor.changeWidth(val); }
+  changeDecorationPoleHeight(val)  { this.decorationsEditor.changePoleHeight(val); }
+  changeDecorationHeading(val)     { this.decorationsEditor.changeHeading(val); }
 
   deselectAll() {
     this.checkpointEditor.deselect();
@@ -1119,9 +1106,8 @@ export class EditorController {
     this.terrainShapeEditor.deselect();
     this.normalMapDecalEditor.deselect();
     this.tireStackEditor.deselect();
-    this.flagEditor.deselect();
+    this.decorationsEditor.deselect();
     this.trackSignEditor.deselect();
-    this.bannerStringEditor.deselect();
     this.actionZoneEditor.deselect();
     this.bridgeEditor?.deselect();
     this.aiPathEditor?.deselect();
@@ -1166,9 +1152,9 @@ export class EditorController {
   deselectBezierWall()          { this.bezierWallEditor.deselectBezierWall(); }
 
   // ── Flag Vue bridge methods ──
-  changeFlagColor(val) { this.flagEditor.changeColor(val); }
-  deleteFlag()         { this.flagEditor.deleteSelected(); }
-  duplicateFlag()      { this.flagEditor.duplicateSelected(); }
+  changeFlagColor(val) { this.decorationsEditor.changeColor(val); }
+  deleteFlag()         { this.decorationsEditor.deleteSelected(); }
+  duplicateFlag()      { this.decorationsEditor.duplicateSelected(); }
 
   // ── Track Sign Vue bridge methods ──
   addTrackSignEntity()         { this.trackSignEditor.addEntity(); }
@@ -1185,13 +1171,13 @@ export class EditorController {
   duplicateTrackSign()         { this.trackSignEditor.duplicateSelected(); }
 
   // ── Banner String Vue bridge methods ──
-  addBannerStringEntity()         { this.bannerStringEditor.addEntity(); }
-  deselectBannerString()          { this.bannerStringEditor.deselect(); }
-  changeBannerStringWidth(val)    { this.bannerStringEditor.changeWidth(val); }
-  changeBannerStringPoleHeight(val) { this.bannerStringEditor.changePoleHeight(val); }
-  changeBannerStringHeading(val)  { this.bannerStringEditor.changeHeading(val); }
-  deleteBannerString()            { this.bannerStringEditor.deleteSelected(); }
-  duplicateBannerString()         { this.bannerStringEditor.duplicateSelected(); }
+  addBannerStringEntity()         { this.decorationsEditor.addEntity(); }
+  deselectBannerString()          { this.decorationsEditor.deselect(); }
+  changeBannerStringWidth(val)    { this.decorationsEditor.changeWidth(val); }
+  changeBannerStringPoleHeight(val) { this.decorationsEditor.changePoleHeight(val); }
+  changeBannerStringHeading(val)  { this.decorationsEditor.changeHeading(val); }
+  deleteBannerString()            { this.decorationsEditor.deleteSelected(); }
+  duplicateBannerString()         { this.decorationsEditor.duplicateSelected(); }
 
   // ── Action Zone Vue bridge methods ──
   addActionZoneEntity()           { this.actionZoneEditor.addEntity(); }
