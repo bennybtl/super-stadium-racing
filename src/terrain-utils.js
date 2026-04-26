@@ -40,9 +40,197 @@ function _getDiffuseTextureEntry(filename) {
   return entry;
 }
 
+function _buildTextureEdges(cellsPerSide, pixelsPerCell) {
+  const edges = new Array(cellsPerSide + 1);
+  for (let i = 0; i <= cellsPerSide; i++) {
+    edges[i] = Math.floor(i * pixelsPerCell);
+  }
+  return edges;
+}
+
+function _writeColorPixel(data, width, x, y, r, g, b, a = 255) {
+  const base = (y * width + x) * 4;
+  data[base] = r;
+  data[base + 1] = g;
+  data[base + 2] = b;
+  data[base + 3] = a;
+}
+
+export function buildTerrainTexturePixelData(terrainManager, pixelsPerCell, isEditing = false) {
+  const n = terrainManager.cellsPerSide;
+  const xEdges = _buildTextureEdges(n, pixelsPerCell);
+  const yEdges = _buildTextureEdges(n, pixelsPerCell);
+  const width = xEdges[n];
+  const height = yEdges[n];
+  const data = new Uint8Array(width * height * 4);
+
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      const cell = terrainManager.grid[row * n + col];
+      if (!cell) continue;
+
+      const x0 = xEdges[col];
+      const y0 = yEdges[row];
+      const cellW = Math.max(1, xEdges[col + 1] - x0);
+      const cellH = Math.max(1, yEdges[row + 1] - y0);
+
+      if (isEditing) {
+        const r = Math.round((cell.color?.r ?? 0) * 255);
+        const g = Math.round((cell.color?.g ?? 0) * 255);
+        const b = Math.round((cell.color?.b ?? 0) * 255);
+        for (let py = 0; py < cellH; py++) {
+          for (let pxx = 0; pxx < cellW; pxx++) {
+            _writeColorPixel(data, width, x0 + pxx, y0 + py, r, g, b);
+          }
+        }
+        continue;
+      }
+
+      const rCell = col + 1 < n ? terrainManager.grid[row * n + col + 1] : null;
+      const lCell = col > 0     ? terrainManager.grid[row * n + col - 1] : null;
+      const bCell = row + 1 < n ? terrainManager.grid[(row + 1) * n + col] : null;
+      const aCell = row > 0     ? terrainManager.grid[(row - 1) * n + col] : null;
+
+      const rDiff = rCell && rCell !== cell;
+      const lDiff = lCell && lCell !== cell;
+      const bDiff = bCell && bCell !== cell;
+      const aDiff = aCell && aCell !== cell;
+      const anyBlend = rDiff || lDiff || bDiff || aDiff;
+
+      for (let py = 0; py < cellH; py++) {
+        for (let pxx = 0; pxx < cellW; pxx++) {
+          let blendR = cell.color.r * 255;
+          let blendG = cell.color.g * 255;
+          let blendB = cell.color.b * 255;
+          let totalWeight = 1.0;
+
+          if (anyBlend) {
+            const distR = cellW - 1 - pxx;
+            const distL = pxx;
+            const distB = cellH - 1 - py;
+            const distA = py;
+
+            if (rDiff && distR < cellW) {
+              const w = 1 - distR / cellW;
+              totalWeight += w;
+              blendR += rCell.color.r * 255 * w;
+              blendG += rCell.color.g * 255 * w;
+              blendB += rCell.color.b * 255 * w;
+            }
+            if (lDiff && distL < cellW) {
+              const w = 1 - distL / cellW;
+              totalWeight += w;
+              blendR += lCell.color.r * 255 * w;
+              blendG += lCell.color.g * 255 * w;
+              blendB += lCell.color.b * 255 * w;
+            }
+            if (bDiff && distB < cellH) {
+              const w = 1 - distB / cellH;
+              totalWeight += w;
+              blendR += bCell.color.r * 255 * w;
+              blendG += bCell.color.g * 255 * w;
+              blendB += bCell.color.b * 255 * w;
+            }
+            if (aDiff && distA < cellH) {
+              const w = 1 - distA / cellH;
+              totalWeight += w;
+              blendR += aCell.color.r * 255 * w;
+              blendG += aCell.color.g * 255 * w;
+              blendB += aCell.color.b * 255 * w;
+            }
+          }
+
+          const r = Math.round(Math.max(0, Math.min(255, blendR / totalWeight)));
+          const g = Math.round(Math.max(0, Math.min(255, blendG / totalWeight)));
+          const b = Math.round(Math.max(0, Math.min(255, blendB / totalWeight)));
+          _writeColorPixel(data, width, x0 + pxx, y0 + py, r, g, b);
+        }
+      }
+    }
+  }
+
+  return { width, height, data };
+}
+
+export function buildTerrainSpecularTexturePixelData(terrainManager, pixelsPerCell) {
+  const n = terrainManager.cellsPerSide;
+  const xEdges = _buildTextureEdges(n, pixelsPerCell);
+  const yEdges = _buildTextureEdges(n, pixelsPerCell);
+  const width = xEdges[n];
+  const height = yEdges[n];
+  const data = new Uint8Array(width * height * 4);
+
+  function cellGrey(cell) {
+    return Math.round((cell.specular ?? 0.03) * 255);
+  }
+
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      const cell = terrainManager.grid[row * n + col];
+      if (!cell) continue;
+
+      const sv = cellGrey(cell);
+      const x0 = xEdges[col];
+      const y0 = yEdges[row];
+      const cellW = Math.max(1, xEdges[col + 1] - x0);
+      const cellH = Math.max(1, yEdges[row + 1] - y0);
+
+      const rCell = col + 1 < n ? terrainManager.grid[row * n + col + 1] : null;
+      const lCell = col > 0     ? terrainManager.grid[row * n + col - 1] : null;
+      const bCell = row + 1 < n ? terrainManager.grid[(row + 1) * n + col] : null;
+      const aCell = row > 0     ? terrainManager.grid[(row - 1) * n + col] : null;
+
+      const rDiff = rCell && rCell !== cell;
+      const lDiff = lCell && lCell !== cell;
+      const bDiff = bCell && bCell !== cell;
+      const aDiff = aCell && aCell !== cell;
+      const anyBlend = rDiff || lDiff || bDiff || aDiff;
+
+      for (let py = 0; py < cellH; py++) {
+        for (let pxx = 0; pxx < cellW; pxx++) {
+          let blendV = sv;
+          let totalWeight = 1.0;
+
+          if (anyBlend) {
+            const distR = cellW - 1 - pxx;
+            const distL = pxx;
+            const distB = cellH - 1 - py;
+            const distA = py;
+
+            if (rDiff && distR < cellW) {
+              const w = 1 - distR / cellW;
+              totalWeight += w;
+              blendV += cellGrey(rCell) * w;
+            }
+            if (lDiff && distL < cellW) {
+              const w = 1 - distL / cellW;
+              totalWeight += w;
+              blendV += cellGrey(lCell) * w;
+            }
+            if (bDiff && distB < cellH) {
+              const w = 1 - distB / cellH;
+              totalWeight += w;
+              blendV += cellGrey(bCell) * w;
+            }
+            if (aDiff && distA < cellH) {
+              const w = 1 - distA / cellH;
+              totalWeight += w;
+              blendV += cellGrey(aCell) * w;
+            }
+          }
+
+          const v = Math.round(Math.max(0, Math.min(255, blendV / totalWeight)));
+          _writeColorPixel(data, width, x0 + pxx, y0 + py, v, v, v);
+        }
+      }
+    }
+  }
+
+  return { width, height, data };
+}
+
 /**
  * Paint terrain texture from terrainManager grid to a canvas context.
- * Adds random noise for visual variation.
  * Skips blending during editing mode for performance but applies terrain color.
  * 
  * @param {CanvasRenderingContext2D} ctx - Canvas context from DynamicTexture

@@ -3,7 +3,10 @@ import { EditorController } from "../editor/EditorController.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
-import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
+import {
+  buildTerrainTexturePixelData,
+  buildTerrainSpecularTexturePixelData,
+} from "../terrain-utils.js";
 
 /**
  * EditorMode – track editing interface.
@@ -109,14 +112,13 @@ export class EditorMode extends BaseMode {
       }
     };
 
-    // Slow: paint the canvas texture from terrainManager.grid (call on deselect)
+    // Slow: rebuild terrain texture buffers from terrainManager.grid (call on deselect)
     const _rebuildTerrainTextureNow = async () => {
       window.rebuildTerrainGrid();
-      const ctx = groundTex.getContext();
-      await paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
-      groundTex.update();
-      paintTerrainSpecularMap(specularTex.getContext(), terrainManager, pixelsPerCell);
-      specularTex.update();
+      const diffuseData = buildTerrainTexturePixelData(terrainManager, pixelsPerCell);
+      groundTex.update(diffuseData.data);
+      const specularData = buildTerrainSpecularTexturePixelData(terrainManager, pixelsPerCell);
+      specularTex.update(specularData.data);
     };
     let _rebuildTerrainTimer = null;
     window.rebuildTerrainTexture = (immediate = false) => {

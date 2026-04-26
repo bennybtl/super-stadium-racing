@@ -13,9 +13,9 @@ import {
   PhysicsAggregate,
   PhysicsShapeType,
   FreeCamera,
-  DynamicTexture,
   Texture,
   VertexBuffer,
+  RawTexture,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { TerrainManager } from "../terrain.js";
@@ -31,7 +31,10 @@ import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeManager } from "../managers/BridgeManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
-import { paintTerrainTexture, paintTerrainSpecularMap } from "../terrain-utils.js";
+import {
+  buildTerrainTexturePixelData,
+  buildTerrainSpecularTexturePixelData,
+} from "../terrain-utils.js";
 
 /**
  * Builds the shared Babylon scene used by both RaceMode and EditorMode:
@@ -139,32 +142,34 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Keep this divisible by terrainManager.cellsPerSide (40) to avoid
   // floor/ceil cell raster overlap seams in terrain texture painting.
   const texSize = 2000;
-  const groundTex = new DynamicTexture(
-    "groundTex",
-    { width: texSize, height: texSize },
-    scene
-  );
-  const ctx = groundTex.getContext();
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
-  await paintTerrainTexture(ctx, terrainManager, pixelsPerCell);
-
-  groundTex.update();
-  groundMat.diffuseTexture = groundTex;
-  groundMat.diffuseTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
-  groundMat.diffuseTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
-  // Flip texture vertically so canvas Y aligns with world Z
-  groundMat.diffuseTexture.vScale = -1;
-  groundMat.diffuseTexture.vOffset = 1;
-
-  // -- Specular (wet) map -- bright where mud/water, dark everywhere else
-  const specularTex = new DynamicTexture(
-    "specularTex",
-    { width: texSize, height: texSize },
-    scene
+  const diffuseData = buildTerrainTexturePixelData(terrainManager, pixelsPerCell);
+  const groundTex = RawTexture.CreateRGBATexture(
+    diffuseData.data,
+    diffuseData.width,
+    diffuseData.height,
+    scene,
+    false,
+    true,
+    Texture.BILINEAR_SAMPLINGMODE
   );
-  paintTerrainSpecularMap(specularTex.getContext(), terrainManager, pixelsPerCell);
-  specularTex.update();
+  groundTex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  groundTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  groundTex.vScale = -1;
+  groundTex.vOffset = 1;
+  groundMat.diffuseTexture = groundTex;
+
+  const specularData = buildTerrainSpecularTexturePixelData(terrainManager, pixelsPerCell);
+  const specularTex = RawTexture.CreateRGBATexture(
+    specularData.data,
+    specularData.width,
+    specularData.height,
+    scene,
+    false,
+    true,
+    Texture.BILINEAR_SAMPLINGMODE
+  );
   specularTex.wrapU = Texture.CLAMP_ADDRESSMODE;
   specularTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   specularTex.vScale = -1;
