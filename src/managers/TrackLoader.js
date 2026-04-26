@@ -29,7 +29,6 @@ export class TrackLoader {
         this.trackList.push(key);
       }
       
-      console.log(`[TrackLoader] Loaded track: ${track.name} (${key})`);
       return track;
     } catch (error) {
       console.error(`[TrackLoader] Error loading track ${filename}:`, error);
@@ -51,8 +50,6 @@ export class TrackLoader {
         const track = Track.fromJSON(rawJson);
         this.tracks.set(key, track);
         if (!this.trackList.includes(key)) this.trackList.push(key);
-        console.log(this.trackList)
-        console.log(`[TrackLoader] Loaded track: ${track.name} (${key})`);
       } catch (error) {
         console.error(`[TrackLoader] Error loading track ${path}:`, error);
       }
@@ -60,7 +57,6 @@ export class TrackLoader {
 
     await Promise.all(loadPromises);
     this.trackList.sort((a, b) => a.localeCompare(b));
-    console.log(`[TrackLoader] Loaded ${this.tracks.size} tracks`);
     return this.tracks;
   }
 
@@ -93,7 +89,6 @@ export class TrackLoader {
   saveTrackToStorage(key, track) {
     const json = track.toJSON();
     localStorage.setItem(`track_${key}`, json);
-    console.log(`[TrackLoader] Saved track ${key} to local storage`);
   }
 
   /**
@@ -102,7 +97,6 @@ export class TrackLoader {
   loadTrackFromStorage(key) {
     const json = localStorage.getItem(`track_${key}`);
     if (json) {
-      console.log(`[TrackLoader] Found saved track in localStorage for ${key}`);
       const track = Track.fromJSON(json);
       this.tracks.set(key, track);
       if (!this.trackList.includes(key)) {
@@ -127,6 +121,5 @@ export class TrackLoader {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    console.log(`[TrackLoader] Downloaded track: ${track.name}`);
   }
 }

@@ -32,8 +32,8 @@ import { BridgeManager } from "../managers/BridgeManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import {
-  buildTerrainTexturePixelData,
-  buildTerrainSpecularTexturePixelData,
+  buildTerrainIdTexturePixelData,
+  buildTerrainTypePropertyTexturePixelData,
 } from "../terrain-utils.js";
 
 /**
@@ -144,44 +144,54 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const texSize = 2000;
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
-  const diffuseData = buildTerrainTexturePixelData(terrainManager, pixelsPerCell);
-  const groundTex = RawTexture.CreateRGBATexture(
-    diffuseData.data,
-    diffuseData.width,
-    diffuseData.height,
-    scene,
-    false,
-    true,
-    Texture.BILINEAR_SAMPLINGMODE
-  );
-  groundTex.wrapU = Texture.CLAMP_ADDRESSMODE;
-  groundTex.wrapV = Texture.CLAMP_ADDRESSMODE;
-  groundTex.vScale = -1;
-  groundTex.vOffset = 1;
-  groundMat.diffuseTexture = groundTex;
+  const { createCompositeNormalMap, createTerrainRenderTargetTexture } = await import('../shaders/ground-shader.js');
 
-  const specularData = buildTerrainSpecularTexturePixelData(terrainManager, pixelsPerCell);
-  const specularTex = RawTexture.CreateRGBATexture(
-    specularData.data,
-    specularData.width,
-    specularData.height,
+  const terrainIdData = buildTerrainIdTexturePixelData(terrainManager);
+  const terrainIdTex = RawTexture.CreateRGBATexture(
+    terrainIdData.data,
+    terrainIdData.width,
+    terrainIdData.height,
     scene,
     false,
-    true,
-    Texture.BILINEAR_SAMPLINGMODE
+    false,
+    Texture.NEAREST_SAMPLINGMODE
   );
-  specularTex.wrapU = Texture.CLAMP_ADDRESSMODE;
-  specularTex.wrapV = Texture.CLAMP_ADDRESSMODE;
-  specularTex.vScale = -1;
-  specularTex.vOffset = 1;
+  terrainIdTex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  terrainIdTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+
+  const terrainTypePropertyData = buildTerrainTypePropertyTexturePixelData();
+  const terrainPropertyTex = RawTexture.CreateRGBATexture(
+    terrainTypePropertyData.data,
+    terrainTypePropertyData.width,
+    terrainTypePropertyData.height,
+    scene,
+    false,
+    false,
+    Texture.NEAREST_SAMPLINGMODE
+  );
+  terrainPropertyTex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  terrainPropertyTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+
+  const { diffuseTexture: groundTex, specularTexture: specularTex } = createTerrainRenderTargetTexture(
+    scene,
+    terrainIdTex,
+    terrainPropertyTex,
+    terrainTypePropertyData.width,
+    terrainManager.cellsPerSide,
+    texSize
+  );
+  groundMat.diffuseTexture = groundTex;
+  groundMat.diffuseTexture.vScale = -1;
+  groundMat.diffuseTexture.vOffset = 1;
   groundMat.specularTexture = specularTex;
-  
+  groundMat.specularTexture.vScale = -1;
+  groundMat.specularTexture.vOffset = 1;
+
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
   // Collect all normal map decal features from the track
   const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
   
   // Create composite normal map texture that blends base + decals
-  const { createCompositeNormalMap } = await import('../shaders/ground-shader.js');
   const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, texSize, terrainSize);
   
   groundMat.bumpTexture = compositeNormalMap;
@@ -193,6 +203,12 @@ export async function buildScene(engine, trackLoader, trackKey) {
   groundMat.bumpTexture.level = 0.25; // Adjust intensity as needed
   
   ground.material = groundMat;
+  ground.metadata = {
+    ...(ground.metadata ?? {}),
+    terrainIdTexture: terrainIdTex,
+    terrainPropertyTexture: terrainPropertyTex,
+    terrainNormalMapNames: terrainTypePropertyData.normalMapNames,
+  };
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
   driveSurfaceManager.register(ground, { surfaceType: "ground", level: 0 });
@@ -342,6 +358,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
     ground,
     groundTex,
     specularTex,
+    terrainIdTex,
+    terrainPropertyTex,
+    terrainNormalMapNames: terrainTypePropertyData.normalMapNames,
     pixelsPerCell,
     compositeNormalMap,
     checkpointManager,

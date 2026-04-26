@@ -4,8 +4,8 @@ import { DebugManager } from "../managers/DebugManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 import {
-  buildTerrainTexturePixelData,
-  buildTerrainSpecularTexturePixelData,
+  buildTerrainIdTexturePixelData,
+  updateTerrainIdTexture,
 } from "../terrain-utils.js";
 
 /**
@@ -34,6 +34,7 @@ export class EditorMode extends BaseMode {
       ground,
       groundTex,
       specularTex,
+      terrainIdTex,
       pixelsPerCell,
       compositeNormalMap,
       checkpointManager,
@@ -98,8 +99,12 @@ export class EditorMode extends BaseMode {
       steepSlopeColliderManager.rebuild();
     };
 
+    const _changedTerrainCells = [];
+
     // Fast: sync terrainManager.grid from track features (no canvas writes)
     window.rebuildTerrainGrid = () => {
+      _changedTerrainCells.length = 0;
+
       for (let row = 0; row < terrainManager.cellsPerSide; row++) {
         for (let col = 0; col < terrainManager.cellsPerSide; col++) {
           const worldX =
@@ -107,7 +112,11 @@ export class EditorMode extends BaseMode {
           const worldZ =
             (row - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
           const terrainType = currentTrack.getTerrainTypeAt(worldX, worldZ);
-          terrainManager.grid[row * terrainManager.cellsPerSide + col] = terrainType;
+          const index = row * terrainManager.cellsPerSide + col;
+          if (terrainManager.grid[index] !== terrainType) {
+            terrainManager.grid[index] = terrainType;
+            _changedTerrainCells.push({ col, row, terrainType });
+          }
         }
       }
     };
@@ -115,10 +124,11 @@ export class EditorMode extends BaseMode {
     // Slow: rebuild terrain texture buffers from terrainManager.grid (call on deselect)
     const _rebuildTerrainTextureNow = async () => {
       window.rebuildTerrainGrid();
-      const diffuseData = buildTerrainTexturePixelData(terrainManager, pixelsPerCell);
-      groundTex.update(diffuseData.data);
-      const specularData = buildTerrainSpecularTexturePixelData(terrainManager, pixelsPerCell);
-      specularTex.update(specularData.data);
+      if (_changedTerrainCells.length > 0) {
+        updateTerrainIdTexture(terrainIdTex, terrainManager);
+        groundTex.render();
+        specularTex.render();
+      }
     };
     let _rebuildTerrainTimer = null;
     window.rebuildTerrainTexture = (immediate = false) => {

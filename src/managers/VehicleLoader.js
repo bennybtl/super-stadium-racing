@@ -39,14 +39,14 @@ export class VehicleLoader {
         }
         this.vehicles.set(key, def);
         if (!this.vehicleList.includes(key)) this.vehicleList.push(key);
-        console.log(`[VehicleLoader] Loaded vehicle: ${def.name} (${key}) modelUrl=${def.modelUrl ?? 'none'}`);
+        console.debug(`[VehicleLoader] Loaded vehicle: ${def.name} (${key}) modelUrl=${def.modelUrl ?? 'none'}`);
       } catch (err) {
         console.error(`[VehicleLoader] Error loading vehicle ${path}:`, err);
       }
     });
 
     await Promise.all(loadPromises);
-    console.log(`[VehicleLoader] Loaded ${this.vehicles.size} vehicles`);
+    console.debug(`[VehicleLoader] Loaded ${this.vehicles.size} vehicles`);
     return this.vehicles;
   }
 
