@@ -164,7 +164,7 @@ export class HillEditor {
     this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
     hillData.sphere.isVisible = false;
     hillData.sphere.isPickable = false;
-    hillData.mesh.isVisible = true;
+    hillData.mesh.isVisible = this.editor.gizmosVisible;
     hillData.mesh.isPickable = true;
     this.showProperties(hillData);
     console.log('[HillEditor] Selected hill at',

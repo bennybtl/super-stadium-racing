@@ -76,7 +76,6 @@ export class SquareHillEditor {
   /** Build a box-shaped editor gizmo for a squareHill feature. */
   createVisual(feature) {
     const scene = this.editor.scene;
-    const track = this.editor.currentTrack;
     const transition = feature.transition ?? 8;
     const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     const absH = feature.heightAtMin !== undefined
@@ -181,7 +180,7 @@ export class SquareHillEditor {
     this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
     hillData.sphere.isVisible = false;
     hillData.sphere.isPickable = false;
-    hillData.mesh.isVisible = true;
+    hillData.mesh.isVisible = this.editor.gizmosVisible;
     hillData.mesh.isPickable = true;
     this.showProperties(hillData);
     console.log('[SquareHillEditor] Selected square hill at',

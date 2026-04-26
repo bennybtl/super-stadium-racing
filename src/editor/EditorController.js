@@ -1290,8 +1290,10 @@ export class EditorController {
       for (const item of items || []) setMeshVisibility(item, props);
     };
 
-    setListVisibility(this.hillEditor?.meshes, ['node', 'mesh', 'sphere']);
-    setListVisibility(this.squareHillEditor?.meshes, ['node', 'mesh', 'sphere']);
+    // The highlight mesh for hills and square hills is selected-only,
+    // so do not force all of those meshes visible on a global gizmo toggle.
+    setListVisibility(this.hillEditor?.meshes, ['node', 'sphere']);
+    setListVisibility(this.squareHillEditor?.meshes, ['node', 'sphere']);
     setListVisibility(this.terrainShapeEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.normalMapDecalEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.tireStackEditor?.meshes, ['node', 'mesh']);
@@ -1359,6 +1361,13 @@ export class EditorController {
         if (h.mesh) h.mesh.isVisible = visible;
       }
       if (this.aiPathEditor.lineMesh) this.aiPathEditor.lineMesh.isVisible = visible;
+    }
+
+    if (this.hillEditor?.selected?.mesh) {
+      this.hillEditor.selected.mesh.isVisible = visible;
+    }
+    if (this.squareHillEditor?.selected?.mesh) {
+      this.squareHillEditor.selected.mesh.isVisible = visible;
     }
   }
 }
