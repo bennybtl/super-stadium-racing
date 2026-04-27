@@ -158,6 +158,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   );
   terrainIdTex.wrapU = Texture.CLAMP_ADDRESSMODE;
   terrainIdTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  terrainIdTex.gammaSpace = false;
 
   const terrainTypePropertyData = buildTerrainTypePropertyTexturePixelData();
   const terrainPropertyTex = RawTexture.CreateRGBATexture(
@@ -171,6 +172,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   );
   terrainPropertyTex.wrapU = Texture.CLAMP_ADDRESSMODE;
   terrainPropertyTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  terrainPropertyTex.gammaSpace = false;
 
   const { diffuseTexture: groundTex, specularTexture: specularTex } = createTerrainRenderTargetTexture(
     scene,
@@ -180,6 +182,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainManager.cellsPerSide,
     texSize
   );
+  groundTex.gammaSpace = false;
+  specularTex.gammaSpace = false;
+  groundMat.disableGammaTransform = true;
   groundMat.diffuseTexture = groundTex;
   groundMat.diffuseTexture.vScale = -1;
   groundMat.diffuseTexture.vOffset = 1;

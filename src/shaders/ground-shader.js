@@ -132,6 +132,7 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
     rawTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
     rawTexture.vScale = -1;
     rawTexture.vOffset = 1;
+    rawTexture.gammaSpace = false;
     return rawTexture;
   }
   
@@ -207,6 +208,7 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
   rawTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
   rawTexture.vScale = -1;
   rawTexture.vOffset = 1;
+  rawTexture.gammaSpace = false;
   return rawTexture;
 }
 
@@ -397,6 +399,7 @@ function _createTerrainRenderTargetTexture(scene, name, terrainIdTex, terrainPro
 
   renderTarget.wrapU = Texture.CLAMP_ADDRESSMODE;
   renderTarget.wrapV = Texture.CLAMP_ADDRESSMODE;
+  renderTarget.gammaSpace = false;
   renderTarget.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME;
 
   const postProcess = new PostProcess(
