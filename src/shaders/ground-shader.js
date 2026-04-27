@@ -430,15 +430,21 @@ function _createTerrainRenderTargetTexture(scene, name, terrainIdTex, terrainPro
     effect.setTexture("terrainPropertySampler", terrainPropertyTex);
   };
 
+  // Guard the bake: customRenderFunction is a no-op until the shader has
+  // compiled. Once compiled, flip the flag and switch to RENDER_ONCE so the
+  // scene performs exactly one bake on the next frame, then stops.
+  let _effectReady = false;
   postProcess.onEffectCreatedObservable.addOnce((effect) => {
     effect.executeWhenCompiled(() => {
-      renderTarget.render();
+      _effectReady = true;
       renderTarget.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+      renderTarget.render();
     });
   });
 
   const engine = scene.getEngine();
   renderTarget.customRenderFunction = () => {
+    if (!_effectReady) return;
     const target = renderTarget.renderTarget;
     if (!target) {
       return;
@@ -446,6 +452,10 @@ function _createTerrainRenderTargetTexture(scene, name, terrainIdTex, terrainPro
     scene.postProcessManager.directRender([postProcess], target, true);
     engine.restoreDefaultFramebuffer();
   };
+
+  renderTarget.onDisposeObservable.addOnce(() => {
+    postProcess.dispose();
+  });
 
   return renderTarget;
 }
