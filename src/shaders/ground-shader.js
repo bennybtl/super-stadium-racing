@@ -6,7 +6,7 @@
  * to the standard material's bump texture.
  */
 
-import { RawTexture, Texture, Vector2, RenderTargetTexture, PostProcess, Effect, Constants } from "@babylonjs/core";
+import { RawTexture, Texture, Vector2, RenderTargetTexture, PostProcess, Effect, Constants, ShaderMaterial, Vector3, Color3 } from "@babylonjs/core";
 
 /**
  * Load and cache normal map images by filename.
@@ -301,8 +301,7 @@ float decodeTerrainId(vec4 encoded) {
 
 vec4 sampleTypeProperties(float typeIndex) {
   float u = (typeIndex + 0.5) / terrainTypeCount;
-  float v = 0.25;
-  return texture2D(terrainPropertySampler, vec2(u, v));
+  return texture2D(terrainPropertySampler, vec2(u, 0.5));
 }
 
 vec4 sampleTerrainId(vec2 cellUV) {
@@ -480,4 +479,238 @@ export function createTerrainRenderTargetTexture(scene, terrainIdTex, terrainPro
   const { renderTarget: specularTexture, rebake: rebakeSpecular } = _createTerrainRenderTargetTexture(scene, "terrainSpecular", terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, textureSize, 1);
   const rebake = () => { rebakeDiffuse(); rebakeSpecular(); };
   return { diffuseTexture, specularTexture, rebake };
+}
+
+// ---------------------------------------------------------------------------
+// ShaderMaterial-based terrain renderer
+// Replaces the RTT bake + StandardMaterial stack.  The terrain blending runs
+// per-fragment directly on the ground mesh, reading terrainIdTex live.
+// No rebake is needed after terrain edits — updateTerrainIdTexture() is enough.
+// ---------------------------------------------------------------------------
+
+const GROUND_TERRAIN_VERTEX_SHADER = `
+attribute vec3 position;
+attribute vec3 normal;
+attribute vec2 uv;
+
+uniform mat4 worldViewProjection;
+uniform mat4 world;
+
+varying vec2 vUV;
+varying vec3 vPositionW;
+varying vec3 vNormalW;
+
+void main() {
+    vec4 worldPos = world * vec4(position, 1.0);
+    vPositionW = worldPos.xyz;
+    // Normal matrix: inverse-transpose of the upper-left 3x3 of world.
+    // For uniform scaling (terrain mesh never shears) this simplifies to mat3(world).
+    vNormalW = normalize(mat3(world) * normal);
+    vUV = uv;
+    gl_Position = worldViewProjection * vec4(position, 1.0);
+}
+`;
+
+const GROUND_TERRAIN_FRAGMENT_SHADER = `
+#extension GL_OES_standard_derivatives : enable
+
+varying vec2 vUV;
+varying vec3 vPositionW;
+varying vec3 vNormalW;
+
+// Terrain index texture: R channel = terrain type index (0-255), nearest sampling
+uniform sampler2D terrainIdSampler;
+// Terrain property texture: RGBA = (R,G,B,specular) per terrain type, 1×numTypes
+uniform sampler2D terrainPropertySampler;
+// Composite normal map (canvas-baked, per-terrain-type base + decals)
+uniform sampler2D bumpSampler;
+
+uniform float terrainTypeCount;   // number of terrain types (width of terrainPropertySampler)
+uniform float terrainCellCount;   // grid cells per side
+
+// Lighting uniforms
+uniform vec3  sunDirection;  // world-space direction FROM surface TOWARD sun (normalized)
+uniform vec3  sunDiffuse;    // sun diffuse colour
+uniform vec3  skyColor;      // hemisphere ambient – sky (up) colour
+uniform vec3  groundColor;   // hemisphere ambient – ground (down) colour
+uniform vec3  eyePosition;   // camera world position
+uniform float specularPower; // Blinn-Phong exponent
+
+// ---- helpers ---------------------------------------------------------------
+
+float decodeTerrainId(vec4 encoded) {
+    return floor(encoded.r * 255.0 + 0.5);
+}
+
+vec4 sampleTypeProperties(float typeIndex) {
+    float u = (typeIndex + 0.5) / terrainTypeCount;
+    return texture2D(terrainPropertySampler, vec2(u, 0.5));
+}
+
+// Blend contribution from one neighbor into accum/totalWeight.
+// Only accumulates if the neighbor has a different type than the center.
+void blendNeighbor(vec2 nc, float centerId, float w,
+                   inout vec4 accum, inout float totalWeight) {
+    if (w <= 0.0) return;
+    float nId = decodeTerrainId(texture2D(terrainIdSampler, (nc + 0.5) / terrainCellCount));
+    if (nId != centerId) {
+        accum += sampleTypeProperties(nId) * w;
+        totalWeight += w;
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+void main() {
+    // The terrainIdTex and compositeNormalMap were built/stored with v=0 at the
+    // top of the data array (image convention), but when uploaded to WebGL the
+    // texture is NOT Y-flipped, so v=0 is the bottom of the texture in UV space.
+    // The ground mesh UV v=0 is at -Z (terrain grid row 0 = most-negative Z),
+    // which coincides with the bottom of the GL texture.  So no flip is needed
+    // here — ground mesh UV maps directly to terrainIdTex UV.
+    //
+    // The RTT pipeline needed vScale=-1/vOffset=1 because an RTT bake introduces
+    // its own Y-inversion; the ShaderMaterial reads the raw texture directly.
+    vec2 terrainUV = vUV;
+
+    // ---- 8-neighbor terrain blending (4 cardinal + 4 diagonal) ----
+    float n = terrainCellCount;
+    vec2 coord = clamp(terrainUV * n, vec2(0.0), vec2(n - 1.0));
+    vec2 cell  = floor(coord);
+    vec2 local = fract(coord);
+
+    float centerId   = decodeTerrainId(texture2D(terrainIdSampler, (cell + 0.5) / n));
+    vec4  centerProps = sampleTypeProperties(centerId);
+    vec4  accum      = centerProps;
+    float totalWeight = 1.0;
+
+    float cx = cell.x, cy = cell.y;
+    float lx = local.x, ly = local.y;
+    float nx_max = n - 1.0;
+
+    // Cardinal
+    blendNeighbor(vec2(min(cx + 1.0, nx_max), cy), centerId, lx,        accum, totalWeight);
+    blendNeighbor(vec2(max(cx - 1.0, 0.0),    cy), centerId, 1.0 - lx,  accum, totalWeight);
+    blendNeighbor(vec2(cx, min(cy + 1.0, nx_max)), centerId, ly,        accum, totalWeight);
+    blendNeighbor(vec2(cx, max(cy - 1.0, 0.0)),    centerId, 1.0 - ly,  accum, totalWeight);
+
+    // Diagonal
+    blendNeighbor(vec2(min(cx + 1.0, nx_max), min(cy + 1.0, nx_max)), centerId, lx * ly,               accum, totalWeight);
+    blendNeighbor(vec2(max(cx - 1.0, 0.0),    min(cy + 1.0, nx_max)), centerId, (1.0 - lx) * ly,       accum, totalWeight);
+    blendNeighbor(vec2(min(cx + 1.0, nx_max), max(cy - 1.0, 0.0)),    centerId, lx * (1.0 - ly),       accum, totalWeight);
+    blendNeighbor(vec2(max(cx - 1.0, 0.0),    max(cy - 1.0, 0.0)),    centerId, (1.0 - lx) * (1.0 - ly), accum, totalWeight);
+
+    vec4  terrainResult   = accum / totalWeight;
+    vec3  albedo          = terrainResult.rgb;
+    float specularIntensity = terrainResult.a;
+
+    // ---- Normal map (TBN built from screen-space derivatives) ----
+    vec4 bumpSample = texture2D(bumpSampler, terrainUV);
+    vec3 bumpTangentNormal = bumpSample.rgb * 2.0 - 1.0;
+
+    vec3 dPdx  = dFdx(vPositionW);
+    vec3 dPdy  = dFdy(vPositionW);
+    vec2 dUVdx = dFdx(vUV);
+    vec2 dUVdy = dFdy(vUV);
+    float det  = dUVdx.x * dUVdy.y - dUVdx.y * dUVdy.x;
+    vec3 tangent, bitangent;
+    if (abs(det) > 1e-6) {
+        float invDet = 1.0 / det;
+        tangent   = normalize(( dUVdy.y * dPdx - dUVdx.y * dPdy) * invDet);
+        bitangent = normalize((-dUVdy.x * dPdx + dUVdx.x * dPdy) * invDet);
+    } else {
+        tangent   = vec3(1.0, 0.0, 0.0);
+        bitangent = vec3(0.0, 0.0, 1.0);
+    }
+    vec3 normalW = normalize(mat3(tangent, bitangent, vNormalW) * bumpTangentNormal);
+
+    // ---- Phong lighting ----
+    vec3 viewDir = normalize(eyePosition - vPositionW);
+
+    // Hemisphere ambient
+    float upFactor = dot(normalW, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
+    vec3 ambient = mix(groundColor, skyColor, upFactor);
+
+    // Directional sun – diffuse
+    float NdotL = max(dot(normalW, sunDirection), 0.0);
+    vec3  diffuse = sunDiffuse * NdotL;
+
+    // Blinn-Phong specular
+    vec3  halfVec = normalize(sunDirection + viewDir);
+    float spec    = pow(max(dot(normalW, halfVec), 0.0), specularPower);
+    vec3  specular = sunDiffuse * spec * specularIntensity;
+
+    vec3 finalColor = (ambient + diffuse) * albedo + specular;
+    gl_FragColor = vec4(finalColor, 1.0);
+}
+`;
+
+/**
+ * Create a ShaderMaterial that renders terrain blending + normal map + Phong
+ * lighting directly on the ground mesh, without any RTT bake step.
+ *
+ * After terrain edits call updateTerrainIdTexture() — no rebake required.
+ *
+ * @param {Scene}      scene
+ * @param {RawTexture} terrainIdTex          cellsPerSide×cellsPerSide, R = type index
+ * @param {RawTexture} terrainPropertyTex    numTypes×1, RGBA = (r,g,b,specular)
+ * @param {RawTexture} compositeNormalMap    canvas-baked normal map
+ * @param {number}     terrainTypeCount      number of terrain types
+ * @param {number}     terrainCellCount      grid cells per side
+ * @returns {ShaderMaterial}
+ */
+export function createTerrainShaderMaterial(scene, terrainIdTex, terrainPropertyTex, compositeNormalMap, terrainTypeCount, terrainCellCount) {
+  const mat = new ShaderMaterial(
+    "groundTerrainMat",
+    scene,
+    {
+      vertexSource:   GROUND_TERRAIN_VERTEX_SHADER,
+      fragmentSource: GROUND_TERRAIN_FRAGMENT_SHADER,
+    },
+    {
+      attributes: ["position", "normal", "uv"],
+      uniforms: [
+        "worldViewProjection", "world",
+        "terrainTypeCount", "terrainCellCount",
+        "sunDirection", "sunDiffuse",
+        "skyColor", "groundColor",
+        "eyePosition", "specularPower",
+      ],
+      samplers: ["terrainIdSampler", "terrainPropertySampler", "bumpSampler"],
+    }
+  );
+
+  mat.setTexture("terrainIdSampler",       terrainIdTex);
+  mat.setTexture("terrainPropertySampler", terrainPropertyTex);
+  mat.setTexture("bumpSampler",            compositeNormalMap);
+  mat.setFloat("terrainTypeCount",  terrainTypeCount);
+  mat.setFloat("terrainCellCount",  terrainCellCount);
+  mat.setFloat("specularPower",     48.0);
+
+  // Per-frame uniforms pushed each time the material is bound to a mesh.
+  // Sun direction and ambient colours are effectively constant but reading
+  // them from the scene objects keeps this decoupled from hard-coded values.
+  mat.onBindObservable.add(() => {
+    const sun     = scene.getLightByName("sun");
+    const ambient = scene.getLightByName("ambient");
+
+    if (sun) {
+      // sun.direction points FROM light TOWARD scene; negate for "toward light"
+      const d = sun.direction;
+      mat.setVector3("sunDirection", new Vector3(-d.x, -d.y, -d.z).normalize());
+      mat.setColor3("sunDiffuse", sun.diffuse);
+    }
+
+    if (ambient) {
+      mat.setColor3("skyColor",    ambient.diffuse);
+      mat.setColor3("groundColor", ambient.groundColor);
+    }
+
+    const cam = scene.activeCamera;
+    if (cam) {
+      mat.setVector3("eyePosition", cam.globalPosition);
+    }
+  });
+
+  return mat;
 }

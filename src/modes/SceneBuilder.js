@@ -132,19 +132,13 @@ export async function buildScene(engine, trackLoader, trackKey) {
   ground.setVerticesData(VertexBuffer.PositionKind, positions);
   ground.createNormals(true);
 
-  const groundMat = new StandardMaterial("groundMat", scene);
-  // specularColor = max highlight colour; the specularTexture scales it per-pixel
-  // so dry terrain stays matte while mud/water cells become shiny/wet.
-  groundMat.specularColor = new Color3(1, 1, 1);
-  groundMat.specularPower = 48; // tighter highlight → wet/glossy look
-
   // -- Ground texture --
   // Keep this divisible by terrainManager.cellsPerSide (40) to avoid
   // floor/ceil cell raster overlap seams in terrain texture painting.
   const texSize = 2000;
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
-  const { createCompositeNormalMap, createTerrainRenderTargetTexture } = await import('../shaders/ground-shader.js');
+  const { createCompositeNormalMap, createTerrainShaderMaterial } = await import('../shaders/ground-shader.js');
 
   const terrainIdData = buildTerrainIdTexturePixelData(terrainManager);
   const terrainIdTex = RawTexture.CreateRGBATexture(
@@ -174,44 +168,33 @@ export async function buildScene(engine, trackLoader, trackKey) {
   terrainPropertyTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   terrainPropertyTex.gammaSpace = false;
 
-  const { diffuseTexture: groundTex, specularTexture: specularTex, rebake: rebakeTerrainTexture } = createTerrainRenderTargetTexture(
-    scene,
-    terrainIdTex,
-    terrainPropertyTex,
-    terrainTypePropertyData.width,
-    terrainManager.cellsPerSide,
-    texSize
-  );
-  groundTex.gammaSpace = false;
-  specularTex.gammaSpace = false;
-  groundMat.diffuseTexture = groundTex;
-  groundMat.diffuseTexture.vScale = -1;
-  groundMat.diffuseTexture.vOffset = 1;
-  groundMat.specularTexture = specularTex;
-  groundMat.specularTexture.vScale = -1;
-  groundMat.specularTexture.vOffset = 1;
+  const groundTex = null;
+  const specularTex = null;
+  const rebakeTerrainTexture = () => {}; // no-op: ShaderMaterial reads terrainIdTex live
 
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
   // Collect all normal map decal features from the track
   const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
-  
+
   // Create composite normal map texture that blends base + decals
   const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, texSize, terrainSize);
-  
-  groundMat.bumpTexture = compositeNormalMap;
-  groundMat.bumpTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
-  groundMat.bumpTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
-  // Flip vertically to match diffuse texture orientation
-  groundMat.bumpTexture.vScale = -1;
-  groundMat.bumpTexture.vOffset = 1;
-  groundMat.bumpTexture.level = 0.25; // Adjust intensity as needed
-  
-  ground.material = groundMat;
+
+  // Build ShaderMaterial: terrain blending + normal map + Phong lighting,
+  // all running per-fragment on the ground mesh.
+  const groundShaderMat = createTerrainShaderMaterial(
+    scene,
+    terrainIdTex,
+    terrainPropertyTex,
+    compositeNormalMap,
+    terrainTypePropertyData.width,
+    terrainManager.cellsPerSide
+  );
+
+  ground.material = groundShaderMat;
   ground.metadata = {
     ...(ground.metadata ?? {}),
     terrainIdTexture: terrainIdTex,
     terrainPropertyTexture: terrainPropertyTex,
-    terrainNormalMapNames: terrainTypePropertyData.normalMapNames,
   };
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
@@ -365,7 +348,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
     rebakeTerrainTexture,
     terrainIdTex,
     terrainPropertyTex,
-    terrainNormalMapNames: terrainTypePropertyData.normalMapNames,
     pixelsPerCell,
     compositeNormalMap,
     checkpointManager,
