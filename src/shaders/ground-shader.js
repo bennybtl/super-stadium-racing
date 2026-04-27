@@ -288,10 +288,6 @@ export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecal
 
 const TERRAIN_EXPAND_SHADER_NAME = "terrainExpand";
 Effect.ShadersStore[`${TERRAIN_EXPAND_SHADER_NAME}PixelShader`] = `
-#ifdef GL_ES
-precision highp float;
-#endif
-
 varying vec2 vUV;
 uniform sampler2D terrainIdSampler;
 uniform sampler2D terrainPropertySampler;
@@ -430,38 +426,58 @@ function _createTerrainRenderTargetTexture(scene, name, terrainIdTex, terrainPro
     effect.setTexture("terrainPropertySampler", terrainPropertyTex);
   };
 
-  // Guard the bake: customRenderFunction is a no-op until the shader has
-  // compiled. Once compiled, flip the flag and switch to RENDER_ONCE so the
-  // scene performs exactly one bake on the next frame, then stops.
+  // customRenderFunction must be assigned BEFORE registering the compilation
+  // callback. When Babylon's effect cache is warm (e.g. re-entering editor
+  // mode after a game session), executeWhenCompiled fires synchronously inside
+  // the PostProcess constructor, meaning render() would be called before
+  // customRenderFunction exists — producing a black bake.
   let _effectReady = false;
-  postProcess.onEffectCreatedObservable.addOnce((effect) => {
-    effect.executeWhenCompiled(() => {
-      _effectReady = true;
-      renderTarget.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
-      renderTarget.render();
-    });
-  });
-
+  let _bakeCount = 0;
   const engine = scene.getEngine();
-  renderTarget.customRenderFunction = () => {
-    if (!_effectReady) return;
+
+  console.debug(`[TerrainRTT:${name}] created, waiting for shader compilation`);
+
+  const rebake = () => {
     const target = renderTarget.renderTarget;
-    if (!target) {
+    if (!_effectReady) {
+      console.warn(`[TerrainRTT:${name}] rebake() called before effect ready — ignoring`);
       return;
     }
+    if (!target) {
+      console.warn(`[TerrainRTT:${name}] rebake() called but renderTarget is null`);
+      return;
+    }
+    _bakeCount++;
+    console.debug(`[TerrainRTT:${name}] baking (call #${_bakeCount})`);
     scene.postProcessManager.directRender([postProcess], target, true);
     engine.restoreDefaultFramebuffer();
+    console.debug(`[TerrainRTT:${name}] bake complete`);
   };
+
+  // customRenderFunction is NOT used — Babylon's RenderingManager only calls it
+  // when iterating rendering groups that contain meshes. Since this RTT has an
+  // empty render list, customRenderFunction would never fire. We bake directly
+  // via directRender instead.
+
+  postProcess.onEffectCreatedObservable.addOnce((effect) => {
+    console.debug(`[TerrainRTT:${name}] effect created`);
+    effect.executeWhenCompiled(() => {
+      console.debug(`[TerrainRTT:${name}] shader compiled, triggering bake`);
+      _effectReady = true;
+      rebake();
+    });
+  });
 
   renderTarget.onDisposeObservable.addOnce(() => {
     postProcess.dispose();
   });
 
-  return renderTarget;
+  return { renderTarget, rebake };
 }
 
 export function createTerrainRenderTargetTexture(scene, terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, textureSize) {
-  const diffuseTexture = _createTerrainRenderTargetTexture(scene, "terrainDiffuse", terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, textureSize, 0);
-  const specularTexture = _createTerrainRenderTargetTexture(scene, "terrainSpecular", terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, textureSize, 1);
-  return { diffuseTexture, specularTexture };
+  const { renderTarget: diffuseTexture, rebake: rebakeDiffuse } = _createTerrainRenderTargetTexture(scene, "terrainDiffuse", terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, textureSize, 0);
+  const { renderTarget: specularTexture, rebake: rebakeSpecular } = _createTerrainRenderTargetTexture(scene, "terrainSpecular", terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, textureSize, 1);
+  const rebake = () => { rebakeDiffuse(); rebakeSpecular(); };
+  return { diffuseTexture, specularTexture, rebake };
 }

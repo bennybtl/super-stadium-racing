@@ -4,7 +4,6 @@ import { DebugManager } from "../managers/DebugManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 import {
-  buildTerrainIdTexturePixelData,
   updateTerrainIdTexture,
 } from "../terrain-utils.js";
 
@@ -34,6 +33,7 @@ export class EditorMode extends BaseMode {
       ground,
       groundTex,
       specularTex,
+      rebakeTerrainTexture,
       terrainIdTex,
       pixelsPerCell,
       compositeNormalMap,
@@ -99,36 +99,28 @@ export class EditorMode extends BaseMode {
       steepSlopeColliderManager.rebuild();
     };
 
-    const _changedTerrainCells = [];
-
     // Fast: sync terrainManager.grid from track features (no canvas writes)
     window.rebuildTerrainGrid = () => {
-      _changedTerrainCells.length = 0;
-
       for (let row = 0; row < terrainManager.cellsPerSide; row++) {
         for (let col = 0; col < terrainManager.cellsPerSide; col++) {
           const worldX =
             (col - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
           const worldZ =
             (row - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
-          const terrainType = currentTrack.getTerrainTypeAt(worldX, worldZ);
-          const index = row * terrainManager.cellsPerSide + col;
-          if (terrainManager.grid[index] !== terrainType) {
-            terrainManager.grid[index] = terrainType;
-            _changedTerrainCells.push({ col, row, terrainType });
-          }
+          terrainManager.grid[row * terrainManager.cellsPerSide + col] =
+            currentTrack.getTerrainTypeAt(worldX, worldZ);
         }
       }
     };
 
-    // Slow: rebuild terrain texture buffers from terrainManager.grid (call on deselect)
-    const _rebuildTerrainTextureNow = async () => {
+    // Rebuild terrain texture buffers from terrainManager.grid (call on deselect)
+    const _rebuildTerrainTextureNow = () => {
+      console.debug('[EditorMode] rebuildTerrainTexture: syncing grid...');
       window.rebuildTerrainGrid();
-      if (_changedTerrainCells.length > 0) {
-        updateTerrainIdTexture(terrainIdTex, terrainManager);
-        groundTex.render();
-        specularTex.render();
-      }
+      console.debug('[EditorMode] rebuildTerrainTexture: updating id texture and re-baking...');
+      updateTerrainIdTexture(terrainIdTex, terrainManager);
+      rebakeTerrainTexture();
+      console.debug('[EditorMode] rebuildTerrainTexture: done');
     };
     let _rebuildTerrainTimer = null;
     window.rebuildTerrainTexture = (immediate = false) => {
