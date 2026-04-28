@@ -138,7 +138,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const texSize = 2000;
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
-  const { createCompositeNormalMap, createTerrainShaderMaterial } = await import('../shaders/ground-shader.js');
+  const { createCompositeNormalMap, createTerrainMaterial } = await import('../shaders/ground-shader.js');
 
   const terrainIdData = buildTerrainIdTexturePixelData(terrainManager);
   const terrainIdTex = RawTexture.CreateRGBATexture(
@@ -173,24 +173,24 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const rebakeTerrainTexture = () => {}; // no-op: ShaderMaterial reads terrainIdTex live
 
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
-  // Collect all normal map decal features from the track
   const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
-
-  // Create composite normal map texture that blends base + decals
   const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, texSize, terrainSize);
 
-  // Build ShaderMaterial: terrain blending + normal map + Phong lighting,
-  // all running per-fragment on the ground mesh.
-  const groundShaderMat = createTerrainShaderMaterial(
+  // Build StandardMaterial + TerrainBlendPlugin.
+  // StandardMaterial handles CSM shadow receiving, lighting, and normal mapping.
+  // The plugin injects 8-neighbor terrain blending per-fragment.
+  const groundMat = createTerrainMaterial(
     scene,
     terrainIdTex,
     terrainPropertyTex,
-    compositeNormalMap,
     terrainTypePropertyData.width,
-    terrainManager.cellsPerSide
+    terrainManager.cellsPerSide,
+    terrainSize / 2
   );
+  groundMat.bumpTexture = compositeNormalMap;
+  groundMat.bumpTexture.level = 0.75;
 
-  ground.material = groundShaderMat;
+  ground.material = groundMat;
   ground.metadata = {
     ...(ground.metadata ?? {}),
     terrainIdTexture: terrainIdTex,
