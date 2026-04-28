@@ -3,8 +3,7 @@ import {
   HavokPlugin,
   Vector3,
   HemisphericLight,
-  DirectionalLight,
-  CascadedShadowGenerator,
+  PointLight,
   ShadowGenerator,
   MeshBuilder,
   StandardMaterial,
@@ -60,29 +59,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   camera.setTarget(Vector3.Zero());
   const cameraController = new CameraController(camera, new Vector3(0, 28, -20));
 
-  // --- Lighting ---
+  // --- Ambient ---
   const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);
-  ambient.intensity = 0.4;
+  ambient.intensity = 0.35;
   ambient.groundColor = new Color3(0.2, 0.15, 0.1);
-
-  const sun = new DirectionalLight("sun", new Vector3(-1, -2, -1).normalize(), scene);
-  sun.intensity = 1.2;
-  sun.position = new Vector3(20, 60, 20);
-
-  // -- Shadows --
-  // Use CascadedShadowGenerator for huge outdoors over DirectionalLight to map automatically
-  const shadows = new CascadedShadowGenerator(2048, sun);
-  shadows.usePercentageCloserFiltering = true;
-  shadows.filteringQuality = 1; // 1 = Medium, 2 = High (for PCF)
-  // Automatically configure cascades over the main camera clipping planes
-  shadows.lambda = 0.8;
-  shadows.cascadeBlendPercentage = 0.1;
-  shadows.depthClamp = false;
-  shadows.autoCalcDepthBounds = true;
-  
-  // Fix shadow acne / self-shadowing interference patterns on meshes
-  shadows.bias = 0.005;
-  shadows.normalBias = 0.02;
 
   // -- Track --
   let currentTrack;
@@ -100,6 +80,32 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackDepth = currentTrack.depth ?? 160;
   const maxTrackDim = Math.max(trackWidth, trackDepth);
   const terrainSize = maxTrackDim + 20;
+
+  // -- Stadium lights --
+  // 4 point lights at the corners of the track, elevated like stadium floodlights.
+  const _lightHeight = 60;
+  const _lightSpread = terrainSize * 0.55;
+  const _stadiumPositions = [
+    new Vector3(-_lightSpread, _lightHeight, -_lightSpread),
+    new Vector3( _lightSpread, _lightHeight, -_lightSpread),
+    new Vector3( _lightSpread, _lightHeight,  _lightSpread),
+    new Vector3(-_lightSpread, _lightHeight,  _lightSpread),
+  ];
+  const _stadiumLights = _stadiumPositions.map((pos, i) => {
+    const light = new PointLight(`stadiumLight${i}`, pos, scene);
+    light.intensity = 0.85;
+    light.range = terrainSize * 2.2;
+    light.diffuse  = new Color3(1.0, 0.97, 1.00);
+    light.specular = new Color3(1.0, 0.97, 1.00);
+    return light;
+  });
+
+  // One light casts shadows (cube-map ShadowGenerator).
+  const shadows = new ShadowGenerator(1024, _stadiumLights[0]);
+  shadows.useBlurExponentialShadowMap = true;
+  shadows.blurKernel = 16;
+  shadows.bias = 0.005;
+  shadows.normalBias = 0.02;
 
   // -- Terrain manager --
   // Use 1m terrain cells for smoother visual blending between terrain types.
@@ -188,7 +194,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainSize / 2
   );
   groundMat.bumpTexture = compositeNormalMap;
+  groundMat.bumpTexture.vScale = -1;
+  groundMat.bumpTexture.vOffset = 1;
   groundMat.bumpTexture.level = 0.75;
+  groundMat.invertNormalMapY = true;
 
   ground.material = groundMat;
   ground.metadata = {
