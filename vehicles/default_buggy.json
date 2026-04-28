@@ -1,9 +1,15 @@
 {
   "id": "default_buggy",
   "name": "2WD Buggy",
-  "modelFile": "default_buggy.obj",
+  "modelFile": "offroad-buggy-opt.obj",
   "imageFile": "default_buggy.png",
   "defaultColor": [0.8, 0.2, 0.5],
+  "meshColors": {
+    "Body_Body1": [1.0, 0, 0],
+    "cockpit_Body6": [0.1, 0.1, 0.1],
+    "wing_Body7": [0.9, 0.9, 0.9],
+    "frame_Body9": [0.7, 0.7, 0.7]
+  },
   "bodyTransform": {
     "position": [0, 0.4, 0.0],
     "rotation": [-1.5708, 0, 0],

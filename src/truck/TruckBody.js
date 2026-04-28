@@ -1,4 +1,4 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3, SceneLoader, TransformNode } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, TransformNode } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import truckTireUrl  from "../assets/truck-tire-2.obj?url";
 
@@ -43,8 +43,6 @@ export class TruckBody {
     this._wheelMaxDrop   = (g.maxDrop ?? 0.32);
     this._wheelMaxRise   = (g.maxRise ?? 0.15);
     this._wheelFollowMinGroundedness = (g.followMinGroundedness ?? 0.2);
-    // Cap expensive wheel surface sampling (raycasts) to a fixed cadence.
-    this._wheelSampleInterval = g.surfaceSampleInterval ?? (1 / 10);
 
     // Body OBJ URL — resolved by VehicleLoader and stored on the def
     this._modelUrl = vehicleDef?.modelUrl ?? null;
@@ -86,11 +84,13 @@ export class TruckBody {
     this._wheels = [];  // { mesh, isFront, side: 'L'|'R', baseLocalY }
     this._sampledWheelBaseY = [];
     this._hasWheelSamples = false;
-    this._wheelSampleTimer = 0;
 
     // Reused temporaries for wheel anchor world transform (avoid per-frame allocs)
     this._tmpAnchorLocal = new Vector3();
     this._tmpAnchorWorld = new Vector3();
+    this._tmpDesiredWorld = new Vector3();
+    this._tmpDesiredLocal = new Vector3();
+    this._tmpInvMatrix    = new Matrix();
 
     this._steerAngle = 0;  // current front-wheel steer angle (radians)
 
@@ -279,33 +279,35 @@ export class TruckBody {
 
     let sampledWheelBaseY = this._hasWheelSamples ? this._sampledWheelBaseY : null;
     if (sampleSurfaceY && groundedness >= this._wheelFollowMinGroundedness) {
-      this._wheelSampleTimer -= dt;
-      const shouldResample = this._wheelSampleTimer <= 0;
-
-      if (shouldResample) {
       const parentY = this.parent.position.y;
-      const wheelRootY = this._wheelRoot.position.y;
       const fromY = parentY + 2;
       const world = this.parent.getWorldMatrix();
+
+      // Invert the wheel root's world matrix once so we can convert a desired
+      // world-space wheel position back to wheel-root local space.  This
+      // correctly accounts for parent pitch, roll, and yaw — a plain
+      // (floorY - parentY) arithmetic only works when the truck is flat.
+      this._wheelRoot.getWorldMatrix().invertToRef(this._tmpInvMatrix);
 
       for (let i = 0; i < this._wheels.length; i++) {
         const w = this._wheels[i];
         this._tmpAnchorLocal.set(w.anchorX, 0, w.anchorZ);
         Vector3.TransformCoordinatesToRef(this._tmpAnchorLocal, world, this._tmpAnchorWorld);
         const floorY = sampleSurfaceY(this._tmpAnchorWorld.x, this._tmpAnchorWorld.z, fromY, terrainY ?? 0);
-        const targetBaseY = floorY + this._wheelRadius - parentY - wheelRootY;
+
+        // Desired wheel-centre world position → wheel-root local space.
+        this._tmpDesiredWorld.set(this._tmpAnchorWorld.x, floorY + this._wheelRadius, this._tmpAnchorWorld.z);
+        Vector3.TransformCoordinatesToRef(this._tmpDesiredWorld, this._tmpInvMatrix, this._tmpDesiredLocal);
+
         const minBaseY = w.baseLocalY - this._wheelMaxDrop;
         const maxBaseY = w.baseLocalY + this._wheelMaxRise;
-        this._sampledWheelBaseY[i] = Math.max(minBaseY, Math.min(maxBaseY, targetBaseY));
+        this._sampledWheelBaseY[i] = Math.max(minBaseY, Math.min(maxBaseY, this._tmpDesiredLocal.y));
       }
 
-        sampledWheelBaseY = this._sampledWheelBaseY;
-        this._hasWheelSamples = true;
-        this._wheelSampleTimer = this._wheelSampleInterval;
-      }
+      sampledWheelBaseY = this._sampledWheelBaseY;
+      this._hasWheelSamples = true;
     } else {
-      // Force immediate resample when ground-following becomes active again.
-      this._wheelSampleTimer = 0;
+      this._hasWheelSamples = false;
     }
 
     this._animateWheels(state, speed, dt, input, sampledWheelBaseY);
