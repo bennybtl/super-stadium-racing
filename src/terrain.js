@@ -25,18 +25,28 @@ export const TERRAIN_TYPES = {
     dragMultiplier: 0.8,
     roughness: 0.1,          // Very slight — compacted surface
     normalMap: 'cloud_h-normal.png',
-    normalMapIntensity: 1.0, // Moderate dirt texture
+    normalMapIntensity: 0.8, // Moderate dirt texture
     specular: 0.10,          // Matte dry dirt
   },
-  LOOSE_DIRT: {
-    name: "loose_dirt",
+  LOAMY_DIRT: {
+    name: "loamy_dirt",
     gripMultiplier: 0.5,    // Slides more
-    color: TERRAIN_COLORS.loose_dirt,
-    dragMultiplier: 1.0,
+    color: TERRAIN_COLORS.loamy_dirt,
+    dragMultiplier: 1.2,
     roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: '6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
     specular: 0.03,          // Matte dry dirt
+  },
+  LOOSE_DIRT: {
+    name: "loose_dirt",
+    gripMultiplier: 1.5,    // Slides more
+    color: TERRAIN_COLORS.loose_dirt,
+    dragMultiplier: 0.9,
+    roughness: 0.15,         // Noticeable ruts and loose clumps
+    normalMap: '6481-normal.jpg',
+    normalMapIntensity: 1.0, // Full intensity — rough loose surface
+    specular: 0.05,          // Matte dry dirt
   },
   MUD: {
     name: "mud",

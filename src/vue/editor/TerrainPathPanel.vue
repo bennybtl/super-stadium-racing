@@ -42,6 +42,7 @@
     >
       <option value="packed_dirt">Packed Dirt</option>
       <option value="loose_dirt">Loose Dirt</option>
+      <option value="loamy_dirt">Loamy Dirt</option>
       <option value="asphalt">Asphalt</option>
       <option value="mud">Mud</option>
       <option value="water">Water</option>

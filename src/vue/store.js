@@ -257,6 +257,7 @@ export const useEditorStore = defineStore('editor', () => {
     radius: 0,
     height: 3,
     width: 5,
+    terrainType: 'none',
     closed: false,
   });
 
@@ -479,6 +480,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setPolyHillRadius(val)       { polyHill.radius = val;  _bridge.value?.changePolyHillRadius(val); }
   function setPolyHillHeight(val)       { polyHill.height = val;  _bridge.value?.changePolyHillHeight(val); }
   function setPolyHillWidth(val)        { polyHill.width = val;   _bridge.value?.changePolyHillWidth(val); }
+  function setPolyHillTerrainType(name) { polyHill.terrainType = name; _bridge.value?.changePolyHillTerrainType(name); }
   function setPolyHillClosed(val)       { polyHill.closed = val;  _bridge.value?.changePolyHillClosed(val); }
   function insertPolyHillPoint()        { _bridge.value?.insertPolyHillPoint(); }
   function deletePolyHillPoint()        { _bridge.value?.deletePolyHillPoint(); }
@@ -660,7 +662,7 @@ export const useEditorStore = defineStore('editor', () => {
     setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,
     setPolyWallRadius, setPolyWallHeight, setPolyWallCollisionHeight, setPolyWallThickness, setPolyWallClosed,
     insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, duplicatePolyWall, closePolyWall,
-    setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillClosed,
+    setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillTerrainType, setPolyHillClosed,
     insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, duplicatePolyHill, closePolyHill,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, duplicateBezierWall, closeBezierWall,

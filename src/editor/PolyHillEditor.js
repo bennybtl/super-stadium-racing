@@ -1,5 +1,6 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import { EditorMaterials, LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
+import { TERRAIN_TYPES } from "../terrain.js";
 
 /**
  * PolyHillEditor – place and edit polyHill features in the track editor.
@@ -83,6 +84,7 @@ export class PolyHillEditor {
       ],
       height: 3,
       width: 5,
+      terrainType: null,
       closed: false,
     };
 
@@ -347,6 +349,16 @@ export class PolyHillEditor {
     this._rebuildHill(this._activeHill.feature);
   }
 
+  setTerrainType(name) {
+    if (!this._activeHill) return;
+    this.ec.saveSnapshot();
+    this._activeHill.feature.terrainType = name === 'none'
+      ? null
+      : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
+    this._syncStoreToFeature(this._activeHill.feature, this.selectedPoint?.idx ?? null);
+    this._rebuildHill(this._activeHill.feature);
+  }
+
   setClosed(closed) {
     if (!this._activeHill) return;
     this.ec.saveSnapshot(true);
@@ -393,6 +405,7 @@ export class PolyHillEditor {
     store.polyHill.canHaveRadius = selectedIdx !== null && this._canHaveRadius(feature, selectedIdx);
     store.polyHill.height = feature.height ?? 3;
     store.polyHill.width = feature.width ?? feature.slope ?? 5;
+    store.polyHill.terrainType = feature.terrainType?.name || 'none';
     store.polyHill.closed = feature.closed ?? false;
   }
 
@@ -407,6 +420,9 @@ export class PolyHillEditor {
     if (window.rebuildPolyHill) {
       window.rebuildPolyHill(feature);
     }
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+    window.rebuildNormalMap?.();
   }
 
   /** Returns the live PolyHill mesh for a given feature, if it exists. */

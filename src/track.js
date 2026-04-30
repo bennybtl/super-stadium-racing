@@ -407,6 +407,33 @@ export class Track {
           }
           break;
         }
+
+        case "polyHill": {
+          const points = feature.points;
+          if (!points || points.length < 2) break;
+          const closed = feature.closed ?? false;
+          const expandedPoints = this._expandPolylineForHill(points, closed);
+          const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
+          const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
+          let minDist = Infinity;
+
+          for (let j = 0; j < numSegments; j++) {
+            const p1 = expandedPoints[j];
+            const p2 = expandedPoints[(j + 1) % expandedPoints.length];
+            const dx = p2.x - p1.x;
+            const dz = p2.z - p1.z;
+            const len2 = dx * dx + dz * dz;
+            if (len2 < 1e-8) continue;
+            const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
+            const projX = p1.x + t * dx;
+            const projZ = p1.z + t * dz;
+            const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
+            minDist = Math.min(minDist, dist);
+          }
+
+          if (minDist <= halfWidth) return feature.terrainType;
+          break;
+        }
       }
     }
 
