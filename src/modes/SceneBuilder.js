@@ -30,6 +30,7 @@ import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeManager } from "../managers/BridgeManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
+import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
 import {
   buildTerrainIdTexturePixelData,
   buildTerrainTypePropertyTexturePixelData,
@@ -271,6 +272,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
   const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager);
+  const surfaceDecalManager = new SurfaceDecalManager(scene, currentTrack, ground);
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
     sampleStep: 3,
@@ -298,6 +300,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       bannerStringManager.createBanner(feature);
     } else if (feature.type === "bridge") {
       bridgeManager.createBridge(feature);
+    } else if (feature.type === "surfaceDecal") {
+      surfaceDecalManager.createDecal(feature);
     } else if (
       (feature.type === "hill" && feature.height < 0) ||
       (feature.type === "squareHill" && (
@@ -368,6 +372,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     pickupManager,
     bridgeManager,
     steepSlopeColliderManager,
+    surfaceDecalManager,
     driveSurfaceManager,
   };
 }

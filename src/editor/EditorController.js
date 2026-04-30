@@ -16,6 +16,7 @@ import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
 import { BridgeEditor } from './BridgeEditor.js';
 import { AiPathEditor } from './AiPathEditor.js';
+import { SurfaceDecalEditor } from './SurfaceDecalEditor.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
@@ -96,6 +97,9 @@ export class EditorController {
     // AI path waypoint editor
     this.aiPathEditor = new AiPathEditor(this);
 
+    // Surface decal stamp editor
+    this.surfaceDecalEditor = new SurfaceDecalEditor(this);
+
     this._rawDragPos = null;
     this._aiPathMouseDownSelectedWaypoint = null;
     this._aiPathMouseDownMoved = false;
@@ -172,6 +176,9 @@ export class EditorController {
 
     // AI path waypoint editor
     this.aiPathEditor.activate(this.scene, track);
+
+    // Surface decal stamp editor
+    this.surfaceDecalEditor.activate(this.scene, track);
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
@@ -262,6 +269,9 @@ export class EditorController {
 
     // AI path waypoint editor
     this.aiPathEditor.dispose();
+
+    // Surface decal stamp editor
+    this.surfaceDecalEditor.dispose();
   }
 
   // ─── Undo / Redo ──────────────────────────────────────────────────────────
@@ -381,6 +391,12 @@ export class EditorController {
 
     // Handle ESC key — deselect first, open menu if nothing selected
     if (event.key === 'Escape') {
+      if (this._editorStore?.selectedType === 'surfaceDecal') {
+        this.closeSurfaceDecalStamp();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (this._editorStore?.selectedType === 'aiPath') {
         this.closeAiPath();
         event.preventDefault();
@@ -500,6 +516,12 @@ export class EditorController {
       } else {
         this._editorStore.toggleSnap();
       }
+      event.preventDefault();
+      return;
+    }
+
+    // Intercept Q/E for surface decal rotation before camera rotation
+    if (this.surfaceDecalEditor?.onKeyDown(event)) {
       event.preventDefault();
       return;
     }
@@ -842,6 +864,14 @@ export class EditorController {
     
     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
       const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+
+      // Surface decal stamp mode: click to stamp.
+      if (this._editorStore?.selectedType === 'surfaceDecal') {
+        if (pickResult.hit && pickResult.pickedPoint) {
+          this.surfaceDecalEditor.stamp(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
+        }
+        return;
+      }
 
       // AI path panel open: click terrain to add waypoints, click existing point to select it.
       if (this._editorStore?.selectedType === 'aiPath') {
@@ -1239,6 +1269,26 @@ export class EditorController {
     this.meshGridEditor?.deselectPoint();
     if (this._editorStore) this._editorStore.selectedType = null;
   }
+
+  // ── Surface Decal helper methods ──────────────────────────────────────────
+  setSurfaceDecalManager(manager) {
+    this.surfaceDecalEditor.setDecalManager(manager);
+  }
+
+  openSurfaceDecalStamp() {
+    this.surfaceDecalEditor.open();
+  }
+
+  closeSurfaceDecalStamp() {
+    this.surfaceDecalEditor.close();
+  }
+
+  setSurfaceDecalType(val) { this.surfaceDecalEditor.setType(val); }
+  setSurfaceDecalRandomRotation(val) { this.surfaceDecalEditor.setRandomRotation(val); }
+  setSurfaceDecalAngle(val) { this.surfaceDecalEditor.setAngle(val); }
+  setSurfaceDecalOpacity(val) { this.surfaceDecalEditor.setOpacity(val); }
+  setSurfaceDecalWidth(val) { this.surfaceDecalEditor.setWidth(val); }
+  setSurfaceDecalDepth(val) { this.surfaceDecalEditor.setDepth(val); }
 
   // ── AI Path helper methods ───────────────────────────────────────────────
   openAiPath() {

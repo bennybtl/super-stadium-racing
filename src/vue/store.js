@@ -576,6 +576,18 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteAiWaypoint()  { _bridge.value?.deleteAiWaypoint(); }
   function clearAiPath()       { _bridge.value?.clearAiPath(); }
 
+  // ── Surface decal stamp ──
+  const surfaceDecal = reactive({ decalType: 'gouge', decalTypes: ['gouge', 'holes', 'rough'], imageName: '', angle: 0, randomRotation: true, width: 4, depth: 4, opacity: 0.8 });
+  function openSurfaceDecalStamp()   { _bridge.value?.openSurfaceDecalStamp(); }
+  function closeSurfaceDecalStamp()  { _bridge.value?.closeSurfaceDecalStamp(); }
+  function setSurfaceDecalType(v)    { _bridge.value?.setSurfaceDecalType(v); }
+  function setSurfaceDecalRandomRotation(v) { _bridge.value?.setSurfaceDecalRandomRotation(v); }
+  function setSurfaceDecalAngle(v)   { _bridge.value?.setSurfaceDecalAngle(v); }
+  function setSurfaceDecalOpacity(v) { _bridge.value?.setSurfaceDecalOpacity(v); }
+  function setSurfaceDecalWidth(v)   { _bridge.value?.setSurfaceDecalWidth(v); }
+  function setSurfaceDecalDepth(v)   { _bridge.value?.setSurfaceDecalDepth(v); }
+
+
   return {
     selectedType,
     activeTool,
@@ -645,6 +657,10 @@ export const useEditorStore = defineStore('editor', () => {
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,
     openAiPath, closeAiPath,
+    surfaceDecal,
+    openSurfaceDecalStamp, closeSurfaceDecalStamp,
+    setSurfaceDecalType, setSurfaceDecalRandomRotation, setSurfaceDecalAngle,
+    setSurfaceDecalOpacity, setSurfaceDecalWidth, setSurfaceDecalDepth,
     setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     meshGridAdjustUp, meshGridAdjustDown,

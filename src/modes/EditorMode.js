@@ -46,6 +46,7 @@ export class EditorMode extends BaseMode {
       bannerStringManager,
       bridgeManager,
       steepSlopeColliderManager,
+      surfaceDecalManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     // Dispose runtime FlagManager flags – the EditorController's FlagTool
@@ -81,6 +82,7 @@ export class EditorMode extends BaseMode {
     // -- Editor controller --
     const editorController = new EditorController(camera, scene);
     editorController.activate(currentTrack, checkpointManager, menuManager);
+    editorController.setSurfaceDecalManager(surfaceDecalManager);
     this.editorController = editorController;
 
     // -- Editor globals (used by editor tool UI) --

@@ -65,7 +65,8 @@ const features = [
   { label: 'Decoration',       img: imgFlags,         action: () => editor.addDecoration()     },
   { label: 'Action Zone',      img: imgActionZone,     action: () => editor.addActionZone()     },
   { label: 'Bridge',           img: imgBridge,             action: () => editor.addBridge()         },
-  { label: 'AI Path',          img: imgAiPath,             action: () => editor.openAiPath()        },
+  { label: 'AI Path',          img: imgAiPath,             action: () => editor.openAiPath()              },
+  { label: 'Surface Decal',   img: null,                  action: () => editor.openSurfaceDecalStamp()   },
 ];
 </script>
 

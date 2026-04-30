@@ -29,6 +29,7 @@
     <MeshGridPanel />
     <BridgePanel />
     <AiPathPanel />
+    <SurfaceDecalPanel />
     <AddEntityMenu />
     <EditorStatusBar />
   </div>
@@ -59,6 +60,7 @@ import PolyCurbPanel      from './editor/PolyCurbPanel.vue';
 import MeshGridPanel      from './editor/MeshGridPanel.vue';
 import BridgePanel        from './editor/BridgePanel.vue';
 import AiPathPanel        from './editor/AiPathPanel.vue';
+import SurfaceDecalPanel  from './editor/SurfaceDecalPanel.vue';
 import AddEntityMenu      from './editor/AddEntityMenu.vue';
 import EditorStatusBar    from './editor/EditorStatusBar.vue';
 

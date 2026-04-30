@@ -26,17 +26,6 @@
       "heightAtMax": 8.5
     },
     {
-      "type": "tireStack",
-      "x": -30,
-      "z": -4
-    },
-    {
-      "type": "flag",
-      "x": -30,
-      "z": -4,
-      "color": "blue"
-    },
-    {
       "type": "bridge",
       "centerX": -11.024629944647165,
       "centerZ": 36.224320442354056,
