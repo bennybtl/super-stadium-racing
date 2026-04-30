@@ -7,6 +7,7 @@
  */
 
 import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } from "@babylonjs/core";
+import { TERRAIN_TYPES } from "../terrain.js";
 
 /**
  * Load and cache normal map images by filename.
@@ -25,6 +26,136 @@ async function _loadNormalMap(filename) {
   });
   _normalMapCache.set(filename, img);
   return img;
+}
+
+function _smoothstep(edge0, edge1, x) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / Math.max(1e-6, edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function _buildWaterDepthTileCanvas(img, tileSizePx, waterCfg) {
+  const tileSize = Math.max(4, Math.round(tileSizePx));
+  const canvas = document.createElement('canvas');
+  canvas.width = tileSize;
+  canvas.height = tileSize;
+  const ctx = canvas.getContext('2d');
+
+  ctx.drawImage(img, 0, 0, tileSize, tileSize);
+  const image = ctx.getImageData(0, 0, tileSize, tileSize);
+  const data = image.data;
+
+  const deepColor = waterCfg.diffuseDepthColor ?? new Color3(0.10, 0.30, 0.55);
+  const deepR = Math.round((deepColor.r ?? 0.10) * 255);
+  const deepG = Math.round((deepColor.g ?? 0.30) * 255);
+  const deepB = Math.round((deepColor.b ?? 0.55) * 255);
+  const threshold = waterCfg.diffuseDepthThreshold ?? 0.45;
+  const softness = Math.max(0.01, waterCfg.diffuseDepthSoftness ?? 0.18);
+  const opacity = Math.max(0, Math.min(1, waterCfg.diffuseTextureOpacity ?? 0.62));
+  const gain = Math.max(0.1, waterCfg.diffuseDepthGain ?? 1.8);
+  const minBlend = Math.max(0, Math.min(1, waterCfg.diffuseDepthMinBlend ?? 0.12));
+
+  // Normalize luminance per tile so subtle source maps still produce visible depth contrast.
+  let minLum = 1;
+  let maxLum = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] / 255;
+    const g = data[i + 1] / 255;
+    const b = data[i + 2] / 255;
+    const luminance = r * 0.299 + g * 0.587 + b * 0.114;
+    if (luminance < minLum) minLum = luminance;
+    if (luminance > maxLum) maxLum = luminance;
+  }
+  const lumRange = Math.max(1e-4, maxLum - minLum);
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] / 255;
+    const g = data[i + 1] / 255;
+    const b = data[i + 2] / 255;
+    const rawLum = r * 0.299 + g * 0.587 + b * 0.114;
+    const luminance = (rawLum - minLum) / lumRange;
+    // Use darkness (not brightness) so thresholds are intuitive for "deep" regions.
+    const depthSignal = 1 - luminance;
+    let depthMask = Math.max(0, Math.min(1,
+      _smoothstep(threshold, threshold + softness, depthSignal) * gain
+    ));
+    if (depthMask > 0) depthMask = minBlend + (1 - minBlend) * depthMask;
+    const alpha = Math.round(depthMask * opacity * 255);
+
+    data[i] = deepR;
+    data[i + 1] = deepG;
+    data[i + 2] = deepB;
+    data[i + 3] = alpha;
+  }
+
+  ctx.putImageData(image, 0, 0);
+  return canvas;
+}
+
+async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSize) {
+  const waterCfg = TERRAIN_TYPES.WATER;
+  const waterNormalName = waterCfg.diffuseTexture ?? waterCfg.normalMap;
+  if (!waterNormalName) return;
+
+  const img = await _loadNormalMap(waterNormalName);
+  if (!img || img.naturalWidth <= 0) return;
+
+  const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
+  const worldUnitsPerTile = waterCfg.diffuseTextureWorldUnitsPerTile ?? 12;
+  const tileSize = (textureSize / worldSize) * worldUnitsPerTile;
+  const waterTile = _buildWaterDepthTileCanvas(img, tileSize, waterCfg);
+  const pattern = ctx.createPattern(waterTile, 'repeat');
+  if (!pattern) return;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1.0;
+  ctx.fillStyle = pattern;
+
+  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
+    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
+      const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
+      if (cell?.name !== 'water') continue;
+      ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+    }
+  }
+
+  ctx.restore();
+}
+
+export async function createWaterDepthOverlayTexture(scene, terrainManager, textureSize = 2048, worldSize = 160) {
+  const canvas = document.createElement('canvas');
+  canvas.width = textureSize;
+  canvas.height = textureSize;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, textureSize, textureSize);
+  await _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSize);
+
+  const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
+  const rawTexture = RawTexture.CreateRGBATexture(
+    imageData.data,
+    textureSize,
+    textureSize,
+    scene,
+    false,
+    false,
+    Texture.BILINEAR_SAMPLINGMODE
+  );
+  rawTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
+  rawTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
+  rawTexture.gammaSpace = false;
+  return rawTexture;
+}
+
+export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager, worldSize = 160) {
+  const textureSize = rawTexture.getSize().width;
+  const canvas = document.createElement('canvas');
+  canvas.width = textureSize;
+  canvas.height = textureSize;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, textureSize, textureSize);
+  await _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSize);
+  const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
+  rawTexture.update(imageData.data);
 }
 
 /**
@@ -295,6 +426,7 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   // registers the names for binding; the GLSL declaration must be explicit.
   uniform sampler2D terrainIdSampler;
   uniform sampler2D terrainPropertySampler;
+  uniform sampler2D terrainWaterOverlaySampler;
   // Terrain uniforms — also declared explicitly; the UBO path handles binding
   // but we need the declaration regardless of UBO vs non-UBO engine.
   uniform float terrainTypeCount;
@@ -345,7 +477,9 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
 const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   vec2 _tUV = vPositionW.xz / (terrainWorldHalfSize * 2.0) + 0.5;
   _terrainBlendResult = _computeTerrainBlend(_tUV);
-  baseColor = vec4(_terrainBlendResult.rgb, 1.0);
+  vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUV);
+  vec3 _terrainRgb = mix(_terrainBlendResult.rgb, _waterOverlay.rgb, _waterOverlay.a);
+  baseColor = vec4(_terrainRgb, 1.0);
 `;
 
 // Per-pixel specular intensity is now injected via a regex replacement
@@ -356,10 +490,11 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
  * StandardMaterial keeps CSM shadow receiving, lighting, and normal mapping.
  */
 export class TerrainBlendPlugin extends MaterialPluginBase {
-  constructor(material, terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
     super(material, "TerrainBlend", 200, {});
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
+    this._terrainWaterOverlayTex = terrainWaterOverlayTex;
     this._terrainTypeCount    = terrainTypeCount;
     this._terrainCellCount    = terrainCellCount;
     this._terrainWorldHalfSize = terrainWorldHalfSize;
@@ -367,7 +502,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
   }
 
   getSamplers(samplers) {
-    samplers.push("terrainIdSampler", "terrainPropertySampler");
+    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler");
   }
 
   getUniforms() {
@@ -390,6 +525,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     if (scene.texturesEnabled) {
       uniformBuffer.setTexture("terrainIdSampler",       this._terrainIdTex);
       uniformBuffer.setTexture("terrainPropertySampler", this._terrainPropertyTex);
+      uniformBuffer.setTexture("terrainWaterOverlaySampler", this._terrainWaterOverlayTex);
     }
   }
 
@@ -420,12 +556,12 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
  * @param {number}     terrainWorldHalfSize half of terrain world size (metres)
  * @returns {StandardMaterial}
  */
-export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
   const mat = new StandardMaterial("groundMat", scene);
   mat.specularColor = new Color3(1, 1, 1);
   mat.specularPower = 48;
 
-  new TerrainBlendPlugin(mat, terrainIdTex, terrainPropertyTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize);
+  new TerrainBlendPlugin(mat, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize);
 
   return mat;
 }

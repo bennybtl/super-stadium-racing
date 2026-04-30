@@ -145,7 +145,12 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const texSize = 2000;
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
-  const { createCompositeNormalMap, createTerrainMaterial } = await import('../shaders/ground-shader.js');
+  const {
+    createCompositeNormalMap,
+    createTerrainMaterial,
+    createWaterDepthOverlayTexture,
+    updateWaterDepthOverlayTexture,
+  } = await import('../shaders/ground-shader.js');
 
   const terrainIdData = buildTerrainIdTexturePixelData(terrainManager);
   const terrainIdTex = RawTexture.CreateRGBATexture(
@@ -177,11 +182,14 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   const groundTex = null;
   const specularTex = null;
-  const rebakeTerrainTexture = () => {}; // no-op: ShaderMaterial reads terrainIdTex live
 
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
   const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
   const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, texSize, terrainSize);
+  const waterDepthOverlayTex = await createWaterDepthOverlayTexture(scene, terrainManager, texSize, terrainSize);
+  const rebakeTerrainTexture = () => {
+    updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, terrainSize);
+  };
 
   // Build StandardMaterial + TerrainBlendPlugin.
   // StandardMaterial handles CSM shadow receiving, lighting, and normal mapping.
@@ -190,6 +198,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     scene,
     terrainIdTex,
     terrainPropertyTex,
+    waterDepthOverlayTex,
     terrainTypePropertyData.width,
     terrainManager.cellsPerSide,
     terrainSize / 2
@@ -205,6 +214,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     ...(ground.metadata ?? {}),
     terrainIdTexture: terrainIdTex,
     terrainPropertyTexture: terrainPropertyTex,
+    terrainWaterOverlayTexture: waterDepthOverlayTex,
   };
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
