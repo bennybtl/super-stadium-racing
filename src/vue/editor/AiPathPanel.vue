@@ -54,13 +54,24 @@
       />
 
       <div class="flex justify-between mb-1 text-[12px]">
-        <span>Breakup</span>
-        <span>{{ editor.aiPathWear.breakup.toFixed(2) }}</span>
+        <span>Alpha Breakup</span>
+        <span>{{ editor.aiPathWear.alphaBreakup.toFixed(2) }}</span>
       </div>
       <input
         type="range" min="0" max="1" step="0.01"
-        :value="editor.aiPathWear.breakup"
-        @input="editor.setAiPathWearBreakup(+$event.target.value)"
+        :value="editor.aiPathWear.alphaBreakup"
+        @input="editor.setAiPathWearAlphaBreakup(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Path Wander</span>
+        <span>{{ editor.aiPathWear.pathWander.toFixed(2) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="1.5" step="0.01"
+        :value="editor.aiPathWear.pathWander"
+        @input="editor.setAiPathWearPathWander(+$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 

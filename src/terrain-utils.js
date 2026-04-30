@@ -14,7 +14,8 @@ export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
   width: 3.2,
   intensity: 0.18,
   laneSpacing: 1.3,
-  breakup: 0.28,
+  alphaBreakup: 0.28,
+  pathWander: 0.5,
   edgeSoftness: 0.75,
   secondaryPathCount: 4,
   secondaryPathStrength: 0.62,
@@ -99,37 +100,39 @@ function _blurAlpha(data, width, height, radius) {
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      let total = 0;
+      let totalR = 0, totalG = 0;
       let weight = 0;
       for (let dx = -r; dx <= r; dx++) {
         const sx = _clamp(x + dx, 0, width - 1);
-        const sampleIndex = (y * width + sx) * 4 + 3;
+        const base = (y * width + sx) * 4;
         const w = r + 1 - Math.abs(dx);
-        total += data[sampleIndex] * w;
+        totalR += data[base] * w;
+        totalG += data[base + 1] * w;
         weight += w;
       }
-      const outIndex = (y * width + x) * 4 + 3;
-      tmp[outIndex] = Math.round(total / Math.max(1, weight));
+      const outIndex = (y * width + x) * 4;
+      tmp[outIndex] = Math.round(totalR / Math.max(1, weight));
+      tmp[outIndex + 1] = Math.round(totalG / Math.max(1, weight));
     }
   }
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      let total = 0;
+      let totalR = 0, totalG = 0;
       let weight = 0;
       for (let dy = -r; dy <= r; dy++) {
         const sy = _clamp(y + dy, 0, height - 1);
-        const sampleIndex = (sy * width + x) * 4 + 3;
+        const base = (sy * width + x) * 4;
         const w = r + 1 - Math.abs(dy);
-        total += tmp[sampleIndex] * w;
+        totalR += tmp[base] * w;
+        totalG += tmp[base + 1] * w;
         weight += w;
       }
       const outIndex = (y * width + x) * 4;
-      const alpha = Math.round(total / Math.max(1, weight));
-      out[outIndex] = 255;
-      out[outIndex + 1] = 255;
-      out[outIndex + 2] = 255;
-      out[outIndex + 3] = alpha;
+      out[outIndex] = Math.round(totalR / Math.max(1, weight));
+      out[outIndex + 1] = Math.round(totalG / Math.max(1, weight));
+      out[outIndex + 2] = 0;
+      out[outIndex + 3] = 0;
     }
   }
 
@@ -201,10 +204,8 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
   const data = new Uint8ClampedArray(width * height * 4);
 
   for (let i = 0; i < data.length; i += 4) {
-    data[i] = 0;   // R: 0=darken, 255=lighten
-    data[i + 1] = 0;
-    data[i + 2] = 0;
-    data[i + 3] = 0;
+    data[i] = 0;     // R: lighten alpha
+    data[i + 1] = 0; // G: darken alpha
   }
 
   const wear = {
@@ -217,7 +218,7 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
   const points = aiPath?.points;
   if (!Array.isArray(points) || points.length < 3) return { width, height, data };
 
-  const smoothingRadius = _clamp(wear.width * 3.7, 0.95, 23);
+  const smoothingRadius = _clamp(wear.width * 4.2, 1, 30);
   const smoothedPoints = expandPolyline(
     points.map(point => ({ ...point, radius: smoothingRadius })),
     true
@@ -242,8 +243,8 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
   const secondaryPathStrength = _clamp(wear.secondaryPathStrength ?? 0.62, 0, 1.5);
 
   const mainLanes = [
-    { offset: -mainLaneOffset, alpha: 1.0, radiusX: majorRadiusX, radiusY: majorRadiusY },
-    { offset: mainLaneOffset, alpha: 0.96, radiusX: majorRadiusX, radiusY: majorRadiusY },
+    { offset: -mainLaneOffset, alpha: 1.0, radiusX: majorRadiusX, radiusY: majorRadiusY, lighten: false },
+    { offset: mainLaneOffset, alpha: 0.96, radiusX: majorRadiusX, radiusY: majorRadiusY, lighten: false },
   ];
 
   const sideWearPaths = [];
@@ -276,7 +277,7 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
   // Smooth per-lane lateral wander: sum of two low-frequency sines so lanes
   // gradually deviate from their base offset instead of forming parallel stripes.
   const n = samples.length;
-  const wanderAmplitude = wear.width * 0.5;
+  const wanderAmplitude = wear.width * (wear.pathWander ?? 0.5);
   const makeWanderFn = (amp) => {
     const phA = rng() * Math.PI * 2;
     const phB = rng() * Math.PI * 2;
@@ -287,11 +288,26 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
       Math.sin((i / n) * Math.PI * 2 * frB + phB) * 0.35
     );
   };
+  const makePresenceFn = () => {
+    const phA = rng() * Math.PI * 2;
+    const phB = rng() * Math.PI * 2;
+    const frA = 1.2 + rng() * 2.0; // 1.2–3.2 cycles — more fades per lap
+    const frB = 2.8 + rng() * 2.2;
+    return (i) => {
+      const t = (i / n) * Math.PI * 2;
+      const wave =
+        Math.sin(t * frA + phA) * 0.62 +
+        Math.sin(t * frB + phB) * 0.38;
+      return (wave * 1.4) * 0.5 + 0.5; // amplitude >1 so output regularly hits 0 and 1
+    };
+  };
   for (const lane of mainLanes) {
     lane.wanderFn = makeWanderFn(wanderAmplitude);
+    lane.presenceFn = makePresenceFn();
   }
   for (const lane of sideWearPaths) {
     lane.wanderFn = makeWanderFn(wanderAmplitude * 0.85);
+    lane.presenceFn = makePresenceFn();
   }
 
   const stamp = (centerX, centerZ, tangentX, tangentZ, lane) => {
@@ -322,10 +338,12 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
 
         const falloff = 1 - _smoothstep(1 - edgeSoftness, 1, ellipse);
         const base = (y * width + x) * 4;
-        const existing = data[base + 3] / 255;
-        const next = _clamp(existing + lane.alpha * falloff, 0, 1);
-        data[base + 3] = Math.round(next * 255);
-        if (lane.lighten) data[base] = 255;
+        const contribution = Math.round(_clamp(lane.alpha * falloff, 0, 1) * 255);
+        if (lane.lighten) {
+          data[base] = Math.min(255, data[base] + contribution);     // R: lighten
+        } else {
+          data[base + 1] = Math.min(255, data[base + 1] + contribution); // G: darken
+        }
       }
     }
   };
@@ -347,16 +365,34 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
     const curveZ2 = next.z - curr.z;
     const cross = curveX1 * curveZ2 - curveZ1 * curveX2;
     const curvatureBoost = _clamp(Math.abs(cross) / 4, 0, 1);
-    const breakup = (rng() - 0.5) * wear.breakup;
-    const alphaBase = wear.intensity * (1 + curvatureBoost * 0.35 + breakup);
-    const lateralDrift = (rng() - 0.5) * wear.breakup * 0.6;
+    const alphaBreak = (rng() - 0.5) * wear.alphaBreakup;
+    const alphaBase = wear.intensity * (1 + curvatureBoost * 0.35 + alphaBreak) * _lerp(0.70, 1.0, curvatureBoost);
+    const presenceThreshold = _lerp(0.55, 0.18, curvatureBoost);
+
+    // Steepness fade: sample height along tangent and normal, take max slope angle.
+    const PROBE = 1.0; // metres between height probes
+    const hFwd  = track.getHeightAt(curr.x + tangentX * PROBE, curr.z + tangentZ * PROBE);
+    const hBack = track.getHeightAt(curr.x - tangentX * PROBE, curr.z - tangentZ * PROBE);
+    const hLeft = track.getHeightAt(curr.x - tangentZ * PROBE, curr.z + tangentX * PROBE);
+    const hRight= track.getHeightAt(curr.x + tangentZ * PROBE, curr.z - tangentX * PROBE);
+    const slopeDeg = Math.max(
+      Math.abs(Math.atan2(hFwd - hBack, PROBE * 2) * (180 / Math.PI)),
+      Math.abs(Math.atan2(hLeft - hRight, PROBE * 2) * (180 / Math.PI))
+    );
+    const steepnessFade = 1 - _smoothstep(20, 28, slopeDeg);
 
     for (const lane of mainLanes) {
+      const lanePresence = _smoothstep(
+        presenceThreshold - 0.08,
+        presenceThreshold + 0.08,
+        lane.presenceFn(i)
+      );
       stamp(curr.x, curr.z, tangentX, tangentZ, {
-        offset: lane.offset + lateralDrift + lane.wanderFn(i),
-        alpha: Math.max(0, lane.alpha * alphaBase),
+        offset: lane.offset + lane.wanderFn(i),
+        alpha: Math.max(0, lane.alpha * alphaBase * lanePresence * steepnessFade),
         radiusX: lane.radiusX * (1 + curvatureBoost * 0.18),
         radiusY: lane.radiusY * (1 + curvatureBoost * 0.08),
+        lighten: lane.lighten,
       });
     }
 
@@ -373,11 +409,18 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
         segmentAlpha *= _smoothstep(0, lane.fade, distToEnd);
       }
 
+      const lanePresence = _smoothstep(
+        presenceThreshold - 0.08,
+        presenceThreshold + 0.08,
+        lane.presenceFn(i)
+      );
+
       stamp(curr.x, curr.z, tangentX, tangentZ, {
-        offset: lane.offset + lateralDrift * 1.9 + lane.wanderFn(i),
-        alpha: Math.max(0, lane.alpha * alphaBase * segmentAlpha),
+        offset: lane.offset + lane.wanderFn(i),
+        alpha: Math.max(0, lane.alpha * alphaBase * segmentAlpha * lanePresence * steepnessFade),
         radiusX: lane.radiusX * (1 + curvatureBoost * 0.22),
         radiusY: lane.radiusY * (1 + curvatureBoost * 0.16),
+        lighten: lane.lighten,
       });
     }
   }

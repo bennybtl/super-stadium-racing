@@ -481,6 +481,7 @@ export class Track {
       depth: this.depth,
       defaultTerrainType: this.defaultTerrainType?.name ?? 'packed_dirt',
       borderTerrainType: this.borderTerrainType?.name ?? this.defaultTerrainType?.name ?? 'packed_dirt',
+      wear: this.wear ?? undefined,
       features: serializedFeatures,
     }, null, 2);
   }
@@ -513,6 +514,10 @@ export class Track {
     }
 
     // Convert features and map terrainType names to TERRAIN_TYPES objects
+    if (data.wear && typeof data.wear === 'object') {
+      track.wear = { ...data.wear };
+    }
+
     track.features = (data.features || []).map(feature => {
       const loaded = { ...feature };
 

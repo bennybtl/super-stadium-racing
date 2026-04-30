@@ -480,12 +480,12 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   _terrainBlendResult = _computeTerrainBlend(_tUV);
   vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUV);
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
-  float _wear = _wearOverlay.a;
-  float _wearLighten = step(0.5, _wearOverlay.r);
-  float _wearDir = _wearLighten * 2.0 - 1.0;
+  float _wearLighten = _wearOverlay.r;
+  float _wearDarken  = _wearOverlay.g;
   vec3 _terrainRgb = mix(_terrainBlendResult.rgb, _waterOverlay.rgb, _waterOverlay.a);
-  _terrainRgb = clamp(_terrainRgb * (1.0 + _wearDir * _wear * 0.16), 0.0, 1.0);
-  _terrainBlendResult.a = clamp(_terrainBlendResult.a + _wear * 0.06, 0.0, 1.0);
+  _terrainRgb = clamp(_terrainRgb * (1.0 + _wearLighten * 0.22), 0.0, 1.0);
+  _terrainRgb = clamp(_terrainRgb * (1.0 - _wearDarken  * 0.22), 0.0, 1.0);
+  _terrainBlendResult.a = clamp(_terrainBlendResult.a + max(_wearLighten, _wearDarken) * 0.06, 0.0, 1.0);
   baseColor = vec4(_terrainRgb, 1.0);
 `;
 

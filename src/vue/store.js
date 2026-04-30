@@ -362,7 +362,8 @@ export const useEditorStore = defineStore('editor', () => {
     width: 3.2,
     intensity: 0.18,
     laneSpacing: 1.3,
-    breakup: 0.28,
+    alphaBreakup: 0.28,
+    pathWander: 0.5,
     edgeSoftness: 0.75,
     secondaryPathCount: 4,
     secondaryPathStrength: 0.62,
@@ -373,7 +374,8 @@ export const useEditorStore = defineStore('editor', () => {
   function setAiPathWearWidth(val)        { aiPathWear.width = val;        _bridge.value?.changeAiPathWearWidth?.(val); }
   function setAiPathWearIntensity(val)    { aiPathWear.intensity = val;    _bridge.value?.changeAiPathWearIntensity?.(val); }
   function setAiPathWearLaneSpacing(val)  { aiPathWear.laneSpacing = val;  _bridge.value?.changeAiPathWearLaneSpacing?.(val); }
-  function setAiPathWearBreakup(val)      { aiPathWear.breakup = val;      _bridge.value?.changeAiPathWearBreakup?.(val); }
+  function setAiPathWearAlphaBreakup(val) { aiPathWear.alphaBreakup = val; _bridge.value?.changeAiPathWearAlphaBreakup?.(val); }
+  function setAiPathWearPathWander(val)    { aiPathWear.pathWander = val;   _bridge.value?.changeAiPathWearPathWander?.(val); }
   function setAiPathWearEdgeSoftness(val) { aiPathWear.edgeSoftness = val; _bridge.value?.changeAiPathWearEdgeSoftness?.(val); }
   function setAiPathWearSecondaryPathCount(val) { aiPathWear.secondaryPathCount = val; _bridge.value?.changeAiPathWearSecondaryPathCount?.(val); }
   function setAiPathWearSecondaryPathStrength(val) { aiPathWear.secondaryPathStrength = val; _bridge.value?.changeAiPathWearSecondaryPathStrength?.(val); }
@@ -700,7 +702,7 @@ export const useEditorStore = defineStore('editor', () => {
     openAiPath, closeAiPath,
     aiPathWear,
     setAiPathWearEnabled, setAiPathWearWidth, setAiPathWearIntensity,
-    setAiPathWearLaneSpacing, setAiPathWearBreakup, setAiPathWearEdgeSoftness,
+    setAiPathWearLaneSpacing, setAiPathWearAlphaBreakup, setAiPathWearPathWander, setAiPathWearEdgeSoftness,
     setAiPathWearSecondaryPathCount, setAiPathWearSecondaryPathStrength, setAiPathWearSecondaryPathSpacing,
     terrainPath,
     openTerrainPath, closeTerrainPath,

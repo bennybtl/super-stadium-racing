@@ -25,8 +25,8 @@ export const TERRAIN_TYPES = {
     dragMultiplier: 0.8,
     roughness: 0.1,          // Very slight — compacted surface
     normalMap: 'cloud_h-normal.png',
-    normalMapIntensity: 1.5, // Moderate dirt texture
-    specular: 0.13,          // Matte dry dirt
+    normalMapIntensity: 1.0, // Moderate dirt texture
+    specular: 0.10,          // Matte dry dirt
   },
   LOOSE_DIRT: {
     name: "loose_dirt",
@@ -36,7 +36,7 @@ export const TERRAIN_TYPES = {
     roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: '6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
-    specular: 0.13,          // Matte dry dirt
+    specular: 0.03,          // Matte dry dirt
   },
   MUD: {
     name: "mud",
