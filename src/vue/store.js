@@ -348,14 +348,36 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── AI path editor panel actions ──
   function openAiPath() {
+    _bridge.value?.openAiPath?.();
     selectedType.value = 'aiPath';
-    _bridge.value?.deselectAiWaypoint?.();
   }
 
   function closeAiPath() {
-    _bridge.value?.deselectAiWaypoint?.();
+    _bridge.value?.closeAiPath?.();
     selectedType.value = null;
   }
+
+  const aiPathWear = reactive({
+    enabled: true,
+    width: 3.2,
+    intensity: 0.18,
+    laneSpacing: 1.3,
+    breakup: 0.28,
+    edgeSoftness: 0.75,
+    secondaryPathCount: 4,
+    secondaryPathStrength: 0.62,
+    secondaryPathSpacing: 0.1,
+  });
+
+  function setAiPathWearEnabled(val)      { aiPathWear.enabled = val;      _bridge.value?.changeAiPathWearEnabled?.(val); }
+  function setAiPathWearWidth(val)        { aiPathWear.width = val;        _bridge.value?.changeAiPathWearWidth?.(val); }
+  function setAiPathWearIntensity(val)    { aiPathWear.intensity = val;    _bridge.value?.changeAiPathWearIntensity?.(val); }
+  function setAiPathWearLaneSpacing(val)  { aiPathWear.laneSpacing = val;  _bridge.value?.changeAiPathWearLaneSpacing?.(val); }
+  function setAiPathWearBreakup(val)      { aiPathWear.breakup = val;      _bridge.value?.changeAiPathWearBreakup?.(val); }
+  function setAiPathWearEdgeSoftness(val) { aiPathWear.edgeSoftness = val; _bridge.value?.changeAiPathWearEdgeSoftness?.(val); }
+  function setAiPathWearSecondaryPathCount(val) { aiPathWear.secondaryPathCount = val; _bridge.value?.changeAiPathWearSecondaryPathCount?.(val); }
+  function setAiPathWearSecondaryPathStrength(val) { aiPathWear.secondaryPathStrength = val; _bridge.value?.changeAiPathWearSecondaryPathStrength?.(val); }
+  function setAiPathWearSecondaryPathSpacing(val) { aiPathWear.secondaryPathSpacing = val; _bridge.value?.changeAiPathWearSecondaryPathSpacing?.(val); }
 
   // ── Terrain path panel ──
   const terrainPath = reactive({
@@ -676,6 +698,10 @@ export const useEditorStore = defineStore('editor', () => {
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,
     openAiPath, closeAiPath,
+    aiPathWear,
+    setAiPathWearEnabled, setAiPathWearWidth, setAiPathWearIntensity,
+    setAiPathWearLaneSpacing, setAiPathWearBreakup, setAiPathWearEdgeSoftness,
+    setAiPathWearSecondaryPathCount, setAiPathWearSecondaryPathStrength, setAiPathWearSecondaryPathSpacing,
     terrainPath,
     openTerrainPath, closeTerrainPath,
     setTerrainPathWidth, setTerrainPathCornerRadius, setTerrainPathTerrainType,

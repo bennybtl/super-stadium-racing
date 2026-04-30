@@ -33,6 +33,7 @@ import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
 import {
   buildTerrainIdTexturePixelData,
+  buildTerrainWearOverlayPixelData,
   buildTerrainTypePropertyTexturePixelData,
 } from "../terrain-utils.js";
 
@@ -180,6 +181,20 @@ export async function buildScene(engine, trackLoader, trackKey) {
   terrainPropertyTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   terrainPropertyTex.gammaSpace = false;
 
+  const terrainWearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, terrainSize);
+  const terrainWearOverlayTex = RawTexture.CreateRGBATexture(
+    terrainWearOverlayData.data,
+    terrainWearOverlayData.width,
+    terrainWearOverlayData.height,
+    scene,
+    false,
+    false,
+    Texture.BILINEAR_SAMPLINGMODE
+  );
+  terrainWearOverlayTex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  terrainWearOverlayTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  terrainWearOverlayTex.gammaSpace = false;
+
   const groundTex = null;
   const specularTex = null;
 
@@ -188,6 +203,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, texSize, terrainSize);
   const waterDepthOverlayTex = await createWaterDepthOverlayTexture(scene, terrainManager, texSize, terrainSize);
   const rebakeTerrainTexture = () => {
+    const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, terrainSize);
+    terrainWearOverlayTex.update(wearOverlayData.data);
     updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, terrainSize);
   };
 
@@ -199,6 +216,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainIdTex,
     terrainPropertyTex,
     waterDepthOverlayTex,
+    terrainWearOverlayTex,
     terrainTypePropertyData.width,
     terrainManager.cellsPerSide,
     terrainSize / 2
@@ -215,6 +233,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainIdTexture: terrainIdTex,
     terrainPropertyTexture: terrainPropertyTex,
     terrainWaterOverlayTexture: waterDepthOverlayTex,
+    terrainWearOverlayTexture: terrainWearOverlayTex,
   };
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
@@ -371,6 +390,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     rebakeTerrainTexture,
     terrainIdTex,
     terrainPropertyTex,
+    terrainWearOverlayTex,
     pixelsPerCell,
     compositeNormalMap,
     checkpointManager,

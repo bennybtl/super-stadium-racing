@@ -427,6 +427,7 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   uniform sampler2D terrainIdSampler;
   uniform sampler2D terrainPropertySampler;
   uniform sampler2D terrainWaterOverlaySampler;
+  uniform sampler2D terrainWearOverlaySampler;
   // Terrain uniforms — also declared explicitly; the UBO path handles binding
   // but we need the declaration regardless of UBO vs non-UBO engine.
   uniform float terrainTypeCount;
@@ -478,7 +479,13 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   vec2 _tUV = vPositionW.xz / (terrainWorldHalfSize * 2.0) + 0.5;
   _terrainBlendResult = _computeTerrainBlend(_tUV);
   vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUV);
+  vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
+  float _wear = _wearOverlay.a;
+  float _wearLighten = step(0.5, _wearOverlay.r);
+  float _wearDir = _wearLighten * 2.0 - 1.0;
   vec3 _terrainRgb = mix(_terrainBlendResult.rgb, _waterOverlay.rgb, _waterOverlay.a);
+  _terrainRgb = clamp(_terrainRgb * (1.0 + _wearDir * _wear * 0.16), 0.0, 1.0);
+  _terrainBlendResult.a = clamp(_terrainBlendResult.a + _wear * 0.06, 0.0, 1.0);
   baseColor = vec4(_terrainRgb, 1.0);
 `;
 
@@ -490,11 +497,12 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
  * StandardMaterial keeps CSM shadow receiving, lighting, and normal mapping.
  */
 export class TerrainBlendPlugin extends MaterialPluginBase {
-  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
     super(material, "TerrainBlend", 200, {});
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
     this._terrainWaterOverlayTex = terrainWaterOverlayTex;
+    this._terrainWearOverlayTex = terrainWearOverlayTex;
     this._terrainTypeCount    = terrainTypeCount;
     this._terrainCellCount    = terrainCellCount;
     this._terrainWorldHalfSize = terrainWorldHalfSize;
@@ -502,7 +510,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
   }
 
   getSamplers(samplers) {
-    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler");
+    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler");
   }
 
   getUniforms() {
@@ -526,6 +534,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       uniformBuffer.setTexture("terrainIdSampler",       this._terrainIdTex);
       uniformBuffer.setTexture("terrainPropertySampler", this._terrainPropertyTex);
       uniformBuffer.setTexture("terrainWaterOverlaySampler", this._terrainWaterOverlayTex);
+      uniformBuffer.setTexture("terrainWearOverlaySampler", this._terrainWearOverlayTex);
     }
   }
 
@@ -551,17 +560,19 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
  * @param {Scene}      scene
  * @param {RawTexture} terrainIdTex         cellsPerSide×cellsPerSide, R = type index
  * @param {RawTexture} terrainPropertyTex   numTypes×1, RGBA = (r,g,b,specular)
+ * @param {RawTexture} terrainWaterOverlayTex world-space RGBA water tint/opacity overlay
+ * @param {RawTexture} terrainWearOverlayTex  world-space RGBA wear mask overlay
  * @param {number}     terrainTypeCount     number of terrain types
  * @param {number}     terrainCellCount     grid cells per side
  * @param {number}     terrainWorldHalfSize half of terrain world size (metres)
  * @returns {StandardMaterial}
  */
-export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
   const mat = new StandardMaterial("groundMat", scene);
   mat.specularColor = new Color3(1, 1, 1);
   mat.specularPower = 48;
 
-  new TerrainBlendPlugin(mat, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize);
+  new TerrainBlendPlugin(mat, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize);
 
   return mat;
 }

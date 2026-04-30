@@ -3,9 +3,144 @@
  */
 
 import { TERRAIN_TYPES } from "./terrain.js";
+import { expandPolyline } from "./polyline-utils.js";
 
 const TERRAIN_TYPE_LIST = Object.values(TERRAIN_TYPES);
 const TERRAIN_TYPE_INDEX = new Map(TERRAIN_TYPE_LIST.map((terrainType, index) => [terrainType, index]));
+
+export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
+  enabled: true,
+  source: 'aiPath',
+  width: 3.2,
+  intensity: 0.18,
+  laneSpacing: 1.3,
+  breakup: 0.28,
+  edgeSoftness: 0.75,
+  secondaryPathCount: 4,
+  secondaryPathStrength: 0.62,
+  secondaryPathSpacing: 0.1,
+  seed: 1337,
+});
+
+function _clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function _lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function _smoothstep(edge0, edge1, x) {
+  const t = _clamp((x - edge0) / Math.max(1e-6, edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function _createSeededRandom(seed = 1337) {
+  let state = (seed >>> 0) || 1;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+}
+
+function _distance2d(a, b) {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  return Math.sqrt(dx * dx + dz * dz);
+}
+
+function _sampleClosedPath(points, spacing) {
+  if (!Array.isArray(points) || points.length < 2) return [];
+
+  const safeSpacing = Math.max(0.25, spacing);
+  const samples = [];
+  const segmentLengths = [];
+  let totalLength = 0;
+
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const length = _distance2d(a, b);
+    segmentLengths.push(length);
+    totalLength += length;
+  }
+
+  if (totalLength < 0.01) return [];
+
+  let segmentIndex = 0;
+  let segmentStart = 0;
+  let segmentLength = segmentLengths[0];
+
+  for (let dist = 0; dist < totalLength; dist += safeSpacing) {
+    while (segmentLength > 0 && dist > segmentStart + segmentLength && segmentIndex < points.length - 1) {
+      segmentStart += segmentLength;
+      segmentIndex += 1;
+      segmentLength = segmentLengths[segmentIndex];
+    }
+
+    const start = points[segmentIndex];
+    const end = points[(segmentIndex + 1) % points.length];
+    const t = segmentLength > 0.001 ? (dist - segmentStart) / segmentLength : 0;
+    samples.push({
+      x: _lerp(start.x, end.x, t),
+      z: _lerp(start.z, end.z, t),
+    });
+  }
+
+  return samples;
+}
+
+function _blurAlpha(data, width, height, radius) {
+  const r = Math.max(0, Math.round(radius));
+  if (r <= 0) return data;
+
+  const tmp = new Uint8ClampedArray(data.length);
+  const out = new Uint8ClampedArray(data.length);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let total = 0;
+      let weight = 0;
+      for (let dx = -r; dx <= r; dx++) {
+        const sx = _clamp(x + dx, 0, width - 1);
+        const sampleIndex = (y * width + sx) * 4 + 3;
+        const w = r + 1 - Math.abs(dx);
+        total += data[sampleIndex] * w;
+        weight += w;
+      }
+      const outIndex = (y * width + x) * 4 + 3;
+      tmp[outIndex] = Math.round(total / Math.max(1, weight));
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let total = 0;
+      let weight = 0;
+      for (let dy = -r; dy <= r; dy++) {
+        const sy = _clamp(y + dy, 0, height - 1);
+        const sampleIndex = (sy * width + x) * 4 + 3;
+        const w = r + 1 - Math.abs(dy);
+        total += tmp[sampleIndex] * w;
+        weight += w;
+      }
+      const outIndex = (y * width + x) * 4;
+      const alpha = Math.round(total / Math.max(1, weight));
+      out[outIndex] = 255;
+      out[outIndex + 1] = 255;
+      out[outIndex + 2] = 255;
+      out[outIndex + 3] = alpha;
+    }
+  }
+
+  return out;
+}
+
+function _wrapSampleDistance(index, start, total) {
+  const direct = index - start;
+  const wrapped = direct < 0 ? direct + total : direct;
+  return wrapped;
+}
 
 export function buildTerrainIdTexturePixelData(terrainManager) {
   const n = terrainManager.cellsPerSide;
@@ -58,5 +193,199 @@ export function buildTerrainTypePropertyTexturePixelData() {
   }
 
   return { width, height, data, normalMapNames };
+}
+
+export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldSize = 160) {
+  const width = Math.max(4, Math.round(textureSize));
+  const height = width;
+  const data = new Uint8ClampedArray(width * height * 4);
+
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 0;   // R: 0=darken, 255=lighten
+    data[i + 1] = 0;
+    data[i + 2] = 0;
+    data[i + 3] = 0;
+  }
+
+  const wear = {
+    ...DEFAULT_TERRAIN_WEAR_CONFIG,
+    ...(track?.wear ?? {}),
+  };
+  if (!wear.enabled || wear.source !== 'aiPath') return { width, height, data };
+
+  const aiPath = track?.features?.find(feature => feature.type === 'aiPath');
+  const points = aiPath?.points;
+  if (!Array.isArray(points) || points.length < 3) return { width, height, data };
+
+  const smoothingRadius = _clamp(wear.width * 3.7, 0.95, 23);
+  const smoothedPoints = expandPolyline(
+    points.map(point => ({ ...point, radius: smoothingRadius })),
+    true
+  );
+  if (!Array.isArray(smoothedPoints) || smoothedPoints.length < 3) return { width, height, data };
+
+  const pixelsPerUnit = width / Math.max(1, worldSize);
+  const sampleSpacing = _clamp(wear.width * 0.2, 0.5, 1.0);
+  const samples = _sampleClosedPath(smoothedPoints, sampleSpacing);
+  if (samples.length < 3) return { width, height, data };
+
+  const rng = _createSeededRandom(wear.seed);
+  const halfWorld = worldSize / 2;
+  const mainLaneOffset = Math.max(0.35, wear.laneSpacing * 0.5);
+  const secondaryPathSpacing = Math.max(0, wear.secondaryPathSpacing ?? 0.1);
+  const sideLaneOffset = mainLaneOffset + Math.max(0.9, wear.width * 0.5) * secondaryPathSpacing;
+  const majorRadiusX = Math.max(2.5, pixelsPerUnit * wear.width * 0.28);
+  const majorRadiusY = Math.max(6, majorRadiusX * 2.8);
+  const minorRadiusX = Math.max(1.8, majorRadiusX * 0.62);
+  const minorRadiusY = Math.max(4.5, majorRadiusY * 0.82);
+  const edgeSoftness = _clamp(wear.edgeSoftness, 0.1, 1.5);
+  const secondaryPathStrength = _clamp(wear.secondaryPathStrength ?? 0.62, 0, 1.5);
+
+  const mainLanes = [
+    { offset: -mainLaneOffset, alpha: 1.0, radiusX: majorRadiusX, radiusY: majorRadiusY },
+    { offset: mainLaneOffset, alpha: 0.96, radiusX: majorRadiusX, radiusY: majorRadiusY },
+  ];
+
+  const sideWearPaths = [];
+  const buildSideWearPaths = (sideSign) => {
+    const pathCount = Math.max(0, Math.round(wear.secondaryPathCount ?? 4));
+    const minLength = Math.max(10, Math.round(samples.length * 0.06));
+    const maxLength = Math.max(minLength + 4, Math.round(samples.length * 0.18));
+    const bandSpacing = Math.max(0.6, wear.laneSpacing * 0.75) * secondaryPathSpacing;
+
+    for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
+      const span = minLength + Math.floor(rng() * (maxLength - minLength + 1));
+      const fade = Math.max(3, Math.min(Math.round(span * 0.2), 14));
+      const bandIndex = 1 + pathIndex;
+      sideWearPaths.push({
+        start: Math.floor(rng() * samples.length),
+        span,
+        fade,
+        offset: sideSign * (sideLaneOffset + bandIndex * bandSpacing + (rng() - 0.5) * bandSpacing * 0.45),
+        alpha: (0.52 + rng() * 0.22) * secondaryPathStrength,
+        radiusX: minorRadiusX * (0.95 + rng() * 0.4),
+        radiusY: minorRadiusY * (0.9 + rng() * 0.35),
+        lighten: rng() > 0.5,
+      });
+    }
+  };
+
+  buildSideWearPaths(-1);
+  buildSideWearPaths(1);
+
+  // Smooth per-lane lateral wander: sum of two low-frequency sines so lanes
+  // gradually deviate from their base offset instead of forming parallel stripes.
+  const n = samples.length;
+  const wanderAmplitude = wear.width * 0.5;
+  const makeWanderFn = (amp) => {
+    const phA = rng() * Math.PI * 2;
+    const phB = rng() * Math.PI * 2;
+    const frA = 1.8 + rng() * 2.4; // 1.8–4.2 cycles around the track
+    const frB = 3.6 + rng() * 2.0; // higher harmonic for secondary shape
+    return (i) => amp * (
+      Math.sin((i / n) * Math.PI * 2 * frA + phA) * 0.65 +
+      Math.sin((i / n) * Math.PI * 2 * frB + phB) * 0.35
+    );
+  };
+  for (const lane of mainLanes) {
+    lane.wanderFn = makeWanderFn(wanderAmplitude);
+  }
+  for (const lane of sideWearPaths) {
+    lane.wanderFn = makeWanderFn(wanderAmplitude * 0.85);
+  }
+
+  const stamp = (centerX, centerZ, tangentX, tangentZ, lane) => {
+    const normalX = -tangentZ;
+    const normalZ = tangentX;
+    const laneX = centerX + normalX * lane.offset;
+    const laneZ = centerZ + normalZ * lane.offset;
+    const sx = (laneX + halfWorld) * pixelsPerUnit;
+    const sy = (laneZ + halfWorld) * pixelsPerUnit;
+
+    const pad = Math.ceil(Math.max(lane.radiusX, lane.radiusY) + 2);
+    const minX = _clamp(Math.floor(sx - pad), 0, width - 1);
+    const maxX = _clamp(Math.ceil(sx + pad), 0, width - 1);
+    const minY = _clamp(Math.floor(sy - pad), 0, height - 1);
+    const maxY = _clamp(Math.ceil(sy + pad), 0, height - 1);
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const dx = x - sx;
+        const dy = y - sy;
+        const localX = dx * tangentX + dy * tangentZ;
+        const localY = dx * normalX + dy * normalZ;
+        const ellipse = Math.sqrt(
+          (localY * localY) / Math.max(1e-6, lane.radiusX * lane.radiusX) +
+          (localX * localX) / Math.max(1e-6, lane.radiusY * lane.radiusY)
+        );
+        if (ellipse >= 1) continue;
+
+        const falloff = 1 - _smoothstep(1 - edgeSoftness, 1, ellipse);
+        const base = (y * width + x) * 4;
+        const existing = data[base + 3] / 255;
+        const next = _clamp(existing + lane.alpha * falloff, 0, 1);
+        data[base + 3] = Math.round(next * 255);
+        if (lane.lighten) data[base] = 255;
+      }
+    }
+  };
+
+  for (let i = 0; i < samples.length; i++) {
+    const prev = samples[(i - 1 + samples.length) % samples.length];
+    const curr = samples[i];
+    const next = samples[(i + 1) % samples.length];
+    let tangentX = next.x - prev.x;
+    let tangentZ = next.z - prev.z;
+    const tangentLength = Math.sqrt(tangentX * tangentX + tangentZ * tangentZ);
+    if (tangentLength < 1e-5) continue;
+    tangentX /= tangentLength;
+    tangentZ /= tangentLength;
+
+    const curveX1 = curr.x - prev.x;
+    const curveZ1 = curr.z - prev.z;
+    const curveX2 = next.x - curr.x;
+    const curveZ2 = next.z - curr.z;
+    const cross = curveX1 * curveZ2 - curveZ1 * curveX2;
+    const curvatureBoost = _clamp(Math.abs(cross) / 4, 0, 1);
+    const breakup = (rng() - 0.5) * wear.breakup;
+    const alphaBase = wear.intensity * (1 + curvatureBoost * 0.35 + breakup);
+    const lateralDrift = (rng() - 0.5) * wear.breakup * 0.6;
+
+    for (const lane of mainLanes) {
+      stamp(curr.x, curr.z, tangentX, tangentZ, {
+        offset: lane.offset + lateralDrift + lane.wanderFn(i),
+        alpha: Math.max(0, lane.alpha * alphaBase),
+        radiusX: lane.radiusX * (1 + curvatureBoost * 0.18),
+        radiusY: lane.radiusY * (1 + curvatureBoost * 0.08),
+      });
+    }
+
+    for (const lane of sideWearPaths) {
+      const dist = _wrapSampleDistance(i, lane.start, samples.length);
+      if (dist >= lane.span) continue;
+
+      let segmentAlpha = 1;
+      if (dist < lane.fade) {
+        segmentAlpha *= _smoothstep(0, lane.fade, dist);
+      }
+      const distToEnd = lane.span - dist;
+      if (distToEnd < lane.fade) {
+        segmentAlpha *= _smoothstep(0, lane.fade, distToEnd);
+      }
+
+      stamp(curr.x, curr.z, tangentX, tangentZ, {
+        offset: lane.offset + lateralDrift * 1.9 + lane.wanderFn(i),
+        alpha: Math.max(0, lane.alpha * alphaBase * segmentAlpha),
+        radiusX: lane.radiusX * (1 + curvatureBoost * 0.22),
+        radiusY: lane.radiusY * (1 + curvatureBoost * 0.16),
+      });
+    }
+  }
+
+  return {
+    width,
+    height,
+    data: _blurAlpha(data, width, height, Math.max(1, pixelsPerUnit * 0.12)),
+  };
 }
 

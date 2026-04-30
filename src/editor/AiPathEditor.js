@@ -179,6 +179,7 @@ export class AiPathEditor {
     this.selected.mesh.position.set(pt.x, y, pt.z);
 
     this._rebuildLine(feature);
+    this._scheduleTerrainRebuild();
 
     return new Vector3(pt.x - prevX, 0, pt.z - prevZ);
   }
@@ -201,6 +202,7 @@ export class AiPathEditor {
 
     const handle = this._createHandle(feature, feature.points.length - 1);
     this._rebuildLine(feature);
+    this._scheduleTerrainRebuild();
     // Auto-select the new point
     this.select(handle);
   }
@@ -222,6 +224,7 @@ export class AiPathEditor {
 
     this._renumberHandles();
     this._rebuildLine(feature);
+    this._scheduleTerrainRebuild();
 
     // Remove feature entirely if no points left
     if (feature.points.length === 0) {
@@ -238,11 +241,17 @@ export class AiPathEditor {
     const track = this.editor.currentTrack;
     const idx = track.features.findIndex(f => f.type === 'aiPath');
     if (idx > -1) track.features.splice(idx, 1);
+    this._scheduleTerrainRebuild();
   }
 
   /** Called after an undo/redo snapshot restore. */
   onSnapshotRestored(track) {
     this.clearMeshes();
     this._buildFromTrack(track);
+    this._scheduleTerrainRebuild();
+  }
+
+  _scheduleTerrainRebuild() {
+    window.rebuildTerrainTexture?.();
   }
 }

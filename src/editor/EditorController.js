@@ -20,6 +20,7 @@ import { TerrainPathEditor } from './TerrainPathEditor.js';
 import { SurfaceDecalEditor } from './SurfaceDecalEditor.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
+import { DEFAULT_TERRAIN_WEAR_CONFIG } from '../terrain-utils.js';
 
 /**
  * EditorController - Handles track editing mode
@@ -108,7 +109,7 @@ export class EditorController {
     this._aiPathMouseDownSelectedWaypoint = null;
     this._aiPathMouseDownMoved = false;
 
-    // Undo / redo stacks (each entry is a JSON string of the features array)
+    // Undo / redo stacks (each entry is a JSON string of editable track state)
     this._undoStack = [];
     this._redoStack = [];
     this._snapshotDebounceTimer = null;
@@ -192,6 +193,7 @@ export class EditorController {
     this.setGizmosVisible(true);
     this._editorStore.trackDefaultTerrain = track.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = track.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
+    this._syncAiPathPanel();
   }
 
   /**
@@ -288,13 +290,13 @@ export class EditorController {
   // ─── Undo / Redo ──────────────────────────────────────────────────────────
 
   /**
-   * Save the current features array as an undo snapshot.
+  * Save the current editable track state as an undo snapshot.
    * Pass debounce=true for continuous operations (slider drags, WASD movement)
    * so we don't flood the stack — a snapshot is only committed after 400ms of silence.
    */
   saveSnapshot(debounce = false) {
     const commit = () => {
-      const snap = JSON.stringify(this.currentTrack.features);
+    const snap = this._serializeSnapshot();
       // Don't push a duplicate of the current top
       if (this._undoStack.length && this._undoStack[this._undoStack.length - 1] === snap) return;
       this._undoStack.push(snap);
@@ -309,6 +311,44 @@ export class EditorController {
       clearTimeout(this._snapshotDebounceTimer);
       this._snapshotDebounceTimer = setTimeout(commit, 400);
     }
+  }
+
+  _serializeSnapshot() {
+    return JSON.stringify({
+      features: this.currentTrack.features,
+      wear: this.currentTrack.wear ?? null,
+    });
+  }
+
+  _getWearConfig() {
+    if (!this.currentTrack) return { ...DEFAULT_TERRAIN_WEAR_CONFIG };
+    this.currentTrack.wear = {
+      ...DEFAULT_TERRAIN_WEAR_CONFIG,
+      ...(this.currentTrack.wear ?? {}),
+    };
+    return this.currentTrack.wear;
+  }
+
+  _syncAiPathPanel() {
+    if (!this._editorStore) return;
+    const wear = this._getWearConfig();
+    this._editorStore.aiPathWear.enabled = !!wear.enabled;
+    this._editorStore.aiPathWear.width = wear.width;
+    this._editorStore.aiPathWear.intensity = wear.intensity;
+    this._editorStore.aiPathWear.laneSpacing = wear.laneSpacing;
+    this._editorStore.aiPathWear.breakup = wear.breakup;
+    this._editorStore.aiPathWear.edgeSoftness = wear.edgeSoftness;
+    this._editorStore.aiPathWear.secondaryPathCount = wear.secondaryPathCount;
+    this._editorStore.aiPathWear.secondaryPathStrength = wear.secondaryPathStrength;
+    this._editorStore.aiPathWear.secondaryPathSpacing = wear.secondaryPathSpacing;
+  }
+
+  _updateAiPathWear(updates, debounce = true) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(debounce);
+    Object.assign(this._getWearConfig(), updates);
+    this._syncAiPathPanel();
+    window.rebuildTerrainTexture?.();
   }
 
   _applySnapshot(snap) {
@@ -339,8 +379,18 @@ export class EditorController {
     this.actionZoneEditor.clearMeshes();
     this.bridgeEditor.clearMeshes();
 
-    // Restore features
-    this.currentTrack.features = JSON.parse(snap);
+    // Restore editable track state
+    const parsed = JSON.parse(snap);
+    if (Array.isArray(parsed)) {
+      this.currentTrack.features = parsed;
+      this.currentTrack.wear = { ...DEFAULT_TERRAIN_WEAR_CONFIG };
+    } else {
+      this.currentTrack.features = parsed.features ?? [];
+      this.currentTrack.wear = {
+        ...DEFAULT_TERRAIN_WEAR_CONFIG,
+        ...(parsed.wear ?? {}),
+      };
+    }
 
     // Recreate gizmos + rebuild visuals
     for (const feature of this.currentTrack.features) {
@@ -358,6 +408,7 @@ export class EditorController {
     this.aiPathEditor.onSnapshotRestored(this.currentTrack);
     // Restore terrain path gizmos
     this.terrainPathEditor.onSnapshotRestored(this.currentTrack);
+    this._syncAiPathPanel();
 
     // Restore mesh grid gizmos
     this.meshGridEditor?.onSnapshotRestored();
@@ -384,14 +435,14 @@ export class EditorController {
 
   undo() {
     if (this._undoStack.length === 0) return;
-    this._redoStack.push(JSON.stringify(this.currentTrack.features));
+    this._redoStack.push(this._serializeSnapshot());
     this._applySnapshot(this._undoStack.pop());
     console.log('[Undo] stack remaining:', this._undoStack.length);
   }
 
   redo() {
     if (this._redoStack.length === 0) return;
-    this._undoStack.push(JSON.stringify(this.currentTrack.features));
+    this._undoStack.push(this._serializeSnapshot());
     this._applySnapshot(this._redoStack.pop());
     console.log('[Redo] stack remaining:', this._redoStack.length);
   }
@@ -1382,6 +1433,7 @@ export class EditorController {
     if (this._editorStore) {
       this._editorStore.selectedType = 'aiPath';
       this.aiPathEditor.deselect();
+      this._syncAiPathPanel();
     }
   }
 
@@ -1396,10 +1448,20 @@ export class EditorController {
     const target = this.camera.getTarget();
     this.aiPathEditor.addPoint(target.x, target.z);
     this.hideAddMenu();
+    this._syncAiPathPanel();
   }
   deleteAiWaypoint()   { this.aiPathEditor.deleteSelected(); }
   clearAiPath()        { this.aiPathEditor.clearAll(); }
   deselectAiWaypoint() { this.aiPathEditor.deselect(); }
+  changeAiPathWearEnabled(val)      { this._updateAiPathWear({ enabled: !!val }, false); }
+  changeAiPathWearWidth(val)        { this._updateAiPathWear({ width: val }, true); }
+  changeAiPathWearIntensity(val)    { this._updateAiPathWear({ intensity: val }, true); }
+  changeAiPathWearLaneSpacing(val)  { this._updateAiPathWear({ laneSpacing: val }, true); }
+  changeAiPathWearBreakup(val)      { this._updateAiPathWear({ breakup: val }, true); }
+  changeAiPathWearEdgeSoftness(val) { this._updateAiPathWear({ edgeSoftness: val }, true); }
+  changeAiPathWearSecondaryPathCount(val) { this._updateAiPathWear({ secondaryPathCount: Math.max(0, Math.round(val)) }, true); }
+  changeAiPathWearSecondaryPathStrength(val) { this._updateAiPathWear({ secondaryPathStrength: val }, true); }
+  changeAiPathWearSecondaryPathSpacing(val) { this._updateAiPathWear({ secondaryPathSpacing: val }, true); }
 
   // ── Terrain Path helper methods ──────────────────────────────────────────
   openTerrainPath() {
