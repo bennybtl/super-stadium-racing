@@ -28,6 +28,24 @@
         </select>
       </div>
 
+      <!-- Border terrain picker -->
+      <div class="flex items-center gap-2">
+        <span class="text-slate-500 text-[11px] font-sans whitespace-nowrap">Border Terrain</span>
+        <select
+          class="w-full max-w-[180px] bg-white/5 text-slate-200 border border-slate-800 rounded-lg px-2 py-1 text-[12px] font-sans cursor-pointer"
+          :value="editor.trackBorderTerrain"
+          @change="editor.setTrackBorderTerrain($event.target.value)"
+        >
+          <option value="packed_dirt">Packed Dirt</option>
+          <option value="loose_dirt">Loose Dirt</option>
+          <option value="asphalt">Asphalt</option>
+          <option value="mud">Mud</option>
+          <option value="water">Water</option>
+          <option value="rocky">Rocky</option>
+          <option value="grass">Grass</option>
+        </select>
+      </div>
+
       <!-- Right: snap controls -->
       <div class="ml-auto flex items-center gap-2">
         <button

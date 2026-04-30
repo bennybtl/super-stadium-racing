@@ -66,6 +66,7 @@ const features = [
   { label: 'Action Zone',      img: imgActionZone,     action: () => editor.addActionZone()     },
   { label: 'Bridge',           img: imgBridge,             action: () => editor.addBridge()         },
   { label: 'AI Path',          img: imgAiPath,             action: () => editor.openAiPath()              },
+  { label: 'Terrain Path',     img: imgTerrain,            action: () => editor.addTerrainPath()          },
   { label: 'Surface Decal',   img: null,                  action: () => editor.openSurfaceDecalStamp()   },
 ];
 </script>

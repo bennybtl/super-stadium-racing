@@ -312,39 +312,31 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
       float u = (typeIndex + 0.5) / terrainTypeCount;
       return texture2D(terrainPropertySampler, vec2(u, 0.5));
   }
-  void _blendNeighbor(vec2 nc, float centerId, float w,
-                      inout vec4 accum, inout float totalW) {
-      if (w <= 0.0) return;
-      float nId = _decodeTerrainId(texture2D(terrainIdSampler,
-                      (nc + 0.5) / terrainCellCount));
-      if (nId != centerId) {
-          accum += _sampleTypeProps(nId) * w;
-          totalW += w;
-      }
-  }
+  // 3×3 Gaussian kernel over cell neighbours.
+  // Weights: exp(-|d|² / (2σ²)) with σ=1.
+  //   center  (d=0):       1.000
+  //   edge    (d=1):       0.607
+  //   corner  (d=√2):      0.368
+  // This spreads the blend zone over ~3 cells, removing the 1-cell staircase
+  // visible at diagonal terrain-type boundaries.
   vec4 _computeTerrainBlend(vec2 tUV) {
-      float n = terrainCellCount;
-      vec2 coord = clamp(tUV * n, vec2(0.0), vec2(n - 1.0));
-      vec2 cell  = floor(coord);
-      vec2 local = fract(coord);
-      float cx = cell.x, cy = cell.y;
-      float lx = local.x, ly = local.y;
+      float n  = terrainCellCount;
       float nm = n - 1.0;
-      float centerId    = _decodeTerrainId(texture2D(terrainIdSampler,
-                              (cell + 0.5) / n));
-      vec4  accum       = _sampleTypeProps(centerId);
-      float totalWeight = 1.0;
-      // Cardinal
-      _blendNeighbor(vec2(min(cx+1.,nm), cy),          centerId, lx,           accum, totalWeight);
-      _blendNeighbor(vec2(max(cx-1.,0.), cy),          centerId, 1.-lx,        accum, totalWeight);
-      _blendNeighbor(vec2(cx, min(cy+1.,nm)),          centerId, ly,           accum, totalWeight);
-      _blendNeighbor(vec2(cx, max(cy-1.,0.)),          centerId, 1.-ly,        accum, totalWeight);
-      // Diagonal
-      _blendNeighbor(vec2(min(cx+1.,nm), min(cy+1.,nm)), centerId, lx*ly,         accum, totalWeight);
-      _blendNeighbor(vec2(max(cx-1.,0.), min(cy+1.,nm)), centerId, (1.-lx)*ly,    accum, totalWeight);
-      _blendNeighbor(vec2(min(cx+1.,nm), max(cy-1.,0.)), centerId, lx*(1.-ly),    accum, totalWeight);
-      _blendNeighbor(vec2(max(cx-1.,0.), max(cy-1.,0.)), centerId, (1.-lx)*(1.-ly), accum, totalWeight);
-      return accum / totalWeight;
+      vec2 coord = clamp(tUV * n, vec2(0.0), vec2(nm));
+      vec2 cell  = floor(coord);
+      vec4  accum  = vec4(0.0);
+      float totalW = 0.0;
+      for (int dy = -1; dy <= 1; dy++) {
+          for (int dx = -1; dx <= 1; dx++) {
+              vec2  nc   = clamp(cell + vec2(float(dx), float(dy)), vec2(0.0), vec2(nm));
+              float dist2 = float(dx * dx + dy * dy);
+              float w    = exp(-dist2 * 0.5);
+              float nId  = _decodeTerrainId(texture2D(terrainIdSampler, (nc + 0.5) / n));
+              accum  += _sampleTypeProps(nId) * w;
+              totalW += w;
+          }
+      }
+      return accum / totalW;
   }
 `;
 

@@ -1,4 +1,5 @@
 import { TERRAIN_TYPES } from "./terrain.js";
+import { expandPolyline } from "./polyline-utils.js";
 
 /**
  * Track system for defining 3D terrain layouts with different surface types
@@ -12,6 +13,7 @@ export class Track {
     this.depth = depth;
     this.features = [];
     this.defaultTerrainType = TERRAIN_TYPES.PACKED_DIRT;
+    this.borderTerrainType = TERRAIN_TYPES.PACKED_DIRT;
     this.image = null;
   }
 
@@ -381,7 +383,38 @@ export class Track {
           if (dist < transition) return feature.terrainType;
           break;
         }
+
+        case "terrainPath": {
+          const pts = feature.points;
+          if (!pts || pts.length < 2) break;
+          const halfWidth = (feature.width ?? 8) / 2;
+          const cornerRadius = feature.cornerRadius ?? 0;
+          const expanded = cornerRadius > 0.1
+            ? this._expandPolylineForHill(pts.map(p => ({ ...p, radius: cornerRadius })))
+            : pts;
+          for (let j = 0; j < expanded.length - 1; j++) {
+            const p1 = expanded[j];
+            const p2 = expanded[j + 1];
+            const dx = p2.x - p1.x;
+            const dz = p2.z - p1.z;
+            const len2 = dx * dx + dz * dz;
+            if (len2 < 1e-8) continue;
+            const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
+            const projX = p1.x + t * dx;
+            const projZ = p1.z + t * dz;
+            const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
+            if (dist <= halfWidth) return feature.terrainType;
+          }
+          break;
+        }
       }
+    }
+
+    const halfW = (this.width ?? 160) / 2;
+    const halfD = (this.depth ?? 160) / 2;
+    const inEditableArea = Math.abs(x) <= halfW && Math.abs(z) <= halfD;
+    if (!inEditableArea) {
+      return this.borderTerrainType ?? this.defaultTerrainType;
     }
 
     return this.defaultTerrainType;
@@ -389,91 +422,7 @@ export class Track {
 
   // Expand a polyline with optional rounded corners at each point
   _expandPolylineForHill(points, closed = false) {
-    if (points.length < 2) return points;
-    
-    const out = [];
-    const numSegments = closed ? points.length : points.length - 1;
-    
-    for (let i = 0; i < numSegments; i++) {
-      const p1 = points[i];
-      const p2 = points[(i + 1) % points.length];
-      const p3 = closed ? points[(i + 2) % points.length] : (i + 2 < points.length ? points[i + 2] : null);
-      
-      const radius = p2.radius ?? 0;
-      
-      if (i === 0 && !closed) {
-        out.push({ x: p1.x, z: p1.z });
-      }
-      
-      const dx = p2.x - p1.x;
-      const dz = p2.z - p1.z;
-      const len = Math.sqrt(dx * dx + dz * dz);
-      
-      if (len < 0.01) continue;
-      
-      if (radius > 0.1 && p3) {
-        const dx2 = p3.x - p2.x;
-        const dz2 = p3.z - p2.z;
-        const len2 = Math.sqrt(dx2 * dx2 + dz2 * dz2);
-        
-        if (len2 > 0.01) {
-          const maxRadius = Math.min(len * 0.45, len2 * 0.45);
-          const clampedRadius = Math.min(radius, maxRadius);
-          
-          const dir1X = dx / len;
-          const dir1Z = dz / len;
-          const dir2X = dx2 / len2;
-          const dir2Z = dz2 / len2;
-          
-          const beforeX = p2.x - dir1X * clampedRadius;
-          const beforeZ = p2.z - dir1Z * clampedRadius;
-          out.push({ x: beforeX, z: beforeZ });
-          
-          const afterX = p2.x + dir2X * clampedRadius;
-          const afterZ = p2.z + dir2Z * clampedRadius;
-          
-          const angle1 = Math.atan2(dir1Z, dir1X);
-          const angle2 = Math.atan2(dir2Z, dir2X);
-          
-          let angleDiff = angle2 - angle1;
-          while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-          while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-          
-          const halfAngle = angleDiff / 2;
-          const centerDist = clampedRadius / Math.sin(Math.abs(halfAngle));
-          const bisectorAngle = angle1 + halfAngle;
-          const perpAngle = bisectorAngle + (angleDiff > 0 ? Math.PI/2 : -Math.PI/2);
-          const centerX = p2.x + Math.cos(perpAngle) * centerDist;
-          const centerZ = p2.z + Math.sin(perpAngle) * centerDist;
-          
-          const arcSteps = Math.max(4, Math.ceil(Math.abs(angleDiff) * clampedRadius / 1.5));
-          const startAngle = Math.atan2(beforeZ - centerZ, beforeX - centerX);
-          const endAngle = Math.atan2(afterZ - centerZ, afterX - centerX);
-          
-          let arcAngleDiff = endAngle - startAngle;
-          while (arcAngleDiff > Math.PI) arcAngleDiff -= 2 * Math.PI;
-          while (arcAngleDiff < -Math.PI) arcAngleDiff += 2 * Math.PI;
-          
-          const arcRadius = Math.sqrt((beforeX - centerX) ** 2 + (beforeZ - centerZ) ** 2);
-          
-          for (let step = 1; step <= arcSteps; step++) {
-            const t = step / arcSteps;
-            const angle = startAngle + arcAngleDiff * t;
-            const arcX = centerX + Math.cos(angle) * arcRadius;
-            const arcZ = centerZ + Math.sin(angle) * arcRadius;
-            out.push({ x: arcX, z: arcZ });
-          }
-        } else {
-          out.push({ x: p2.x, z: p2.z });
-        }
-      } else {
-        if (!closed || i < numSegments - 1) {
-          out.push({ x: p2.x, z: p2.z });
-        }
-      }
-    }
-    
-    return out;
+    return expandPolyline(points, closed);
   }
 
   /**
@@ -531,6 +480,7 @@ export class Track {
       width: this.width,
       depth: this.depth,
       defaultTerrainType: this.defaultTerrainType?.name ?? 'packed_dirt',
+      borderTerrainType: this.borderTerrainType?.name ?? this.defaultTerrainType?.name ?? 'packed_dirt',
       features: serializedFeatures,
     }, null, 2);
   }
@@ -547,6 +497,21 @@ export class Track {
       );
       if (key) track.defaultTerrainType = TERRAIN_TYPES[key];
     }
+
+    if (data.borderTerrainType) {
+      const borderKey = Object.keys(TERRAIN_TYPES).find(
+        k => TERRAIN_TYPES[k].name === data.borderTerrainType
+      );
+      if (borderKey) {
+        track.borderTerrainType = TERRAIN_TYPES[borderKey];
+      } else {
+        track.borderTerrainType = track.defaultTerrainType;
+      }
+    } else {
+      // Backwards compatibility: legacy tracks had one terrain default for all empty cells.
+      track.borderTerrainType = track.defaultTerrainType;
+    }
+
     // Convert features and map terrainType names to TERRAIN_TYPES objects
     track.features = (data.features || []).map(feature => {
       const loaded = { ...feature };

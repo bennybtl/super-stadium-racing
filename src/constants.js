@@ -24,7 +24,7 @@ export const basicColors = {
 export const TERRAIN_COLORS = {
   asphalt: new Color3(0.2, 0.2, 0.25),
   packed_dirt: new Color3(0.54, 0.28, 0.08),
-  loose_dirt: new Color3(0.60, 0.34, 0.14),
+  loose_dirt: new Color3(0.64, 0.38, 0.18),
   mud: new Color3(0.34, 0.18, 0.08),
   water: new Color3(0.34, 0.18, 0.08),
   rocky: new Color3(0.42, 0.30, 0.22),

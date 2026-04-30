@@ -16,6 +16,7 @@ import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
 import { BridgeEditor } from './BridgeEditor.js';
 import { AiPathEditor } from './AiPathEditor.js';
+import { TerrainPathEditor } from './TerrainPathEditor.js';
 import { SurfaceDecalEditor } from './SurfaceDecalEditor.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
@@ -97,6 +98,9 @@ export class EditorController {
     // AI path waypoint editor
     this.aiPathEditor = new AiPathEditor(this);
 
+    // Terrain path editor (terrain-painted polygon paths)
+    this.terrainPathEditor = new TerrainPathEditor(this);
+
     // Surface decal stamp editor
     this.surfaceDecalEditor = new SurfaceDecalEditor(this);
 
@@ -177,6 +181,9 @@ export class EditorController {
     // AI path waypoint editor
     this.aiPathEditor.activate(this.scene, track);
 
+    // Terrain path editor
+    this.terrainPathEditor.activate(this.scene, track);
+
     // Surface decal stamp editor
     this.surfaceDecalEditor.activate(this.scene, track);
 
@@ -184,6 +191,7 @@ export class EditorController {
     this._editorStore.setBridge(this);
     this.setGizmosVisible(true);
     this._editorStore.trackDefaultTerrain = track.defaultTerrainType?.name ?? 'packed_dirt';
+    this._editorStore.trackBorderTerrain = track.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
   }
 
   /**
@@ -270,6 +278,9 @@ export class EditorController {
     // AI path waypoint editor
     this.aiPathEditor.dispose();
 
+    // Terrain path editor
+    this.terrainPathEditor.dispose();
+
     // Surface decal stamp editor
     this.surfaceDecalEditor.dispose();
   }
@@ -313,6 +324,7 @@ export class EditorController {
     this.actionZoneEditor.deselect();
     this.bridgeEditor.deselect();
     this.aiPathEditor.deselect();
+    this.terrainPathEditor.deselect();
 
     // Clear all gizmo meshes (keeps materials alive for re-use)
     this.hillEditor.clearMeshes();
@@ -344,6 +356,8 @@ export class EditorController {
     }
     // Restore AI path waypoint gizmos
     this.aiPathEditor.onSnapshotRestored(this.currentTrack);
+    // Restore terrain path gizmos
+    this.terrainPathEditor.onSnapshotRestored(this.currentTrack);
 
     // Restore mesh grid gizmos
     this.meshGridEditor?.onSnapshotRestored();
@@ -399,6 +413,12 @@ export class EditorController {
       }
       if (this._editorStore?.selectedType === 'aiPath') {
         this.closeAiPath();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (this._editorStore?.selectedType === 'terrainPath') {
+        this.closeTerrainPath();
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -478,6 +498,9 @@ export class EditorController {
         event.preventDefault();
       } else if (this.aiPathEditor?.selected) {
         this.aiPathEditor.deleteSelected();
+        event.preventDefault();
+      } else if (this.terrainPathEditor?.selected) {
+        this.terrainPathEditor.deleteSelected();
         event.preventDefault();
       } else if (this.meshGridEditor?.activeFeature) {
         this.meshGridEditor.deleteMeshGrid();
@@ -712,6 +735,8 @@ export class EditorController {
       delta = this.bridgeEditor.move(movement);
     } else if (this.aiPathEditor?.selected) {
       delta = this.aiPathEditor.move(movement);
+    } else if (this.terrainPathEditor?.selected) {
+      delta = this.terrainPathEditor.move(movement);
     } else if (this.polyWallEditor?.selectedPoint) {
       const d = this.polyWallEditor.moveSelectedPoint(movement.x, movement.z);
       delta = new Vector3(d.x, movement.y, d.z);
@@ -772,10 +797,15 @@ export class EditorController {
 
     if (pointerInfo.type === PointerEventTypes.POINTERUP) {
       if (this._aiPathMouseDownSelectedWaypoint && !this._aiPathMouseDownMoved) {
-        this.closeAiPath();
+        if (this._aiPathMouseDownType === 'terrainPath') {
+          this.closeTerrainPath();
+        } else {
+          this.closeAiPath();
+        }
       }
       this._aiPathMouseDownSelectedWaypoint = null;
       this._aiPathMouseDownMoved = false;
+      this._aiPathMouseDownType = null;
       this._mouseDrag = null;
       this.polyWallEditor?.endDrag?.();
       this.polyHillEditor?.endDrag?.();
@@ -819,6 +849,7 @@ export class EditorController {
       this.actionZoneEditor.selected ||
       this.bridgeEditor?.selected ||
       this.aiPathEditor?.selected ||
+      this.terrainPathEditor?.selected ||
       this.polyWallEditor?.selectedPoint ||
       this.polyHillEditor?.selectedPoint ||
       this.bezierWallEditor?.selectedAnchor ||
@@ -841,6 +872,7 @@ export class EditorController {
     else if (this.actionZoneEditor.selected) this.actionZoneEditor.move(movement);
     else if (this.bridgeEditor?.selected) this.bridgeEditor.move(movement);
     else if (this.aiPathEditor?.selected) this.aiPathEditor.move(movement);
+    else if (this.terrainPathEditor?.selected) this.terrainPathEditor.move(movement);
     else if (this.polyWallEditor?.selectedPoint) this.polyWallEditor.moveSelectedPoint(dx, dz);
     else if (this.polyHillEditor?.selectedPoint) this.polyHillEditor.moveSelectedPoint(dx, dz);
     else if (this.bezierWallEditor?.selectedAnchor) this.bezierWallEditor.moveSelectedAnchor(dx, dz);
@@ -882,6 +914,7 @@ export class EditorController {
             if (this.aiPathEditor.selected === wpData) {
               this._aiPathMouseDownSelectedWaypoint = clickedMesh;
               this._aiPathMouseDownMoved = false;
+              this._aiPathMouseDownType = 'aiPath';
               if (this._editorStore) this._editorStore.selectedType = 'aiPath';
               return;
             }
@@ -893,6 +926,30 @@ export class EditorController {
         }
         if (pickResult.hit && pickResult.pickedPoint) {
           this.aiPathEditor.addPoint(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
+        }
+        return;
+      }
+
+      // Terrain path panel open: click terrain to add waypoints, click existing point to select it.
+      if (this._editorStore?.selectedType === 'terrainPath') {
+        if (pickResult.hit && pickResult.pickedMesh) {
+          const clickedMesh = pickResult.pickedMesh;
+          const wpData = this.terrainPathEditor.findByMesh(clickedMesh);
+          if (wpData) {
+            if (this.terrainPathEditor.selected === wpData) {
+              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
+              this._aiPathMouseDownMoved = false;
+              this._aiPathMouseDownType = 'terrainPath';
+              return;
+            }
+            this.deselectAll();
+            this.terrainPathEditor.select(wpData);
+            if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
+            return;
+          }
+        }
+        if (pickResult.hit && pickResult.pickedPoint) {
+          this.terrainPathEditor.addPoint(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
         }
         return;
       }
@@ -939,12 +996,31 @@ export class EditorController {
             if (this.aiPathEditor.selected === wpData) {
               this._aiPathMouseDownSelectedWaypoint = clickedMesh;
               this._aiPathMouseDownMoved = false;
+              this._aiPathMouseDownType = 'aiPath';
               if (this._editorStore) this._editorStore.selectedType = 'aiPath';
               return;
             }
             this.deselectAll();
             this.aiPathEditor.select(wpData);
             if (this._editorStore) this._editorStore.selectedType = 'aiPath';
+            return;
+          }
+        }
+
+        // Check if clicked mesh is a terrain path waypoint
+        {
+          const wpData = this.terrainPathEditor.findByMesh(clickedMesh);
+          if (wpData) {
+            if (this.terrainPathEditor.selected === wpData) {
+              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
+              this._aiPathMouseDownMoved = false;
+              this._aiPathMouseDownType = 'terrainPath';
+              if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
+              return;
+            }
+            this.deselectAll();
+            this.terrainPathEditor.select(wpData);
+            if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
             return;
           }
         }
@@ -1066,6 +1142,16 @@ export class EditorController {
     window.rebuildNormalMap?.();
   }
 
+  changeTrackBorderTerrain(name) {
+    const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === name);
+    if (!key) return;
+    this.saveSnapshot();
+    this.currentTrack.borderTerrainType = TERRAIN_TYPES[key];
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+    window.rebuildNormalMap?.();
+  }
+
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }
   changeSquareHillDepth(val)        { this.squareHillEditor.changeDepth(val); }
   changeSquareHillTransition(val)   { this.squareHillEditor.changeTransition(val); }
@@ -1141,6 +1227,7 @@ export class EditorController {
     this.actionZoneEditor.deselect();
     this.bridgeEditor?.deselect();
     this.aiPathEditor?.deselect();
+    this.terrainPathEditor?.deselect();
     this.meshGridEditor?.deselectPoint();
     this.polyWallEditor?.deselectPoint();
     this.polyHillEditor?.deselectPoint();
@@ -1314,6 +1401,41 @@ export class EditorController {
   clearAiPath()        { this.aiPathEditor.clearAll(); }
   deselectAiWaypoint() { this.aiPathEditor.deselect(); }
 
+  // ── Terrain Path helper methods ──────────────────────────────────────────
+  openTerrainPath() {
+    if (this._editorStore) {
+      this._editorStore.selectedType = 'terrainPath';
+      this.terrainPathEditor.deselect();
+    }
+  }
+
+  closeTerrainPath() {
+    this.terrainPathEditor.deselect();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
+
+  // ── Terrain Path Vue bridge methods ──────────────────────────────────────
+  addTerrainPathEntity() {
+    this.terrainPathEditor.createNewPath();
+    if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
+    this.hideAddMenu();
+    this._syncTerrainPathPanel();
+  }
+  deleteTerrainPathWaypoint()   { this.terrainPathEditor.deleteSelected(); }
+  clearTerrainPath()            { this.terrainPathEditor.clearActivePath(); }
+  changeTerrainPathWidth(val)          { this.terrainPathEditor.changeWidth(val); }
+  changeTerrainPathCornerRadius(val)   { this.terrainPathEditor.changeCornerRadius(val); }
+  changeTerrainPathTerrainType(name)   { this.terrainPathEditor.changeTerrainType(name); }
+
+  _syncTerrainPathPanel() {
+    const s = this._editorStore;
+    if (!s || !this.terrainPathEditor.activeFeature) return;
+    const f = this.terrainPathEditor.activeFeature;
+    s.terrainPath.width        = f.width ?? 8;
+    s.terrainPath.cornerRadius = f.cornerRadius ?? 0;
+    s.terrainPath.terrainType  = f.terrainType?.name ?? 'mud';
+  }
+
   /**
    * Dispose of the controller
    */
@@ -1411,6 +1533,15 @@ export class EditorController {
         if (h.mesh) h.mesh.isVisible = visible;
       }
       if (this.aiPathEditor.lineMesh) this.aiPathEditor.lineMesh.isVisible = visible;
+    }
+
+    if (this.terrainPathEditor) {
+      for (const h of this.terrainPathEditor.handles || []) {
+        if (h.mesh) h.mesh.isVisible = visible;
+      }
+      for (const lm of this.terrainPathEditor.lineMeshes?.values() ?? []) {
+        lm.isVisible = visible;
+      }
     }
 
     if (this.hillEditor?.selected?.mesh) {

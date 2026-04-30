@@ -340,6 +340,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Track defaults ──
   const trackDefaultTerrain = ref('packed_dirt');
+  const trackBorderTerrain = ref('packed_dirt');
 
   // ── Test mode (back button) ──
   const testModeActive = ref(false);
@@ -355,6 +356,22 @@ export const useEditorStore = defineStore('editor', () => {
     _bridge.value?.deselectAiWaypoint?.();
     selectedType.value = null;
   }
+
+  // ── Terrain path panel ──
+  const terrainPath = reactive({
+    width: 8,
+    cornerRadius: 0,
+    terrainType: 'mud',
+  });
+
+  function openTerrainPath()                  { _bridge.value?.openTerrainPath?.(); }
+  function closeTerrainPath()                 { _bridge.value?.closeTerrainPath?.(); }
+  function setTerrainPathWidth(val)           { terrainPath.width = val;         _bridge.value?.changeTerrainPathWidth?.(val); }
+  function setTerrainPathCornerRadius(val)    { terrainPath.cornerRadius = val;  _bridge.value?.changeTerrainPathCornerRadius?.(val); }
+  function setTerrainPathTerrainType(val)     { terrainPath.terrainType = val;   _bridge.value?.changeTerrainPathTerrainType?.(val); }
+  function deleteTerrainPathWaypoint()        { _bridge.value?.deleteTerrainPathWaypoint?.(); }
+  function clearTerrainPath()                 { _bridge.value?.clearTerrainPath?.(); }
+  function addTerrainPath()                   { _bridge.value?.addTerrainPathEntity?.(); }
 
   // ── Vue panel bridge (set to EditorController instance on activate) ──
   const _bridge = shallowRef(null);
@@ -546,6 +563,7 @@ export const useEditorStore = defineStore('editor', () => {
   function closeMeshGrid()           { _bridge.value?.closeMeshGrid(); }
 
   function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
+  function setTrackBorderTerrain(name) { trackBorderTerrain.value = name; _bridge.value?.changeTrackBorderTerrain(name); }
 
   // ── Test mode ──
   function setActiveTool(val)           { activeTool.value = val; }
@@ -648,6 +666,7 @@ export const useEditorStore = defineStore('editor', () => {
     setBridgeCollisionEndCapThickness, setBridgeCollisionEndCapDrop,
     duplicateBridge, deleteBridge, closeBridge,
     trackDefaultTerrain, setTrackDefaultTerrain,
+    trackBorderTerrain, setTrackBorderTerrain,
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
     toggleSnap, cycleSnapSize, quickTestTrack,
@@ -657,6 +676,10 @@ export const useEditorStore = defineStore('editor', () => {
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,
     openAiPath, closeAiPath,
+    terrainPath,
+    openTerrainPath, closeTerrainPath,
+    setTerrainPathWidth, setTerrainPathCornerRadius, setTerrainPathTerrainType,
+    deleteTerrainPathWaypoint, clearTerrainPath, addTerrainPath,
     surfaceDecal,
     openSurfaceDecalStamp, closeSurfaceDecalStamp,
     setSurfaceDecalType, setSurfaceDecalRandomRotation, setSurfaceDecalAngle,
