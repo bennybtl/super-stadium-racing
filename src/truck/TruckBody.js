@@ -1,4 +1,4 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, TransformNode } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, TransformNode, DynamicTexture } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import truckTireUrl  from "../assets/truck-tire-2.obj?url";
 
@@ -29,6 +29,7 @@ export class TruckBody {
     this.scene   = scene;
     this.shadows = shadows;
     this.vehicleDef = vehicleDef;
+    this._parentHalfHeight = parent.getBoundingInfo()?.boundingBox?.extendSize?.y ?? 0.4;
 
     // Wheel geometry — from vehicle def, falling back to defaults matching the OBJ model
     const g = vehicleDef?.wheels ?? {};
@@ -93,6 +94,9 @@ export class TruckBody {
     this._tmpInvMatrix    = new Matrix();
 
     this._steerAngle = 0;  // current front-wheel steer angle (radians)
+    this._contactShadow = null;
+    this._contactShadowMat = null;
+    this._contactShadowTex = null;
 
     this._build();
   }
@@ -120,6 +124,46 @@ export class TruckBody {
 
     // Default to fully extended visual drop until first terrain sample.
     this._sampledWheelBaseY = this._wheels.map(w => w.baseLocalY - this._wheelMaxDrop);
+
+    // Add a simple blob shadow so the truck always reads as grounded.
+    this._createContactShadow();
+  }
+
+  _createContactShadow() {
+    const shadow = MeshBuilder.CreateGround("truckContactShadow", {
+      width: 3,
+      height: 5,
+      subdivisions: 1,
+    }, this.scene);
+    shadow.isPickable = false;
+    shadow.receiveShadows = false;
+    shadow.alwaysSelectAsActiveMesh = true;
+
+    const tex = new DynamicTexture("truckContactShadowTex", { width: 128, height: 128 }, this.scene, false);
+    const ctx = tex.getContext();
+    const g = ctx.createRadialGradient(64, 64, 8, 64, 64, 64);
+    g.addColorStop(0.0, "rgba(0,0,0,0.9)");
+    g.addColorStop(0.45, "rgba(0,0,0,0.55)");
+    g.addColorStop(0.8, "rgba(0,0,0,0.18)");
+    g.addColorStop(1.0, "rgba(0,0,0,0)");
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    tex.hasAlpha = true;
+    tex.update();
+
+    const mat = new StandardMaterial("truckContactShadowMat", this.scene);
+    mat.disableLighting = true;
+    mat.emissiveColor = new Color3(0, 0, 0);
+    mat.diffuseColor = new Color3(0, 0, 0);
+    mat.opacityTexture = tex;
+    mat.alpha = 0.48;
+    mat.backFaceCulling = false;
+    shadow.material = mat;
+
+    this._contactShadow = shadow;
+    this._contactShadowMat = mat;
+    this._contactShadowTex = tex;
   }
 
   async _loadBody() {
@@ -267,6 +311,21 @@ export class TruckBody {
       const bodyAllowance = 0.25;
       const bodyDeficit = deficit - bodyAllowance;
       this._visualRoot.position.y = (bodyDeficit > 0 ? bodyDeficit : 0) + this._bodyYOffset;
+
+      // Keep a dark, stable contact shadow under the truck.
+      if (this._contactShadow) {
+        const hover = Math.max(0, physY - (terrainY + this._parentHalfHeight));
+        this._contactShadow.position.set(this.parent.position.x, terrainY + 0.035, this.parent.position.z);
+        this._contactShadow.rotation.y = this.parent.rotation.y;
+        const radius = 1.45 + Math.min(0.55, hover * 0.8);
+        this._contactShadow.scaling.set(radius * 1.35, 1, radius * 0.92);
+        if (this._contactShadowMat) {
+          this._contactShadowMat.alpha = Math.max(0.14, Math.min(0.56, 0.5 - hover * 0.42));
+        }
+        this._contactShadow.isVisible = true;
+      }
+    } else if (this._contactShadow) {
+      this._contactShadow.isVisible = false;
     }
 
     // Cancel only the drift lean (currentRoll) on the wheel root, not the terrain roll.
@@ -393,6 +452,9 @@ export class TruckBody {
 
   dispose() {
     for (const mesh of this._parts) mesh.dispose();
+    this._contactShadow?.dispose();
+    this._contactShadowMat?.dispose();
+    this._contactShadowTex?.dispose();
     this._visualRoot.dispose();
     this._wheelRoot.dispose();
     this._parts  = [];
