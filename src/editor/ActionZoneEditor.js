@@ -401,11 +401,9 @@ export class ActionZoneEditor {
 
   addEntity() {
     const e        = this.editor;
-    const camPos   = e.camera.position;
-    const camTarget = e.camera.target;
-    const dir      = camTarget.subtract(camPos).normalize();
-    const newX     = e._snap(camPos.x + dir.x * 20);
-    const newZ     = e._snap(camPos.z + dir.z * 50);
+    const camTarget = e.camera.getTarget();
+    const newX     = e._snap(camTarget.x);
+    const newZ     = e._snap(camTarget.z);
 
     const feature = {
       type: 'actionZone',

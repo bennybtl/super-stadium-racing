@@ -73,13 +73,9 @@ export class HillEditor {
   /** Place a new hill in front of the camera and select it. */
   addEntity() {
     const { camera } = this.editor;
-    const camPos = camera.position;
-    const camTarget = camera.target;
-    const direction = camTarget.subtract(camPos).normalize();
-    const distance = 20;
-
-    const newX = camPos.x + direction.x * distance;
-    const newZ = camPos.z + direction.z * distance;
+    const camTarget = camera.getTarget();
+    const newX = camTarget.x;
+    const newZ = camTarget.z;
 
     const newFeature = {
       type: 'hill',

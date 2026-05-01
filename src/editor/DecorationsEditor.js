@@ -262,11 +262,9 @@ export class DecorationsEditor {
 
   addEntity() {
     const e = this.editor;
-    const camPos = e.camera.position;
-    const camTarget = e.camera.target;
-    const direction = camTarget.subtract(camPos).normalize();
-    const newX = camPos.x + direction.x * 20;
-    const newZ = camPos.z + direction.z * 50;
+    const camTarget = e.camera.getTarget();
+    const newX = camTarget.x;
+    const newZ = camTarget.z;
     const type = this.editor._editorStore?.decoration?.type || 'flag';
 
     e.saveSnapshot();

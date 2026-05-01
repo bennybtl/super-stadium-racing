@@ -121,12 +121,9 @@ export class BridgeEditor {
 
   addEntity() {
     const { camera } = this.editor;
-    const camPos    = camera.position;
-    const camTarget = camera.target;
-    const direction = camTarget.subtract(camPos).normalize();
-
-    const newX = camPos.x + direction.x * 20;
-    const newZ = camPos.z + direction.z * 50;
+    const camTarget = camera.getTarget();
+    const newX = camTarget.x;
+    const newZ = camTarget.z;
 
     const newFeature = {
       type:      'bridge',

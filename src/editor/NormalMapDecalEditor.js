@@ -154,11 +154,11 @@ export class NormalMapDecalEditor {
 
   addEntity() {
     const cam       = this.editor.camera;
-    const direction = cam.getTarget().subtract(cam.position).normalize();
+    const camTarget = cam.getTarget();
     const newFeature = {
       type:      'normalMapDecal',
-      centerX:   cam.position.x + direction.x * 20,
-      centerZ:   cam.position.z + direction.z * 50,
+      centerX:   camTarget.x,
+      centerZ:   camTarget.z,
       width:     10,
       depth:     10,
       angle:     0,

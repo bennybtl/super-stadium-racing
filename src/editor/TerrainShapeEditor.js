@@ -224,12 +224,12 @@ export class TerrainShapeEditor {
 
   addEntity(shape = 'circle') {
     const cam       = this.editor.camera;
-    const direction = cam.getTarget().subtract(cam.position).normalize();
+    const camTarget = cam.getTarget();
     const base = {
       type:        'terrain',
       shape,
-      centerX:     cam.position.x + direction.x * 20,
-      centerZ:     cam.position.z + direction.z * 50,
+      centerX:     camTarget.x,
+      centerZ:     camTarget.z,
       terrainType: TERRAIN_TYPES.MUD,
     };
     const newFeature = { ...base, width: 10, depth: 10, rotation: 0 };

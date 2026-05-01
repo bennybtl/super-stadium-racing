@@ -276,12 +276,10 @@ export class ObstacleEditor {
 
   addEntity() {
     const e = this.editor;
-    const camPos    = e.camera.position;
-    const camTarget = e.camera.target;
-    const direction = camTarget.subtract(camPos).normalize();
+    const camTarget = e.camera.getTarget();
     this.addEntityAt(
-      camPos.x + direction.x * 20,
-      camPos.z + direction.z * 50
+      camTarget.x,
+      camTarget.z
     );
     e.hideAddMenu();
   }

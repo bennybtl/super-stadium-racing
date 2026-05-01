@@ -217,13 +217,9 @@ export class CheckpointEditor {
 
   addEntity() {
     const { camera, currentTrack } = this.editor;
-    const camPos = camera.position;
-    const camTarget = camera.target;
-    const direction = camTarget.subtract(camPos).normalize();
-    const distance = 20;
-
-    const newX = camPos.x + direction.x * distance;
-    const newZ = camPos.z + direction.z * distance;
+    const camTarget = camera.getTarget();
+    const newX = camTarget.x;
+    const newZ = camTarget.z;
 
     // Get terrain height
     const terrainHeight = this.editor.terrainQuery.heightAt(newX, newZ);
@@ -247,7 +243,8 @@ export class CheckpointEditor {
     currentTrack.features.push(newFeature);
 
     // Create visual representation
-    this.editor.checkpointManager.createSingleCheckpoint(newFeature);
+    const checkpoint = this.editor.checkpointManager.createSingleCheckpoint(newFeature);
+    this.select(checkpoint);
 
     // Hide menu
     this.editor.hideAddMenu();

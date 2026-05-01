@@ -70,9 +70,9 @@ export class PolyHillEditor {
 
   addPolyHillFeature() {
     const cam = this.ec.camera;
-    const dir = cam.getTarget().subtract(cam.position).normalize();
-    const cx = cam.position.x + dir.x * 30;
-    const cz = cam.position.z + dir.z * 30;
+    const target = cam.getTarget();
+    const cx = target.x;
+    const cz = target.z;
 
     const feature = {
       type: 'polyHill',
