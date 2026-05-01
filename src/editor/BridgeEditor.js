@@ -197,6 +197,7 @@ export class BridgeEditor {
     feature.centerX = this.editor._snap(this.editor._rawDragPos.x, 'x');
     feature.centerZ = this.editor._snap(this.editor._rawDragPos.z, 'z');
     this.updateVisual(this.selected);
+    window.rebuildBridge?.(this.selected.feature);
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
 
@@ -208,6 +209,7 @@ export class BridgeEditor {
     const s = this.editor._editorStore;
     if (s) s.bridge.angle = Math.round(f.angle);
     this.updateVisual(this.selected);
+    window.rebuildBridge?.(this.selected.feature);
   }
 
   // ── Delete / Duplicate ────────────────────────────────────────────────────

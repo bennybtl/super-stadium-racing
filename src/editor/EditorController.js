@@ -583,45 +583,50 @@ export class EditorController {
       };
     }
 
-    // Recreate gizmos + rebuild visuals
-    for (const feature of this.currentTrack.features) {
-      if (feature.type === 'hill') this.hillEditor.createVisual(feature);
-      else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
-      else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
-      else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
-      else if (feature.type === 'tireStack' || feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
-      else if (feature.type === 'flag' || feature.type === 'bannerString') this.decorationsEditor.createVisual(feature);
-      else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
-      else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
-      else if (feature.type === 'bridge') this.bridgeEditor.createVisual(feature);
-    }
-    // Restore AI path waypoint gizmos
-    this.aiPathEditor.onSnapshotRestored(this.currentTrack);
-    // Restore terrain path gizmos
-    this.terrainPathEditor.onSnapshotRestored(this.currentTrack);
-    this._syncAiPathPanel();
+      // Rebuild terrain first so terrain-sampled visuals land at correct heights.
+      window.rebuildTerrain?.();
+      window.rebuildTerrainGrid?.();
+      window.rebuildTerrainTexture?.();
 
-    // Restore mesh grid gizmos
-    this.meshGridEditor?.onSnapshotRestored();
-    // Restore poly wall gizmos
-    this.polyWallEditor?.onSnapshotRestored();
-    window.rebuildPolyWall?.(null);
-    // Restore poly hill gizmos
-    this.polyHillEditor?.onSnapshotRestored();
-    window.rebuildPolyHill?.(null);
-    // Restore bezier wall gizmos
-    this.bezierWallEditor?.onSnapshotRestored();
-    window.rebuildBezierWall?.(null);
-    // Restore poly curb gizmos
-    this.polyCurbEditor?.onSnapshotRestored();
-    window.rebuildPolyCurb?.(null);
-    // Checkpoints are managed by CheckpointManager — rebuild from features
-    // Checkpoints are managed by CheckpointManager — rebuild from features
-    this.checkpointEditor.rebuildFromFeatures();
+      // Recreate gizmos + rebuild visuals.
+      for (const feature of this.currentTrack.features) {
+        if (feature.type === 'hill') this.hillEditor.createVisual(feature);
+        else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
+        else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
+        else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
+        else if (feature.type === 'tireStack' || feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
+        else if (feature.type === 'flag' || feature.type === 'bannerString') this.decorationsEditor.createVisual(feature);
+        else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
+        else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
+        else if (feature.type === 'bridge') this.bridgeEditor.createVisual(feature);
+      }
+      // Restore AI path waypoint gizmos
+      this.aiPathEditor.onSnapshotRestored(this.currentTrack);
+      // Restore terrain path gizmos
+      this.terrainPathEditor.onSnapshotRestored(this.currentTrack);
+      this._syncAiPathPanel();
+
+      // Restore mesh grid gizmos
+      this.meshGridEditor?.onSnapshotRestored();
+      // Restore poly wall gizmos
+      this.polyWallEditor?.onSnapshotRestored();
+      // Restore poly hill gizmos
+      this.polyHillEditor?.onSnapshotRestored();
+      window.rebuildPolyHill?.(null);
+      // Restore bezier wall gizmos
+      this.bezierWallEditor?.onSnapshotRestored();
+      window.rebuildBezierWall?.(null);
+      // Restore poly curb gizmos
+      this.polyCurbEditor?.onSnapshotRestored();
+      window.rebuildPolyCurb?.(null);
+      window.rebuildBridge?.(null);
+      // Checkpoints are managed by CheckpointManager — rebuild from features
+      this.checkpointEditor.rebuildFromFeatures();
 
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
+    window.rebuildPolyWall?.(null);
   }
 
   undo() {

@@ -362,7 +362,6 @@ export class PolyWallEditor {
       if (f.type === 'polyWall') this._createWallGizmos(f);
     }
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
-    window.rebuildPolyWall?.(null);
   }
 
   // ─── Vue Store Sync ───────────────────────────────────────────────────────
