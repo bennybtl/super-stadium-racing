@@ -277,6 +277,7 @@ export class Truck {
         isGrounded,
         particleDt,
         terrain,
+        track,
         effectScaleOverride
       );
       this._particleUpdateAccumulator = 0;

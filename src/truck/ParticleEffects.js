@@ -22,14 +22,96 @@ export class ParticleEffects {
     this.scene = scene;
     this._qualityScale = Math.max(0.1, Math.min(1, options?.qualityScale ?? 1));
     this.driftParticles = this._createDriftParticles(TERRAIN_TYPES.PACKED_DIRT.color);
-    this.splashParticles = this.createSplashParticles();
+    this.splashParticles = [
+      this._createSplashParticles("splashL", -1),
+      this._createSplashParticles("splashR", 1),
+    ];
+    this.deepSplashParticles = [
+      this._createDeepSplashParticles("deepSplashL", -1),
+      this._createDeepSplashParticles("deepSplashR", 1),
+    ];
     this.nitroParticles = this._createNitroParticles();
     this._currentTerrainName = null;
+    this._wasInDeepWater = false;
+    this._deepSplashPulseTimer = 0;
+    this._deepSplashPulseCooldown = 0;
     this._nitroTimer = 0;
     this._wasBoostActive = false;
     this._nitroEmitter = new Vector3();
     this._nitroDir1 = new Vector3();
     this._nitroDir2 = new Vector3();
+  }
+
+  _isWaterTerrain(terrainType) {
+    const name = typeof terrainType === 'string' ? terrainType : terrainType?.name;
+    return name === 'water';
+  }
+
+  _hillContributionAt(feature, x, z) {
+    const dx = x - feature.centerX;
+    const dz = z - feature.centerZ;
+    const distFromCenter = Math.sqrt(dx * dx + dz * dz);
+    if (distFromCenter >= feature.radius) return 0;
+    const t = distFromCenter / feature.radius;
+    return feature.height * Math.cos(t * Math.PI / 2);
+  }
+
+  _squareHillContributionAt(feature, x, z) {
+    const hw = feature.width / 2;
+    const hd = (feature.depth ?? feature.width) / 2;
+    const transition = feature.transition ?? 4;
+
+    const wx = x - feature.centerX;
+    const wz = z - feature.centerZ;
+    const angleRad = (feature.angle ?? 0) * Math.PI / 180;
+    const cosA = Math.cos(angleRad);
+    const sinA = Math.sin(angleRad);
+    const lx = wx * cosA + wz * sinA;
+    const lz = -wx * sinA + wz * cosA;
+
+    const edgeDx = Math.max(0, Math.abs(lx) - hw);
+    const edgeDz = Math.max(0, Math.abs(lz) - hd);
+    const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
+    if (dist >= transition) return 0;
+
+    const falloff = dist === 0 ? 1 : Math.cos((dist / transition) * Math.PI / 2);
+    if (feature.heightAtMin !== undefined) {
+      const t = (Math.max(-hw, Math.min(hw, lx)) + hw) / feature.width;
+      const innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
+      return innerHeight * falloff;
+    }
+    return feature.height * falloff;
+  }
+
+  _isInDeepWater(track) {
+    if (!track?.features?.length) return false;
+
+    const x = this.mesh.position.x;
+    const z = this.mesh.position.z;
+    const DEEP_WATER_THRESHOLD = -0.9;
+
+    for (let i = track.features.length - 1; i >= 0; i--) {
+      const feature = track.features[i];
+      if (!this._isWaterTerrain(feature?.terrainType)) continue;
+
+      if (feature.type === 'hill' && feature.height < 0) {
+        const h = this._hillContributionAt(feature, x, z);
+        if (h <= DEEP_WATER_THRESHOLD) return true;
+      } else if (feature.type === 'squareHill') {
+        const isNegativeFlat = (feature.height ?? 0) < 0;
+        const isNegativeSlope =
+          feature.heightAtMin !== undefined &&
+          feature.heightAtMax !== undefined &&
+          feature.heightAtMin < 0 &&
+          feature.heightAtMax < 0;
+        if (!isNegativeFlat && !isNegativeSlope) continue;
+
+        const h = this._squareHillContributionAt(feature, x, z);
+        if (h <= DEEP_WATER_THRESHOLD) return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -147,12 +229,15 @@ export class ParticleEffects {
     this._nitroTimer = 0.35;
   }
 
-  createSplashParticles() {
-    const splashParticles = new ParticleSystem("splash", Math.round(300 * this._qualityScale), this.scene);
+  _createSplashParticles(name, sideSign) {
+    const splashParticles = new ParticleSystem(name, Math.round(180 * this._qualityScale), this.scene);
     splashParticles.particleTexture = getSharedCloudTexture(this.scene);
     splashParticles.emitter = this.mesh;
-    splashParticles.minEmitBox = new Vector3(-0.7, 0, -0.5);
-    splashParticles.maxEmitBox = new Vector3(0.7, 0, 0.5);
+    const sideCenterX = sideSign * 1.15;
+    splashParticles.minEmitBox = new Vector3(sideCenterX - 0.28, 0.45, -2.9);
+    splashParticles.maxEmitBox = new Vector3(sideCenterX + 0.28, 0.9, -1.1);
+    // Render after the translucent water surface so splashes are visibly on top.
+    splashParticles.renderingGroupId = 2;
     
     splashParticles.color1 = new Color4(0.8, 0.9, 1.0, 0.6);
     splashParticles.color2 = new Color4(0.6, 0.8, 0.9, 0.4);
@@ -178,7 +263,41 @@ export class ParticleEffects {
     return splashParticles;
   }
 
-  update(state, speed, terrainManager, isGrounded = true, deltaTime = 0.016, currentTerrain = null, effectScaleOverride = 1) {
+  _createDeepSplashParticles(name, sideSign) {
+    const particles = new ParticleSystem(name, Math.round(380 * this._qualityScale), this.scene);
+    particles.particleTexture = getSharedCloudTexture(this.scene);
+    particles.emitter = this.mesh;
+    const sideCenterX = sideSign * 1.35;
+    particles.minEmitBox = new Vector3(sideCenterX - 0.42, 0.55, -2.9);
+    particles.maxEmitBox = new Vector3(sideCenterX + 0.42, 1.2, -1.1);
+    // Render after the translucent water surface so pulses are not occluded by it.
+    particles.renderingGroupId = 2;
+
+    particles.color1 = new Color4(1.0, 1.0, 1.0, 0.95);
+    particles.color2 = new Color4(1.0, 1.0, 1.0, 0.65);
+    particles.colorDead = new Color4(1.0, 1.0, 1.0, 0);
+
+    particles.minSize = 0.9;
+    particles.maxSize = 2.0;
+    particles.minLifeTime = 0.22;
+    particles.maxLifeTime = 0.42;
+
+    particles.emitRate = 0;
+    particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+    particles.gravity = new Vector3(0, -28, 0);
+    particles.direction1 = new Vector3(-2.8, 2.0, -2.8);
+    particles.direction2 = new Vector3(2.8, 3.1, 2.8);
+    particles.minAngularSpeed = 0;
+    particles.maxAngularSpeed = Math.PI * 2;
+    particles.minEmitPower = 1.8;
+    particles.maxEmitPower = 4.5;
+    particles.updateSpeed = 0.012;
+
+    particles.start();
+    return particles;
+  }
+
+  update(state, speed, terrainManager, isGrounded = true, deltaTime = 0.016, currentTerrain = null, track = null, effectScaleOverride = 1) {
     const effectiveScale = this._qualityScale * Math.max(0, Math.min(1, effectScaleOverride));
     const terrain = currentTerrain ?? (terrainManager ? terrainManager.getTerrainAt(this.mesh.position) : null);
     const terrainName = terrain?.name ?? 'default';
@@ -203,10 +322,35 @@ export class ParticleEffects {
     // Update splash particles when in water and wheels are on the ground
     const isInWater = terrainName === 'water';
     if (isInWater && isGrounded && speed > 1) {
-      this.splashParticles.emitRate = speed * 80 * effectiveScale;
+      const rate = speed * 80 * effectiveScale;
+      for (const p of this.splashParticles) p.emitRate = rate;
     } else {
-      this.splashParticles.emitRate = 0;
+      for (const p of this.splashParticles) p.emitRate = 0;
     }
+
+    // Deep-water splash pulse: one strong burst on entry and repeated pulses while driving.
+    const inDeepWater = isInWater && isGrounded && this._isInDeepWater(track);
+    if (inDeepWater && !this._wasInDeepWater) {
+      this._deepSplashPulseTimer = 0.16;
+      this._deepSplashPulseCooldown = 0.42;
+    }
+
+    if (inDeepWater && speed > 1.5) {
+      this._deepSplashPulseCooldown -= deltaTime;
+      if (this._deepSplashPulseCooldown <= 0) {
+        this._deepSplashPulseTimer = 0.11;
+        this._deepSplashPulseCooldown = Math.max(0.18, 0.45 - speed * 0.012);
+      }
+    }
+
+    if (this._deepSplashPulseTimer > 0) {
+      this._deepSplashPulseTimer -= deltaTime;
+      const rate = (450 + speed * 140) * effectiveScale;
+      for (const p of this.deepSplashParticles) p.emitRate = rate;
+    } else {
+      for (const p of this.deepSplashParticles) p.emitRate = 0;
+    }
+    this._wasInDeepWater = inDeepWater;
 
     // Nitro burst: fire a cloud of white smoke the moment boost activates
     const boostJustStarted = effectiveScale > 0.05 && state.boostActive && !this._wasBoostActive;
