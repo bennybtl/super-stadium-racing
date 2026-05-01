@@ -27,7 +27,7 @@ export class PracticeMode extends DriveMode {
       shadows,
       currentTrack,
       terrainManager,
-      tireStackManager,
+      obstacleManager,
       flagManager,
       pickupManager,
     } = await this.buildDriveScene(trackKey);
@@ -127,7 +127,7 @@ export class PracticeMode extends DriveMode {
       else uiManager.showOutOfBoundsCountdown(oobRemaining);
 
       staticBodyCollisionManager.update(trucks);
-      tireStackManager.update(trucks, dt);
+      obstacleManager.update(trucks, dt);
       flagManager.update(trucks, dt);
       pickupManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);

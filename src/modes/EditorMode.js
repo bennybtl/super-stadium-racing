@@ -41,7 +41,7 @@ export class EditorMode extends BaseMode {
       wallManager,
       shadows,
       flagManager,
-      tireStackManager,
+      obstacleManager,
       trackSignManager,
       bannerStringManager,
       bridgeManager,
@@ -54,11 +54,11 @@ export class EditorMode extends BaseMode {
     // Keeping both sets causes duplicate meshes and breaks click-selection.
     flagManager.dispose();
 
-    // Dispose runtime TireStackManager stacks – the TireStackEditor creates
-    // its own pickable gizmo cylinders. The real TireStack objects have
+    // Dispose runtime ObstacleManager stacks – the ObstacleEditor creates
+    // its own pickable gizmo cylinders. The real Obstacle objects have
     // physics bodies and disc meshes that are pickable by default, which
     // intercept raycasts and make existing stacks impossible to select.
-    tireStackManager.dispose();
+    obstacleManager.dispose();
 
     // Dispose runtime TrackSignManager signs for the same reason — the
     // TrackSignEditor creates its own copies that are tracked for selection.

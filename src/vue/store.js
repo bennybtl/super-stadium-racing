@@ -166,7 +166,7 @@ export const useDebugStore = defineStore('debug', () => {
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
 export const useEditorStore = defineStore('editor', () => {
-  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainShape' | 'normalMapDecal' | 'meshGrid' | 'polyWall' | 'flag')
+  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainShape' | 'normalMapDecal' | 'meshGrid' | 'polyWall' | 'flag' | 'obstacle')
   const selectedType = ref(null);
   const activeTool = ref(null);
 
@@ -223,6 +223,20 @@ export const useEditorStore = defineStore('editor', () => {
     repeatU: 1,
     repeatV: 1,
     intensity: 0.5,
+  });
+
+  // ── Obstacle panel ──
+  const obstacle = reactive({
+    type: 'barrel',
+    scale: 1,
+    rotation: 0,
+    weight: 22,
+    placementActive: false,
+    options: [
+      { value: 'barrel', label: 'Barrel' },
+      { value: 'hayBale', label: 'Hay Bale' },
+      { value: 'tireStack', label: 'Tire Stack' },
+    ],
   });
 
   // ── Mesh grid panel ──
@@ -605,7 +619,16 @@ export const useEditorStore = defineStore('editor', () => {
   function addSquareHill()     { _bridge.value?.addSquareHillEntity(); }
   function addTerrain()        { _bridge.value?.addTerrainEntity(); }
   function addNormalMapDecal() { _bridge.value?.addNormalMapDecalEntity(); }
-  function addTireStack()      { _bridge.value?.addTireStackEntity(); }
+  function addObstacle()       { _bridge.value?.addObstacleEntity(); }
+  function setObstacleType(val) { obstacle.type = val; _bridge.value?.changeObstacleType?.(val); }
+  function setObstacleScale(val) { obstacle.scale = val; _bridge.value?.changeObstacleScale?.(val); }
+  function setObstacleRotation(val) { obstacle.rotation = val; _bridge.value?.changeObstacleRotation?.(val); }
+  function setObstacleWeight(val) { obstacle.weight = val; _bridge.value?.changeObstacleWeight?.(val); }
+  function setObstaclePlacementActive(val) {
+    obstacle.placementActive = !!val;
+    _bridge.value?.setObstaclePlacementActive?.(!!val);
+  }
+  function closeObstacle()     { _bridge.value?.closeObstacle?.(); }
   function addFlag()           { _bridge.value?.addFlagEntity(); }
   function addMeshGrid()       { _bridge.value?.addMeshGridEntity(); }
   function addPolyWall()       { _bridge.value?.addPolyWallEntity(); }
@@ -643,6 +666,7 @@ export const useEditorStore = defineStore('editor', () => {
     squareHill,
     terrainShape,
     normalMapDecal,
+    obstacle,
     meshGrid,
     polyWall,
     polyHill,
@@ -698,7 +722,10 @@ export const useEditorStore = defineStore('editor', () => {
     toggleSnap, cycleSnapSize, quickTestTrack,
     openAddMenu, closeAddMenu, toggleAddMenu,
     addCheckpoint, addHill, addSquareHill, addTerrain,
-    addNormalMapDecal, addTireStack, addFlag,
+    addNormalMapDecal, addObstacle,
+    setObstacleType, setObstacleScale, setObstacleRotation, setObstacleWeight,
+    setObstaclePlacementActive, closeObstacle,
+    addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,
     openAiPath, closeAiPath,

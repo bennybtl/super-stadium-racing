@@ -42,7 +42,7 @@ import imgFlags       from '../assets/flags.feature.png';
 import imgTrackSign   from '../assets/track_sign.feature.png';
 import imgTerrain     from '../assets/terrain_region.feature.png';
 import imgMeshGrid    from '../assets/mesh_grid.feature.png';
-import imgTireStack   from '../assets/tire_stack.feature.png';
+import imgObstacle    from '../assets/tire_stack.feature.png';
 import imgActionZone  from '../assets/action_zone.feature.png';
 import imgBridge      from '../assets/bridge.feature.png';
 import imgAiPath      from '../assets/ai_path.feature.png';
@@ -60,7 +60,7 @@ const features = [
   { label: 'Poly Hill',        img: imgPolyHill,      action: () => editor.addPolyHill()       },
   { label: 'Mesh Grid',        img: imgMeshGrid,      action: () => editor.addMeshGrid()       },
   { label: 'Terrain Region',   img: imgTerrain,       action: () => editor.addTerrain()        },
-  { label: 'Tire Stack',       img: imgTireStack,     action: () => editor.addTireStack()      },
+  { label: 'Obstacle',         img: imgObstacle,      action: () => editor.addObstacle()      },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.addTrackSign()      },
   { label: 'Decoration',       img: imgFlags,         action: () => editor.addDecoration()     },
   { label: 'Action Zone',      img: imgActionZone,     action: () => editor.addActionZone()     },

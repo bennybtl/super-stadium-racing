@@ -43,7 +43,7 @@ export class RaceMode extends DriveMode {
       terrainManager,
       checkpointManager,
       wallManager,
-      tireStackManager,
+      obstacleManager,
       flagManager,
       pickupManager,
     } = await this.buildDriveScene(trackKey);
@@ -413,7 +413,7 @@ export class RaceMode extends DriveMode {
 
       checkpointManager.rebuild();
       wallManager.rebuild();
-      tireStackManager.rebuild();
+      obstacleManager.rebuild();
       pickupManager.rebuild();
 
       uiManager.updateBoosts(playerTruckData.gameState.boostCount);
@@ -512,7 +512,7 @@ export class RaceMode extends DriveMode {
       });
 
       truckCollisionManager.update(trucks);
-      tireStackManager.update(trucks);
+      obstacleManager.update(trucks);
       flagManager.update(trucks, dt);
       pickupManager.update(trucks, dt);
 

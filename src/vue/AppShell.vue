@@ -19,6 +19,7 @@
     <SquareHillPanel />
     <TerrainShapePanel />
     <NormalMapDecalPanel />
+    <ObstaclePanel />
     <PolyWallPanel />
     <PolyHillPanel />
     <BezierWallPanel />
@@ -51,6 +52,7 @@ import HillPanel          from './editor/HillPanel.vue';
 import SquareHillPanel    from './editor/SquareHillPanel.vue';
 import TerrainShapePanel  from './editor/TerrainShapePanel.vue';
 import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
+import ObstaclePanel      from './editor/ObstaclePanel.vue';
 import PolyWallPanel      from './editor/PolyWallPanel.vue';
 import PolyHillPanel      from './editor/PolyHillPanel.vue';
 import BezierWallPanel    from './editor/BezierWallPanel.vue';

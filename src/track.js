@@ -114,10 +114,10 @@ export class Track {
     return this;
   }
 
-  // Add a stack of 3 movable tires at a world position.
-  // x/z: centre of the stack base on the terrain.
-  addTireStack(x, z) {
-    this.features.push({ type: "tireStack", x, z });
+  // Add a generic movable obstacle at a world position.
+  // obstacleType: 'barrel' | 'hayBale' | 'tireStack'
+  addObstacle(x, z, obstacleType = 'barrel', angle = 0) {
+    this.features.push({ type: 'obstacle', obstacleType, x, z, angle });
     return this;
   }
 

@@ -28,7 +28,7 @@ export class TestMode extends DriveMode {
       shadows,
       currentTrack,
       terrainManager,
-      tireStackManager,
+      obstacleManager,
       flagManager,
     } = await this.buildDriveScene(trackKey);
 
@@ -88,7 +88,7 @@ export class TestMode extends DriveMode {
       });
 
       staticBodyCollisionManager.update(trucks);
-      tireStackManager.update(trucks);
+      obstacleManager.update(trucks);
       flagManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
       this.debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck);

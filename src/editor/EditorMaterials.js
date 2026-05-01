@@ -293,26 +293,26 @@ export class EditorMaterials {
     }));
   }
 
-  // ── Tire Stack ────────────────────────────────────────────────────────────
+  // ── Obstacle ──────────────────────────────────────────────────────────────
 
   /** Grey handle sphere. */
-  get tireStackHandle() {
-    return this._get('tireStackHandle', s => makeMat('edTireStackHandle', s, {
+  get obstacleHandle() {
+    return this._get('obstacleHandle', s => makeMat('edObstacleHandle', s, {
       diffuse: [0.6, 0.6, 0.6], emissive: [0.1, 0.1, 0.1],
     }));
   }
 
   /** Orange-yellow handle sphere (selected). */
-  get tireStackHandleHighlight() {
-    return this._get('tireStackHandleHL', s => makeMat('edTireStackHandleHL', s, {
+  get obstacleHandleHighlight() {
+    return this._get('obstacleHandleHL', s => makeMat('edObstacleHandleHL', s, {
       diffuse: [1.0, 0.7, 0.1], emissive: [0.5, 0.3, 0.0],
     }));
   }
 
   /** Rubber tyre material — uses specular for a slight sheen. */
-  get tireStackTire() {
-    return this._get('tireStackTire', s => {
-      const mat = new StandardMaterial('edTireStackTire', s);
+  get obstacleTire() {
+    return this._get('obstacleTire', s => {
+      const mat = new StandardMaterial('edObstacleTire', s);
       mat.diffuseColor  = new Color3(0.8, 0.5, 0.1);
       mat.specularColor = new Color3(0.3, 0.2, 0.05);
       mat.specularPower = 32;

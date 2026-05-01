@@ -22,7 +22,7 @@ import { Track } from "../track.js";
 import { CameraController } from "../managers/CameraController.js";
 import { CheckpointManager } from "../managers/CheckpointManager.js";
 import { WallManager } from "../managers/WallManager.js";
-import { TireStackManager } from "../managers/TireStackManager.js";
+import { ObstacleManager } from "../managers/ObstacleManager.js";
 import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { BannerStringManager } from "../managers/BannerStringManager.js";
@@ -295,7 +295,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // -- Feature managers --
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
   // wallManager already created above
-  const tireStackManager = new TireStackManager(scene, currentTrack, shadows);
+  const obstacleManager = new ObstacleManager(scene, currentTrack, shadows);
   const flagManager     = new FlagManager(scene, currentTrack, shadows);
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
@@ -313,10 +313,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   steepSlopeColliderManager.rebuild();
   checkpointManager.createCheckpoints();
 
-  // Create Tire Stacks, Flags, and Track Signs from track features (must be after ground so we can query heights)
+  // Create movable obstacles, flags, and track signs from track features.
   for (const feature of currentTrack.features) {
-    if (feature.type === "tireStack") {
-      tireStackManager.createStack(feature);
+    if (feature.type === "tireStack" || feature.type === "obstacle") {
+      obstacleManager.createStack(feature);
     } else if (feature.type === "polyWall") {
       wallManager.createPolyWall(feature);
     } else if (feature.type === "polyCurb") {
@@ -395,7 +395,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     compositeNormalMap,
     checkpointManager,
     wallManager,
-    tireStackManager,
+    obstacleManager,
     flagManager,
     trackSignManager,
     bannerStringManager,

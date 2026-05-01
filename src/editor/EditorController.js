@@ -9,7 +9,7 @@ import { CheckpointEditor } from "./CheckpointEditor.js";
 import { SquareHillEditor } from "./SquareHillEditor.js";
 import { TerrainShapeEditor } from "./TerrainShapeEditor.js";
 import { NormalMapDecalEditor } from "./NormalMapDecalEditor.js";
-import { TireStackEditor } from "./TireStackEditor.js";
+import { ObstacleEditor } from "./ObstacleEditor.js";
 import { DecorationsEditor } from "./DecorationsEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
 import { ActionZoneEditor } from './ActionZoneEditor.js';
@@ -66,8 +66,8 @@ export class EditorController {
     // Normal map decal editing (delegated to NormalMapDecalEditor)
     this.normalMapDecalEditor = new NormalMapDecalEditor(this);
 
-    // Tire stack editing (delegated to TireStackEditor)
-    this.tireStackEditor = new TireStackEditor(this);
+    // Tire stack editing (delegated to ObstacleEditor)
+    this.obstacleEditor = new ObstacleEditor(this);
 
     // Decorations editing (flags + banner strings)
     this.decorationsEditor = new DecorationsEditor(this);
@@ -154,7 +154,7 @@ export class EditorController {
     this.squareHillEditor.activate(this.scene, track);
     this.terrainShapeEditor.activate(this.scene, track);
     this.normalMapDecalEditor.activate(this.scene, track);
-    this.tireStackEditor.activate(this.scene, track);
+    this.obstacleEditor.activate(this.scene, track);
 
     // Activate all object editors
     this.decorationsEditor.activate(this.scene, track);
@@ -226,7 +226,7 @@ export class EditorController {
     this.normalMapDecalEditor.dispose();
 
     // Dispose all tire stack editor visuals
-    this.tireStackEditor.dispose();
+    this.obstacleEditor.dispose();
 
     // Hide all editor panels via Vue store
     if (this._editorStore) {
@@ -359,7 +359,7 @@ export class EditorController {
     this.squareHillEditor.deselect();
     this.terrainShapeEditor.deselect();
     this.normalMapDecalEditor.deselect();
-    this.tireStackEditor.deselect();
+    this.obstacleEditor.deselect();
     this.decorationsEditor.deselect();
     this.trackSignEditor.deselect();
     this.actionZoneEditor.deselect();
@@ -372,7 +372,7 @@ export class EditorController {
     this.squareHillEditor.clearMeshes();
     this.terrainShapeEditor.clearMeshes();
     this.normalMapDecalEditor.clearMeshes();
-    this.tireStackEditor.clearMeshes();
+    this.obstacleEditor.clearMeshes();
 
     // Clear object editor meshes
     this.decorationsEditor.clearMeshes();
@@ -399,7 +399,7 @@ export class EditorController {
       else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
       else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
       else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
-      else if (feature.type === 'tireStack') this.tireStackEditor.createVisual(feature);
+      else if (feature.type === 'tireStack' || feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
       else if (feature.type === 'flag' || feature.type === 'bannerString') this.decorationsEditor.createVisual(feature);
       else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
       else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
@@ -475,6 +475,12 @@ export class EditorController {
         event.stopPropagation();
         return;
       }
+      if (this._editorStore?.selectedType === 'obstacle') {
+        this.closeObstacle();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (this.hillEditor.selected) {
         this.hillEditor.deselect();
       } else if (this.squareHillEditor.selected) {
@@ -509,7 +515,7 @@ export class EditorController {
       else if (this.checkpointEditor.selected) this.checkpointEditor.duplicateSelected();
       else if (this.terrainShapeEditor.selected) this.terrainShapeEditor.duplicateSelected();
       else if (this.normalMapDecalEditor.selected) this.normalMapDecalEditor.duplicateSelected();
-      else if (this.tireStackEditor.selected) this.tireStackEditor.duplicateSelected();
+      else if (this.obstacleEditor.selected) this.obstacleEditor.duplicateSelected();
       else if (this.bridgeEditor.selected) this.bridgeEditor.duplicateSelected();
       event.preventDefault();
       event.stopPropagation();
@@ -533,8 +539,8 @@ export class EditorController {
       } else if (this.normalMapDecalEditor.selected) {
         this.normalMapDecalEditor.deleteSelected();
         event.preventDefault();
-      } else if (this.tireStackEditor.selected) {
-        this.tireStackEditor.deleteSelected();
+      } else if (this.obstacleEditor.selected) {
+        this.obstacleEditor.deleteSelected();
         event.preventDefault();
       } else if (this.decorationsEditor.selected) {
         this.decorationsEditor.deleteSelected();
@@ -767,8 +773,11 @@ export class EditorController {
       if (this.keys.rotateLeft)  this.normalMapDecalEditor.rotate( rotStep);
       if (this.keys.rotateRight) this.normalMapDecalEditor.rotate(-rotStep);
       delta = this.normalMapDecalEditor.move(movement);
-    } else if (this.tireStackEditor.selected) {
-      delta = this.tireStackEditor.move(movement);
+    } else if (this.obstacleEditor.selected) {
+      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
+      if (this.keys.rotateLeft)  this.obstacleEditor.rotate(rotStep);
+      if (this.keys.rotateRight) this.obstacleEditor.rotate(-rotStep);
+      delta = this.obstacleEditor.move(movement);
     } else if (this.decorationsEditor.selected) {
       if (this.keys.rotateLeft)  this.decorationsEditor.rotate(this.rotationSpeed);
       if (this.keys.rotateRight) this.decorationsEditor.rotate(-this.rotationSpeed);
@@ -895,7 +904,7 @@ export class EditorController {
       this.squareHillEditor.selected ||
       this.terrainShapeEditor.selected ||
       this.normalMapDecalEditor.selected ||
-      this.tireStackEditor.selected ||
+      this.obstacleEditor.selected ||
       this.decorationsEditor.selected ||
       this.trackSignEditor.selected ||
       this.actionZoneEditor.selected ||
@@ -918,7 +927,7 @@ export class EditorController {
     else if (this.squareHillEditor.selected) this.squareHillEditor.move(movement);
     else if (this.terrainShapeEditor.selected) this.terrainShapeEditor.move(movement);
     else if (this.normalMapDecalEditor.selected) this.normalMapDecalEditor.move(movement);
-    else if (this.tireStackEditor.selected) this.tireStackEditor.move(movement);
+    else if (this.obstacleEditor.selected) this.obstacleEditor.move(movement);
     else if (this.decorationsEditor.selected) this.decorationsEditor.move(movement);
     else if (this.trackSignEditor.selected) this.trackSignEditor.move(movement);
     else if (this.actionZoneEditor.selected) this.actionZoneEditor.move(movement);
@@ -1005,6 +1014,13 @@ export class EditorController {
         }
         return;
       }
+
+      if (this._editorStore?.obstacle?.placementActive) {
+        if (pickResult.hit && pickResult.pickedPoint) {
+          this.addObstacleAt(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
+        }
+        return;
+      }
       
       if (pickResult.hit && pickResult.pickedMesh) {
         const clickedMesh = pickResult.pickedMesh;
@@ -1030,7 +1046,7 @@ export class EditorController {
           { editor: this.squareHillEditor },
           { editor: this.terrainShapeEditor },
           { editor: this.normalMapDecalEditor },
-          { editor: this.tireStackEditor },
+          { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
           { editor: this.actionZoneEditor },
@@ -1242,18 +1258,50 @@ export class EditorController {
   changeNormalMapDecalRepeatV(val)   { this.normalMapDecalEditor.changeRepeatV(val); }
   changeNormalMapDecalIntensity(val) { this.normalMapDecalEditor.changeIntensity(val); }
 
-  // ─── Tire Stack Editing (delegated to TireStackEditor) ───────────────────
+  // ─── Obstacle Editing (delegated to ObstacleEditor) ─────────────────────
 
-  addTireStackEntity()             { this.tireStackEditor.addEntity(); }
-  createTireStackVisual(f)         { return this.tireStackEditor.createVisual(f); }
-  updateTireStackVisual(d)         { this.tireStackEditor.updateVisual(d); }
-  selectTireStack(d)               { this.tireStackEditor.select(d); }
-  deselectTireStack()              { this.tireStackEditor.deselect(); }
-  moveSelectedTireStack(movement)  { return this.tireStackEditor.move(movement); }
-  deleteSelectedTireStack()        { this.tireStackEditor.deleteSelected(); }
-  duplicateSelectedTireStack()     { this.tireStackEditor.duplicateSelected(); }
+  addObstacleEntity() {
+    this.deselectAll();
+    if (this._editorStore) {
+      this._editorStore.selectedType = 'obstacle';
+      this._editorStore.obstacle.placementActive = true;
+    }
+    this.hideAddMenu();
+  }
+  addObstacleAt(x, z) {
+    this.obstacleEditor.addEntityAt(x, z);
+  }
+  changeObstacleType(val) {
+    this.obstacleEditor.changeType(val);
+  }
+  changeObstacleScale(val) {
+    this.obstacleEditor.changeScale(val);
+  }
+  changeObstacleRotation(val) {
+    this.obstacleEditor.changeRotation(val);
+  }
+  changeObstacleWeight(val) {
+    this.obstacleEditor.changeWeight(val);
+  }
+  setObstaclePlacementActive(active) {
+    this.obstacleEditor.setPlacementActive(active);
+  }
+  closeObstacle() {
+    if (this._editorStore) {
+      this._editorStore.obstacle.placementActive = false;
+      if (this._editorStore.selectedType === 'obstacle') this._editorStore.selectedType = null;
+    }
+    this.obstacleEditor.deselect();
+  }
+  createObstacleVisual(f)          { return this.obstacleEditor.createVisual(f); }
+  updateObstacleVisual(d)          { this.obstacleEditor.updateVisual(d); }
+  selectObstacle(d)                { this.obstacleEditor.select(d); }
+  deselectObstacle()               { this.obstacleEditor.deselect(); }
+  moveSelectedObstacle(movement)   { return this.obstacleEditor.move(movement); }
+  deleteSelectedObstacle()         { this.obstacleEditor.deleteSelected(); }
+  duplicateSelectedObstacle()      { this.obstacleEditor.duplicateSelected(); }
 
-  get selectedTireStack()          { return this.tireStackEditor.selected; }
+  get selectedObstacle()           { return this.obstacleEditor.selected; }
 
   // ─── Decorations Editing (flags + banner strings) ────────────────────────
 
@@ -1273,7 +1321,7 @@ export class EditorController {
     this.squareHillEditor.deselect();
     this.terrainShapeEditor.deselect();
     this.normalMapDecalEditor.deselect();
-    this.tireStackEditor.deselect();
+    this.obstacleEditor.deselect();
     this.decorationsEditor.deselect();
     this.trackSignEditor.deselect();
     this.actionZoneEditor.deselect();
@@ -1533,7 +1581,7 @@ export class EditorController {
     setListVisibility(this.squareHillEditor?.meshes, ['node', 'sphere']);
     setListVisibility(this.terrainShapeEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.normalMapDecalEditor?.meshes, ['node', 'mesh']);
-    setListVisibility(this.tireStackEditor?.meshes, ['node', 'mesh']);
+    setListVisibility(this.obstacleEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.bridgeEditor?.meshes, ['node', 'sphere']);
 
     if (this.meshGridEditor) {
