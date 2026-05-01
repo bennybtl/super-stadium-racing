@@ -396,6 +396,152 @@ export class EditorController {
     return true;
   }
 
+  _setMovementKeyState(key, pressed) {
+    const keyMap = {
+      w: 'forward',
+      s: 'back',
+      d: 'left',
+      a: 'right',
+      q: 'rotateLeft',
+      e: 'rotateRight',
+      '=': 'down',
+      '+': 'down',
+      '-': 'up',
+      '_': 'up',
+    };
+
+    const stateKey = keyMap[key];
+    if (!stateKey) return false;
+
+    this.keys[stateKey] = pressed;
+    if (pressed) this._setRepeatingKeyPressed(stateKey);
+    else this._clearRepeatingKeyPressed(stateKey);
+    return true;
+  }
+
+  _createVectorSelectionInteraction(editor, rotateStepFn = null) {
+    const interaction = {
+      move: (movement) => editor.move(movement),
+      moveByPointerDelta: (dx, dz) => editor.move(new Vector3(dx, 0, dz)),
+    };
+
+    if (rotateStepFn) {
+      interaction.rotateLeft = (fast) => editor.rotate(rotateStepFn(fast));
+      interaction.rotateRight = (fast) => editor.rotate(-rotateStepFn(fast));
+    }
+
+    return interaction;
+  }
+
+  _createPointSelectionInteraction(editor, moveMethodName) {
+    const movePoint = (movement) => {
+      const delta = editor[moveMethodName](movement.x, movement.z);
+      return new Vector3(delta.x, movement.y, delta.z);
+    };
+
+    return {
+      move: movePoint,
+      moveByPointerDelta: (dx, dz) => editor[moveMethodName](dx, dz),
+    };
+  }
+
+  _getActiveSelectionInteraction() {
+    if (this.checkpointEditor.selected) {
+      return this._createVectorSelectionInteraction(this.checkpointEditor, () => this.rotationSpeed);
+    }
+
+    if (this.hillEditor.selected) {
+      return this._createVectorSelectionInteraction(this.hillEditor);
+    }
+
+    if (this.squareHillEditor.selected) {
+      return this._createVectorSelectionInteraction(this.squareHillEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
+    if (this.terrainShapeEditor.selected) {
+      return this._createVectorSelectionInteraction(this.terrainShapeEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
+    if (this.normalMapDecalEditor.selected) {
+      return this._createVectorSelectionInteraction(this.normalMapDecalEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
+    if (this.obstacleEditor.selected) {
+      return this._createVectorSelectionInteraction(this.obstacleEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
+    if (this.decorationsEditor.selected) {
+      return this._createVectorSelectionInteraction(this.decorationsEditor);
+    }
+
+    if (this.trackSignEditor.selected) {
+      return this._createVectorSelectionInteraction(this.trackSignEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
+    if (this.actionZoneEditor.selected) {
+      return this._createVectorSelectionInteraction(this.actionZoneEditor);
+    }
+
+    if (this.bridgeEditor?.selected) {
+      return this._createVectorSelectionInteraction(this.bridgeEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
+    if (this.aiPathEditor?.selected) {
+      return this._createVectorSelectionInteraction(this.aiPathEditor);
+    }
+
+    if (this.terrainPathEditor?.selected) {
+      return this._createVectorSelectionInteraction(this.terrainPathEditor);
+    }
+
+    if (this.polyWallEditor?.selectedPoint) {
+      return this._createPointSelectionInteraction(this.polyWallEditor, 'moveSelectedPoint');
+    }
+
+    if (this.polyHillEditor?.selectedPoint) {
+      return this._createPointSelectionInteraction(this.polyHillEditor, 'moveSelectedPoint');
+    }
+
+    if (this.bezierWallEditor?.selectedAnchor) {
+      return this._createPointSelectionInteraction(this.bezierWallEditor, 'moveSelectedAnchor');
+    }
+
+    if (this.bezierWallEditor?.selectedHandle) {
+      return this._createPointSelectionInteraction(this.bezierWallEditor, 'moveSelectedHandle');
+    }
+
+    if (this.polyCurbEditor?.selectedPoint) {
+      return this._createPointSelectionInteraction(this.polyCurbEditor, 'moveSelectedPoint');
+    }
+
+    return null;
+  }
+
+  _getSelectedFeatureActions() {
+    const featureActions = [
+      { selected: () => this.checkpointEditor.selected, duplicate: () => this.checkpointEditor.duplicateSelected(), delete: () => this.checkpointEditor.deleteSelected() },
+      { selected: () => this.hillEditor.selected, duplicate: () => this.hillEditor.duplicateSelected(), delete: () => this.hillEditor.deleteSelected() },
+      { selected: () => this.squareHillEditor.selected, duplicate: () => this.squareHillEditor.duplicateSelected(), delete: () => this.squareHillEditor.deleteSelected() },
+      { selected: () => this.terrainShapeEditor.selected, duplicate: () => this.terrainShapeEditor.duplicateSelected(), delete: () => this.terrainShapeEditor.deleteSelected() },
+      { selected: () => this.normalMapDecalEditor.selected, duplicate: () => this.normalMapDecalEditor.duplicateSelected(), delete: () => this.normalMapDecalEditor.deleteSelected() },
+      { selected: () => this.obstacleEditor.selected, duplicate: () => this.obstacleEditor.duplicateSelected(), delete: () => this.obstacleEditor.deleteSelected() },
+      { selected: () => this.decorationsEditor.selected, duplicate: () => this.decorationsEditor.duplicateSelected(), delete: () => this.decorationsEditor.deleteSelected() },
+      { selected: () => this.trackSignEditor.selected, duplicate: () => this.trackSignEditor.duplicateSelected(), delete: () => this.trackSignEditor.deleteSelected() },
+      { selected: () => this.actionZoneEditor.selected, duplicate: () => this.actionZoneEditor.duplicateSelected(), delete: () => this.actionZoneEditor.deleteSelected() },
+      { selected: () => this.bridgeEditor?.selected, duplicate: () => this.bridgeEditor?.duplicateSelected?.(), delete: () => this.bridgeEditor?.deleteSelected?.() },
+      { selected: () => this.aiPathEditor?.selected, delete: () => this.aiPathEditor?.deleteSelected?.() },
+      { selected: () => this.terrainPathEditor?.selected, delete: () => this.terrainPathEditor?.deleteSelected?.() },
+      { selected: () => this.meshGridEditor?.activeFeature, delete: () => this.meshGridEditor?.deleteMeshGrid?.() },
+      { selected: () => this.polyWallEditor?.selectedPoint, delete: () => this.polyWallEditor?.deleteSelectedPoint?.() },
+      { selected: () => this.polyHillEditor?.selectedPoint, delete: () => this.polyHillEditor?.deleteSelectedPoint?.() },
+      { selected: () => this.polyCurbEditor?.selectedPoint, delete: () => this.polyCurbEditor?.deletePolyCurbPoint?.() },
+      { selected: () => this.bezierWallEditor?.selectedAnchor, delete: () => this.bezierWallEditor?.deleteSelectedPoint?.() },
+      { selected: () => this.bezierWallEditor?.selectedHandle },
+    ];
+
+    return featureActions.find(action => action.selected()) ?? null;
+  }
+
   _applySnapshot(snap) {
     // Deselect everything
     this.deselectCheckpoint();
@@ -554,13 +700,7 @@ export class EditorController {
 
     // Handle Duplicate (Ctrl+D / Cmd+D)
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
-      if (this.hillEditor.selected) this.hillEditor.duplicateSelected();
-      else if (this.squareHillEditor.selected) this.squareHillEditor.duplicateSelected();
-      else if (this.checkpointEditor.selected) this.checkpointEditor.duplicateSelected();
-      else if (this.terrainShapeEditor.selected) this.terrainShapeEditor.duplicateSelected();
-      else if (this.normalMapDecalEditor.selected) this.normalMapDecalEditor.duplicateSelected();
-      else if (this.obstacleEditor.selected) this.obstacleEditor.duplicateSelected();
-      else if (this.bridgeEditor.selected) this.bridgeEditor.duplicateSelected();
+      this._getSelectedFeatureActions()?.duplicate?.();
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -568,55 +708,8 @@ export class EditorController {
     
     // Handle Delete key
     if (event.key === 'Delete' || event.key === 'Backspace') {
-      if (this.checkpointEditor.selected) {
-        this.checkpointEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.hillEditor.selected) {
-        this.hillEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.squareHillEditor.selected) {
-        this.squareHillEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.terrainShapeEditor.selected) {
-        this.terrainShapeEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.normalMapDecalEditor.selected) {
-        this.normalMapDecalEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.obstacleEditor.selected) {
-        this.obstacleEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.decorationsEditor.selected) {
-        this.decorationsEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.trackSignEditor?.selected) {
-        this.trackSignEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.actionZoneEditor?.selected) {
-        this.actionZoneEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.bridgeEditor?.selected) {
-        this.bridgeEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.aiPathEditor?.selected) {
-        this.aiPathEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.terrainPathEditor?.selected) {
-        this.terrainPathEditor.deleteSelected();
-        event.preventDefault();
-      } else if (this.meshGridEditor?.activeFeature) {
-        this.meshGridEditor.deleteMeshGrid();
-        event.preventDefault();
-      } else if (this.polyWallEditor?.selectedPoint) {
-        this.polyWallEditor.deleteSelectedPoint();
-        event.preventDefault();
-      } else if (this.polyHillEditor?.selectedPoint) {
-        this.polyHillEditor.deleteSelectedPoint();
-        event.preventDefault();
-      } else if (this.polyCurbEditor?.selectedPoint) {
-        this.polyCurbEditor.deletePolyCurbPoint();
-        event.preventDefault();
-      }
+      this._getSelectedFeatureActions()?.delete?.();
+      event.preventDefault();
       return;
     }
     
@@ -657,97 +750,29 @@ export class EditorController {
       return;
     }
 
-    switch(event.key.toLowerCase()) {
-      case 'w':
-        this.keys.forward = true;
-        this._setRepeatingKeyPressed('forward');
-        event.preventDefault();
-        break;
-      case 's':
-        this.keys.back = true;
-        this._setRepeatingKeyPressed('back');
-        event.preventDefault();
-        break;
-      case 'd':
-        this.keys.left = true;
-        this._setRepeatingKeyPressed('left');
-        event.preventDefault();
-        break;
-      case 'a':
-        this.keys.right = true;
-        this._setRepeatingKeyPressed('right');
-        event.preventDefault();
-        break;
-      case 'q':
-        this.keys.rotateLeft = true;
-        this._setRepeatingKeyPressed('rotateLeft');
-        event.preventDefault();
-        break;
-      case 'e':
-        this.keys.rotateRight = true;
-        this._setRepeatingKeyPressed('rotateRight');
-        event.preventDefault();
-        break;
-      case '=':
-      case '+':
-        this.keys.down = true;
-        this._setRepeatingKeyPressed('down');
-        event.preventDefault();
-        break;
-      case '-':
-      case '_':
-        this.keys.up = true;
-        this._setRepeatingKeyPressed('up');
-        event.preventDefault();
-        break;
-      case 'shift':
-        this.keys.fast = true;
-        event.preventDefault();
-        break;
+    const key = event.key.toLowerCase();
+    if (this._setMovementKeyState(key, true)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (key === 'shift') {
+      this.keys.fast = true;
+      event.preventDefault();
+      return;
     }
   }
 
   handleKeyUp(event) {
     if (!this.isActive) return;
     
-    switch(event.key.toLowerCase()) {
-      case 'w':
-        this.keys.forward = false;
-        this._clearRepeatingKeyPressed('forward');
-        break;
-      case 's':
-        this.keys.back = false;
-        this._clearRepeatingKeyPressed('back');
-        break;
-      case 'd':
-        this.keys.left = false;
-        this._clearRepeatingKeyPressed('left');
-        break;
-      case 'a':
-        this.keys.right = false;
-        this._clearRepeatingKeyPressed('right');
-        break;
-      case 'q':
-        this.keys.rotateLeft = false;
-        this._clearRepeatingKeyPressed('rotateLeft');
-        break;
-      case 'e':
-        this.keys.rotateRight = false;
-        this._clearRepeatingKeyPressed('rotateRight');
-        break;
-      case '=':
-      case '+':
-        this.keys.down = false;
-        this._clearRepeatingKeyPressed('down');
-        break;
-      case '-':
-      case '_':
-        this.keys.up = false;
-        this._clearRepeatingKeyPressed('up');
-        break;
-      case 'shift':
-        this.keys.fast = false;
-        break;
+    const key = event.key.toLowerCase();
+    if (this._setMovementKeyState(key, false)) {
+      return;
+    }
+
+    if (key === 'shift') {
+      this.keys.fast = false;
     }
 
     // Flush any deferred poly wall rebuild when a movement key is released
@@ -769,26 +794,8 @@ export class EditorController {
   update() {
     if (!this.isActive) return;
     const now = performance.now();
-    const hasSelection = Boolean(
-      this.checkpointEditor.selected ||
-      this.hillEditor.selected ||
-      this.squareHillEditor.selected ||
-      this.terrainShapeEditor.selected ||
-      this.normalMapDecalEditor.selected ||
-      this.obstacleEditor.selected ||
-      this.decorationsEditor.selected ||
-      this.trackSignEditor.selected ||
-      this.actionZoneEditor.selected ||
-      this.bridgeEditor.selected ||
-      this.aiPathEditor?.selected ||
-      this.terrainPathEditor?.selected ||
-      this.polyWallEditor?.selectedPoint ||
-      this.polyHillEditor?.selectedPoint ||
-      this.bezierWallEditor?.selectedAnchor ||
-      this.bezierWallEditor?.selectedHandle ||
-      this.polyCurbEditor?.selectedPoint ||
-      this.meshGridEditor?.activeFeature
-    );
+    const selection = this._getActiveSelectionInteraction();
+    const hasSelection = !!selection;
 
     const speed = this.keys.fast ? this.fastSpeed : this.moveSpeed;
     const movement = new Vector3(0, 0, 0);
@@ -822,80 +829,20 @@ export class EditorController {
     if (moveKeyActive('down')) {
       movement.y -= speed;
     }
-    
+
     const currentTarget = this.camera.getTarget();
     let delta
-    // If checkpoint is selected, move it instead of camera
-    if (this.checkpointEditor.selected) {
-      // Handle rotation
-      if (moveKeyActive('rotateLeft')) {
+    if (selection) {
+      if (selection.rotateLeft && moveKeyActive('rotateLeft')) {
         this.saveSnapshot(true);
-        this.checkpointEditor.rotate(this.rotationSpeed);
+        selection.rotateLeft(this.keys.fast);
       }
-      if (moveKeyActive('rotateRight')) {
+      if (selection.rotateRight && moveKeyActive('rotateRight')) {
         this.saveSnapshot(true);
-        this.checkpointEditor.rotate(-this.rotationSpeed);
+        selection.rotateRight(this.keys.fast);
       }
 
-      delta = this.checkpointEditor.move(movement);
-    } else if (this.hillEditor.selected) {
-      delta = this.hillEditor.move(movement);
-    } else if (this.squareHillEditor.selected) {
-      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (moveKeyActive('rotateLeft')) this.squareHillEditor.rotate(rotStep);
-      if (moveKeyActive('rotateRight')) this.squareHillEditor.rotate(-rotStep);
-      delta = this.squareHillEditor.move(movement);
-    } else if (this.terrainShapeEditor.selected) {
-      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (moveKeyActive('rotateLeft'))  this.terrainShapeEditor.rotate( rotStep);
-      if (moveKeyActive('rotateRight')) this.terrainShapeEditor.rotate(-rotStep);
-      delta = this.terrainShapeEditor.move(movement);
-    } else if (this.normalMapDecalEditor.selected) {
-      // Q/E rotates the normal map decal
-      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (moveKeyActive('rotateLeft'))  this.normalMapDecalEditor.rotate( rotStep);
-      if (moveKeyActive('rotateRight')) this.normalMapDecalEditor.rotate(-rotStep);
-      delta = this.normalMapDecalEditor.move(movement);
-    } else if (this.obstacleEditor.selected) {
-      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (moveKeyActive('rotateLeft'))  this.obstacleEditor.rotate(rotStep);
-      if (moveKeyActive('rotateRight')) this.obstacleEditor.rotate(-rotStep);
-      delta = this.obstacleEditor.move(movement);
-    } else if (this.decorationsEditor.selected) {
-      if (moveKeyActive('rotateLeft'))  this.decorationsEditor.rotate(this.rotationSpeed);
-      if (moveKeyActive('rotateRight')) this.decorationsEditor.rotate(-this.rotationSpeed);
-      delta = this.decorationsEditor.move(movement);
-    } else if (this.trackSignEditor.selected) {
-      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (moveKeyActive('rotateLeft'))  this.trackSignEditor.rotate( rotStep);
-      if (moveKeyActive('rotateRight')) this.trackSignEditor.rotate(-rotStep);
-      delta = this.trackSignEditor.move(movement);
-    } else if (this.actionZoneEditor.selected) {
-      delta = this.actionZoneEditor.move(movement);
-    } else if (this.bridgeEditor.selected) {
-      const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (moveKeyActive('rotateLeft'))  this.bridgeEditor.rotate( rotStep);
-      if (moveKeyActive('rotateRight')) this.bridgeEditor.rotate(-rotStep);
-      delta = this.bridgeEditor.move(movement);
-    } else if (this.aiPathEditor?.selected) {
-      delta = this.aiPathEditor.move(movement);
-    } else if (this.terrainPathEditor?.selected) {
-      delta = this.terrainPathEditor.move(movement);
-    } else if (this.polyWallEditor?.selectedPoint) {
-      const d = this.polyWallEditor.moveSelectedPoint(movement.x, movement.z);
-      delta = new Vector3(d.x, movement.y, d.z);
-    } else if (this.polyHillEditor?.selectedPoint) {
-      const d = this.polyHillEditor.moveSelectedPoint(movement.x, movement.z);
-      delta = new Vector3(d.x, movement.y, d.z);
-    } else if (this.bezierWallEditor?.selectedAnchor) {
-      const d = this.bezierWallEditor.moveSelectedAnchor(movement.x, movement.z);
-      delta = new Vector3(d.x, movement.y, d.z);
-    } else if (this.bezierWallEditor?.selectedHandle) {
-      const d = this.bezierWallEditor.moveSelectedHandle(movement.x, movement.z);
-      delta = new Vector3(d.x, movement.y, d.z);
-    } else if (this.polyCurbEditor?.selectedPoint) {
-      const d = this.polyCurbEditor.moveSelectedPoint(movement.x, movement.z);
-      delta = new Vector3(d.x, movement.y, d.z);
+      delta = selection.move(movement);
     } else {
       // Move camera and target together
       delta = movement;
@@ -981,47 +928,11 @@ export class EditorController {
   }
 
   _hasDraggableSelection() {
-    return !!(
-      this.checkpointEditor.selected ||
-      this.hillEditor.selected ||
-      this.squareHillEditor.selected ||
-      this.terrainShapeEditor.selected ||
-      this.normalMapDecalEditor.selected ||
-      this.obstacleEditor.selected ||
-      this.decorationsEditor.selected ||
-      this.trackSignEditor.selected ||
-      this.actionZoneEditor.selected ||
-      this.bridgeEditor?.selected ||
-      this.aiPathEditor?.selected ||
-      this.terrainPathEditor?.selected ||
-      this.polyWallEditor?.selectedPoint ||
-      this.polyHillEditor?.selectedPoint ||
-      this.bezierWallEditor?.selectedAnchor ||
-      this.bezierWallEditor?.selectedHandle ||
-      this.polyCurbEditor?.selectedPoint
-    );
+    return !!this._getActiveSelectionInteraction();
   }
 
   _moveSelectedByPointerDelta(dx, dz) {
-    const movement = new Vector3(dx, 0, dz);
-
-    if (this.checkpointEditor.selected) this.checkpointEditor.move(movement);
-    else if (this.hillEditor.selected) this.hillEditor.move(movement);
-    else if (this.squareHillEditor.selected) this.squareHillEditor.move(movement);
-    else if (this.terrainShapeEditor.selected) this.terrainShapeEditor.move(movement);
-    else if (this.normalMapDecalEditor.selected) this.normalMapDecalEditor.move(movement);
-    else if (this.obstacleEditor.selected) this.obstacleEditor.move(movement);
-    else if (this.decorationsEditor.selected) this.decorationsEditor.move(movement);
-    else if (this.trackSignEditor.selected) this.trackSignEditor.move(movement);
-    else if (this.actionZoneEditor.selected) this.actionZoneEditor.move(movement);
-    else if (this.bridgeEditor?.selected) this.bridgeEditor.move(movement);
-    else if (this.aiPathEditor?.selected) this.aiPathEditor.move(movement);
-    else if (this.terrainPathEditor?.selected) this.terrainPathEditor.move(movement);
-    else if (this.polyWallEditor?.selectedPoint) this.polyWallEditor.moveSelectedPoint(dx, dz);
-    else if (this.polyHillEditor?.selectedPoint) this.polyHillEditor.moveSelectedPoint(dx, dz);
-    else if (this.bezierWallEditor?.selectedAnchor) this.bezierWallEditor.moveSelectedAnchor(dx, dz);
-    else if (this.bezierWallEditor?.selectedHandle) this.bezierWallEditor.moveSelectedHandle(dx, dz);
-    else if (this.polyCurbEditor?.selectedPoint) this.polyCurbEditor.moveSelectedPoint(dx, dz);
+    this._getActiveSelectionInteraction()?.moveByPointerDelta?.(dx, dz);
   }
 
   _handleMeshSelection(clickedMesh, editor, selectFn = null) {
@@ -1033,6 +944,33 @@ export class EditorController {
       (selectFn ?? ((data) => editor.select(data)))(featureData);
     }
     return true;
+  }
+
+  _handleWaypointSelection(clickedMesh, pickedPoint, editor, selectedType) {
+    if (clickedMesh) {
+      const waypoint = editor.findByMesh(clickedMesh);
+      if (waypoint) {
+        if (editor.selected === waypoint) {
+          this._aiPathMouseDownSelectedWaypoint = clickedMesh;
+          this._aiPathMouseDownMoved = false;
+          this._aiPathMouseDownType = selectedType;
+          if (this._editorStore) this._editorStore.selectedType = selectedType;
+          return true;
+        }
+
+        this.deselectAll();
+        editor.select(waypoint);
+        if (this._editorStore) this._editorStore.selectedType = selectedType;
+        return true;
+      }
+    }
+
+    if (pickedPoint) {
+      editor.addPoint(pickedPoint.x, pickedPoint.z);
+      return true;
+    }
+
+    return false;
   }
 
   handlePointerDown(pointerInfo) {
@@ -1051,50 +989,13 @@ export class EditorController {
 
       // AI path panel open: click terrain to add waypoints, click existing point to select it.
       if (this._editorStore?.selectedType === 'aiPath') {
-        if (pickResult.hit && pickResult.pickedMesh) {
-          const clickedMesh = pickResult.pickedMesh;
-          const wpData = this.aiPathEditor.findByMesh(clickedMesh);
-          if (wpData) {
-            if (this.aiPathEditor.selected === wpData) {
-              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
-              this._aiPathMouseDownMoved = false;
-              this._aiPathMouseDownType = 'aiPath';
-              if (this._editorStore) this._editorStore.selectedType = 'aiPath';
-              return;
-            }
-            this.deselectAll();
-            this.aiPathEditor.select(wpData);
-            if (this._editorStore) this._editorStore.selectedType = 'aiPath';
-            return;
-          }
-        }
-        if (pickResult.hit && pickResult.pickedPoint) {
-          this.aiPathEditor.addPoint(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
-        }
+        if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.aiPathEditor, 'aiPath')) return;
         return;
       }
 
       // Terrain path panel open: click terrain to add waypoints, click existing point to select it.
       if (this._editorStore?.selectedType === 'terrainPath') {
-        if (pickResult.hit && pickResult.pickedMesh) {
-          const clickedMesh = pickResult.pickedMesh;
-          const wpData = this.terrainPathEditor.findByMesh(clickedMesh);
-          if (wpData) {
-            if (this.terrainPathEditor.selected === wpData) {
-              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
-              this._aiPathMouseDownMoved = false;
-              this._aiPathMouseDownType = 'terrainPath';
-              return;
-            }
-            this.deselectAll();
-            this.terrainPathEditor.select(wpData);
-            if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
-            return;
-          }
-        }
-        if (pickResult.hit && pickResult.pickedPoint) {
-          this.terrainPathEditor.addPoint(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
-        }
+        if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.terrainPathEditor, 'terrainPath')) return;
         return;
       }
 
