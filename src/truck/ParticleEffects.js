@@ -26,6 +26,10 @@ export class ParticleEffects {
       this._createSplashParticles("splashL", -1),
       this._createSplashParticles("splashR", 1),
     ];
+    this.mudSplashParticles = [
+      this._createMudSplashParticles("mudSplashL", -1),
+      this._createMudSplashParticles("mudSplashR", 1),
+    ];
     this.deepSplashParticles = [
       this._createDeepSplashParticles("deepSplashL", -1),
       this._createDeepSplashParticles("deepSplashR", 1),
@@ -263,6 +267,40 @@ export class ParticleEffects {
     return splashParticles;
   }
 
+  _createMudSplashParticles(name, sideSign) {
+    const particles = new ParticleSystem(name, Math.round(220 * this._qualityScale), this.scene);
+    particles.particleTexture = getSharedCloudTexture(this.scene);
+    particles.emitter = this.mesh;
+    const sideCenterX = sideSign * 1.1;
+    particles.minEmitBox = new Vector3(sideCenterX - 0.3, 0.4, -2.8);
+    particles.maxEmitBox = new Vector3(sideCenterX + 0.3, 1.0, -1.0);
+    // Render after the translucent water surface so mud spray is visibly on top.
+    particles.renderingGroupId = 2;
+
+    particles.color1 = new Color4(0.42, 0.25, 0.10, 0.75);
+    particles.color2 = new Color4(0.30, 0.18, 0.07, 0.50);
+    particles.colorDead = new Color4(0.18, 0.10, 0.04, 0);
+
+    particles.minSize = 0.55;
+    particles.maxSize = 1.7;
+    particles.minLifeTime = 0.18;
+    particles.maxLifeTime = 0.38;
+
+    particles.emitRate = 0;
+    particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+    particles.gravity = new Vector3(0, -16, 0);
+    particles.direction1 = new Vector3(-1.4, 1.1, -0.8);
+    particles.direction2 = new Vector3(1.4, 1.8, 0.8);
+    particles.minAngularSpeed = 0;
+    particles.maxAngularSpeed = Math.PI * 1.5;
+    particles.minEmitPower = 1.8;
+    particles.maxEmitPower = 4.0;
+    particles.updateSpeed = 0.01;
+
+    particles.start();
+    return particles;
+  }
+
   _createDeepSplashParticles(name, sideSign) {
     const particles = new ParticleSystem(name, Math.round(380 * this._qualityScale), this.scene);
     particles.particleTexture = getSharedCloudTexture(this.scene);
@@ -321,11 +359,19 @@ export class ParticleEffects {
     
     // Update splash particles when in water and wheels are on the ground
     const isInWater = terrainName === 'water';
+    const isInMud = terrainName === 'mud';
     if (isInWater && isGrounded && speed > 1) {
       const rate = speed * 80 * effectiveScale;
       for (const p of this.splashParticles) p.emitRate = rate;
     } else {
       for (const p of this.splashParticles) p.emitRate = 0;
+    }
+
+    if (isInMud && isGrounded && speed > 0.75) {
+      const rate = speed * 95 * effectiveScale;
+      for (const p of this.mudSplashParticles) p.emitRate = rate;
+    } else {
+      for (const p of this.mudSplashParticles) p.emitRate = 0;
     }
 
     // Deep-water splash pulse: one strong burst on entry and repeated pulses while driving.
