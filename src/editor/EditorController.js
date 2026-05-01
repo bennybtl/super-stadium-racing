@@ -37,6 +37,8 @@ export class EditorController {
     this.moveSpeed = 0.5;
     this.fastSpeed = 1.5;
     this.rotationSpeed = 0.05; // Radians per frame
+    this.keyRepeatDelayMs = 220;
+    this.keyRepeatIntervalMs = 80;
     this.keys = {
       forward: false,
       back: false,
@@ -47,6 +49,16 @@ export class EditorController {
       fast: false,
       rotateLeft: false,
       rotateRight: false
+    };
+    this._repeatingKeyState = {
+      forward: { pressed: false, hasFired: false, nextRepeatAt: 0 },
+      back: { pressed: false, hasFired: false, nextRepeatAt: 0 },
+      left: { pressed: false, hasFired: false, nextRepeatAt: 0 },
+      right: { pressed: false, hasFired: false, nextRepeatAt: 0 },
+      up: { pressed: false, hasFired: false, nextRepeatAt: 0 },
+      down: { pressed: false, hasFired: false, nextRepeatAt: 0 },
+      rotateLeft: { pressed: false, hasFired: false, nextRepeatAt: 0 },
+      rotateRight: { pressed: false, hasFired: false, nextRepeatAt: 0 }
     };
     
     // Selection state
@@ -212,6 +224,11 @@ export class EditorController {
     
     // Reset key states
     Object.keys(this.keys).forEach(key => this.keys[key] = false);
+    Object.values(this._repeatingKeyState).forEach(state => {
+      state.pressed = false;
+      state.hasFired = false;
+      state.nextRepeatAt = 0;
+    });
 
     // Dispose hill editor
     this.hillEditor.dispose();
@@ -350,6 +367,33 @@ export class EditorController {
     Object.assign(this._getWearConfig(), updates);
     this._syncAiPathPanel();
     window.rebuildTerrainTexture?.();
+  }
+
+  _setRepeatingKeyPressed(key) {
+    const state = this._repeatingKeyState[key];
+    if (!state) return;
+    if (state.pressed) return;
+    state.pressed = true;
+    state.hasFired = false;
+    state.nextRepeatAt = 0;
+  }
+
+  _clearRepeatingKeyPressed(key) {
+    const state = this._repeatingKeyState[key];
+    if (!state) return;
+    state.pressed = false;
+    state.hasFired = false;
+    state.nextRepeatAt = 0;
+  }
+
+  _shouldConsumeRepeatingKey(key, now) {
+    const state = this._repeatingKeyState[key];
+    if (!state || !state.pressed || now < state.nextRepeatAt) return false;
+
+    const delay = state.hasFired ? this.keyRepeatIntervalMs : this.keyRepeatDelayMs;
+    state.hasFired = true;
+    state.nextRepeatAt = now + delay;
+    return true;
   }
 
   _applySnapshot(snap) {
@@ -616,36 +660,44 @@ export class EditorController {
     switch(event.key.toLowerCase()) {
       case 'w':
         this.keys.forward = true;
+        this._setRepeatingKeyPressed('forward');
         event.preventDefault();
         break;
       case 's':
         this.keys.back = true;
+        this._setRepeatingKeyPressed('back');
         event.preventDefault();
         break;
       case 'd':
         this.keys.left = true;
+        this._setRepeatingKeyPressed('left');
         event.preventDefault();
         break;
       case 'a':
         this.keys.right = true;
+        this._setRepeatingKeyPressed('right');
         event.preventDefault();
         break;
       case 'q':
         this.keys.rotateLeft = true;
+        this._setRepeatingKeyPressed('rotateLeft');
         event.preventDefault();
         break;
       case 'e':
         this.keys.rotateRight = true;
+        this._setRepeatingKeyPressed('rotateRight');
         event.preventDefault();
         break;
       case '=':
       case '+':
         this.keys.down = true;
+        this._setRepeatingKeyPressed('down');
         event.preventDefault();
         break;
       case '-':
       case '_':
         this.keys.up = true;
+        this._setRepeatingKeyPressed('up');
         event.preventDefault();
         break;
       case 'shift':
@@ -661,29 +713,37 @@ export class EditorController {
     switch(event.key.toLowerCase()) {
       case 'w':
         this.keys.forward = false;
+        this._clearRepeatingKeyPressed('forward');
         break;
       case 's':
         this.keys.back = false;
+        this._clearRepeatingKeyPressed('back');
         break;
       case 'd':
         this.keys.left = false;
+        this._clearRepeatingKeyPressed('left');
         break;
       case 'a':
         this.keys.right = false;
+        this._clearRepeatingKeyPressed('right');
         break;
       case 'q':
         this.keys.rotateLeft = false;
+        this._clearRepeatingKeyPressed('rotateLeft');
         break;
       case 'e':
         this.keys.rotateRight = false;
+        this._clearRepeatingKeyPressed('rotateRight');
         break;
       case '=':
       case '+':
         this.keys.down = false;
+        this._clearRepeatingKeyPressed('down');
         break;
       case '-':
       case '_':
         this.keys.up = false;
+        this._clearRepeatingKeyPressed('up');
         break;
       case 'shift':
         this.keys.fast = false;
@@ -708,7 +768,28 @@ export class EditorController {
    */
   update() {
     if (!this.isActive) return;
-    
+    const now = performance.now();
+    const hasSelection = Boolean(
+      this.checkpointEditor.selected ||
+      this.hillEditor.selected ||
+      this.squareHillEditor.selected ||
+      this.terrainShapeEditor.selected ||
+      this.normalMapDecalEditor.selected ||
+      this.obstacleEditor.selected ||
+      this.decorationsEditor.selected ||
+      this.trackSignEditor.selected ||
+      this.actionZoneEditor.selected ||
+      this.bridgeEditor.selected ||
+      this.aiPathEditor?.selected ||
+      this.terrainPathEditor?.selected ||
+      this.polyWallEditor?.selectedPoint ||
+      this.polyHillEditor?.selectedPoint ||
+      this.bezierWallEditor?.selectedAnchor ||
+      this.bezierWallEditor?.selectedHandle ||
+      this.polyCurbEditor?.selectedPoint ||
+      this.meshGridEditor?.activeFeature
+    );
+
     const speed = this.keys.fast ? this.fastSpeed : this.moveSpeed;
     const movement = new Vector3(0, 0, 0);
     
@@ -719,24 +800,26 @@ export class EditorController {
     
     const right = Vector3.Cross(forward, Vector3.Up());
     right.normalize();
+
+    const moveKeyActive = (key) => hasSelection ? this._shouldConsumeRepeatingKey(key, now) : this.keys[key];
     
     // Apply movement
-    if (this.keys.forward) {
+    if (moveKeyActive('forward')) {
       movement.addInPlace(forward.scale(speed));
     }
-    if (this.keys.back) {
+    if (moveKeyActive('back')) {
       movement.addInPlace(forward.scale(-speed));
     }
-    if (this.keys.left) {
+    if (moveKeyActive('left')) {
       movement.addInPlace(right.scale(-speed));
     }
-    if (this.keys.right) {
+    if (moveKeyActive('right')) {
       movement.addInPlace(right.scale(speed));
     }
-    if (this.keys.up) {
+    if (moveKeyActive('up')) {
       movement.y += speed;
     }
-    if (this.keys.down) {
+    if (moveKeyActive('down')) {
       movement.y -= speed;
     }
     
@@ -745,11 +828,11 @@ export class EditorController {
     // If checkpoint is selected, move it instead of camera
     if (this.checkpointEditor.selected) {
       // Handle rotation
-      if (this.keys.rotateLeft) {
+      if (moveKeyActive('rotateLeft')) {
         this.saveSnapshot(true);
         this.checkpointEditor.rotate(this.rotationSpeed);
       }
-      if (this.keys.rotateRight) {
+      if (moveKeyActive('rotateRight')) {
         this.saveSnapshot(true);
         this.checkpointEditor.rotate(-this.rotationSpeed);
       }
@@ -759,40 +842,40 @@ export class EditorController {
       delta = this.hillEditor.move(movement);
     } else if (this.squareHillEditor.selected) {
       const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (this.keys.rotateLeft) this.squareHillEditor.rotate(rotStep);
-      if (this.keys.rotateRight) this.squareHillEditor.rotate(-rotStep);
+      if (moveKeyActive('rotateLeft')) this.squareHillEditor.rotate(rotStep);
+      if (moveKeyActive('rotateRight')) this.squareHillEditor.rotate(-rotStep);
       delta = this.squareHillEditor.move(movement);
     } else if (this.terrainShapeEditor.selected) {
       const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (this.keys.rotateLeft)  this.terrainShapeEditor.rotate( rotStep);
-      if (this.keys.rotateRight) this.terrainShapeEditor.rotate(-rotStep);
+      if (moveKeyActive('rotateLeft'))  this.terrainShapeEditor.rotate( rotStep);
+      if (moveKeyActive('rotateRight')) this.terrainShapeEditor.rotate(-rotStep);
       delta = this.terrainShapeEditor.move(movement);
     } else if (this.normalMapDecalEditor.selected) {
       // Q/E rotates the normal map decal
       const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (this.keys.rotateLeft)  this.normalMapDecalEditor.rotate( rotStep);
-      if (this.keys.rotateRight) this.normalMapDecalEditor.rotate(-rotStep);
+      if (moveKeyActive('rotateLeft'))  this.normalMapDecalEditor.rotate( rotStep);
+      if (moveKeyActive('rotateRight')) this.normalMapDecalEditor.rotate(-rotStep);
       delta = this.normalMapDecalEditor.move(movement);
     } else if (this.obstacleEditor.selected) {
       const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (this.keys.rotateLeft)  this.obstacleEditor.rotate(rotStep);
-      if (this.keys.rotateRight) this.obstacleEditor.rotate(-rotStep);
+      if (moveKeyActive('rotateLeft'))  this.obstacleEditor.rotate(rotStep);
+      if (moveKeyActive('rotateRight')) this.obstacleEditor.rotate(-rotStep);
       delta = this.obstacleEditor.move(movement);
     } else if (this.decorationsEditor.selected) {
-      if (this.keys.rotateLeft)  this.decorationsEditor.rotate(this.rotationSpeed);
-      if (this.keys.rotateRight) this.decorationsEditor.rotate(-this.rotationSpeed);
+      if (moveKeyActive('rotateLeft'))  this.decorationsEditor.rotate(this.rotationSpeed);
+      if (moveKeyActive('rotateRight')) this.decorationsEditor.rotate(-this.rotationSpeed);
       delta = this.decorationsEditor.move(movement);
     } else if (this.trackSignEditor.selected) {
       const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (this.keys.rotateLeft)  this.trackSignEditor.rotate( rotStep);
-      if (this.keys.rotateRight) this.trackSignEditor.rotate(-rotStep);
+      if (moveKeyActive('rotateLeft'))  this.trackSignEditor.rotate( rotStep);
+      if (moveKeyActive('rotateRight')) this.trackSignEditor.rotate(-rotStep);
       delta = this.trackSignEditor.move(movement);
     } else if (this.actionZoneEditor.selected) {
       delta = this.actionZoneEditor.move(movement);
     } else if (this.bridgeEditor.selected) {
       const rotStep = (this.keys.fast ? 5 : 1) * (Math.PI / 180);
-      if (this.keys.rotateLeft)  this.bridgeEditor.rotate( rotStep);
-      if (this.keys.rotateRight) this.bridgeEditor.rotate(-rotStep);
+      if (moveKeyActive('rotateLeft'))  this.bridgeEditor.rotate( rotStep);
+      if (moveKeyActive('rotateRight')) this.bridgeEditor.rotate(-rotStep);
       delta = this.bridgeEditor.move(movement);
     } else if (this.aiPathEditor?.selected) {
       delta = this.aiPathEditor.move(movement);
