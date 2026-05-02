@@ -4,8 +4,14 @@ import {
   Color3,
   Vector3,
   DynamicTexture,
+  SceneLoader,
   TransformNode,
 } from "@babylonjs/core";
+import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
+import barrelUrl from "../assets/barrel.obj?url";
+
+OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
+OBJFileLoader.SKIP_MATERIALS = true;
 
 /**
  * Simple seeded PRNG (mulberry32) — returns a function that yields [0, 1) floats.
@@ -24,6 +30,8 @@ function seededRng(seed) {
 const BARREL_COLOR    = new Color3(0.8, 0.5, 0.1);
 const BARREL_FLASH    = new Color3(0, 1, 0);
 const FLASH_DURATION  = 1000; // ms
+const BARREL_MODEL_SCALE = 0.1;
+const BARREL_PIVOT_Y = -0.55;
 
 /**
  * Checkpoint — a single racing gate: two barrels and a ground decal.
@@ -55,13 +63,8 @@ export class Checkpoint {
     // Barrels at ±halfWidth along the local X axis,
     // each placed at the terrain height beneath them
     const halfWidth = feature.width / 2;
-    this.barrel1 = this._createBarrel("barrel1",  halfWidth, feature, terrainHeight, track, scene);
-    this.barrel2 = this._createBarrel("barrel2", -halfWidth, feature, terrainHeight, track, scene);
-
-    if (shadows) {
-      shadows.addShadowCaster(this.barrel1);
-      shadows.addShadowCaster(this.barrel2);
-    }
+    this.barrel1 = this._createBarrel("barrel1",  halfWidth, feature, terrainHeight, track, scene, shadows);
+    this.barrel2 = this._createBarrel("barrel2", -halfWidth, feature, terrainHeight, track, scene, shadows);
 
     // Ground decal (numbered or finish-line checkerboard)
     this.decal = feature.checkpointNumber !== null
@@ -73,11 +76,11 @@ export class Checkpoint {
 
   /** Flash barrels green for one second to signal a successful pass. */
   flashGreen() {
-    this.barrel1.material.diffuseColor = BARREL_FLASH.clone();
-    this.barrel2.material.diffuseColor = BARREL_FLASH.clone();
+    if (this._barrel1Mat) this._barrel1Mat.diffuseColor = BARREL_FLASH.clone();
+    if (this._barrel2Mat) this._barrel2Mat.diffuseColor = BARREL_FLASH.clone();
     setTimeout(() => {
-      if (this.barrel1.material) this.barrel1.material.diffuseColor = BARREL_COLOR.clone();
-      if (this.barrel2.material) this.barrel2.material.diffuseColor = BARREL_COLOR.clone();
+      if (this._barrel1Mat) this._barrel1Mat.diffuseColor = BARREL_COLOR.clone();
+      if (this._barrel2Mat) this._barrel2Mat.diffuseColor = BARREL_COLOR.clone();
     }, FLASH_DURATION);
   }
 
@@ -103,14 +106,14 @@ export class Checkpoint {
     const w1z = this.feature.centerZ - halfWidth * sin;
     const offset1 = this._track.getHeightAt(w1x, w1z) - containerTerrainY;
     this.barrel1.position.x =  halfWidth;
-    this.barrel1.position.y =  1 + offset1;
+    this.barrel1.position.y =  offset1;
 
     // Barrel 2 (-halfWidth)
     const w2x = this.feature.centerX - halfWidth * cos;
     const w2z = this.feature.centerZ + halfWidth * sin;
     const offset2 = this._track.getHeightAt(w2x, w2z) - containerTerrainY;
     this.barrel2.position.x = -halfWidth;
-    this.barrel2.position.y =  1 + offset2;
+    this.barrel2.position.y =  offset2;
 
     if (this.decal) this.updateDecal(this.feature.checkpointNumber, this.isFinish);
   }
@@ -119,13 +122,15 @@ export class Checkpoint {
     if (this.decal)    this.decal.dispose();
     if (this.barrel1)  this.barrel1.dispose();
     if (this.barrel2)  this.barrel2.dispose();
+    if (this._barrel1Mat) this._barrel1Mat.dispose();
+    if (this._barrel2Mat) this._barrel2Mat.dispose();
     if (this.container) this.container.dispose();
   }
 
   // ─── Private: mesh construction ──────────────────────────────────────────
 
-  _createBarrel(name, localX, feature, containerTerrainY, track, scene) {
-    const barrel = MeshBuilder.CreateCylinder(name, { height: 2, diameter: 1 }, scene);
+  _createBarrel(name, localX, feature, containerTerrainY, track, scene, shadows) {
+    const barrelRoot = new TransformNode(name, scene);
 
     // Compute the barrel's world XZ from the container centre + heading offset
     const cos = Math.cos(feature.heading);
@@ -138,13 +143,52 @@ export class Checkpoint {
     const barrelTerrainY = track.getHeightAt(worldX, worldZ);
     const localYOffset   = barrelTerrainY - containerTerrainY;
 
-    barrel.position = new Vector3(localX, 1 + localYOffset, 0);
-    barrel.parent   = this.container;
+    barrelRoot.position = new Vector3(localX, localYOffset, 0);
+    barrelRoot.parent   = this.container;
 
-    const mat = new StandardMaterial(`${name}Mat`, scene);
-    mat.diffuseColor = BARREL_COLOR.clone();
-    barrel.material  = mat;
-    return barrel;
+    const barrelMat = new StandardMaterial(`${name}Mat`, scene);
+    barrelMat.diffuseColor = BARREL_COLOR.clone();
+    barrelMat.specularColor = new Color3(0.12, 0.08, 0.05);
+
+    const pivot = new TransformNode(`${name}Pivot`, scene);
+    pivot.parent = barrelRoot;
+    pivot.position.y = BARREL_PIVOT_Y * BARREL_MODEL_SCALE;
+    pivot.rotation.x = -Math.PI / 2;
+    pivot.scaling.setAll(BARREL_MODEL_SCALE);
+
+    Checkpoint._getSourceMeshes(scene).then(sourceMeshes => {
+      for (const src of sourceMeshes) {
+        const m = src.clone(`${name}Mesh`, pivot);
+        m.isVisible = true;
+        m.isPickable = false;
+        m.material = barrelMat;
+        m.receiveShadows = true;
+        if (shadows) shadows.addShadowCaster(m);
+      }
+    }).catch(err => console.warn(`[Checkpoint] Failed to load barrel model:`, err));
+
+    if (name === "barrel1") this._barrel1Mat = barrelMat;
+    if (name === "barrel2") this._barrel2Mat = barrelMat;
+
+    return barrelRoot;
+  }
+
+  static _getSourceMeshes(scene) {
+    if (!Checkpoint._sourcePromise || Checkpoint._sourceScene !== scene) {
+      const lastSlash = barrelUrl.lastIndexOf('/');
+      const rootUrl = barrelUrl.substring(0, lastSlash + 1);
+      const fileName = barrelUrl.substring(lastSlash + 1);
+      Checkpoint._sourceScene = scene;
+      Checkpoint._sourcePromise = SceneLoader.ImportMeshAsync('', rootUrl, fileName, scene)
+        .then(result => {
+          for (const m of result.meshes) {
+            m.isVisible = false;
+            m.isPickable = false;
+          }
+          return result.meshes;
+        });
+    }
+    return Checkpoint._sourcePromise;
   }
 
   _createDecal(feature, isFinish, scene) {

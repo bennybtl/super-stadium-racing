@@ -11,6 +11,8 @@ import { TRUCK_HALF_HEIGHT, basicColors } from "../constants.js";
 import { DriveMode } from "./DriveMode.js";
 import { UPGRADES } from "../managers/SeasonManager.js";
 import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
+import { AudioManager } from "../managers/AudioManager.js";
+import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { setupAIDrivers } from "./setupAIDrivers.js";
 
 /**
@@ -28,6 +30,8 @@ export class RaceMode extends DriveMode {
     this._countdownTimeouts = [];
     this._dnfTimer = null;
     this.debugManager = null;
+    this.audioManager = null;
+    this.truckAudioController = null;
     this.telemetryRecorder = null;
   }
 
@@ -49,6 +53,9 @@ export class RaceMode extends DriveMode {
     } = await this.buildDriveScene(trackKey);
 
     this.scene = scene;
+    const audioManager = await AudioManager.create(scene);
+    this.audioManager = audioManager;
+    pickupManager.setAudioManager(audioManager);
 
     // -- Starting grid (based on the last/finish checkpoint) --
     const {
@@ -167,8 +174,10 @@ export class RaceMode extends DriveMode {
     const spawn0 = getGridSpawn(0);
 
     const playerVehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
+    this.truckAudioController = await TruckAudioController.create(audioManager, playerVehicleDef?.engineAudio);
     const playerColor = playerColorKey ? basicColors[playerColorKey]?.diffuse : null;
     const playerTruck = new Truck(scene, shadows, playerColor, null, playerVehicleDef);
+    playerTruck.setAudioController(this.truckAudioController);
     playerTruck.mesh.position.copyFrom(spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
@@ -511,6 +520,21 @@ export class RaceMode extends DriveMode {
         }
       });
 
+      // Give AI trucks a short out-of-bounds timeout so they don't stay stuck off-track.
+      trucks.forEach((truckData) => {
+        if (truckData.isPlayer) return;
+        this.updateOutOfBoundsCountdown({
+          truckId: truckData.id,
+          truck: truckData.truck,
+          outOfBoundsZones,
+          dt,
+          durationSec: 2,
+          onTimeout: () => {
+            respawnToLastCheckpoint(truckData);
+          },
+        });
+      });
+
       truckCollisionManager.update(trucks);
       obstacleManager.update(trucks);
       flagManager.update(trucks, dt);
@@ -518,6 +542,11 @@ export class RaceMode extends DriveMode {
 
       debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck);
       uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
+
+      const engineSpeed = Math.sqrt(
+        playerTruckData.truck.state.velocity.x * playerTruckData.truck.state.velocity.x +
+        playerTruckData.truck.state.velocity.z * playerTruckData.truck.state.velocity.z
+      );
 
       // Feed telemetry recorder each frame for the player truck
       if (telemetryRecorder.recording && raceStarted) {
@@ -544,6 +573,10 @@ export class RaceMode extends DriveMode {
 
       trucks.forEach((truckData) => {
         if (truckData.gameState.raceFinished) return;
+
+        const wasBoostActive = truckData._wasBoostActive ?? false;
+        const nowBoostActive = truckData.truck.state.boostActive;
+        truckData._wasBoostActive = nowBoostActive;
 
         const checkpointResult = checkpointManager.update(
           truckData.truck.mesh.position,
@@ -689,6 +722,12 @@ export class RaceMode extends DriveMode {
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
+    }
+    if (this.audioManager) {
+      this.truckAudioController?.stop();
+      this.truckAudioController = null;
+      this.audioManager.dispose();
+      this.audioManager = null;
     }
     super.teardown();
   }

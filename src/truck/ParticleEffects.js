@@ -153,33 +153,22 @@ export class ParticleEffects {
     return particles;
   }
 
-  /**
-   * Swap drift particle color to match the current terrain.
-   * Updates colors in-place to avoid system churn when terrain changes.
-   */
   setDriftColor(color) {
-    this.driftParticles.color1    = new Color4(color.r,        color.g,        color.b,        0.5);
-    this.driftParticles.color2    = new Color4(color.r * 0.75, color.g * 0.75, color.b * 0.75, 0.3);
-    this.driftParticles.colorDead = new Color4(color.r * 0.5,  color.g * 0.5,  color.b * 0.5,  0);
+    this.driftParticles.color1 = new Color4(color.r, color.g, color.b, 0.5);
+    this.driftParticles.color2 = new Color4(color.r * 0.75, color.g * 0.75, color.b * 0.75, 0.3);
+    this.driftParticles.colorDead = new Color4(color.r * 0.5, color.g * 0.5, color.b * 0.5, 0);
   }
-  /**
-   * Creates a white smoke burst system for the nitro boost.
-   * The emitter is set to a fixed world-space position at fire time so
-   * particles stay on the track and don't follow the truck.
-   */
+
   _createNitroParticles() {
     const particles = new ParticleSystem("nitro", Math.round(600 * this._qualityScale), this.scene);
     particles.particleTexture = getSharedCloudTexture(this.scene);
-    // Emitter starts as a world-space point; overridden in _fireNitroBurst
     particles.emitter = Vector3.Zero();
 
-    // Small spread around the emitter point (world-space axes, approximate)
     particles.minEmitBox = new Vector3(-0.4, -0.1, -0.4);
-    particles.maxEmitBox = new Vector3( 0.4,  0.2,  0.4);
+    particles.maxEmitBox = new Vector3(0.4, 0.2, 0.4);
 
-    // Bright white → fading grey
-    particles.color1    = new Color4(1.00, 1.00, 1.00, 0.90);
-    particles.color2    = new Color4(0.88, 0.88, 0.88, 0.70);
+    particles.color1 = new Color4(1.00, 1.00, 1.00, 0.90);
+    particles.color2 = new Color4(0.88, 0.88, 0.88, 0.70);
     particles.colorDead = new Color4(0.70, 0.70, 0.70, 0.00);
 
     particles.minSize = 0.5;
@@ -187,11 +176,9 @@ export class ParticleEffects {
     particles.minLifeTime = 0.3;
     particles.maxLifeTime = 0.8;
 
-    particles.emitRate = 0; // driven manually
+    particles.emitRate = 0;
     particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
-    particles.gravity = new Vector3(0, 1.5, 0); // smoke rises
-
-    // Directions are overridden in _fireNitroBurst with world-space vectors
+    particles.gravity = new Vector3(0, 1.5, 0);
     particles.direction1 = new Vector3(0, 0.5, -8);
     particles.direction2 = new Vector3(0, 2.0, -5);
     particles.minAngularSpeed = 0;
@@ -205,25 +192,20 @@ export class ParticleEffects {
   }
 
   /**
-   * Snapshot the truck's current rear world position and heading into the
-   * nitro particle system so emitted particles stay on the track.
+   * Swap drift particle color to match the current terrain.
+   * Updates colors in-place to avoid system churn when terrain changes.
    */
   _fireNitroBurst(heading) {
     const sin = Math.sin(heading);
     const cos = Math.cos(heading);
 
-    // World-space backward and right vectors
-    const bx = -sin, bz = -cos; // backward
-    const rx =  cos, rz = -sin; // right
+    const bx = -sin, bz = -cos;
+    const rx =  cos, rz = -sin;
 
-    // Place emitter at truck rear (1.4 units behind centre)
     const pos = this.mesh.position;
     this._nitroEmitter.set(pos.x + bx * 1.4, pos.y, pos.z + bz * 1.4);
     this.nitroParticles.emitter = this._nitroEmitter;
 
-    // Transform local directions to world space:
-    //   local (-2, 0.5, -8) → world backward*8 - right*2 + up*0.5
-    //   local ( 2, 2.0, -5) → world backward*5 + right*2 + up*2.0
     this._nitroDir1.set(bx * 8 - rx * 2, 0.5, bz * 8 - rz * 2);
     this._nitroDir2.set(bx * 5 + rx * 2, 2.0, bz * 5 + rz * 2);
     this.nitroParticles.direction1 = this._nitroDir1;
@@ -335,7 +317,7 @@ export class ParticleEffects {
     return particles;
   }
 
-  update(state, speed, terrainManager, isGrounded = true, deltaTime = 0.016, currentTerrain = null, track = null, effectScaleOverride = 1) {
+  update(state, speed, terrainManager, groundedness = 1, deltaTime = 0.016, currentTerrain = null, track = null, effectScaleOverride = 1) {
     const effectiveScale = this._qualityScale * Math.max(0, Math.min(1, effectScaleOverride));
     const terrain = currentTerrain ?? (terrainManager ? terrainManager.getTerrainAt(this.mesh.position) : null);
     const terrainName = terrain?.name ?? 'default';
@@ -349,6 +331,8 @@ export class ParticleEffects {
     }
 
     // Update drift particles
+    const isGrounded = groundedness > 0.5;
+
     if (speed > 0.5) {
       const driftIntensity = Math.max(0, state.slipAngle - state.driftThreshold);
       const spinoutBoost = state.isSpinningOut ? 2.0 : 1.0;

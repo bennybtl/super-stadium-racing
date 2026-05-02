@@ -1,6 +1,7 @@
 {
   "id": "default_buggy",
   "name": "2WD Buggy",
+  "engineAudio": "bac",
   "modelFile": "offroad-buggy-opt.obj",
   "imageFile": "default_buggy.png",
   "defaultColor": [0.8, 0.2, 0.5],

@@ -4,6 +4,8 @@ import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
+import { AudioManager } from "../managers/AudioManager.js";
+import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { DriveMode } from "./DriveMode.js";
 
 /**
@@ -16,6 +18,8 @@ export class PracticeMode extends DriveMode {
   constructor(controller) {
     super(controller);
     this.inputManager = null;
+    this.audioManager = null;
+    this.truckAudioController = null;
   }
 
   async setup({ trackKey, vehicleKey = 'default_truck' }) {
@@ -35,12 +39,18 @@ export class PracticeMode extends DriveMode {
 
     this.scene = scene;
 
+    const audioManager = await AudioManager.create(scene);
+    this.audioManager = audioManager;
+    pickupManager.setAudioManager(audioManager);
+
     // Spawn just behind the start/finish checkpoint, facing forward
     const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);
 
     // Create truck first so we can read its height when calculating spawnPos
     const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
+    this.truckAudioController = await TruckAudioController.create(audioManager, vehicleDef?.engineAudio);
     const playerTruck = new Truck(scene, shadows, null, null, vehicleDef);
+    playerTruck.setAudioController(this.truckAudioController);
 
     const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);
     const spawnPos = spawn.pos;
@@ -132,6 +142,10 @@ export class PracticeMode extends DriveMode {
       pickupManager.update(trucks, dt);
       cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
       
+      const engineSpeed = Math.sqrt(
+        playerTruck.state.velocity.x * playerTruck.state.velocity.x +
+        playerTruck.state.velocity.z * playerTruck.state.velocity.z
+      );
       debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck);
     });
 
@@ -142,6 +156,12 @@ export class PracticeMode extends DriveMode {
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
+    }
+    if (this.audioManager) {
+      this.truckAudioController?.stop();
+      this.truckAudioController = null;
+      this.audioManager.dispose();
+      this.audioManager = null;
     }
     super.teardown();
   }

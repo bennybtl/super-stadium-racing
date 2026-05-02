@@ -53,6 +53,7 @@ export class Truck {
     this.particles = new ParticleEffects(this.mesh, scene, {
       qualityScale: this.driver ? 0.45 : 1,
     });
+    this.audioController = null;
     const terrainQuery = new TerrainQuery(scene);
     const terrainPhysicsOptions = this.driver
       ? { normalSampleInterval: 1 / 30 }
@@ -91,6 +92,10 @@ export class Truck {
     this.body = new TruckBody(this.mesh, scene, shadows, {
       body:   this.diffuseColor,
     }, vehicleDef ?? null);
+  }
+
+  setAudioController(audioController) {
+    this.audioController = audioController;
   }
 
   createMesh() {
@@ -245,6 +250,19 @@ export class Truck {
     this._surfaceSampleFallback = terrainY ?? 0;
     this.body.update(this.state, input, hSpeed, deltaTime, terrainY, groundedness, this._surfaceSampler);
 
+    this.audioController?.update({
+      state: this.state,
+      speed,
+      hSpeed,
+      groundedness,
+      deltaTime,
+      maxSpeed: this.state.maxSpeed,
+      mesh: this.mesh,
+      track,
+      currentTerrain: terrain,
+      input,
+    });
+
     // Sync physics body
     this.syncPhysicsBody();
     this._particleUpdateAccumulator += deltaTime;
@@ -274,7 +292,7 @@ export class Truck {
         this.state,
         hSpeed,
         terrainManager,
-        isGrounded,
+        groundedness,
         particleDt,
         terrain,
         track,

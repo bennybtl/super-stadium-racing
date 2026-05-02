@@ -36,7 +36,7 @@ const MIN_PICKUP_DIST = 14;
  *   pm.rebuild();
  */
 export class PickupManager {
-  constructor(scene, track, shadows, count = DEFAULT_COUNT) {
+  constructor(scene, track, shadows, count = DEFAULT_COUNT, audioManager = null) {
     this.scene   = scene;
     this.track   = track;
     this.shadows = shadows;
@@ -56,7 +56,14 @@ export class PickupManager {
      */
     this.onPickupCollected = null;
 
+    /** @type {import('./AudioManager.js').AudioManager|null} */
+    this.audioManager = audioManager;
+
     this._spawnAll();
+  }
+
+  setAudioManager(audioManager) {
+    this.audioManager = audioManager;
   }
 
   // ── Creation ──────────────────────────────────────────────────────────────
@@ -235,6 +242,12 @@ export class PickupManager {
 
         if (Math.sqrt(dx * dx + dz * dz) < COLLECT_RADIUS) {
           pickup.setVisible(false);
+          if (pickup.type === 'boost' && truckData?.isPlayer) {
+            truck.audioController?.playReload?.();
+            if (!truck.audioController) {
+              this.audioManager?.playSound('reload');
+            }
+          }
           this.onPickupCollected?.(pickup.type, truckData);
 
           const t = setTimeout(() => pickup.setVisible(true), RESPAWN_DELAY_MS);

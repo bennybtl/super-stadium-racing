@@ -1,6 +1,7 @@
 {
   "id": "default_truck",
   "name": "2WD Truck",
+  "engineAudio": "v8",
   "modelFile": "truck-assembly-v1.obj",
   "imageFile": "default_truck.png",
   "defaultColor": [0.8, 0.2, 0.1],
@@ -30,7 +31,7 @@
     "damping": 7,
     "maxSpeed": 24,
     "maxReverseSpeed": -10,
-    "acceleration": 26,
+    "acceleration": 18,
     "braking": 2,
     "drag": 4,
     "turnSpeed": 3.6,
