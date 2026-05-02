@@ -19,11 +19,11 @@
           <button
             v-for="t in store.trackList"
             :key="t.key"
-            class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
+            class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-2 text-lg font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
             @click="store.startEditor(t.key)"
           >{{ t.name }}</button>
-          <button class="bg-gradient-to-b from-[#4caf50] to-[#388e3c] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#66bb6a] hover:to-[#4caf50]" @click="store.startEditor('new')">+ New Track</button>
-          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.back('start')">Back</button>
+          <button class="bg-gradient-to-b from-[#4caf50] to-[#388e3c] text-white border-0 px-10 py-2 text-lg font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#66bb6a] hover:to-[#4caf50]" @click="store.startEditor('new')">+ New Track</button>
+          <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-2 text-lg font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.back('start')">Back</button>
         </template>
 
         <!-- ── In-game pause ── -->

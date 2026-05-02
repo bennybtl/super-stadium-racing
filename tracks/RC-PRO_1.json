@@ -2,7 +2,23 @@
   "name": "RC-PRO 1",
   "width": 160,
   "depth": 160,
+  "image": "RC-PRO_1.jpg",
   "defaultTerrainType": "grass",
+  "borderTerrainType": "grass",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "width": 3.2,
+    "intensity": 0.39,
+    "laneSpacing": 1.3,
+    "alphaBreakup": 0.28,
+    "pathWander": 0.79,
+    "edgeSoftness": 0.29,
+    "secondaryPathCount": 55,
+    "secondaryPathStrength": 1.15,
+    "secondaryPathSpacing": 0.13,
+    "seed": 1337
+  },
   "features": [
     {
       "type": "terrain",
@@ -38,9 +54,9 @@
       "type": "terrain",
       "shape": "rect",
       "centerX": 7,
-      "centerZ": 23.5,
+      "centerZ": 24.5,
       "terrainType": "asphalt",
-      "width": 54.5,
+      "width": 59.5,
       "depth": 18.5,
       "rotation": 90
     },
@@ -48,7 +64,7 @@
       "type": "terrain",
       "shape": "rect",
       "centerX": 41,
-      "centerZ": 41,
+      "centerZ": 44,
       "terrainType": "asphalt",
       "width": 54.5,
       "depth": 18.5,
@@ -58,7 +74,7 @@
       "type": "terrain",
       "shape": "rect",
       "centerX": 58,
-      "centerZ": -7,
+      "centerZ": -3.5,
       "terrainType": "asphalt",
       "width": 80,
       "depth": 18.5,
@@ -67,7 +83,7 @@
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": 41,
+      "centerX": 40.5,
       "centerZ": -49,
       "terrainType": "asphalt",
       "width": 34,
@@ -80,17 +96,17 @@
         {
           "x": -4,
           "z": 15,
-          "radius": 3.5
+          "radius": 6
         },
         {
           "x": -66,
           "z": 15,
-          "radius": 3.5
+          "radius": 6
         },
         {
           "x": -67,
           "z": -68,
-          "radius": 3.5
+          "radius": 6
         },
         {
           "x": 70,
@@ -99,13 +115,13 @@
         },
         {
           "x": 69,
-          "z": 52,
-          "radius": 3.5
+          "z": 55.5,
+          "radius": 6
         },
         {
           "x": -3,
-          "z": 52,
-          "radius": 3.5
+          "z": 56.5,
+          "radius": 6
         }
       ],
       "height": 2,
@@ -119,12 +135,12 @@
         {
           "x": -45,
           "z": -5,
-          "radius": 3.5
+          "radius": 7
         },
         {
           "x": -47,
           "z": -47,
-          "radius": 4.5
+          "radius": 7
         },
         {
           "x": 48,
@@ -133,18 +149,18 @@
         },
         {
           "x": 49,
-          "z": 32,
-          "radius": 3.5
+          "z": 34.5,
+          "radius": 7
         },
         {
           "x": 17,
-          "z": 32,
-          "radius": 3.5
+          "z": 34,
+          "radius": 7
         },
         {
           "x": 17,
           "z": -5,
-          "radius": 3.5
+          "radius": 7
         }
       ],
       "height": 0.22,
@@ -240,7 +256,7 @@
       "type": "actionZone",
       "zoneType": "slowZone",
       "x": 11.03828751042395,
-      "z": -10.44033835185193,
+      "z": -10.384782796296374,
       "radius": 15,
       "shape": "polygon",
       "points": [
@@ -250,7 +266,7 @@
         },
         {
           "x": 30.276841736827866,
-          "z": -43.93835959552672
+          "z": -43.43835959552672
         },
         {
           "x": 45.659147978512756,
@@ -286,44 +302,44 @@
       "type": "aiPath",
       "points": [
         {
-          "x": -36,
-          "z": -59.5
+          "x": -32.860302325965506,
+          "z": -57.82707728053982
         },
         {
-          "x": -51.62,
-          "z": -48.98
+          "x": -47.62389867664764,
+          "z": -47.34275093877878
         },
         {
-          "x": -62.29,
-          "z": -25.310000000000002
+          "x": -57.39016689779843,
+          "z": -23.75684739815938
         },
         {
-          "x": -45.34,
-          "z": -3.1499999999999986
+          "x": -45.60732084114445,
+          "z": -2.6870104207870966
         },
         {
           "x": -2.490000000000002,
           "z": 7.4399999999999995
         },
         {
-          "x": 14.7,
-          "z": 32.55
+          "x": 14.07593648937641,
+          "z": 34.688885141303075
         },
         {
-          "x": 33.18,
-          "z": 43.96
+          "x": 33.36093848039754,
+          "z": 41.67032605791383
         },
         {
-          "x": 50.05,
-          "z": 32.58
+          "x": 53.42879024876165,
+          "z": 34.97768678032048
         },
         {
           "x": 62.72,
           "z": 16.99
         },
         {
-          "x": 55.37,
-          "z": -34.54
+          "x": 56.40909232340892,
+          "z": -35.157619524999426
         },
         {
           "x": 36.15,
@@ -331,7 +347,7 @@
         },
         {
           "x": 11.66,
-          "z": -61.83
+          "z": -61.33
         }
       ]
     },
@@ -341,8 +357,8 @@
       "shape": "circle",
       "x": 5.560351732640609,
       "z": 7.247954762896832,
-      "width": 21,
-      "depth": 21,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -352,8 +368,8 @@
       "shape": "circle",
       "x": 57.56035173264061,
       "z": 40.74795476289683,
-      "width": 21,
-      "depth": 21,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -363,8 +379,8 @@
       "shape": "circle",
       "x": 52.06035173264061,
       "z": -54.25204523710317,
-      "width": 21,
-      "depth": 21,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -374,8 +390,8 @@
       "shape": "circle",
       "x": -56.93964826735939,
       "z": -56.25204523710317,
-      "width": 21,
-      "depth": 21,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -498,7 +514,7 @@
     {
       "type": "trackSign",
       "x": -5.4270016279762885,
-      "z": -28.004963731739274,
+      "z": -31.004963731739274,
       "name": "Pro-Am 01",
       "rotation": 0,
       "contentType": "text",
@@ -524,7 +540,7 @@
     {
       "type": "trackSign",
       "x": 10.97936995225762,
-      "z": 55.26346029571634,
+      "z": 60.26346029571634,
       "name": "Pro-Am 01",
       "rotation": -0.03490658503988659,
       "contentType": "brand",
@@ -537,7 +553,7 @@
     {
       "type": "trackSign",
       "x": 57.47936995225762,
-      "z": 55.26346029571634,
+      "z": 59.76346029571634,
       "name": "Pro-Am 01",
       "rotation": -0.03490658503988659,
       "contentType": "brand",
@@ -549,8 +565,8 @@
     },
     {
       "type": "trackSign",
-      "x": -53.69289347042787,
-      "z": 18.250509353830807,
+      "x": -52.69289347042787,
+      "z": 22.250509353830807,
       "name": "Pro-Am 01",
       "rotation": -0.03490658503988659,
       "contentType": "brand",
@@ -572,6 +588,19 @@
       "scale": 1.65,
       "heightOffset": 1.3,
       "width": 11.5
+    },
+    {
+      "type": "trackSign",
+      "x": -24.19289347042787,
+      "z": 23.250509353830807,
+      "name": "Pro-Am 01",
+      "rotation": -0.03490658503988659,
+      "contentType": "brand",
+      "brandImage": "power-lube.png",
+      "background": "white",
+      "scale": 1.6,
+      "heightOffset": 1.3,
+      "width": 15
     }
   ]
 }
