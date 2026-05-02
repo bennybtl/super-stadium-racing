@@ -177,7 +177,7 @@ export class BridgeEditor {
   deselect() {
     if (!this.selected) return;
     if (this.selected.sphere) {
-      this.selected.sphere.material = this.handleSphere;
+      this.selected.sphere.material = this.sphereMaterial;
     }
     this.hideProperties();
     this.selected = null;
