@@ -131,6 +131,9 @@ export class EditorController {
     this.boundKeyUp = this.handleKeyUp.bind(this);
     this.boundPointerEvent = this.handlePointerEvent.bind(this);
     this._mouseDrag = null;
+    this._dragHoldTimer = null;
+    this._dragHoldTarget = null;
+    this._dragHoldDelayMs = 180;
     
     // Track being edited
     this.currentTrack = null;
@@ -220,6 +223,7 @@ export class EditorController {
     window.removeEventListener('keydown', this.boundKeyDown, true);
     window.removeEventListener('keyup', this.boundKeyUp);
     this.scene.onPointerObservable.removeCallback(this.boundPointerEvent);
+    this._clearDragHoldTimer();
     this._mouseDrag = null;
     
     // Reset key states
@@ -861,14 +865,23 @@ export class EditorController {
     if (!this.isActive) return;
 
     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+      const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+      const clickedMesh = pickResult?.pickedMesh ?? null;
+      const wasSelectedTarget = this._isSelectedGizmoTarget(clickedMesh);
+
+      this._clearDragHoldTimer();
       this.handlePointerDown(pointerInfo);
 
-      const world = this._pointerWorldXZ();
-      if (world && this._hasDraggableSelection()) {
-        this._mouseDrag = { x: world.x, z: world.z };
-        this.polyWallEditor?.beginDrag?.();
-        this.polyCurbEditor?.beginDrag?.();
-        this.bezierWallEditor?.beginDrag?.();
+      if (pickResult?.pickedMesh && this._hasDraggableSelection() && this._isSelectedGizmoTarget(pickResult.pickedMesh)) {
+        this._dragHoldTarget = clickedMesh;
+        this._dragHoldTimer = setTimeout(() => {
+          if (!this.isActive || this._dragHoldTarget !== clickedMesh) return;
+          if (!this._beginSelectedGizmoDrag()) {
+            this._clearDragHoldTimer();
+            return;
+          }
+          this._clearDragHoldTimer();
+        }, this._dragHoldDelayMs);
       }
       return;
     }
@@ -892,6 +905,7 @@ export class EditorController {
     }
 
     if (pointerInfo.type === PointerEventTypes.POINTERUP) {
+      this._clearDragHoldTimer();
       if (this._aiPathMouseDownSelectedWaypoint && !this._aiPathMouseDownMoved) {
         if (this._aiPathMouseDownType === 'terrainPath') {
           this.closeTerrainPath();
@@ -934,6 +948,87 @@ export class EditorController {
 
   _hasDraggableSelection() {
     return !!this._getActiveSelectionInteraction();
+  }
+
+  _clearDragHoldTimer() {
+    if (this._dragHoldTimer) {
+      clearTimeout(this._dragHoldTimer);
+      this._dragHoldTimer = null;
+    }
+    this._dragHoldTarget = null;
+  }
+
+  _beginSelectedGizmoDrag() {
+    const world = this._pointerWorldXZ();
+    if (!world || !this._hasDraggableSelection()) return false;
+
+    this._mouseDrag = { x: world.x, z: world.z };
+    this.polyWallEditor?.beginDrag?.();
+    this.polyHillEditor?.beginDrag?.();
+    this.polyCurbEditor?.beginDrag?.();
+    this.bezierWallEditor?.beginDrag?.();
+    return true;
+  }
+
+  _isSelectedGizmoTarget(clickedMesh) {
+    if (!clickedMesh) return false;
+
+    const meshMatches = (mesh) => {
+      if (!mesh) return false;
+      if (mesh === clickedMesh) return true;
+      if (typeof clickedMesh.isDescendantOf === 'function' && clickedMesh.isDescendantOf(mesh)) return true;
+      if (typeof mesh.isDescendantOf === 'function' && mesh.isDescendantOf(clickedMesh)) return true;
+      return false;
+    };
+
+    const selectedObjectMatches = (selected) => {
+      if (!selected) return false;
+      if (typeof selected.containsMesh === 'function' && selected.containsMesh(clickedMesh)) return true;
+      return meshMatches(selected.mesh)
+        || meshMatches(selected.node)
+        || meshMatches(selected.sphere)
+        || meshMatches(selected.handle)
+        || meshMatches(selected.flag);
+    };
+
+    const selectedEditors = [
+      [this.checkpointEditor, 'selected'],
+      [this.hillEditor, 'selected'],
+      [this.squareHillEditor, 'selected'],
+      [this.terrainShapeEditor, 'selected'],
+      [this.normalMapDecalEditor, 'selected'],
+      [this.obstacleEditor, 'selected'],
+      [this.trackSignEditor, 'selected'],
+      [this.actionZoneEditor, '_selected'],
+      [this.bridgeEditor, 'selected'],
+      [this.decorationsEditor, '_selected'],
+      [this.aiPathEditor, 'selected'],
+      [this.terrainPathEditor, 'selected'],
+    ];
+
+    for (const [editor, selectedKey] of selectedEditors) {
+      const selected = editor?.[selectedKey];
+      if (selected && (editor?.findByMesh?.(clickedMesh) === selected || selectedObjectMatches(selected))) {
+        return true;
+      }
+    }
+
+    if (selectedObjectMatches(this.meshGridEditor?.selectedPoint)) return true;
+    if (selectedObjectMatches(this.polyWallEditor?.selectedPoint)) return true;
+    if (selectedObjectMatches(this.polyHillEditor?.selectedPoint)) return true;
+    if (selectedObjectMatches(this.polyCurbEditor?.selectedPoint)) return true;
+    if (selectedObjectMatches(this.bezierWallEditor?.selectedAnchor)) return true;
+    if (selectedObjectMatches(this.bezierWallEditor?.selectedHandle)) return true;
+
+    const zoneData = this.actionZoneEditor?._selected;
+    if (zoneData) {
+      if (meshMatches(zoneData.handle)) return true;
+      if (zoneData.feature.shape === 'polygon' && this.actionZoneEditor._selectedPointIndex >= 0) {
+        if (meshMatches(zoneData.pointHandles?.[this.actionZoneEditor._selectedPointIndex])) return true;
+      }
+    }
+
+    return false;
   }
 
   _moveSelectedByPointerDelta(dx, dz) {
@@ -983,6 +1078,11 @@ export class EditorController {
     
     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
       const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+      const wasSelectedTarget = this._isSelectedGizmoTarget(pickResult?.pickedMesh ?? null);
+
+      if (wasSelectedTarget) {
+        return;
+      }
 
       // Surface decal stamp mode: click to stamp.
       if (this._editorStore?.selectedType === 'surfaceDecal') {
@@ -1004,13 +1104,6 @@ export class EditorController {
         return;
       }
 
-      if (this._editorStore?.obstacle?.placementActive) {
-        if (pickResult.hit && pickResult.pickedPoint) {
-          this.addObstacleAt(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
-        }
-        return;
-      }
-      
       if (pickResult.hit && pickResult.pickedMesh) {
         const clickedMesh = pickResult.pickedMesh;
 
@@ -1082,12 +1175,27 @@ export class EditorController {
           }
         }
 
+        if (this._editorStore?.obstacle?.placementActive) {
+          if (pickResult.pickedPoint) {
+            this.addObstacleAt(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
+          }
+          return;
+        }
+
         // Clicked on something else (terrain, etc.) — deselect all
         this.deselectAll();
       } else {
+        if (this._editorStore?.obstacle?.placementActive) {
+          if (pickResult.hit && pickResult.pickedPoint) {
+            this.addObstacleAt(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
+          }
+          return;
+        }
+
         // Clicked on empty space (sky, etc.) — deselect all
         this.deselectAll();
       }
+
     }
   }
 
@@ -1305,6 +1413,7 @@ export class EditorController {
   changeDecorationHeading(val)     { this.decorationsEditor.changeHeading(val); }
 
   deselectAll() {
+    this._clearDragHoldTimer();
     this.checkpointEditor.deselect();
     this.hillEditor.deselect();
     this.squareHillEditor.deselect();

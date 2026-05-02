@@ -355,10 +355,9 @@ export class MeshGridEditor {
     for (const p of this.pointMeshes) {
       if (pickedMesh === p.mesh) {
         if (this.selectedPoint === p) {
-          this.deselectPoint();
-        } else {
-          this.selectPoint(p);
+          return true;
         }
+        this.selectPoint(p);
         return true;
       }
     }

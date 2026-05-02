@@ -279,8 +279,10 @@ export class PolyHillEditor {
     for (const hg of this._hillGizmos) {
       const idx = hg.pointMeshes.indexOf(mesh);
       if (idx !== -1) {
+        if (this.selectedPoint && this.selectedPoint.hg === hg && this.selectedPoint.idx === idx) {
+          return true;
+        }
         this.selectPoint(hg, idx);
-        this._startDrag(mesh);
         return true;
       }
     }

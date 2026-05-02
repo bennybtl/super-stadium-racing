@@ -997,6 +997,78 @@
       "radius": 7.5,
       "height": 3,
       "terrainType": null
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": -15.668120233141831,
+      "z": -66.33835864366606,
+      "angle": -0.6108652381980157,
+      "scale": 1,
+      "weight": 22
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": -11.619399804248028,
+      "z": -69.75615473180673,
+      "angle": -0.9250245035569956,
+      "scale": 1,
+      "weight": 22
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": -17.692106806705258,
+      "z": -60.49010628468997,
+      "angle": -0.2792526803190928,
+      "scale": 1,
+      "weight": 22
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": -6.414367692416095,
+      "z": -72.81873102559814,
+      "angle": -1.3788101090755218,
+      "scale": 1,
+      "weight": 22
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": -3.9919461631906703,
+      "z": -73.04593287992178,
+      "angle": -1.448623279155295,
+      "scale": 1,
+      "weight": 22
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": -1.6055557401375946,
+      "z": -72.99857760098654,
+      "angle": -1.5533430342749552,
+      "scale": 1,
+      "weight": 22
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": 0.9345434173103477,
+      "z": -73.13364991991887,
+      "angle": -1.5533430342749552,
+      "scale": 1,
+      "weight": 22
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "hayBale",
+      "x": 3.370278949323458,
+      "z": -73.10896729210184,
+      "angle": -1.5533430342749552,
+      "scale": 1,
+      "weight": 22
     }
   ]
 }

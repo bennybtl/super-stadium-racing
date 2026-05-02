@@ -287,10 +287,9 @@ export class PolyWallEditor {
       for (let idx = 0; idx < wg.pointMeshes.length; idx++) {
         if (pickedMesh === wg.pointMeshes[idx]) {
           if (this.selectedPoint && this.selectedPoint.wg === wg && this.selectedPoint.idx === idx) {
-            this.deselectPoint();
-          } else {
-            this.selectPoint(wg, idx);
+            return true;
           }
+          this.selectPoint(wg, idx);
           return true;
         }
       }

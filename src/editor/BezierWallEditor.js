@@ -422,10 +422,9 @@ export class BezierWallEditor {
       for (let idx = 0; idx < wg.anchorMeshes.length; idx++) {
         if (pickedMesh === wg.anchorMeshes[idx]) {
           if (this.selectedAnchor && this.selectedAnchor.wg === wg && this.selectedAnchor.idx === idx) {
-            this.deselectAll();
-          } else {
-            this.selectAnchor(wg, idx);
+            return true;
           }
+          this.selectAnchor(wg, idx);
           return true;
         }
       }
@@ -436,10 +435,9 @@ export class BezierWallEditor {
           if (this.selectedHandle && this.selectedHandle.wg === wg && 
               this.selectedHandle.anchorIdx === hm.anchorIdx && 
               this.selectedHandle.type === hm.type) {
-            this.deselectAll();
-          } else {
-            this.selectHandle(wg, hm.anchorIdx, hm.type);
+            return true;
           }
+          this.selectHandle(wg, hm.anchorIdx, hm.type);
           return true;
         }
       }

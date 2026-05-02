@@ -240,10 +240,9 @@ export class PolyCurbEditor {
       for (let idx = 0; idx < cg.pointMeshes.length; idx++) {
         if (pickedMesh === cg.pointMeshes[idx]) {
           if (this.selectedPoint?.cg === cg && this.selectedPoint.idx === idx) {
-            this.deselectPoint();
-          } else {
-            this.selectPoint(cg, idx);
+            return true;
           }
+          this.selectPoint(cg, idx);
           return true;
         }
       }
