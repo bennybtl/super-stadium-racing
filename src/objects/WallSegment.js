@@ -27,6 +27,7 @@ export class WallSegment {
    * @param {number} heading  - rotation around Y (radians)
    * @param {number} friction - tangential speed bleed on impact (0–1)
    * @param {number} index    - segment index (0-based) used for alternating colour
+   * @param {string} style    - colour style: 'red_white' | 'black_yellow' | 'grey'
    * @param {string} name     - mesh name for debugging
    * @param {BABYLON.Scene} scene
    * @param {BABYLON.ShadowGenerator} shadows
@@ -41,6 +42,7 @@ export class WallSegment {
     heading,
     friction,
     index,
+    style,
     name,
     scene,
     shadows,
@@ -54,6 +56,7 @@ export class WallSegment {
     this.heading    = heading;
     this.friction   = friction;
     this._index     = index;
+    this._style     = style ?? 'red_white';
 
     this._sheared = Math.abs(yShiftA) > 0.001 || Math.abs(yShiftB) > 0.001;
     const visualMesh = this._sheared
@@ -172,8 +175,15 @@ export class WallSegment {
 
   _applyMaterial(scene, shadows) {
     const mat = new StandardMaterial("wallMat", scene);
-    const isRed = this._index % 2 === 0;
-    mat.diffuseColor  = isRed ? new Color3(0.85, 0.08, 0.08) : new Color3(1.0, 1.0, 1.0);
+    const even = this._index % 2 === 0;
+    if (this._style === 'black_yellow') {
+      mat.diffuseColor = even ? new Color3(0.08, 0.08, 0.08) : new Color3(0.95, 0.80, 0.05);
+    } else if (this._style === 'grey') {
+      mat.diffuseColor = new Color3(0.55, 0.55, 0.55);
+    } else {
+      // default: red_white
+      mat.diffuseColor = even ? new Color3(0.85, 0.08, 0.08) : new Color3(1.0, 1.0, 1.0);
+    }
     mat.specularColor = new Color3(0.2, 0.2, 0.2);
     if (this._sheared) mat.backFaceCulling = false;
     this.mesh.material = mat;

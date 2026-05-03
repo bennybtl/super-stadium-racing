@@ -9,7 +9,7 @@ import {
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import barrelUrl from "../assets/barrel.obj?url";
-
+import { basicColors } from "../constants";
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
@@ -27,11 +27,13 @@ function seededRng(seed) {
   };
 }
 
-const BARREL_COLOR    = new Color3(0.9, 0.6, 0.2);
-const BARREL_FLASH    = new Color3(0, 1, 0);
+const BARREL_COLOR    = basicColors.yellow.diffuse;
+const BARREL_FLASH    = basicColors.green.diffuse;
 const FLASH_DURATION  = 1000; // ms
 const BARREL_MODEL_SCALE = 0.1;
 const BARREL_PIVOT_Y = -0.55;
+const HANDLE_HEIGHT = 2.5;
+const HANDLE_DIAMETER = 1.25;
 
 /**
  * Checkpoint — a single racing gate: two barrels and a ground decal.
@@ -65,6 +67,9 @@ export class Checkpoint {
     const halfWidth = feature.width / 2;
     this.barrel1 = this._createBarrel("barrel1",  halfWidth, feature, terrainHeight, track, scene, shadows);
     this.barrel2 = this._createBarrel("barrel2", -halfWidth, feature, terrainHeight, track, scene, shadows);
+
+    // Center handle used for selection and dragging
+    this.handle = this._createHandle(scene);
 
     // Ground decal (numbered or finish-line checkerboard)
     this.decal = feature.checkpointNumber !== null
@@ -120,10 +125,12 @@ export class Checkpoint {
 
   dispose() {
     if (this.decal)    this.decal.dispose();
+    if (this.handle)   this.handle.dispose();
     if (this.barrel1)  this.barrel1.dispose();
     if (this.barrel2)  this.barrel2.dispose();
     if (this._barrel1Mat) this._barrel1Mat.dispose();
     if (this._barrel2Mat) this._barrel2Mat.dispose();
+    if (this._handleMat) this._handleMat.dispose();
     if (this.container) this.container.dispose();
   }
 
@@ -172,6 +179,26 @@ export class Checkpoint {
     if (name === "barrel2") this._barrel2Mat = barrelMat;
 
     return barrelRoot;
+  }
+
+  _createHandle(scene) {
+    const handleMat = new StandardMaterial('checkpointHandleMat', scene);
+    handleMat.diffuseColor = basicColors.gray.diffuse.clone();
+    handleMat.specularColor = new Color3(0.12, 0.12, 0.12);
+    handleMat.emissiveColor = new Color3(0.1, 0.1, 0.1);
+
+    const handle = MeshBuilder.CreateSphere('checkpointHandle', {
+      diameter: HANDLE_DIAMETER,
+      segments: 8,
+    }, scene);
+    handle.parent = this.container;
+    handle.position = new Vector3(0, HANDLE_HEIGHT, 0);
+    handle.material = handleMat;
+    handle.isPickable = true;
+    handle.isVisible = false;
+
+    this._handleMat = handleMat;
+    return handle;
   }
 
   static _getSourceMeshes(scene) {

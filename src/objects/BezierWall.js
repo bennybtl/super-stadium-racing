@@ -114,7 +114,7 @@ export class BezierWall {
         const segW = segLen * 1.02;
         this.segments.push(
           new WallSegment(px, pz, centerY, segW, totalH, thickness,
-            heading, friction, this.segments.length, "wall_bezier", scene, shadows,
+            heading, friction, this.segments.length, null, "wall_bezier", scene, shadows,
             yShiftA, yShiftB)
         );
       }

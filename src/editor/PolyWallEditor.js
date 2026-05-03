@@ -395,6 +395,7 @@ export class PolyWallEditor {
     store.polyWall.collisionHeight = feature.collisionHeight ?? feature.height ?? 2;
     store.polyWall.thickness = feature.thickness ?? 0.5;
     store.polyWall.closed = feature.closed ?? false;
+    store.polyWall.style = feature.style ?? 'red_white';
   }
 
   // Called by EditorController (bridge from Vue store actions)
@@ -437,6 +438,13 @@ export class PolyWallEditor {
     if (!this._activeWall) return;
     this.ec.saveSnapshot(true);
     this._activeWall.feature.closed = val;
+    this._rebuildWall(this._activeWall.feature);
+  }
+
+  changePolyWallStyle(val) {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot(true);
+    this._activeWall.feature.style = val;
     this._rebuildWall(this._activeWall.feature);
   }
 

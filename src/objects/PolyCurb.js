@@ -1,4 +1,4 @@
-import { expandPolyline } from "./PolyWall.js";
+import { expandPolyline } from "../polyline-utils.js";
 import { WallSegment } from "./WallSegment.js";
 
 /**
@@ -77,7 +77,7 @@ export class PolyCurb {
           new WallSegment(
             px, pz, centerY,
             segW, height, width,
-            heading, 0, this.segments.length, 'curb_poly',
+            heading, 0, this.segments.length, feature.style ?? 'red_white', 'curb_poly',
             scene, shadows,
             yShiftA, yShiftB,
             false,

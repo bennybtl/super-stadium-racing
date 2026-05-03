@@ -15,21 +15,19 @@ export class CheckpointEditor {
     // Selection state
     this.selected = null;
 
-    // Highlight material (created lazily in createMaterials)
+    // Materials (set in createMaterials)
     this.highlightMaterial = null;
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-
-  /** Create (or recreate) the highlight material for the current scene. */
+  /** Create (or recreate) shared materials for the current scene. */
   createMaterials() {
-    this.highlightMaterial = EditorMaterials.for(this.editor.scene).checkpointHighlight;
+    const m = EditorMaterials.for(this.editor.scene);
+    this.highlightMaterial = m.checkpointHighlight;
   }
 
-  /** Dispose highlight material and reset state. */
+  /** Dispose all gizmo spheres and reset state. */
   dispose() {
     this.deselect();
-    this.highlightMaterial = null;
   }
 
   /**
@@ -39,6 +37,7 @@ export class CheckpointEditor {
   rebuildFromFeatures() {
     const mgr = this.editor.checkpointManager;
     if (!mgr) return;
+    this.deselect();
     mgr.dispose?.();
     for (const feature of this.editor.currentTrack.features) {
       if (feature.type === 'checkpoint') {
@@ -50,26 +49,13 @@ export class CheckpointEditor {
   // ── Click test ────────────────────────────────────────────────────────────
 
   /**
-   * Returns the checkpointData if `mesh` belongs to a checkpoint, otherwise null.
+   * Returns the checkpointData if `mesh` is the checkpoint handle.
    */
   findByMesh(mesh) {
     const mgr = this.editor.checkpointManager;
     if (!mgr) return null;
     for (const cpData of mgr.checkpointMeshes) {
-      let current = mesh;
-      while (current) {
-        if (current === cpData.barrel1 ||
-            current === cpData.barrel2 ||
-            current === cpData.arrow ||
-            current === cpData.arrowHead ||
-            current === cpData.numberPlane) {
-          return cpData;
-        }
-        current = current.parent;
-      }
-      if (mesh?.metadata?.checkpointData === cpData) {
-        return cpData;
-      }
+      if (mesh === cpData.handle) return cpData;
     }
     return null;
   }
@@ -83,32 +69,27 @@ export class CheckpointEditor {
     this.selected = checkpointData;
     this.editor._rawDragPos = { x: checkpointData.feature.centerX, z: checkpointData.feature.centerZ };
 
-    // Highlight selected checkpoint
-    const originalMat1 = checkpointData.barrel1.material;
-    const originalMat2 = checkpointData.barrel2.material;
-    checkpointData.barrel1.material = this.highlightMaterial;
-    checkpointData.barrel2.material = this.highlightMaterial;
+    if (!this.highlightMaterial) this.createMaterials();
 
-    // Store original materials for restoration
-    checkpointData.originalMat1 = originalMat1;
-    checkpointData.originalMat2 = originalMat2;
+    // Switch the center handle to the selected material
+    if (checkpointData.handle) {
+      checkpointData.originalHandleMaterial = checkpointData.handle.material;
+      checkpointData.handle.material = this.highlightMaterial;
+    }
 
     this.showProperties(checkpointData);
 
-    console.log('[CheckpointEditor] Selected checkpoint', checkpointData.feature.checkpointNumber);
+    console.debug('[CheckpointEditor] Selected checkpoint', checkpointData.feature.checkpointNumber);
   }
 
   deselect() {
     if (this.selected) {
-      // Restore original materials
-      if (this.selected.originalMat1) {
-        this.selected.barrel1.material = this.selected.originalMat1;
-      }
-      if (this.selected.originalMat2) {
-        this.selected.barrel2.material = this.selected.originalMat2;
+      // Restore the center handle material
+      if (this.selected.handle && this.selected.originalHandleMaterial) {
+        this.selected.handle.material = this.selected.originalHandleMaterial;
       }
 
-      console.log('[CheckpointEditor] Deselected checkpoint');
+      console.debug('[CheckpointEditor] Deselected checkpoint');
       this.hideProperties();
       this.selected = null;
       this.editor._rawDragPos = null;
@@ -186,6 +167,9 @@ export class CheckpointEditor {
       this.editor.currentTrack.features.splice(featureIndex, 1);
     }
 
+    // Deselect before disposing the checkpoint meshes
+    this.deselect();
+
     // Dispose the container and all its children
     checkpoint.container.dispose();
 
@@ -196,13 +180,10 @@ export class CheckpointEditor {
       mgr.checkpointMeshes.splice(meshIndex, 1);
     }
 
-    // Deselect
-    this.deselect();
-
     // Renumber remaining checkpoints
     mgr.renumberCheckpoints();
 
-    console.log('[CheckpointEditor] Deleted checkpoint');
+    console.debug('[CheckpointEditor] Deleted checkpoint');
   }
 
   duplicateSelected() {
@@ -256,7 +237,7 @@ export class CheckpointEditor {
     // Hide menu
     this.editor.hideAddMenu();
 
-    console.log('[CheckpointEditor] Added checkpoint at', newX.toFixed(1), newZ.toFixed(1));
+    console.debug('[CheckpointEditor] Added checkpoint at', newX.toFixed(1), newZ.toFixed(1));
   }
 
   // ── Properties (Vue store bridge) ─────────────────────────────────────────

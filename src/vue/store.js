@@ -261,6 +261,7 @@ export const useEditorStore = defineStore('editor', () => {
     collisionHeight: 2,
     thickness: 0.5,
     closed: false,
+    style: 'red_white',
   });
 
   // ── Poly hill panel ──
@@ -334,6 +335,7 @@ export const useEditorStore = defineStore('editor', () => {
     height: 0.22,
     width: 0.9,
     closed: false,
+    style: 'red_white',
   });
 
   // ── Bridge panel ──
@@ -484,6 +486,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setPolyWallCollisionHeight(val) { polyWall.collisionHeight = val; _bridge.value?.changePolyWallCollisionHeight(val); }
   function setPolyWallThickness(val)       { polyWall.thickness = val;       _bridge.value?.changePolyWallThickness(val); }
   function setPolyWallClosed(val)          { polyWall.closed = val;          _bridge.value?.changePolyWallClosed(val); }
+  function setPolyWallStyle(val)           { polyWall.style = val;           _bridge.value?.changePolyWallStyle(val); }
   function insertPolyWallPoint()        { _bridge.value?.insertPolyWallPoint(); }
   function deletePolyWallPoint()        { _bridge.value?.deletePolyWallPoint(); }
   function deletePolyWall()             { _bridge.value?.deletePolyWall(); }
@@ -563,6 +566,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setPolyCurbHeight(val)  { polyCurb.height = val;  _bridge.value?.changePolyCurbHeight(val); }
   function setPolyCurbWidth(val)   { polyCurb.width  = val;  _bridge.value?.changePolyCurbWidth(val); }
   function setPolyCurbClosed(val)  { polyCurb.closed = val;  _bridge.value?.changePolyCurbClosed(val); }
+  function setPolyCurbStyle(val)   { polyCurb.style = val;   _bridge.value?.changePolyCurbStyle(val); }
   function insertPolyCurbPoint()   { _bridge.value?.insertPolyCurbPoint(); }
   function deletePolyCurbPoint()   { _bridge.value?.deletePolyCurbPoint(); }
   function deletePolyCurb()        { _bridge.value?.deletePolyCurb(); }
@@ -684,7 +688,7 @@ export const useEditorStore = defineStore('editor', () => {
     setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
     setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,
     setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,
-    setPolyWallRadius, setPolyWallHeight, setPolyWallCollisionHeight, setPolyWallThickness, setPolyWallClosed,
+    setPolyWallRadius, setPolyWallHeight, setPolyWallCollisionHeight, setPolyWallThickness, setPolyWallClosed, setPolyWallStyle,
     insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, duplicatePolyWall, closePolyWall,
     setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillTerrainType, setPolyHillClosed,
     insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, duplicatePolyHill, closePolyHill,
@@ -707,7 +711,7 @@ export const useEditorStore = defineStore('editor', () => {
     insertActionZonePoint, deleteActionZonePoint,
     deleteActionZone, duplicateActionZone, closeActionZone,
     polyCurb,
-    setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed,
+    setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed, setPolyCurbStyle,
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
     bridge,
     setBridgeWidth, setBridgeDepth, setBridgeHeight, setBridgeThickness, setBridgeAngle,

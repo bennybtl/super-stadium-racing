@@ -78,7 +78,7 @@ export class TruckAudioController {
     await audioManager.loadSound("splashLanding", splashLandingUrl, {
       loop: false,
       autoplay: false,
-      volume: 1,
+      volume: 0.5,
     });
     await audioManager.loadSound("clunk1", clunk1Url, {
       loop: false,
@@ -189,7 +189,7 @@ export class TruckAudioController {
 
   _playSplashLanding() {
     if (!this._audioManager) return;
-    this._playSound("splashLanding", 0.6);
+    this._playSound("splashLanding", 0.5);
   }
 
   _isWaterTerrain(terrainType) {

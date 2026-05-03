@@ -337,6 +337,7 @@ export class PolyCurbEditor {
     store.polyCurb.height = feature.height ?? 0.22;
     store.polyCurb.width  = feature.width  ?? 0.9;
     store.polyCurb.closed = feature.closed ?? false;
+    store.polyCurb.style  = feature.style  ?? 'red_white';
   }
 
   changePolyCurbRadius(val) {
@@ -365,6 +366,13 @@ export class PolyCurbEditor {
     if (!this._activeGizmo) return;
     this.ec.saveSnapshot(true);
     this._activeGizmo.feature.closed = val;
+    this._rebuild(this._activeGizmo.feature);
+  }
+
+  changePolyCurbStyle(val) {
+    if (!this._activeGizmo) return;
+    this.ec.saveSnapshot(true);
+    this._activeGizmo.feature.style = val;
     this._rebuild(this._activeGizmo.feature);
   }
 

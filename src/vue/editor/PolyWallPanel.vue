@@ -81,6 +81,20 @@
       />
     </div>
 
+    <!-- Style -->
+    <div class="flex justify-between items-center mb-1 text-[12px]">
+      <span>Style</span>
+      <select
+        :value="editor.polyWall.style"
+        @change="editor.setPolyWallStyle($event.target.value)"
+        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+      >
+        <option value="red_white">Red &amp; White</option>
+        <option value="black_yellow">Black &amp; Yellow</option>
+        <option value="grey">Grey</option>
+      </select>
+    </div>
+
     <div class="text-[10px] text-slate-400 mb-3">WASD to move</div>
 
     <!-- Actions -->

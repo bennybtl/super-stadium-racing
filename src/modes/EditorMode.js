@@ -239,8 +239,7 @@ export class EditorMode extends BaseMode {
     };
 
     // Hide racing HUD while in editor (it starts hidden; only UIManager.showRaceStatusPanel shows it)
-
-    console.log("[Editor] Track editor mode active");
+    console.debug("[Editor] Track editor mode active");
 
     // -- Menu callbacks --
     menuManager.onEditorResume = () => menuManager.hideMenu();

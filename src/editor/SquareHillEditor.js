@@ -156,7 +156,7 @@ export class SquareHillEditor {
     this.rebuildTerrain();
 
     this.editor.hideAddMenu();
-    console.log('[SquareHillEditor] Added square hill at', newX.toFixed(1), newZ.toFixed(1));
+    console.debug('[SquareHillEditor] Added square hill at', newX.toFixed(1), newZ.toFixed(1));
   }
 
   // ── Click test ────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ export class SquareHillEditor {
     hillData.mesh.isVisible = this.editor.gizmosVisible;
     hillData.mesh.isPickable = true;
     this.showProperties(hillData);
-    console.log('[SquareHillEditor] Selected square hill at',
+    console.debug('[SquareHillEditor] Selected square hill at',
       hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
   }
 
@@ -195,7 +195,7 @@ export class SquareHillEditor {
         window.rebuildTerrainTexture?.();
         this._terrainDirty = false;
       }
-      console.log('[SquareHillEditor] Deselected square hill');
+      console.debug('[SquareHillEditor] Deselected square hill');
       this.selected = null;
       this.editor._rawDragPos = null;
     }
@@ -251,7 +251,7 @@ export class SquareHillEditor {
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
-    console.log('[SquareHillEditor] Deleted square hill');
+    console.debug('[SquareHillEditor] Deleted square hill');
   }
 
   duplicateSelected() {

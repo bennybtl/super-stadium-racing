@@ -160,9 +160,6 @@ export class EditorController {
     window.addEventListener('keydown', this.boundKeyDown, true); // Use capture phase
     window.addEventListener('keyup', this.boundKeyUp);
     this.scene.onPointerObservable.add(this.boundPointerEvent);
-
-    // Create highlight material for selected checkpoint
-    this.checkpointEditor.createMaterials();
     
     // Activate all gizmo editors (creates materials + initial visuals)
     this.hillEditor.activate(this.scene, track);
@@ -1439,6 +1436,7 @@ export class EditorController {
   changePolyWallCollisionHeight(val) { this.polyWallEditor.changePolyWallCollisionHeight(val); }
   changePolyWallThickness(val)       { this.polyWallEditor.changePolyWallThickness(val); }
   changePolyWallClosed(val)          { this.polyWallEditor.changePolyWallClosed(val); }
+  changePolyWallStyle(val)           { this.polyWallEditor.changePolyWallStyle(val); }
   insertPolyWallPoint()         { this.polyWallEditor.insertPolyWallPoint(); }
   deletePolyWallPoint()         { this.polyWallEditor.deleteSelectedPoint(); }
   deletePolyWall()              { this.polyWallEditor.deletePolyWall(); }
@@ -1512,6 +1510,7 @@ export class EditorController {
   changePolyCurbHeight(val)  { this.polyCurbEditor?.changePolyCurbHeight(val); }
   changePolyCurbWidth(val)   { this.polyCurbEditor?.changePolyCurbWidth(val); }
   changePolyCurbClosed(val)  { this.polyCurbEditor?.changePolyCurbClosed(val); }
+  changePolyCurbStyle(val)   { this.polyCurbEditor?.changePolyCurbStyle(val); }
   insertPolyCurbPoint()      { this.polyCurbEditor?.insertPolyCurbPoint(); }
   deletePolyCurbPoint()      { this.polyCurbEditor?.deletePolyCurbPoint(); }
   deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
@@ -1681,6 +1680,12 @@ export class EditorController {
     setListVisibility(this.normalMapDecalEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.obstacleEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.bridgeEditor?.meshes, ['node', 'sphere']);
+
+    if (this.checkpointManager) {
+      for (const cp of this.checkpointManager.checkpointMeshes || []) {
+        if (cp.handle) cp.handle.isVisible = visible;
+      }
+    }
 
     if (this.meshGridEditor) {
       for (const p of this.meshGridEditor.pointMeshes || []) {
