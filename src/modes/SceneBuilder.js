@@ -353,7 +353,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
           { radius: feature.radius, tessellation: 48, sideOrientation: 2 },
           scene
         );
-        waterMesh.position  = new Vector3(feature.centerX, baseCy + 6, feature.centerZ);
+        waterMesh.position  = new Vector3(feature.centerX, baseCy + 4, feature.centerZ);
         waterMesh.rotation.x = -Math.PI / 2;
       } else {
         // squareHill: baseCy already reflects the depressed terrain at the center,
