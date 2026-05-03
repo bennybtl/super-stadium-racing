@@ -595,7 +595,7 @@ export class EditorController {
         else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
         else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
         else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
-        else if (feature.type === 'tireStack' || feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
+        else if (feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
         else if (feature.type === 'flag' || feature.type === 'bannerString') this.decorationsEditor.createVisual(feature);
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
@@ -1377,6 +1377,12 @@ export class EditorController {
   changeObstacleWeight(val) {
     this.obstacleEditor.changeWeight(val);
   }
+  changeObstacleColor(val) {
+    this.obstacleEditor.changeColor(val);
+  }
+  resetObstacleDefaults() {
+    this.obstacleEditor.resetToDefaults();
+  }
   setObstaclePlacementActive(active) {
     this.obstacleEditor.setPlacementActive(active);
   }
@@ -1392,7 +1398,7 @@ export class EditorController {
   selectObstacle(d)                { this.obstacleEditor.select(d); }
   deselectObstacle()               { this.obstacleEditor.deselect(); }
   moveSelectedObstacle(movement)   { return this.obstacleEditor.move(movement); }
-  deleteSelectedObstacle()         { this.obstacleEditor.deleteSelected(); }
+  deleteSelectedObstacle()         { this.obstacleEditor.deleteSelectedObstacle(); }
   duplicateSelectedObstacle()      { this.obstacleEditor.duplicateSelected(); }
 
   get selectedObstacle()           { return this.obstacleEditor.selected; }

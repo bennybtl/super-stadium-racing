@@ -1,6 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
 import { Obstacle, normalizeObstacleType } from "../objects/Obstacle.js";
-import { TRUCK_RADIUS } from "../constants.js";
 import { TerrainQuery } from "./TerrainQuery.js";
 /**
  * ObstacleManager — creates and manages movable obstacles on the track.
@@ -29,7 +28,7 @@ export class ObstacleManager {
     const rawScale = typeof feature.scale === 'number' ? feature.scale : 1;
     const scale = rawScale === 0.1 ? 1 : rawScale;
     const weight = typeof feature.weight === 'number' ? feature.weight : null;
-    const stack = new Obstacle(x, z, groundY, this.scene, this.shadows, obstacleType, angle, scale, weight);
+    const stack = new Obstacle(x, z, groundY, this.scene, this.shadows, obstacleType, angle, scale, weight, feature.color);
     this._stacks.push(stack);
   }
 
@@ -37,11 +36,11 @@ export class ObstacleManager {
 
   /**
    * Call every frame after trucks have moved.
-   * Detects truck ↔ stack proximity, launches the stack with a physics impulse,
-   * and bleeds speed from the truck proportional to the impact.
+   * Detects truck ↔ stack overlap using the existing box bodies, launches the
+   * stack with a physics impulse, and bleeds speed from the truck proportional
+   * to the impact.
    */
   update(trucks) {
-    // Combined contact radius: truck (≈half-diagonal of 1.5×2.2 box) + obstacle
     // Maximum fraction of truck speed lost per hit (capped so we don't reverse the truck)
     const MAX_SLOW       = 0.55;
 
@@ -52,13 +51,13 @@ export class ObstacleManager {
         const truck = truckData.truck ?? truckData;
         if (!truck.mesh || !truck.state) continue;
 
-        const CONTACT_DIST = (truck.radius ?? TRUCK_RADIUS) + (stack.radius ?? 0.62);
+        if (!stack.body.intersectsMesh(truck.mesh, false)) continue;
 
-        const tp  = truck.mesh.position;
-        const dx  = sp.x - tp.x;
-        const dz  = sp.z - tp.z;
+        const tp = truck.mesh.position;
+        const dx = sp.x - tp.x;
+        const dz = sp.z - tp.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist > CONTACT_DIST || dist < 0.01) continue;
+        if (dist < 0.01) continue;
 
         // Unit vector from truck → stack
         const nx = dx / dist;
@@ -97,7 +96,7 @@ export class ObstacleManager {
   rebuild() {
     this.dispose();
     for (const feature of this.track.features) {
-      if (feature.type === "tireStack" || feature.type === "obstacle") this.createStack(feature);
+      if (feature.type === "obstacle") this.createStack(feature);
     }
   }
 

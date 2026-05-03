@@ -18,6 +18,8 @@ export class AudioManager {
     this._sounds = new Map();
     this._loopingSounds = new Set();
     this._unlockHandler = this._unlockAudio.bind(this);
+    this._disposeTimer = null;
+    this._disposed = false;
 
     document.addEventListener("pointerdown", this._unlockHandler, { once: true, passive: true });
     document.addEventListener("keydown", this._unlockHandler, { once: true, passive: true });
@@ -152,13 +154,39 @@ export class AudioManager {
   }
 
   dispose() {
+    if (this._disposed) return;
+    this._disposed = true;
+
     document.removeEventListener("pointerdown", this._unlockHandler);
     document.removeEventListener("keydown", this._unlockHandler);
-    this._sounds.forEach(sound => sound.dispose());
+
+    // Give any pending AudioBufferSourceNode ended callbacks a chance to run
+    // before disposing the sounds. Babylon's WebAudio static sounds can throw
+    // if dispose races the ended cleanup path.
+    const sounds = Array.from(this._sounds.values());
+    const audioEngine = this.audioEngine;
+
     this._sounds.clear();
-    if (this.audioEngine) {
-      this.audioEngine.dispose();
-      this.audioEngine = null;
-    }
+    this._loopingSounds.clear();
+    this.audioEngine = null;
+
+    if (this._disposeTimer) clearTimeout(this._disposeTimer);
+    this._disposeTimer = setTimeout(() => {
+      for (const sound of sounds) {
+        try {
+          sound.dispose();
+        } catch (error) {
+          console.warn('[AudioManager] sound.dispose() failed during teardown:', error);
+        }
+      }
+
+      if (audioEngine) {
+        try {
+          audioEngine.dispose();
+        } catch (error) {
+          console.warn('[AudioManager] audioEngine.dispose() failed during teardown:', error);
+        }
+      }
+    }, 0);
   }
 }

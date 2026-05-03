@@ -318,7 +318,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // Create movable obstacles, flags, and track signs from track features.
   for (const feature of currentTrack.features) {
-    if (feature.type === "tireStack" || feature.type === "obstacle") {
+    if (feature.type === "obstacle") {
       obstacleManager.createStack(feature);
     } else if (feature.type === "polyWall") {
       wallManager.createPolyWall(feature);

@@ -19,7 +19,6 @@ export class ObstacleEditor {
     const m = EditorMaterials.for(this.scene);
     this.material          = m.obstacleHandle;
     this.highlightMaterial = m.obstacleHandleHighlight;
-    this.tireMat           = m.obstacleTire;
   }
 
   /** Called when editor mode activates — creates materials and initial visuals. */
@@ -42,13 +41,11 @@ export class ObstacleEditor {
 
   createVisualsForTrack(track) {
     for (const feature of track.features) {
-      if (feature.type === 'tireStack' || feature.type === 'obstacle') this.createVisual(feature);
+      if (feature.type === 'obstacle') this.createVisual(feature);
     }
   }
 
   _featureObstacleType(feature) {
-    // Legacy tracks only have type='tireStack' and no subtype.
-    if (feature.type === 'tireStack') return 'tireStack';
     return normalizeObstacleType(feature.obstacleType);
   }
 
@@ -61,8 +58,13 @@ export class ObstacleEditor {
       if (feature.scale == null) feature.scale = 1;
       if (feature.weight == null) feature.weight = spec.mass;
       if (feature.angle == null) feature.angle = 0;
+      if (feature.color == null) feature.color = 'yellow';
     }
     return { type, spec };
+  }
+
+  _obstacleMaterial(color) {
+    return EditorMaterials.for(this.scene).obstaclePaint(color);
   }
 
   _syncStoreFromFeature(feature) {
@@ -73,6 +75,7 @@ export class ObstacleEditor {
     s.obstacle.scale = feature.scale ?? 1;
     s.obstacle.rotation = ((feature.angle ?? 0) * 180) / Math.PI;
     s.obstacle.weight = feature.weight ?? spec.mass;
+    s.obstacle.color = feature.color ?? 'yellow';
     s.selectedType = 'obstacle';
   }
 
@@ -105,7 +108,7 @@ export class ObstacleEditor {
           const m = src.clone('obstacleEditorMesh', node);
           m.isVisible  = true;
           m.isPickable = false;
-          if (type === 'tireStack') m.material = this.tireMat;
+          m.material = this._obstacleMaterial(feature.color ?? 'yellow');
         }
       })
       .catch(err => console.warn(`[ObstacleEditor] Failed to clone obstacle '${type}':`, err));
@@ -131,7 +134,7 @@ export class ObstacleEditor {
           const m = src.clone('obstacleEditorMesh', node);
           m.isVisible  = true;
           m.isPickable = false;
-          if (type === 'tireStack') m.material = this.tireMat;
+          m.material = this._obstacleMaterial(feature.color ?? 'yellow');
         }
       })
       .catch(err => console.warn(`[ObstacleEditor] Failed to clone obstacle '${type}':`, err));
@@ -211,7 +214,6 @@ export class ObstacleEditor {
   rotate(delta) {
     if (!this.selected || delta === 0) return;
     const { feature } = this.selected;
-    if (this._featureObstacleType(feature) !== 'hayBale') return;
     this.editor.saveSnapshot(true);
     feature.angle = (feature.angle ?? 0) + delta;
     this.updateVisual(this.selected);
@@ -253,6 +255,7 @@ export class ObstacleEditor {
     const selectedScale = e._editorStore?.obstacle?.scale ?? 1;
     const selectedWeight = e._editorStore?.obstacle?.weight ?? getObstacleSpec(selectedType).mass;
     const selectedRotationDeg = e._editorStore?.obstacle?.rotation ?? 0;
+    const selectedColor = e._editorStore?.obstacle?.color ?? 'yellow';
     const newFeature = {
       type: 'obstacle',
       obstacleType: selectedType,
@@ -261,6 +264,7 @@ export class ObstacleEditor {
       angle: selectedRotationDeg * Math.PI / 180,
       scale: selectedScale,
       weight: selectedWeight,
+      color: selectedColor,
     };
     e.saveSnapshot();
     e.currentTrack.features.push(newFeature);
@@ -286,15 +290,17 @@ export class ObstacleEditor {
 
   changeType(val) {
     const normalized = normalizeObstacleType(val);
+    const spec = getObstacleSpec(normalized);
     const s = this.editor._editorStore;
-    if (s) s.obstacle.type = normalized;
+    if (s) {
+      s.obstacle.type = normalized;
+      s.obstacle.weight = spec.mass;
+    }
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.type = 'obstacle';
     this.selected.feature.obstacleType = normalized;
-    if (this.selected.feature.weight == null) {
-      this.selected.feature.weight = getObstacleSpec(normalized).mass;
-    }
+    this.selected.feature.weight = spec.mass;
     this._rebuildNodeVisual(this.selected);
     this.updateVisual(this.selected);
   }
@@ -329,11 +335,40 @@ export class ObstacleEditor {
     this.selected.feature.weight = weight;
   }
 
+  resetToDefaults() {
+    if (!this.selected) return;
+    const { feature } = this.selected;
+    const { spec } = this._ensureObstacleDefaults(feature);
+    this.editor.saveSnapshot(true);
+    feature.scale = 1;
+    feature.angle = 0;
+    feature.weight = spec.mass;
+    feature.color = 'yellow';
+    this._syncStoreFromFeature(feature);
+    this._rebuildNodeVisual(this.selected);
+    this.updateVisual(this.selected);
+  }
+
+  changeColor(color) {
+    const normalized = String(color || 'yellow');
+    const s = this.editor._editorStore;
+    if (s) s.obstacle.color = normalized;
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.color = normalized;
+    this._rebuildNodeVisual(this.selected);
+    this.updateVisual(this.selected);
+  }
+
   setPlacementActive(active) {
     const s = this.editor._editorStore;
     if (!s) return;
     s.obstacle.placementActive = !!active;
     s.selectedType = 'obstacle';
+  }
+
+  deleteSelectedObstacle() {
+    this.deleteSelected();
   }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────

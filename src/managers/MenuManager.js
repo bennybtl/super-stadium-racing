@@ -11,7 +11,7 @@ import { SEASON_TRACKS } from './SeasonManager.js';
 export class MenuManager {
   constructor() {
     // Game-logic state (plain JS — not reactive)
-    this.currentMenu = 'start';
+    this.currentMenu = 'title';
     this.gameStarted = false;
     this.isPaused    = false;
     this.editorMode  = false;
@@ -28,6 +28,7 @@ export class MenuManager {
     this._store.selectedTrack = this.selectedTrack;
     this._store.selectedLaps = this.selectedLaps;
     this._store.selectedVehicle = this.selectedVehicle;
+    this._store.screen = 'title';
   }
 
   // ── Public navigation (called by modes) ──────────────────────────────────

@@ -84,8 +84,6 @@ export class MenuMode extends BaseMode {
       });
     };
 
-    menuManager.showStartMenu();
-
     return scene;
   }
 

@@ -309,13 +309,23 @@ export class EditorMaterials {
     }));
   }
 
-  /** Rubber tyre material — uses specular for a slight sheen. */
-  get obstacleTire() {
-    return this._get('obstacleTire', s => {
-      const mat = new StandardMaterial('edObstacleTire', s);
-      mat.diffuseColor  = new Color3(0.8, 0.5, 0.1);
-      mat.specularColor = new Color3(0.3, 0.2, 0.05);
-      mat.specularPower = 32;
+  /** Color-tinted obstacle material. */
+  obstaclePaint(color = 'yellow') {
+    const key = `obstaclePaint:${color}`;
+    return this._get(key, s => {
+      const colorMap = {
+        white:  basicColors.white,
+        red:    basicColors.red,
+        blue:   basicColors.blue,
+        yellow: basicColors.yellow,
+        black:  basicColors.black,
+      };
+      const swatch = colorMap[color] ?? basicColors.yellow;
+      const mat = new StandardMaterial(`edObstaclePaint_${color}`, s);
+      mat.diffuseColor  = swatch.diffuse;
+      mat.emissiveColor = new Color3(0.0, 0.0, 0.0);
+      mat.specularColor = new Color3(0.12, 0.12, 0.12);
+      mat.specularPower = 16;
       return mat;
     });
   }

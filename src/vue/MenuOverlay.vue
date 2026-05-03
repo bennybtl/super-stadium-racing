@@ -1,7 +1,22 @@
 <template>
-  <div v-if="store.screen" class="fixed inset-0 bg-black/80 flex items-center justify-center z-[1000] pointer-events-auto font-sans">
-    <div class="bg-[#141414]/95 px-16 py-10 rounded-[10px] border-[3px] border-[#ff5722] shadow-[0_10px_40px_rgba(0,0,0,0.5)] text-center" @mousedown.stop>
-      <h1 class="text-[#ff5722] mb-8 text-4xl uppercase tracking-[4px] drop-shadow-[0_0_10px_rgba(255,87,34,0.5)]">{{ title }}</h1>
+  <div
+    v-if="store.screen"
+    class="fixed inset-0 z-[1000] font-sans overflow-hidden bg-black"
+    :style="titleBackgroundStyle"
+  >
+    <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70"></div>
+
+    <div v-if="store.screen === 'title'" class="absolute inset-x-0 bottom-0 flex justify-center pb-10">
+      <button
+        class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-14 py-5 text-2xl font-bold rounded-md uppercase tracking-[3px] transition duration-150 ease-in-out shadow-[0_12px_30px_rgba(0,0,0,0.45)] pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
+        @click="store.back('start')"
+      >
+        Start
+      </button>
+    </div>
+
+    <div v-else class="absolute inset-0 flex items-center justify-center pointer-events-auto">
+      <div class="bg-[#141414]/80 px-16 py-10 rounded-[10px] border-[3px] border-[#ff5722] shadow-[0_10px_40px_rgba(0,0,0,0.5)] text-center backdrop-blur-sm" @mousedown.stop>
       <div class="flex flex-col gap-4">
 
         <!-- ── Start ── -->
@@ -57,6 +72,7 @@
 
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -65,10 +81,17 @@ import { computed } from 'vue';
 import { useMenuStore } from './store.js';
 
 const store = useMenuStore();
+const titleBackgroundStyle = {
+  backgroundImage: `url(${new URL('../assets/title.png', import.meta.url).href})`,
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: 'cover',
+};
 
 const title = computed(() => {
   switch (store.screen) {
-    case 'start':             return 'OPEN Off-Road!';
+    case 'title':
+    case 'start':             return '';
     case 'editorTrackSelect': return 'Select Track to Edit';
     case 'pause':             return 'Paused';
     case 'editorPause':       return 'Track Editor';

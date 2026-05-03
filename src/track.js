@@ -116,8 +116,8 @@ export class Track {
 
   // Add a generic movable obstacle at a world position.
   // obstacleType: 'barrel' | 'hayBale' | 'tireStack'
-  addObstacle(x, z, obstacleType = 'barrel', angle = 0) {
-    this.features.push({ type: 'obstacle', obstacleType, x, z, angle });
+  addObstacle(x, z, obstacleType = 'barrel', angle = 0, color = 'yellow') {
+    this.features.push({ type: 'obstacle', obstacleType, x, z, angle, color });
     return this;
   }
 

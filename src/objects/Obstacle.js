@@ -9,9 +9,11 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
+import { basicColors } from "../constants.js";
 import tireStackUrl from "../assets/tire-stack.obj?url";
 import barrelUrl from "../assets/barrel.obj?url";
 import hayBaleUrl from "../assets/hay-bale.obj?url";
+import softWallUrl from "../assets/soft-wall.obj?url";
 
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
@@ -29,36 +31,51 @@ const OBSTACLE_SPECS = {
     modelRotationX: -Math.PI / 2,
     modelScale: 0.1,
     modelOffsetY: 0,
-    diffuseColor: new Color3(0.8, 0.5, 0.1),
-    specularColor: new Color3(0.3, 0.2, 0.05),
-    specularPower: 32,
+    diffuseColor: basicColors.white.diffuse,
+    specularColor: new Color3(0.3, 0.3, 0.3),
+    specularPower: 10,
   },
   barrel: {
     url: barrelUrl,
     halfExtents: { x: 0.45, y: 0.55, z: 0.45 },
-    mass: 22,
+    mass: 20,
     contactRadius: 0.5,
     linearDamping: 0.55,
     angularDamping: 0.35,
     modelRotationX: -Math.PI / 2,
     modelScale: 0.1,
     modelOffsetY: 0,
-    diffuseColor: new Color3(0.48, 0.32, 0.18),
-    specularColor: new Color3(0.12, 0.08, 0.05),
-    specularPower: 20,
+    diffuseColor: basicColors.white.diffuse,
+    specularColor: new Color3(0.3, 0.3, 0.3),
+    specularPower: 10,
   },
   hayBale: {
     url: hayBaleUrl,
     halfExtents: { x: 0.8, y: 0.45, z: 0.55 },
-    mass: 28,
+    mass: 30,
     contactRadius: 0.8,
     linearDamping: 0.7,
     angularDamping: 0.5,
     modelRotationX: -Math.PI / 2,
     modelScale: 0.1,
     modelOffsetY: 0,
-    diffuseColor: new Color3(0.78, 0.67, 0.28),
-    specularColor: new Color3(0.1, 0.09, 0.04),
+    diffuseColor: basicColors.white.diffuse,
+    emissiveColor: basicColors.white.emissive,
+    specularColor: new Color3(0.3, 0.3, 0.3),
+    specularPower: 10,
+  },
+  softWall: {
+    url: softWallUrl,
+    halfExtents: { x: 1.1, y: 0.85, z: 3.2 },
+    mass: 80,
+    contactRadius: 3.2,
+    linearDamping: 0.6,
+    angularDamping: 0.4,
+    modelRotationX: -Math.PI / 2,
+    modelScale: 0.1,
+    modelOffsetY: 0,
+    diffuseColor: basicColors.white.diffuse,
+    specularColor: new Color3(0.3, 0.3, 0.3),
     specularPower: 10,
   },
 };
@@ -68,7 +85,17 @@ function normalizeObstacleType(type) {
   if (raw === "barrel") return "barrel";
   if (raw === "haybale" || raw === "hay-bale" || raw === "hay_bale") return "hayBale";
   if (raw === "tirestack" || raw === "tire_stack" || raw === "tire-stack") return "tireStack";
+  if (raw === "softwall" || raw === "soft_wall" || raw === "soft-wall") return "softWall";
   return DEFAULT_OBSTACLE_TYPE;
+}
+
+function normalizeObstacleColor(color) {
+  const raw = String(color ?? "").trim().toLowerCase();
+  if (raw === "white") return "white";
+  if (raw === "red") return "red";
+  if (raw === "blue") return "blue";
+  if (raw === "black") return "black";
+  return "yellow";
 }
 
 function getObstacleSpec(type) {
@@ -77,9 +104,9 @@ function getObstacleSpec(type) {
 }
 
 /**
- * Obstacle — a single rigid stack of tires at a fixed world position.
+ * Obstacle — a single rigid obstacle at a fixed world position.
  *
- * Owns one invisible BOX physics body with torus visual meshes parented to
+ * Owns one invisible BOX physics body with visual meshes parented to
  * it. The whole group tumbles together when hit by a truck.
  */
 export class Obstacle {
@@ -99,11 +126,13 @@ export class Obstacle {
     obstacleType = DEFAULT_OBSTACLE_TYPE,
     angle = 0,
     scale = 1,
-    weightOverride = null
+    weightOverride = null,
+    color = 'yellow'
   ) {
     this.scene = scene;
     this._loadedMeshes = [];
     this.obstacleType = normalizeObstacleType(obstacleType);
+    this.color = normalizeObstacleColor(color);
     const spec = getObstacleSpec(this.obstacleType);
     const safeScale = Math.max(0.05, Number(scale) || 1);
     const safeMass = (typeof weightOverride === 'number' && weightOverride > 0)
@@ -137,10 +166,12 @@ export class Obstacle {
     this.aggregate.body.setAngularDamping(spec.angularDamping);
 
     // OBJ visual model parented to the physics body so it tumbles with it.
-    this._tireMat = new StandardMaterial(`tireStackMat_${x}_${z}`, scene);
-    this._tireMat.diffuseColor  = spec.diffuseColor;
-    this._tireMat.specularColor = spec.specularColor;
-    this._tireMat.specularPower = spec.specularPower;
+    const tint = basicColors[this.color] ?? basicColors.yellow;
+    this._paintMat = new StandardMaterial(`obstacleMat_${x}_${z}`, scene);
+    this._paintMat.diffuseColor  = tint.diffuse;
+    this._paintMat.emissiveColor = new Color3(0.0, 0.0, 0.0);
+    this._paintMat.specularColor = new Color3(0.2, 0.2, 0.2);
+    this._paintMat.specularPower = 0;
 
     // Pivot node: child of body, holds rotation correction so it tumbles with physics
     this._pivot = new TransformNode(`tireStackPivot_${x}_${z}`, scene);
@@ -155,7 +186,7 @@ export class Obstacle {
         for (const src of sourceMeshes) {
           const m = src.clone(`tireStackMesh_${x}_${z}`, this._pivot);
           m.isVisible  = true;
-          m.material   = this._tireMat;
+          m.material   = this._paintMat;
           m.isPickable = false;
           shadows.addShadowCaster(m);
           m.receiveShadows = true;
@@ -172,7 +203,7 @@ export class Obstacle {
   dispose() {
     this.aggregate.dispose();
     for (const m of this._loadedMeshes) m.dispose();
-    this._tireMat?.dispose();
+    this._paintMat?.dispose();
     this._pivot?.dispose();
     this.body.dispose();
     this._loadedMeshes = [];

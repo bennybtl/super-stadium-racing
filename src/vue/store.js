@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia';
 import { ref, reactive, computed, shallowRef } from 'vue';
+import { getObstacleSpec } from '../objects/Obstacle.js';
 
 // ─── Menu store ───────────────────────────────────────────────────────────────
 export const useMenuStore = defineStore('menu', () => {
   // UI state — drives MenuOverlay.vue rendering. null = hidden.
-  const screen = ref('start');
+  const screen = ref('title');
   const isPaused = ref(false);
   const trackList = ref([]); // [{ key, name }]
   const vehicleList = ref([]); // [{ key, name }]
@@ -231,11 +232,20 @@ export const useEditorStore = defineStore('editor', () => {
     scale: 1,
     rotation: 0,
     weight: 22,
+    color: 'yellow',
     placementActive: false,
     options: [
       { value: 'barrel', label: 'Barrel' },
       { value: 'hayBale', label: 'Hay Bale' },
       { value: 'tireStack', label: 'Tire Stack' },
+      { value: 'softWall', label: 'Soft Wall' },
+    ],
+    colorOptions: [
+      { value: 'white', label: 'White' },
+      { value: 'red', label: 'Red' },
+      { value: 'blue', label: 'Blue' },
+      { value: 'yellow', label: 'Yellow' },
+      { value: 'black', label: 'Black' },
     ],
   });
 
@@ -624,10 +634,17 @@ export const useEditorStore = defineStore('editor', () => {
   function addTerrain()        { _bridge.value?.addTerrainEntity(); }
   function addNormalMapDecal() { _bridge.value?.addNormalMapDecalEntity(); }
   function addObstacle()       { _bridge.value?.addObstacleEntity(); }
-  function setObstacleType(val) { obstacle.type = val; _bridge.value?.changeObstacleType?.(val); }
+  function setObstacleType(val) {
+    obstacle.type = val;
+    obstacle.weight = getObstacleSpec(val).mass;
+    _bridge.value?.changeObstacleType?.(val);
+  }
   function setObstacleScale(val) { obstacle.scale = val; _bridge.value?.changeObstacleScale?.(val); }
   function setObstacleRotation(val) { obstacle.rotation = val; _bridge.value?.changeObstacleRotation?.(val); }
   function setObstacleWeight(val) { obstacle.weight = val; _bridge.value?.changeObstacleWeight?.(val); }
+  function setObstacleColor(val) { obstacle.color = val; _bridge.value?.changeObstacleColor?.(val); }
+  function resetObstacleDefaults() { _bridge.value?.resetObstacleDefaults?.(); }
+  function deleteSelectedObstacle() { _bridge.value?.deleteSelectedObstacle?.(); }
   function setObstaclePlacementActive(val) {
     obstacle.placementActive = !!val;
     _bridge.value?.setObstaclePlacementActive?.(!!val);
@@ -727,8 +744,8 @@ export const useEditorStore = defineStore('editor', () => {
     openAddMenu, closeAddMenu, toggleAddMenu,
     addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addObstacle,
-    setObstacleType, setObstacleScale, setObstacleRotation, setObstacleWeight,
-    setObstaclePlacementActive, closeObstacle,
+    setObstacleType, setObstacleScale, setObstacleRotation, setObstacleWeight, setObstacleColor,
+    setObstaclePlacementActive, resetObstacleDefaults, deleteSelectedObstacle, closeObstacle,
     addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,

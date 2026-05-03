@@ -98,6 +98,11 @@ export class RaceMode extends DriveMode {
       raceEnded = true;
       if (dnfTimer) { clearDnfTimer(); }
 
+      // Stop the player engine loop immediately when the race ends.
+      // The post-race summary screen is shown before this mode is torn down,
+      // so waiting for teardown would leave the engine audio running there.
+      this.truckAudioController?.stop();
+
       // Freeze trucks that DNF'd (still moving with no path to finish)
       trucks.forEach(td => {
         if (!td.gameState.raceFinished) {
