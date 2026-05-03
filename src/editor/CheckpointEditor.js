@@ -56,11 +56,18 @@ export class CheckpointEditor {
     const mgr = this.editor.checkpointManager;
     if (!mgr) return null;
     for (const cpData of mgr.checkpointMeshes) {
-      if (mesh === cpData.barrel1 ||
-          mesh === cpData.barrel2 ||
-          mesh === cpData.arrow ||
-          mesh === cpData.arrowHead ||
-          mesh === cpData.numberPlane) {
+      let current = mesh;
+      while (current) {
+        if (current === cpData.barrel1 ||
+            current === cpData.barrel2 ||
+            current === cpData.arrow ||
+            current === cpData.arrowHead ||
+            current === cpData.numberPlane) {
+          return cpData;
+        }
+        current = current.parent;
+      }
+      if (mesh?.metadata?.checkpointData === cpData) {
         return cpData;
       }
     }

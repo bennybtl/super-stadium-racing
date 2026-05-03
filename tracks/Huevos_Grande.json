@@ -4,6 +4,21 @@
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "width": 3.8,
+    "intensity": 0.3,
+    "laneSpacing": 1.3,
+    "alphaBreakup": 0.42,
+    "pathWander": 0.8,
+    "edgeSoftness": 0.75,
+    "secondaryPathCount": 68,
+    "secondaryPathStrength": 0.88,
+    "secondaryPathSpacing": 0.1,
+    "seed": 1337
+  },
   "features": [
     {
       "type": "meshGrid",
@@ -14,7 +29,7 @@
       "cols": 9,
       "rows": 9,
       "heights": [
-        37,
+        31.5,
         19,
         5.5,
         2,
@@ -23,7 +38,7 @@
         2.5,
         5,
         9,
-        34.5,
+        31.5,
         16.5,
         4.5,
         0,
@@ -32,7 +47,7 @@
         0,
         0,
         5,
-        32.5,
+        31,
         13,
         2,
         0,
@@ -41,7 +56,7 @@
         0,
         0,
         2,
-        30,
+        29.5,
         15,
         24,
         18,
@@ -50,7 +65,7 @@
         12,
         10,
         14,
-        30,
+        29.5,
         15,
         23.5,
         20,
@@ -289,8 +304,8 @@
     {
       "type": "hill",
       "centerX": 5,
-      "centerZ": 72,
-      "radius": 10,
+      "centerZ": 71.5,
+      "radius": 9,
       "height": -3,
       "terrainType": "water"
     },
@@ -335,15 +350,15 @@
     {
       "type": "trackSign",
       "x": 2,
-      "z": -39.27521310516259,
+      "z": -36.27521310516259,
       "name": "Heuvos Grande",
       "rotation": 0,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "background": "black",
-      "scale": 2.05,
-      "heightOffset": 1.2,
-      "width": 10.5
+      "scale": 2.15,
+      "heightOffset": 2.5,
+      "width": 11.5
     },
     {
       "type": "polyHill",
@@ -415,30 +430,6 @@
       "terrainType": "mud"
     },
     {
-      "type": "normalMapDecal",
-      "centerX": -40,
-      "centerZ": 53,
-      "width": 4,
-      "depth": 21,
-      "angle": 91,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 1.8,
-      "intensity": 1
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": -39.5,
-      "centerZ": 63.724786894837415,
-      "width": 4,
-      "depth": 21,
-      "angle": 78,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 1.8,
-      "intensity": 1
-    },
-    {
       "type": "terrain",
       "centerX": -6.5,
       "centerZ": 58.22478689483742,
@@ -483,9 +474,9 @@
     {
       "type": "checkpoint",
       "centerX": 3,
-      "centerZ": -57,
+      "centerZ": -55,
       "heading": -1.5707963267948966,
-      "width": 29,
+      "width": 27,
       "checkpointNumber": 5
     },
     {
@@ -514,10 +505,10 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 63,
+      "centerX": 63.5,
       "centerZ": -18,
       "heading": -3.141592653589793,
-      "width": 27,
+      "width": 26,
       "checkpointNumber": 4
     },
     {
@@ -527,18 +518,8 @@
     },
     {
       "type": "tireStack",
-      "x": 56,
-      "z": -49
-    },
-    {
-      "type": "tireStack",
-      "x": 55,
-      "z": -46
-    },
-    {
-      "type": "tireStack",
-      "x": 53,
-      "z": -43
+      "x": 52.395022698097144,
+      "z": -41.6881748264452
     },
     {
       "type": "tireStack",
@@ -591,60 +572,12 @@
       "z": -60.50000000000001
     },
     {
-      "type": "normalMapDecal",
-      "centerX": -11,
-      "centerZ": 27.5,
-      "width": 4,
-      "depth": 21,
-      "angle": 115,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 1.8,
-      "intensity": 1
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": -8,
-      "centerZ": 22,
-      "width": 4,
-      "depth": 21,
-      "angle": 135,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 1.8,
-      "intensity": 1
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": -15.5,
-      "centerZ": -5.5,
-      "width": 4,
-      "depth": 13.5,
-      "angle": 70,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 1.8,
-      "intensity": 1
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": -12.5,
-      "centerZ": -12.5,
-      "width": 4,
-      "depth": 13.5,
-      "angle": 74,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 1.8,
-      "intensity": 1
-    },
-    {
       "type": "terrain",
-      "centerX": 62.5,
+      "centerX": 65,
       "centerZ": -47.5,
       "terrainType": "loose_dirt",
       "shape": "circle",
-      "width": 16,
+      "width": 24,
       "depth": 16,
       "rotation": 0
     },
@@ -660,18 +593,6 @@
       "angle": 0
     },
     {
-      "type": "normalMapDecal",
-      "centerX": 0.3852646713758823,
-      "centerZ": -29.232163570436594,
-      "width": 80,
-      "depth": 22.5,
-      "angle": 0,
-      "normalMap": "6481-normal.jpg",
-      "repeatU": 1.3,
-      "repeatV": 1,
-      "intensity": 0.9
-    },
-    {
       "type": "terrain",
       "centerX": 66.5,
       "centerZ": 23.724786894837408,
@@ -684,7 +605,7 @@
     {
       "type": "terrain",
       "centerX": -29.5,
-      "centerZ": 33.22478689483741,
+      "centerZ": 31.724786894837408,
       "terrainType": "rocky",
       "shape": "circle",
       "width": 14,
@@ -693,8 +614,8 @@
     },
     {
       "type": "hill",
-      "centerX": 32,
-      "centerZ": -47,
+      "centerX": 31.5,
+      "centerZ": -48.5,
       "radius": 10,
       "height": -3,
       "terrainType": "mud"
@@ -703,8 +624,8 @@
       "type": "bannerString",
       "x": 63,
       "z": -18,
-      "heading": 0,
-      "width": 27,
+      "heading": -0.13962634015954636,
+      "width": 32,
       "poleHeight": 12
     },
     {
@@ -720,7 +641,7 @@
         },
         {
           "x": -69.54452048476269,
-          "z": -26.756347913039342
+          "z": -32.75634791303934
         },
         {
           "x": -70.60896587149708,
@@ -729,10 +650,6 @@
         {
           "x": -49.11,
           "z": 66.22
-        },
-        {
-          "x": -19.45,
-          "z": 63.3
         },
         {
           "x": 12.612874151433344,
@@ -751,12 +668,8 @@
           "z": 26.23479277996098
         },
         {
-          "x": 1.1210105219068751,
+          "x": -13.878989478093125,
           "z": 28.53033827176485
-        },
-        {
-          "x": -16.70488332533128,
-          "z": 34.084097734311094
         },
         {
           "x": -27.52835888361879,
@@ -768,11 +681,11 @@
         },
         {
           "x": 37.6323513745975,
-          "z": -12.841880486189575
+          "z": -11.341880486189575
         },
         {
           "x": 61.130747448672714,
-          "z": -15.871522940607484
+          "z": -13.371522940607484
         },
         {
           "x": 68.75379418538859,
@@ -877,6 +790,66 @@
           "z": 44.0744293150535
         }
       ]
+    },
+    {
+      "type": "trackSign",
+      "x": 32.023675949884904,
+      "z": -26.124264563524747,
+      "name": "Heuvos Grande",
+      "rotation": -0.3490658503988659,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "scale": 2.15,
+      "heightOffset": 2.5,
+      "width": 11.5
+    },
+    {
+      "type": "trackSign",
+      "x": -37.3420840934334,
+      "z": -26.744737557361745,
+      "name": "Heuvos Grande",
+      "rotation": 0.33161255787892263,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "scale": 2.15,
+      "heightOffset": 2.5,
+      "width": 11.5
+    },
+    {
+      "type": "trackSign",
+      "x": 3.531877703827453,
+      "z": 48.956297606361034,
+      "name": "Track Name",
+      "rotation": 0.03490658503988659,
+      "contentType": "brand",
+      "brandImage": "turbo-king.png",
+      "background": "black",
+      "scale": 1.45,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 41.58943129441953,
+      "z": 49.900987363715245,
+      "name": "Track Name",
+      "rotation": 0.03490658503988659,
+      "contentType": "brand",
+      "brandImage": "turbo-king.png",
+      "background": "black",
+      "scale": 1.45,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "bannerString",
+      "x": -24,
+      "z": 11.998731336830762,
+      "heading": 0.08726646259971647,
+      "width": 32,
+      "poleHeight": 11
     }
   ]
 }

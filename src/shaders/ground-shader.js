@@ -9,6 +9,12 @@
 import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 
+const STEEP_DIRT_NORMAL_MAP = '7733-normal.jpg';
+const STEEP_DIRT_SLOPE_START = 18;
+const STEEP_DIRT_SLOPE_END = 34;
+const STEEP_DIRT_SAMPLE_DISTANCE = 2.5;
+const STEEP_DIRT_TILE_WORLD_UNITS = 10;
+
 /**
  * Load and cache normal map images by filename.
  * @private
@@ -31,6 +37,70 @@ async function _loadNormalMap(filename) {
 function _smoothstep(edge0, edge1, x) {
   const t = Math.max(0, Math.min(1, (x - edge0) / Math.max(1e-6, edge1 - edge0)));
   return t * t * (3 - 2 * t);
+}
+
+function _getCellWorldCenter(terrainManager, col, row, worldSize) {
+  const halfWorld = worldSize / 2;
+  const x = (col + 0.5) * terrainManager.cellSize - halfWorld;
+  const z = (row + 0.5) * terrainManager.cellSize - halfWorld;
+  return { x, z };
+}
+
+function _getTerrainSlopeDeg(track, x, z, sampleDistance) {
+  if (!track) return 0;
+  const d = Math.max(0.25, sampleDistance);
+  const dx = track.getHeightAt(x + d, z) - track.getHeightAt(x - d, z);
+  const dz = track.getHeightAt(x, z + d) - track.getHeightAt(x, z - d);
+  const rise = Math.sqrt(dx * dx + dz * dz) / (2 * d);
+  return Math.atan(rise) * 180 / Math.PI;
+}
+
+async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize, worldUnitsPerTile = STEEP_DIRT_TILE_WORLD_UNITS) {
+  if (!track) return;
+
+  const img = await _loadNormalMap(STEEP_DIRT_NORMAL_MAP);
+  if (!img || img.naturalWidth <= 0) return;
+
+  const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
+  const tileSize = (textureSize / worldSize) * worldUnitsPerTile;
+  const pattern = ctx.createPattern(img, 'repeat');
+  if (!pattern) return;
+
+  const scale = tileSize / img.naturalWidth;
+  pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
+
+  const cellsByBlend = new Map();
+  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
+    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
+      const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
+      const cellName = cell?.name ?? '';
+      if (cellName !== 'packed_dirt' && cellName !== 'loose_dirt') continue;
+
+      const { x, z } = _getCellWorldCenter(terrainManager, col, row, worldSize);
+      const slopeDeg = _getTerrainSlopeDeg(track, x, z, STEEP_DIRT_SAMPLE_DISTANCE * terrainManager.cellSize);
+      const blend = _smoothstep(STEEP_DIRT_SLOPE_START, STEEP_DIRT_SLOPE_END, slopeDeg);
+      if (blend <= 0) continue;
+
+      const key = Math.round(blend * 20) / 20;
+      if (!cellsByBlend.has(key)) cellsByBlend.set(key, []);
+      cellsByBlend.get(key).push({ col, row });
+    }
+  }
+
+  if (cellsByBlend.size === 0) return;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = pattern;
+
+  for (const [blend, cells] of cellsByBlend.entries()) {
+    ctx.globalAlpha = Math.min(1, Math.max(0, blend));
+    for (const { col, row } of cells) {
+      ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+    }
+  }
+
+  ctx.restore();
 }
 
 function _buildWaterDepthTileCanvas(img, tileSizePx, waterCfg) {
@@ -240,12 +310,13 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSi
  * @param {number} worldSize - Size of the world space the texture covers
  * @returns {Promise<RawTexture>}
  */
-export async function createCompositeNormalMap(scene, normalMapDecals, terrainManager, textureSize = 2048, worldSize = 160) {
+export async function createCompositeNormalMap(scene, normalMapDecals, terrainManager, track, textureSize = 2048, worldSize = 160) {
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
   await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
+  await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize);
   
   // If no decals, build the raw texture from the canvas and return it.
   if (!normalMapDecals || normalMapDecals.length === 0) {

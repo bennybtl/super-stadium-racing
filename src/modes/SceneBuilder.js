@@ -200,7 +200,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
   const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
-  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, texSize, terrainSize);
+  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, currentTrack, texSize, terrainSize);
   const waterDepthOverlayTex = await createWaterDepthOverlayTexture(scene, terrainManager, texSize, terrainSize);
   const rebakeTerrainTexture = () => {
     const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, terrainSize);
@@ -347,10 +347,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
       if (feature.type === "hill") {
         waterMesh = MeshBuilder.CreateDisc(
           `water_${feature.centerX}_${feature.centerZ}`,
-          { radius: feature.radius, tessellation: 48, sideOrientation: 2 },
+          { radius: feature.radius / 2, tessellation: 48, sideOrientation: 2 },
           scene
         );
-        waterMesh.position  = new Vector3(feature.centerX, baseCy + 0.5, feature.centerZ);
+        waterMesh.position  = new Vector3(feature.centerX, baseCy + 1, feature.centerZ);
         waterMesh.rotation.x = Math.PI / 2;
       } else {
         // squareHill: baseCy already reflects the depressed terrain at the center,
@@ -361,7 +361,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
           { width: feature.width * 2, height: height * 2, subdivisions: 1 },
           scene
         );
-        waterMesh.position  = new Vector3(feature.centerX, baseCy + 0.5, feature.centerZ);
+        waterMesh.position  = new Vector3(feature.centerX, baseCy + 1, feature.centerZ);
         waterMesh.rotation.y = ((feature.angle ?? 0) * Math.PI) / 180;
       }
 

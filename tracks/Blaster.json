@@ -4,6 +4,21 @@
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "width": 3.2,
+    "intensity": 0.18,
+    "laneSpacing": 1.3,
+    "alphaBreakup": 0.28,
+    "pathWander": 0.5,
+    "edgeSoftness": 0.75,
+    "secondaryPathCount": 4,
+    "secondaryPathStrength": 0.62,
+    "secondaryPathSpacing": 0.1,
+    "seed": 1337
+  },
   "features": [
     {
       "type": "polyHill",
@@ -53,7 +68,7 @@
         },
         {
           "x": 30.5,
-          "z": 44.93487213690245,
+          "z": 44.43487213690245,
           "radius": 0
         }
       ],
@@ -290,7 +305,13 @@
       "x": -45,
       "z": -53.56512786309757,
       "name": "Blaster",
-      "rotation": 0
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "scale": 1,
+      "heightOffset": 0,
+      "width": 10
     },
     {
       "type": "meshGrid",
@@ -424,7 +445,7 @@
     },
     {
       "type": "bannerString",
-      "x": 5,
+      "x": 4.5,
       "z": -10.5,
       "heading": 0,
       "width": 38,
@@ -432,15 +453,15 @@
     },
     {
       "type": "bannerString",
-      "x": 5,
+      "x": 6,
       "z": 30.499999999999986,
       "heading": 0,
-      "width": 38,
+      "width": 36,
       "poleHeight": 12
     },
     {
       "type": "bannerString",
-      "x": 5,
+      "x": 4.5,
       "z": -1,
       "heading": 0.05000000000000002,
       "width": 38,
@@ -448,10 +469,10 @@
     },
     {
       "type": "bannerString",
-      "x": 4,
+      "x": 5.5,
       "z": -39.5,
       "heading": 0.05000000000000002,
-      "width": 38,
+      "width": 35,
       "poleHeight": 12
     },
     {
@@ -511,10 +532,10 @@
       "x": 66.15961143831977,
       "z": -31.784275921761918,
       "shape": "circle",
-      "width": 22,
-      "depth": 22,
+      "width": 25,
+      "depth": 25,
       "rotation": 0,
-      "radius": 12.5
+      "radius": 15
     },
     {
       "type": "actionZone",
@@ -522,8 +543,8 @@
       "x": 11.422310922206421,
       "z": -65.07493938763164,
       "shape": "circle",
-      "width": 24,
-      "depth": 24,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -533,8 +554,8 @@
       "x": 5.247145218335469,
       "z": -4.941218018314615,
       "shape": "circle",
-      "width": 23,
-      "depth": 23,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -555,30 +576,30 @@
       "x": -51.965357457095074,
       "z": 64.654545190146,
       "shape": "circle",
-      "width": 20,
-      "depth": 20,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
     {
       "type": "checkpoint",
-      "centerX": -28.5,
-      "centerZ": -24.21008524206502,
+      "centerX": -27,
+      "centerZ": -24.71008524206502,
       "heading": 1.5707963267948966,
-      "width": 24,
+      "width": 22.5,
       "checkpointNumber": 7
     },
     {
       "type": "checkpoint",
-      "centerX": 69,
+      "centerX": 69.5,
       "centerZ": -44.21008524206502,
       "heading": -3.141592653589793,
-      "width": 20,
+      "width": 19,
       "checkpointNumber": 1
     },
     {
       "type": "checkpoint",
-      "centerX": 5.5,
+      "centerX": 5,
       "centerZ": -39.21008524206502,
       "heading": 0,
       "width": 24.5,
@@ -596,8 +617,8 @@
       "type": "checkpoint",
       "centerX": 66.5,
       "centerZ": 42.78991475793498,
-      "heading": -3.141592653589793,
-      "width": 19.5,
+      "heading": 3.0415926535897935,
+      "width": 21,
       "checkpointNumber": 4
     },
     {
@@ -605,15 +626,15 @@
       "centerX": -26.551762769779426,
       "centerZ": 16.830640246663023,
       "heading": -1.5707963267948966,
-      "width": 25,
+      "width": 24,
       "checkpointNumber": 5
     },
     {
       "type": "checkpoint",
-      "centerX": -70.5,
+      "centerX": -70,
       "centerZ": 27.78991475793498,
       "heading": -3.141592653589793,
-      "width": 14.5,
+      "width": 16,
       "checkpointNumber": 6
     },
     {
@@ -636,10 +657,10 @@
     },
     {
       "type": "hill",
-      "centerX": 39.5,
+      "centerX": 40,
       "centerZ": 20,
       "radius": 7,
-      "height": 2.5,
+      "height": 3.5,
       "terrainType": "loose_dirt"
     },
     {

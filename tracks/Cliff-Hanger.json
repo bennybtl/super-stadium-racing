@@ -4,6 +4,21 @@
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "width": 3.2,
+    "intensity": 0.29,
+    "laneSpacing": 1.6,
+    "alphaBreakup": 0.42,
+    "pathWander": 1,
+    "edgeSoftness": 0.75,
+    "secondaryPathCount": 74,
+    "secondaryPathStrength": 0.79,
+    "secondaryPathSpacing": 0.08,
+    "seed": 1337
+  },
   "features": [
     {
       "type": "meshGrid",
@@ -72,9 +87,9 @@
         20,
         12,
         12,
-        12,
-        12,
-        13.5,
+        10.5,
+        10.5,
+        10.5,
         13.5,
         13.5,
         20,
@@ -105,7 +120,7 @@
       "width": 14,
       "depth": 19,
       "transition": 10,
-      "terrainType": null,
+      "terrainType": "packed_dirt",
       "angle": 0,
       "height": 5
     },
@@ -117,7 +132,7 @@
       "depth": 8,
       "height": 4.5,
       "transition": 6.5,
-      "terrainType": null,
+      "terrainType": "loose_dirt",
       "angle": 170
     },
     {
@@ -128,7 +143,7 @@
       "depth": 8,
       "height": 4.5,
       "transition": 6,
-      "terrainType": null,
+      "terrainType": "loose_dirt",
       "angle": 16
     },
     {
@@ -364,7 +379,8 @@
       ],
       "height": 4,
       "width": 9.5,
-      "closed": false
+      "closed": false,
+      "terrainType": "loose_dirt"
     },
     {
       "type": "checkpoint",
@@ -426,26 +442,6 @@
       "passedBy": {}
     },
     {
-      "type": "terrain",
-      "shape": "rect",
-      "centerX": 2.0001325989128613,
-      "centerZ": -29.233688973759094,
-      "terrainType": "loose_dirt",
-      "width": 67.5,
-      "depth": 22,
-      "rotation": 0
-    },
-    {
-      "type": "terrain",
-      "shape": "rect",
-      "centerX": 5.000132598912861,
-      "centerZ": 48.766311026240906,
-      "terrainType": "loose_dirt",
-      "width": 67.5,
-      "depth": 18,
-      "rotation": 0
-    },
-    {
       "type": "bannerString",
       "x": 65.06827281967215,
       "z": 53.47519417707416,
@@ -465,26 +461,27 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 4.216082485209704,
-          "z": -47.94307817283727,
+          "x": 10.967536104075421,
+          "z": -46.25468693670276,
           "radius": 0
         },
         {
-          "x": -36.97028546697521,
-          "z": -54.0301929819258,
+          "x": -38.97028546697521,
+          "z": -52.5301929819258,
           "radius": 0
         }
       ],
       "height": 3,
       "width": 5,
-      "closed": false
+      "closed": false,
+      "terrainType": "loose_dirt"
     },
     {
       "type": "hill",
-      "centerX": 25.122378183031287,
-      "centerZ": -58.8439262795374,
+      "centerX": 28.122378183031287,
+      "centerZ": -50.8439262795374,
       "radius": 10,
-      "height": -4.5,
+      "height": -7.5,
       "terrainType": "water"
     },
     {
@@ -583,7 +580,7 @@
       "points": [
         {
           "x": -50.81868538553903,
-          "z": -72.66132859218537
+          "z": -71.16132859218537
         },
         {
           "x": -70.94,
@@ -714,8 +711,8 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "circle",
-      "x": 25.431760374029153,
-      "z": -25.292793298261046,
+      "x": 25.931760374029153,
+      "z": -25.792793298261046,
       "width": 30,
       "depth": 30,
       "rotation": 0,

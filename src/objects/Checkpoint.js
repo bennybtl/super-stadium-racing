@@ -27,7 +27,7 @@ function seededRng(seed) {
   };
 }
 
-const BARREL_COLOR    = new Color3(0.8, 0.5, 0.1);
+const BARREL_COLOR    = new Color3(0.9, 0.6, 0.2);
 const BARREL_FLASH    = new Color3(0, 1, 0);
 const FLASH_DURATION  = 1000; // ms
 const BARREL_MODEL_SCALE = 0.1;
@@ -160,9 +160,10 @@ export class Checkpoint {
       for (const src of sourceMeshes) {
         const m = src.clone(`${name}Mesh`, pivot);
         m.isVisible = true;
-        m.isPickable = false;
+        m.isPickable = true;
         m.material = barrelMat;
         m.receiveShadows = true;
+        m.metadata = { ...(m.metadata ?? {}), checkpointBarrel: true };
         if (shadows) shadows.addShadowCaster(m);
       }
     }).catch(err => console.warn(`[Checkpoint] Failed to load barrel model:`, err));

@@ -4,6 +4,21 @@
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "width": 3.2,
+    "intensity": 0.28,
+    "laneSpacing": 1.3,
+    "alphaBreakup": 0.48,
+    "pathWander": 0.72,
+    "edgeSoftness": 0.75,
+    "secondaryPathCount": 59,
+    "secondaryPathStrength": 0.62,
+    "secondaryPathSpacing": 0.13,
+    "seed": 1337
+  },
   "features": [
     {
       "type": "meshGrid",
@@ -121,7 +136,7 @@
     },
     {
       "type": "hill",
-      "centerX": -7,
+      "centerX": -6,
       "centerZ": 28,
       "radius": 4,
       "height": 2.5,
@@ -130,7 +145,7 @@
     {
       "type": "hill",
       "centerX": -14,
-      "centerZ": 33,
+      "centerZ": 33.5,
       "radius": 6,
       "height": 2.5,
       "terrainType": "loose_dirt"
@@ -301,14 +316,14 @@
       "centerX": -11,
       "centerZ": -6,
       "heading": 0,
-      "width": 15,
+      "width": 16,
       "checkpointNumber": 2,
       "passedBy": {}
     },
     {
       "type": "checkpoint",
       "centerX": -0.026157781073411712,
-      "centerZ": -55.01407625122488,
+      "centerZ": -55.51407625122488,
       "heading": -1.5707963267948966,
       "width": 27,
       "checkpointNumber": 8,
@@ -451,132 +466,12 @@
       "terrainType": "loose_dirt"
     },
     {
-      "type": "normalMapDecal",
-      "centerX": 12,
-      "centerZ": 0.7247868948374077,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 12,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": 8,
-      "centerZ": -4.775213105162592,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 26,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": 15,
-      "centerZ": -4.275213105162592,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 1,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": 48.5,
-      "centerZ": 10.224786894837415,
-      "width": 52.5,
-      "depth": 19.5,
-      "angle": 0,
-      "normalMap": "6481-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 0.1,
-      "intensity": 0.95
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": 39.5,
-      "centerZ": 33.72478689483741,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 99,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": 42.5,
-      "centerZ": 28.224786894837408,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 90,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": 45.5,
-      "centerZ": 65.22478689483741,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 90,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": 42,
-      "centerZ": 72.22478689483741,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 77,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": -56,
-      "centerZ": -33.77521310516259,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 134,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
-    },
-    {
       "type": "hill",
       "centerX": 48.5,
       "centerZ": -62.710085242065034,
       "radius": 10,
       "height": 1.5,
       "terrainType": "loose_dirt"
-    },
-    {
-      "type": "normalMapDecal",
-      "centerX": -49,
-      "centerZ": -31.775213105162592,
-      "width": 3.5,
-      "depth": 17.5,
-      "angle": 150,
-      "normalMap": "7632-normal.jpg",
-      "repeatU": 1,
-      "repeatV": 1,
-      "intensity": 0.5
     },
     {
       "type": "squareHill",
@@ -786,16 +681,16 @@
       "centerX": 11,
       "centerZ": 1,
       "heading": 3.049999999999997,
-      "width": 16.5,
+      "width": 16,
       "checkpointNumber": 6,
       "passedBy": {}
     },
     {
       "type": "checkpoint",
-      "centerX": 61,
+      "centerX": 62,
       "centerZ": -37,
       "heading": 3.141592653589793,
-      "width": 24,
+      "width": 25,
       "checkpointNumber": 7,
       "passedBy": {}
     },
@@ -962,18 +857,6 @@
       "width": 10
     },
     {
-      "type": "normalMapDecal",
-      "centerX": -51.5,
-      "centerZ": 10.724786894837415,
-      "width": 52.5,
-      "depth": 19.5,
-      "angle": 0,
-      "normalMap": "6481-normal.jpg",
-      "repeatU": 0.1,
-      "repeatV": 0.1,
-      "intensity": 0.95
-    },
-    {
       "type": "aiPath",
       "points": [
         {
@@ -982,19 +865,19 @@
         },
         {
           "x": -44.88933473170838,
-          "z": -55.12003582414858
+          "z": -57.12003582414858
         },
         {
-          "x": -61.007582243615985,
-          "z": -44.19777503756841
+          "x": -60.507582243615985,
+          "z": -41.19777503756841
         },
         {
-          "x": -47.72348049417797,
-          "z": -26.357728040106302
+          "x": -48.72348049417797,
+          "z": -25.357728040106302
         },
         {
-          "x": -15.63,
-          "z": -12.38
+          "x": -15.13,
+          "z": -15.88
         },
         {
           "x": -6.020788434108088,
@@ -1006,7 +889,7 @@
         },
         {
           "x": -62.9059015343195,
-          "z": 31.20809881125902
+          "z": 30.70809881125902
         },
         {
           "x": -71.8635094298748,
@@ -1037,8 +920,8 @@
           "z": 34.42582715551876
         },
         {
-          "x": 5.6,
-          "z": 10.870000000000001
+          "x": 6.6,
+          "z": 10.370000000000001
         },
         {
           "x": 18,
@@ -1046,7 +929,7 @@
         },
         {
           "x": 50.4,
-          "z": -23.1
+          "z": -22.6
         },
         {
           "x": 63.93,
