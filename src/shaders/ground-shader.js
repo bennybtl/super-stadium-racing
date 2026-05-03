@@ -14,6 +14,11 @@ const STEEP_DIRT_SLOPE_START = 18;
 const STEEP_DIRT_SLOPE_END = 34;
 const STEEP_DIRT_SAMPLE_DISTANCE = 2.5;
 const STEEP_DIRT_TILE_WORLD_UNITS = 10;
+const STEEP_GRASS_NORMAL_MAP = TERRAIN_TYPES.LOAMY_DIRT.normalMap || '6481-normal.jpg';
+const STEEP_GRASS_SLOPE_START = 16;
+const STEEP_GRASS_SLOPE_END = 30;
+const STEEP_GRASS_SAMPLE_DISTANCE = 6.5;
+const STEEP_GRASS_TILE_WORLD_UNITS = 10;
 
 /**
  * Load and cache normal map images by filename.
@@ -55,10 +60,24 @@ function _getTerrainSlopeDeg(track, x, z, sampleDistance) {
   return Math.atan(rise) * 180 / Math.PI;
 }
 
-async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize, worldUnitsPerTile = STEEP_DIRT_TILE_WORLD_UNITS) {
+async function _paintSteepTerrainOverlay(
+  ctx,
+  track,
+  terrainManager,
+  textureSize,
+  worldSize,
+  {
+    normalMap,
+    sourceTerrainNames,
+    slopeStart,
+    slopeEnd,
+    sampleDistance,
+    worldUnitsPerTile,
+  }
+) {
   if (!track) return;
 
-  const img = await _loadNormalMap(STEEP_DIRT_NORMAL_MAP);
+  const img = await _loadNormalMap(normalMap);
   if (!img || img.naturalWidth <= 0) return;
 
   const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
@@ -74,11 +93,11 @@ async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, w
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
       const cellName = cell?.name ?? '';
-      if (cellName !== 'packed_dirt' && cellName !== 'loose_dirt') continue;
+      if (!sourceTerrainNames.includes(cellName)) continue;
 
       const { x, z } = _getCellWorldCenter(terrainManager, col, row, worldSize);
-      const slopeDeg = _getTerrainSlopeDeg(track, x, z, STEEP_DIRT_SAMPLE_DISTANCE * terrainManager.cellSize);
-      const blend = _smoothstep(STEEP_DIRT_SLOPE_START, STEEP_DIRT_SLOPE_END, slopeDeg);
+      const slopeDeg = _getTerrainSlopeDeg(track, x, z, sampleDistance * terrainManager.cellSize);
+      const blend = _smoothstep(slopeStart, slopeEnd, slopeDeg);
       if (blend <= 0) continue;
 
       const key = Math.round(blend * 20) / 20;
@@ -101,6 +120,28 @@ async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, w
   }
 
   ctx.restore();
+}
+
+async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize) {
+  return _paintSteepTerrainOverlay(ctx, track, terrainManager, textureSize, worldSize, {
+    normalMap: STEEP_DIRT_NORMAL_MAP,
+    sourceTerrainNames: ['packed_dirt', 'loose_dirt'],
+    slopeStart: STEEP_DIRT_SLOPE_START,
+    slopeEnd: STEEP_DIRT_SLOPE_END,
+    sampleDistance: STEEP_DIRT_SAMPLE_DISTANCE,
+    worldUnitsPerTile: STEEP_DIRT_TILE_WORLD_UNITS,
+  });
+}
+
+async function _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldSize) {
+  return _paintSteepTerrainOverlay(ctx, track, terrainManager, textureSize, worldSize, {
+    normalMap: STEEP_GRASS_NORMAL_MAP,
+    sourceTerrainNames: ['grass'],
+    slopeStart: STEEP_GRASS_SLOPE_START,
+    slopeEnd: STEEP_GRASS_SLOPE_END,
+    sampleDistance: STEEP_GRASS_SAMPLE_DISTANCE,
+    worldUnitsPerTile: STEEP_GRASS_TILE_WORLD_UNITS,
+  });
 }
 
 function _buildWaterDepthTileCanvas(img, tileSizePx, waterCfg) {
@@ -317,6 +358,7 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
   const ctx = canvas.getContext('2d');
   await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
   await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize);
+  await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldSize);
   
   // If no decals, build the raw texture from the canvas and return it.
   if (!normalMapDecals || normalMapDecals.length === 0) {
@@ -420,13 +462,15 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
  * @param {number} [worldSize]
  * @returns {Promise<void>}
  */
-export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecals, terrainManager, worldSize = 160) {
+export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecals, terrainManager, track, worldSize = 160) {
   const textureSize = rawTexture.getSize().width;
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
   await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
+  await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize);
+  await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldSize);
   
   if (normalMapDecals && normalMapDecals.length > 0) {
     const pixelsPerUnit = textureSize / worldSize;

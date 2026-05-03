@@ -145,6 +145,38 @@ function _wrapSampleDistance(index, start, total) {
   return wrapped;
 }
 
+function _getTerrainSlopeDegAt(track, x, z, sampleDistance) {
+  if (!track) return 0;
+  const d = Math.max(0.25, sampleDistance);
+  const dx = track.getHeightAt(x + d, z) - track.getHeightAt(x - d, z);
+  const dz = track.getHeightAt(x, z + d) - track.getHeightAt(x, z - d);
+  const rise = Math.sqrt(dx * dx + dz * dz) / (2 * d);
+  return Math.atan(rise) * 180 / Math.PI;
+}
+
+export function applySteepGrassTerrainRemap(terrainManager, track, options = {}) {
+  const slopeStart = options.slopeStart ?? 16;
+  const sampleDistance = options.sampleDistance ?? 2.5;
+  const cellsPerSide = terrainManager?.cellsPerSide ?? 0;
+  if (!track || cellsPerSide <= 0) return;
+
+  const halfWorld = terrainManager.gridSize / 2;
+  for (let row = 0; row < cellsPerSide; row++) {
+    for (let col = 0; col < cellsPerSide; col++) {
+      const index = row * cellsPerSide + col;
+      const cell = terrainManager.grid[index];
+      if (cell?.name !== 'grass') continue;
+
+      const worldX = (col + 0.5) * terrainManager.cellSize - halfWorld;
+      const worldZ = (row + 0.5) * terrainManager.cellSize - halfWorld;
+      const slopeDeg = _getTerrainSlopeDegAt(track, worldX, worldZ, sampleDistance * terrainManager.cellSize);
+      if (slopeDeg >= slopeStart) {
+        terrainManager.grid[index] = TERRAIN_TYPES.LOAMY_DIRT;
+      }
+    }
+  }
+}
+
 export function buildTerrainIdTexturePixelData(terrainManager) {
   const n = terrainManager.cellsPerSide;
   const data = new Uint8Array(n * n * 4);

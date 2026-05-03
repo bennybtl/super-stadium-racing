@@ -5,6 +5,7 @@ import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
 import {
   updateTerrainIdTexture,
+  applySteepGrassTerrainRemap,
 } from "../terrain-utils.js";
 
 /**
@@ -113,6 +114,7 @@ export class EditorMode extends BaseMode {
             currentTrack.getTerrainTypeAt(worldX, worldZ);
         }
       }
+      applySteepGrassTerrainRemap(terrainManager, currentTrack);
     };
 
     // Rebuild terrain texture buffers from terrainManager.grid (call on deselect)
@@ -122,6 +124,7 @@ export class EditorMode extends BaseMode {
       console.debug('[EditorMode] rebuildTerrainTexture: updating id texture and re-baking...');
       updateTerrainIdTexture(terrainIdTex, terrainManager);
       rebakeTerrainTexture();
+      window.rebuildNormalMap?.(true);
       console.debug('[EditorMode] rebuildTerrainTexture: done');
     };
     let _rebuildTerrainTimer = null;
@@ -135,7 +138,7 @@ export class EditorMode extends BaseMode {
     const _rebuildNormalMapNow = async () => {
       const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
       const { updateCompositeNormalMap } = await import('../shaders/ground-shader.js');
-      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, terrainManager.gridSize);
+      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, currentTrack, terrainManager.gridSize);
     };
     let _rebuildNormalMapTimer = null;
     window.rebuildNormalMap = (immediate = false) => {

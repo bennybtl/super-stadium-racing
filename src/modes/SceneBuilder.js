@@ -17,7 +17,7 @@ import {
   RawTexture,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
-import { TerrainManager } from "../terrain.js";
+import { TerrainManager, TERRAIN_TYPES } from "../terrain.js";
 import { Track } from "../track.js";
 import { CameraController } from "../managers/CameraController.js";
 import { CheckpointManager } from "../managers/CheckpointManager.js";
@@ -35,6 +35,7 @@ import {
   buildTerrainIdTexturePixelData,
   buildTerrainWearOverlayPixelData,
   buildTerrainTypePropertyTexturePixelData,
+  applySteepGrassTerrainRemap,
 } from "../terrain-utils.js";
 
 /**
@@ -124,6 +125,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       terrainManager.setTerrainCell(col, row, terrainType);
     }
   }
+
+  applySteepGrassTerrainRemap(terrainManager, currentTrack);
 
   // -- Ground mesh --
   const ground = MeshBuilder.CreateGround(
@@ -347,11 +350,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
       if (feature.type === "hill") {
         waterMesh = MeshBuilder.CreateDisc(
           `water_${feature.centerX}_${feature.centerZ}`,
-          { radius: feature.radius / 2, tessellation: 48, sideOrientation: 2 },
+          { radius: feature.radius, tessellation: 48, sideOrientation: 2 },
           scene
         );
-        waterMesh.position  = new Vector3(feature.centerX, baseCy + 1, feature.centerZ);
-        waterMesh.rotation.x = Math.PI / 2;
+        waterMesh.position  = new Vector3(feature.centerX, baseCy + 6, feature.centerZ);
+        waterMesh.rotation.x = -Math.PI / 2;
       } else {
         // squareHill: baseCy already reflects the depressed terrain at the center,
         // so just float 0.5 units above it (same as the circular hill).
@@ -362,7 +365,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
           scene
         );
         waterMesh.position  = new Vector3(feature.centerX, baseCy + 1, feature.centerZ);
-        waterMesh.rotation.y = ((feature.angle ?? 0) * Math.PI) / 180;
+        waterMesh.rotation.y = -((feature.angle ?? 0) * Math.PI) / 180;
       }
 
       waterMesh.isPickable = false;

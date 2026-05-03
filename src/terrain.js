@@ -67,11 +67,11 @@ export const TERRAIN_TYPES = {
     roughness: 0,            // Smooth surface — drag is the hazard
     diffuseTexture: 'water.jpg',
     diffuseTextureWorldUnitsPerTile: 12,
-    diffuseTextureOpacity: 0.9,
-    diffuseDepthThreshold: 0.55,
+    diffuseTextureOpacity: 0.3,
+    diffuseDepthThreshold: 0.35,
     diffuseDepthSoftness: 0.28,
-    diffuseDepthGain: 2.2,
-    diffuseDepthMinBlend: 0.2,
+    diffuseDepthGain: 1.2,
+    diffuseDepthMinBlend: 0.1,
     diffuseDepthColor: new Color3(0.05, 0.36, 0.72),
     normalMap: 'water.jpg',
     normalMapIntensity: 0.5, // Gentle ripple detail
