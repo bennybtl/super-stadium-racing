@@ -42,6 +42,7 @@ export class MenuMode extends BaseMode {
       menuManager._store.pitData = null;
       menuManager.hideMenu();
       this.controller.startSeason(laps);
+      this.controller.continueSeason();
     };
 
     menuManager.onContinueSeason = () => {

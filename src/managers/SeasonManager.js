@@ -6,7 +6,15 @@
 const STORAGE_KEY = 'season_state';
 
 /** Ordered race track keys for a season */
-export const SEASON_TRACKS = ['Fandango.json', 'Huevos_Grande.json', 'Sidewinder.json'];
+export const SEASON_TRACKS = [
+  'Fandango.json',
+  'Huevos_Grande.json',
+  'Sidewinder.json',
+  'Big_Dukes.json',
+  'Blaster.json',
+  'Cliff-Hanger.json',
+  'Wipeout.json',
+];
 
 import { AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 
@@ -231,7 +239,7 @@ export class SeasonManager {
           ...u,
           level: count,
           maxLevel: 99,
-          affordable: (player?.balance ?? 0) >= u.cost && count < 99,
+          affordable: (player?.balance ?? 0) >= u.cost && count < 10,
         };
       }
       return {
