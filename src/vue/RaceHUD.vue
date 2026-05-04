@@ -1,30 +1,68 @@
 <template>
-  <div v-if="race.visible" class="fixed bottom-2.5 right-2.5 flex flex-col items-end gap-0 bg-black/70 pointer-events-none">
-    <div v-if="race.timerVisible" class="w-full bg-black/80 text-[#00ff00] font-mono text-2xl font-bold p-1">{{ formattedTime }}</div>
-    <div class="w-full text-[#999] font-mono text-base font-bold p-1">Checkpoints: <span>{{ race.checkpoints }}</span></div>
-    <div class="w-full text-[#999] font-mono text-base font-bold p-1">Lap: <span>{{ race.lap }}</span>/{{ race.totalLaps }}</div>
-    <div class="w-full p-1" :class="race.boostActive ? 'text-yellow-300 shadow-[0_0_20px_rgba(255,255,0,0.75)] animate-pulse' : 'text-[#999]'">
-      Nitro: <span>{{ race.boosts }}</span>
+  <div v-if="race.visible" class="pointer-events-none">
+    <div
+      v-if="race.timerVisible"
+      class="fixed left-1/2 top-4 z-[1200] -translate-x-1/2"
+    >
+      <div class="rounded-[14px] border border-[#6a5c48] bg-[#0c0c0c]/60 px-6 py-2 shadow-[0_14px_30px_rgba(0,0,0,0.55)]">
+        <div class="flex items-center gap-3">
+          <span class="h-[2px] w-10 rounded-full bg-gradient-to-r from-[#ff6b2e] to-[#ffd166]"></span>
+          <span class="font-mono text-[28px] font-black tracking-[0.12em] text-white tabular-nums drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
+            {{ formattedTime }}
+          </span>
+          <span class="h-[2px] w-10 rounded-full bg-gradient-to-l from-[#ff6b2e] to-[#ffd166]"></span>
+        </div>
+      </div>
     </div>
 
-    <!-- Telemetry controls -->
-    <div class="flex gap-1 p-1 pointer-events-auto">
-      <button
-        class="font-mono text-xs font-bold px-2 py-1 border border-slate-600 bg-black/80 text-slate-300 rounded-sm transition hover:bg-slate-800 hover:text-white"
-        :class="race.telemetryRecording ? 'border-red-500 text-red-500 animate-pulse' : ''"
-        @click="race.toggleTelemetry()"
-      >
-        {{ race.telemetryRecording ? '⏹ Stop' : '⏺ Record' }}
-      </button>
-      <button
-        v-if="race.telemetryHasData"
-        class="font-mono text-xs font-bold px-2 py-1 border border-sky-500 bg-black/80 text-sky-400 rounded-sm transition hover:bg-slate-800 hover:text-white"
-        @click="race.exportTelemetry()"
-      >
-        ⬇ Export
-      </button>
+    <div class="fixed left-1/2 bottom-4 -translate-x-1/2 z-[1200] w-[min(24rem,calc(100vw-1rem))] max-w-[24rem]">
+      <div class="rounded-[14px] overflow-hidden border border-[#6a5c48] bg-[#0c0c0c]/60 px-2 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.62)] backdrop-blur-sm">
+        <div class="grid gap-px" :style="gridStyle">
+          <div class="flex h-full items-center justify-end text-right font-mono text-[10px] font-black uppercase tracking-[0.28em] text-[#d2cbc3] leading-none">
+          </div>
+          <div
+            v-for="(truck, index) in race.truckStatus"
+            :key="`name-${truck.id ?? index}`"
+            class="text-center"
+          >
+            <div class="truncate font-mono text-[10px] font-black uppercase tracking-[0.16em] text-white" :style="truckChipStyle(truck, index)">
+              {{ truckLabel(truck, index) }}
+            </div>
+          </div>
+
+          <div class="flex h-full items-center justify-end text-right font-mono text-[10px] font-black uppercase tracking-[0.28em] text-[#d2cbc3] leading-none">
+            Lap
+          </div>
+          <div
+            v-for="(truck, index) in race.truckStatus"
+            :key="`lap-${truck.id ?? index}`"
+            class="text-center"
+          >
+            <div class="rounded-md border font-mono text-white tabular-nums" :style="cellStyle(truck, index, truck.finished ? 0.45 : 1)">
+              {{ truck.lap }} / {{ truck.totalLaps }}
+            </div>
+          </div>
+
+          <div class="flex h-full items-center justify-end text-right font-mono text-[10px] font-black uppercase tracking-[0.28em] text-[#d2cbc3] leading-none">
+            Nitro
+          </div>
+
+          <div
+            v-for="(truck, index) in race.truckStatus"
+            :key="`nitro-${truck.id ?? index}`"
+            class="text-center"
+          >
+            <div
+              class="rounded-md border font-mono text-white tabular-nums"
+              :class="truck.boostActive ? 'animate-pulse' : ''"
+              :style="cellStyle(truck, index, truck.boostActive ? 1 : 0.82, true)"
+            >
+             {{ truck.boosts }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div v-if="race.telemetryRecording" class="font-mono text-xs font-bold text-red-500 px-1 pb-1 animate-pulse">● REC</div>
   </div>
 
   <div v-if="race.countdownVisible" class="fixed inset-0 flex items-center justify-center pointer-events-none">
@@ -47,6 +85,10 @@ import { useRaceStore } from './store.js';
 
 const race = useRaceStore();
 
+const gridStyle = computed(() => ({
+  gridTemplateColumns: `5.75rem repeat(${Math.max(1, race.truckStatus.length)}, minmax(0, 1fr))`,
+}));
+
 const formattedTime = computed(() => {
   const ms = race.timerMs;
   const m  = Math.floor(ms / 60000);
@@ -54,5 +96,42 @@ const formattedTime = computed(() => {
   const cs = Math.floor((ms % 1000) / 10);
   return `${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
 });
+
+function truckLabel(truck, index) {
+  return truck?.name ?? `Truck ${index + 1}`;
+}
+
+function toCssColor(color) {
+  if (!color) return '#ff6b2e';
+  if (typeof color === 'string') return color;
+  if (typeof color.toHexString === 'function') return color.toHexString();
+  if (typeof color.r === 'number' && typeof color.g === 'number' && typeof color.b === 'number') {
+    const to255 = value => Math.max(0, Math.min(255, Math.round(value * 255)));
+    return `rgb(${to255(color.r)} ${to255(color.g)} ${to255(color.b)})`;
+  }
+  return '#ff6b2e';
+}
+
+function cellStyle(truck, index, opacity = 1, nitro = false) {
+  const color = toCssColor(truck?.color);
+  return {
+    borderColor: color,
+    background: nitro
+      ? `linear-gradient(180deg, rgba(0,0,0,0.9), rgba(15,15,15,0.98))`
+      : `linear-gradient(180deg, rgba(255,255,255,${0.10 * opacity}), rgba(0,0,0,0.95))`,
+    boxShadow: truck?.boostActive
+      ? `0 0 0 1px ${color}, 0 0 18px rgba(255,255,255,0.08)`
+      : `0 0 0 1px rgba(255,255,255,0.06)`,
+    color: truck?.finished ? 'rgba(255,255,255,0.55)' : 'white',
+  };
+}
+
+function truckChipStyle(truck, index) {
+  const color = toCssColor(truck?.color);
+  return {
+    color,
+    textShadow: `0 0 10px ${color}44`,
+  };
+}
 </script>
 

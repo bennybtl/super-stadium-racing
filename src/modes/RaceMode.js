@@ -280,6 +280,23 @@ export class RaceMode extends DriveMode {
       d.setRaceContext(td, trucks);
     });
 
+    const syncTruckStatus = () => {
+      uiManager.updateTruckStatus(
+        trucks.map(td => ({
+          id: td.id,
+          name: td.name,
+          isPlayer: td.isPlayer,
+          color: td.truck.diffuseColor?.clone?.() ?? td.truck.diffuseColor ?? null,
+          lap: td.gameState.lapCount,
+          totalLaps,
+          boosts: td.gameState.boostCount,
+          boostActive: td.truck.state.boostActive,
+          finished: td.gameState.raceFinished,
+        })),
+        totalLaps
+      );
+    };
+
     // Prime lastCheckpointPassed so trucks are ready to cross the start/finish line first
     trucks.forEach(td => {
       td.gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
@@ -293,6 +310,7 @@ export class RaceMode extends DriveMode {
     // uiManager.showDebugPanel();
     uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
+    syncTruckStatus();
 
     const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
@@ -434,6 +452,8 @@ export class RaceMode extends DriveMode {
       uiManager.updateLaps(0, totalLaps);
       uiManager.updateCheckpoints(0);
 
+      syncTruckStatus();
+
       startCountdown();
     };
 
@@ -544,6 +564,8 @@ export class RaceMode extends DriveMode {
       obstacleManager.update(trucks);
       flagManager.update(trucks, dt);
       pickupManager.update(trucks, dt);
+
+      syncTruckStatus();
 
       debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck);
       uiManager.setBoostActive(playerTruckData.truck.state.boostActive);

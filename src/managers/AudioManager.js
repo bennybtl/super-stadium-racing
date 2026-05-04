@@ -150,7 +150,13 @@ export class AudioManager {
   stopSound(key) {
     const sound = this._sounds.get(key);
     if (!sound) return;
-    sound.stop();
+    if (sound.state === "Stopped") return;
+
+    try {
+      sound.stop();
+    } catch (error) {
+      console.warn(`[AudioManager] stopSound failed for ${key}:`, error);
+    }
   }
 
   dispose() {
@@ -165,6 +171,16 @@ export class AudioManager {
     // if dispose races the ended cleanup path.
     const sounds = Array.from(this._sounds.values());
     const audioEngine = this.audioEngine;
+
+    for (const sound of sounds) {
+      try {
+        if (sound.state !== "Stopped") {
+          sound.stop();
+        }
+      } catch (error) {
+        console.warn("[AudioManager] sound.stop() failed during teardown:", error);
+      }
+    }
 
     this._sounds.clear();
     this._loopingSounds.clear();
@@ -187,6 +203,6 @@ export class AudioManager {
           console.warn('[AudioManager] audioEngine.dispose() failed during teardown:', error);
         }
       }
-    }, 0);
+    }, 100);
   }
 }

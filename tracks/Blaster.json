@@ -532,8 +532,8 @@
       "x": 66.15961143831977,
       "z": -31.784275921761918,
       "shape": "circle",
-      "width": 25,
-      "depth": 25,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -965,6 +965,26 @@
           "z": -61.825106552581275
         }
       ]
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": -43.246869964287406,
+      "z": 7.33659018826426,
+      "angle": -0.8726646259971649,
+      "scale": 1,
+      "weight": 80,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": -47.740452480725196,
+      "z": 13.093491004302379,
+      "angle": -0.48869219055841195,
+      "scale": 1,
+      "weight": 80,
+      "color": "yellow"
     }
   ]
 }

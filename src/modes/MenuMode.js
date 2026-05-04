@@ -26,6 +26,12 @@ export class MenuMode extends BaseMode {
     new FreeCamera("menuCam", new Vector3(0, 0, -10), scene);
     this.scene = scene;
 
+    // Preserve the initial title screen on app startup, but restore the
+    // interactive start menu after returning from a race or practice mode.
+    if (menuManager.currentMenu == null) {
+      menuManager.showStartMenu();
+    }
+
     menuManager.onStartGame = () => {
       menuManager.hideMenu();
       this.controller.showSingleRacePit();

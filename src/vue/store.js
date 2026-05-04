@@ -99,6 +99,7 @@ export const useRaceStore = defineStore('race', () => {
   const checkpoints = ref(0);
   const lap = ref(0);
   const totalLaps = ref(3);
+  const truckStatus = ref([]);
   const boosts = ref(5);
   const boostActive = ref(false);
   const timerMs = ref(0);
@@ -136,7 +137,7 @@ export const useRaceStore = defineStore('race', () => {
   }
 
   return {
-    visible, checkpoints, lap, totalLaps,
+    visible, checkpoints, lap, totalLaps, truckStatus,
     boosts, boostActive,
     timerMs, timerVisible,
     countdownText, countdownVisible,

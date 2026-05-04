@@ -4,6 +4,21 @@
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "width": 3.2,
+    "intensity": 0.18,
+    "laneSpacing": 1.3,
+    "alphaBreakup": 0.28,
+    "pathWander": 0.5,
+    "edgeSoftness": 0.75,
+    "secondaryPathCount": 4,
+    "secondaryPathStrength": 0.62,
+    "secondaryPathSpacing": 0.1,
+    "seed": 1337
+  },
   "features": [
     {
       "type": "meshGrid",
@@ -274,7 +289,7 @@
       "centerZ": -43.27521310516259,
       "width": 16,
       "depth": 10,
-      "height": -6,
+      "height": -4,
       "transition": 6,
       "terrainType": "mud",
       "angle": 0
@@ -315,9 +330,9 @@
     {
       "type": "squareHill",
       "centerX": 48.5,
-      "centerZ": -18.775213105162578,
-      "width": 6,
-      "depth": 3,
+      "centerZ": -19.775213105162578,
+      "width": 8.5,
+      "depth": 4,
       "transition": 2.5,
       "terrainType": null,
       "angle": 67,
@@ -337,10 +352,10 @@
     },
     {
       "type": "hill",
-      "centerX": -22.5,
-      "centerZ": -4,
+      "centerX": -21.5,
+      "centerZ": -6.5,
       "radius": 9.5,
-      "height": -4,
+      "height": -3,
       "terrainType": "mud"
     },
     {
@@ -446,7 +461,7 @@
       "centerX": -69,
       "centerZ": 21.5,
       "radius": 10,
-      "height": 2,
+      "height": 1.5,
       "terrainType": "rocky"
     },
     {
@@ -494,7 +509,7 @@
       "centerX": 54,
       "centerZ": 64,
       "radius": 9.5,
-      "height": -4.5,
+      "height": -1.5,
       "terrainType": "mud"
     },
     {
@@ -502,7 +517,7 @@
       "centerX": 14,
       "centerZ": 67,
       "radius": 6.5,
-      "height": -3.5,
+      "height": -2,
       "terrainType": "mud"
     },
     {
@@ -687,8 +702,8 @@
       "shape": "circle",
       "x": -25.667352769110323,
       "z": 7.35137285245041,
-      "width": 35,
-      "depth": 35,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -698,8 +713,8 @@
       "shape": "circle",
       "x": 50.00314680991897,
       "z": 15.270784139216687,
-      "width": 27,
-      "depth": 27,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },
@@ -709,8 +724,8 @@
       "shape": "circle",
       "x": -61.53777080533776,
       "z": 57.6052909495954,
-      "width": 27,
-      "depth": 27,
+      "width": 30,
+      "depth": 30,
       "rotation": 0,
       "radius": 15
     },

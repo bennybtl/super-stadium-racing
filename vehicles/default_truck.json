@@ -40,7 +40,7 @@
     "weightTransfer": 1.35,
     "stationarySpinRate": 0.6,
     "boostCount": 5,
-    "maxBoosts": 5,
+    "maxBoosts": 9,
     "boostDuration": 1.6,
     "boostAccelMult": 2,
     "boostSpeedMult": 1.5

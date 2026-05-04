@@ -17,6 +17,10 @@ export class UIManager {
   }
   updateBoosts(count)                { this._race.boosts = count; }
   setBoostActive(active)             { this._race.boostActive = active; }
+  updateTruckStatus(statuses, totalLaps = null) {
+    this._race.truckStatus = Array.isArray(statuses) ? statuses : [];
+    if (totalLaps !== null) this._race.totalLaps = totalLaps;
+  }
 
   showRaceStatusPanel()              { this._race.visible = true; }
   hideRaceStatusPanel()              { this._race.visible = false; }
@@ -58,6 +62,7 @@ export class UIManager {
     this._race.oobCountdownSeconds = 0;
     this._race.telemetryRecording = false;
     this._race.telemetryHasData   = false;
+    this._race.truckStatus = [];
     this._race.setTelemetryBridge(null);
   }
 }

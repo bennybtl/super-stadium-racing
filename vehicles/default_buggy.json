@@ -6,7 +6,6 @@
   "imageFile": "default_buggy.png",
   "defaultColor": [0.8, 0.2, 0.5],
   "meshColors": {
-    "Body_Body1": [1.0, 0, 0],
     "cockpit_Body6": [0.1, 0.1, 0.1],
     "wing_Body7": [0.9, 0.9, 0.9],
     "frame_Body9": [0.7, 0.7, 0.7]
@@ -30,20 +29,20 @@
     "rearAxle":  -1.6
   },
   "params": {
-    "springStrength": 120,
-    "damping": 5,
-    "maxSpeed": 30,
+    "springStrength": 130,
+    "damping": 3,
+    "maxSpeed": 28,
     "maxReverseSpeed": -12,
-    "acceleration": 34,
+    "acceleration": 24,
     "braking": 2,
     "drag": 4,
     "turnSpeed": 4.2,
-    "grip": 0.10,
-    "driftThreshold": 0.3,
-    "weightTransfer": 0.7,
-    "stationarySpinRate": 0.5,
-    "boostCount": 7,
-    "maxBoosts": 7,
+    "grip": 0.08,
+    "driftThreshold": 0.2,
+    "weightTransfer": 0.9,
+    "stationarySpinRate": 0.6,
+    "boostCount": 5,
+    "maxBoosts": 9,
     "boostDuration": 1.0,
     "boostAccelMult": 1.8,
     "boostSpeedMult": 1.3
