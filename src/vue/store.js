@@ -189,8 +189,11 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Hill panel ──
   const hill = reactive({
-    radius: 10,
+    radiusX: 10,
+    radiusZ: 10,
+    rotation: 0,
     height: 5,
+    waterLevelOffset: 2,
     terrainType: 'none',
   });
 
@@ -199,6 +202,7 @@ export const useEditorStore = defineStore('editor', () => {
     width: 10,
     depth: 10,
     height: 3,
+    waterLevelOffset: 1,
     transition: 4,
     angle: 0,
     slopeMode: false,
@@ -448,8 +452,12 @@ export const useEditorStore = defineStore('editor', () => {
   function closeCheckpoint()            { _bridge.value?.deselectCheckpoint(); }
 
   // ── Hill actions ──
-  function setHillRadius(val)           { hill.radius = val;       _bridge.value?.changeHillRadius(val); }
+  function setHillRadius(val)           { hill.radiusX = val; hill.radiusZ = val; _bridge.value?.changeHillRadius(val); }
+  function setHillRadiusX(val)          { hill.radiusX = val; _bridge.value?.changeHillRadiusX(val); }
+  function setHillRadiusZ(val)          { hill.radiusZ = val; _bridge.value?.changeHillRadiusZ(val); }
+  function setHillRotation(val)         { hill.rotation = val; _bridge.value?.changeHillRotation(val); }
   function setHillHeight(val)           { hill.height = val;       _bridge.value?.changeHillHeight(val); }
+  function setHillWaterLevelOffset(val) { hill.waterLevelOffset = val; _bridge.value?.changeHillWaterLevelOffset(val); }
   function setHillTerrainType(name)     { hill.terrainType = name; _bridge.value?.changeHillTerrainType(name); }
   function duplicateHill()              { _bridge.value?.duplicateSelectedHill(); }
   function deleteHill()                 { _bridge.value?.deleteSelectedHill(); }
@@ -461,6 +469,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setSquareHillTransition(val) { squareHill.transition = val;  _bridge.value?.changeSquareHillTransition(val); }
   function setSquareHillAngle(val)      { squareHill.angle = val;       _bridge.value?.changeSquareHillAngle(val); }
   function setSquareHillHeight(val)     { squareHill.height = val;      _bridge.value?.changeSquareHillHeight(val); }
+  function setSquareHillWaterLevelOffset(val) { squareHill.waterLevelOffset = val; _bridge.value?.changeSquareHillWaterLevelOffset(val); }
   function setSquareHillHeightMin(val)  { squareHill.heightAtMin = val; _bridge.value?.changeSquareHillHeightMin(val); }
   function setSquareHillHeightMax(val)  { squareHill.heightAtMax = val; _bridge.value?.changeSquareHillHeightMax(val); }
   function setSquareHillMode(sloped)    { squareHill.slopeMode = sloped; _bridge.value?.changeSquareHillMode(sloped); }
@@ -697,9 +706,10 @@ export const useEditorStore = defineStore('editor', () => {
     testModeActive, testModeReturnKey,
     setBridge,
     setCheckpointWidth, setCheckpointHeading, shiftCheckpointOrder, duplicateCheckpoint, deleteCheckpoint, closeCheckpoint,
-    setHillRadius, setHillHeight, setHillTerrainType, duplicateHill, deleteHill, closeHill,
+    setHillRadius, setHillRadiusX, setHillRadiusZ, setHillRotation,
+    setHillHeight, setHillWaterLevelOffset, setHillTerrainType, duplicateHill, deleteHill, closeHill,
     setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
-    setSquareHillHeight, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
+    setSquareHillHeight, setSquareHillWaterLevelOffset, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
     setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation,
     setTerrainShapeTerrainType, duplicateTerrainShape, deleteTerrainShape, closeTerrainShape,

@@ -281,17 +281,21 @@
       "type": "hill",
       "centerX": 56,
       "centerZ": 45.289914757934966,
-      "radius": 9.5,
       "height": -2,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "radiusX": 9.5,
+      "radiusZ": 9.5,
+      "angle": 0
     },
     {
       "type": "hill",
       "centerX": 5,
       "centerZ": 71.5,
-      "radius": 9,
       "height": -3,
-      "terrainType": "water"
+      "terrainType": "water",
+      "radiusX": 9,
+      "radiusZ": 9,
+      "angle": 0
     },
     {
       "type": "squareHill",
@@ -308,9 +312,11 @@
       "type": "hill",
       "centerX": 45,
       "centerZ": -50,
-      "radius": 10,
       "height": -4.5,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
     },
     {
       "type": "trackSign",
@@ -390,9 +396,11 @@
       "type": "hill",
       "centerX": 51,
       "centerZ": 35.289914757934966,
-      "radius": 7,
       "height": -1.5,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "radiusX": 7,
+      "radiusZ": 7,
+      "angle": 0
     },
     {
       "type": "terrain",
@@ -571,9 +579,11 @@
       "type": "hill",
       "centerX": 31.5,
       "centerZ": -48.5,
-      "radius": 10,
       "height": -3,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
     },
     {
       "type": "bannerString",
@@ -810,17 +820,21 @@
       "type": "hill",
       "centerX": -14.830082803936731,
       "centerZ": 56.398750953932065,
-      "radius": 9,
       "height": -6,
-      "terrainType": "water"
+      "terrainType": "water",
+      "radiusX": 9,
+      "radiusZ": 9,
+      "angle": 0
     },
     {
       "type": "hill",
       "centerX": 24.169917196063267,
       "centerZ": 52.898750953932065,
-      "radius": 9,
       "height": -6,
-      "terrainType": "water"
+      "terrainType": "water",
+      "radiusX": 9,
+      "radiusZ": 9,
+      "angle": 0
     },
     {
       "type": "squareHill",

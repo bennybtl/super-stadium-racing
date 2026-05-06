@@ -291,9 +291,11 @@
       "type": "hill",
       "centerX": -60,
       "centerZ": 22.289914757934966,
-      "radius": 13.5,
       "height": -5,
-      "terrainType": "water"
+      "terrainType": "water",
+      "radiusX": 13.5,
+      "radiusZ": 13.5,
+      "angle": 0
     },
     {
       "type": "squareHill",
@@ -310,25 +312,31 @@
       "type": "hill",
       "centerX": 31.49999730242169,
       "centerZ": 1.8125505541266307,
-      "radius": 10,
       "height": 5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
     },
     {
       "type": "hill",
       "centerX": 14.99999730242169,
       "centerZ": 23.81255055412663,
-      "radius": 10,
       "height": 5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
     },
     {
       "type": "hill",
       "centerX": 33.2340324925118,
       "centerZ": -61.59058006100137,
-      "radius": 10,
       "height": 5,
-      "terrainType": null
+      "terrainType": null,
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
     },
     {
       "type": "squareHill",
@@ -419,9 +427,11 @@
       "type": "hill",
       "centerX": -48.5,
       "centerZ": -51.710085242065034,
-      "radius": 15.5,
       "height": 1,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "radiusX": 15.5,
+      "radiusZ": 15.5,
+      "angle": 0
     }
   ]
 }

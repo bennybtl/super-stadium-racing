@@ -1,6 +1,26 @@
 import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline } from "./polyline-utils.js";
 
+function getHillEllipseParams(feature) {
+  return {
+    radiusX: Math.max(0.001, feature.radiusX ?? 10),
+    radiusZ: Math.max(0.001, feature.radiusZ ?? 10),
+    angleRad: ((feature.angle ?? 0) * Math.PI) / 180,
+  };
+}
+
+function getHillLocalCoords(feature, x, z) {
+  const wx = x - feature.centerX;
+  const wz = z - feature.centerZ;
+  const { angleRad } = getHillEllipseParams(feature);
+  const cosA = Math.cos(angleRad);
+  const sinA = Math.sin(angleRad);
+  return {
+    lx: wx * cosA + wz * sinA,
+    lz: -wx * sinA + wz * cosA,
+  };
+}
+
 /**
  * Track system for defining 3D terrain layouts with different surface types
  * Tracks are composed of features (ridges, hills, valleys, jumps, etc.)
@@ -17,13 +37,15 @@ export class Track {
     this.image = null;
   }
 
-  // Add a circular hill
-  addHill(centerX, centerZ, radius, height, terrainType = null) {
+  // Add a hill (ellipse when radiusX !== radiusZ)
+  addHill(centerX, centerZ, radiusX, radiusZ, height, angle = 0, terrainType = null) {
     this.features.push({
       type: "hill",
       centerX,
       centerZ,
-      radius,
+      radiusX,
+      radiusZ,
+      angle,
       height,
       terrainType,
     });
@@ -167,11 +189,11 @@ export class Track {
     for (const feature of this.features) {
       switch (feature.type) {
         case "hill": {
-          const dx = x - feature.centerX;
-          const dz = z - feature.centerZ;
-          const distFromCenter = Math.sqrt(dx * dx + dz * dz);
-          if (distFromCenter < feature.radius) {
-            const t = distFromCenter / feature.radius;
+          const { radiusX, radiusZ } = getHillEllipseParams(feature);
+          const { lx, lz } = getHillLocalCoords(feature, x, z);
+          const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
+          if (t2 < 1) {
+            const t = Math.sqrt(t2);
             totalHeight += feature.height * Math.cos(t * Math.PI / 2);
           }
           break;
@@ -321,10 +343,10 @@ export class Track {
 
       switch (feature.type) {
         case "hill": {
-          const dx = x - feature.centerX;
-          const dz = z - feature.centerZ;
-          const distFromCenter = Math.sqrt(dx * dx + dz * dz);
-          if (distFromCenter < feature.radius) {
+          const { radiusX, radiusZ } = getHillEllipseParams(feature);
+          const { lx, lz } = getHillLocalCoords(feature, x, z);
+          const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
+          if (t2 < 1) {
             return feature.terrainType;
           }
           break;

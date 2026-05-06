@@ -67,9 +67,11 @@
       "type": "hill",
       "centerX": 66,
       "centerZ": -46,
-      "radius": 8,
       "height": 4,
-      "terrainType": null
+      "terrainType": null,
+      "radiusX": 8,
+      "radiusZ": 8,
+      "angle": 0
     },
     {
       "type": "polyWall",
@@ -173,25 +175,31 @@
       "type": "hill",
       "centerX": -53,
       "centerZ": 8,
-      "radius": 8,
       "height": 2.5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "radiusX": 8,
+      "radiusZ": 8,
+      "angle": 0
     },
     {
       "type": "hill",
       "centerX": -66,
       "centerZ": 25,
-      "radius": 8,
       "height": 4,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "radiusX": 8,
+      "radiusZ": 8,
+      "angle": 0
     },
     {
       "type": "hill",
       "centerX": -52,
       "centerZ": 49,
-      "radius": 8,
       "height": 4,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "radiusX": 8,
+      "radiusZ": 8,
+      "angle": 0
     },
     {
       "type": "squareHill",
@@ -994,9 +1002,11 @@
       "type": "hill",
       "centerX": 48.99462400959313,
       "centerZ": -35.20540325036382,
-      "radius": 7.5,
       "height": 3,
-      "terrainType": null
+      "terrainType": null,
+      "radiusX": 7.5,
+      "radiusZ": 7.5,
+      "angle": 0
     },
     {
       "type": "obstacle",

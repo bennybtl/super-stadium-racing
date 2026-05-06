@@ -97,6 +97,17 @@
       />
     </template>
 
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Water Level</span>
+      <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
+    </div>
+    <input
+      type="range" min="0" max="15" step="0.5"
+      :value="editor.squareHill.waterLevelOffset"
+      @input="editor.setSquareHillWaterLevelOffset(+$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <!-- Surface -->
     <div class="text-[12px] mb-1">Surface</div>
     <select

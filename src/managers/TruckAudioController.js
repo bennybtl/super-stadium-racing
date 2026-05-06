@@ -198,11 +198,18 @@ export class TruckAudioController {
   }
 
   _hillContributionAt(feature, x, z) {
-    const dx = x - feature.centerX;
-    const dz = z - feature.centerZ;
-    const distFromCenter = Math.sqrt(dx * dx + dz * dz);
-    if (distFromCenter >= feature.radius) return 0;
-    const t = distFromCenter / feature.radius;
+    const radiusX = Math.max(0.001, feature.radiusX ?? 10);
+    const radiusZ = Math.max(0.001, feature.radiusZ ?? 10);
+    const angleRad = ((feature.angle ?? 0) * Math.PI) / 180;
+    const wx = x - feature.centerX;
+    const wz = z - feature.centerZ;
+    const cosA = Math.cos(angleRad);
+    const sinA = Math.sin(angleRad);
+    const lx = wx * cosA + wz * sinA;
+    const lz = -wx * sinA + wz * cosA;
+    const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
+    if (t2 >= 1) return 0;
+    const t = Math.sqrt(t2);
     return feature.height * Math.cos(t * Math.PI / 2);
   }
 

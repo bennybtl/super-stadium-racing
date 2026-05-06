@@ -147,6 +147,19 @@ export class EditorMode extends BaseMode {
       _rebuildNormalMapTimer = setTimeout(_rebuildNormalMapNow, 300);
     };
 
+    // Rebuild hill water meshes so water level/position changes are visible immediately.
+    window.rebuildHillWater = async () => {
+      for (const mesh of scene.meshes.slice()) {
+        if (mesh?.name?.startsWith('water_')) mesh.dispose();
+      }
+      const { createHill } = await import('../objects/Hill.js');
+      for (const feature of currentTrack.features) {
+        if (feature.type === 'hill' || feature.type === 'squareHill') {
+          createHill(feature, currentTrack, scene);
+        }
+      }
+    };
+
     // Rebuild a specific polyWall (or all polyWalls if feature is null)
     window.rebuildPolyWall = (targetFeature) => {
       wallManager._walls = wallManager._walls.filter(w => {
@@ -301,6 +314,7 @@ export class EditorMode extends BaseMode {
     delete window.rebuildTerrain;
     delete window.rebuildTerrainTexture;
     delete window.rebuildNormalMap;
+    delete window.rebuildHillWater;
     delete window.rebuildPolyWall;
     delete window.rebuildPolyHill;
     delete window.polyHills;

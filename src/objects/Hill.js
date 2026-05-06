@@ -1,5 +1,36 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3 } from "@babylonjs/core";
 
+function getHillEllipse(feature) {
+  return {
+    radiusX: feature.radiusX ?? 10,
+    radiusZ: feature.radiusZ ?? 10,
+    angleRad: -((feature.angle ?? 0) * Math.PI) / 180,
+  };
+}
+
+function getCenterDepthLimit(feature) {
+  if (feature.type === 'hill') {
+    return Math.max(0, -(feature.height ?? 0));
+  }
+
+  if (feature.type === 'squareHill') {
+    if (feature.heightAtMin !== undefined && feature.heightAtMax !== undefined) {
+      const centerHeight = ((feature.heightAtMin ?? 0) + (feature.heightAtMax ?? 0)) * 0.5;
+      return Math.max(0, -centerHeight);
+    }
+    return Math.max(0, -(feature.height ?? 0));
+  }
+
+  return 0;
+}
+
+function getWaterLevelOffset(feature) {
+  const desired = typeof feature.waterLevelOffset === 'number'
+    ? feature.waterLevelOffset
+    : (feature.type === 'squareHill' ? 1 : 2);
+  return Math.min(desired, getCenterDepthLimit(feature));
+}
+
 function applyWaterMaterial(mesh, feature, scene) {
   const waterMat = new StandardMaterial(`waterMat_${feature.centerX}_${feature.centerZ}`, scene);
   waterMat.diffuseColor = new Color3(0.08, 0.28, 0.82);
@@ -12,14 +43,18 @@ function applyWaterMaterial(mesh, feature, scene) {
 }
 
 function createRoundHillWater(feature, scene, baseCy) {
+  const { radiusX, radiusZ, angleRad } = getHillEllipse(feature);
   const waterMesh = MeshBuilder.CreateDisc(
     `water_${feature.centerX}_${feature.centerZ}`,
-    { radius: feature.radius, tessellation: 48, sideOrientation: 2 },
+    { radius: 1, tessellation: 48, sideOrientation: 2 },
     scene
   );
 
-  waterMesh.position = new Vector3(feature.centerX, baseCy + 2, feature.centerZ);
+  waterMesh.position = new Vector3(feature.centerX, baseCy + getWaterLevelOffset(feature), feature.centerZ);
   waterMesh.rotation.x = -Math.PI / 2;
+  waterMesh.rotation.y = angleRad;
+  waterMesh.scaling.x = radiusX;
+  waterMesh.scaling.y = radiusZ;
   waterMesh.isPickable = false;
   applyWaterMaterial(waterMesh, feature, scene);
   return waterMesh;
@@ -33,7 +68,7 @@ function createSquareHillWater(feature, scene, baseCy) {
     scene
   );
 
-  waterMesh.position = new Vector3(feature.centerX, baseCy + 1, feature.centerZ);
+  waterMesh.position = new Vector3(feature.centerX, baseCy + getWaterLevelOffset(feature), feature.centerZ);
   waterMesh.rotation.y = -((feature.angle ?? 0) * Math.PI) / 180;
   waterMesh.isPickable = false;
   applyWaterMaterial(waterMesh, feature, scene);

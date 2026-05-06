@@ -70,6 +70,18 @@ export class HillEditor {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
+  _radiusX(feature) {
+    return feature.radiusX ?? 10;
+  }
+
+  _radiusZ(feature) {
+    return feature.radiusZ ?? 10;
+  }
+
+  _angleDeg(feature) {
+    return feature.angle ?? 0;
+  }
+
   /** Place a new hill in front of the camera and select it. */
   addEntity() {
     const { camera } = this.editor;
@@ -81,8 +93,11 @@ export class HillEditor {
       type: 'hill',
       centerX: newX,
       centerZ: newZ,
-      radius: 10,
+      radiusX: 10,
+      radiusZ: 10,
+      angle: 0,
       height: 5,
+      waterLevelOffset: 2,
       terrainType: null,
     };
 
@@ -104,12 +119,16 @@ export class HillEditor {
   createVisual(feature) {
     const scene = this.editor.scene;
     const track = this.editor.currentTrack;
+    const radiusX = this._radiusX(feature);
+    const radiusZ = this._radiusZ(feature);
+    const angleRad = -(this._angleDeg(feature) * Math.PI / 180);
     const absH = Math.max(0.5, Math.abs(feature.height));
     const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
 
     const node = new TransformNode('hillNode', scene);
     node.position = new Vector3(feature.centerX, terrainH + absH / 2, feature.centerZ);
-    node.scaling = new Vector3(feature.radius, absH, feature.radius);
+    node.scaling = new Vector3(radiusX, absH, radiusZ);
+    node.rotation.y = angleRad;
 
     const mesh = MeshBuilder.CreateCylinder('hillMesh', {
       height: 1,
@@ -137,14 +156,18 @@ export class HillEditor {
   updateVisual(hillData) {
     const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
+    const radiusX = this._radiusX(feature);
+    const radiusZ = this._radiusZ(feature);
+    const angleRad = -(this._angleDeg(feature) * Math.PI / 180);
     const absH = Math.max(0.5, Math.abs(feature.height));
     const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;
     node.position.y = terrainH + absH / 2;
-    node.scaling.x = feature.radius;
+    node.scaling.x = radiusX;
     node.scaling.y = absH;
-    node.scaling.z = feature.radius;
+    node.scaling.z = radiusZ;
+    node.rotation.y = angleRad;
     if (sphere) {
       sphere.position.x = feature.centerX;
       sphere.position.y = terrainH;
@@ -245,8 +268,11 @@ export class HillEditor {
     const s = this.editor._editorStore;
     if (!s) return;
     const { feature } = hillData;
-    s.hill.radius = feature.radius;
+    s.hill.radiusX = this._radiusX(feature);
+    s.hill.radiusZ = this._radiusZ(feature);
+    s.hill.rotation = this._angleDeg(feature);
     s.hill.height = feature.height;
+    s.hill.waterLevelOffset = feature.waterLevelOffset ?? 2;
     s.hill.terrainType = feature.terrainType?.name || 'none';
     s.selectedType = 'hill';
   }
@@ -261,6 +287,21 @@ export class HillEditor {
     if (this.selected) this.updateVisual(this.selected);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
+    window.rebuildHillWater?.();
+  }
+
+  _maxWaterOffsetForFeature(feature) {
+    return Math.max(0, -(feature.height ?? 0));
+  }
+
+  _clampSelectedWaterOffsetToDepth() {
+    if (!this.selected) return;
+    const f = this.selected.feature;
+    const max = this._maxWaterOffsetForFeature(f);
+    const current = typeof f.waterLevelOffset === 'number' ? f.waterLevelOffset : 2;
+    const clamped = Math.min(current, max);
+    f.waterLevelOffset = clamped;
+    if (this.editor._editorStore) this.editor._editorStore.hill.waterLevelOffset = clamped;
   }
 
   // ── Vue Bridge — called by Pinia store actions ────────────────────────────
@@ -268,7 +309,38 @@ export class HillEditor {
   changeRadius(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
-    this.selected.feature.radius = val;
+    this.selected.feature.radiusX = val;
+    this.selected.feature.radiusZ = val;
+    this.rebuildTerrain();
+  }
+
+  changeRadiusX(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.radiusX = val;
+    this.rebuildTerrain();
+  }
+
+  changeRadiusZ(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.radiusZ = val;
+    this.rebuildTerrain();
+  }
+
+  changeAngle(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.angle = val;
+    this.rebuildTerrain();
+  }
+
+  rotate(rotStep) {
+    if (!this.selected) return;
+    const f = this.selected.feature;
+    f.angle = ((f.angle ?? 0) + rotStep * 180 / Math.PI + 360) % 360;
+    const s = this.editor._editorStore;
+    if (s) s.hill.rotation = f.angle;
     this.rebuildTerrain();
   }
 
@@ -276,6 +348,17 @@ export class HillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.height = val;
+    this._clampSelectedWaterOffsetToDepth();
+    this.rebuildTerrain();
+  }
+
+  changeWaterLevelOffset(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    const max = this._maxWaterOffsetForFeature(this.selected.feature);
+    const clamped = Math.min(val, max);
+    this.selected.feature.waterLevelOffset = clamped;
+    if (this.editor._editorStore) this.editor._editorStore.hill.waterLevelOffset = clamped;
     this.rebuildTerrain();
   }
 

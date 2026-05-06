@@ -141,6 +141,7 @@ export class SquareHillEditor {
       width: 10,
       depth: 10,
       height: 3,
+      waterLevelOffset: 1,
       transition: 4,
       terrainType: null,
     };
@@ -277,6 +278,7 @@ export class SquareHillEditor {
     s.squareHill.depth       = feature.depth ?? feature.width;
     s.squareHill.transition  = feature.transition ?? 8;
     s.squareHill.angle       = feature.angle ?? 0;
+    s.squareHill.waterLevelOffset = feature.waterLevelOffset ?? 1;
     s.squareHill.slopeMode   = sloped;
     s.squareHill.terrainType = feature.terrainType?.name || 'none';
     if (sloped) {
@@ -298,6 +300,25 @@ export class SquareHillEditor {
     if (this.selected) this.updateVisual(this.selected);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
+    window.rebuildHillWater?.();
+  }
+
+  _maxWaterOffsetForFeature(feature) {
+    if (feature.heightAtMin !== undefined && feature.heightAtMax !== undefined) {
+      const centerHeight = ((feature.heightAtMin ?? 0) + (feature.heightAtMax ?? 0)) * 0.5;
+      return Math.max(0, -centerHeight);
+    }
+    return Math.max(0, -(feature.height ?? 0));
+  }
+
+  _clampSelectedWaterOffsetToDepth() {
+    if (!this.selected) return;
+    const f = this.selected.feature;
+    const max = this._maxWaterOffsetForFeature(f);
+    const current = typeof f.waterLevelOffset === 'number' ? f.waterLevelOffset : 1;
+    const clamped = Math.min(current, max);
+    f.waterLevelOffset = clamped;
+    if (this.editor._editorStore) this.editor._editorStore.squareHill.waterLevelOffset = clamped;
   }
 
   // ── Vue Bridge — called by Pinia store actions ────────────────────────────
@@ -334,6 +355,17 @@ export class SquareHillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.height = val;
+    this._clampSelectedWaterOffsetToDepth();
+    this.rebuildTerrain();
+  }
+
+  changeWaterLevelOffset(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    const max = this._maxWaterOffsetForFeature(this.selected.feature);
+    const clamped = Math.min(val, max);
+    this.selected.feature.waterLevelOffset = clamped;
+    if (this.editor._editorStore) this.editor._editorStore.squareHill.waterLevelOffset = clamped;
     this.rebuildTerrain();
   }
 
@@ -341,6 +373,7 @@ export class SquareHillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.heightAtMin = val;
+    this._clampSelectedWaterOffsetToDepth();
     this.rebuildTerrain();
   }
 
@@ -348,6 +381,7 @@ export class SquareHillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.heightAtMax = val;
+    this._clampSelectedWaterOffsetToDepth();
     this.rebuildTerrain();
   }
 
@@ -371,6 +405,7 @@ export class SquareHillEditor {
       delete f.heightAtMin; delete f.heightAtMax;
       if (s) s.squareHill.height = prevH;
     }
+    this._clampSelectedWaterOffsetToDepth();
     this.rebuildTerrain();
   }
 

@@ -453,9 +453,11 @@
       "type": "hill",
       "centerX": -67.5,
       "centerZ": -19.210085242065034,
-      "radius": 12,
       "height": 5,
-      "terrainType": null
+      "terrainType": null,
+      "radiusX": 12,
+      "radiusZ": 12,
+      "angle": 0
     },
     {
       "type": "polyHill",
@@ -480,9 +482,11 @@
       "type": "hill",
       "centerX": 28.122378183031287,
       "centerZ": -50.8439262795374,
-      "radius": 10,
       "height": -7.5,
-      "terrainType": "water"
+      "terrainType": "water",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
     },
     {
       "type": "squareHill",
@@ -511,9 +515,11 @@
       "type": "hill",
       "centerX": 50.5,
       "centerZ": 70.28991475793495,
-      "radius": 10,
       "height": 3,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
     },
     {
       "type": "tireStack",

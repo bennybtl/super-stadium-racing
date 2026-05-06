@@ -452,7 +452,7 @@ export class EditorController {
     }
 
     if (this.hillEditor.selected) {
-      return this._createVectorSelectionInteraction(this.hillEditor);
+      return this._createVectorSelectionInteraction(this.hillEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
     if (this.squareHillEditor.selected) {
@@ -1291,7 +1291,11 @@ export class EditorController {
   changeCheckpointHeading(degrees) { this.checkpointEditor.changeHeading(degrees); }
 
   changeHillRadius(val) { this.hillEditor.changeRadius(val); }
+  changeHillRadiusX(val) { this.hillEditor.changeRadiusX(val); }
+  changeHillRadiusZ(val) { this.hillEditor.changeRadiusZ(val); }
+  changeHillRotation(val) { this.hillEditor.changeAngle(val); }
   changeHillHeight(val) { this.hillEditor.changeHeight(val); }
+  changeHillWaterLevelOffset(val) { this.hillEditor.changeWaterLevelOffset(val); }
   changeHillTerrainType(name) { this.hillEditor.changeTerrainType(name); }
 
   changeTrackDefaultTerrain(name) {
@@ -1319,6 +1323,7 @@ export class EditorController {
   changeSquareHillTransition(val)   { this.squareHillEditor.changeTransition(val); }
   changeSquareHillAngle(val)        { this.squareHillEditor.changeAngle(val); }
   changeSquareHillHeight(val)       { this.squareHillEditor.changeHeight(val); }
+  changeSquareHillWaterLevelOffset(val) { this.squareHillEditor.changeWaterLevelOffset(val); }
   changeSquareHillHeightMin(val)    { this.squareHillEditor.changeHeightMin(val); }
   changeSquareHillHeightMax(val)    { this.squareHillEditor.changeHeightMax(val); }
   changeSquareHillMode(sloped)      { this.squareHillEditor.changeMode(sloped); }
