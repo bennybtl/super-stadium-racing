@@ -90,10 +90,10 @@ export class AIDriver {
     // Pause flag — when true, getInput returns all-false
     this.paused = false;
 
-    // Input throttling — recalculate steering at ~10 hz instead of every frame.
-    // The truck's physics carries the last input between updates imperceptibly.
-    this._inputUpdateInterval = 6; // frames between recalculations (6 ≈ 10 hz @ 60 fps)
-    this._inputFrameCounter   = 0;
+    // Input throttling — recalculate steering at a fixed real-time cadence
+    // so AI behavior remains stable when frame rate changes.
+    this._inputUpdateIntervalMs = 100;
+    this._inputElapsedMs = 0;
     this._cachedInput = { forward: true, back: false, left: false, right: false };
 
     // Other truck instances used for vehicle-to-vehicle avoidance.
@@ -317,12 +317,13 @@ export class AIDriver {
       return { forward: false, back: false, left: false, right: false };
     }
 
-    // Throttle: only recalculate every N frames. Return cached input between updates.
-    this._inputFrameCounter++;
-    if (this._inputFrameCounter < this._inputUpdateInterval) {
+    // Throttle: only recalculate every N milliseconds. Return cached input between updates.
+    this._inputElapsedMs += dt * 1000;
+    if (this._inputElapsedMs < this._inputUpdateIntervalMs) {
       return this._cachedInput;
     }
-    this._inputFrameCounter = 0;
+    const aiDt = this._inputElapsedMs / 1000;
+    this._inputElapsedMs = 0;
     
     // Find target waypoint ahead
     const targetWaypoint = this.findLookAheadPoint(position);
@@ -335,6 +336,7 @@ export class AIDriver {
       position,
       heading,
       targetWaypoint,
+      dt: aiDt,
     });
 
     const { shouldMoveForward, shouldReverse } = this._throttleController.compute({
@@ -357,11 +359,8 @@ export class AIDriver {
     this._boostController.update({ position, forward, rightVec, fwdSpeed, input });
 
     const currentPos = { x: position.x, z: position.z };
-    // Stuck recovery runs on the throttled AI update cadence.
-    // Scale dt so timing thresholds remain in real seconds.
-    const stuckDt = dt * this._inputUpdateInterval;
     this._stuckRecovery.update({
-      dt: stuckDt,
+      dt: aiDt,
       input,
       fwdSpeed,
       currentPos,
@@ -387,6 +386,7 @@ export class AIDriver {
    */
   reset() {
     this.currentPathIndex = 0;
+    this._inputElapsedMs = 0;
     this._steeringController.reset();
     this._stuckRecovery.reset();
     this._boostController.reset();

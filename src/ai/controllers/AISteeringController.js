@@ -34,7 +34,7 @@ export class AISteeringController {
     this._smoothedTurn = 0;
   }
 
-  compute({ position, heading, targetWaypoint }) {
+  compute({ position, heading, targetWaypoint, dt = 1 / 60 }) {
     // Current heading vector (scratch — no allocation)
     this._fwd.copyFromFloats(Math.sin(heading), 0, Math.cos(heading));
     const forward = this._fwd;
@@ -85,7 +85,9 @@ export class AISteeringController {
       }
     }
 
-    this._smoothedTurn += (turnStrength - this._smoothedTurn) * this.steeringSmooth;
+    const safeDt = Math.max(dt, 1 / 240);
+    const smoothAlpha = 1 - Math.pow(1 - this.steeringSmooth, safeDt / (1 / 60));
+    this._smoothedTurn += (turnStrength - this._smoothedTurn) * smoothAlpha;
     turnStrength = this._smoothedTurn;
 
     return { forward, rightVec, turnStrength };

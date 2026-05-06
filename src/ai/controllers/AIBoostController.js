@@ -9,6 +9,7 @@ export const DEFAULT_BOOST_CONFIG = {
   stockWeight: 0.25,
   maxChance: 0.85,
   stockRef: 4,
+  wallProbeStep: 2,
   debug: false,
   debugLogIntervalMs: 1200,
 };
@@ -35,6 +36,7 @@ export class AIBoostController {
     this.stockWeight = config.stockWeight ?? DEFAULT_BOOST_CONFIG.stockWeight;
     this.maxChance = config.maxChance ?? DEFAULT_BOOST_CONFIG.maxChance;
     this.stockRef = Math.max(1, config.stockRef ?? DEFAULT_BOOST_CONFIG.stockRef);
+    this.wallProbeStep = Math.max(0.5, config.wallProbeStep ?? DEFAULT_BOOST_CONFIG.wallProbeStep);
     this.debug = config.debug ?? DEFAULT_BOOST_CONFIG.debug;
     this.debugLogIntervalMs = Math.max(
       0,
@@ -145,6 +147,11 @@ export class AIBoostController {
 
   _isBoostLaneClear(position, forward, rightVec) {
     this._lastBoostBlocker = null;
+
+    if (this._isBoostPathBlockedByWalls(position, forward, rightVec)) {
+      return false;
+    }
+
     for (const other of this.driver.otherTrucks) {
       if (!other?.mesh) continue;
       const odx = other.mesh.position.x - position.x;
@@ -163,6 +170,33 @@ export class AIBoostController {
       }
     }
     return true;
+  }
+
+  _isBoostPathBlockedByWalls(position, forward, rightVec) {
+    if (!this.driver?.wallManager || !this.driver?.worldToGrid || !this.driver?.isBlocked) {
+      return false;
+    }
+
+    const laneOffsets = [0, this.clearLateralDist * 0.6, -this.clearLateralDist * 0.6];
+    const startDist = Math.max(2, this.wallProbeStep);
+
+    for (let dist = startDist; dist <= this.clearAheadDist; dist += this.wallProbeStep) {
+      for (const lateral of laneOffsets) {
+        const sampleX = position.x + forward.x * dist + rightVec.x * lateral;
+        const sampleZ = position.z + forward.z * dist + rightVec.z * lateral;
+        const cell = this.driver.worldToGrid(sampleX, sampleZ);
+        if (this.driver.isBlocked(cell.x, cell.z)) {
+          this._lastBoostBlocker = {
+            name: 'wall/curb',
+            fwdDist: dist,
+            latDist: lateral,
+          };
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   _debug(key, message, force = false) {

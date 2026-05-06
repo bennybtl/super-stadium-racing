@@ -224,7 +224,7 @@ export class RaceMode extends DriveMode {
       return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
     };
 
-    const AI_COUNT = 9; // change this to add more AI competitors
+    const AI_COUNT = 5; // change this to add more AI competitors
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({
       count: AI_COUNT,
       scene,
@@ -474,6 +474,10 @@ export class RaceMode extends DriveMode {
     // Pre-filter 'slowZone' action zones for per-frame position checks
     const slowZones = this.getSlowZones(currentTrack);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
+    const truckStatusUiIntervalMs = 200;
+    const aiGripSampleIntervalMs = 100;
+    let truckStatusUiElapsedMs = 0;
+    let aiGripSampleElapsedMs = 0;
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
@@ -545,27 +549,16 @@ export class RaceMode extends DriveMode {
         }
       });
 
-      // Give AI trucks a short out-of-bounds timeout so they don't stay stuck off-track.
-      trucks.forEach((truckData) => {
-        if (truckData.isPlayer) return;
-        this.updateOutOfBoundsCountdown({
-          truckId: truckData.id,
-          truck: truckData.truck,
-          outOfBoundsZones,
-          dt,
-          durationSec: 2,
-          onTimeout: () => {
-            respawnToLastCheckpoint(truckData);
-          },
-        });
-      });
-
       truckCollisionManager.update(trucks);
       obstacleManager.update(trucks);
       flagManager.update(trucks, dt);
       pickupManager.update(trucks, dt);
 
-      syncTruckStatus();
+      truckStatusUiElapsedMs += dt * 1000;
+      if (truckStatusUiElapsedMs >= truckStatusUiIntervalMs) {
+        syncTruckStatus();
+        truckStatusUiElapsedMs = 0;
+      }
 
       debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck);
       uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
@@ -589,14 +582,18 @@ export class RaceMode extends DriveMode {
         );
       }
 
-      // Keep each AI truck's last-known terrain grip updated so the telemetry
-      // speed-target scaling in AIDriver can access it without a terrainManager ref.
-      trucks.forEach(td => {
-        if (!td.isPlayer && td.truck.driver) {
-          const terrain = terrainManager.getTerrainAt(td.truck.mesh.position);
-          td.truck._lastTerrainGrip = terrain.gripMultiplier;
-        }
-      });
+      // Keep each AI truck's last-known terrain grip updated for telemetry speed scaling.
+      // Sampling at 10hz cuts redundant per-frame terrain lookups with minimal behavior change.
+      aiGripSampleElapsedMs += dt * 1000;
+      if (aiGripSampleElapsedMs >= aiGripSampleIntervalMs) {
+        trucks.forEach(td => {
+          if (!td.isPlayer && td.truck.driver) {
+            const terrain = terrainManager.getTerrainAt(td.truck.mesh.position);
+            td.truck._lastTerrainGrip = terrain.gripMultiplier;
+          }
+        });
+        aiGripSampleElapsedMs = 0;
+      }
 
       trucks.forEach((truckData) => {
         if (truckData.gameState.raceFinished) return;
