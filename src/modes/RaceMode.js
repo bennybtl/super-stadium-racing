@@ -13,7 +13,7 @@ import { UPGRADES } from "../managers/SeasonManager.js";
 import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
-import { setupAIDrivers } from "./setupAIDrivers.js";
+import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -224,7 +224,7 @@ export class RaceMode extends DriveMode {
       return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
     };
 
-    const AI_COUNT = 3; // change this to add more AI competitors
+    const AI_COUNT = 9; // change this to add more AI competitors
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({
       count: AI_COUNT,
       scene,

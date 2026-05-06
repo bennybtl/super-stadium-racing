@@ -31,6 +31,7 @@ import { BridgeManager } from "../managers/BridgeManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
+import { createHill } from "../objects/Hill.js";
 import {
   buildTerrainIdTexturePixelData,
   buildTerrainWearOverlayPixelData,
@@ -334,49 +335,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       bridgeManager.createBridge(feature);
     } else if (feature.type === "surfaceDecal") {
       surfaceDecalManager.createDecal(feature);
-    } else if (
-      (feature.type === "hill" && feature.height < 0) ||
-      (feature.type === "squareHill" && (
-        feature.height < 0 ||
-        (feature.heightAtMin !== undefined && feature.heightAtMin < 0 && feature.heightAtMax < 0)
-      ))
-    ) {
-      const _t = currentTrack.getTerrainTypeAt(feature.centerX, feature.centerZ);
-      if (!(_t === 'water' || _t?.name === 'water')) continue; // eslint-disable-line no-continue
-      // Translucent water surface filling a negative hill or squareHill with water terrain type.
-      const baseCy = currentTrack.getHeightAt(feature.centerX, feature.centerZ);
-      let waterMesh;
-
-      if (feature.type === "hill") {
-        waterMesh = MeshBuilder.CreateDisc(
-          `water_${feature.centerX}_${feature.centerZ}`,
-          { radius: feature.radius, tessellation: 48, sideOrientation: 2 },
-          scene
-        );
-        waterMesh.position  = new Vector3(feature.centerX, baseCy + 2, feature.centerZ);
-        waterMesh.rotation.x = -Math.PI / 2;
-      } else {
-        // squareHill: baseCy already reflects the depressed terrain at the center,
-        // so just float 0.5 units above it (same as the circular hill).
-        const height = feature.depth ?? feature.width
-        waterMesh = MeshBuilder.CreateGround(
-          `water_${feature.centerX}_${feature.centerZ}`,
-          { width: feature.width * 2, height: height * 2, subdivisions: 1 },
-          scene
-        );
-        waterMesh.position  = new Vector3(feature.centerX, baseCy + 1, feature.centerZ);
-        waterMesh.rotation.y = -((feature.angle ?? 0) * Math.PI) / 180;
-      }
-
-      waterMesh.isPickable = false;
-      const waterMat = new StandardMaterial(`waterMat_${feature.centerX}_${feature.centerZ}`, scene);
-      waterMat.diffuseColor  = new Color3(0.08, 0.28, 0.82);
-      waterMat.emissiveColor = new Color3(0.02, 0.08, 0.22);
-      waterMat.specularColor = new Color3(0.8,  0.9,  1.0);
-      waterMat.specularPower = 64;
-      waterMat.alpha = 0.82;
-      waterMat.backFaceCulling = false;
-      waterMesh.material = waterMat;
+    } else if (feature.type === 'hill' || feature.type === 'squareHill') {
+      createHill(feature, currentTrack, scene);
     }
   }
 

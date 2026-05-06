@@ -1,4 +1,4 @@
-import { AIDriver } from "../ai/AIDriver.js";
+import { AIDriver } from "./AIDriver.js";
 import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { TelemetryPlayer } from "../managers/TelemetryPlayer.js";

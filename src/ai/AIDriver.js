@@ -357,8 +357,11 @@ export class AIDriver {
     this._boostController.update({ position, forward, rightVec, fwdSpeed, input });
 
     const currentPos = { x: position.x, z: position.z };
+    // Stuck recovery runs on the throttled AI update cadence.
+    // Scale dt so timing thresholds remain in real seconds.
+    const stuckDt = dt * this._inputUpdateInterval;
     this._stuckRecovery.update({
-      dt,
+      dt: stuckDt,
       input,
       fwdSpeed,
       currentPos,
