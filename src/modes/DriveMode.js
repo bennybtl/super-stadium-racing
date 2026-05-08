@@ -1,6 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";
+import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
 
 /**
  * DriveMode - shared utilities for drivable gameplay modes.
@@ -16,6 +17,25 @@ export class DriveMode extends BaseMode {
     this._oobStateByTruckId = new Map();
     this.cameraController = null;
     this._photoModeActive = false;
+    this.frameProfiler = null;
+  }
+
+  /**
+   * Create and bind a per-mode frame profiler.
+   */
+  initFrameProfiler(name) {
+    if (this.frameProfiler) {
+      this.frameProfiler.dispose();
+    }
+    const enabled = shouldEnableFrameProfiler();
+    this.frameProfiler = new FrameProfiler(name, {
+      enabled,
+      autoReport: enabled,
+      reportEveryMs: 3000,
+      maxHistoryFrames: 300,
+    });
+    this.frameProfiler.bindWindowApi(window, "gameLoopProfiler");
+    return this.frameProfiler;
   }
 
   /**
@@ -50,6 +70,10 @@ export class DriveMode extends BaseMode {
     if (this.debugManager) {
       this.debugManager.hide();
       this.debugManager = null;
+    }
+    if (this.frameProfiler) {
+      this.frameProfiler.dispose(window, "gameLoopProfiler");
+      this.frameProfiler = null;
     }
     super.teardown();
   }

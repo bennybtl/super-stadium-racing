@@ -53,6 +53,12 @@ export class RaceMode extends DriveMode {
     } = await this.buildDriveScene(trackKey);
 
     this.scene = scene;
+    const frameProfiler = this.initFrameProfiler('RaceMode');
+    const shadowMap = shadows?.getShadowMap?.();
+    if (shadowMap) {
+      // Update shadows every other frame to reduce render cost in races.
+      shadowMap.refreshRate = 2;
+    }
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
@@ -224,7 +230,7 @@ export class RaceMode extends DriveMode {
       return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
     };
 
-    const AI_COUNT = seasonAIDrivers ? seasonAIDrivers.length : 3;
+    const AI_COUNT = seasonAIDrivers ? seasonAIDrivers.length : 9;
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({
       count: AI_COUNT,
       scene,
@@ -490,6 +496,15 @@ export class RaceMode extends DriveMode {
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
+    let frameRenderStartMs = 0;
+
+    scene.onAfterRenderObservable.add(() => {
+      if (frameRenderStartMs > 0) {
+        frameProfiler.addDuration('render.pipeline', performance.now() - frameRenderStartMs);
+        frameRenderStartMs = 0;
+      }
+      frameProfiler.endFrame();
+    });
 
     // -- Game loop --
     scene.onBeforeRenderObservable.add(() => {
@@ -497,26 +512,33 @@ export class RaceMode extends DriveMode {
 
       // Use 50ms cap for race mode (more generous than default 20ms)
       const dt = this.getClampedDeltaTime(engine, 0.05);
+      frameProfiler.beginFrame(dt);
       if (this._photoModeActive) {
-        const input = this.inputManager.getMovementInput();
-        this.cameraController.moveFreeCamera(input, dt);
-        this.cameraController.update();
+        const input = frameProfiler.measure('input.photo', () => this.inputManager.getMovementInput());
+        frameProfiler.measure('camera.photoMove', () => this.cameraController.moveFreeCamera(input, dt));
+        frameProfiler.measure('camera.photoUpdate', () => this.cameraController.update());
+        frameRenderStartMs = performance.now();
         return;
       }
-      if (menuManager.isMenuActive()) return;
-
-      if (raceStarted && raceStartTime !== null) {
-        uiManager.updateTimer(Date.now() - raceStartTime);
+      if (menuManager.isMenuActive()) {
+        frameRenderStartMs = performance.now();
+        return;
       }
 
-      const input = countdownActive
-        ? { forward: false, back: false, left: false, right: false }
-        : this.inputManager.getMovementInput();
+      if (raceStarted && raceStartTime !== null) {
+        frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartTime));
+      }
 
-      truckCollisionManager.preUpdate(trucks, dt);
+      const input = frameProfiler.measure('input', () => (
+        countdownActive
+          ? { forward: false, back: false, left: false, right: false }
+          : this.inputManager.getMovementInput()
+      ));
+
+      frameProfiler.measure('collision.truck.pre', () => truckCollisionManager.preUpdate(trucks, dt));
 
       let playerDebugInfo = null;
-      trucks.forEach((truckData) => {
+      frameProfiler.measure('trucks.update', () => trucks.forEach((truckData) => {
         // Finished trucks still get physics updates (zero input) so they coast to a stop
         const isCoasting = truckData.gameState.raceFinished;
         const truckInput = (isCoasting || !truckData.isPlayer)
@@ -528,18 +550,19 @@ export class RaceMode extends DriveMode {
           terrainManager,
           currentTrack,
           truckData.isPlayer,
-          playerTruckData.truck.mesh.position
+          playerTruckData.truck.mesh.position,
+          frameProfiler
         );
         if (truckData.isPlayer) {
           playerDebugInfo = debugInfo;
         }
-      });
+      }));
 
-      staticBodyCollisionManager.update(trucks);
+      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
 
-      this.applySlowZones(trucks, slowZones);
+      frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
 
-      trucks.forEach((truckData) => {
+      frameProfiler.measure('zones.oob', () => trucks.forEach((truckData) => {
         const oobRemaining = this.updateOutOfBoundsCountdown({
           truckId: truckData.id,
           truck: truckData.truck,
@@ -556,12 +579,12 @@ export class RaceMode extends DriveMode {
           if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
           else uiManager.showOutOfBoundsCountdown(oobRemaining);
         }
-      });
+      }));
 
-      truckCollisionManager.update(trucks);
-      obstacleManager.update(trucks);
-      flagManager.update(trucks, dt);
-      pickupManager.update(trucks, dt);
+      frameProfiler.measure('collision.truck.resolve', () => truckCollisionManager.update(trucks));
+      frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
+      frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
+      frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
 
       truckStatusUiElapsedMs += dt * 1000;
       if (truckStatusUiElapsedMs >= truckStatusUiIntervalMs) {
@@ -569,8 +592,8 @@ export class RaceMode extends DriveMode {
         truckStatusUiElapsedMs = 0;
       }
 
-      debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck);
-      uiManager.setBoostActive(playerTruckData.truck.state.boostActive);
+      frameProfiler.measure('debug.update', () => debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck));
+      frameProfiler.measure('ui.boost', () => uiManager.setBoostActive(playerTruckData.truck.state.boostActive));
 
       const engineSpeed = Math.sqrt(
         playerTruckData.truck.state.velocity.x * playerTruckData.truck.state.velocity.x +
@@ -578,33 +601,37 @@ export class RaceMode extends DriveMode {
       );
 
       // Feed telemetry recorder each frame for the player truck
-      if (telemetryRecorder.recording && raceStarted) {
-        const pt = playerTruckData.truck;
-        const fwdVec = new Vector3(Math.sin(pt.state.heading), 0, Math.cos(pt.state.heading));
-        const fwdSpd = pt.state.velocity.dot(fwdVec);
-        const currentGrip = playerDebugInfo?.terrainGripMultiplier ?? 1;
-        telemetryRecorder.update(
-          { x: pt.mesh.position.x, z: pt.mesh.position.z },
-          fwdSpd,
-          dt * 1000,
-          currentGrip
-        );
-      }
+      frameProfiler.measure('telemetry.player', () => {
+        if (telemetryRecorder.recording && raceStarted) {
+          const pt = playerTruckData.truck;
+          const fwdVec = new Vector3(Math.sin(pt.state.heading), 0, Math.cos(pt.state.heading));
+          const fwdSpd = pt.state.velocity.dot(fwdVec);
+          const currentGrip = playerDebugInfo?.terrainGripMultiplier ?? 1;
+          telemetryRecorder.update(
+            { x: pt.mesh.position.x, z: pt.mesh.position.z },
+            fwdSpd,
+            dt * 1000,
+            currentGrip
+          );
+        }
+      });
 
       // Keep each AI truck's last-known terrain grip updated for telemetry speed scaling.
       // Sampling at 10hz cuts redundant per-frame terrain lookups with minimal behavior change.
-      aiGripSampleElapsedMs += dt * 1000;
-      if (aiGripSampleElapsedMs >= aiGripSampleIntervalMs) {
-        trucks.forEach(td => {
-          if (!td.isPlayer && td.truck.driver) {
-            const terrain = terrainManager.getTerrainAt(td.truck.mesh.position);
-            td.truck._lastTerrainGrip = terrain.gripMultiplier;
-          }
-        });
-        aiGripSampleElapsedMs = 0;
-      }
+      frameProfiler.measure('ai.gripSample', () => {
+        aiGripSampleElapsedMs += dt * 1000;
+        if (aiGripSampleElapsedMs >= aiGripSampleIntervalMs) {
+          trucks.forEach(td => {
+            if (!td.isPlayer && td.truck.driver) {
+              const terrain = terrainManager.getTerrainAt(td.truck.mesh.position);
+              td.truck._lastTerrainGrip = terrain.gripMultiplier;
+            }
+          });
+          aiGripSampleElapsedMs = 0;
+        }
+      });
 
-      trucks.forEach((truckData) => {
+      frameProfiler.measure('checkpoints.laps', () => trucks.forEach((truckData) => {
         if (truckData.gameState.raceFinished) return;
 
         const wasBoostActive = truckData._wasBoostActive ?? false;
@@ -736,9 +763,10 @@ export class RaceMode extends DriveMode {
             }
           }
         }
-      });
+      }));
 
-      cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt);
+      frameProfiler.measure('camera.update', () => cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt));
+      frameRenderStartMs = performance.now();
     });
 
     // Start the pre-race countdown

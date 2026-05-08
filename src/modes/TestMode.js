@@ -33,6 +33,7 @@ export class TestMode extends DriveMode {
     } = await this.buildDriveScene(trackKey);
 
     this.scene = scene;
+    const frameProfiler = this.initFrameProfiler('TestMode');
 
     // Spawn just behind the start/finish checkpoint, facing forward
     const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);
@@ -68,14 +69,28 @@ export class TestMode extends DriveMode {
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
+    let frameRenderStartMs = 0;
+
+    scene.onAfterRenderObservable.add(() => {
+      if (frameRenderStartMs > 0) {
+        frameProfiler.addDuration('render.pipeline', performance.now() - frameRenderStartMs);
+        frameRenderStartMs = 0;
+      }
+      frameProfiler.endFrame();
+    });
+
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
 
       const dt = this.getClampedDeltaTime(engine, 0.05);
-      const input = inputManager.getMovementInput();
-      const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
+      frameProfiler.beginFrame(dt);
+      const input = frameProfiler.measure('input', () => inputManager.getMovementInput());
+      const debugInfo = frameProfiler.measure(
+        'truck.update',
+        () => playerTruck.update(input, dt, terrainManager, currentTrack, true, null, frameProfiler)
+      );
 
-      this.updateOutOfBoundsCountdown({
+      frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
         truckId: 'player',
         truck: playerTruck,
         outOfBoundsZones,
@@ -85,13 +100,14 @@ export class TestMode extends DriveMode {
         onTimeout: () => {
           this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
         },
-      });
+      }));
 
-      staticBodyCollisionManager.update(trucks);
-      obstacleManager.update(trucks);
-      flagManager.update(trucks, dt);
-      cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
-      this.debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck);
+      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
+      frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
+      frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
+      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
+      frameProfiler.measure('debug.update', () => this.debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
+      frameRenderStartMs = performance.now();
     });
 
     return scene;

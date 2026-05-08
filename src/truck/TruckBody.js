@@ -24,10 +24,11 @@ export class TruckBody {
    * @param {Object}  shadows - ShadowGenerator
    * @param {Object}  colors  - { body, cabin, wheel, detail }
    */
-  constructor(parent, scene, shadows, colors = {}, vehicleDef = null) {
+  constructor(parent, scene, shadows, colors = {}, vehicleDef = null, options = null) {
     this.parent  = parent;
     this.scene   = scene;
     this.shadows = shadows;
+    this._disableDynamicShadows = options?.disableDynamicShadows === true;
     this.vehicleDef = vehicleDef;
     this._parentHalfHeight = parent.getBoundingInfo()?.boundingBox?.extendSize?.y ?? 0.4;
 
@@ -444,8 +445,10 @@ export class TruckBody {
     mat.specularColor = options.specularColor ?? new Color3(0.9, 0.9, 0.9);
     mat.specularPower = options.specularPower ?? 32;
     mesh.material     = mat;
-    mesh.receiveShadows = true;
-    this.shadows.addShadowCaster(mesh);
+    mesh.receiveShadows = !this._disableDynamicShadows;
+    if (!this._disableDynamicShadows) {
+      this.shadows?.addShadowCaster(mesh);
+    }
   }
 
   // ─── Disposal ─────────────────────────────────────────────────────────────

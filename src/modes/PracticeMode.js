@@ -38,6 +38,7 @@ export class PracticeMode extends DriveMode {
     // Note: Pickups are disabled by default via buildScene. We don't spawn them here.
 
     this.scene = scene;
+    const frameProfiler = this.initFrameProfiler('PracticeMode');
 
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;
@@ -106,27 +107,44 @@ export class PracticeMode extends DriveMode {
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
+    let frameRenderStartMs = 0;
 
     // Simple game loop
+    scene.onAfterRenderObservable.add(() => {
+      if (frameRenderStartMs > 0) {
+        frameProfiler.addDuration('render.pipeline', performance.now() - frameRenderStartMs);
+        frameRenderStartMs = 0;
+      }
+      frameProfiler.endFrame();
+    });
+
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
 
       const dt = this.getClampedDeltaTime(engine, 0.05);
+      frameProfiler.beginFrame(dt);
       if (this._photoModeActive) {
-        const input = inputManager.getMovementInput();
-        this.cameraController.moveFreeCamera(input, dt);
-        this.cameraController.update();
+        const input = frameProfiler.measure('input.photo', () => inputManager.getMovementInput());
+        frameProfiler.measure('camera.photoMove', () => this.cameraController.moveFreeCamera(input, dt));
+        frameProfiler.measure('camera.photoUpdate', () => this.cameraController.update());
+        frameRenderStartMs = performance.now();
         return;
       }
-      if (menuManager.isPaused) return;
+      if (menuManager.isPaused) {
+        frameRenderStartMs = performance.now();
+        return;
+      }
 
-      const input = inputManager.getMovementInput();
+      const input = frameProfiler.measure('input', () => inputManager.getMovementInput());
 
-      const debugInfo = playerTruck.update(input, dt, terrainManager, currentTrack);
+      const debugInfo = frameProfiler.measure(
+        'truck.update',
+        () => playerTruck.update(input, dt, terrainManager, currentTrack, true, null, frameProfiler)
+      );
 
-      this.applySlowZones(trucks, slowZones);
+      frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
 
-      const oobRemaining = this.updateOutOfBoundsCountdown({
+      const oobRemaining = frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
         truckId: 'player',
         truck: playerTruck,
         outOfBoundsZones,
@@ -136,21 +154,22 @@ export class PracticeMode extends DriveMode {
         onTimeout: () => {
           this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
         },
-      });
+      }));
       if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
       else uiManager.showOutOfBoundsCountdown(oobRemaining);
 
-      staticBodyCollisionManager.update(trucks);
-      obstacleManager.update(trucks, dt);
-      flagManager.update(trucks, dt);
-      pickupManager.update(trucks, dt);
-      cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt);
+      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
+      frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
+      frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
+      frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
+      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
       
       const engineSpeed = Math.sqrt(
         playerTruck.state.velocity.x * playerTruck.state.velocity.x +
         playerTruck.state.velocity.z * playerTruck.state.velocity.z
       );
-      debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck);
+      frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
+      frameRenderStartMs = performance.now();
     });
 
     return scene;

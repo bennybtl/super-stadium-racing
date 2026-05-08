@@ -88,6 +88,9 @@ const ROUGHNESS = {
   rollJitter:       0.20,  // max roll jitter per bump (radians × roughness)
 };
 
+// Far AI trucks use a lower cadence for full normal sampling to reduce raycast load.
+const LOW_DETAIL_NORMAL_SAMPLE_INTERVAL = 0.25;
+
 /**
  * Handles terrain-related physics: gravity, suspension, and slope collision.
  */
@@ -120,7 +123,8 @@ export class TerrainPhysics {
   /** Most-recently resolved terrain surface normal (world space, unit length). */
   get floorNormal() { return this._lastFloorNormal; }
 
-  update(mesh, deltaTime, track) {
+  update(mesh, deltaTime, track, options = null) {
+    const lowDetail = options?.lowDetail === true;
     this.state.velocity.y += this.gravity * deltaTime;
 
     // Single downward raycast from just above the truck centre.
@@ -142,8 +146,11 @@ export class TerrainPhysics {
 
       // Optionally throttle full normal sampling for non-player trucks.
       this._normalSampleTimer -= deltaTime;
+      const normalSampleInterval = lowDetail
+        ? Math.max(this._normalSampleInterval, LOW_DETAIL_NORMAL_SAMPLE_INTERVAL)
+        : this._normalSampleInterval;
       const shouldSampleNormal =
-        this._normalSampleInterval <= 0 ||
+        normalSampleInterval <= 0 ||
         this._normalSampleTimer <= 0;
 
       if (shouldSampleNormal) {
@@ -158,7 +165,7 @@ export class TerrainPhysics {
         } else {
           this._lastFloorNormal.copyFrom(UP);
         }
-        this._normalSampleTimer = this._normalSampleInterval;
+        this._normalSampleTimer = normalSampleInterval;
       }
     } else {
       effectiveFloor        = this._sampleFloorYAt(
@@ -175,7 +182,7 @@ export class TerrainPhysics {
     const truckBottomY = effectiveFloor + this.halfHeight + SPRING.rideHeight;
     const penetration  = truckBottomY - mesh.position.y;
 
-    this._applySpring(mesh, deltaTime, track, penetration, truckBottomY);
+    this._applySpring(mesh, deltaTime, track, penetration, truckBottomY, lowDetail);
 
     // Compute forward vector and horizontal speed once — reused by _updateSuspension and pitch.
     const hSpeed = Math.sqrt(
@@ -184,7 +191,10 @@ export class TerrainPhysics {
     );
     const forward = this._forwardVector();
 
-    const groundedness = this._updateSuspension(mesh, track, penetration, forward, hSpeed);
+    const groundedness = this._updateSuspension(mesh, track, penetration, forward, hSpeed, lowDetail);
+    
+    // Debug: track lowDetail flag for profiling analysis
+    this._lastLowDetail = lowDetail;
     if (groundedness > ORIENTATION.groundednessThreshold && track) {
       this.updateTerrainOrientation(mesh, deltaTime);
     }
@@ -315,12 +325,12 @@ export class TerrainPhysics {
    * Apply terrain spring force and slope-tunneling depenetration.
    * Mutates verticalVelocity and mesh.position.y.
    */
-  _applySpring(mesh, deltaTime, track, penetration, truckBottomY) {
+  _applySpring(mesh, deltaTime, track, penetration, truckBottomY, lowDetail = false) {
     if (penetration <= -SPRING.proximityThreshold) return;
 
     let effectivePenetration = penetration;
 
-    if (penetration > SPRING.depenetrationMinDepth && (track || this._terrainQuery)) {
+    if (!lowDetail && penetration > SPRING.depenetrationMinDepth && (track || this._terrainQuery)) {
       effectivePenetration = this._applyDepenetration(mesh, deltaTime, track, penetration, truckBottomY);
     }
 
@@ -419,11 +429,25 @@ export class TerrainPhysics {
    * Handles both downhill terrain-following passes.
    * @returns {number} groundedness (0–1)
    */
-  _updateSuspension(mesh, track, penetration, forward, speed) {
+  _updateSuspension(mesh, track, penetration, forward, speed, lowDetail = false) {
     const hasSurfaceSampling = !!this._terrainQuery || !!track;
 
     // Base compression from current overlap depth.
     let baseCompression = Math.max(0, Math.min(1, penetration / SPRING.compressionNorm));
+
+    if (lowDetail) {
+      const targetCompression = baseCompression > 0
+        ? baseCompression * SUSPENSION.compressionBaseScale +
+          Math.max(0, -this.state.velocity.y * SUSPENSION.velCompressionFactor)
+        : 0;
+
+      this.state.suspensionCompression +=
+        (targetCompression - this.state.suspensionCompression) * SUSPENSION.smoothing;
+      this.state.suspensionCompression =
+        Math.max(0, Math.min(SUSPENSION.maxCompression, this.state.suspensionCompression));
+
+      return Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
+    }
 
     // Reuse downhill probe values between follow/boost passes.
     let sampledHeightHere = null;

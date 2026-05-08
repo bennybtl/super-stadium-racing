@@ -56,7 +56,7 @@ export class Truck {
     this.audioController = null;
     const terrainQuery = new TerrainQuery(scene);
     const terrainPhysicsOptions = this.driver
-      ? { normalSampleInterval: 1 / 30 }
+      ? { normalSampleInterval: 1 / 20 }
       : { normalSampleInterval: 0 };
     this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight, terrainQuery, terrainPhysicsOptions);
     this.driftPhysics = new DriftPhysics(this.state);
@@ -72,6 +72,15 @@ export class Truck {
     // AI trucks can run particle effect updates at a lower cadence.
     this._particleUpdateInterval = this.driver ? (1 / 30) : 0;
     this._particleUpdateAccumulator = 0;
+
+    // AI visual puppet updates can run at a lower cadence with minimal gameplay impact.
+    this._bodyUpdateInterval = this.driver ? (1 / 30) : 0;
+    this._bodyUpdateIntervalMid = this.driver ? (1 / 20) : 0;
+    this._bodyUpdateIntervalFar = this.driver ? (1 / 12) : 0;
+    this._bodyUpdateAccumulator = 0;
+
+    // Terrain physics LOD: far AI trucks can use a cheaper suspension path.
+    this._terrainPhysicsLodFarDistanceSq = 55 * 55;
 
     // Reused debug payload to avoid per-frame object allocation.
     this._debugInfo = {
@@ -91,7 +100,9 @@ export class Truck {
     // Visual puppet — sits on top of the invisible physics box
     this.body = new TruckBody(this.mesh, scene, shadows, {
       body:   this.diffuseColor,
-    }, vehicleDef ?? null);
+    }, vehicleDef ?? null, {
+      disableDynamicShadows: !!this.driver,
+    });
   }
 
   setAudioController(audioController) {
@@ -177,19 +188,41 @@ export class Truck {
 
 
 
-  update(input, deltaTime, terrainManager = null, track = null, collectDebugInfo = true, effectsFocusPosition = null) {
+  update(input, deltaTime, terrainManager = null, track = null, collectDebugInfo = true, effectsFocusPosition = null, profiler = null) {
+    const profile = (label, fn) => {
+      if (!profiler) return fn();
+      return profiler.measure(label, fn);
+    };
+
     // If AI driver, get input from driver
     if (this.driver) {
-      this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
-      const fwdSpeed = this.state.velocity.dot(this._forward);
-      input = this.driver.getInput(this.mesh.position, this.state.heading, fwdSpeed, deltaTime);
+      profile('truck.aiInput', () => {
+        this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+        const fwdSpeed = this.state.velocity.dot(this._forward);
+        input = this.driver.getInput(this.mesh.position, this.state.heading, fwdSpeed, deltaTime);
+      });
     }
     
     // Update boost timer
-    this.controls.updateBoost(deltaTime);
+    profile('truck.controls.boost', () => this.controls.updateBoost(deltaTime));
     
     // Terrain physics (gravity, suspension, slopes)
-    const { groundedness, penetration } = this.terrainPhysics.update(this.mesh, deltaTime, track);
+    let terrainLowDetail = false;
+    let terrainDistance = 0;
+    if (this.driver && effectsFocusPosition) {
+      const dx = this.mesh.position.x - effectsFocusPosition.x;
+      const dz = this.mesh.position.z - effectsFocusPosition.z;
+      const distSq = dx * dx + dz * dz;
+      terrainDistance = Math.sqrt(distSq);
+      terrainLowDetail = distSq > this._terrainPhysicsLodFarDistanceSq;
+    }
+
+    const { groundedness, penetration } = profile(
+      'truck.terrainPhysics',
+      () => this.terrainPhysics.update(this.mesh, deltaTime, track, {
+        lowDetail: terrainLowDetail,
+      })
+    );
     
     // Get terrain modifiers — only apply when wheels are actually on or near the ground
     let terrainGripMultiplier = 1.0;
@@ -197,12 +230,14 @@ export class Truck {
     let terrainRoughness = 0;
     let terrain = null;
     const isGrounded = penetration > -0.3;
-    if (terrainManager && isGrounded) {
-      terrain = terrainManager.getTerrainAt(this.mesh.position);
-      terrainGripMultiplier = terrain.gripMultiplier;
-      terrainDragMultiplier = terrain.dragMultiplier;
-      terrainRoughness = terrain.roughness ?? 0;
-    }
+    profile('truck.terrainSample', () => {
+      if (terrainManager && isGrounded) {
+        terrain = terrainManager.getTerrainAt(this.mesh.position);
+        terrainGripMultiplier = terrain.gripMultiplier;
+        terrainDragMultiplier = terrain.dragMultiplier;
+        terrainRoughness = terrain.roughness ?? 0;
+      }
+    });
 
     const speed = this.state.velocity.length();
     // Horizontal (XZ) speed for steering/grip calculations — excludes velocity.y
@@ -213,58 +248,103 @@ export class Truck {
     );
 
     // Apply roughness bumps — vertical impulses + pitch/roll jitter scaled by terrain and speed
-    this.terrainPhysics.applyRoughnessBumps(terrainRoughness, hSpeed, groundedness, deltaTime);
+    profile('truck.roughnessBumps', () =>
+      this.terrainPhysics.applyRoughnessBumps(terrainRoughness, hSpeed, groundedness, deltaTime)
+    );
     this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     
     // Calculate speed-based factors (use hSpeed so velocity.y doesn't inflate understeer)
-    const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor } = this.controls.calculateSpeedFactors(
-      hSpeed, terrainGripMultiplier, groundedness, input
+    const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor } = profile(
+      'truck.controls.speedFactors',
+      () => this.controls.calculateSpeedFactors(
+        hSpeed, terrainGripMultiplier, groundedness, input
+      )
     );
     
     // Handle input
-    this.controls.updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime);
-    this.controls.updateAcceleration(input, this._forward, groundedness, deltaTime);
+    profile('truck.controls.steering', () =>
+      this.controls.updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime)
+    );
+    profile('truck.controls.acceleration', () =>
+      this.controls.updateAcceleration(input, this._forward, groundedness, deltaTime)
+    );
 
     // Apply drag
-    this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness);
+    profile('truck.drag', () =>
+      this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness)
+    );
 
     // Apply grip and drift physics — rearTractionFactor encodes weight transfer:
     // throttle loosens rear (mild), braking unloads rear (significant).
-    this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor);
+    profile('truck.drift', () =>
+      this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor)
+    );
     
     // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)
-    this.mesh.position.x += this.state.velocity.x * deltaTime;
-    this.mesh.position.y += this.state.velocity.y * deltaTime;
-    this.mesh.position.z += this.state.velocity.z * deltaTime;
+    profile('truck.integrate', () => {
+      this.mesh.position.x += this.state.velocity.x * deltaTime;
+      this.mesh.position.y += this.state.velocity.y * deltaTime;
+      this.mesh.position.z += this.state.velocity.z * deltaTime;
+    });
 
     // Update rotation
-    this.mesh.rotation.y = this.state.heading;
+    profile('truck.rotate', () => {
+      this.mesh.rotation.y = this.state.heading;
+    });
 
     // Update roll before syncing the physics body so visual lean is live this frame.
-    this.driftPhysics.updateRoll(this.mesh, hSpeed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime);
+    profile('truck.roll', () =>
+      this.driftPhysics.updateRoll(this.mesh, hSpeed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime)
+    );
 
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
     this._surfaceSampleTrack = track;
     this._surfaceSampleFallback = terrainY ?? 0;
-    this.body.update(this.state, input, hSpeed, deltaTime, terrainY, groundedness, this._surfaceSampler);
+    let bodyUpdateInterval = this._bodyUpdateInterval;
+    if (this.driver && effectsFocusPosition) {
+      const dx = this.mesh.position.x - effectsFocusPosition.x;
+      const dz = this.mesh.position.z - effectsFocusPosition.z;
+      const distSq = dx * dx + dz * dz;
+      const near = 35;
+      const far = 75;
+      if (distSq >= far * far) {
+        bodyUpdateInterval = this._bodyUpdateIntervalFar;
+      } else if (distSq >= near * near) {
+        bodyUpdateInterval = this._bodyUpdateIntervalMid;
+      }
+    }
 
-    this.audioController?.update({
-      state: this.state,
-      speed,
-      hSpeed,
-      groundedness,
-      deltaTime,
-      maxSpeed: this.state.maxSpeed,
-      mesh: this.mesh,
-      track,
-      currentTerrain: terrain,
-      input,
+    this._bodyUpdateAccumulator += deltaTime;
+    if (
+      bodyUpdateInterval <= 0 ||
+      this._bodyUpdateAccumulator >= bodyUpdateInterval
+    ) {
+      const bodyDt = this._bodyUpdateAccumulator;
+      this._bodyUpdateAccumulator = 0;
+      profile('truck.bodyVisual', () =>
+        this.body.update(this.state, input, hSpeed, bodyDt, terrainY, groundedness, this._surfaceSampler)
+      );
+    }
+
+    profile('truck.audio', () => {
+      this.audioController?.update({
+        state: this.state,
+        speed,
+        hSpeed,
+        groundedness,
+        deltaTime,
+        maxSpeed: this.state.maxSpeed,
+        mesh: this.mesh,
+        track,
+        currentTerrain: terrain,
+        input,
+      });
     });
 
     // Sync physics body
-    this.syncPhysicsBody();
+    profile('truck.syncPhysics', () => this.syncPhysicsBody());
     this._particleUpdateAccumulator += deltaTime;
     if (
       this._particleUpdateInterval <= 0 ||
@@ -288,7 +368,7 @@ export class Truck {
         }
       }
 
-      this.particles.update(
+      profile('truck.particles', () => this.particles.update(
         this.state,
         hSpeed,
         terrainManager,
@@ -297,25 +377,28 @@ export class Truck {
         terrain,
         track,
         effectScaleOverride
-      );
+      ));
       this._particleUpdateAccumulator = 0;
     }
 
     if (!collectDebugInfo) return null;
 
     // Return debug info
-    const debug = this._debugInfo;
-    debug.compression = this.state.suspensionCompression;
-    debug.groundedness = groundedness;
-    debug.penetration = penetration;
-    debug.verticalVelocity = this.state.velocity.y;
-    debug.speed = speed;
-    debug.effectiveGrip = effectiveGrip;
-    debug.slipAngle = this.state.slipAngle;
-    debug.terrainGripMultiplier = terrainGripMultiplier;
-    debug.x = this.mesh.position.x;
-    debug.y = this.mesh.position.y;
-    debug.z = this.mesh.position.z;
+    const debug = profile('truck.debugPayload', () => {
+      const payload = this._debugInfo;
+      payload.compression = this.state.suspensionCompression;
+      payload.groundedness = groundedness;
+      payload.penetration = penetration;
+      payload.verticalVelocity = this.state.velocity.y;
+      payload.speed = speed;
+      payload.effectiveGrip = effectiveGrip;
+      payload.slipAngle = this.state.slipAngle;
+      payload.terrainGripMultiplier = terrainGripMultiplier;
+      payload.x = this.mesh.position.x;
+      payload.y = this.mesh.position.y;
+      payload.z = this.mesh.position.z;
+      return payload;
+    });
     return debug;
   }
 
@@ -351,4 +434,5 @@ export class Truck {
     }
     this.syncPhysicsBody();
   }
+
 }
