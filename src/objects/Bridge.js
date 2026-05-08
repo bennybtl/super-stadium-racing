@@ -19,10 +19,12 @@ import { TERRAIN_TYPES } from "../terrain.js";
  */
 export class Bridge {
   /**
-   * @param {object} feature
-   * @param {number} terrainY
+   * @param {object} feature — Bridge feature config (centerX, centerZ, height, width, depth, angle, thickness, etc.)
+   * @param {object} track — Track instance with getHeightAt() method
+   * @param {number} terrainY — Terrain height at bridge center
    * @param {BABYLON.Scene} scene
    * @param {BABYLON.ShadowGenerator} shadows
+   * @param {object} driveSurfaceManager — Optional drive surface registration manager
    */
   constructor(feature, track, terrainY, scene, shadows, driveSurfaceManager = null) {
     this.feature = feature;
@@ -36,7 +38,6 @@ export class Bridge {
     const angleY = ((feature.angle ?? 0) * Math.PI) / 180;
 
     const collision = feature.collision ?? {};
-    const collisionEnabled = true;
     const width = feature.width ?? 20;
     const depth = feature.depth ?? 8;
     const transitionEnabled = feature.transitionEnabled === true;
@@ -73,15 +74,15 @@ export class Bridge {
 
     this._collisionVolume = {
       x: feature.centerX,
-      y: (collisionEnabled && deckColliderEnabled) ? collisionCenterY : this.mesh.position.y,
+      y: deckColliderEnabled ? collisionCenterY : this.mesh.position.y,
       z: feature.centerZ,
       heading: angleY,
       halfWidth: width / 2,
-      halfHeight: (collisionEnabled && deckColliderEnabled) ? collisionHeight / 2 : thickness / 2,
-      halfDepth: (collisionEnabled && deckColliderEnabled) ? collisionDepth / 2 : depth / 2,
+      halfHeight: deckColliderEnabled ? collisionHeight / 2 : thickness / 2,
+      halfDepth: deckColliderEnabled ? collisionDepth / 2 : depth / 2,
     };
 
-    if (collisionEnabled && deckColliderEnabled) {
+    if (deckColliderEnabled) {
       this.colliderMesh = MeshBuilder.CreateBox(
         `bridge_collision_${feature.centerX}_${feature.centerZ}`,
         {
@@ -95,13 +96,11 @@ export class Bridge {
       this.colliderMesh.rotation.y = angleY;
       this.colliderMesh.isVisible = false;
       this.colliderMesh.isPickable = false;
-      this.colliderMesh.metadata = {
-        ...(this.colliderMesh.metadata ?? {}),
-        truckCollider: true,
-        truckColliderFriction: driveColliderFriction,
-        truckColliderApplyFriction: driveColliderApplyFriction,
-        truckColliderIgnoreTop: true,
-      };
+      this.colliderMesh.metadata = this._createTruckColliderMetadata(
+        driveColliderFriction,
+        driveColliderApplyFriction,
+        true // ignoreTop
+      );
       this.colliderAggregate = new PhysicsAggregate(
         this.colliderMesh,
         PhysicsShapeType.BOX,
@@ -129,8 +128,6 @@ export class Bridge {
     this._rampColliders = [];
     this._rampColliderAggregates = [];
 
-    const rampWidth = width;
-
     const createRampMesh = (sign, startX, startZ, topY, bottomY) => {
       const depthLength = transitionDepth;
       const deltaY = bottomY - topY;
@@ -140,12 +137,12 @@ export class Bridge {
       );
 
       const positions = [
-        -rampWidth / 2, 0, 0,
-         rampWidth / 2, 0, 0,
-        -rampWidth / 2, deltaY, 0,
-         rampWidth / 2, deltaY, 0,
-        -rampWidth / 2, deltaY, depthLength,
-         rampWidth / 2, deltaY, depthLength,
+        -width / 2, 0, 0,
+         width / 2, 0, 0,
+        -width / 2, deltaY, 0,
+         width / 2, deltaY, 0,
+        -width / 2, deltaY, depthLength,
+         width / 2, deltaY, depthLength,
       ];
 
       const indices = [
@@ -205,18 +202,18 @@ export class Bridge {
         collider.isVisible = false;
         collider.isPickable = false;
         collider.metadata = {
-          ...(collider.metadata ?? {}),
-          truckCollider: true,
-          truckColliderFriction: driveColliderFriction,
-          truckColliderApplyFriction: driveColliderApplyFriction,
+          ...this._createTruckColliderMetadata(
+            driveColliderFriction,
+            driveColliderApplyFriction,
+            ignoreTop
+          ),
           truckColliderDebug: false,
-          ...(ignoreTop ? { truckColliderIgnoreTop: true } : {}),
         };
         return collider;
       };
 
       const colliders = [];
-      // Left and right vertical wall colliders.
+      // Left and right vertical wall colliders (inset by wallThickness to create guide rails).
       colliders.push(makeCollider(
         `bridge_ramp_collider_side_left_${sign}_${feature.centerX}_${feature.centerZ}`,
         wallThickness,
@@ -280,7 +277,8 @@ export class Bridge {
     // extend downward through terrain. These prevent uphill under-bridge
     // tunneling at the transition where floor/ceiling constraints conflict.
     this._endCaps = [];
-    if (collisionEnabled && endCapsEnabled && (endCapsOnDepth || endCapsOnWidth)) {
+    this._endCapAggregates = [];
+    if (endCapsEnabled && (endCapsOnDepth || endCapsOnWidth)) {
       const endCapThickness = collision.endCapThickness ?? 1.2;
       const endCapPad = collision.endCapPad ?? 0.4;
       const endCapFriction = collision.endCapFriction ?? 1.0;
@@ -330,14 +328,14 @@ export class Bridge {
         cap.rotation.y = angleY;
         cap.isVisible = false;
         cap.isPickable = false;
-        cap.metadata = {
-          ...(cap.metadata ?? {}),
-          truckCollider: true,
-          truckColliderFriction: endCapFriction,
-          truckColliderApplyFriction: endCapApplyFriction,
-        };
+        cap.metadata = this._createTruckColliderMetadata(
+          endCapFriction,
+          endCapApplyFriction,
+          false // ignoreTop
+        );
 
         this._endCaps.push(cap);
+        this._endCapAggregates.push(new PhysicsAggregate(cap, PhysicsShapeType.BOX, { mass: 0 }, scene));
       };
 
       if (endCapsOnDepth) {
@@ -393,6 +391,25 @@ export class Bridge {
     this._material?.dispose();
     for (const cap of this._endCaps ?? []) cap.dispose();
     this._endCaps = [];
+    for (const agg of this._endCapAggregates ?? []) agg.dispose();
+    this._endCapAggregates = [];
     this.mesh?.dispose();
+  }
+
+  /**
+   * Create truck collider metadata with optional ignoreTop flag.
+   * @private
+   */
+  _createTruckColliderMetadata(friction, applyFriction, ignoreTop = false) {
+    const metadata = {
+      ...(this.mesh?.metadata ?? {}),
+      truckCollider: true,
+      truckColliderFriction: friction,
+      truckColliderApplyFriction: applyFriction,
+    };
+    if (ignoreTop) {
+      metadata.truckColliderIgnoreTop = true;
+    }
+    return metadata;
   }
 }
