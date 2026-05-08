@@ -1,4 +1,4 @@
-import { Vector3 } from "@babylonjs/core";
+import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
 import { AIDriver } from "../ai/AIDriver.js";
 import { GameState } from "../managers/GameState.js";
@@ -213,18 +213,18 @@ export class RaceMode extends DriveMode {
     // ── AI drivers ───────────────────────────────────────────────────────────
     // Season driver info helpers — passed into setupAIDrivers so it can name/id each slot
     const seasonAIDrivers = season && seasonManager ? seasonManager.getAIDrivers() : null;
-    const getAIName  = (i) => seasonAIDrivers ? seasonAIDrivers[i].name : `AI ${i + 1}`;
-    const getAIId    = (i) => seasonAIDrivers ? seasonAIDrivers[i].id   : `ai${i + 1}`;
-    const getAISkill = (i) => seasonAIDrivers ? seasonAIDrivers[i].skillConfig : {};
+    const getAIName  = (i) => seasonAIDrivers?.[i]?.name ?? `AI ${i + 1}`;
+    const getAIId    = (i) => seasonAIDrivers?.[i]?.id   ?? `ai${i + 1}`;
+    const getAISkill = (i) => seasonAIDrivers?.[i]?.skillConfig ?? {};
     const getAIDriver = (i) => {
-      if (seasonAIDrivers) return null;
+      if (seasonAIDrivers?.[i]) return null;
       const slot = i % 3;
       if (slot === 0) return AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
       if (slot === 1) return AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
       return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
     };
 
-    const AI_COUNT = 5; // change this to add more AI competitors
+    const AI_COUNT = seasonAIDrivers ? seasonAIDrivers.length : 3;
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({
       count: AI_COUNT,
       scene,
@@ -373,11 +373,20 @@ export class RaceMode extends DriveMode {
 
     // -- Pickup collection --
     pickupManager.spawn(6); // Scatter pickups specifically for the race
-    pickupManager.onPickupCollected = (type, truckData) => {
+
+    pickupManager.onPickupCollected = (type, truckData, payload = null) => {
       if (type === 'boost' && truckData.gameState) {
         truckData.gameState.boostCount++;
         if (truckData.isPlayer) {
           uiManager.updateBoosts(truckData.gameState.boostCount);
+        }
+        return;
+      }
+
+      if (type === 'coin' && truckData?.isPlayer && season && seasonManager) {
+        const credits = Math.max(0, Math.round(payload?.credits ?? 0));
+        if (credits > 0) {
+          seasonManager.addPlayerBalance(credits);
         }
       }
     };

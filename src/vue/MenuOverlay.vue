@@ -8,7 +8,7 @@
 
     <div v-if="store.screen === 'title'" class="absolute inset-x-0 bottom-0 flex justify-center pb-10">
       <button
-        class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-14 py-5 text-2xl font-bold rounded-md uppercase tracking-[3px] transition duration-150 ease-in-out shadow-[0_12px_30px_rgba(0,0,0,0.45)] pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
+        class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-14 py-5 text-2xl font-bold rounded-md uppercase tracking-[3px] transition duration-150 ease-in-out shadow-[0_12px_30px_rgba(0,0,0,0.45)] pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]"
         @click="store.back('start')"
       >
         Start
@@ -16,14 +16,14 @@
     </div>
 
     <div v-else class="absolute inset-0 flex items-center justify-center pointer-events-auto">
-      <div class="bg-[#141414]/80 px-16 py-10 rounded-[10px] border-[3px] border-[#ff5722] shadow-[0_10px_40px_rgba(0,0,0,0.5)] text-center backdrop-blur-sm" @mousedown.stop>
+      <div class="bg-[#141414]/80 px-16 py-10 rounded-[10px] border-[3px] border-[#ff2222] shadow-[0_10px_40px_rgba(0,0,0,0.5)] text-center backdrop-blur-sm" @mousedown.stop>
       <div class="flex flex-col gap-4">
 
         <!-- ── Start ── -->
         <template v-if="store.screen === 'start'">
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showPitMenu('practice')">Practice</button>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showPitMenu()">Single Race</button>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.showPitMenu('season')">Start Season</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.showPitMenu('practice')">Practice</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.showPitMenu()">Single Race</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.showPitMenu('season')">Start Season</button>
           <hr>
           <button class="bg-gradient-to-b from-[#999999] to-[#555555] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#bbbbbb] hover:to-[#777777]" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="bg-gradient-to-b from-[#999999] to-[#555555] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#bbbbbb] hover:to-[#777777]" @click="store.settings()">Settings</button>
@@ -34,7 +34,7 @@
           <button
             v-for="t in store.trackList"
             :key="t.key"
-            class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-2 text-lg font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]"
+            class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-2 text-lg font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]"
             @click="store.startEditor(t.key)"
           >{{ t.name }}</button>
           <button class="bg-gradient-to-b from-[#4caf50] to-[#388e3c] text-white border-0 px-10 py-2 text-lg font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#66bb6a] hover:to-[#4caf50]" @click="store.startEditor('new')">+ New Track</button>
@@ -52,16 +52,16 @@
             <li><b>R:</b> Reset to last checkpoint</li>
             <li><b>C:</b> Change camera mode</li>
           </ul>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.resume()">Resume</button>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.reset()">Reset</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.resume()">Resume</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.reset()">Reset</button>
           <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.exit()">Exit</button>
         </template>
 
         <!-- ── Editor pause ── -->
         <template v-else-if="store.screen === 'editorPause'">
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.editorResume()">Resume Editing</button>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.editorSave()">Save Track</button>
-          <button class="bg-gradient-to-b from-[#ff5722] to-[#d84315] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff7043] hover:to-[#ff5722]" @click="store.editorLoad()">Load Track</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.editorResume()">Resume Editing</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.editorSave()">Save Track</button>
+          <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.editorLoad()">Load Track</button>
           <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-10 py-4 text-xl font-bold rounded-md uppercase tracking-[2px] transition duration-150 ease-in-out shadow-lg pointer-events-auto hover:from-slate-600 hover:to-slate-700 mt-1" @click="store.editorExit()">Exit to Menu</button>
         </template>
 

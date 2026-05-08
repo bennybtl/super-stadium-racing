@@ -1,5 +1,5 @@
 import { useMenuStore } from '../vue/store.js';
-import { SEASON_TRACKS } from './SeasonManager.js';
+import { SEASON_TRACKS, UPGRADES } from './SeasonManager.js';
 
 /**
  * MenuManager – thin bridge between game logic (ModeController / modes) and
@@ -75,6 +75,24 @@ export class MenuManager {
       this._store.selectedTrack = this.selectedTrack;
     }
 
+    const seasonStartUpgrades = isSeasonStart
+      ? UPGRADES.map((u) => {
+          if (u.id === 'nitro') {
+            return {
+              ...u,
+              level: 5,
+              maxLevel: 99,
+              affordable: false,
+            };
+          }
+          return {
+            ...u,
+            level: 0,
+            affordable: false,
+          };
+        })
+      : [];
+
     this.currentMenu = 'pit';
     this._store.postRaceData = null;
     this._store.pitData = {
@@ -88,7 +106,7 @@ export class MenuManager {
       isSeasonComplete: false,
       standings:        [],
       playerBalance:    0,
-      upgrades:         [],
+      upgrades:         seasonStartUpgrades,
       selectedColorKey: this.selectedPlayerColor,
     };
     this._store.seasonFinalData = null;

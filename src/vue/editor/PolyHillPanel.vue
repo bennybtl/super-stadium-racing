@@ -100,6 +100,21 @@
       />
     </div>
 
+    <!-- Filled toggle -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Filled</span>
+      <input
+        type="checkbox"
+        :checked="editor.polyHill.filled"
+        :disabled="!editor.polyHill.closed"
+        @change="editor.setPolyHillFilled($event.target.checked)"
+        class="w-4 h-4 accent-[var(--accent)] cursor-pointer disabled:opacity-50"
+      />
+    </div>
+    <div v-if="!editor.polyHill.closed && editor.polyHill.filled" class="text-[10px] text-slate-400 mb-3" style="color: #ff9800;">
+      Filled mode requires closed loop
+    </div>
+
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->

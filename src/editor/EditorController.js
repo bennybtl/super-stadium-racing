@@ -1460,6 +1460,7 @@ export class EditorController {
   changePolyHillWidth(val)      { this.polyHillEditor.setWidth(val); }
   changePolyHillTerrainType(val){ this.polyHillEditor.setTerrainType(val); }
   changePolyHillClosed(val)     { this.polyHillEditor.setClosed(val); }
+  changePolyHillFilled(val)     { this.polyHillEditor.setFilled(val); }
   insertPolyHillPoint()         { this.polyHillEditor.insertPointAfter(); }
   deletePolyHillPoint()         { this.polyHillEditor.deleteSelectedPoint(); }
   deletePolyHill()              { this.polyHillEditor.deletePolyHill(); }

@@ -86,6 +86,7 @@ export class PolyHillEditor {
       width: 5,
       terrainType: null,
       closed: false,
+      filled: false,
     };
 
     this.ec.saveSnapshot();
@@ -369,6 +370,13 @@ export class PolyHillEditor {
     this._rebuildHill(this._activeHill.feature);
   }
 
+  setFilled(filled) {
+    if (!this._activeHill) return;
+    this.ec.saveSnapshot(true);
+    this._activeHill.feature.filled = filled;
+    this._rebuildHill(this._activeHill.feature);
+  }
+
   deletePolyHill() {
     if (!this._activeHill) return;
     this.ec.saveSnapshot();
@@ -409,6 +417,7 @@ export class PolyHillEditor {
     store.polyHill.width = feature.width ?? feature.slope ?? 5;
     store.polyHill.terrainType = feature.terrainType?.name || 'none';
     store.polyHill.closed = feature.closed ?? false;
+    store.polyHill.filled = feature.filled ?? false;
   }
 
   _canHaveRadius(feature, idx) {

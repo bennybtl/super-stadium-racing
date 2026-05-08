@@ -543,11 +543,11 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   uniform sampler2D terrainPropertySampler;
   uniform sampler2D terrainWaterOverlaySampler;
   uniform sampler2D terrainWearOverlaySampler;
-  // Terrain uniforms — also declared explicitly; the UBO path handles binding
-  // but we need the declaration regardless of UBO vs non-UBO engine.
-  uniform float terrainTypeCount;
-  uniform float terrainCellCount;
-  uniform float terrainWorldHalfSize;
+
+  // Compile-time constants injected from JS.
+  const float terrainTypeCount = __TERRAIN_TYPE_COUNT__;
+  const float terrainCellCount = __TERRAIN_CELL_COUNT__;
+  const float terrainWorldHalfSize = __TERRAIN_WORLD_HALF_SIZE__;
 
   // Declared as module-level so both CUSTOM_FRAGMENT_UPDATE_DIFFUSE and the
   // specularColor override can access the result.
@@ -628,25 +628,9 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler");
   }
 
-  getUniforms() {
-    // The uniform declarations are emitted in CUSTOM_FRAGMENT_DEFINITIONS.
-    // Return the ubo list so Babylon's UBO path still maps names to slots
-    // when the engine supports uniform buffer objects.
-    return {
-      ubo: [
-        { name: "terrainTypeCount",      size: 1, type: "float" },
-        { name: "terrainCellCount",      size: 1, type: "float" },
-        { name: "terrainWorldHalfSize",  size: 1, type: "float" },
-      ],
-    };
-  }
-
   bindForSubMesh(uniformBuffer, scene) {
-    uniformBuffer.updateFloat("terrainTypeCount",     this._terrainTypeCount);
-    uniformBuffer.updateFloat("terrainCellCount",     this._terrainCellCount);
-    uniformBuffer.updateFloat("terrainWorldHalfSize", this._terrainWorldHalfSize);
     if (scene.texturesEnabled) {
-      uniformBuffer.setTexture("terrainIdSampler",       this._terrainIdTex);
+      uniformBuffer.setTexture("terrainIdSampler", this._terrainIdTex);
       uniformBuffer.setTexture("terrainPropertySampler", this._terrainPropertyTex);
       uniformBuffer.setTexture("terrainWaterOverlaySampler", this._terrainWaterOverlayTex);
       uniformBuffer.setTexture("terrainWearOverlaySampler", this._terrainWearOverlayTex);
@@ -655,8 +639,17 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
 
   getCustomCode(shaderType) {
     if (shaderType !== "fragment") return null;
+
+    const terrainTypeCount = Number(this._terrainTypeCount || 1).toFixed(1);
+    const terrainCellCount = Number(this._terrainCellCount || 1).toFixed(1);
+    const terrainWorldHalfSize = Number(this._terrainWorldHalfSize || 80).toFixed(1);
+    const defs = _TERRAIN_BLEND_GLSL_DEFS
+      .replace("__TERRAIN_TYPE_COUNT__", terrainTypeCount)
+      .replace("__TERRAIN_CELL_COUNT__", terrainCellCount)
+      .replace("__TERRAIN_WORLD_HALF_SIZE__", terrainWorldHalfSize);
+
     return {
-      "CUSTOM_FRAGMENT_DEFINITIONS":   _TERRAIN_BLEND_GLSL_DEFS,
+      "CUSTOM_FRAGMENT_DEFINITIONS": defs,
       "CUSTOM_FRAGMENT_UPDATE_DIFFUSE": _TERRAIN_BLEND_UPDATE_DIFFUSE,
       // Replace the specularColor declaration line so per-pixel terrain
       // specular intensity overrides the material uniform.
@@ -687,7 +680,28 @@ export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, t
   mat.specularColor = new Color3(1, 1, 1);
   mat.specularPower = 48;
 
-  new TerrainBlendPlugin(mat, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize);
+  const webglVersion = scene?.getEngine?.()?.webGLVersion ?? 2;
+  const supportsTerrainBlendPlugin = webglVersion >= 2;
+
+  if (supportsTerrainBlendPlugin) {
+    new TerrainBlendPlugin(
+      mat,
+      terrainIdTex,
+      terrainPropertyTex,
+      terrainWaterOverlayTex,
+      terrainWearOverlayTex,
+      terrainTypeCount,
+      terrainCellCount,
+      terrainWorldHalfSize
+    );
+  } else {
+    // WebGL1 fallback: use a stable flat color material
+    const fallback = TERRAIN_TYPES.PACKED_DIRT?.color;
+    mat.diffuseColor = fallback?.clone ? fallback.clone() : new Color3(0.47, 0.36, 0.25);
+    mat.specularColor = new Color3(0.08, 0.08, 0.08);
+    mat.specularPower = 24;
+    console.warn("[GroundShader] TerrainBlendPlugin disabled: WebGL2 unavailable (fallback material active).");
+  }
 
   return mat;
 }

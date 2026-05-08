@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <button class="rounded-2xl bg-gradient-to-b from-orange-500 to-orange-700 px-10 py-3 text-lg font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-orange-950/30 transition hover:from-orange-400 hover:to-orange-600" @click="store.exitSeason()">
+      <button class="rounded-2xl bg-gradient-to-b from-red-500 to-red-700 px-10 py-3 text-lg font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-red-950/30 transition hover:from-red-400 hover:to-red-600" @click="store.exitSeason()">
         Back to Menu
       </button>
     </div>

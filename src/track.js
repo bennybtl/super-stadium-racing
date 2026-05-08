@@ -22,6 +22,25 @@ function getHillLocalCoords(feature, x, z) {
 }
 
 /**
+ * Ray-casting point-in-polygon test using the winding number algorithm
+ * Returns true if (x, z) is inside the polygon formed by points
+ */
+function isPointInPolygon(x, z, points) {
+  if (!points || points.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const xi = points[i].x;
+    const zi = points[i].z;
+    const xj = points[j].x;
+    const zj = points[j].z;
+    const intersects = ((zi > z) !== (zj > z))
+      && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-8) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+/**
  * Track system for defining 3D terrain layouts with different surface types
  * Tracks are composed of features (ridges, hills, valleys, jumps, etc.)
  */
@@ -283,47 +302,64 @@ export class Track {
         }
 
         case "polyHill": {
-          const { points, height = 3, slope = 5, closed = false } = feature;
+          const { points, height = 3, slope = 5, closed = false, filled = false } = feature;
           if (!points || points.length < 2) break;
           
-          // Expand polyline with rounded corners based on radius
           const expandedPoints = this._expandPolylineForHill(points, closed);
-          
-          // Find distance to the expanded polyline
-          let minDist = Infinity;
-          const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
-          
-          for (let i = 0; i < numSegments; i++) {
-            const p1 = expandedPoints[i];
-            const p2 = expandedPoints[(i + 1) % expandedPoints.length];
-            
-            // Calculate distance from point to line segment
-            const dx = p2.x - p1.x;
-            const dz = p2.z - p1.z;
-            const len2 = dx * dx + dz * dz;
-            
-            if (len2 < 0.0001) {
-              // Degenerate segment, use point distance
-              const pdx = x - p1.x;
-              const pdz = z - p1.z;
-              minDist = Math.min(minDist, Math.sqrt(pdx * pdx + pdz * pdz));
-              continue;
-            }
-            
-            // Project point onto line segment
-            const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
-            const projX = p1.x + t * dx;
-            const projZ = p1.z + t * dz;
-            const distToSeg = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-            minDist = Math.min(minDist, distToSeg);
-          }
-          
-          // Apply triangular profile: full height at center, 0 at width/2
           const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
-          if (minDist < halfWidth) {
-            // Linear falloff from center to edge: 1 at center, 0 at edge
-            const linearFalloff = 1 - (minDist / halfWidth);
-            totalHeight += height * linearFalloff;
+          
+          // Filled mode: uniform height inside polygon, falloff at edges
+          if (filled && closed) {
+            if (isPointInPolygon(x, z, expandedPoints)) {
+              totalHeight += height;
+            } else {
+              // Falloff zone outside polygon boundary
+              let minDist = Infinity;
+              const numSegments = expandedPoints.length;
+              for (let i = 0; i < numSegments; i++) {
+                const p1 = expandedPoints[i];
+                const p2 = expandedPoints[(i + 1) % numSegments];
+                const dx = p2.x - p1.x;
+                const dz = p2.z - p1.z;
+                const len2 = dx * dx + dz * dz;
+                if (len2 < 0.0001) continue;
+                const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
+                const projX = p1.x + t * dx;
+                const projZ = p1.z + t * dz;
+                const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
+                minDist = Math.min(minDist, dist);
+              }
+              if (minDist < halfWidth) {
+                const falloff = 1 - (minDist / halfWidth);
+                totalHeight += height * falloff;
+              }
+            }
+          } else {
+            // Original behavior: distance-based falloff from centerline
+            let minDist = Infinity;
+            const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
+            for (let i = 0; i < numSegments; i++) {
+              const p1 = expandedPoints[i];
+              const p2 = expandedPoints[(i + 1) % expandedPoints.length];
+              const dx = p2.x - p1.x;
+              const dz = p2.z - p1.z;
+              const len2 = dx * dx + dz * dz;
+              if (len2 < 0.0001) {
+                const pdx = x - p1.x;
+                const pdz = z - p1.z;
+                minDist = Math.min(minDist, Math.sqrt(pdx * pdx + pdz * pdz));
+                continue;
+              }
+              const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
+              const projX = p1.x + t * dx;
+              const projZ = p1.z + t * dz;
+              const distToSeg = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
+              minDist = Math.min(minDist, distToSeg);
+            }
+            if (minDist < halfWidth) {
+              const linearFalloff = 1 - (minDist / halfWidth);
+              totalHeight += height * linearFalloff;
+            }
           }
           break;
         }
@@ -434,11 +470,18 @@ export class Track {
           const points = feature.points;
           if (!points || points.length < 2) break;
           const closed = feature.closed ?? false;
+          const filled = feature.filled ?? false;
           const expandedPoints = this._expandPolylineForHill(points, closed);
           const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
+          
+          // Filled mode: entire interior is terrain type
+          if (filled && closed && isPointInPolygon(x, z, expandedPoints)) {
+            return feature.terrainType;
+          }
+          
+          // Falloff zone: check distance to polyline
           const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
           let minDist = Infinity;
-
           for (let j = 0; j < numSegments; j++) {
             const p1 = expandedPoints[j];
             const p2 = expandedPoints[(j + 1) % expandedPoints.length];
@@ -452,7 +495,6 @@ export class Track {
             const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
             minDist = Math.min(minDist, dist);
           }
-
           if (minDist <= halfWidth) return feature.terrainType;
           break;
         }

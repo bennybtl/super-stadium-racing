@@ -1,4 +1,4 @@
-import { Pickup } from "../objects/Pickup.js";
+import { Pickup, PICKUP_MAX_TORUS_DIAMETER } from "../objects/Pickup.js";
 import { TerrainQuery } from "./TerrainQuery.js";
 
 // =============================================================================
@@ -6,7 +6,7 @@ import { TerrainQuery } from "./TerrainQuery.js";
 // =============================================================================
 
 /** Horizontal distance (m) at which a truck collects a pickup. */
-const COLLECT_RADIUS = 2.4;
+const COLLECT_RADIUS = PICKUP_MAX_TORUS_DIAMETER;
 
 /** Milliseconds before a collected pickup reappears. */
 const RESPAWN_DELAY_MS = 10_000;
@@ -20,6 +20,8 @@ const SPAWN_HALF_EXTENT = 65;
 
 /** Minimum distance (m) between any two pickup spawn points. */
 const MIN_PICKUP_DIST = 14;
+const COIN_VALUES = [100, 200, 300, 400, 500];
+const COIN_SPAWN_CHANCE = 0.35;
 
 // =============================================================================
 
@@ -29,7 +31,7 @@ const MIN_PICKUP_DIST = 14;
  *
  * Usage:
  *   const pm = new PickupManager(scene, track, shadows);
- *   pm.onPickupCollected = (type, truckData) => { ... };
+ *   pm.onPickupCollected = (type, truckData, payload) => { ... };
  *   // each frame:
  *   pm.update(trucks, dt);
  *   // on race reset:
@@ -71,8 +73,12 @@ export class PickupManager {
   _spawnAll() {
     for (const { x, z } of this._generatePositions(this._count)) {
       const groundY = this._terrainQuery.heightAt(x, z);
-      this._pickups.push(new Pickup(x, z, groundY, 'boost', this.scene, this.shadows));
+      this._pickups.push(new Pickup(x, z, groundY, this._pickType(), this.scene, this.shadows));
     }
+  }
+
+  _pickType() {
+    return Math.random() < COIN_SPAWN_CHANCE ? 'coin' : 'boost';
   }
 
   /**
@@ -248,7 +254,14 @@ export class PickupManager {
               this.audioManager?.playSound('reload');
             }
           }
-          this.onPickupCollected?.(pickup.type, truckData);
+          let payload = undefined;
+          if (pickup.type === 'coin') {
+            payload = {
+              credits: COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)],
+              position: { x: pp.x, y: pp.y, z: pp.z },
+            };
+          }
+          this.onPickupCollected?.(pickup.type, truckData, payload);
 
           const t = setTimeout(() => pickup.setVisible(true), RESPAWN_DELAY_MS);
           this._respawnTimers.push(t);

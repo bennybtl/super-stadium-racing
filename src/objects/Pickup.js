@@ -8,7 +8,34 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders/OBJ/index.js";
 import nitroUrl from "../assets/nitro.obj?url";
+import coinUrl from "../assets/coin.obj?url";
 import { basicColors } from "../constants.js";
+
+// Keep visual sizing constants exported so PickupManager can match collect radius.
+const AURA_DIAMETER = 2.15;
+const AURA_THICKNESS = 0.14;
+const AURA_MAX_PULSE = 1.08;
+export const PICKUP_MAX_TORUS_DIAMETER = (AURA_DIAMETER + AURA_THICKNESS) * AURA_MAX_PULSE;
+
+function getPickupColor(type) {
+  switch (type) {
+    case 'boost':
+      return {
+        diffuse: basicColors.blue.diffuse,
+        emissive: basicColors.blue.emissive,
+      };
+    case 'coin':
+      return {
+        diffuse: new Color3(1.0, 0.82, 0.22),
+        emissive: new Color3(0.65, 0.45, 0.05),
+      };
+    default:
+      return {
+        diffuse: new Color3(0.95, 0.35, 0.35),
+        emissive: new Color3(0.7, 0.12, 0.12),
+      };
+  }
+}
 /**
  * Pickup — a single collectable item floating above the ground.
  *
@@ -17,6 +44,7 @@ import { basicColors } from "../constants.js";
  *
  * Supported types:
  *   'boost' — awards +1 nitro boost to the collecting truck
+ *   'coin'  — awards random season budget credits on collect
  */
 export class Pickup {
   /**
@@ -32,6 +60,9 @@ export class Pickup {
     this.scene  = scene;
     this._baseY = groundY + 1.2;
     this._time  = Math.random() * Math.PI * 2; // random phase so pickups don't all bob in sync
+    this._aura  = null;
+
+    const { diffuse, emissive } = getPickupColor(type);
 
     // Root transform — position drives the bob animation
     this._root = new TransformNode(`pickup_${type}_${x}_${z}`, scene);
@@ -46,8 +77,8 @@ export class Pickup {
     this._core.parent = this._root;
 
     const coreMat = new StandardMaterial(`pickupCoreMat_${x}_${z}`, scene);
-    coreMat.diffuseColor  = basicColors.blue.diffuse
-    coreMat.emissiveColor = basicColors.blue.emissive;
+    coreMat.diffuseColor  = diffuse;
+    coreMat.emissiveColor = emissive;
     coreMat.specularColor = new Color3(1.0, 1.0, 0.5);
     coreMat.specularPower = 16;
     this._core.material = coreMat;
@@ -62,16 +93,31 @@ export class Pickup {
     this._ring.parent = this._root;
 
     const ringMat = new StandardMaterial(`pickupRingMat_${x}_${z}`, scene);
-    ringMat.diffuseColor  = basicColors.blue.diffuse;
-    ringMat.emissiveColor = basicColors.blue.emissive;
+    ringMat.diffuseColor  = diffuse;
+    ringMat.emissiveColor = emissive;
     this._ring.material = ringMat;
     shadows.addShadowCaster(this._ring);
 
-    // Try stringing together async nitro.obj load
-    if (type === 'boost') {
-      const lastSlash = nitroUrl.lastIndexOf("/");
-      const rootUrl   = nitroUrl.substring(0, lastSlash + 1);
-      const fileName  = nitroUrl.substring(lastSlash + 1);
+    // Persistent visibility ring that stays even when custom pickup meshes load.
+    this._aura = MeshBuilder.CreateTorus(
+      `pickup_aura_${x}_${z}`,
+      { diameter: AURA_DIAMETER, thickness: AURA_THICKNESS, tessellation: 48 },
+      scene
+    );
+    this._aura.parent = this._root;
+
+    const auraMat = new StandardMaterial(`pickupAuraMat_${x}_${z}`, scene);
+    auraMat.diffuseColor = new Color3(0, 0, 0);
+    auraMat.emissiveColor = emissive;
+    auraMat.specularColor = new Color3(0, 0, 0);
+    auraMat.disableLighting = true;
+    auraMat.alpha = 0.95;
+    this._aura.material = auraMat;
+
+    const loadObjModel = (url, { tiltX = 0 } = {}) => {
+      const lastSlash = url.lastIndexOf("/");
+      const rootUrl = url.substring(0, lastSlash + 1);
+      const fileName = url.substring(lastSlash + 1);
 
       SceneLoader.ImportMeshAsync("", rootUrl, fileName, scene)
         .then((result) => {
@@ -82,11 +128,13 @@ export class Pickup {
           this._core.dispose();
           this._ring.dispose();
 
-          this._core = result.meshes[0];
+          this._core = new TransformNode(`pickup_obj_${type}_${x}_${z}`, scene);
           this._core.parent = this._root;
+          this._core.rotation.x = tiltX;
           this._ring = null;
 
           for (const m of result.meshes) {
+            m.parent = this._core;
             shadows.addShadowCaster(m);
             // Optionally apply the golden material if it didn't come with one.
             if (!m.material || m.material.name === "default material") {
@@ -95,8 +143,15 @@ export class Pickup {
           }
         })
         .catch(e => {
-          console.warn("Could not load nitro.obj, falling back to primitive geo.", e);
+          console.warn(`Could not load ${fileName}, falling back to primitive geo.`, e);
         });
+    };
+
+    // Try loading custom OBJ models per pickup type.
+    if (type === 'boost') {
+      loadObjModel(nitroUrl, { tiltX: -Math.PI / 4 });
+    } else if (type === 'coin') {
+      loadObjModel(coinUrl);
     }
   }
 
@@ -128,8 +183,7 @@ export class Pickup {
         this._core.rotation.y = this._time * 2.2;
         this._core.rotation.x = this._time * 0.9;
       } else {
-        // Just spin the loaded nitro model cleanly on Y, tilted at a 45 degree angle
-        this._core.rotation.x = -Math.PI / 4; 
+        // Loaded OBJ models spin cleanly around Y.
         this._core.rotation.y = this._time * 2.2;
       }
     }
@@ -138,13 +192,22 @@ export class Pickup {
     if (this._ring) {
       this._ring.rotation.z = this._time * 1.1;
     }
+
+    // Slow spin + subtle pulse to improve pickup readability at distance.
+    if (this._aura) {
+      const pulse = 1 + Math.sin(this._time * 3.8) * 0.08;
+      this._aura.scaling.set(pulse, pulse, pulse);
+      this._aura.rotation.y = this._time * 0.8;
+    }
   }
 
   dispose() {
     this._core?.material?.dispose();
     this._ring?.material?.dispose();
+    this._aura?.material?.dispose();
     this._core?.dispose();
     this._ring?.dispose();
+    this._aura?.dispose();
     this._root?.dispose();
   }
 }

@@ -69,7 +69,7 @@ export const UPGRADES = [
   {
     id: 'nitro',
     label: 'Nitro',
-    description: 'Add a boost charge to your pool (max 99, carries over between races)',
+    description: 'Add a nitro boost to your stock.',
     cost: 200,
     statKey: null,
     statDelta: 1,
@@ -222,6 +222,22 @@ export class SeasonManager {
     this._requireState();
     const player = this.state.drivers.find(d => d.isPlayer);
     return player?.balance ?? 5000;
+  }
+
+  /**
+   * Credit the player's season budget by an arbitrary amount.
+   * Used by in-race rewards like coin pickups.
+   * @param {number} amount
+   * @returns {number} new balance
+   */
+  addPlayerBalance(amount) {
+    this._requireState();
+    const player = this.state.drivers.find(d => d.isPlayer);
+    if (!player) return 0;
+    const delta = Math.max(0, Math.round(amount ?? 0));
+    player.balance += delta;
+    this.save();
+    return player.balance;
   }
 
   /**

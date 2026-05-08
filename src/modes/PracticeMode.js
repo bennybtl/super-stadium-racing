@@ -80,7 +80,10 @@ export class PracticeMode extends DriveMode {
     inputManager.onPause(() => menuManager.showPauseMenu());
     inputManager.onTogglePhotoMode(() => this.togglePhotoMode());
     this.setupDebugToggle(inputManager, debugManager);
-    inputManager.onReset(() => this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager));
+    inputManager.onReset(() => {
+      obstacleManager.rebuild();
+      this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
+    });
 
     // Wire up pause callbacks
     menuManager.onResume = () => {
@@ -88,6 +91,7 @@ export class PracticeMode extends DriveMode {
     };
 
     menuManager.onReset = () => {
+      obstacleManager.rebuild();
       inputManager.onResetCallback();
       menuManager.hideMenu();
     };
@@ -163,6 +167,11 @@ export class PracticeMode extends DriveMode {
       this.audioManager.dispose();
       this.audioManager = null;
     }
+    // Clear paused state so MenuMode shows the start menu rather than staying
+    // stuck on the pause screen.
+    this.controller.menuManager.currentMenu = null;
+    this.controller.menuManager.isPaused = false;
+    this.controller.menuManager._store.isPaused = false;
     super.teardown();
   }
 }
