@@ -13,29 +13,21 @@ import { basicColors } from "../constants.js";
 
 // Keep visual sizing constants exported so PickupManager can match collect radius.
 const AURA_DIAMETER = 2.15;
-const AURA_THICKNESS = 0.14;
+const AURA_THICKNESS = 0.24;
 const AURA_MAX_PULSE = 1.08;
 export const PICKUP_MAX_TORUS_DIAMETER = (AURA_DIAMETER + AURA_THICKNESS) * AURA_MAX_PULSE;
 
 function getPickupColor(type) {
   switch (type) {
     case 'boost':
-      return {
-        diffuse: basicColors.blue.diffuse,
-        emissive: basicColors.blue.emissive,
-      };
+      return basicColors.blue
     case 'coin':
-      return {
-        diffuse: new Color3(1.0, 0.82, 0.22),
-        emissive: new Color3(0.65, 0.45, 0.05),
-      };
+      return basicColors.yellow
     default:
-      return {
-        diffuse: new Color3(0.95, 0.35, 0.35),
-        emissive: new Color3(0.7, 0.12, 0.12),
-      };
-  }
+      return basicColors.red
+  };
 }
+
 /**
  * Pickup — a single collectable item floating above the ground.
  *
@@ -62,8 +54,6 @@ export class Pickup {
     this._time  = Math.random() * Math.PI * 2; // random phase so pickups don't all bob in sync
     this._aura  = null;
 
-    const { diffuse, emissive } = getPickupColor(type);
-
     // Root transform — position drives the bob animation
     this._root = new TransformNode(`pickup_${type}_${x}_${z}`, scene);
     this._root.position = new Vector3(x, this._baseY, z);
@@ -77,6 +67,8 @@ export class Pickup {
     this._core.parent = this._root;
 
     const coreMat = new StandardMaterial(`pickupCoreMat_${x}_${z}`, scene);
+    const { diffuse, emissive } = getPickupColor(type);
+
     coreMat.diffuseColor  = diffuse;
     coreMat.emissiveColor = emissive;
     coreMat.specularColor = new Color3(1.0, 1.0, 0.5);
@@ -197,7 +189,6 @@ export class Pickup {
     if (this._aura) {
       const pulse = 1 + Math.sin(this._time * 3.8) * 0.08;
       this._aura.scaling.set(pulse, pulse, pulse);
-      this._aura.rotation.y = this._time * 0.8;
     }
   }
 

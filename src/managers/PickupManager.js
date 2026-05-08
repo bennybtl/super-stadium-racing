@@ -6,7 +6,7 @@ import { TerrainQuery } from "./TerrainQuery.js";
 // =============================================================================
 
 /** Horizontal distance (m) at which a truck collects a pickup. */
-const COLLECT_RADIUS = PICKUP_MAX_TORUS_DIAMETER;
+const COLLECT_RADIUS = PICKUP_MAX_TORUS_DIAMETER * 1.5;
 
 /** Milliseconds before a collected pickup reappears. */
 const RESPAWN_DELAY_MS = 10_000;
@@ -19,7 +19,7 @@ const DEFAULT_COUNT = 6;
 const SPAWN_HALF_EXTENT = 65;
 
 /** Minimum distance (m) between any two pickup spawn points. */
-const MIN_PICKUP_DIST = 14;
+const MIN_PICKUP_DIST = 10;
 const COIN_VALUES = [100, 200, 300, 400, 500];
 const COIN_SPAWN_CHANCE = 0.35;
 
