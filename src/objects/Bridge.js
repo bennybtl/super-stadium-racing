@@ -39,6 +39,9 @@ export class Bridge {
     const collisionEnabled = true;
     const width = feature.width ?? 20;
     const depth = feature.depth ?? 8;
+    const transitionEnabled = feature.transitionEnabled === true;
+    const transitionDepth = feature.transitionDepth ?? 10;
+    const deckColliderEnabled = collision.deckCollider ?? !transitionEnabled;
     const driveColliderFriction = collision.friction ?? 1.0;
     const driveColliderApplyFriction = collision.applyFriction ?? false;
     // End-caps are an opt-in safety feature. Default off so bridges remain
@@ -47,7 +50,7 @@ export class Bridge {
     const endCapsOnDepth = collision.endCapsOnDepth ?? true;
     const endCapsOnWidth = collision.endCapsOnWidth ?? false;
 
-    // Visible bridge deck. This mesh is also the collision body.
+    // Visible bridge deck mesh.
     this.mesh = MeshBuilder.CreateBox(
       `bridge_render_${feature.centerX}_${feature.centerZ}`,
       {
@@ -61,26 +64,30 @@ export class Bridge {
     this.mesh.rotation.y = angleY;
     this.mesh.isPickable = true;
 
+    const rampJoinInset = transitionEnabled
+      ? Math.min(Math.max(0.8, thickness * 2), Math.max(0, depth / 2 - 0.25))
+      : 0;
+    const collisionDepth = Math.max(0.5, depth - rampJoinInset * 2);
     const collisionHeight = thickness;
     const collisionCenterY = deckY - thickness;
 
     this._collisionVolume = {
       x: feature.centerX,
-      y: collisionEnabled ? collisionCenterY : this.mesh.position.y,
+      y: (collisionEnabled && deckColliderEnabled) ? collisionCenterY : this.mesh.position.y,
       z: feature.centerZ,
       heading: angleY,
       halfWidth: width / 2,
-      halfHeight: collisionHeight / 2,
-      halfDepth: depth / 2,
+      halfHeight: (collisionEnabled && deckColliderEnabled) ? collisionHeight / 2 : thickness / 2,
+      halfDepth: (collisionEnabled && deckColliderEnabled) ? collisionDepth / 2 : depth / 2,
     };
 
-    if (collisionEnabled) {
+    if (collisionEnabled && deckColliderEnabled) {
       this.colliderMesh = MeshBuilder.CreateBox(
         `bridge_collision_${feature.centerX}_${feature.centerZ}`,
         {
           width,
           height: collisionHeight,
-          depth,
+          depth: collisionDepth,
         },
         scene
       );
@@ -122,8 +129,6 @@ export class Bridge {
     this._rampColliders = [];
     this._rampColliderAggregates = [];
 
-    const transitionEnabled = feature.transitionEnabled === true;
-    const transitionDepth = feature.transitionDepth ?? 10;
     const rampWidth = width;
 
     const createRampMesh = (sign, startX, startZ, topY, bottomY) => {
@@ -277,7 +282,6 @@ export class Bridge {
     this._endCaps = [];
     if (collisionEnabled && endCapsEnabled && (endCapsOnDepth || endCapsOnWidth)) {
       const endCapThickness = collision.endCapThickness ?? 1.2;
-      const endCapDrop = collision.endCapDrop ?? Math.max(30, (feature.height ?? 5) + 24);
       const endCapPad = collision.endCapPad ?? 0.4;
       const endCapFriction = collision.endCapFriction ?? 1.0;
       const endCapApplyFriction = collision.endCapApplyFriction ?? false;
@@ -289,7 +293,6 @@ export class Bridge {
       const dirWidthX = Math.cos(angleY);      // local +X axis
       const dirWidthZ = -Math.sin(angleY);
       const baseY = this.mesh.position.y - thickness / 2;
-      const capCenterY = baseY - endCapDrop / 2;
 
       const createEndCap = (sign, axis) => {
         const isDepthCap = axis === "depth";
@@ -303,20 +306,26 @@ export class Bridge {
         const dirX = isDepthCap ? dirDepthX : dirWidthX;
         const dirZ = isDepthCap ? dirDepthZ : dirWidthZ;
 
+        const capX = this.mesh.position.x + dirX * endOffset * sign;
+        const capZ = this.mesh.position.z + dirZ * endOffset * sign;
+        const terrainY = this.track.getHeightAt(capX, capZ);
+        const endCapHeight = Math.max(0.5, baseY - terrainY - 2);
+        const capCenterY = terrainY + endCapHeight / 2;
+
         const cap = MeshBuilder.CreateBox(
           `bridge_endcap_${axis}_${sign > 0 ? "pos" : "neg"}_${feature.centerX}_${feature.centerZ}`,
           {
             width: capWidth,
-            height: endCapDrop,
+            height: endCapHeight,
             depth: capDepth,
           },
           scene
         );
 
         cap.position = new Vector3(
-          this.mesh.position.x + dirX * endOffset * sign,
+          capX,
           capCenterY,
-          this.mesh.position.z + dirZ * endOffset * sign,
+          capZ,
         );
         cap.rotation.y = angleY;
         cap.isVisible = false;
