@@ -19,6 +19,7 @@ export class MenuManager {
     // Set by Vue store actions before calling the callbacks below
     this.selectedTrack   = null;
     this.selectedLaps    = 3;
+    this.selectedAIDrivers = 9;
     this.selectedVehicle = 'default_truck';
     this.selectedPlayerColor = null;
 
@@ -27,6 +28,7 @@ export class MenuManager {
     this._store.setBridge(this);
     this._store.selectedTrack = this.selectedTrack;
     this._store.selectedLaps = this.selectedLaps;
+    this._store.selectedAIDrivers = this.selectedAIDrivers;
     this._store.selectedVehicle = this.selectedVehicle;
     this._store.screen = 'title';
   }
@@ -60,7 +62,11 @@ export class MenuManager {
     if (!this.selectedLaps) {
       this.selectedLaps = 3;
     }
+    if (this.selectedAIDrivers == null) {
+      this.selectedAIDrivers = 9;
+    }
     this._store.selectedLaps = this.selectedLaps;
+    this._store.selectedAIDrivers = this.selectedAIDrivers;
 
     const isSeasonStart = mode === 'season';
     const nextTrackKey = isSeasonStart
@@ -102,6 +108,7 @@ export class MenuManager {
       nextTrackKey,
       trackName:        nextTrackName,
       laps:             this.selectedLaps,
+      aiDrivers:        isSeasonStart ? null : this.selectedAIDrivers,
       isSeason:         isSeasonStart,
       isSeasonComplete: false,
       standings:        [],
@@ -132,6 +139,14 @@ export class MenuManager {
     this._store.selectedLaps = laps;
     if (this._store.pitData) {
       this._store.pitData.laps = laps;
+    }
+  }
+
+  setSelectedAIDrivers(count) {
+    this.selectedAIDrivers = count;
+    this._store.selectedAIDrivers = count;
+    if (this._store.pitData && !this._store.pitData.isSeason) {
+      this._store.pitData.aiDrivers = count;
     }
   }
 

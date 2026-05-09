@@ -11,6 +11,7 @@ export const useMenuStore = defineStore('menu', () => {
   const vehicleList = ref([]); // [{ key, name }]
   const selectedTrack = ref(null);
   const selectedLaps = ref(3);
+  const selectedAIDrivers = ref(9);
   const selectedVehicle = ref('default_truck');
 
   // Season overlay data (null when not showing)
@@ -40,6 +41,7 @@ export const useMenuStore = defineStore('menu', () => {
   function selectPlayerVehicle(key) { if (!_bridge.value) return; _bridge.value.setSelectedVehicle(key); }
   function setSelectedTrack(key) { if (!_bridge.value) return; _bridge.value.setSelectedTrack(key); }
   function setSelectedLaps(laps) { if (!_bridge.value) return; _bridge.value.setSelectedLaps(laps); }
+  function setSelectedAIDrivers(count) { if (!_bridge.value) return; _bridge.value.setSelectedAIDrivers(count); }
   function showPitMenu(mode = 'singleRace') { _bridge.value?.showPitMenu(mode); }
   function startPracticeMode() {
     _bridge.value?.onStartPractice();
@@ -78,13 +80,13 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   return {
-    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedVehicle,
+    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedVehicle,
     postRaceData, pitData, seasonFinalData, singleRaceData,
     loadingVisible, loadingMessage,
     setBridge,
     showEditorTrackSelect,
     startEditor,
-    selectPlayerVehicle, setSelectedTrack, setSelectedLaps, showPitMenu, startPracticeMode,
+    selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, showPitMenu, startPracticeMode,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,

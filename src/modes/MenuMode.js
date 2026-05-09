@@ -78,6 +78,7 @@ export class MenuMode extends BaseMode {
       this.controller.goToRace({
         trackKey:        menuManager.selectedTrack,
         laps:            menuManager.selectedLaps,
+        aiCount:         menuManager.selectedAIDrivers,
         vehicleKey:      menuManager.selectedVehicle,
         playerColorKey:  menuManager.selectedPlayerColor,
       });

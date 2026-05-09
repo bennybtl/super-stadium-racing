@@ -143,6 +143,7 @@
             :modelValue="store.selectedTrack"
             @update:modelValue="store.setSelectedTrack($event)"
           />
+
           <div v-if="store.pitData.pitMode !== 'practice'">
             <label class="block text-slate-400 text-xs uppercase tracking-[2px] mb-2">Laps</label>
             <select
@@ -153,9 +154,21 @@
               <option v-for="n in [1, 3, 5, 10]" :key="n" :value="n">{{ n }} Lap{{ n > 1 ? 's' : '' }}</option>
             </select>
           </div>
+
+          <div v-if="store.pitData.pitMode !== 'practice'">
+            <label class="block text-slate-400 text-xs uppercase tracking-[2px] mb-2">AI Drivers</label>
+            <select
+              class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-3 text-left text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              :value="store.selectedAIDrivers"
+              @change="store.setSelectedAIDrivers(Number($event.target.value))"
+            >
+              <option v-for="n in [0, 3, 5, 7, 9]" :key="n" :value="n">{{ n }} AI Driver{{ n !== 1 ? 's' : '' }}</option>
+            </select>
+          </div>
+
         </div>
 
-          <div class="grid gap-4 mb-4">
+          <div class="flex flex-row gap-4 mb-4">
             <div class="text-left">
               <div class="text-slate-300 text-xs uppercase tracking-[2px] mb-3">Choose your truck</div>
               <div class="grid grid-cols-2 gap-3">
@@ -175,7 +188,7 @@
 
             <div class="text-left">
               <div class="text-slate-300 text-xs uppercase tracking-[2px] mb-3">Choose your truck color</div>
-              <div class="grid grid-cols-12 gap-2">
+              <div class="flex flex-row gap-3">
                 <button
                   v-for="option in colorOptions"
                   :key="option.key"
@@ -189,7 +202,7 @@
             </div>
           </div>
 
-        <div class="flex flex-col gap-3">
+        <div class="flex flex-row gap-3">
           <button
             class="bg-slate-700 text-white border-0 px-8 py-4 text-base font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.2)] transition duration-150 ease-in-out hover:bg-slate-600"
             @click="store.back('start')"

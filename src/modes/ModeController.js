@@ -161,6 +161,7 @@ export class ModeController {
       nextTrackKey:     trackKey,
       trackName,
       laps:             this.menuManager.selectedLaps,
+      aiDrivers:        this.menuManager.selectedAIDrivers,
       nextRaceNumber:   1,
       isSeason:         false,
       isSeasonComplete: false,
