@@ -14,7 +14,7 @@ export class TrackLoader {
    */
   async loadTrack(filename) {
     try {
-      const response = await fetch(`/tracks/${filename}`);
+      const response = await fetch(`${import.meta.env.BASE_URL}tracks/${filename}`);
       if (!response.ok) {
         throw new Error(`Failed to load track: ${response.statusText}`);
       }

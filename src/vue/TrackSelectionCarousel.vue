@@ -74,7 +74,7 @@ const displayTracks = computed(() => {
     return {
       key: track.key,
       name: track.name,
-      image: trackData?.image ? `/tracks/${trackData.image}` : null,
+      image: trackData?.image ? `${import.meta.env.BASE_URL}tracks/${trackData.image}` : null,
     };
   });
 });

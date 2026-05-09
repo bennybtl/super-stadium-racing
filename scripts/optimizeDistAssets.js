@@ -7,6 +7,8 @@ import ffmpegStatic from "ffmpeg-static";
 const projectRoot = process.cwd();
 const distDir = path.join(projectRoot, "dist");
 const distAssetsDir = path.join(distDir, "assets");
+const sourceTracksDir = path.join(projectRoot, "tracks");
+const distTracksDir = path.join(distDir, "tracks");
 const ffmpegPath = ffmpegStatic || "ffmpeg";
 const pngKeepSourceDirs = [
   path.join(projectRoot, "src", "assets", "brands"),
@@ -83,6 +85,30 @@ function loadPngKeepStemSet() {
 function getSourceStemFromDistAsset(filePath) {
   const stem = path.parse(filePath).name;
   return stem.replace(/-[A-Za-z0-9_-]{6,}$/, "");
+}
+
+function copyTrackStaticFiles() {
+  if (!fs.existsSync(sourceTracksDir)) {
+    return { copied: 0 };
+  }
+
+  const allowedExt = new Set([".json", ".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+  fs.mkdirSync(distTracksDir, { recursive: true });
+
+  let copied = 0;
+  const files = walkFiles(sourceTracksDir);
+  for (const sourcePath of files) {
+    const ext = path.extname(sourcePath).toLowerCase();
+    if (!allowedExt.has(ext)) {
+      continue;
+    }
+
+    const targetPath = path.join(distTracksDir, path.basename(sourcePath));
+    fs.copyFileSync(sourcePath, targetPath);
+    copied += 1;
+  }
+
+  return { copied };
 }
 
 async function optimizeImages(files) {
@@ -253,6 +279,7 @@ async function main() {
 
   const imageStats = await optimizeImages(beforeFiles);
   const audioStats = convertWavToOgg(beforeFiles);
+  const trackFiles = copyTrackStaticFiles();
   const rewrittenFiles = rewriteBundleReferences([...imageStats.renames, ...audioStats.renames]);
 
   const afterFiles = walkFiles(distAssetsDir);
@@ -265,6 +292,7 @@ async function main() {
   console.log(`[optimize-dist-assets] png files kept by brands/decals allowlist: ${imageStats.keptBySourceAllowlist}`);
   console.log(`[optimize-dist-assets] png conversion skipped (output larger): ${imageStats.convertedLargerSkipped}`);
   console.log(`[optimize-dist-assets] wav files converted to ogg: ${audioStats.convertedCount}`);
+  console.log(`[optimize-dist-assets] track files copied to dist/tracks: ${trackFiles.copied}`);
   console.log(`[optimize-dist-assets] bundle files rewritten: ${rewrittenFiles}`);
   console.log(
     `[optimize-dist-assets] size: ${formatMb(beforeBytes)} -> ${formatMb(afterBytes)} (${formatMb(savedBytes)} saved)`
