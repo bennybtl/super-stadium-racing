@@ -10,10 +10,10 @@ import {
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import { basicColors } from "../constants.js";
-import tireStackUrl from "../assets/tire-stack.obj?url";
-import barrelUrl from "../assets/barrel.obj?url";
-import hayBaleUrl from "../assets/hay-bale.obj?url";
-import softWallUrl from "../assets/soft-wall.obj?url";
+import tireStackUrl from "../assets/models/tire-stack.obj?url";
+import barrelUrl from "../assets/models/barrel.obj?url";
+import hayBaleUrl from "../assets/models/hay-bale.obj?url";
+import softWallUrl from "../assets/models/soft-wall.obj?url";
 
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;

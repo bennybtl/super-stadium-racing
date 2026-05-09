@@ -162,7 +162,7 @@ export class NormalMapDecalEditor {
       width:     10,
       depth:     10,
       angle:     0,
-      normalMap: '6481-normal.jpg',
+      normalMap: 'normals/6481-normal.jpg',
       repeatU:   1,
       repeatV:   1,
       intensity: 0.5,
@@ -187,7 +187,7 @@ export class NormalMapDecalEditor {
     s.normalMapDecal.width     = feature.width;
     s.normalMapDecal.depth     = feature.depth;
     s.normalMapDecal.angle     = feature.angle ?? 0;
-    s.normalMapDecal.normalMap = feature.normalMap || '6481-normal.jpg';
+    s.normalMapDecal.normalMap = feature.normalMap || 'normals/6481-normal.jpg';
     s.normalMapDecal.repeatU   = feature.repeatU ?? 1;
     s.normalMapDecal.repeatV   = feature.repeatV ?? 1;
     s.normalMapDecal.intensity = feature.intensity ?? 0.5;

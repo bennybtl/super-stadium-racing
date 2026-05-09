@@ -227,7 +227,7 @@ export const useEditorStore = defineStore('editor', () => {
     width: 10,
     depth: 10,
     angle: 0,
-    normalMap: '6481-normal.jpg',
+    normalMap: 'normals/6481-normal.jpg',
     repeatU: 1,
     repeatV: 1,
     intensity: 0.5,

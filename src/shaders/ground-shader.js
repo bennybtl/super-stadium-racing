@@ -9,12 +9,12 @@
 import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 
-const STEEP_DIRT_NORMAL_MAP = '7733-normal.jpg';
+const STEEP_DIRT_NORMAL_MAP = 'normals/7733-normal.jpg';
 const STEEP_DIRT_SLOPE_START = 18;
 const STEEP_DIRT_SLOPE_END = 34;
 const STEEP_DIRT_SAMPLE_DISTANCE = 2.5;
 const STEEP_DIRT_TILE_WORLD_UNITS = 10;
-const STEEP_GRASS_NORMAL_MAP = TERRAIN_TYPES.LOAMY_DIRT.normalMap || '6481-normal.jpg';
+const STEEP_GRASS_NORMAL_MAP = TERRAIN_TYPES.LOAMY_DIRT.normalMap || 'normals/6481-normal.jpg';
 const STEEP_GRASS_SLOPE_START = 16;
 const STEEP_GRASS_SLOPE_END = 30;
 const STEEP_GRASS_SAMPLE_DISTANCE = 6.5;

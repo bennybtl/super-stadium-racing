@@ -8,7 +8,7 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import barrelUrl from "../assets/barrel.obj?url";
+import barrelUrl from "../assets/models/barrel.obj?url";
 import { basicColors } from "../constants";
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;

@@ -47,9 +47,9 @@
       :value="editor.normalMapDecal.normalMap"
       @change="editor.setNormalMapDecalNormalMap($event.target.value)"
     >
-      <option value="6481-normal.jpg">6481 (Fine Gravel)</option>
-      <option value="7632-normal.jpg">7632 (Rough)</option>
-      <option value="sample-normal.png">Sample</option>
+      <option value="normals/6481-normal.jpg">6481 (Fine Gravel)</option>
+      <option value="normals/7632-normal.jpg">7632 (Rough)</option>
+      <option value="normals/sample-normal.png">Sample</option>
     </select>
 
     <!-- Repeat U -->

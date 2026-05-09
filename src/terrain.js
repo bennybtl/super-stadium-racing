@@ -10,7 +10,7 @@ export const TERRAIN_TYPES = {
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     dragMultiplier: 0.5,
     roughness: 0,            // Perfectly smooth
-    normalMap: '616-normal.jpg',
+    normalMap: 'normals/616-normal.jpg',
     normalMapIntensity: 0.6, // Subtle road surface texture
     specular: 0.18,          // Slightly shiny pavement
   },
@@ -18,13 +18,13 @@ export const TERRAIN_TYPES = {
     name: "packed_dirt",
     gripMultiplier: 2.0,    // Baseline
     color: TERRAIN_COLORS.packed_dirt,
-    diffuseTexture: '702f91fc-f75b-405a-a707-ff31e4a1803d.png',
+    diffuseTexture: 'textures/dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 10,
     diffuseTextureBlendMode: 'soft-light',
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.8,
     roughness: 0.1,          // Very slight — compacted surface
-    normalMap: 'cloud_h-normal.png',
+    normalMap: 'normals/cloud_h-normal.png',
     normalMapIntensity: 0.8, // Moderate dirt texture
     specular: 0.10,          // Matte dry dirt
   },
@@ -34,7 +34,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.loamy_dirt,
     dragMultiplier: 1.2,
     roughness: 0.25,         // Noticeable ruts and loose clumps
-    normalMap: '6481-normal.jpg',
+    normalMap: 'normals/6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
     specular: 0.03,          // Matte dry dirt
   },
@@ -44,7 +44,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.loose_dirt,
     dragMultiplier: 0.9,
     roughness: 0.15,         // Noticeable ruts and loose clumps
-    normalMap: '6481-normal.jpg',
+    normalMap: 'normals/6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
     specular: 0.05,          // Matte dry dirt
   },
@@ -54,7 +54,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.mud,
     dragMultiplier: 2.9,    // Slows you down
     roughness: 0.15,         // Sloppy but soft — low-impact bumps
-    normalMap: 'mud.png',
+    normalMap: 'normals/mud.png',
     normalMapIntensity: 0.9, // Deep muddy surface detail
     specular: 0.4,          // Glistening wet mud
   },
@@ -65,7 +65,7 @@ export const TERRAIN_TYPES = {
     smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
     dragMultiplier: 6.0,     // Very high drag
     roughness: 0,            // Smooth surface — drag is the hazard
-    diffuseTexture: 'water.jpg',
+    diffuseTexture: 'normal/water.jpg',
     diffuseTextureWorldUnitsPerTile: 12,
     diffuseTextureOpacity: 0.3,
     diffuseDepthThreshold: 0.35,
@@ -73,7 +73,7 @@ export const TERRAIN_TYPES = {
     diffuseDepthGain: 1.2,
     diffuseDepthMinBlend: 0.1,
     diffuseDepthColor: new Color3(0.05, 0.36, 0.72),
-    normalMap: 'water.jpg',
+    normalMap: 'normals/water.jpg',
     normalMapIntensity: 0.5, // Gentle ripple detail
     specular: 0.92,          // Highly reflective water surface
   },
@@ -83,7 +83,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.rocky, // Dark reddish-brown rock
     dragMultiplier: 2.5,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
-    normalMap: 'rocky.jpg',
+    normalMap: 'normals/rocky.jpg',
     normalMapIntensity: 1.5, // Strong rocky surface detail
     specular: 0.14,          // Matte rock
   },
@@ -93,7 +93,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.grass, // Green grass
     dragMultiplier: 1.2,     // Slightly slows down
     roughness: 0.3,          // Slightly rough — soft impacts
-    normalMap: 'grass.jpg',
+    normalMap: 'normals/grass.jpg',
     normalMapIntensity: 1.5, // Strong grass surface detail
     specular: 0.14,          // Matte grass
   },

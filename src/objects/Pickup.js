@@ -7,8 +7,8 @@ import {
   SceneLoader,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/OBJ/index.js";
-import nitroUrl from "../assets/nitro.obj?url";
-import coinUrl from "../assets/coin.obj?url";
+import nitroUrl from "../assets/models/nitro.obj?url";
+import coinUrl from "../assets/models/coin.obj?url";
 import { basicColors } from "../constants.js";
 
 // Keep visual sizing constants exported so PickupManager can match collect radius.
