@@ -40,7 +40,7 @@ export class TrackLoader {
    * Load all tracks from the tracks directory
    */
   async loadAllTracks() {
-    const modules = import.meta.glob('/tracks/*.json', { query: '?raw', import: 'default' });
+    const modules = import.meta.glob('/public/tracks/*.json', { query: '?raw', import: 'default' });
 
     const loadPromises = Object.entries(modules).map(async ([path, load]) => {
       try {
