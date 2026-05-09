@@ -28,8 +28,7 @@ function seededRng(seed) {
 }
 
 const BARREL_COLOR    = basicColors.yellow.diffuse;
-const BARREL_FLASH    = basicColors.green.diffuse;
-const FLASH_DURATION  = 1000; // ms
+const BARREL_ACTIVE   = new Color3(0.25, 1.0, 0.25);
 const BARREL_MODEL_SCALE = 0.1;
 const BARREL_PIVOT_Y = -0.55;
 const HANDLE_HEIGHT = 2.5;
@@ -79,14 +78,21 @@ export class Checkpoint {
 
   // ─── Public API ───────────────────────────────────────────────────────────
 
-  /** Flash barrels green for one second to signal a successful pass. */
-  flashGreen() {
-    if (this._barrel1Mat) this._barrel1Mat.diffuseColor = BARREL_FLASH.clone();
-    if (this._barrel2Mat) this._barrel2Mat.diffuseColor = BARREL_FLASH.clone();
-    setTimeout(() => {
-      if (this._barrel1Mat) this._barrel1Mat.diffuseColor = BARREL_COLOR.clone();
-      if (this._barrel2Mat) this._barrel2Mat.diffuseColor = BARREL_COLOR.clone();
-    }, FLASH_DURATION);
+  /** Highlight this checkpoint when it is the player's next target. */
+  setActive(isActive) {
+    const diffuse = isActive ? BARREL_ACTIVE : BARREL_COLOR;
+    const emissive = isActive
+      ? new Color3(0.15, 0.45, 0.15)
+      : Color3.Black();
+
+    if (this._barrel1Mat) {
+      this._barrel1Mat.diffuseColor = diffuse.clone();
+      this._barrel1Mat.emissiveColor = emissive.clone();
+    }
+    if (this._barrel2Mat) {
+      this._barrel2Mat.diffuseColor = diffuse.clone();
+      this._barrel2Mat.emissiveColor = emissive.clone();
+    }
   }
 
   /** Redraw the ground decal after a renumber or width change. */
@@ -155,6 +161,7 @@ export class Checkpoint {
 
     const barrelMat = new StandardMaterial(`${name}Mat`, scene);
     barrelMat.diffuseColor = BARREL_COLOR.clone();
+    barrelMat.emissiveColor = Color3.Black();
     barrelMat.specularColor = new Color3(0.12, 0.08, 0.05);
 
     const pivot = new TransformNode(`${name}Pivot`, scene);

@@ -103,6 +103,7 @@ export class RaceMode extends DriveMode {
       if (raceEnded) return;
       raceEnded = true;
       if (dnfTimer) { clearDnfTimer(); }
+      checkpointManager.clearPlayerCheckpointHighlight();
 
       // Stop the player engine loop immediately when the race ends.
       // The post-race summary screen is shown before this mode is torn down,
@@ -307,6 +308,7 @@ export class RaceMode extends DriveMode {
     trucks.forEach(td => {
       td.gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
     });
+    checkpointManager.updatePlayerCheckpointHighlight(playerTruckData.gameState.lastCheckpointPassed);
 
     // -- UI --
     const uiManager = new UIManager();
@@ -459,6 +461,7 @@ export class RaceMode extends DriveMode {
       });
 
       checkpointManager.rebuild();
+      checkpointManager.updatePlayerCheckpointHighlight(playerTruckData.gameState.lastCheckpointPassed);
       wallManager.rebuild();
       obstacleManager.rebuild();
       pickupManager.rebuild();
@@ -663,6 +666,7 @@ export class RaceMode extends DriveMode {
           truckData.gameState.checkpointCount = 0;
           checkpointManager.resetForTruck(truckData.id);
           if (truckData.isPlayer) {
+            checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
             uiManager.updateCheckpoints(0);
             // Auto-start telemetry recording when player crosses the start line
             if (telemetryRecorder.recording) {
@@ -707,6 +711,7 @@ export class RaceMode extends DriveMode {
         }
 
         if (truckData.isPlayer) {
+          checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
           uiManager.updateCheckpoints(newCount);
         }
 
@@ -718,6 +723,8 @@ export class RaceMode extends DriveMode {
           checkpointManager.resetForTruck(truckData.id);
 
           if (truckData.isPlayer) {
+            if (lapCount >= totalLaps) checkpointManager.clearPlayerCheckpointHighlight();
+            else checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
             uiManager.updateLaps(lapCount, totalLaps);
             uiManager.updateCheckpoints(0);
             console.log(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);

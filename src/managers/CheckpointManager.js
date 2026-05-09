@@ -13,6 +13,8 @@ export class CheckpointManager {
     this.track = track;
     this.shadows = shadows;
     this.checkpointMeshes = []; // array of Checkpoint instances
+    this._maxCheckpointNumber = 0;
+    this._activeCheckpointNumber = null;
   }
 
   createCheckpoints() {
@@ -23,6 +25,7 @@ export class CheckpointManager {
         maxCheckpointNumber = Math.max(maxCheckpointNumber, feature.checkpointNumber);
       }
     }
+    this._maxCheckpointNumber = maxCheckpointNumber;
 
     for (const feature of this.track.features) {
       if (feature.type === "checkpoint") {
@@ -30,6 +33,8 @@ export class CheckpointManager {
         this.createSingleCheckpoint(feature, isFinish);
       }
     }
+
+    this._applyActiveCheckpointHighlight();
   }
 
   /**
@@ -78,7 +83,6 @@ export class CheckpointManager {
       // Trigger only if truck is within width, crosses the line, AND moving in correct direction
       if (perpDist < feature.width / 2 && Math.abs(forwardDist) < 2 && velocityDotForward > 0) {
         feature.passedBy.add(truckId);
-        checkpoint.flashGreen();
         return { passed: true, index: feature.checkpointNumber };
       }
     }
@@ -90,11 +94,14 @@ export class CheckpointManager {
     for (const cp of this.checkpointMeshes) {
       cp.feature.passedBy = new Set();
     }
+    this.clearPlayerCheckpointHighlight();
   }
 
   dispose() {
     for (const cp of this.checkpointMeshes) cp.dispose();
     this.checkpointMeshes = [];
+    this._maxCheckpointNumber = 0;
+    this._activeCheckpointNumber = null;
   }
 
   rebuild() {
@@ -112,6 +119,23 @@ export class CheckpointManager {
 
   getTotalCheckpoints() {
     return this.checkpointMeshes.length;
+  }
+
+  updatePlayerCheckpointHighlight(lastCheckpointPassed) {
+    if (this._maxCheckpointNumber <= 0) {
+      this.clearPlayerCheckpointHighlight();
+      return;
+    }
+
+    this._activeCheckpointNumber = lastCheckpointPassed >= this._maxCheckpointNumber
+      ? 1
+      : lastCheckpointPassed + 1;
+    this._applyActiveCheckpointHighlight();
+  }
+
+  clearPlayerCheckpointHighlight() {
+    this._activeCheckpointNumber = null;
+    this._applyActiveCheckpointHighlight();
   }
   
   /**
@@ -133,9 +157,21 @@ export class CheckpointManager {
     });
 
     const maxNum = checkpointFeatures.length;
+    this._maxCheckpointNumber = maxNum;
     for (const checkpoint of this.checkpointMeshes) {
       const isFinish = maxNum > 0 && checkpoint.feature.checkpointNumber === maxNum;
       checkpoint.updateDecal(checkpoint.feature.checkpointNumber, isFinish);
+    }
+
+    this._applyActiveCheckpointHighlight();
+  }
+
+  _applyActiveCheckpointHighlight() {
+    for (const checkpoint of this.checkpointMeshes) {
+      checkpoint.setActive(
+        this._activeCheckpointNumber !== null &&
+        checkpoint.feature.checkpointNumber === this._activeCheckpointNumber
+      );
     }
   }
 }
