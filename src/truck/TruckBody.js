@@ -1,6 +1,6 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, TransformNode, DynamicTexture } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import truckTireUrl  from "../assets/truck-tire-2.obj?url";
+import truckTireUrl  from "../assets/truck-tire.obj?url";
 
 // Skip MTL lookup — materials are applied programmatically
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;

@@ -143,7 +143,7 @@ export class Pickup {
     if (type === 'boost') {
       loadObjModel(nitroUrl, { tiltX: -Math.PI / 4 });
     } else if (type === 'coin') {
-      loadObjModel(coinUrl);
+      loadObjModel(coinUrl, { tiltX: Math.PI / 2 });
     }
   }
 

@@ -1,6 +1,6 @@
 # Blender 5.1.1
 # www.blender.org
-mtllib offroad-buggy-opt.mtl
+mtllib barrel.mtl
 o offroad-buggy-opt
 v 0.500000 1.564964 0.039560
 v 0.500000 1.537171 -0.037676
