@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <div class="fixed left-1/2 bottom-4 -translate-x-1/2 z-[1200] w-[min(24rem,calc(100vw-1rem))] max-w-[24rem]">
+    <div class="fixed left-1/2 bottom-4 -translate-x-1/2 z-[1200]">
       <div class="rounded-[14px] overflow-hidden border border-[#6a5c48] bg-[#0c0c0c]/60 px-2 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.62)] backdrop-blur-sm">
         <div class="grid gap-px" :style="gridStyle">
           <div class="flex h-full items-center justify-end text-right font-mono text-[10px] font-black uppercase tracking-[0.28em] text-[#d2cbc3] leading-none">
@@ -39,7 +39,7 @@
             class="text-center"
           >
             <div class="rounded-md border font-mono text-white tabular-nums" :style="cellStyle(truck, index, truck.finished ? 0.45 : 1)">
-              {{ truck.lap }} / {{ truck.totalLaps }}
+              {{ truck.lap }}/{{ truck.totalLaps }}
             </div>
           </div>
 
@@ -86,7 +86,7 @@ import { useRaceStore } from './store.js';
 const race = useRaceStore();
 
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `5.75rem repeat(${Math.max(1, race.truckStatus.length)}, minmax(0, 1fr))`,
+  gridTemplateColumns: `3.75rem repeat(${Math.max(1, race.truckStatus.length)}, minmax(0, 1fr))`,
 }));
 
 const formattedTime = computed(() => {

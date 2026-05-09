@@ -177,10 +177,10 @@
                   :key="v.key"
                   type="button"
                   @click="store.selectPlayerVehicle(v.key)"
-                  class="rounded-lg transition border-2 "
+                  class="rounded-lg transition border-2 px-4"
                   :class="v.key === store.selectedVehicle ? 'border-amber-400 bg-slate-800' : 'border-slate-700  bg-slate-900'"
                 >
-                  <div class="text-sm text-slate-400 uppercase tracking-[2px] mb-2">Vehicle</div>
+                  <div class="text-sm text-slate-400 uppercase tracking-[2px]">Vehicle</div>
                   <div class="text-white text-lg font-semibold">{{ v.name }}</div>
                 </button>
               </div>
