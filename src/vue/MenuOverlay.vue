@@ -68,7 +68,7 @@
 
         <!-- ── Settings ── -->
         <template v-else-if="store.screen === 'settings'">
-          <button class="menu-button pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.back('start')">Back</button>
+          <SettingsMenu @back="store.back('start')" />
         </template>
 
       </div>
@@ -80,6 +80,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useMenuStore } from './store.js';
+import SettingsMenu from './SettingsMenu.vue';
 
 const store = useMenuStore();
 const titleBackgroundStyle = {
