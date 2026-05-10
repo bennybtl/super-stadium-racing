@@ -1,0 +1,12 @@
+const e=`{
+  "id": "redoubt_about",
+  "packId": "offroad_pack_2",
+  "image": "redoubt_about.jpg",
+  "name": "Redoubt-About",
+  "hidden": true,
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
+  "features": [
+  ]
+}`;export{e as default};

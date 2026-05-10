@@ -1,0 +1,12 @@
+const a=`{
+  "id": "volcano_valley",
+  "packId": "offroad_pack_2",
+  "image": "volcano_valley.jpg",
+  "name": "Volcano Valley",
+  "hidden": true,
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
+  "features": [
+  ]
+}`;export{a as default};

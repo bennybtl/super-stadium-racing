@@ -1,0 +1,441 @@
+const n=`{
+  "id": "wipeout",
+  "packId": "offroad_pack_1",
+  "image": "wipeout.jpg",
+  "name": "Wipeout",
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "width": 3.2,
+    "intensity": 0.18,
+    "laneSpacing": 1.3,
+    "alphaBreakup": 0.28,
+    "pathWander": 0.5,
+    "edgeSoftness": 0.75,
+    "secondaryPathCount": 4,
+    "secondaryPathStrength": 0.62,
+    "secondaryPathSpacing": 0.1,
+    "seed": 1337
+  },
+  "features": [
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -60.797600535678676,
+          "z": -73.19942092671609,
+          "radius": 4
+        },
+        {
+          "x": -74.79696020751956,
+          "z": -57.25743563619644,
+          "radius": 1.5
+        },
+        {
+          "x": -73.83146640642524,
+          "z": -35.40451277694419,
+          "radius": 5.5
+        },
+        {
+          "x": -37.23990152087338,
+          "z": -13.686911259462484,
+          "radius": 15
+        },
+        {
+          "x": -32.054678052219245,
+          "z": -2.4054918752487247,
+          "radius": 15.5
+        },
+        {
+          "x": -80,
+          "z": -3.299414599495279,
+          "radius": 10.5
+        },
+        {
+          "x": -79.97194071692272,
+          "z": 80,
+          "radius": 8
+        },
+        {
+          "x": 79.99487191318303,
+          "z": 80,
+          "radius": 10
+        },
+        {
+          "x": 80,
+          "z": 36.84426083395072,
+          "radius": 9
+        },
+        {
+          "x": 33.03284289951669,
+          "z": 3.182489596909278,
+          "radius": 7
+        },
+        {
+          "x": 31.00146186454102,
+          "z": -9.46283090231853,
+          "radius": 12
+        },
+        {
+          "x": 78.18448427885917,
+          "z": -40.15283931546539,
+          "radius": 9
+        },
+        {
+          "x": 67.75906072731529,
+          "z": -77.31082446399333,
+          "radius": 6
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 8.5,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -51.76449574957897,
+          "z": -52.06007577845067,
+          "radius": 6.5
+        },
+        {
+          "x": -16.478668041607467,
+          "z": -28.09494109974127,
+          "radius": 10
+        },
+        {
+          "x": 12.281736248046299,
+          "z": -28.506380671521192,
+          "radius": 4
+        },
+        {
+          "x": 49.9084403343673,
+          "z": -55.06325350123905,
+          "radius": 12.5
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": 25.12607569025822,
+          "z": 27.316604537440284,
+          "radius": 8
+        },
+        {
+          "x": -51.34919125196484,
+          "z": 28.374130299948753,
+          "radius": 6
+        },
+        {
+          "x": -52.60778045970711,
+          "z": 50.05410281723115,
+          "radius": 8.5
+        },
+        {
+          "x": 51.01758193222407,
+          "z": 50.71895877590545,
+          "radius": 8
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.1,
+      "closed": true
+    },
+    {
+      "type": "meshGrid",
+      "centerX": 0,
+      "centerZ": 0,
+      "width": 160,
+      "depth": 160,
+      "cols": 11,
+      "rows": 11,
+      "heights": [
+        3.5,
+        6,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        6,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6.5,
+        6,
+        9,
+        7.5,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5.5,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2.5,
+        1.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3.5,
+        2.5,
+        0,
+        0,
+        -2.5,
+        -2.5,
+        -2,
+        0,
+        10,
+        8,
+        4,
+        4.5,
+        4,
+        3.5,
+        0,
+        -2.5,
+        -2,
+        0,
+        10,
+        7.5,
+        9,
+        9,
+        6,
+        5.5,
+        5,
+        5,
+        0,
+        0,
+        4,
+        9,
+        11.5,
+        12,
+        13,
+        7,
+        6.5,
+        6,
+        5,
+        0,
+        0,
+        4,
+        12,
+        12,
+        12.5,
+        13,
+        8,
+        8,
+        8,
+        5,
+        0,
+        0,
+        4,
+        12,
+        13,
+        13,
+        13
+      ],
+      "smoothing": 1
+    },
+    {
+      "type": "hill",
+      "centerX": -60,
+      "centerZ": 22.289914757934966,
+      "height": -5,
+      "terrainType": "water",
+      "radiusX": 13.5,
+      "radiusZ": 13.5,
+      "angle": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": -2.4756015877775646,
+      "centerZ": -3.6823647174561387,
+      "width": 10,
+      "depth": 19,
+      "height": -5,
+      "transition": 11,
+      "terrainType": "water",
+      "angle": 59
+    },
+    {
+      "type": "hill",
+      "centerX": 31.49999730242169,
+      "centerZ": 1.8125505541266307,
+      "height": 5,
+      "terrainType": "loose_dirt",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
+    },
+    {
+      "type": "hill",
+      "centerX": 14.99999730242169,
+      "centerZ": 23.81255055412663,
+      "height": 5,
+      "terrainType": "loose_dirt",
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
+    },
+    {
+      "type": "hill",
+      "centerX": 33.2340324925118,
+      "centerZ": -61.59058006100137,
+      "height": 5,
+      "terrainType": null,
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": 56.05448361115528,
+      "centerZ": -34.22101999584942,
+      "width": 5,
+      "depth": 5.5,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 3,
+      "heightAtMax": -2,
+      "angle": 147
+    },
+    {
+      "type": "squareHill",
+      "centerX": 38.98176085825788,
+      "centerZ": -40.32558783344928,
+      "width": 5,
+      "depth": 5.5,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 3,
+      "heightAtMax": 0,
+      "angle": 147
+    },
+    {
+      "type": "squareHill",
+      "centerX": 39.914377275605446,
+      "centerZ": -25.532394876800353,
+      "width": 5,
+      "depth": 5.5,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 3.5,
+      "heightAtMax": -2,
+      "angle": 147
+    },
+    {
+      "type": "squareHill",
+      "centerX": 19.19070552197629,
+      "centerZ": -27.157574100601074,
+      "width": 5,
+      "depth": 5.5,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 3,
+      "heightAtMax": 0,
+      "angle": 147
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": 74.74209028727287,
+          "z": -45.27312906208094
+        },
+        {
+          "x": 65.0283199122934,
+          "z": -76.89798310867485
+        },
+        {
+          "x": -59.97331012046288,
+          "z": -73.67650982399248
+        },
+        {
+          "x": -73.36753849179689,
+          "z": -58.0354042379768
+        }
+      ],
+      "width": 6,
+      "cornerRadius": 2.5,
+      "terrainType": "loamy_dirt"
+    },
+    {
+      "type": "trackSign",
+      "x": -2.7437379525497496,
+      "z": -43.10128198333641,
+      "name": "Wipe-Out",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "scale": 1.65,
+      "heightOffset": 3,
+      "width": 16.5
+    },
+    {
+      "type": "hill",
+      "centerX": -48.5,
+      "centerZ": -51.710085242065034,
+      "height": 1,
+      "terrainType": "loose_dirt",
+      "radiusX": 15.5,
+      "radiusZ": 15.5,
+      "angle": 0
+    }
+  ]
+}
+`;export{n as default};

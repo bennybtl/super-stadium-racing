@@ -27,6 +27,24 @@
 
 ----
 
+# Track Pack ZIP file structure
+> trackName is the "trackId" of the track in JSON file
+tracks/
+  trackId.json
+  trackId.jpg
+
+----
+
+# Local Storage Namespacing
+
+season.save
+settings.controls
+settings.audio
+settings.display
+tracks.custom.<trackId>
+
+----
+
 # Start Screen
 - Displays the background image from src/assets/title.png
 - A single button animates from the bottom of the screen reading "START"
@@ -99,7 +117,7 @@ Navigation
       - Navigates to the PIT SCREEN
 
 ## SEASON RACE PAUSE
-  > Escape while in the practice displays this menu
+  > Escape while in a season race displays this menu
   - RESUME
   - FORFEIT RACE
     - Display "ARE YOU SURE?" pop-up
@@ -109,7 +127,7 @@ Navigation
 
 # PIT SCREEN
 - Display the src/vue/TruckSelection.vue component (need to create)
-- Display the src/vue/TruckUpgrades component (need to create)
+- Display the src/vue/TruckUpgrades.vue component (need to create)
   - if season: SAVE & EXIT
     - Save state to localStorage
     - Exits to MAIN MENU
@@ -123,6 +141,10 @@ Navigation
   > Track Edits persist in localStorage
   - Display the src/vue/TrackSelectionCarousel.vue component
   - Click a track to enter the editor
+  - At the bottom of the list of tracks
+  - ------------
+  - BACK
+    - return to the MAIN MENU
 
 ## TRACK EDITOR PAUSE
   > Escape while in the editor displays this menu
@@ -135,7 +157,7 @@ Navigation
   - SELECT TRACK
     - Exits the editor and navigates to the TRACK EDITOR menu
   - EXIT
-    - Exits the editor and navigats to the MAIN MENU
+    - Exits the editor and navigates to the MAIN MENU
 
 
 # SETTINGS MENU
@@ -176,7 +198,7 @@ Navigation
 ## SETTINGS MENU > MANAGE TRACKS
   - LOAD TRACKS
     - Upload all tracks JSON files and images in a zip file
-    - These should we written to local storage
+    - These should be written to local storage
   - EXPORT TRACKS
     - Download all tracks JSON files and images in a zip file
   - RESET TRACKS
@@ -185,8 +207,3 @@ Navigation
   - ------------
   - BACK
 
-# Track Pack ZIP file stucture
-> trackName is the "trackId" of the track in JSON file
-tracks/
-  trackId.json
-  trackId.jpg

@@ -13,3 +13,49 @@
     @apply pointer-events-none;
   }
 }
+
+@layer components {
+  .menu-panel {
+    width: min(90vw, 980px);
+    max-height: 80vh;
+    border-radius: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 3px solid #101010;
+    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.65);
+    background-color: rgba(0, 0, 0, 0.45);
+    background-blend-mode: multiply;
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    backdrop-filter: blur(10px) saturate(120%);
+  }
+
+  .menu-button {
+    border: 0;
+    background: transparent;
+    color: #ffffff;
+    font-style: italic;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-shadow:
+      -2px -2px 0 #000,
+       2px -2px 0 #000,
+      -2px  2px 0 #000,
+       2px  2px 0 #000,
+       0px -2px 0 #000,
+       0px  2px 0 #000,
+      -2px  0px 0 #000,
+       2px  0px 0 #000;
+    transform-origin: center;
+    transition: transform 150ms ease, color 150ms ease;
+  }
+
+  .menu-button:hover {
+    color: #ffd400;
+    transform: scale(1.2);
+  }
+
+  .menu-button-muted {
+    color: #999999;
+  }
+}

@@ -1,4 +1,7 @@
 {
+  "id": "wipeout",
+  "packId": "offroad_pack_1",
+  "image": "wipeout.jpg",
   "name": "Wipeout",
   "width": 160,
   "depth": 160,
