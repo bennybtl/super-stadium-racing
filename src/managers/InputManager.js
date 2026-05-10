@@ -1,4 +1,57 @@
 import { Vector3 } from "@babylonjs/core";
+import { loadControlsSettings } from "../settingsStorage.js";
+
+const DRIVING_BINDING_KEYS = {
+  forward: "Gas",
+  back: "Brake/Reverse",
+  left: "Steer Left",
+  right: "Steer Right",
+  boost: "Use Nitro",
+  reset: "Reset Truck",
+  cycleCamera: "Cycle Camera",
+  toggleDebug: "Toggle Debug",
+  togglePhotoMode: "Toggle Photo Mode",
+  zoomIn: "Zoom In",
+  zoomOut: "Zoom Out",
+};
+
+const DEFAULT_DRIVING_CODES = {
+  forward: "KeyW",
+  back: "KeyS",
+  left: "KeyA",
+  right: "KeyD",
+  boost: "KeyQ",
+  reset: "KeyR",
+  cycleCamera: "KeyC",
+  toggleDebug: "Backslash",
+  togglePhotoMode: "KeyP",
+  zoomIn: "Equal",
+  zoomOut: "Minus",
+};
+
+function resolveDrivingCodes() {
+  const settings = loadControlsSettings();
+  const driving = settings?.driving || {};
+
+  const getCode = (action) => {
+    const configured = driving[DRIVING_BINDING_KEYS[action]];
+    return (typeof configured === "string" && configured.trim()) || DEFAULT_DRIVING_CODES[action];
+  };
+
+  return {
+    forward: getCode("forward"),
+    back: getCode("back"),
+    left: getCode("left"),
+    right: getCode("right"),
+    boost: getCode("boost"),
+    reset: getCode("reset"),
+    cycleCamera: getCode("cycleCamera"),
+    toggleDebug: getCode("toggleDebug"),
+    togglePhotoMode: getCode("togglePhotoMode"),
+    zoomIn: getCode("zoomIn"),
+    zoomOut: getCode("zoomOut"),
+  };
+}
 
 /**
  * InputManager - Handles all keyboard input
@@ -8,6 +61,7 @@ export class InputManager {
     this.truck = truck;
     this.cameraController = cameraController;
     this._disposed = false;
+    this.drivingCodes = resolveDrivingCodes();
     
     // Movement input state
     this.input = { 
@@ -45,20 +99,20 @@ export class InputManager {
   handleKeyDown(e) {
     if (this._disposed) return;
     // Movement
-    if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = true;
-    if (e.code === "KeyS" || e.code === "Space" || e.code === "ArrowDown") this.input.back = true;
-    if (e.code === "KeyA" || e.code === "ArrowLeft") this.input.left = true;
-    if (e.code === "KeyD" || e.code === "ArrowRight") this.input.right = true;
+    if (e.code === this.drivingCodes.forward) this.input.forward = true;
+    if (e.code === this.drivingCodes.back) this.input.back = true;
+    if (e.code === this.drivingCodes.left) this.input.left = true;
+    if (e.code === this.drivingCodes.right) this.input.right = true;
     
     // Nitro boost
-    if (e.code === "KeyQ") {
+    if (e.code === this.drivingCodes.boost) {
       if (this.onBoostCallback) {
         this.onBoostCallback();
       }
     }
     
     // Reset
-    if (e.code === "KeyR") {
+    if (e.code === this.drivingCodes.reset) {
       if (this.onResetCallback) {
         this.onResetCallback();
       }
@@ -70,38 +124,39 @@ export class InputManager {
         this.onPauseCallback();
       }
     }
-    
-    // Toggle debug panel
-    if (e.code === "Backslash") {
-      if (this.onToggleDebugCallback) this.onToggleDebugCallback();
-    }
 
     // Camera mode toggle
-    if (e.code === "KeyC") {
+    if (e.code === this.drivingCodes.cycleCamera) {
       this.cameraController.toggleMode();
     }
 
+
+    // Toggle debug panel
+    if (e.code === this.drivingCodes.toggleDebug) {
+      if (this.onToggleDebugCallback) this.onToggleDebugCallback();
+    }
+
     // Screenshot camera toggle
-    if (e.code === "KeyP") {
+    if (e.code === this.drivingCodes.togglePhotoMode) {
       if (this.onTogglePhotoModeCallback) {
         this.onTogglePhotoModeCallback();
       }
     }
 
     // Zoom controls
-    if (e.code === "Equal" || e.code === "NumpadAdd") {
+    if (e.code === this.drivingCodes.zoomIn) {
       this.cameraController.zoomIn();
     }
-    if (e.code === "Minus" || e.code === "NumpadSubtract") {
+    if (e.code === this.drivingCodes.zoomOut) {
       this.cameraController.zoomOut();
     }
   }
 
   handleKeyUp(e) {
-    if (e.code === "KeyW" || e.code === "ArrowUp") this.input.forward = false;
-    if (e.code === "KeyS" || e.code === "Space" || e.code === "ArrowDown") this.input.back = false;
-    if (e.code === "KeyA" || e.code === "ArrowLeft") this.input.left = false;
-    if (e.code === "KeyD" || e.code === "ArrowRight") this.input.right = false;
+    if (e.code === this.drivingCodes.forward) this.input.forward = false;
+    if (e.code === this.drivingCodes.back) this.input.back = false;
+    if (e.code === this.drivingCodes.left) this.input.left = false;
+    if (e.code === this.drivingCodes.right) this.input.right = false;
   }
 
   getMovementInput() {

@@ -6,13 +6,17 @@ const STORAGE_KEYS = {
 
 export const DEFAULT_CONTROLS_SETTINGS = {
   driving: {
-    Gas: 'W',
-    'Brake/Reverse': 'S',
-    'Steer Left': 'A',
-    'Steer Right': 'D',
-    'Use Nitro': 'Q',
-    'Reset Truck': 'R',
-    'Cycle Camera': 'C',
+    Gas: 'KeyW',
+    'Brake/Reverse': 'KeyS',
+    'Steer Left': 'KeyA',
+    'Steer Right': 'KeyD',
+    'Use Nitro': 'KeyQ',
+    'Reset Truck': 'KeyR',
+    'Cycle Camera': 'KeyC',
+    'Toggle Debug': 'Backslash',
+    'Toggle Photo Mode': 'KeyP',
+    'Zoom In': 'Equal',
+    'Zoom Out': 'Minus',
   },
   editor: {
     'Move Forward': 'W',

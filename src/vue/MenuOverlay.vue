@@ -46,12 +46,12 @@
         <template v-else-if="store.screen === 'pause'">
           <ul class="list-disc list-inside text-left text-[#ccc] my-2 space-y-1">
             <li><b>ESC:</b> to toggle this menu</li>
-            <li><b>W:</b> Gas</li>
-            <li><b>S/Left Shift:</b> Brake/Reverse</li>
-            <li><b>A,D:</b> Steering</li>
-            <li><b>Q:</b> Use Nitro</li>
-            <li><b>R:</b> Reset to last checkpoint</li>
-            <li><b>C:</b> Change camera mode</li>
+            <li><b>{{ drivingBindings['Gas'] }}:</b> Gas</li>
+            <li><b>{{ drivingBindings['Brake/Reverse'] }}:</b> Brake/Reverse</li>
+            <li><b>{{ drivingBindings['Steer Left'] }} / {{ drivingBindings['Steer Right'] }}:</b> Steering</li>
+            <li><b>{{ drivingBindings['Use Nitro'] }}:</b> Use Nitro</li>
+            <li><b>{{ drivingBindings['Reset Truck'] }}:</b> Reset to last checkpoint</li>
+            <li><b>{{ drivingBindings['Cycle Camera'] }}:</b> Change camera mode</li>
           </ul>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.resume()">Resume</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.reset()">Reset</button>
@@ -81,6 +81,7 @@
 import { computed } from 'vue';
 import { useMenuStore } from './store.js';
 import SettingsMenu from './SettingsMenu.vue';
+import { loadControlsSettings } from '../settingsStorage.js';
 
 const store = useMenuStore();
 const titleBackgroundStyle = {
@@ -95,6 +96,8 @@ const panelStyle = {
   backgroundRepeat: 'repeat',
   backgroundSize: '220px 220px',
 };
+
+const drivingBindings = computed(() => loadControlsSettings().driving);
 
 const title = computed(() => {
   switch (store.screen) {
