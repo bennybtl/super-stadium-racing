@@ -4,10 +4,14 @@ import { TrackLoader } from "./managers/TrackLoader.js";
 import { VehicleLoader } from "./managers/VehicleLoader.js";
 import { ModeController } from "./modes/ModeController.js";
 import { MenuMode } from "./modes/MenuMode.js";
+import { initializeSettingsStorage } from "./settingsStorage.js";
 import '/src/vue/main.js';
 
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true);
+
+// Ensure settings keys exist with defaults before gameplay systems read them.
+initializeSettingsStorage();
 
 const menuManager = new MenuManager();
 

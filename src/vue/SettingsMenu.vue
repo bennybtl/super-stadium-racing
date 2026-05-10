@@ -1,6 +1,7 @@
 <template>
   <div>
     <div v-if="screen === ''" class="settings-menu">
+      <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">Settings</h2>
       <button class="menu-button px-10 py-4 text-2xl" @click="screen = 'controls'">Controls</button>
       <button class="menu-button px-10 py-4 text-2xl" @click="screen = 'sound'">Sound</button>
       <button class="menu-button px-10 py-4 text-2xl" @click="screen = 'display'">Display</button>
