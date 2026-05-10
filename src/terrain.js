@@ -54,7 +54,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.mud,
     dragMultiplier: 2.9,    // Slows you down
     roughness: 0.15,         // Sloppy but soft — low-impact bumps
-    normalMap: 'normals/mud.png',
+    normalMap: 'normals/mud.normal.png',
     normalMapIntensity: 0.9, // Deep muddy surface detail
     specular: 0.4,          // Glistening wet mud
   },
@@ -73,7 +73,7 @@ export const TERRAIN_TYPES = {
     diffuseDepthGain: 1.2,
     diffuseDepthMinBlend: 0.1,
     diffuseDepthColor: new Color3(0.05, 0.36, 0.72),
-    normalMap: 'normals/water.jpg',
+    normalMap: 'normals/water.normal.jpg',
     normalMapIntensity: 0.5, // Gentle ripple detail
     specular: 0.92,          // Highly reflective water surface
   },
@@ -83,7 +83,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.rocky, // Dark reddish-brown rock
     dragMultiplier: 2.5,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
-    normalMap: 'normals/rocky.jpg',
+    normalMap: 'normals/rocky.normal.jpg',
     normalMapIntensity: 1.5, // Strong rocky surface detail
     specular: 0.14,          // Matte rock
   },
@@ -93,7 +93,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.grass, // Green grass
     dragMultiplier: 1.2,     // Slightly slows down
     roughness: 0.3,          // Slightly rough — soft impacts
-    normalMap: 'normals/grass.jpg',
+    normalMap: 'normals/grass.normal.jpg',
     normalMapIntensity: 1.5, // Strong grass surface detail
     specular: 0.14,          // Matte grass
   },

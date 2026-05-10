@@ -6,7 +6,7 @@ import {
 } from "@babylonjs/core";
 
 // All decal image filenames available (discovered via import.meta.glob in SurfaceDecalManager).
-const _decalModules = import.meta.glob('../assets/decals/*.png', { eager: true, as: 'url' });
+const _decalModules = import.meta.glob('../assets/decals/*.png', { eager: true, query: '?url', import: 'default' });
 const DECAL_FILENAMES = Object.keys(_decalModules)
   .map(path => path.split('/').at(-1))
   .sort();

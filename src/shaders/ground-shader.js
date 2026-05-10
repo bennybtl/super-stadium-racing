@@ -20,6 +20,24 @@ const STEEP_GRASS_SLOPE_END = 30;
 const STEEP_GRASS_SAMPLE_DISTANCE = 6.5;
 const STEEP_GRASS_TILE_WORLD_UNITS = 10;
 
+const _normalMapModules = import.meta.glob('../assets/normals/*', { eager: true, query: '?url', import: 'default' });
+const _normalMapUrls = {};
+for (const [path, url] of Object.entries(_normalMapModules)) {
+  const relativePath = path.replace('../assets/', '');
+  const filename = path.split('/').at(-1);
+  _normalMapUrls[relativePath] = url;
+  _normalMapUrls[filename] = url;
+}
+
+const _textureMapModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
+const _textureMapUrls = {};
+for (const [path, url] of Object.entries(_textureMapModules)) {
+  const relativePath = path.replace('../assets/', '');
+  const filename = path.split('/').at(-1);
+  _textureMapUrls[relativePath] = url;
+  _textureMapUrls[filename] = url;
+}
+
 /**
  * Load and cache normal map images by filename.
  * @private
@@ -27,15 +45,40 @@ const STEEP_GRASS_TILE_WORLD_UNITS = 10;
 const _normalMapCache = new Map();
 async function _loadNormalMap(filename) {
   if (_normalMapCache.has(filename)) return _normalMapCache.get(filename);
+  const url = _normalMapUrls[filename];
+  if (!url) {
+    console.warn(`[GroundShader] normal map not found: ${filename}`);
+    _normalMapCache.set(filename, null);
+    return null;
+  }
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  const path = new URL(`../assets/${filename}`, import.meta.url).href;
   await new Promise((resolve) => {
     img.onload = resolve;
     img.onerror = resolve;
-    img.src = path;
+    img.src = url;
   });
   _normalMapCache.set(filename, img);
+  return img;
+}
+
+const _textureMapCache = new Map();
+async function _loadTextureMap(filename) {
+  if (_textureMapCache.has(filename)) return _textureMapCache.get(filename);
+  const url = _textureMapUrls[filename];
+  if (!url) {
+    console.warn(`[GroundShader] texture not found: ${filename}`);
+    _textureMapCache.set(filename, null);
+    return null;
+  }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  await new Promise((resolve) => {
+    img.onload = resolve;
+    img.onerror = resolve;
+    img.src = url;
+  });
+  _textureMapCache.set(filename, img);
   return img;
 }
 
@@ -204,10 +247,10 @@ function _buildWaterDepthTileCanvas(img, tileSizePx, waterCfg) {
 
 async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSize) {
   const waterCfg = TERRAIN_TYPES.WATER;
-  const waterNormalName = waterCfg.diffuseTexture ?? waterCfg.normalMap;
-  if (!waterNormalName) return;
+  const waterTextureName = _textureMapUrls[waterCfg.diffuseTexture] ? waterCfg.diffuseTexture : waterCfg.normalMap;
+  if (!waterTextureName) return;
 
-  const img = await _loadNormalMap(waterNormalName);
+  const img = await (_textureMapUrls[waterTextureName] ? _loadTextureMap(waterTextureName) : _loadNormalMap(waterTextureName));
   if (!img || img.naturalWidth <= 0) return;
 
   const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
@@ -233,6 +276,69 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSi
   ctx.restore();
 }
 
+async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldSize) {
+  const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
+
+  const uniqueTextures = [...new Set(
+    terrainManager.grid.map(cell => cell.diffuseTexture).filter(Boolean)
+  )];
+  const imgMap = {};
+  await Promise.all(uniqueTextures.map(async (name) => {
+    imgMap[name] = await _loadTextureMap(name);
+  }));
+
+  const cellsByMap = {};
+  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
+    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
+      const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
+      const name = cell?.diffuseTexture;
+      if (!name) continue;
+      if (!cellsByMap[name]) cellsByMap[name] = [];
+      cellsByMap[name].push({
+        col,
+        row,
+        opacity: cell.diffuseTextureOpacity ?? 1.0,
+      });
+    }
+  }
+
+  for (const [name, cells] of Object.entries(cellsByMap)) {
+    const img = imgMap[name];
+    if (!img || img.naturalWidth <= 0) continue;
+
+    const pattern = ctx.createPattern(img, 'repeat');
+    if (!pattern) continue;
+
+    const worldUnitsPerTile = terrainManager.grid.find(cell => cell.diffuseTexture === name)?.diffuseTextureWorldUnitsPerTile ?? 10;
+    const tileSize = (textureSize / worldSize) * worldUnitsPerTile;
+    const scale = tileSize / img.naturalWidth;
+
+    ctx.save();
+    ctx.fillStyle = pattern;
+    pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
+
+    const byOpacity = {};
+    for (const cell of cells) {
+      const key = cell.opacity;
+      if (!byOpacity[key]) byOpacity[key] = [];
+      byOpacity[key].push(cell);
+    }
+
+    for (const [opacity, group] of Object.entries(byOpacity)) {
+      ctx.globalAlpha = Number(opacity);
+      for (const { col, row } of group) {
+        ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+      }
+    }
+
+    ctx.restore();
+  }
+}
+
+async function _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldSize) {
+  await _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldSize);
+}
+
 export async function createWaterDepthOverlayTexture(scene, terrainManager, textureSize = 2048, worldSize = 160) {
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
@@ -255,6 +361,42 @@ export async function createWaterDepthOverlayTexture(scene, terrainManager, text
   rawTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
   rawTexture.gammaSpace = false;
   return rawTexture;
+}
+
+export async function createTerrainDiffuseOverlayTexture(scene, terrainManager, textureSize = 2048, worldSize = 160) {
+  const canvas = document.createElement('canvas');
+  canvas.width = textureSize;
+  canvas.height = textureSize;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, textureSize, textureSize);
+  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldSize);
+
+  const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
+  const rawTexture = RawTexture.CreateRGBATexture(
+    imageData.data,
+    textureSize,
+    textureSize,
+    scene,
+    false,
+    false,
+    Texture.BILINEAR_SAMPLINGMODE
+  );
+  rawTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
+  rawTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
+  rawTexture.gammaSpace = false;
+  return rawTexture;
+}
+
+export async function updateTerrainDiffuseOverlayTexture(rawTexture, terrainManager, worldSize = 160) {
+  const textureSize = rawTexture.getSize().width;
+  const canvas = document.createElement('canvas');
+  canvas.width = textureSize;
+  canvas.height = textureSize;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, textureSize, textureSize);
+  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldSize);
+  const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
+  rawTexture.update(imageData.data);
 }
 
 export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager, worldSize = 160) {
@@ -543,6 +685,7 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   uniform sampler2D terrainPropertySampler;
   uniform sampler2D terrainWaterOverlaySampler;
   uniform sampler2D terrainWearOverlaySampler;
+  uniform sampler2D terrainDiffuseOverlaySampler;
 
   // Compile-time constants injected from JS.
   const float terrainTypeCount = __TERRAIN_TYPE_COUNT__;
@@ -595,11 +738,13 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   _terrainBlendResult = _computeTerrainBlend(_tUV);
   vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUV);
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
+  vec4 _diffuseOverlay = texture2D(terrainDiffuseOverlaySampler, _tUV);
   float _wearLighten = _wearOverlay.r;
   float _wearDarken  = _wearOverlay.g;
   vec3 _terrainRgb = mix(_terrainBlendResult.rgb, _waterOverlay.rgb, _waterOverlay.a);
   _terrainRgb = clamp(_terrainRgb * (1.0 + _wearLighten * 0.22), 0.0, 1.0);
   _terrainRgb = clamp(_terrainRgb * (1.0 - _wearDarken  * 0.22), 0.0, 1.0);
+  _terrainRgb = mix(_terrainRgb, _diffuseOverlay.rgb, _diffuseOverlay.a);
   _terrainBlendResult.a = clamp(_terrainBlendResult.a + max(_wearLighten, _wearDarken) * 0.06, 0.0, 1.0);
   baseColor = vec4(_terrainRgb, 1.0);
 `;
@@ -612,12 +757,13 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
  * StandardMaterial keeps CSM shadow receiving, lighting, and normal mapping.
  */
 export class TerrainBlendPlugin extends MaterialPluginBase {
-  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
     super(material, "TerrainBlend", 200, {});
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
     this._terrainWaterOverlayTex = terrainWaterOverlayTex;
     this._terrainWearOverlayTex = terrainWearOverlayTex;
+    this._terrainDiffuseOverlayTex = terrainDiffuseOverlayTex;
     this._terrainTypeCount    = terrainTypeCount;
     this._terrainCellCount    = terrainCellCount;
     this._terrainWorldHalfSize = terrainWorldHalfSize;
@@ -625,7 +771,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
   }
 
   getSamplers(samplers) {
-    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler");
+    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler", "terrainDiffuseOverlaySampler");
   }
 
   bindForSubMesh(uniformBuffer, scene) {
@@ -634,6 +780,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       uniformBuffer.setTexture("terrainPropertySampler", this._terrainPropertyTex);
       uniformBuffer.setTexture("terrainWaterOverlaySampler", this._terrainWaterOverlayTex);
       uniformBuffer.setTexture("terrainWearOverlaySampler", this._terrainWearOverlayTex);
+      uniformBuffer.setTexture("terrainDiffuseOverlaySampler", this._terrainDiffuseOverlayTex);
     }
   }
 
@@ -675,7 +822,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
  * @param {number}     terrainWorldHalfSize half of terrain world size (metres)
  * @returns {StandardMaterial}
  */
-export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
   const mat = new StandardMaterial("groundMat", scene);
   mat.specularColor = new Color3(1, 1, 1);
   mat.specularPower = 48;
@@ -690,6 +837,7 @@ export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, t
       terrainPropertyTex,
       terrainWaterOverlayTex,
       terrainWearOverlayTex,
+      terrainDiffuseOverlayTex,
       terrainTypeCount,
       terrainCellCount,
       terrainWorldHalfSize

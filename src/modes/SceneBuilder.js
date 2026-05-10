@@ -38,6 +38,10 @@ import {
   buildTerrainTypePropertyTexturePixelData,
   applySteepGrassTerrainRemap,
 } from "../terrain-utils.js";
+import {
+  createTerrainDiffuseOverlayTexture,
+  updateTerrainDiffuseOverlayTexture,
+} from "../shaders/ground-shader.js";
 
 /**
  * Builds the shared Babylon scene used by both RaceMode and EditorMode:
@@ -199,6 +203,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
   terrainWearOverlayTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   terrainWearOverlayTex.gammaSpace = false;
 
+  const terrainDiffuseOverlayTex = await createTerrainDiffuseOverlayTexture(scene, terrainManager, texSize, terrainSize);
+  terrainDiffuseOverlayTex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  terrainDiffuseOverlayTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  terrainDiffuseOverlayTex.gammaSpace = false;
+
   const groundTex = null;
   const specularTex = null;
 
@@ -209,6 +218,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const rebakeTerrainTexture = () => {
     const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, terrainSize);
     terrainWearOverlayTex.update(wearOverlayData.data);
+    updateTerrainDiffuseOverlayTexture(terrainDiffuseOverlayTex, terrainManager, terrainSize);
     updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, terrainSize);
   };
 
@@ -221,6 +231,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainPropertyTex,
     waterDepthOverlayTex,
     terrainWearOverlayTex,
+    terrainDiffuseOverlayTex,
     terrainTypePropertyData.width,
     terrainManager.cellsPerSide,
     terrainSize / 2
@@ -238,6 +249,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainPropertyTexture: terrainPropertyTex,
     terrainWaterOverlayTexture: waterDepthOverlayTex,
     terrainWearOverlayTexture: terrainWearOverlayTex,
+    terrainDiffuseOverlayTexture: terrainDiffuseOverlayTex,
   };
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.

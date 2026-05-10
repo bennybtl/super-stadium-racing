@@ -1,5 +1,27 @@
 import { Track } from '../track.js';
 
+const TRACK_FILENAMES = [
+  'big_dukes.json',
+  'blaster.json',
+  'boulder_hill.json',
+  'cliff_hanger.json',
+  'cut_off_pass.json',
+  'debug.json',
+  'fandango.json',
+  'huevos_grande.json',
+  'hurricane_gultch.json',
+  'leapin_lizards.json',
+  'pig_bog.json',
+  'rc_pro_1.json',
+  'rc_pro_2.json',
+  'redoubt_about.json',
+  'rio_trio.json',
+  'shortcut.json',
+  'sidewinder.json',
+  'volcano_valley.json',
+  'wipeout.json',
+];
+
 /**
  * TrackLoader - Loads tracks from JSON files
  */
@@ -40,19 +62,8 @@ export class TrackLoader {
    * Load all tracks from the tracks directory
    */
   async loadAllTracks() {
-    const modules = import.meta.glob('/public/tracks/*.json', { query: '?raw', import: 'default' });
-
-    const loadPromises = Object.entries(modules).map(async ([path, load]) => {
-      try {
-        const rawJson = await load();
-        const filename = path.split('/').pop();
-        const key = filename.replace('.json', '');
-        const track = Track.fromJSON(rawJson);
-        this.tracks.set(key, track);
-        if (!this.trackList.includes(key)) this.trackList.push(key);
-      } catch (error) {
-        console.error(`[TrackLoader] Error loading track ${path}:`, error);
-      }
+    const loadPromises = TRACK_FILENAMES.map(async (filename) => {
+      await this.loadTrack(filename);
     });
 
     await Promise.all(loadPromises);

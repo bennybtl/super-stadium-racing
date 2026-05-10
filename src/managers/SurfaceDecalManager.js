@@ -1,7 +1,7 @@
 import { MeshBuilder, StandardMaterial, Texture, Color3, Vector3, Engine } from "@babylonjs/core";
 
 // Vite glob import — all PNGs in src/assets/decals/ keyed by relative path
-const _decalModules = import.meta.glob('../assets/decals/*.png', { eager: true, as: 'url' });
+const _decalModules = import.meta.glob('../assets/decals/*.png', { eager: true, query: '?url', import: 'default' });
 const _decalUrls = {};
 for (const [path, url] of Object.entries(_decalModules)) {
   const filename = path.split('/').at(-1);
