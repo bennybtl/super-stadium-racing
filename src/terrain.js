@@ -8,6 +8,10 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 4.0,    // Best grip
     color: TERRAIN_COLORS.asphalt,
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
+    diffuseTexture: 'textures/asphalt_2.texture.png',
+    diffuseTextureWorldUnitsPerTile: 20,
+    diffuseTextureBlendMode: 'soft-light',
+    diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.5,
     roughness: 0,            // Perfectly smooth
     normalMap: 'normals/616-normal.jpg',
@@ -18,8 +22,8 @@ export const TERRAIN_TYPES = {
     name: "packed_dirt",
     gripMultiplier: 2.0,    // Baseline
     color: TERRAIN_COLORS.packed_dirt,
-    diffuseTexture: 'textures/dirt.texture.png',
-    diffuseTextureWorldUnitsPerTile: 10,
+    diffuseTexture: 'textures/packed_dirt.texture.png',
+    diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureBlendMode: 'soft-light',
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.8,
@@ -32,6 +36,9 @@ export const TERRAIN_TYPES = {
     name: "loamy_dirt",
     gripMultiplier: 0.5,    // Slides more
     color: TERRAIN_COLORS.loamy_dirt,
+    diffuseTexture: 'textures/loamy-soil.texture.png',
+    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureOpacity: 0.7,
     dragMultiplier: 1.2,
     roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: 'normals/6481-normal.jpg',
@@ -42,6 +49,9 @@ export const TERRAIN_TYPES = {
     name: "loose_dirt",
     gripMultiplier: 1.5,    // Slides more
     color: TERRAIN_COLORS.loose_dirt,
+    diffuseTexture: 'textures/dirt.texture.png',
+    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.9,
     roughness: 0.15,         // Noticeable ruts and loose clumps
     normalMap: 'normals/6481-normal.jpg',
@@ -52,11 +62,14 @@ export const TERRAIN_TYPES = {
     name: "mud",
     gripMultiplier: 0.15,    // Very slippery
     color: TERRAIN_COLORS.mud,
+    diffuseTexture: 'textures/mud.texture.png',
+    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureOpacity: 0.7,
     dragMultiplier: 2.9,    // Slows you down
     roughness: 0.15,         // Sloppy but soft — low-impact bumps
     normalMap: 'normals/mud.normal.png',
-    normalMapIntensity: 0.9, // Deep muddy surface detail
-    specular: 0.4,          // Glistening wet mud
+    normalMapIntensity: 0.5, // Deep muddy surface detail
+    specular: 0.2,          // Glistening wet mud
   },
   WATER: {
     name: "water",
@@ -91,6 +104,9 @@ export const TERRAIN_TYPES = {
     name: "grass",
     gripMultiplier: 0.15,     // Slippery, especially when wet
     color: TERRAIN_COLORS.grass, // Green grass
+    diffuseTexture: 'textures/grass.texture.png',
+    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureOpacity: 0.7,
     dragMultiplier: 1.2,     // Slightly slows down
     roughness: 0.3,          // Slightly rough — soft impacts
     normalMap: 'normals/grass.normal.jpg',
