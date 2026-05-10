@@ -1,5 +1,24 @@
 import { CreateAudioEngineAsync } from "@babylonjs/core/AudioV2/webAudio/webAudioEngine";
 import { CreateSoundAsync } from "@babylonjs/core/AudioV2/abstractAudio/audioEngineV2";
+import { loadAudioSettings } from "../settingsStorage.js";
+
+const SOUND_CATEGORY = {
+  ENGINE: "engine",
+  EFFECTS: "effects",
+  MUSIC: "music",
+};
+
+function clamp01(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+function clampPercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
 
 export class AudioManager {
   static async create(scene) {
@@ -18,11 +37,64 @@ export class AudioManager {
     this._sounds = new Map();
     this._loopingSounds = new Set();
     this._unlockHandler = this._unlockAudio.bind(this);
+    this._soundCategories = new Map();
+    this._requestedVolumes = new Map();
+    this._audioSettings = loadAudioSettings();
+    this._settingsChangedHandler = this._handleAudioSettingsChanged.bind(this);
     this._disposeTimer = null;
     this._disposed = false;
 
     document.addEventListener("pointerdown", this._unlockHandler, { once: true, passive: true });
     document.addEventListener("keydown", this._unlockHandler, { once: true, passive: true });
+    window.addEventListener("offroad:audio-settings-changed", this._settingsChangedHandler);
+  }
+
+  _normalizeAudioSettings(candidate) {
+    return {
+      engine: clampPercent(candidate?.engine),
+      effects: clampPercent(candidate?.effects),
+      music: clampPercent(candidate?.music),
+    };
+  }
+
+  _resolveCategory(key, explicitCategory) {
+    if (explicitCategory === SOUND_CATEGORY.ENGINE || explicitCategory === SOUND_CATEGORY.EFFECTS || explicitCategory === SOUND_CATEGORY.MUSIC) {
+      return explicitCategory;
+    }
+
+    if (typeof key === "string" && key.startsWith("eng_")) {
+      return SOUND_CATEGORY.ENGINE;
+    }
+
+    if (typeof key === "string" && key.startsWith("music")) {
+      return SOUND_CATEGORY.MUSIC;
+    }
+
+    return SOUND_CATEGORY.EFFECTS;
+  }
+
+  _categoryGain(category) {
+    const settings = this._audioSettings;
+    if (category === SOUND_CATEGORY.ENGINE) return (settings.engine ?? 0) / 100;
+    if (category === SOUND_CATEGORY.MUSIC) return (settings.music ?? 0) / 100;
+    return (settings.effects ?? 0) / 100;
+  }
+
+  _scaledVolume(key, requestedVolume) {
+    const category = this._soundCategories.get(key) ?? SOUND_CATEGORY.EFFECTS;
+    return clamp01(requestedVolume) * this._categoryGain(category);
+  }
+
+  _refreshAllSoundVolumes() {
+    for (const [key, sound] of this._sounds) {
+      const requested = this._requestedVolumes.get(key);
+      sound.volume = this._scaledVolume(key, requested ?? 1);
+    }
+  }
+
+  _handleAudioSettingsChanged(event) {
+    this._audioSettings = this._normalizeAudioSettings(event?.detail);
+    this._refreshAllSoundVolumes();
   }
 
   async _unlockAudio() {
@@ -48,6 +120,12 @@ export class AudioManager {
         ...options,
       }, this.audioEngine);
 
+      const category = this._resolveCategory(key, options.category);
+      const requestedVolume = options.volume ?? 1;
+      this._soundCategories.set(key, category);
+      this._requestedVolumes.set(key, requestedVolume);
+      sound.volume = this._scaledVolume(key, requestedVolume);
+
       console.debug(`[AudioManager] sound loaded: ${key}`);
       this._sounds.set(key, sound);
       return sound;
@@ -72,14 +150,21 @@ export class AudioManager {
       startOffset = 0,
     } = options;
 
+    if (!this._soundCategories.has(key)) {
+      this._soundCategories.set(key, this._resolveCategory(key, options.category));
+    }
+    this._requestedVolumes.set(key, volume);
+
+    let scaledVolume = this._scaledVolume(key, volume);
+
     // Some audio engines may optimize away completely silent looped sources.
     // Keep a tiny audible headroom on start so the loop can begin, then mute later.
-    if (loop && volume === 0) {
-      volume = 0.0001;
+    if (loop && scaledVolume === 0) {
+      scaledVolume = 0.0001;
     }
 
     const engineState = this.audioEngine?.state;
-    console.debug(`[AudioManager] playSound ${key}: engineState=${engineState}, volume=${volume}, loop=${loop}, loopStart=${loopStart}, loopEnd=${loopEnd}`);
+    console.debug(`[AudioManager] playSound ${key}: engineState=${engineState}, volume=${scaledVolume}, loop=${loop}, loopStart=${loopStart}, loopEnd=${loopEnd}`);
 
     if (this.audioEngine && this.audioEngine.state !== "running") {
       try {
@@ -90,7 +175,7 @@ export class AudioManager {
     }
 
     try {
-      sound.play({ volume, loop, loopStart, loopEnd, startOffset });
+      sound.play({ volume: scaledVolume, loop, loopStart, loopEnd, startOffset });
       console.debug(`[AudioManager] playSound ${key}: play() called`);
     } catch (err) {
       console.error(`[AudioManager] playSound ${key} failed:`, err);
@@ -126,7 +211,8 @@ export class AudioManager {
       return;
     }
 
-    sound.volume = volume;
+    this._requestedVolumes.set(key, volume);
+    sound.volume = this._scaledVolume(key, volume);
   }
 
   setSoundPlaybackRate(key, playbackRate) {
@@ -165,6 +251,7 @@ export class AudioManager {
 
     document.removeEventListener("pointerdown", this._unlockHandler);
     document.removeEventListener("keydown", this._unlockHandler);
+    window.removeEventListener("offroad:audio-settings-changed", this._settingsChangedHandler);
 
     // Give any pending AudioBufferSourceNode ended callbacks a chance to run
     // before disposing the sounds. Babylon's WebAudio static sounds can throw
@@ -184,6 +271,8 @@ export class AudioManager {
 
     this._sounds.clear();
     this._loopingSounds.clear();
+    this._soundCategories.clear();
+    this._requestedVolumes.clear();
     this.audioEngine = null;
 
     if (this._disposeTimer) clearTimeout(this._disposeTimer);

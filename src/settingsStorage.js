@@ -85,9 +85,9 @@ function normalizeControlsSettings(candidate) {
 
 function normalizeAudioSettings(candidate) {
   return {
-    engine: clamp(candidate?.engine, 0, 100),
-    effects: clamp(candidate?.effects, 0, 100),
-    music: clamp(candidate?.music, 0, 100),
+    engine: clamp(candidate?.engine ?? DEFAULT_AUDIO_SETTINGS.engine, 0, 100),
+    effects: clamp(candidate?.effects ?? DEFAULT_AUDIO_SETTINGS.effects, 0, 100),
+    music: clamp(candidate?.music ?? DEFAULT_AUDIO_SETTINGS.music, 0, 100),
   };
 }
 
@@ -120,7 +120,13 @@ export function loadAudioSettings() {
 }
 
 export function saveAudioSettings(value) {
-  writeStorageObject(STORAGE_KEYS.audio, normalizeAudioSettings(value));
+  const normalized = normalizeAudioSettings(value);
+  writeStorageObject(STORAGE_KEYS.audio, normalized);
+
+  // Broadcast so live systems (e.g. AudioManager) can react immediately.
+  window.dispatchEvent(new CustomEvent('offroad:audio-settings-changed', {
+    detail: normalized,
+  }));
 }
 
 export function loadDisplaySettings() {
