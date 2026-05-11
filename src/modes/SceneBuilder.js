@@ -42,6 +42,7 @@ import {
   createTerrainDiffuseOverlayTexture,
   updateTerrainDiffuseOverlayTexture,
 } from "../shaders/ground-shader.js";
+import { loadDisplaySettings } from "../settingsStorage.js";
 
 /**
  * Builds the shared Babylon scene used by both RaceMode and EditorMode:
@@ -108,12 +109,91 @@ export async function buildScene(engine, trackLoader, trackKey) {
     return light;
   });
 
+  const _centerFloodLight = new PointLight(
+    "stadiumLightCenter",
+    new Vector3(0, _lightHeight, 0),
+    scene
+  );
+  _centerFloodLight.intensity = 1.8;
+  _centerFloodLight.range = terrainSize * 2.4;
+  _centerFloodLight.diffuse = new Color3(1.0, 0.98, 1.0);
+  _centerFloodLight.specular = new Color3(1.0, 0.98, 1.0);
+  _centerFloodLight.setEnabled(false);
+
   // One light casts shadows (cube-map ShadowGenerator).
   const shadows = new ShadowGenerator(1024, _stadiumLights[0]);
   shadows.useBlurExponentialShadowMap = true;
   shadows.blurKernel = 16;
   shadows.bias = 0.005;
   shadows.normalBias = 0.02;
+
+  const applyDisplaySettings = (settings) => {
+    const shadowDetail = settings?.shadow ?? 'medium';
+    const lightCount = settings?.lights ?? 4;
+
+    // Keep enabled corner lights spatially balanced at lower counts.
+    const enabledLightIndices =
+      lightCount === 2 ? [0, 2] :
+      [0, 1, 2, 3];
+
+    if (lightCount === 1) {
+      _centerFloodLight.setEnabled(true);
+      _stadiumLights.forEach((light, index) => {
+        // Keep corner light #0 alive as shadow caster but with no visible contribution.
+        light.setEnabled(index === 0);
+        light.intensity = index === 0 ? 0 : 1.30;
+      });
+    } else {
+      _centerFloodLight.setEnabled(false);
+      const perLightIntensity = lightCount === 2 ? 1.10 : 0.85;
+      _stadiumLights.forEach((light, index) => {
+        light.setEnabled(enabledLightIndices.includes(index));
+        light.intensity = perLightIntensity;
+      });
+    }
+
+    const shadowCasterLight = _stadiumLights[0];
+    const shadowMap = shadows.getShadowMap?.();
+    if (!shadowCasterLight || !shadowMap) return;
+
+    const shadowsEnabled = shadowDetail !== 'off' && shadowCasterLight.isEnabled();
+    shadowCasterLight.shadowEnabled = shadowsEnabled;
+
+    if (!shadowsEnabled) {
+      // Keep map updates cheap when shadows are disabled.
+      shadowMap.refreshRate = 0;
+      return;
+    }
+
+    if (shadowDetail === 'low') {
+      shadows.useBlurExponentialShadowMap = false;
+      shadows.usePoissonSampling = true;
+      shadows.blurKernel = 4;
+      shadowMap.refreshRate = 2;
+      return;
+    }
+
+    shadows.usePoissonSampling = false;
+    shadows.useBlurExponentialShadowMap = true;
+    if (shadowDetail === 'high') {
+      shadows.blurKernel = 24;
+      shadowMap.refreshRate = 1;
+      return;
+    }
+
+    // Medium
+    shadows.blurKernel = 16;
+    shadowMap.refreshRate = 2;
+  };
+
+  applyDisplaySettings(loadDisplaySettings());
+  const onDisplaySettingsChanged = (event) => {
+    applyDisplaySettings(event?.detail ?? loadDisplaySettings());
+  };
+  window.addEventListener('offroad:display-settings-changed', onDisplaySettingsChanged);
+  scene.onDisposeObservable.add(() => {
+    window.removeEventListener('offroad:display-settings-changed', onDisplaySettingsChanged);
+  });
 
   // -- Terrain manager --
   // Use 1m terrain cells for smoother visual blending between terrain types.

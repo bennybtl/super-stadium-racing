@@ -6,6 +6,7 @@
       <div class="flex items-center gap-6">
         <div class="grow min-w-[140px] text-right text-xl font-bold italic uppercase text-white pr-4">Shadow Detail</div>
         <select v-model="shadow" class="w-[180px] shrink-0 px-6 py-2 rounded-md border border-[#333] bg-[#222] text-white text-lg font-bold uppercase italic tracking-wider outline-none transition-colors focus:border-[#ffd400]">
+          <option value="off">Off</option>
           <option value="low">Low</option>
           <option value="medium">Medium</option>
           <option value="high">High</option>
@@ -15,8 +16,8 @@
         <div class="grow min-w-[140px] text-right text-xl font-bold italic uppercase text-white pr-4">Stadium Lights</div>
         <select v-model.number="lights" class="w-[180px] shrink-0 px-6 py-2 rounded-md border border-[#333] bg-[#222] text-white text-lg font-bold uppercase italic tracking-wider outline-none transition-colors focus:border-[#ffd400]">
           <option :value="1">1</option>
+          <option :value="2">2</option>
           <option :value="4">4</option>
-          <option :value="6">6</option>
         </select>
       </div>
     </div>

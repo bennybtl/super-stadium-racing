@@ -188,12 +188,14 @@ Navigation
   - Adjust the music volume (no music yet)
   - ------------
   - BACK
+    - return the SETTINGS MENU
 
 ## SETTINGS MENU > DISPLAY
-  - Adjust the shadow render detail
-  - Adjust the lighting complexity (1, 4, or 6 stadium lights)
+  - Adjust the shadow render detail (off, low, medium, high)
+  - Adjust the lighting complexity (1, 2, or 4 stadium lights)
   - ------------
   - BACK
+    - return the SETTINGS MENU
 
 ## SETTINGS MENU > MANAGE TRACKS
   - LOAD TRACKS

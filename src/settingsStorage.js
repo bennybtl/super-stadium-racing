@@ -94,8 +94,8 @@ function normalizeAudioSettings(candidate) {
 function normalizeDisplaySettings(candidate) {
   const shadow = candidate?.shadow;
   const lights = Number(candidate?.lights);
-  const validShadow = shadow === 'low' || shadow === 'medium' || shadow === 'high';
-  const validLights = lights === 1 || lights === 4 || lights === 6;
+  const validShadow = shadow === 'off' || shadow === 'low' || shadow === 'medium' || shadow === 'high';
+  const validLights = lights === 1 || lights === 2 || lights === 4;
 
   return {
     shadow: validShadow ? shadow : DEFAULT_DISPLAY_SETTINGS.shadow,
@@ -134,7 +134,12 @@ export function loadDisplaySettings() {
 }
 
 export function saveDisplaySettings(value) {
-  writeStorageObject(STORAGE_KEYS.display, normalizeDisplaySettings(value));
+  const normalized = normalizeDisplaySettings(value);
+  writeStorageObject(STORAGE_KEYS.display, normalized);
+
+  window.dispatchEvent(new CustomEvent('offroad:display-settings-changed', {
+    detail: normalized,
+  }));
 }
 
 export function getDefaultControlsSettings() {
