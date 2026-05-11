@@ -12,7 +12,7 @@ export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
   enabled: true,
   source: 'aiPath',
   width: 3.2,
-  intensity: 0.18,
+  intensity: 0.8,
   laneSpacing: 1.3,
   alphaBreakup: 0.28,
   pathWander: 0.5,
@@ -272,7 +272,7 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
   const minorRadiusX = Math.max(1.8, majorRadiusX * 0.62);
   const minorRadiusY = Math.max(4.5, majorRadiusY * 0.82);
   const edgeSoftness = _clamp(wear.edgeSoftness, 0.1, 1.5);
-  const secondaryPathStrength = _clamp(wear.secondaryPathStrength ?? 0.62, 0, 1.5);
+  const secondaryPathStrength = _clamp(wear.secondaryPathStrength ?? 0.62, 0, 3);
 
   const mainLanes = [
     { offset: -mainLaneOffset, alpha: 1.0, radiusX: majorRadiusX, radiusY: majorRadiusY, lighten: false },
@@ -398,7 +398,7 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
     const cross = curveX1 * curveZ2 - curveZ1 * curveX2;
     const curvatureBoost = _clamp(Math.abs(cross) / 4, 0, 1);
     const alphaBreak = (rng() - 0.5) * wear.alphaBreakup;
-    const alphaBase = wear.intensity * (1 + curvatureBoost * 0.35 + alphaBreak) * _lerp(0.70, 1.0, curvatureBoost);
+    const alphaBase = wear.intensity * (1 + curvatureBoost * 0.35 + alphaBreak) * _lerp(0.70, 2.0, curvatureBoost);
     const presenceThreshold = _lerp(0.55, 0.18, curvatureBoost);
 
     // Steepness fade: sample height along tangent and normal, take max slope angle.

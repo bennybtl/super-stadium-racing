@@ -10,8 +10,11 @@ import clunk2Url from "../assets/sounds/clunk2.wav?url";
 import clunk3Url from "../assets/sounds/clunk3.wav?url";
 import clunk4Url from "../assets/sounds/clunk4.wav?url";
 import hit1Url from "../assets/sounds/hit1.wav?url";
-import hit2Url from "../assets/sounds/hit2.wav?url";
 import hit3Url from "../assets/sounds/hit3.wav?url";
+import nitro1Url from "../assets/sounds/nitro1.wav?url";
+import nitro2Url from "../assets/sounds/nitro2.wav?url";
+import nitro3Url from "../assets/sounds/nitro3.wav?url";
+import airhorn1Url from "../assets/sounds/airhorn1.wav?url";
 
 const PRESETS = {
   bac: "bac",
@@ -105,12 +108,27 @@ export class TruckAudioController {
       autoplay: false,
       volume: 1,
     });
-    await audioManager.loadSound("nitroActivation", hit2Url, {
+    await audioManager.loadSound("nitroActivation1", nitro1Url, {
+      loop: false,
+      autoplay: false,
+      volume: 0.75,
+    });
+    await audioManager.loadSound("nitroActivation2", nitro2Url, {
+      loop: false,
+      autoplay: false,
+      volume: 0.75,
+    });
+    await audioManager.loadSound("nitroActivation3", nitro3Url, {
+      loop: false,
+      autoplay: false,
+      volume: 0.75,
+    });
+    await audioManager.loadSound("hit3", hit3Url, {
       loop: false,
       autoplay: false,
       volume: 1,
     });
-    await audioManager.loadSound("hit3", hit3Url, {
+    await audioManager.loadSound("airhorn1", airhorn1Url, {
       loop: false,
       autoplay: false,
       volume: 1,
@@ -327,7 +345,12 @@ export class TruckAudioController {
   }
 
   playNitroActivation() {
-    this._playSound("nitroActivation", 1);
+    const variant = 1 + Math.floor(Math.random() * 3);
+    this._playSound(`nitroActivation${variant}`, 1);
+  }
+
+  playLastLapAirhorn() {
+    this._playSound("airhorn1", 1);
   }
 
   playReload() {

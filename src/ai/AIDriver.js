@@ -427,7 +427,7 @@ export class AIDriver {
 // Static factory methods for creating AI drivers with preset skill levels
 export const AI_SKILL_PRESETS = {
   good: {
-    lookAheadDistance: 22,
+    lookAheadDistance: 24,
     maxSpeed: 1.15,
     steeringPrecision: 1.0,
     boostBaseChance: 0.18,
@@ -437,7 +437,7 @@ export const AI_SKILL_PRESETS = {
     boostStraightMaxAngle: Math.PI / 10.5,
   },
   ok: {
-    lookAheadDistance: 19,
+    lookAheadDistance: 21,
     maxSpeed: 1.05,
     steeringPrecision: 0.95,
     boostBaseChance: 0.16,
@@ -447,7 +447,7 @@ export const AI_SKILL_PRESETS = {
     boostStraightMaxAngle: Math.PI / 10.5,
   },
   bad: {
-    lookAheadDistance: 18,
+    lookAheadDistance: 19,
     maxSpeed: 1.0,
     steeringPrecision: 0.9,
     boostBaseChance: 0.14,

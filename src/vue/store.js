@@ -395,7 +395,7 @@ export const useEditorStore = defineStore('editor', () => {
   const aiPathWear = reactive({
     enabled: true,
     width: 3.2,
-    intensity: 0.18,
+    intensity: 0.8,
     laneSpacing: 1.3,
     alphaBreakup: 0.28,
     pathWander: 0.5,

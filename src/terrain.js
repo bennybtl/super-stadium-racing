@@ -10,7 +10,6 @@ export const TERRAIN_TYPES = {
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     diffuseTexture: 'textures/asphalt_2.texture.png',
     diffuseTextureWorldUnitsPerTile: 20,
-    diffuseTextureBlendMode: 'soft-light',
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.5,
     roughness: 0,            // Perfectly smooth
@@ -24,8 +23,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.packed_dirt,
     diffuseTexture: 'textures/packed_dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
-    diffuseTextureBlendMode: 'soft-light',
-    diffuseTextureOpacity: 0.7,
+    diffuseTextureOpacity: 0.5,
     dragMultiplier: 0.8,
     roughness: 0.1,          // Very slight — compacted surface
     normalMap: 'normals/cloud_h-normal.png',
@@ -50,10 +48,10 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 1.5,    // Slides more
     color: TERRAIN_COLORS.loose_dirt,
     diffuseTexture: 'textures/dirt.texture.png',
-    diffuseTextureWorldUnitsPerTile: 40,
-    diffuseTextureOpacity: 0.7,
+    diffuseTextureWorldUnitsPerTile: 30,
+    diffuseTextureOpacity: 0.6,
     dragMultiplier: 0.9,
-    roughness: 0.15,         // Noticeable ruts and loose clumps
+    roughness: 0.15,         // Noticeable ruts and loos6e clumps
     normalMap: 'normals/6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
     specular: 0.05,          // Matte dry dirt

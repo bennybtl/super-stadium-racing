@@ -722,6 +722,11 @@ export class RaceMode extends DriveMode {
           const lapCount = truckData.gameState.completeLap(lapTime);
           checkpointManager.resetForTruck(truckData.id);
 
+          // Play airhorn when player truck starts last lap
+          if (truckData.isPlayer && lapCount === totalLaps - 1) {
+            truckData.truck.audioController?.playLastLapAirhorn();
+          }
+
           if (truckData.isPlayer) {
             if (lapCount >= totalLaps) checkpointManager.clearPlayerCheckpointHighlight();
             else checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);

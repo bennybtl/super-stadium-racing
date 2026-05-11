@@ -36,7 +36,7 @@
         <span>{{ editor.aiPathWear.intensity.toFixed(2) }}</span>
       </div>
       <input
-        type="range" min="0" max="0.6" step="0.01"
+        type="range" min="0" max="2.0" step="0.1"
         :value="editor.aiPathWear.intensity"
         @input="editor.setAiPathWearIntensity(+$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -102,7 +102,7 @@
         <span>{{ editor.aiPathWear.secondaryPathStrength.toFixed(2) }}</span>
       </div>
       <input
-        type="range" min="0" max="1.5" step="0.01"
+        type="range" min="0" max="3.0" step="0.1"
         :value="editor.aiPathWear.secondaryPathStrength"
         @input="editor.setAiPathWearSecondaryPathStrength(+$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

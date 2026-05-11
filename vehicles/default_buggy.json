@@ -31,20 +31,20 @@
   "params": {
     "springStrength": 130,
     "damping": 3,
-    "maxSpeed": 22,
+    "maxSpeed": 23,
     "maxReverseSpeed": -12,
     "acceleration": 22,
-    "braking": 2,
-    "drag": 4,
+    "braking": 1.5,
+    "drag": 3.5,
     "turnSpeed": 4.0,
     "grip": 0.08,
-    "driftThreshold": 0.24,
-    "weightTransfer": 1.0,
+    "driftThreshold": 0.28,
+    "weightTransfer": 1.1,
     "stationarySpinRate": 0.6,
     "boostCount": 5,
     "maxBoosts": 9,
-    "boostDuration": 1.0,
+    "boostDuration": 1.2,
     "boostAccelMult": 1.8,
-    "boostSpeedMult": 1.3
+    "boostSpeedMult": 1.7
   }
 }
