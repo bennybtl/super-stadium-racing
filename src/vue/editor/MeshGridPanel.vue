@@ -59,7 +59,7 @@
       <span>{{ editor.meshGrid.width }}</span>
     </div>
     <input
-      type="range" min="20" max="160" step="10"
+      type="range" min="20" :max="editor.meshGrid.maxWidth" step="10"
       :value="editor.meshGrid.width"
       @input="editor.setMeshGridWidth(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -71,7 +71,7 @@
       <span>{{ editor.meshGrid.depth }}</span>
     </div>
     <input
-      type="range" min="20" max="160" step="10"
+      type="range" min="20" :max="editor.meshGrid.maxDepth" step="10"
       :value="editor.meshGrid.depth"
       @input="editor.setMeshGridDepth(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

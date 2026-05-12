@@ -76,7 +76,7 @@ export class AIDriver {
     this._usingTelemetry = false;
     
     // Lightweight occupancy grid used for wall/curb blocked checks.
-    this.gridSize = 160; // Match terrain size
+    this.gridSize = Math.max(track.width ?? 160, track.depth ?? 160);
     this.gridResolution = 2; // 2 units per cell
     this.gridCells = Math.floor(this.gridSize / this.gridResolution);
     

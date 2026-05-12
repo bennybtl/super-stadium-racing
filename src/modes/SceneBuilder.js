@@ -214,9 +214,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
   applySteepGrassTerrainRemap(terrainManager, currentTrack);
 
   // -- Ground mesh --
+  const groundWidth = trackWidth + 20;
+  const groundDepth = trackDepth + 20;
   const ground = MeshBuilder.CreateGround(
     "ground",
-    { width: terrainSize, height: terrainSize, subdivisions: Math.floor(terrainSize / 2) },
+    { width: groundWidth, height: groundDepth, subdivisions: Math.floor(Math.max(groundWidth, groundDepth) / 2) },
     scene
   );
   const positions = ground.getVerticesData(VertexBuffer.PositionKind);
@@ -317,8 +319,15 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainSize / 2
   );
   groundMat.bumpTexture = compositeNormalMap;
-  groundMat.bumpTexture.vScale = -1;
-  groundMat.bumpTexture.vOffset = 1;
+  const bumpUScale = groundWidth / terrainSize;
+  const bumpVScale = groundDepth / terrainSize;
+  const bumpUOffset = (1 - bumpUScale) * 0.5;
+  const bumpVOffset = (1 - bumpVScale) * 0.5;
+  groundMat.bumpTexture.uScale = bumpUScale;
+  groundMat.bumpTexture.uOffset = bumpUOffset;
+  // Keep V flipped for texture orientation while matching terrain-space crop.
+  groundMat.bumpTexture.vScale = -bumpVScale;
+  groundMat.bumpTexture.vOffset = 1 - bumpVOffset;
   groundMat.bumpTexture.level = 0.75;
   groundMat.invertNormalMapY = true;
 

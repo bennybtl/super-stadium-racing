@@ -1,3 +1,11 @@
+// Debounce helper (simple, per-instance)
+function debounce(fn, delay = 100) {
+  let timer = null;
+  return function(...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
 import { Vector3, MeshBuilder, StandardMaterial, Color3, Color4 } from "@babylonjs/core";
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../terrain.js';
@@ -20,6 +28,10 @@ const FALLBACK_COLOR = new Color3(0.5, 0.5, 0.5);
  *   - Clicking an existing waypoint selects it (drag or delete).
  */
 export class TerrainPathEditor {
+    _debouncedTerrainRebuild = debounce(() => {
+      window.rebuildTerrainGrid?.();
+      window.rebuildTerrainTexture?.();
+    }, 300);
   constructor(editor) {
     this.editor = editor;
     /** @type {{ feature: object, pointIndex: number, mesh: BABYLON.Mesh }[]} */
@@ -389,9 +401,8 @@ export class TerrainPathEditor {
   }
 
   // ── Terrain rebuild helpers ───────────────────────────────────────────────
-
+  
   _scheduleTerrainRebuild() {
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this._debouncedTerrainRebuild();
   }
 }

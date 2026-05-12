@@ -1,6 +1,4 @@
 {
-  "id": "big_dukes",
-  "packId": "offroad_pack_1",
   "name": "Big Dukes",
   "image": "big_dukes.jpg",
   "width": 160,
@@ -11,13 +9,13 @@
     "enabled": true,
     "source": "aiPath",
     "width": 3.2,
-    "intensity": 0.35,
+    "intensity": 2,
     "laneSpacing": 1.6,
     "alphaBreakup": 1,
-    "pathWander": 0.92,
+    "pathWander": 1.07,
     "edgeSoftness": 0.75,
-    "secondaryPathCount": 61,
-    "secondaryPathStrength": 1.03,
+    "secondaryPathCount": 100,
+    "secondaryPathStrength": 3,
     "secondaryPathSpacing": 0.08,
     "seed": 1337,
     "breakup": 0.69
@@ -1017,7 +1015,8 @@
       "z": -66.33835864366606,
       "angle": -0.6108652381980157,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     },
     {
       "type": "obstacle",
@@ -1026,7 +1025,8 @@
       "z": -69.75615473180673,
       "angle": -0.9250245035569956,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     },
     {
       "type": "obstacle",
@@ -1035,7 +1035,8 @@
       "z": -60.49010628468997,
       "angle": -0.2792526803190928,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     },
     {
       "type": "obstacle",
@@ -1044,7 +1045,8 @@
       "z": -72.81873102559814,
       "angle": -1.3788101090755218,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     },
     {
       "type": "obstacle",
@@ -1053,7 +1055,8 @@
       "z": -73.04593287992178,
       "angle": -1.448623279155295,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     },
     {
       "type": "obstacle",
@@ -1062,7 +1065,8 @@
       "z": -72.99857760098654,
       "angle": -1.5533430342749552,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     },
     {
       "type": "obstacle",
@@ -1071,7 +1075,8 @@
       "z": -73.13364991991887,
       "angle": -1.5533430342749552,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     },
     {
       "type": "obstacle",
@@ -1080,7 +1085,8 @@
       "z": -73.10896729210184,
       "angle": -1.5533430342749552,
       "scale": 1,
-      "weight": 22
+      "weight": 22,
+      "color": "yellow"
     }
   ]
 }

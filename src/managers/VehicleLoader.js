@@ -68,6 +68,11 @@ export class VehicleLoader {
       key,
       name: this.vehicles.get(key)?.name ?? key,
       imageUrl: this.vehicles.get(key)?.imageUrl ?? null,
+      modelUrl: this.vehicles.get(key)?.modelUrl ?? null,
+      defaultColor: this.vehicles.get(key)?.defaultColor ?? null,
+      meshColors: this.vehicles.get(key)?.meshColors ?? this.vehicles.get(key)?.meshColorMap ?? null,
+      bodyTransform: this.vehicles.get(key)?.bodyTransform ?? null,
+      wheelTransform: this.vehicles.get(key)?.wheelTransform ?? null,
     }));
   }
 }

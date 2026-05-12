@@ -262,6 +262,8 @@ export const useEditorStore = defineStore('editor', () => {
     rows: 9,
     width: 160,
     depth: 160,
+    maxWidth: 160,
+    maxDepth: 160,
     smoothing: 0,
     stepSize: 0.5,
     hasSelection: false,

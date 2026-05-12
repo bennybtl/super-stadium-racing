@@ -81,13 +81,16 @@ export class MeshGridEditor {
       return;
     }
 
+    const trackWidth = this.track.width ?? 160;
+    const trackDepth = this.track.depth ?? 160;
+    const meshGridSize = Math.max(trackWidth, trackDepth);
     const cols = 9, rows = 9;
     const feature = {
       type:    'meshGrid',
       centerX: 0,
       centerZ: 0,
-      width:   160,
-      depth:   160,
+      width:   meshGridSize,
+      depth:   meshGridSize,
       cols,
       rows,
       heights: new Array(cols * rows).fill(0),
@@ -419,10 +422,14 @@ export class MeshGridEditor {
   _syncToStore(feature) {
     const s = this.ec._editorStore;
     if (!s) return;
+    const trackWidth = this.track.width ?? 160;
+    const trackDepth = this.track.depth ?? 160;
     s.meshGrid.cols      = feature.cols;
     s.meshGrid.rows      = feature.rows;
     s.meshGrid.width     = feature.width;
     s.meshGrid.depth     = feature.depth;
+    s.meshGrid.maxWidth  = trackWidth;
+    s.meshGrid.maxDepth  = trackDepth;
     s.meshGrid.smoothing = feature.smoothing ?? 0;
     s.selectedType       = 'meshGrid';
   }

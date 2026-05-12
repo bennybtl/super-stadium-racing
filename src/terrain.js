@@ -5,13 +5,13 @@ import { TERRAIN_COLORS } from "./constants";
 export const TERRAIN_TYPES = {
   ASPHALT: {
     name: "asphalt",
-    gripMultiplier: 4.0,    // Best grip
+    gripMultiplier: 2.8,    // Best grip
     color: TERRAIN_COLORS.asphalt,
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     diffuseTexture: 'textures/asphalt_2.texture.png',
     diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.7,
-    dragMultiplier: 0.5,
+    dragMultiplier: 0.3,
     roughness: 0,            // Perfectly smooth
     normalMap: 'normals/616-normal.jpg',
     normalMapIntensity: 0.6, // Subtle road surface texture

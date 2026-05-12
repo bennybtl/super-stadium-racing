@@ -50,6 +50,15 @@ export class EditorMode extends BaseMode {
       surfaceDecalManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
+    // // --- FAST FLAT COLOR TERRAIN FOR EDITOR ---
+    // // Replace the complex terrain material with a simple StandardMaterial
+    // // for much faster terrain rebuilds in editor mode.
+    // const { StandardMaterial, Color3 } = await import("@babylonjs/core");
+    // const editorGroundMat = new StandardMaterial("editorGroundMat", scene);
+    // editorGroundMat.diffuseColor = new Color3(0.45, 0.45, 0.45); // Neutral gray
+    // editorGroundMat.specularColor = new Color3(0.1, 0.1, 0.1);
+    // ground.material = editorGroundMat;
+
     // Dispose runtime FlagManager flags – the EditorController's FlagTool
     // creates its own editor-mode flag meshes (without shadows/physics).
     // Keeping both sets causes duplicate meshes and breaks click-selection.

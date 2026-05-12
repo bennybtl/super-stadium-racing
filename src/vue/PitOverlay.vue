@@ -37,37 +37,14 @@
                 </select>
               </div>
               <div class="grid gap-4 mb-4">
-                <div class="text-left">
-                  <div class="text-slate-300 text-xs uppercase tracking-[2px] mb-3">Choose your truck</div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <button
-                      v-for="v in store.vehicleList"
-                      :key="v.key"
-                      type="button"
-                      @click="store.selectPlayerVehicle(v.key)"
-                      :class="v.key === store.selectedVehicle ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-700'
-                        + ' rounded-xl p-3 bg-slate-900 transition duration-150 hover:bg-slate-800'"
-                    >
-                      <div class="text-sm text-slate-400 uppercase tracking-[2px] mb-2">Vehicle</div>
-                      <div class="text-white text-lg font-semibold">{{ v.name }}</div>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="text-left">
-                  <div class="text-slate-300 text-xs uppercase tracking-[2px] mb-3">Choose your truck color</div>
-                  <div class="grid grid-cols-6 gap-2">
-                    <button
-                      v-for="option in colorOptions"
-                      :key="option.key"
-                      type="button"
-                      @click="store.selectPlayerColor(option.key)"
-                      :class="option.key === store.pitData.selectedColorKey ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-700'
-                        + ' rounded-lg h-12 w-12 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400'"
-                      :style="{ backgroundColor: option.value.diffuse.toHexString() }"
-                    ></button>
-                  </div>
-                </div>
+                <TruckSelection
+                  :vehicles="store.vehicleList"
+                  :selectedVehicle="store.selectedVehicle"
+                  :colorOptions="colorOptions"
+                  :selectedColor="store.pitData.selectedColorKey"
+                  @update:selectedVehicle="store.selectPlayerVehicle($event)"
+                  @update:selectedColor="store.selectPlayerColor($event)"
+                />
               </div>
           </div>
 
@@ -168,38 +145,15 @@
 
         </div>
 
-          <div class="flex flex-row gap-4 mb-4">
-            <div class="text-left">
-              <div class="text-slate-300 text-xs uppercase tracking-[2px] mb-3">Choose your truck</div>
-              <div class="grid grid-cols-2 gap-3">
-                <button
-                  v-for="v in store.vehicleList"
-                  :key="v.key"
-                  type="button"
-                  @click="store.selectPlayerVehicle(v.key)"
-                  class="rounded-lg transition border-2 px-4"
-                  :class="v.key === store.selectedVehicle ? 'border-amber-400 bg-slate-800' : 'border-slate-700  bg-slate-900'"
-                >
-                  <div class="text-sm text-slate-400 uppercase tracking-[2px]">Vehicle</div>
-                  <div class="text-white text-lg font-semibold">{{ v.name }}</div>
-                </button>
-              </div>
-            </div>
-
-            <div class="text-left">
-              <div class="text-slate-300 text-xs uppercase tracking-[2px] mb-3">Choose your truck color</div>
-              <div class="flex flex-row gap-3">
-                <button
-                  v-for="option in colorOptions"
-                  :key="option.key"
-                  type="button"
-                  @click="store.selectPlayerColor(option.key)"
-                  class="rounded-lg h-12 w-12 transition border-2"
-                  :class="option.key === store.pitData.selectedColorKey ? 'border-amber-400' : 'border-slate-700'"
-                  :style="{ backgroundColor: option.value.diffuse.toHexString() }"
-                ></button>
-              </div>
-            </div>
+          <div class="mb-4">
+            <TruckSelection
+              :vehicles="store.vehicleList"
+              :selectedVehicle="store.selectedVehicle"
+              :colorOptions="colorOptions"
+              :selectedColor="store.pitData.selectedColorKey"
+              @update:selectedVehicle="store.selectPlayerVehicle($event)"
+              @update:selectedColor="store.selectPlayerColor($event)"
+            />
           </div>
 
         <div class="flex flex-row gap-3">
@@ -226,6 +180,7 @@ import { onMounted, onUnmounted } from 'vue';
 import { useMenuStore } from './store.js';
 import { basicColors } from '../constants.js';
 import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
+import TruckSelection from './TruckSelection.vue';
 
 const store = useMenuStore();
 const colorOptions = Object.entries(basicColors).map(([key, value]) => ({ key, value }));
