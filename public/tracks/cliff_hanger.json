@@ -1,6 +1,7 @@
 {
   "id": "cliff_hanger",
   "packId": "offroad_pack_1",
+  "hidden": false,
   "name": "Cliff-Hanger",
   "image": "cliff_hanger.jpg",
   "width": 160,

@@ -48,6 +48,9 @@ function isPointInPolygon(x, z, points) {
 export class Track {
   constructor(name = "Untitled Track", width = 160, depth = 160) {
     this.name = name;
+    this.id = name.toLowerCase().replace(/\s+/g, '-');
+    this.hidden = true;
+    this.packId = null;
     this.width = width;
     this.depth = depth;
     this.features = [];
@@ -566,6 +569,9 @@ export class Track {
     });
 
     return JSON.stringify({
+      id: this.id,
+      packId: this.packId,
+      hidden: this.hidden,
       name: this.name,
       image: this.image ?? undefined,
       width: this.width,
@@ -582,7 +588,9 @@ export class Track {
     const data = JSON.parse(jsonString);
     const track = new Track(data.name, data.width ?? 160, data.depth ?? 160);
     track.image = data.image ?? null;
-    
+    track.id = data.id ?? track.id;
+    track.packId = data.packId ?? track.packId;
+    track.hidden = data.hidden ?? track.hidden;
     if (data.defaultTerrainType) {
       const key = Object.keys(TERRAIN_TYPES).find(
         k => TERRAIN_TYPES[k].name === data.defaultTerrainType

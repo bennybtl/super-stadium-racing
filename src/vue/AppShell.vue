@@ -9,7 +9,7 @@
     <MenuOverlay />
     <SingleRaceOverlay />
     <PostRaceOverlay />
-    <PitOverlay />
+    <!-- <PitOverlay /> -->
     <SeasonFinalOverlay />
     <RaceHUD />
     <DebugPanel />
@@ -43,7 +43,7 @@ import MenuOverlay        from './MenuOverlay.vue';
 import LoadingOverlay     from './LoadingOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
 import PostRaceOverlay    from './PostRaceOverlay.vue';
-import PitOverlay         from './PitOverlay.vue';
+// import PitOverlay         from './PitOverlay.vue';
 import SeasonFinalOverlay from './SeasonFinalOverlay.vue';
 import RaceHUD            from './RaceHUD.vue';
 import DebugPanel         from './DebugPanel.vue';

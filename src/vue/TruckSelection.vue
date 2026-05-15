@@ -1,8 +1,7 @@
 <template>
+  <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white">Choose Your Truck</h3>
   <section class="flex flex-row gap-4">
-
-      <div class="flex-grow">
-        <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white">Choose Your Truck</h3>
+      <div class="min-w-0 flex-1 basis-0">
         <div class="flex flex-col gap-3">
           <button
             v-for="vehicle in vehicles"
@@ -17,11 +16,10 @@
         </div>
       </div>
 
-      <div class="flex-grow">
-        <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white">Preview</h3>
+      <div class="min-w-0 flex-1 basis-0">
         <div class="flex min-h-[122px] items-center justify-center overflow-hidden rounded-[10px] border-2 border-[#666] bg-[#0d0d0d]">
           <VehiclePreview3D
-            class="h-[150px] max-w-[150px]"
+            class="h-[170px] max-w-[200px]"
             :vehicle="selectedVehicleData"
             :selectedColor="selectedColor"
             :colorOptions="colorOptions"
@@ -29,14 +27,13 @@
         </div>
       </div>
 
-      <div class="flex-grow">
-        <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white">Choose Color</h3>
-        <div class="grid grid-cols-6 gap-2">
+      <div class="min-w-0 flex-1 basis-0">
+        <div class="flex flex-row flex-wrap gap-3">
           <button
             v-for="option in colorOptions"
             :key="option.key"
             type="button"
-            class="aspect-square w-full rounded-lg border-2 border-[#555] transition duration-150 hover:scale-105 hover:border-white"
+            class="aspect-square w-10 h-10 rounded-lg border-2 border-[#555] transition duration-150 hover:scale-105 hover:border-white"
             :class="{ 'border-white shadow-[inset_0_0_0_2px_#111]': option.key === selectedColor }"
             :title="option.key"
             :aria-label="`Select ${option.key} color`"

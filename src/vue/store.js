@@ -10,8 +10,8 @@ export const useMenuStore = defineStore('menu', () => {
   const trackList = ref([]); // [{ key, name }]
   const vehicleList = ref([]); // [{ key, name }]
   const selectedTrack = ref(null);
-  const selectedLaps = ref(3);
-  const selectedAIDrivers = ref(9);
+  const selectedLaps = ref(5);
+  const selectedAIDrivers = ref(3);
   const selectedVehicle = ref('default_truck');
 
   // Season overlay data (null when not showing)

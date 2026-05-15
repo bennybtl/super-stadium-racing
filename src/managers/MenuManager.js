@@ -18,8 +18,8 @@ export class MenuManager {
 
     // Set by Vue store actions before calling the callbacks below
     this.selectedTrack   = null;
-    this.selectedLaps    = 3;
-    this.selectedAIDrivers = 9;
+    this.selectedLaps    = 5;
+    this.selectedAIDrivers = 3;
     this.selectedVehicle = 'default_truck';
     this.selectedPlayerColor = null;
 
@@ -60,10 +60,10 @@ export class MenuManager {
     this._refreshTrackList();
     this._refreshVehicleList();
     if (!this.selectedLaps) {
-      this.selectedLaps = 3;
+      this.selectedLaps = 5;
     }
     if (this.selectedAIDrivers == null) {
-      this.selectedAIDrivers = 9;
+      this.selectedAIDrivers = 3;
     }
     this._store.selectedLaps = this.selectedLaps;
     this._store.selectedAIDrivers = this.selectedAIDrivers;

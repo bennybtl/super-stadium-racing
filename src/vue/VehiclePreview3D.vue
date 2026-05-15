@@ -207,7 +207,7 @@ function fitCameraToMeshes() {
   const diameter = Math.max(extents.x, extents.y, extents.z, 1);
 
   camera.target.copyFrom(center);
-  camera.radius = diameter * 1.0;
+  camera.radius = diameter * 1.3;
   camera.alpha = -Math.PI / 2;
   camera.beta = Math.PI / 2.9;
 }

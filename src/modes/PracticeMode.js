@@ -7,6 +7,7 @@ import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManag
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { DriveMode } from "./DriveMode.js";
+import { basicColors } from "../constants.js";
 
 /**
  * PracticeMode – free-drive mode for testing and practice.
@@ -22,7 +23,7 @@ export class PracticeMode extends DriveMode {
     this.truckAudioController = null;
   }
 
-  async setup({ trackKey, vehicleKey = 'default_truck' }) {
+  async setup({ trackKey, vehicleKey = 'default_truck', playerColorKey = null }) {
     const { engine, menuManager } = this.controller;
 
     const {
@@ -50,7 +51,8 @@ export class PracticeMode extends DriveMode {
     // Create truck first so we can read its height when calculating spawnPos
     const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     this.truckAudioController = await TruckAudioController.create(audioManager, vehicleDef?.engineAudio);
-    const playerTruck = new Truck(scene, shadows, null, null, vehicleDef);
+    const playerColor = playerColorKey ? basicColors[playerColorKey]?.diffuse : null;
+    const playerTruck = new Truck(scene, shadows, playerColor, null, vehicleDef);
     playerTruck.setAudioController(this.truckAudioController);
 
     const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);

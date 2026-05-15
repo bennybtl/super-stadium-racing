@@ -1,9 +1,11 @@
+
 <template>
   <div class="w-full min-w-0 space-y-3">
+    <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white text-center">Track Selection</h3>
     <div class="relative overflow-hidden flex ">
       <button
         type="button"
-        class="z-20 inline-flex w-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-white transition hover:bg-slate-800"
+        class="rounded-3xl border-2 border-[#444] bg-[#101010] px-2 py-2.5 text-[48px] text-base font-bold text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:border-white hover:text-[#ffe066]"
         @click="selectAdjacent(-1)"
         :disabled="!canSelectLeft"
         aria-label="Select previous track"
@@ -21,11 +23,11 @@
           :key="track.key"
           type="button"
           :data-track-key="track.key"
-          class="min-w-[160px] max-w-[180px] rounded-xl transition border-2"
-          :class="track.key === modelValue ? ' border-amber-400 bg-slate-800' : 'border-slate-700 bg-slate-900'"
+          class="min-w-[160px] max-w-[180px] rounded-xl transition"
+          :class="track.key === modelValue ? ' border-2 border-amber-400' : ''"
           @click="selectTrack(track.key)"
         >
-          <div class="h-32 overflow-hidden rounded-2xl bg-slate-950">
+          <div class="h-32 overflow-hidden rounded-2xl">
             <img
               v-if="track.image"
               :src="track.image"
@@ -39,7 +41,7 @@
       </div>
       <button
         type="button"
-        class="z-20 inline-flex w-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-white transition hover:bg-slate-800"
+        class="rounded-3xl border-2 border-[#444] bg-[#101010] px-2 py-2.5 text-[48px] text-base font-bold text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:border-white hover:text-[#ffe066]"
         @click="selectAdjacent(1)"
         :disabled="!canSelectRight"
         aria-label="Select next track"
@@ -69,11 +71,14 @@ const scroller = ref(null);
 const scrollPosition = ref(0);
 
 const displayTracks = computed(() => {
-  return props.tracks.map(track => {
+  return props.tracks.filter(track => {
     const trackData = window.trackLoader?.getTrack(track.key);
+    console.log('Track data for', track.key, trackData);
+    return trackData != null && trackData.hidden !== true;
+  }).map(trackData => {
     return {
-      key: track.key,
-      name: track.name,
+      key: trackData.key,
+      name: trackData.name,
       image: trackData?.image ? `${import.meta.env.BASE_URL}tracks/${trackData.image}` : null,
     };
   });

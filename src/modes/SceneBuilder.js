@@ -316,7 +316,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainDiffuseOverlayTex,
     terrainTypePropertyData.width,
     terrainManager.cellsPerSide,
-    terrainSize / 2
+    groundWidth / 2,
+    groundDepth / 2
   );
   groundMat.bumpTexture = compositeNormalMap;
   const bumpUScale = groundWidth / terrainSize;

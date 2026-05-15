@@ -68,6 +68,7 @@ export class MenuMode extends BaseMode {
       this.controller.goToPractice({
         trackKey:   menuManager.selectedTrack,
         vehicleKey: menuManager.selectedVehicle,
+        playerColorKey: menuManager.selectedPlayerColor,
       });
     };
 

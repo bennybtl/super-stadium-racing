@@ -1,5 +1,6 @@
 <template>
-  <div v-if="store.pitData" class="fixed inset-0 bg-black/88 flex items-center justify-center z-[1100] pointer-events-auto font-sans">
+  <div v-if="store.pitData" 
+    class="fixed inset-0 bg-black/88 flex items-center justify-center z-[1100] pointer-events-auto font-sans">
     <div class="bg-slate-950/98 border-[3px] border-[#ff2222] rounded-[10px] p-7 min-w-[420px] max-w-[1240px] text-center shadow-[0_12px_48px_rgba(0,0,0,0.7)]">
 
       <div class="text-[#ff2222] text-2xl font-bold uppercase tracking-[4px] mb-2">
