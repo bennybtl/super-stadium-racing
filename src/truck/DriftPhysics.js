@@ -97,11 +97,70 @@ export class DriftPhysics {
     this.state = state;
     this._velocityDir = new Vector3();
     this._right = new Vector3();
+    this._surfaceForward = new Vector3();
+    this._surfaceNormal = new Vector3(0, 1, 0);
+    this._surfaceRight = new Vector3(1, 0, 0);
     this._rollRight = new Vector3();
     this._currentPitchOffset = 0;
   }
 
   applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0) {
+    const surfaceForward = this._surfaceForward;
+    const surfaceNormal = this._surfaceNormal;
+    const surfaceRight = this._surfaceRight;
+
+    const stateNormal = this.state.surfaceNormal;
+    if (stateNormal) {
+      surfaceNormal.copyFrom(stateNormal);
+      const normalLenSq =
+        surfaceNormal.x * surfaceNormal.x +
+        surfaceNormal.y * surfaceNormal.y +
+        surfaceNormal.z * surfaceNormal.z;
+      if (normalLenSq > 1e-6) {
+        const invNormalLen = 1 / Math.sqrt(normalLenSq);
+        surfaceNormal.scaleInPlace(invNormalLen);
+      } else {
+        surfaceNormal.set(0, 1, 0);
+      }
+    } else {
+      surfaceNormal.set(0, 1, 0);
+    }
+
+    const fwdDotNormal =
+      forward.x * surfaceNormal.x +
+      forward.y * surfaceNormal.y +
+      forward.z * surfaceNormal.z;
+    surfaceForward.set(
+      forward.x - surfaceNormal.x * fwdDotNormal,
+      forward.y - surfaceNormal.y * fwdDotNormal,
+      forward.z - surfaceNormal.z * fwdDotNormal
+    );
+    const surfaceFwdLenSq =
+      surfaceForward.x * surfaceForward.x +
+      surfaceForward.y * surfaceForward.y +
+      surfaceForward.z * surfaceForward.z;
+    if (surfaceFwdLenSq > 1e-6) {
+      surfaceForward.scaleInPlace(1 / Math.sqrt(surfaceFwdLenSq));
+    } else {
+      surfaceForward.copyFrom(forward);
+    }
+
+    // Right axis on the terrain tangent plane.
+    surfaceRight.set(
+      surfaceNormal.y * surfaceForward.z - surfaceNormal.z * surfaceForward.y,
+      surfaceNormal.z * surfaceForward.x - surfaceNormal.x * surfaceForward.z,
+      surfaceNormal.x * surfaceForward.y - surfaceNormal.y * surfaceForward.x
+    );
+    const surfaceRightLenSq =
+      surfaceRight.x * surfaceRight.x +
+      surfaceRight.y * surfaceRight.y +
+      surfaceRight.z * surfaceRight.z;
+    if (surfaceRightLenSq > 1e-6) {
+      surfaceRight.scaleInPlace(1 / Math.sqrt(surfaceRightLenSq));
+    } else {
+      surfaceRight.set(surfaceForward.z, 0, -surfaceForward.x);
+    }
+
     // Pick the appropriate minimum speed threshold.
     // When already drifting, use lower thresholds so the drift can bleed out
     // naturally through grip rather than snapping off abruptly.
@@ -120,11 +179,17 @@ export class DriftPhysics {
     if (speed <= minSpeed) {
       // Below threshold: strip lateral velocity and clear drift state so
       // effects don't linger.
-      const forwardVelocity = this.state.velocity.dot(forward);
-      const vy = this.state.velocity.y;
-      this.state.velocity.x = forward.x * forwardVelocity;
-      this.state.velocity.z = forward.z * forwardVelocity;
-      this.state.velocity.y = vy;
+      const forwardVelocity = this.state.velocity.dot(surfaceForward);
+      const normalVelocity = this.state.velocity.dot(surfaceNormal);
+      this.state.velocity.x =
+        surfaceForward.x * forwardVelocity +
+        surfaceNormal.x * normalVelocity;
+      this.state.velocity.y =
+        surfaceForward.y * forwardVelocity +
+        surfaceNormal.y * normalVelocity;
+      this.state.velocity.z =
+        surfaceForward.z * forwardVelocity +
+        surfaceNormal.z * normalVelocity;
       this.state.slipAngle = 0;
       this.state.isDrifting = false;
       this.state.isSpinningOut = false;
@@ -142,18 +207,19 @@ export class DriftPhysics {
     const invVLen = 1 / vLen;
     this._velocityDir.set(vx * invVLen, vy * invVLen, vz * invVLen);
 
-    const forwardVelocity = this.state.velocity.dot(forward);
+    const forwardVelocity = this.state.velocity.dot(surfaceForward);
     const isReversing = forwardVelocity < 0;
 
     // Slip angle: angle between velocity direction and heading direction
     const targetDot = isReversing
-      ? -(forward.x * this._velocityDir.x + forward.y * this._velocityDir.y + forward.z * this._velocityDir.z)
-      :  (forward.x * this._velocityDir.x + forward.y * this._velocityDir.y + forward.z * this._velocityDir.z);
+      ? -(surfaceForward.x * this._velocityDir.x + surfaceForward.y * this._velocityDir.y + surfaceForward.z * this._velocityDir.z)
+      :  (surfaceForward.x * this._velocityDir.x + surfaceForward.y * this._velocityDir.y + surfaceForward.z * this._velocityDir.z);
     this.state.slipAngle = Math.acos(Math.max(-1, Math.min(1, targetDot)));
 
-    // Right vector — XZ perpendicular to heading
-    this._right.set(forward.z, 0, -forward.x);
+    // Lateral velocity across the terrain tangent plane.
+    this._right.copyFrom(surfaceRight);
     const lateralSpeed = this.state.velocity.dot(this._right);
+    const normalVelocity = this.state.velocity.dot(surfaceNormal);
 
     // Two-regime grip curve:
     //   Grip zone  (slip ≤ driftThresh): strong correction → normal cornering.
@@ -187,10 +253,18 @@ export class DriftPhysics {
     // is left untouched. When grip is low (drifting) the lateral speed bleeds off
     // slowly, giving a loose, momentum-driven feel rather than a sharp snap-back.
     const newLateralSpeed = lateralSpeed * (1 - gripMultiplier);
-    const velocityY = this.state.velocity.y;
-    this.state.velocity.x = forward.x * forwardVelocity + this._right.x * newLateralSpeed;
-    this.state.velocity.z = forward.z * forwardVelocity + this._right.z * newLateralSpeed;
-    this.state.velocity.y = velocityY;
+    this.state.velocity.x =
+      surfaceForward.x * forwardVelocity +
+      this._right.x * newLateralSpeed +
+      surfaceNormal.x * normalVelocity;
+    this.state.velocity.y =
+      surfaceForward.y * forwardVelocity +
+      this._right.y * newLateralSpeed +
+      surfaceNormal.y * normalVelocity;
+    this.state.velocity.z =
+      surfaceForward.z * forwardVelocity +
+      this._right.z * newLateralSpeed +
+      surfaceNormal.z * normalVelocity;
 
     this.state.isSpinningOut = this.state.slipAngle > SPINOUT_SLIP_THRESHOLD && gripMultiplier < SPINOUT_GRIP_THRESHOLD;
     this.state.isDrifting = this.state.slipAngle > driftThresh;
