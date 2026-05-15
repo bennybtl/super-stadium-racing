@@ -690,7 +690,8 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   // Compile-time constants injected from JS.
   const float terrainTypeCount = __TERRAIN_TYPE_COUNT__;
   const float terrainCellCount = __TERRAIN_CELL_COUNT__;
-  const float terrainWorldHalfSize = __TERRAIN_WORLD_HALF_SIZE__;
+  const float terrainWorldHalfWidth = __TERRAIN_WORLD_HALF_WIDTH__;
+  const float terrainWorldHalfDepth = __TERRAIN_WORLD_HALF_DEPTH__;
 
   // Declared as module-level so both CUSTOM_FRAGMENT_UPDATE_DIFFUSE and the
   // specularColor override can access the result.
@@ -703,25 +704,47 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
       float u = (typeIndex + 0.5) / terrainTypeCount;
       return texture2D(terrainPropertySampler, vec2(u, 0.5));
   }
-  // 3×3 Gaussian kernel over cell neighbours.
-  // Weights: exp(-|d|² / (2σ²)) with σ=1.
-  //   center  (d=0):       1.000
-  //   edge    (d=1):       0.607
-  //   corner  (d=√2):      0.368
-  // This spreads the blend zone over ~3 cells, removing the 1-cell staircase
-  // visible at diagonal terrain-type boundaries.
+    vec4 _sampleSmoothedDiffuseOverlay(vec2 tUV, vec2 coord) {
+      float n = terrainCellCount;
+      vec2 invN = vec2(1.0 / n);
+      vec4 accum = vec4(0.0);
+      float totalW = 0.0;
+      const float sigma = 0.65;
+      const float invTwoSigma2 = 1.0 / (2.0 * sigma * sigma);
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          vec2 offset = vec2(float(dx), float(dy));
+          vec2 sampleUv = clamp(tUV + offset * invN, vec2(0.0), vec2(1.0));
+          vec2 sampleCenter = floor(coord) + offset + 0.5;
+          vec2 delta = sampleCenter - coord;
+          float dist2 = dot(delta, delta);
+          float w = exp(-dist2 * invTwoSigma2);
+          accum += texture2D(terrainDiffuseOverlaySampler, sampleUv) * w;
+          totalW += w;
+        }
+      }
+      return accum / max(totalW, 1e-5);
+    }
+    // 3x3 Gaussian kernel over cell neighbours using distance from the current
+    // fragment position (in cell space) to each neighbour cell center.
+    // This keeps blending continuous inside each tile instead of a constant
+    // value per tile.
   vec4 _computeTerrainBlend(vec2 tUV) {
       float n  = terrainCellCount;
       float nm = n - 1.0;
-      vec2 coord = clamp(tUV * n, vec2(0.0), vec2(nm));
+      vec2 coord = clamp(tUV * n, vec2(0.001), vec2(nm + 0.999));
       vec2 cell  = floor(coord);
       vec4  accum  = vec4(0.0);
       float totalW = 0.0;
+      const float sigma = 0.75;
+      const float invTwoSigma2 = 1.0 / (2.0 * sigma * sigma);
       for (int dy = -1; dy <= 1; dy++) {
           for (int dx = -1; dx <= 1; dx++) {
               vec2  nc   = clamp(cell + vec2(float(dx), float(dy)), vec2(0.0), vec2(nm));
-              float dist2 = float(dx * dx + dy * dy);
-              float w    = exp(-dist2 * 0.5);
+            vec2 center = nc + 0.5;
+            vec2 delta = center - coord;
+            float dist2 = dot(delta, delta);
+            float w = exp(-dist2 * invTwoSigma2);
               float nId  = _decodeTerrainId(texture2D(terrainIdSampler, (nc + 0.5) / n));
               accum  += _sampleTypeProps(nId) * w;
               totalW += w;
@@ -734,17 +757,21 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
 // terrain UV from world position: maps [-halfSize, +halfSize] → [0, 1]
 // Uses vPositionW (always available in StandardMaterial fragment shader).
 const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
-  vec2 _tUV = vPositionW.xz / (terrainWorldHalfSize * 2.0) + 0.5;
+  vec2 _tUV = vec2(
+    vPositionW.x / (terrainWorldHalfWidth * 2.0) + 0.5,
+    vPositionW.z / (terrainWorldHalfDepth * 2.0) + 0.5
+  );
+  vec2 _coord = clamp(_tUV * terrainCellCount, vec2(0.001), vec2((terrainCellCount - 1.0) + 0.999));
   _terrainBlendResult = _computeTerrainBlend(_tUV);
   vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUV);
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
-  vec4 _diffuseOverlay = texture2D(terrainDiffuseOverlaySampler, _tUV);
+  vec4 _diffuseOverlay = _sampleSmoothedDiffuseOverlay(_tUV, _coord);
   float _wearLighten = _wearOverlay.r;
   float _wearDarken  = _wearOverlay.g;
   vec3 _terrainRgb = mix(_terrainBlendResult.rgb, _waterOverlay.rgb, _waterOverlay.a);
   _terrainRgb = clamp(_terrainRgb * (1.0 + _wearLighten * 0.22), 0.0, 1.0);
   _terrainRgb = clamp(_terrainRgb * (1.0 - _wearDarken  * 0.22), 0.0, 1.0);
-  _terrainRgb = mix(_terrainRgb, _diffuseOverlay.rgb, _diffuseOverlay.a);
+  _terrainRgb = mix(_terrainRgb, _diffuseOverlay.rgb, _diffuseOverlay.a * 0.7);
   _terrainBlendResult.a = clamp(_terrainBlendResult.a + max(_wearLighten, _wearDarken) * 0.06, 0.0, 1.0);
   baseColor = vec4(_terrainRgb, 1.0);
 `;
@@ -757,7 +784,7 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
  * StandardMaterial keeps CSM shadow receiving, lighting, and normal mapping.
  */
 export class TerrainBlendPlugin extends MaterialPluginBase {
-  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth) {
     super(material, "TerrainBlend", 200, {});
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
@@ -766,7 +793,8 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     this._terrainDiffuseOverlayTex = terrainDiffuseOverlayTex;
     this._terrainTypeCount    = terrainTypeCount;
     this._terrainCellCount    = terrainCellCount;
-    this._terrainWorldHalfSize = terrainWorldHalfSize;
+    this._terrainWorldHalfWidth = terrainWorldHalfWidth;
+    this._terrainWorldHalfDepth = terrainWorldHalfDepth;
     this._enable(true);
   }
 
@@ -789,11 +817,13 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
 
     const terrainTypeCount = Number(this._terrainTypeCount || 1).toFixed(1);
     const terrainCellCount = Number(this._terrainCellCount || 1).toFixed(1);
-    const terrainWorldHalfSize = Number(this._terrainWorldHalfSize || 80).toFixed(1);
+    const terrainWorldHalfWidth = Number(this._terrainWorldHalfWidth || 80).toFixed(1);
+    const terrainWorldHalfDepth = Number(this._terrainWorldHalfDepth || 80).toFixed(1);
     const defs = _TERRAIN_BLEND_GLSL_DEFS
       .replace("__TERRAIN_TYPE_COUNT__", terrainTypeCount)
       .replace("__TERRAIN_CELL_COUNT__", terrainCellCount)
-      .replace("__TERRAIN_WORLD_HALF_SIZE__", terrainWorldHalfSize);
+      .replace("__TERRAIN_WORLD_HALF_WIDTH__", terrainWorldHalfWidth)
+      .replace("__TERRAIN_WORLD_HALF_DEPTH__", terrainWorldHalfDepth);
 
     return {
       "CUSTOM_FRAGMENT_DEFINITIONS": defs,
@@ -819,10 +849,11 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
  * @param {RawTexture} terrainWearOverlayTex  world-space RGBA wear mask overlay
  * @param {number}     terrainTypeCount     number of terrain types
  * @param {number}     terrainCellCount     grid cells per side
- * @param {number}     terrainWorldHalfSize half of terrain world size (metres)
+ * @param {number}     terrainWorldHalfWidth half of terrain world width (metres)
+ * @param {number}     terrainWorldHalfDepth half of terrain world depth (metres)
  * @returns {StandardMaterial}
  */
-export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfSize) {
+export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth = terrainWorldHalfWidth) {
   const mat = new StandardMaterial("groundMat", scene);
   mat.specularColor = new Color3(1, 1, 1);
   mat.specularPower = 48;
@@ -840,7 +871,8 @@ export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, t
       terrainDiffuseOverlayTex,
       terrainTypeCount,
       terrainCellCount,
-      terrainWorldHalfSize
+      terrainWorldHalfWidth,
+      terrainWorldHalfDepth
     );
   } else {
     // WebGL1 fallback: use a stable flat color material
