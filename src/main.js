@@ -13,7 +13,7 @@ const engine = new Engine(canvas, true);
 // Ensure settings keys exist with defaults before gameplay systems read them.
 initializeSettingsStorage();
 
-const menuManager = new MenuManager();
+const menuManager = new MenuManager(); // temp for trackLoader
 
 const trackLoader = new TrackLoader();
 window.trackLoader = trackLoader; // MenuManager reads this to list available tracks
@@ -22,6 +22,7 @@ const vehicleLoader = new VehicleLoader();
 window.vehicleLoader = vehicleLoader;
 
 const controller = new ModeController(engine, menuManager, trackLoader);
+menuManager.controller = controller;
 
 menuManager.showLoading('Loading tracks and vehicles…');
 

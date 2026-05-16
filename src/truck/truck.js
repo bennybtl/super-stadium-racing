@@ -13,17 +13,19 @@ import { DriftPhysics } from "./DriftPhysics.js";
 import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
 import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js"; // used as fallback defaults only
+import { UPGRADES } from "../managers/UpgradeStorage.js";
 
 /**
  * Main Truck class that coordinates all truck subsystems
  */
 export class Truck {
-  constructor(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null) {
+  constructor(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null, upgrades = null) {
     this.scene = scene;
     this.shadows = shadows;
     this.driver = driver; // Optional AI driver
     this.vehicleDef = vehicleDef; // Optional vehicle definition from VehicleLoader
     this.vehicleName = vehicleDef?.name ?? 'Truck';
+    this.upgrades = upgrades ?? {}; // Player upgrades that modify truck stats
 
     // Color priority: explicit arg → vehicleDef defaultColor → built-in default
     const defColor = vehicleDef?.defaultColor;
@@ -109,6 +111,35 @@ export class Truck {
     this.audioController = audioController;
   }
 
+  /**
+   * Apply stored upgrades to the truck's state.
+   * Called during construction and can be called again if upgrades change.
+   */
+  _applyUpgradesToState(state) {
+    for (const upgrade of UPGRADES) {
+      const level = this.upgrades[upgrade.id] ?? 0;
+      if (level === 0) continue;
+      if (upgrade.id === 'suspension') {
+        // Suspension upgrades both spring strength and damping
+        state.springStrength += 20 * level;
+        state.damping        += 1.5 * level;
+        state.turnSpeed       += 0.3 * level;
+        state.weightTransfer    -= 0.05 * level;
+      } else if (upgrade.id === 'grip') {
+        // Grip upgrades add a flat multiplier to the grip stat rather than scaling it,
+        // so that it remains effective even with terrain modifiers and at high speeds.
+        state.grip += upgrade.statDelta * level;
+        state.turnSpeed       += 0.15 * level;
+        state.driftThreshold  -= 0.01 * level;
+      } else if (upgrade.statKey) {
+        state[upgrade.statKey] += upgrade.statDelta * level;
+      }
+    }
+    // Apply persistent nitro pool
+    state.boostCount = this.upgrades.nitroCount ?? state.boostCount;
+    state.maxBoosts  = this.upgrades.nitroCount ?? state.maxBoosts;
+  }
+
   createMesh() {
     const mesh = MeshBuilder.CreateBox("truck", { width: this.width, height: this.height, depth: this.depth }, this.scene);
     mesh.position.y = this.halfHeight;
@@ -182,6 +213,9 @@ export class Truck {
     if (this.vehicleDef?.params) {
       Object.assign(base, this.vehicleDef.params);
     }
+
+    // Apply upgrades to base stats
+    this._applyUpgradesToState(base);
 
     return base;
   }

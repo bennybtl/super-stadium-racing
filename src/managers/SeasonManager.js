@@ -17,64 +17,13 @@ export const SEASON_TRACKS = [
 ];
 
 import { AI_SKILL_PRESETS } from "../ai/AIDriver.js";
+import { UPGRADES, getUpgradeCatalog, loadPlayerUpgrades, incrementUpgradeLevel } from "./UpgradeStorage.js";
 
 /** Championship points by finish position (index 0 = 1st place) */
 const POINTS_TABLE = [10, 5, 3, 1];
 
 /** Cash earned per championship point */
 const MONEY_PER_POINT = 100;
-
-/**
- * Available upgrades.
- * Each level purchased adds `statDelta` to the player truck's state property.
- */
-export const UPGRADES = [
-  {
-    id: 'topSpeed',
-    label: 'Top Speed',
-    description: 'Raises maximum speed',
-    cost: 1000,
-    maxLevel: 6,
-    statKey: 'maxSpeed',
-    statDelta: 2,        // +2 m/s per level  (base: 25)
-  },
-  {
-    id: 'acceleration',
-    label: 'Acceleration',
-    description: 'Stronger engine, faster response',
-    cost: 750,
-    maxLevel: 6,
-    statKey: 'acceleration',
-    statDelta: 2,        // +2 per level  (base: 13)
-  },
-  {
-    id: 'tires',
-    label: 'Tires',
-    description: 'Better grip through corners',
-    cost: 500,
-    maxLevel: 6,
-    statKey: 'grip',
-    statDelta: 0.006,    // +0.006 per level  (base: 0.03)
-  },
-  {
-    id: 'suspension',
-    label: 'Suspension',
-    description: 'Improved handling and stability',
-    cost: 500,
-    maxLevel: 6,
-    // suspension applies two stat keys — handled specially in applyUpgradesToTruck
-    statKey: 'suspension',
-    statDelta: null,
-  },
-  {
-    id: 'nitro',
-    label: 'Nitro',
-    description: 'Add a nitro boost to your stock.',
-    cost: 200,
-    statKey: null,
-    statDelta: 1,
-  },
-];
 
 /** AI driver definitions with fixed skill configs */
 const AI_DRIVERS = [
@@ -129,8 +78,6 @@ export class SeasonManager {
           skillConfig: null,
           totalPoints: 0,
           balance: 0,
-          nitroCount: 5,  // persistent boost pool; starts at truck default
-          upgrades: {},   // { [upgradeId]: level }
           raceResults: [],
         },
         ...AI_DRIVERS.map(d => ({ ...d, totalPoints: 0, raceResults: [] })),
@@ -247,23 +194,8 @@ export class SeasonManager {
   getUpgrades() {
     this._requireState();
     const player = this.state.drivers.find(d => d.isPlayer);
-    const purchased = player?.upgrades ?? {};
-    return UPGRADES.map(u => {
-      if (u.id === 'nitro') {
-        const count = player?.nitroCount ?? 5;
-        return {
-          ...u,
-          level: count,
-          maxLevel: 99,
-          affordable: (player?.balance ?? 0) >= u.cost && count < 10,
-        };
-      }
-      return {
-        ...u,
-        level: purchased[u.id] ?? 0,
-        affordable: (player?.balance ?? 0) >= u.cost,
-      };
-    });
+    const balance = player?.balance ?? 0;
+    return getUpgradeCatalog({ balance, ignoreBalance: false });
   }
 
   /**
@@ -272,11 +204,7 @@ export class SeasonManager {
    */
   getPlayerUpgrades() {
     this._requireState();
-    const player = this.state.drivers.find(d => d.isPlayer);
-    return {
-      ...(player?.upgrades ?? {}),
-      nitroCount: player?.nitroCount ?? 5,
-    };
+    return loadPlayerUpgrades();
   }
 
   /**
@@ -292,30 +220,15 @@ export class SeasonManager {
     const player = this.state.drivers.find(d => d.isPlayer);
     if (!player) return { ok: false, reason: 'No player driver' };
 
-    player.upgrades = player.upgrades ?? {};
-
-    // Nitro is a persistent pool — not a level-based upgrade
-    if (upgradeId === 'nitro') {
-      const current = player.nitroCount ?? 5;
-      if (current >= 99) return { ok: false, reason: 'Already at maximum (99)' };
-      if (player.balance < upgrade.cost) return { ok: false, reason: 'Insufficient funds' };
-      player.balance -= upgrade.cost;
-      player.nitroCount = current + 1;
-      this.save();
-      console.log(`[SeasonManager] Purchased Nitro — pool now ${player.nitroCount}. Balance: $${player.balance}`);
-      return { ok: true };
-    }
-
-    const currentLevel = player.upgrades[upgradeId] ?? 0;
-
-    if (currentLevel >= upgrade.maxLevel) return { ok: false, reason: 'Already maxed' };
     if (player.balance < upgrade.cost) return { ok: false, reason: 'Insufficient funds' };
 
+    const result = incrementUpgradeLevel(upgradeId);
+    if (!result.ok) return result;
+
     player.balance -= upgrade.cost;
-    player.upgrades[upgradeId] = currentLevel + 1;
     this.save();
 
-    console.log(`[SeasonManager] Purchased ${upgrade.label} (now level ${player.upgrades[upgradeId]}). Balance: $${player.balance}`);
+    console.log(`[SeasonManager] Purchased ${upgrade.label}. Balance: $${player.balance}`);
     return { ok: true };
   }
 

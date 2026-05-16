@@ -9,11 +9,11 @@ import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { TRUCK_HALF_HEIGHT, basicColors } from "../constants.js";
 import { DriveMode } from "./DriveMode.js";
-import { UPGRADES } from "../managers/SeasonManager.js";
 import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
+import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -188,30 +188,12 @@ export class RaceMode extends DriveMode {
     const playerVehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     this.truckAudioController = await TruckAudioController.create(audioManager, playerVehicleDef?.engineAudio);
     const playerColor = playerColorKey ? basicColors[playerColorKey]?.diffuse : null;
-    const playerTruck = new Truck(scene, shadows, playerColor, null, playerVehicleDef);
+    const playerUpgrades = loadPlayerUpgrades();
+    const playerTruck = new Truck(scene, shadows, playerColor, null, playerVehicleDef, playerUpgrades);
     playerTruck.setAudioController(this.truckAudioController);
     playerTruck.mesh.position.copyFrom(spawn0.pos);
     playerTruck.state.heading = spawn0.heading;
     playerTruck.mesh.rotation.y = spawn0.heading;
-
-    // Apply season upgrades to the player truck's base stats
-    if (season && seasonManager) {
-      const purchased = seasonManager.getPlayerUpgrades();
-      for (const upgrade of UPGRADES) {
-        const level = purchased[upgrade.id] ?? 0;
-        if (level === 0) continue;
-        if (upgrade.id === 'suspension') {
-          // Suspension upgrades both spring strength and damping
-          playerTruck.state.springStrength += 20 * level;
-          playerTruck.state.damping        += 1.5 * level;
-        } else if (upgrade.statKey) {
-          playerTruck.state[upgrade.statKey] += upgrade.statDelta * level;
-        }
-      }
-      // Apply persistent nitro pool (carries over between races)
-      playerTruck.state.boostCount = purchased.nitroCount ?? playerTruck.state.boostCount;
-      playerTruck.state.maxBoosts  = purchased.nitroCount ?? playerTruck.state.maxBoosts;
-    }
 
     // ── Telemetry ────────────────────────────────────────────────────────────
     const telemetryRecorder = new TelemetryRecorder(trackKey, /* checkpoints resolved below */ []);

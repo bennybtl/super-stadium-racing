@@ -57,7 +57,7 @@
 
             <div class="flex flex-col gap-3 mb-4">
               <div
-                v-for="u in store.pitData.upgrades"
+                v-for="u in store.upgrades"
                 :key="u.id"
                 class="rounded-xl border border-slate-700 bg-white/5 p-3 text-left flex items-center gap-3"
                 :class="u.level >= u.maxLevel ? 'border-red-500 bg-red-500/10' : ''"

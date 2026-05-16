@@ -8,6 +8,7 @@ import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { DriveMode } from "./DriveMode.js";
 import { basicColors } from "../constants.js";
+import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 
 /**
  * PracticeMode – free-drive mode for testing and practice.
@@ -52,7 +53,8 @@ export class PracticeMode extends DriveMode {
     const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     this.truckAudioController = await TruckAudioController.create(audioManager, vehicleDef?.engineAudio);
     const playerColor = playerColorKey ? basicColors[playerColorKey]?.diffuse : null;
-    const playerTruck = new Truck(scene, shadows, playerColor, null, vehicleDef);
+    const playerUpgrades = loadPlayerUpgrades();
+    const playerTruck = new Truck(scene, shadows, playerColor, null, vehicleDef, playerUpgrades);
     playerTruck.setAudioController(this.truckAudioController);
 
     const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);

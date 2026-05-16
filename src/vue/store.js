@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, reactive, computed, shallowRef } from 'vue';
 import { getObstacleSpec } from '../objects/Obstacle.js';
+import { resetPlayerUpgrades, getUpgradeCatalog } from '../managers/UpgradeStorage.js';
 
 // ─── Menu store ───────────────────────────────────────────────────────────────
 export const useMenuStore = defineStore('menu', () => {
@@ -13,6 +14,8 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedLaps = ref(5);
   const selectedAIDrivers = ref(3);
   const selectedVehicle = ref('default_truck');
+  // Current gameplay mode: null | 'practice' | 'singleRace' | 'season'
+  const mode = ref(null);
 
   // Season overlay data (null when not showing)
   const postRaceData    = ref(null);
@@ -21,6 +24,8 @@ export const useMenuStore = defineStore('menu', () => {
   const singleRaceData  = ref(null);
   const loadingVisible = ref(false);
   const loadingMessage = ref('Loading…');
+  // Upgrades state for UI
+  const upgrades = ref([]);
   
   // Settings state
   const truckMode = ref(localStorage.getItem('truckMode') || 'arcade');
@@ -42,8 +47,14 @@ export const useMenuStore = defineStore('menu', () => {
   function setSelectedTrack(key) { if (!_bridge.value) return; _bridge.value.setSelectedTrack(key); }
   function setSelectedLaps(laps) { if (!_bridge.value) return; _bridge.value.setSelectedLaps(laps); }
   function setSelectedAIDrivers(count) { if (!_bridge.value) return; _bridge.value.setSelectedAIDrivers(count); }
-  function showPitMenu(mode = 'singleRace') { _bridge.value?.showPitMenu(mode); }
+  function showPitMenu(pitMode = 'singleRace') {
+    if (pitMode === 'season') mode.value = 'season';
+    else if (pitMode === 'singleRace') mode.value = 'singleRace';
+    _bridge.value?.showPitMenu(pitMode);
+  }
+
   function startPracticeMode() {
+    mode.value = 'practice';
     _bridge.value?.onStartPractice();
   }
 
@@ -63,16 +74,31 @@ export const useMenuStore = defineStore('menu', () => {
 
   // ── Season actions (called by Vue overlays) ──────────────────────────────
   function startSeasonMode() {
+    mode.value = 'season';
     _bridge.value?.onSeasonStart(selectedLaps.value);
   }
-  function continueSeason()        { _bridge.value?.onContinueSeason(); }
+  function continueSeason()        { mode.value = 'season'; _bridge.value?.onContinueSeason(); }
   function retireFromSeason()      { _bridge.value?.onRetireFromSeason(); }
   function goToPit()               { _bridge.value?.onGoToPit(); }
   function purchaseUpgrade(id)     { _bridge.value?.onPurchaseUpgrade(id); }
+  function resetUpgrades() {
+    // If in season mode, delegate to bridge (game logic may need to refresh pit, etc)
+    if (mode.value === 'season' && _bridge.value?.onResetUpgrades) {
+      _bridge.value.onResetUpgrades();
+      return;
+    }
+    // Otherwise, reset upgrades directly and update state
+    resetPlayerUpgrades();
+    // Always ignore balance outside of season
+    // (If you want to show balance-aware upgrades, pass pitData.playerBalance)
+    upgrades.value = getUpgradeCatalog({ balance: 0, ignoreBalance: true });
+  }
+  function selectPlayerColor(key)  { _bridge.value?.onSelectPlayerColor(key); }
   function selectPlayerColor(key)  { if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
-  function startSingleRace()        { _bridge.value?.onStartSingleRace(); }
-  function exitSeason()            { postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
-  function singleRaceExit()        { singleRaceData.value = null; _bridge.value?.onExit(); }
+  function startSingleRace()        { mode.value = 'singleRace'; _bridge.value?.onStartSingleRace(); }
+  function exitSeason()            { mode.value = null; postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
+  function singleRaceExit()        { mode.value = null; singleRaceData.value = null; _bridge.value?.onExit(); }
+  function setMode(nextMode)       { mode.value = nextMode; }
 
   function setLoading(visible, message = null) {
     loadingVisible.value = !!visible;
@@ -80,8 +106,8 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   return {
-    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedVehicle,
-    postRaceData, pitData, seasonFinalData, singleRaceData,
+    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedVehicle, mode,
+    postRaceData, pitData, seasonFinalData, singleRaceData, upgrades,
     loadingVisible, loadingMessage,
     setBridge,
     showEditorTrackSelect,
@@ -90,7 +116,8 @@ export const useMenuStore = defineStore('menu', () => {
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
-    continueSeason, retireFromSeason, goToPit, purchaseUpgrade, selectPlayerColor, startSingleRace, startSeasonMode, exitSeason, singleRaceExit,
+    continueSeason, retireFromSeason, goToPit, purchaseUpgrade, resetUpgrades, selectPlayerColor, startSingleRace, startSeasonMode, exitSeason, singleRaceExit,
+    setMode,
     setLoading,
   };
 });

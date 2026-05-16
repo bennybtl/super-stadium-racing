@@ -4,6 +4,7 @@ import { EditorMode } from "./EditorMode.js";
 import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
 import { SeasonManager } from "../managers/SeasonManager.js";
+import { incrementUpgradeLevel, getUpgradeCatalog, resetPlayerUpgrades } from "../managers/UpgradeStorage.js";
 
 /**
  * Owns the engine render loop and coordinates transitions between
@@ -98,9 +99,19 @@ export class ModeController {
    * Purchase an upgrade and refresh the pit screen data.
    */
   purchaseUpgrade(upgradeId) {
-    if (!this.seasonManager) return;
-    const result = this.seasonManager.purchaseUpgrade(upgradeId);
-    if (result.ok) this.goToPit(); // refresh pitData with updated balance + upgrade levels
+    if (!this.seasonManager) {
+      // Practice/single-race path: persist upgrade progress independently of season.
+      const result = incrementUpgradeLevel(upgradeId);
+      if (result.ok) {
+        this.menuManager._store.upgrades = getUpgradeCatalog({
+          balance: this.menuManager._store?.pitData?.playerBalance ?? 0,
+          ignoreBalance: !this.menuManager._store?.pitData?.isSeason,
+        });
+      }
+    } else {
+      const result = this.seasonManager.purchaseUpgrade(upgradeId);
+      if (result.ok) this.goToPit(); // refresh pitData with updated balance + upgrade levels
+    }
   }
 
   /**
@@ -167,7 +178,7 @@ export class ModeController {
       isSeasonComplete: false,
       standings:        [],
       playerBalance:    0,
-      upgrades:         [],
+      upgrades:         getUpgradeCatalog({ balance: 0, ignoreBalance: true }),
       vehicleName,
     });
   }

@@ -85,10 +85,10 @@
         <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
 
           <div class="flex flex-col gap-4">
-            <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">
+            <!-- <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">
               <template v-if="store.pitData.isSeason">PIT LANE</template>
               <template v-else>PRE-RACE</template>
-            </h2>
+            </h2> -->
 
             <!-- <span class="block text-sm text-slate-400 uppercase tracking-[2px] mt-1">
               <template v-if="store.pitData.isSeason">

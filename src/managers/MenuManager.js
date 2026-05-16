@@ -1,5 +1,6 @@
 import { useMenuStore } from '../vue/store.js';
-import { SEASON_TRACKS, UPGRADES } from './SeasonManager.js';
+import { SEASON_TRACKS } from './SeasonManager.js';
+import { getUpgradeCatalog } from './UpgradeStorage.js';
 
 /**
  * MenuManager – thin bridge between game logic (ModeController / modes) and
@@ -9,8 +10,9 @@ import { SEASON_TRACKS, UPGRADES } from './SeasonManager.js';
  * exposes overrideable callbacks for modes to hook into.
  */
 export class MenuManager {
-  constructor() {
+  constructor(controller = null) {
     // Game-logic state (plain JS — not reactive)
+    this.controller = controller;
     this.currentMenu = 'title';
     this.gameStarted = false;
     this.isPaused    = false;
@@ -30,6 +32,7 @@ export class MenuManager {
     this._store.selectedLaps = this.selectedLaps;
     this._store.selectedAIDrivers = this.selectedAIDrivers;
     this._store.selectedVehicle = this.selectedVehicle;
+    this._store.mode = null;
     this._store.screen = 'title';
   }
 
@@ -37,6 +40,7 @@ export class MenuManager {
 
   showStartMenu() {
     this.currentMenu = 'start';
+    this._store.mode = null;
     this._store.postRaceData = null;
     this._store.pitData = null;
     this._store.seasonFinalData = null;
@@ -57,6 +61,7 @@ export class MenuManager {
   }
 
   showPitMenu(mode = 'singleRace') {
+    this._store.mode = mode;
     this._refreshTrackList();
     this._refreshVehicleList();
     if (!this.selectedLaps) {
@@ -81,23 +86,10 @@ export class MenuManager {
       this._store.selectedTrack = this.selectedTrack;
     }
 
-    const seasonStartUpgrades = isSeasonStart
-      ? UPGRADES.map((u) => {
-          if (u.id === 'nitro') {
-            return {
-              ...u,
-              level: 5,
-              maxLevel: 99,
-              affordable: false,
-            };
-          }
-          return {
-            ...u,
-            level: 0,
-            affordable: false,
-          };
-        })
-      : [];
+    const upgrades = getUpgradeCatalog({
+      balance: 0,
+      ignoreBalance: mode !== 'season',
+    });
 
     this.currentMenu = 'pit';
     this._store.postRaceData = null;
@@ -113,9 +105,9 @@ export class MenuManager {
       isSeasonComplete: false,
       standings:        [],
       playerBalance:    0,
-      upgrades:         seasonStartUpgrades,
       selectedColorKey: this.selectedPlayerColor,
     };
+    this._store.upgrades = upgrades;
     this._store.seasonFinalData = null;
     this._store.screen = null;
   }
@@ -179,6 +171,7 @@ export class MenuManager {
   showPit(data) {
     this._refreshVehicleList();
     this.currentMenu = 'pit';
+    this._store.mode = data.isSeason ? 'season' : 'singleRace';
     this._store.postRaceData = null;
     this._store.pitData = {
       pitMode:          data.pitMode ?? (data.isSeason ? 'season' : 'singleRace'),
@@ -187,6 +180,10 @@ export class MenuManager {
       selectedVehicleKey: this.selectedVehicle,
     };
     this._store.seasonFinalData = null;
+    this._store.upgrades = data.upgrades ?? getUpgradeCatalog({
+      balance: data.playerBalance ?? 0,
+      ignoreBalance: !data.isSeason,
+    });
     this._store.screen = null;
   }
 
@@ -226,11 +223,11 @@ export class MenuManager {
   // ── Overrideable callbacks (assigned by modes) ────────────────────────────
 
   onStartGame()    { this.gameStarted = true; this.hideMenu(); }
-  onStartPractice() { this.gameStarted = true; this.hideMenu(); }
+  onStartPractice() { this.gameStarted = true; this._store.mode = 'practice'; this.hideMenu(); }
   onSettings()     { this.showSettingsMenu(); }
   onResume()       { this.hideMenu(); }
   onReset()        {}
-  onExit()         { this.gameStarted = false; this.showStartMenu(); }
+  onExit()         { this.gameStarted = false; this._store.mode = null; this.showStartMenu(); }
   onStartEditor()  { this.editorMode = true; this.hideMenu(); }
   onEditorResume() { this.hideMenu(); }
   onEditorSave()   {}
