@@ -28,5 +28,4 @@
   import { useMenuStore } from './store.js';
 
   const store = useMenuStore();
-  console.log(store.selectedAIDrivers);
 </script>

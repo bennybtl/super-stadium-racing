@@ -72,7 +72,7 @@ export class VehicleLoader {
       defaultColor: this.vehicles.get(key)?.defaultColor ?? null,
       meshColors: this.vehicles.get(key)?.meshColors ?? this.vehicles.get(key)?.meshColorMap ?? null,
       bodyTransform: this.vehicles.get(key)?.bodyTransform ?? null,
-      wheelTransform: this.vehicles.get(key)?.wheelTransform ?? null,
+      wheels: this.vehicles.get(key)?.wheels ?? null,
     }));
   }
 }

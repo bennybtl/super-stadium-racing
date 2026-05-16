@@ -131,40 +131,7 @@
                       @update:selectedColor="store.selectPlayerColor($event)"
                     />
                   </div>
-              </div>
-
-              <div>
-                <div class="flex flex-col items-center bg-emerald-500/10 border border-emerald-500 rounded-xl px-6 py-3 my-3">
-                  <span class="text-slate-400 text-[11px] uppercase tracking-[2px]">Budget</span>
-                  <span class="text-emerald-400 text-3xl font-bold tracking-[2px]">${{ store.pitData.playerBalance.toLocaleString() }}</span>
                 </div>
-
-                <div class="flex flex-col gap-3 mb-4">
-                  <div
-                    v-for="u in store.pitData.upgrades"
-                    :key="u.id"
-                    class="rounded-xl border border-slate-700 bg-white/5 p-3 text-left flex items-center gap-3"
-                    :class="u.level >= u.maxLevel ? 'border-red-500 bg-red-500/10' : ''"
-                  >
-                    <div class="flex-1 min-w-0">
-                      <span class="block text-white text-sm font-semibold">{{ u.label }}</span>
-                      <span class="block text-slate-400 text-xs mt-1">{{ u.description }}</span>
-                    </div>
-                    <div class="flex items-center gap-2 text-red-500">
-                      {{  u.level }} / {{ u.maxLevel }}
-                    </div>
-                    <button
-                      class="min-w-[72px] px-3 py-2 rounded-md font-bold text-sm uppercase tracking-[1px] transition duration-150 ease-in-out"
-                      :class="u.level >= u.maxLevel || !u.affordable ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : 'bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 hover:from-[#ff4343] hover:to-[#ff2222]'"
-                      :disabled="u.level >= u.maxLevel || !u.affordable"
-                      @click="store.purchaseUpgrade(u.id)"
-                    >
-                      <template v-if="u.level >= u.maxLevel">MAX</template>
-                      <template v-else>${{ u.cost.toLocaleString() }}</template>
-                    </button>
-                  </div>
-                </div>
-              </div>
               </div>
               <div class="flex flex-col gap-3">
                 <template v-if="store.pitData.isSeason && store.pitData.raceNumber === 1 && !store.pitData.isSeasonComplete">
@@ -221,7 +188,11 @@
                 @update:selectedColor="store.selectPlayerColor($event)"
               />
             </div>
+            <div class="mb-4">
+              <TruckSetup />
+            </div>
             <hr class="my-3 opacity-60">
+
             <div class="flex flex-row gap-auto">
               <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
               <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
@@ -247,6 +218,7 @@ import SettingsMenu from './SettingsMenu.vue';
 import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
 import TruckSelection from './TruckSelection.vue';
 import RaceConfig from './RaceConfig.vue';
+import TruckSetup from './TruckSetup.vue';
 
 const store = useMenuStore();
 const colorOptions = Object.entries(basicColors).map(([key, value]) => ({ key, value }));
