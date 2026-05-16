@@ -20,7 +20,7 @@ export class PolyWall {
     const visualHeight = Number(feature.height ?? 2);
     const collisionHeight = Number(feature.collisionHeight ?? visualHeight);
     const thickness = Number(feature.thickness ?? 0.5);
-    const friction = Number(feature.friction ?? 0.1);
+    const friction = Number(feature.friction ?? 0.05);
     const closed = feature.closed ?? false;
     const rawPoints = feature.points;
     if (!rawPoints || rawPoints.length < 2) return;

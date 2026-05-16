@@ -434,6 +434,16 @@ export const useEditorStore = defineStore('editor', () => {
     secondaryPathSpacing: 0.1,
   });
 
+  const aiPathBranch = reactive({
+    editingMainPath: true,
+    activeBranchId: null,
+    activeBranchWeight: 1,
+    activeBranchFromMainIndex: null,
+    activeBranchToMainIndex: null,
+    mainWaypointCount: 0,
+  });
+  const aiPathBranches = ref([]);
+
   function setAiPathWearEnabled(val)      { aiPathWear.enabled = val;      _bridge.value?.changeAiPathWearEnabled?.(val); }
   function setAiPathWearWidth(val)        { aiPathWear.width = val;        _bridge.value?.changeAiPathWearWidth?.(val); }
   function setAiPathWearIntensity(val)    { aiPathWear.intensity = val;    _bridge.value?.changeAiPathWearIntensity?.(val); }
@@ -444,6 +454,13 @@ export const useEditorStore = defineStore('editor', () => {
   function setAiPathWearSecondaryPathCount(val) { aiPathWear.secondaryPathCount = val; _bridge.value?.changeAiPathWearSecondaryPathCount?.(val); }
   function setAiPathWearSecondaryPathStrength(val) { aiPathWear.secondaryPathStrength = val; _bridge.value?.changeAiPathWearSecondaryPathStrength?.(val); }
   function setAiPathWearSecondaryPathSpacing(val) { aiPathWear.secondaryPathSpacing = val; _bridge.value?.changeAiPathWearSecondaryPathSpacing?.(val); }
+  function editMainAiPath()                 { aiPathBranch.editingMainPath = true; aiPathBranch.activeBranchId = null; _bridge.value?.editMainAiPath?.(); }
+  function createAiPathBranchFromSelected() { _bridge.value?.createAiPathBranchFromSelected?.(); }
+  function selectAiPathBranch(id)           { aiPathBranch.editingMainPath = !id; aiPathBranch.activeBranchId = id ?? null; _bridge.value?.selectAiPathBranch?.(id ?? null); }
+  function setActiveAiPathBranchWeight(val) { aiPathBranch.activeBranchWeight = val; _bridge.value?.setActiveAiPathBranchWeight?.(val); }
+  function setActiveAiPathBranchRejoinIndex(val) { aiPathBranch.activeBranchToMainIndex = val; _bridge.value?.setActiveAiPathBranchRejoinIndex?.(val); }
+  function deleteActiveAiPathBranch()       { _bridge.value?.deleteActiveAiPathBranch?.(); }
+  function clearAiPathBranches()            { _bridge.value?.clearAiPathBranches?.(); }
 
   // ── Terrain path panel ──
   const terrainPath = reactive({
@@ -795,9 +812,11 @@ export const useEditorStore = defineStore('editor', () => {
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,
     openAiPath, closeAiPath,
     aiPathWear,
+    aiPathBranch, aiPathBranches,
     setAiPathWearEnabled, setAiPathWearWidth, setAiPathWearIntensity,
     setAiPathWearLaneSpacing, setAiPathWearAlphaBreakup, setAiPathWearPathWander, setAiPathWearEdgeSoftness,
     setAiPathWearSecondaryPathCount, setAiPathWearSecondaryPathStrength, setAiPathWearSecondaryPathSpacing,
+    editMainAiPath, createAiPathBranchFromSelected, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, deleteActiveAiPathBranch, clearAiPathBranches,
     terrainPath,
     openTerrainPath, closeTerrainPath,
     setTerrainPathWidth, setTerrainPathCornerRadius, setTerrainPathTerrainType,

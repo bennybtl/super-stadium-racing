@@ -360,6 +360,20 @@ export class EditorController {
     this._editorStore.aiPathWear.secondaryPathCount = wear.secondaryPathCount;
     this._editorStore.aiPathWear.secondaryPathStrength = wear.secondaryPathStrength;
     this._editorStore.aiPathWear.secondaryPathSpacing = wear.secondaryPathSpacing;
+
+    const branchState = this.aiPathEditor?.getPanelState?.() ?? {
+      editingMainPath: true,
+      activeBranchId: null,
+      activeBranchWeight: 1,
+      branches: [],
+    };
+    this._editorStore.aiPathBranch.editingMainPath = !!branchState.editingMainPath;
+    this._editorStore.aiPathBranch.activeBranchId = branchState.activeBranchId;
+    this._editorStore.aiPathBranch.activeBranchWeight = branchState.activeBranchWeight ?? 1;
+    this._editorStore.aiPathBranch.activeBranchFromMainIndex = branchState.activeBranchFromMainIndex ?? null;
+    this._editorStore.aiPathBranch.activeBranchToMainIndex = branchState.activeBranchToMainIndex ?? null;
+    this._editorStore.aiPathBranch.mainWaypointCount = branchState.mainWaypointCount ?? 0;
+    this._editorStore.aiPathBranches = branchState.branches;
   }
 
   _updateAiPathWear(updates, debounce = true) {
@@ -1612,6 +1626,13 @@ export class EditorController {
   deleteAiWaypoint()   { this.aiPathEditor.deleteSelected(); }
   clearAiPath()        { this.aiPathEditor.clearAll(); }
   deselectAiWaypoint() { this.aiPathEditor.deselect(); }
+  editMainAiPath()             { this.aiPathEditor.editMainPath(); }
+  createAiPathBranchFromSelected() { this.aiPathEditor.createBranchFromSelected(); }
+  selectAiPathBranch(branchId) { this.aiPathEditor.selectBranch(branchId); }
+  setActiveAiPathBranchWeight(weight) { this.aiPathEditor.setActiveBranchWeight(weight); }
+  setActiveAiPathBranchRejoinIndex(index) { this.aiPathEditor.setActiveBranchRejoinIndex(index); }
+  deleteActiveAiPathBranch()   { this.aiPathEditor.deleteActiveBranch(); }
+  clearAiPathBranches()        { this.aiPathEditor.clearBranches(); }
   changeAiPathWearEnabled(val)      { this._updateAiPathWear({ enabled: !!val }, false); }
   changeAiPathWearWidth(val)        { this._updateAiPathWear({ width: val }, true); }
   changeAiPathWearIntensity(val)    { this._updateAiPathWear({ intensity: val }, true); }

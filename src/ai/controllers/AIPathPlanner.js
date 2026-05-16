@@ -47,8 +47,78 @@ export class AIPathPlanner {
     const MIN_SPEED = 14 * d.maxSpeed;
     const MAX_DECEL = 22;
 
-    const nodes = authorNodes
-      ? [...authorNodes.map(p => ({ x: p.x, z: p.z })), { x: authorNodes[0].x, z: authorNodes[0].z }]
+    const buildAuthoredNodesWithBranches = () => {
+      const mainNodes = authorNodes.map(p => ({ x: p.x, z: p.z }));
+      const rawBranches = Array.isArray(aiPathFeature?.branches) ? aiPathFeature.branches : [];
+      const validBranches = rawBranches.filter((b) => {
+        if (!b || !Array.isArray(b.points) || b.points.length < 2) return false;
+        if (!Number.isInteger(b.fromMainIndex) || !Number.isInteger(b.toMainIndex)) return false;
+        if (b.fromMainIndex < 0 || b.fromMainIndex >= mainNodes.length) return false;
+        if (b.toMainIndex <= b.fromMainIndex || b.toMainIndex >= mainNodes.length) return false;
+        return true;
+      });
+
+      const byFrom = new Map();
+      for (const branch of validBranches) {
+        const list = byFrom.get(branch.fromMainIndex) ?? [];
+        list.push(branch);
+        byFrom.set(branch.fromMainIndex, list);
+      }
+
+      const pickWeightedBranch = (branchesAtJunction) => {
+        const weighted = branchesAtJunction.map((b) => ({
+          branch: b,
+          weight: Number.isFinite(b.weight) ? Math.max(0, b.weight) : 1,
+        }));
+        // Keep "stay on main path" as a real option so branch weight is
+        // a preference, not an unconditional branch trigger.
+        const mainPathWeight = 1;
+        const branchWeightTotal = weighted.reduce((sum, item) => sum + item.weight, 0);
+        const totalWeight = mainPathWeight + branchWeightTotal;
+        if (totalWeight <= 0) return null;
+
+        let roll = Math.random() * totalWeight;
+        roll -= mainPathWeight;
+        if (roll <= 0) return null;
+
+        for (const item of weighted) {
+          roll -= item.weight;
+          if (roll <= 0) return item.branch;
+        }
+        return null;
+      };
+
+      const nodesOut = [];
+      const pushNode = (node) => {
+        const last = nodesOut[nodesOut.length - 1];
+        if (last && Math.abs(last.x - node.x) < 0.001 && Math.abs(last.z - node.z) < 0.001) return;
+        nodesOut.push({ x: node.x, z: node.z });
+      };
+
+      let i = 0;
+      while (i < mainNodes.length) {
+        pushNode(mainNodes[i]);
+
+        const candidates = byFrom.get(i) ?? [];
+        const chosen = candidates.length > 0 ? pickWeightedBranch(candidates) : null;
+        if (chosen) {
+          for (const bp of chosen.points) pushNode(bp);
+          i = chosen.toMainIndex;
+        } else {
+          i += 1;
+        }
+      }
+
+      if (nodesOut.length > 0) pushNode(nodesOut[0]);
+      return {
+        nodes: nodesOut,
+        branchCount: validBranches.length,
+      };
+    };
+
+    const authoredPath = authorNodes ? buildAuthoredNodesWithBranches() : null;
+    const nodes = authoredPath
+      ? authoredPath.nodes
       : [...d.checkpoints.map(cp => ({ x: cp.x, z: cp.z })), { x: d.checkpoints[0].x, z: d.checkpoints[0].z }];
 
     const interpolateSegment = (a, b) => {
@@ -141,7 +211,9 @@ export class AIPathPlanner {
       d.currentPathIndex = bestIndex;
     }
 
-    const sourceLabel = authorNodes ? `author aiPath (${authorNodes.length} nodes)` : `checkpoints (${d.checkpoints.length} nodes)`;
+    const sourceLabel = authoredPath
+      ? `author aiPath (${authorNodes.length} main nodes, ${authoredPath.branchCount} branches)`
+      : `checkpoints (${d.checkpoints.length} nodes)`;
     console.debug(`[AIDriver] Path built from ${sourceLabel}: ${d.path.length} waypoints. startPos=${startPosition.x.toFixed(2)},${startPosition.z.toFixed(2)} idx=${d.currentPathIndex}`);
 
     if (d.debugEnabled && d.scene) {

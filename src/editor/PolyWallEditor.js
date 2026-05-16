@@ -82,7 +82,7 @@ export class PolyWallEditor {
       height:          2,
       collisionHeight: 2,
       thickness:       0.5,
-      friction:        0.1,
+      friction:        0.05,
       closed:          false,
     };
 
