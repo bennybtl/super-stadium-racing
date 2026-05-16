@@ -3,6 +3,8 @@ import { TRUCK_HALF_HEIGHT, TRUCK_RADIUS } from "../constants.js";
 
 const SKIN = 0.03;
 const DEFAULT_FRICTION = 0.92;
+const BOUNCE_COEFFICIENT = 2.5; // > 1.0 creates bounce on perpendicular collisions
+const BOUNCE_ANGLE_THRESHOLD = Math.cos(30 * Math.PI / 180); // ~0.866 for ±30 degrees
 
 /**
  * StaticBodyCollisionManager
@@ -256,9 +258,15 @@ export class StaticBodyCollisionManager {
     const vel = truck.state.velocity;
     const velDot = vel.x * worldNormal.x + vel.y * worldNormal.y + vel.z * worldNormal.z;
     if (velDot < 0) {
-      vel.x -= worldNormal.x * velDot;
-      vel.y -= worldNormal.y * velDot;
-      vel.z -= worldNormal.z * velDot;
+      // Check if collision is head-on (within ±30 degrees of perpendicular)
+      const velMagnitude = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
+      const isHeadOn = velMagnitude > 0 && Math.abs(velDot) / velMagnitude >= BOUNCE_ANGLE_THRESHOLD;
+      
+      // Apply bounce coefficient only on head-on collisions, otherwise use 1.0 (no bounce)
+      const bounceCoeff = isHeadOn ? BOUNCE_COEFFICIENT : 1.0;
+      vel.x -= worldNormal.x * velDot * bounceCoeff;
+      vel.y -= worldNormal.y * velDot * bounceCoeff;
+      vel.z -= worldNormal.z * velDot * bounceCoeff;
 
       const applyFriction = mesh.metadata?.truckColliderApplyFriction !== false;
       if (applyFriction && Math.abs(worldNormal.y) < 0.2) {

@@ -2,6 +2,18 @@
 <template>
   <div class="w-full min-w-0 space-y-3">
     <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white text-center">Track Selection</h3>
+    <div v-if="availablePacks.length > 1" class="flex justify-center gap-2 flex-wrap">
+      <button
+        v-for="pack in packOptions"
+        :key="pack.value"
+        type="button"
+        class="px-3 py-1 text-xs rounded-full border transition duration-150"
+        :class="selectedPack === pack.value
+          ? 'border-amber-400 bg-amber-400 text-black font-bold'
+          : 'border-[#555] bg-[#1a1a1a] text-slate-300 hover:border-white hover:text-white'"
+        @click="setPackFilter(pack.value)"
+      >{{ pack.label }}</button>
+    </div>
     <div class="relative overflow-hidden flex ">
       <button
         type="button"
@@ -69,19 +81,44 @@ const emit = defineEmits(['update:modelValue']);
 
 const scroller = ref(null);
 const scrollPosition = ref(0);
+const selectedPack = ref('all');
 
-const displayTracks = computed(() => {
+const availablePacks = computed(() => {
+  const packs = new Set();
+  for (const t of props.tracks) {
+    if (t.packId) packs.add(t.packId);
+  }
+  return [...packs].sort();
+});
+
+const packOptions = computed(() => [
+  { value: 'all', label: 'All' },
+  ...availablePacks.value.map(p => ({ value: p, label: p.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) })),
+]);
+
+function setPackFilter(pack) {
+  selectedPack.value = pack;
+  // If current selection is no longer visible, pick first in filtered list
+  if (props.modelValue && !filteredTracks.value.find(t => t.key === props.modelValue)) {
+    if (filteredTracks.value.length > 0) emit('update:modelValue', filteredTracks.value[0].key);
+  }
+}
+
+const filteredTracks = computed(() => {
   return props.tracks.filter(track => {
     const trackData = window.trackLoader?.getTrack(track.key);
-    console.log('Track data for', track.key, trackData);
-    return trackData != null && trackData.hidden !== true;
-  }).map(trackData => {
-    return {
-      key: trackData.key,
-      name: trackData.name,
-      image: trackData?.image ? `${import.meta.env.BASE_URL}tracks/${trackData.image}` : null,
-    };
+    if (!trackData || trackData.hidden === true) return false;
+    if (selectedPack.value !== 'all' && track.packId !== selectedPack.value) return false;
+    return true;
   });
+});
+
+const displayTracks = computed(() => {
+  return filteredTracks.value.map(trackData => ({
+    key: trackData.key,
+    name: trackData.name,
+    image: trackData?.image ? `${import.meta.env.BASE_URL}tracks/${trackData.image}` : null,
+  }));
 });
 
 const selectedIndex = computed(() => {

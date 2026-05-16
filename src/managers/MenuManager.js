@@ -259,7 +259,7 @@ export class MenuManager {
     if (!window.trackLoader) return;
     this._store.trackList = window.trackLoader.getTrackList().map(key => {
       const track = window.trackLoader.getTrack(key);
-      return { key, name: track?.name ?? key, image: track?.image ?? null };
+      return { key, name: track?.name ?? key, image: track?.image ?? null, packId: track?.packId ?? null };
     });
   }
 
