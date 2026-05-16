@@ -89,6 +89,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackDepth = currentTrack.depth ?? 160;
   const maxTrackDim = Math.max(trackWidth, trackDepth);
   const terrainSize = maxTrackDim + 20;
+  const groundWidth = trackWidth + 20;
+  const groundDepth = trackDepth + 20;
 
   // -- Stadium lights --
   // 4 point lights at the corners of the track, elevated like stadium floodlights.
@@ -199,13 +201,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Use 1m terrain cells for smoother visual blending between terrain types.
   // Physics still samples from this grid, but the finer resolution reduces
   // visible blockiness and better matches authored terrain feature boundaries.
-  const terrainManager = new TerrainManager(terrainSize, 1);
+  const terrainManager = new TerrainManager(terrainSize, 1, groundWidth, groundDepth);
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-      const worldX =
-        (col - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
-      const worldZ =
-        (row - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
+      const worldX = ((col + 0.5) / terrainManager.cellsPerSide) * groundWidth - groundWidth / 2;
+      const worldZ = ((row + 0.5) / terrainManager.cellsPerSide) * groundDepth - groundDepth / 2;
       const terrainType = currentTrack.getTerrainTypeAt(worldX, worldZ);
       terrainManager.setTerrainCell(col, row, terrainType);
     }
@@ -214,8 +214,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
   applySteepGrassTerrainRemap(terrainManager, currentTrack);
 
   // -- Ground mesh --
-  const groundWidth = trackWidth + 20;
-  const groundDepth = trackDepth + 20;
   const ground = MeshBuilder.CreateGround(
     "ground",
     { width: groundWidth, height: groundDepth, subdivisions: Math.floor(Math.max(groundWidth, groundDepth) / 2) },
@@ -271,7 +269,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   terrainPropertyTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   terrainPropertyTex.gammaSpace = false;
 
-  const terrainWearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, terrainSize);
+  const terrainWearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, groundWidth, groundDepth);
   const terrainWearOverlayTex = RawTexture.CreateRGBATexture(
     terrainWearOverlayData.data,
     terrainWearOverlayData.width,
@@ -285,7 +283,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   terrainWearOverlayTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   terrainWearOverlayTex.gammaSpace = false;
 
-  const terrainDiffuseOverlayTex = await createTerrainDiffuseOverlayTexture(scene, terrainManager, texSize, terrainSize);
+  const terrainDiffuseOverlayTex = await createTerrainDiffuseOverlayTexture(scene, terrainManager, texSize, groundWidth, groundDepth);
   terrainDiffuseOverlayTex.wrapU = Texture.CLAMP_ADDRESSMODE;
   terrainDiffuseOverlayTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   terrainDiffuseOverlayTex.gammaSpace = false;
@@ -295,13 +293,13 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
   const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
-  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, currentTrack, texSize, terrainSize);
-  const waterDepthOverlayTex = await createWaterDepthOverlayTexture(scene, terrainManager, texSize, terrainSize);
+  const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, currentTrack, texSize, groundWidth, groundDepth);
+  const waterDepthOverlayTex = await createWaterDepthOverlayTexture(scene, terrainManager, texSize, groundWidth, groundDepth);
   const rebakeTerrainTexture = () => {
-    const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, terrainSize);
+    const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, groundWidth, groundDepth);
     terrainWearOverlayTex.update(wearOverlayData.data);
-    updateTerrainDiffuseOverlayTexture(terrainDiffuseOverlayTex, terrainManager, terrainSize);
-    updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, terrainSize);
+    updateTerrainDiffuseOverlayTexture(terrainDiffuseOverlayTex, terrainManager, groundWidth, groundDepth);
+    updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, groundWidth, groundDepth);
   };
 
   // Build StandardMaterial + TerrainBlendPlugin.
@@ -320,15 +318,12 @@ export async function buildScene(engine, trackLoader, trackKey) {
     groundDepth / 2
   );
   groundMat.bumpTexture = compositeNormalMap;
-  const bumpUScale = groundWidth / terrainSize;
-  const bumpVScale = groundDepth / terrainSize;
-  const bumpUOffset = (1 - bumpUScale) * 0.5;
-  const bumpVOffset = (1 - bumpVScale) * 0.5;
-  groundMat.bumpTexture.uScale = bumpUScale;
-  groundMat.bumpTexture.uOffset = bumpUOffset;
-  // Keep V flipped for texture orientation while matching terrain-space crop.
-  groundMat.bumpTexture.vScale = -bumpVScale;
-  groundMat.bumpTexture.vOffset = 1 - bumpVOffset;
+  // Composite normals are now baked in track-aligned world space, so sample
+  // full [0,1] UVs (with V flip for orientation) instead of square->rect crop.
+  groundMat.bumpTexture.uScale = 1;
+  groundMat.bumpTexture.uOffset = 0;
+  groundMat.bumpTexture.vScale = -1;
+  groundMat.bumpTexture.vOffset = 1;
   groundMat.bumpTexture.level = 0.75;
   groundMat.invertNormalMapY = true;
 

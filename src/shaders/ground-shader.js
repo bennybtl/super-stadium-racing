@@ -87,10 +87,10 @@ function _smoothstep(edge0, edge1, x) {
   return t * t * (3 - 2 * t);
 }
 
-function _getCellWorldCenter(terrainManager, col, row, worldSize) {
-  const halfWorld = worldSize / 2;
-  const x = (col + 0.5) * terrainManager.cellSize - halfWorld;
-  const z = (row + 0.5) * terrainManager.cellSize - halfWorld;
+function _getCellWorldCenter(terrainManager, col, row, worldWidth, worldDepth = worldWidth) {
+  const n = terrainManager.cellsPerSide;
+  const x = ((col + 0.5) / n) * worldWidth - worldWidth / 2;
+  const z = ((row + 0.5) / n) * worldDepth - worldDepth / 2;
   return { x, z };
 }
 
@@ -108,7 +108,8 @@ async function _paintSteepTerrainOverlay(
   track,
   terrainManager,
   textureSize,
-  worldSize,
+  worldWidth,
+  worldDepth,
   {
     normalMap,
     sourceTerrainNames,
@@ -123,13 +124,15 @@ async function _paintSteepTerrainOverlay(
   const img = await _loadNormalMap(normalMap);
   if (!img || img.naturalWidth <= 0) return;
 
-  const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
-  const tileSize = (textureSize / worldSize) * worldUnitsPerTile;
+  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
+  const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
+  const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
   const pattern = ctx.createPattern(img, 'repeat');
   if (!pattern) return;
 
-  const scale = tileSize / img.naturalWidth;
-  pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
+  const scaleX = tileSizeX / img.naturalWidth;
+  const scaleY = tileSizeY / img.naturalHeight;
+  pattern.setTransform(new DOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
 
   const cellsByBlend = new Map();
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
@@ -138,7 +141,7 @@ async function _paintSteepTerrainOverlay(
       const cellName = cell?.name ?? '';
       if (!sourceTerrainNames.includes(cellName)) continue;
 
-      const { x, z } = _getCellWorldCenter(terrainManager, col, row, worldSize);
+      const { x, z } = _getCellWorldCenter(terrainManager, col, row, worldWidth, worldDepth);
       const slopeDeg = _getTerrainSlopeDeg(track, x, z, sampleDistance * terrainManager.cellSize);
       const blend = _smoothstep(slopeStart, slopeEnd, slopeDeg);
       if (blend <= 0) continue;
@@ -165,8 +168,8 @@ async function _paintSteepTerrainOverlay(
   ctx.restore();
 }
 
-async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize) {
-  return _paintSteepTerrainOverlay(ctx, track, terrainManager, textureSize, worldSize, {
+async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth) {
+  return _paintSteepTerrainOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth, {
     normalMap: STEEP_DIRT_NORMAL_MAP,
     sourceTerrainNames: ['packed_dirt', 'loose_dirt'],
     slopeStart: STEEP_DIRT_SLOPE_START,
@@ -176,8 +179,8 @@ async function _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, w
   });
 }
 
-async function _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldSize) {
-  return _paintSteepTerrainOverlay(ctx, track, terrainManager, textureSize, worldSize, {
+async function _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth) {
+  return _paintSteepTerrainOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth, {
     normalMap: STEEP_GRASS_NORMAL_MAP,
     sourceTerrainNames: ['grass'],
     slopeStart: STEEP_GRASS_SLOPE_START,
@@ -245,7 +248,7 @@ function _buildWaterDepthTileCanvas(img, tileSizePx, waterCfg) {
   return canvas;
 }
 
-async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSize) {
+async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
   const waterCfg = TERRAIN_TYPES.WATER;
   const waterTextureName = _textureMapUrls[waterCfg.diffuseTexture] ? waterCfg.diffuseTexture : waterCfg.normalMap;
   if (!waterTextureName) return;
@@ -253,9 +256,9 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSi
   const img = await (_textureMapUrls[waterTextureName] ? _loadTextureMap(waterTextureName) : _loadNormalMap(waterTextureName));
   if (!img || img.naturalWidth <= 0) return;
 
-  const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
+  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
   const worldUnitsPerTile = waterCfg.diffuseTextureWorldUnitsPerTile ?? 12;
-  const tileSize = (textureSize / worldSize) * worldUnitsPerTile;
+  const tileSize = (textureSize / ((worldWidth + worldDepth) * 0.5)) * worldUnitsPerTile;
   const waterTile = _buildWaterDepthTileCanvas(img, tileSize, waterCfg);
   const pattern = ctx.createPattern(waterTile, 'repeat');
   if (!pattern) return;
@@ -276,8 +279,8 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSi
   ctx.restore();
 }
 
-async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldSize) {
-  const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
+async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
+  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
 
   const uniqueTextures = [...new Set(
     terrainManager.grid.map(cell => cell.diffuseTexture).filter(Boolean)
@@ -310,12 +313,14 @@ async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldS
     if (!pattern) continue;
 
     const worldUnitsPerTile = terrainManager.grid.find(cell => cell.diffuseTexture === name)?.diffuseTextureWorldUnitsPerTile ?? 10;
-    const tileSize = (textureSize / worldSize) * worldUnitsPerTile;
-    const scale = tileSize / img.naturalWidth;
+    const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
+    const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
+    const scaleX = tileSizeX / img.naturalWidth;
+    const scaleY = tileSizeY / img.naturalHeight;
 
     ctx.save();
     ctx.fillStyle = pattern;
-    pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
+    pattern.setTransform(new DOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
 
     const byOpacity = {};
     for (const cell of cells) {
@@ -335,17 +340,17 @@ async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldS
   }
 }
 
-async function _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldSize) {
-  await _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldSize);
+async function _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
+  await _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldWidth, worldDepth);
 }
 
-export async function createWaterDepthOverlayTexture(scene, terrainManager, textureSize = 2048, worldSize = 160) {
+export async function createWaterDepthOverlayTexture(scene, terrainManager, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, textureSize, textureSize);
-  await _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSize);
+  await _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth);
 
   const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
   const rawTexture = RawTexture.CreateRGBATexture(
@@ -363,13 +368,13 @@ export async function createWaterDepthOverlayTexture(scene, terrainManager, text
   return rawTexture;
 }
 
-export async function createTerrainDiffuseOverlayTexture(scene, terrainManager, textureSize = 2048, worldSize = 160) {
+export async function createTerrainDiffuseOverlayTexture(scene, terrainManager, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, textureSize, textureSize);
-  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldSize);
+  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth);
 
   const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
   const rawTexture = RawTexture.CreateRGBATexture(
@@ -387,26 +392,26 @@ export async function createTerrainDiffuseOverlayTexture(scene, terrainManager, 
   return rawTexture;
 }
 
-export async function updateTerrainDiffuseOverlayTexture(rawTexture, terrainManager, worldSize = 160) {
+export async function updateTerrainDiffuseOverlayTexture(rawTexture, terrainManager, worldWidth = 160, worldDepth = worldWidth) {
   const textureSize = rawTexture.getSize().width;
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, textureSize, textureSize);
-  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldSize);
+  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth);
   const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
   rawTexture.update(imageData.data);
 }
 
-export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager, worldSize = 160) {
+export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager, worldWidth = 160, worldDepth = worldWidth) {
   const textureSize = rawTexture.getSize().width;
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, textureSize, textureSize);
-  await _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldSize);
+  await _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth);
   const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
   rawTexture.update(imageData.data);
 }
@@ -416,12 +421,13 @@ export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager,
  * Each cell uses the normal map specified by its terrain type.
  * @private
  */
-async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize, worldUnitsPerTile = 10) {
-  const pixelsPerCell = (textureSize / worldSize) * terrainManager.cellSize;
+async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth, worldUnitsPerTile = 10) {
+  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
   // tileSize is expressed in canvas pixels and spans worldUnitsPerTile world-units,
   // so the texture can be larger than a single cell and tiles continuously
   // across cell boundaries.
-  const tileSize = (textureSize / worldSize) * worldUnitsPerTile;
+  const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
+  const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
 
   // Pre-load all unique normal maps referenced by the current grid
   const uniqueMaps = [...new Set(
@@ -462,8 +468,9 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSi
 
     if (img && img.naturalWidth > 0) {
       const pattern = ctx.createPattern(img, 'repeat');
-      const scale = tileSize / img.naturalWidth;
-      pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
+      const scaleX = tileSizeX / img.naturalWidth;
+      const scaleY = tileSizeY / img.naturalHeight;
+      pattern.setTransform(new DOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
       ctx.fillStyle = pattern;
 
       // Group cells by intensity to minimise globalAlpha state changes
@@ -490,17 +497,18 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSi
  * @param {Array} normalMapDecals - Array of decal feature objects from track
  * @param {TerrainManager} terrainManager - Terrain manager (provides per-cell normal maps)
  * @param {number} textureSize - Size of the generated texture (power of 2)
- * @param {number} worldSize - Size of the world space the texture covers
+ * @param {number} worldWidth - Width of world space the texture covers
+ * @param {number} worldDepth - Depth of world space the texture covers
  * @returns {Promise<RawTexture>}
  */
-export async function createCompositeNormalMap(scene, normalMapDecals, terrainManager, track, textureSize = 2048, worldSize = 160) {
+export async function createCompositeNormalMap(scene, normalMapDecals, terrainManager, track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
-  await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
-  await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize);
-  await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldSize);
+  await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth);
+  await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
+  await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
   
   // If no decals, build the raw texture from the canvas and return it.
   if (!normalMapDecals || normalMapDecals.length === 0) {
@@ -520,7 +528,8 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
     return rawTexture;
   }
   
-  const pixelsPerUnit = textureSize / worldSize;
+  const pixelsPerUnitX = textureSize / worldWidth;
+  const pixelsPerUnitY = textureSize / worldDepth;
 
   // Load all normal map decal images
   const decalImages = await Promise.all(
@@ -543,10 +552,10 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
     
     const { centerX, centerZ, width, depth, angle = 0, repeatU = 1, repeatV = 1, intensity = 0.5 } = decal;
     
-    const canvasCenterX = (centerX + worldSize / 2) * pixelsPerUnit;
-    const canvasCenterY = (centerZ + worldSize / 2) * pixelsPerUnit;
-    const canvasWidth = width * pixelsPerUnit;
-    const canvasHeight = depth * pixelsPerUnit;
+    const canvasCenterX = (centerX + worldWidth / 2) * pixelsPerUnitX;
+    const canvasCenterY = (centerZ + worldDepth / 2) * pixelsPerUnitY;
+    const canvasWidth = width * pixelsPerUnitX;
+    const canvasHeight = depth * pixelsPerUnitY;
     
     ctx.save();
     ctx.translate(canvasCenterX, canvasCenterY);
@@ -601,21 +610,23 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
  * @param {Scene} scene - Babylon scene
  * @param {Array} normalMapDecals - Array of decal feature objects
  * @param {TerrainManager} [terrainManager]
- * @param {number} [worldSize]
+ * @param {number} [worldWidth]
+ * @param {number} [worldDepth]
  * @returns {Promise<void>}
  */
-export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecals, terrainManager, track, worldSize = 160) {
+export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecals, terrainManager, track, worldWidth = 160, worldDepth = worldWidth) {
   const textureSize = rawTexture.getSize().width;
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
   canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
-  await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldSize);
-  await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldSize);
-  await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldSize);
+  await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth);
+  await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
+  await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
   
   if (normalMapDecals && normalMapDecals.length > 0) {
-    const pixelsPerUnit = textureSize / worldSize;
+    const pixelsPerUnitX = textureSize / worldWidth;
+    const pixelsPerUnitY = textureSize / worldDepth;
 
     const decalImages = await Promise.all(
       normalMapDecals.map(async (decal) => {
@@ -633,10 +644,10 @@ export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecal
     for (const { decal, img } of decalImages) {
       if (!img) continue;
       const { centerX, centerZ, width, depth, angle = 0, repeatU = 1, repeatV = 1, intensity = 0.5 } = decal;
-      const canvasCenterX = (centerX + worldSize / 2) * pixelsPerUnit;
-      const canvasCenterY = (centerZ + worldSize / 2) * pixelsPerUnit;
-      const canvasWidth = width * pixelsPerUnit;
-      const canvasHeight = depth * pixelsPerUnit;
+      const canvasCenterX = (centerX + worldWidth / 2) * pixelsPerUnitX;
+      const canvasCenterY = (centerZ + worldDepth / 2) * pixelsPerUnitY;
+      const canvasWidth = width * pixelsPerUnitX;
+      const canvasHeight = depth * pixelsPerUnitY;
 
       ctx.save();
       ctx.translate(canvasCenterX, canvasCenterY);

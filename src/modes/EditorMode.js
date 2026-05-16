@@ -113,12 +113,12 @@ export class EditorMode extends BaseMode {
 
     // Fast: sync terrainManager.grid from track features (no canvas writes)
     window.rebuildTerrainGrid = () => {
+      const worldWidth = terrainManager.worldWidth ?? terrainManager.gridSize;
+      const worldDepth = terrainManager.worldDepth ?? terrainManager.gridSize;
       for (let row = 0; row < terrainManager.cellsPerSide; row++) {
         for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-          const worldX =
-            (col - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
-          const worldZ =
-            (row - terrainManager.cellsPerSide / 2 + 0.5) * terrainManager.cellSize;
+          const worldX = ((col + 0.5) / terrainManager.cellsPerSide) * worldWidth - worldWidth / 2;
+          const worldZ = ((row + 0.5) / terrainManager.cellsPerSide) * worldDepth - worldDepth / 2;
           terrainManager.grid[row * terrainManager.cellsPerSide + col] =
             currentTrack.getTerrainTypeAt(worldX, worldZ);
         }
@@ -147,7 +147,9 @@ export class EditorMode extends BaseMode {
     const _rebuildNormalMapNow = async () => {
       const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
       const { updateCompositeNormalMap } = await import('../shaders/ground-shader.js');
-      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, currentTrack, terrainManager.gridSize);
+      const worldWidth = terrainManager.worldWidth ?? terrainManager.gridSize;
+      const worldDepth = terrainManager.worldDepth ?? terrainManager.gridSize;
+      await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, currentTrack, worldWidth, worldDepth);
     };
     let _rebuildNormalMapTimer = null;
     window.rebuildNormalMap = (immediate = false) => {

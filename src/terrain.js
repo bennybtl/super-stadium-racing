@@ -114,10 +114,12 @@ export const TERRAIN_TYPES = {
 };
 
 export class TerrainManager {
-  constructor(gridSize = 80, cellSize = 2) {
+  constructor(gridSize = 80, cellSize = 2, worldWidth = gridSize, worldDepth = gridSize) {
     this.gridSize = gridSize;
     this.cellSize = cellSize;
     this.cellsPerSide = Math.floor(gridSize / cellSize);
+    this.worldWidth = worldWidth;
+    this.worldDepth = worldDepth;
     
     // Create a grid of terrain cells
     this.grid = [];
@@ -137,11 +139,11 @@ export class TerrainManager {
 
   // Get terrain type at a world position
   getTerrainAt(position) {
-    // Convert world position to grid coordinates
-    // Since we sample at cell centers (cellIndex + 0.5), we need to round to nearest cell
-    const halfGrid = this.gridSize / 2;
-    const x = Math.round((position.x + halfGrid) / this.cellSize - 0.5);
-    const z = Math.round((position.z + halfGrid) / this.cellSize - 0.5);
+    // Convert world position to nearest cell center in worldWidth/worldDepth space.
+    const halfWorldW = this.worldWidth / 2;
+    const halfWorldD = this.worldDepth / 2;
+    const x = Math.round(((position.x + halfWorldW) / this.worldWidth) * this.cellsPerSide - 0.5);
+    const z = Math.round(((position.z + halfWorldD) / this.worldDepth) * this.cellsPerSide - 0.5);
     
     // Bounds check
     if (x < 0 || x >= this.cellsPerSide || z < 0 || z >= this.cellsPerSide) {

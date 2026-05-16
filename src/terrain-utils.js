@@ -160,15 +160,18 @@ export function applySteepGrassTerrainRemap(terrainManager, track, options = {})
   const cellsPerSide = terrainManager?.cellsPerSide ?? 0;
   if (!track || cellsPerSide <= 0) return;
 
-  const halfWorld = terrainManager.gridSize / 2;
+  const worldWidth = terrainManager.worldWidth ?? terrainManager.gridSize;
+  const worldDepth = terrainManager.worldDepth ?? terrainManager.gridSize;
+  const halfWorldW = worldWidth / 2;
+  const halfWorldD = worldDepth / 2;
   for (let row = 0; row < cellsPerSide; row++) {
     for (let col = 0; col < cellsPerSide; col++) {
       const index = row * cellsPerSide + col;
       const cell = terrainManager.grid[index];
       if (cell?.name !== 'grass') continue;
 
-      const worldX = (col + 0.5) * terrainManager.cellSize - halfWorld;
-      const worldZ = (row + 0.5) * terrainManager.cellSize - halfWorld;
+      const worldX = ((col + 0.5) / cellsPerSide) * worldWidth - halfWorldW;
+      const worldZ = ((row + 0.5) / cellsPerSide) * worldDepth - halfWorldD;
       const slopeDeg = _getTerrainSlopeDegAt(track, worldX, worldZ, sampleDistance * terrainManager.cellSize);
       if (slopeDeg >= slopeStart) {
         terrainManager.grid[index] = TERRAIN_TYPES.LOAMY_DIRT;
@@ -230,7 +233,7 @@ export function buildTerrainTypePropertyTexturePixelData() {
   return { width, height, data, normalMapNames };
 }
 
-export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldSize = 160) {
+export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const width = Math.max(4, Math.round(textureSize));
   const height = width;
   const data = new Uint8ClampedArray(width * height * 4);
@@ -257,16 +260,19 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
   );
   if (!Array.isArray(smoothedPoints) || smoothedPoints.length < 3) return { width, height, data };
 
-  const pixelsPerUnit = width / Math.max(1, worldSize);
+  const pixelsPerUnitX = width / Math.max(1, worldWidth);
+  const pixelsPerUnitZ = height / Math.max(1, worldDepth);
   const sampleSpacing = _clamp(wear.width * 0.2, 0.5, 1.0);
   const samples = _sampleClosedPath(smoothedPoints, sampleSpacing);
   if (samples.length < 3) return { width, height, data };
 
   const rng = _createSeededRandom(wear.seed);
-  const halfWorld = worldSize / 2;
+  const halfWorldX = worldWidth / 2;
+  const halfWorldZ = worldDepth / 2;
   const mainLaneOffset = Math.max(0.35, wear.laneSpacing * 0.5);
   const secondaryPathSpacing = Math.max(0, wear.secondaryPathSpacing ?? 0.1);
   const sideLaneOffset = mainLaneOffset + Math.max(0.9, wear.width * 0.5) * secondaryPathSpacing;
+  const pixelsPerUnit = (pixelsPerUnitX + pixelsPerUnitZ) * 0.5;
   const majorRadiusX = Math.max(2.5, pixelsPerUnit * wear.width * 0.28);
   const majorRadiusY = Math.max(6, majorRadiusX * 2.8);
   const minorRadiusX = Math.max(1.8, majorRadiusX * 0.62);
@@ -347,8 +353,8 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
     const normalZ = tangentX;
     const laneX = centerX + normalX * lane.offset;
     const laneZ = centerZ + normalZ * lane.offset;
-    const sx = (laneX + halfWorld) * pixelsPerUnit;
-    const sy = (laneZ + halfWorld) * pixelsPerUnit;
+    const sx = (laneX + halfWorldX) * pixelsPerUnitX;
+    const sy = (laneZ + halfWorldZ) * pixelsPerUnitZ;
 
     const pad = Math.ceil(Math.max(lane.radiusX, lane.radiusY) + 2);
     const minX = _clamp(Math.floor(sx - pad), 0, width - 1);
