@@ -53,6 +53,8 @@ export class PolyWallEditor {
   }
 
   deactivate() {
+    clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = null;
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeWall = null;
@@ -116,6 +118,8 @@ export class PolyWallEditor {
   }
 
   _destroyAllGizmos() {
+    clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = null;
     for (const wg of [...this._wallGizmos]) this._destroyWallGizmos(wg);
     this._wallGizmos = [];
   }
@@ -188,7 +192,9 @@ export class PolyWallEditor {
   _rebuildDeferred(wg, delayMs = 120) {
     clearTimeout(this._rebuildTimer);
     this._rebuildTimer = setTimeout(() => {
+      this._rebuildTimer = null;
       if (!this.scene) return; // tool was deactivated
+      if (!this._wallGizmos.includes(wg)) return; // wall was deleted while timer was pending
       if (wg.lineSystem) { wg.lineSystem.dispose(); wg.lineSystem = null; }
       wg.lineSystem = this._buildLineSystem(wg.feature);
       this._rebuildWall(wg.feature);
@@ -341,6 +347,8 @@ export class PolyWallEditor {
   deleteActiveWall() {
     if (!this._activeWall) return;
     this.ec.saveSnapshot();
+    clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = null;
     const wg = this._activeWall;
     const fi = this.track.features.indexOf(wg.feature);
     if (fi > -1) this.track.features.splice(fi, 1);

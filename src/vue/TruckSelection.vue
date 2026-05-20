@@ -33,7 +33,7 @@
             v-for="option in colorOptions"
             :key="option.key"
             type="button"
-            class="aspect-square w-10 h-10 rounded-lg border-2 border-[#555] transition duration-150 hover:scale-105 hover:border-white"
+            class="aspect-square w-8 h-8 rounded-lg border-2 border-[#555] transition duration-150 hover:scale-105 hover:border-white"
             :class="{ 'border-white shadow-[inset_0_0_0_2px_#111]': option.key === selectedColor }"
             :title="option.key"
             :aria-label="`Select ${option.key} color`"

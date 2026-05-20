@@ -25,9 +25,16 @@
 
     <div class="text-[10px] text-slate-400 mb-3">WASD to move selected point</div>
 
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.insertPolyCurbPoint()">Insert Point After</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deletePolyCurbPoint()">Delete Point</button>
-
+    <div class="flex gap-2 mb-3">
+      <button 
+          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        @click="editor.deletePolyCurbPoint()"
+      >Delete Point</button>
+      <button 
+          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.insertPolyCurbPoint()"
+      >Insert After</button>
+    </div>
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Curb Properties Section -->
@@ -58,7 +65,7 @@
     />
 
     <!-- Closed toggle -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="flex justify-between mb-3 text-[12px]">
       <span>Closed Loop</span>
       <input
         type="checkbox"
@@ -69,7 +76,7 @@
     </div>
 
     <!-- Style -->
-    <div class="flex justify-between items-center mb-1 text-[12px]">
+    <div class="flex justify-between items-center mb-6 text-[12px]">
       <span>Style</span>
       <select
         :value="editor.polyCurb.style"
@@ -82,11 +89,18 @@
       </select>
     </div>
 
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move</div>
-
     <!-- Actions -->
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicatePolyCurb()">Duplicate</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deletePolyCurb()">Delete</button>
+    <div class="flex gap-2 mb-3">
+    <button 
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+      @click="editor.deletePolyCurb()"
+    >Delete</button>
+    <button 
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+      @click="editor.duplicatePolyCurb()"
+    >Duplicate</button>
+
+  </div>
   </EditorPanel>
 </template>
 

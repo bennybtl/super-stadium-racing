@@ -75,6 +75,7 @@ export class CheckpointEditor {
     if (checkpointData.handle) {
       checkpointData.originalHandleMaterial = checkpointData.handle.material;
       checkpointData.handle.material = this.highlightMaterial;
+      checkpointData.handle.isVisible = this.editor.gizmosVisible !== false;
     }
 
     this.showProperties(checkpointData);
@@ -170,8 +171,8 @@ export class CheckpointEditor {
     // Deselect before disposing the checkpoint meshes
     this.deselect();
 
-    // Dispose the container and all its children
-    checkpoint.container.dispose();
+    // Dispose all checkpoint resources (including ground-projected decal)
+    checkpoint.dispose();
 
     // Remove from checkpoint manager
     const mgr = this.editor.checkpointManager;

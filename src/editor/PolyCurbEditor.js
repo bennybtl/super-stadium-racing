@@ -46,6 +46,8 @@ export class PolyCurbEditor {
   }
 
   deactivate() {
+    clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = null;
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeGizmo = null;
@@ -105,6 +107,8 @@ export class PolyCurbEditor {
   }
 
   _destroyAllGizmos() {
+    clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = null;
     for (const cg of [...this._curbGizmos]) this._destroyGizmos(cg);
     this._curbGizmos = [];
   }
@@ -160,7 +164,9 @@ export class PolyCurbEditor {
   _rebuildDeferred(cg, delayMs = 120) {
     clearTimeout(this._rebuildTimer);
     this._rebuildTimer = setTimeout(() => {
+      this._rebuildTimer = null;
       if (!this.scene) return;
+      if (!this._curbGizmos.includes(cg)) return;
       if (cg.lineSystem) { cg.lineSystem.dispose(); cg.lineSystem = null; }
       cg.lineSystem = this._buildLines(cg.feature);
       this._rebuild(cg.feature);
@@ -286,6 +292,8 @@ export class PolyCurbEditor {
   deleteActiveCurb() {
     if (!this._activeGizmo) return;
     this.ec.saveSnapshot();
+    clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = null;
     const cg = this._activeGizmo;
     const fi = this.track.features.indexOf(cg.feature);
     if (fi > -1) this.track.features.splice(fi, 1);

@@ -207,6 +207,9 @@ export class Truck {
       // Slow zone — set each frame by the game loop when inside a 'slowZone' action zone
       slowZoneActive: false,
       slowZoneMaxSpeed: 5,
+
+      // suspend driving
+      noDriveUntil: false
     };
 
     // Overlay any params supplied by the vehicle definition

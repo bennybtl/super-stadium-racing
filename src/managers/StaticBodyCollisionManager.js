@@ -3,7 +3,7 @@ import { TRUCK_HALF_HEIGHT, TRUCK_RADIUS } from "../constants.js";
 
 const SKIN = 0.03;
 const DEFAULT_FRICTION = 0.92;
-const BOUNCE_COEFFICIENT = 2.5; // > 1.0 creates bounce on perpendicular collisions
+const BOUNCE_COEFFICIENT = 1.5; // > 1.0 creates bounce on perpendicular collisions
 const BOUNCE_ANGLE_THRESHOLD = Math.cos(30 * Math.PI / 180); // ~0.866 for ±30 degrees
 
 /**
@@ -267,6 +267,12 @@ export class StaticBodyCollisionManager {
       vel.x -= worldNormal.x * velDot * bounceCoeff;
       vel.y -= worldNormal.y * velDot * bounceCoeff;
       vel.z -= worldNormal.z * velDot * bounceCoeff;
+
+      // If head-on, suppress forward drive force for 500ms so it doesn't override the bounce
+      if (isHeadOn && truck.state) {
+        // Set a cooldown timestamp; your drive logic should check this and skip applying drive force if active
+        truck.state.noDriveUntil = Date.now() + 500;
+      }
 
       const applyFriction = mesh.metadata?.truckColliderApplyFriction !== false;
       if (applyFriction && Math.abs(worldNormal.y) < 0.2) {

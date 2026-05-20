@@ -84,25 +84,6 @@
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
         <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
 
-          <div class="flex flex-col gap-4">
-            <!-- <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">
-              <template v-if="store.pitData.isSeason">PIT LANE</template>
-              <template v-else>PRE-RACE</template>
-            </h2> -->
-
-            <!-- <span class="block text-sm text-slate-400 uppercase tracking-[2px] mt-1">
-              <template v-if="store.pitData.isSeason">
-                Race {{ store.pitData.raceNumber }} of {{ store.pitData.totalRaces }}
-              </template>
-              <template v-else-if="store.pitData.pitMode === 'practice'">
-                Practice
-              </template>
-              <template v-else>
-                Single race · {{ store.pitData.laps }} laps
-              </template>
-            </span> -->
-          </div>
-
           <template v-if="store.pitData.isSeason">
             <template v-if="!store.pitData.isSeasonComplete">
               <div class="text-[#ccc] text-sm mb-3">
@@ -176,7 +157,7 @@
               </div>
             </div>
 
-            <hr class="my-3 opacity-60">
+            <!-- <hr class="my-3 opacity-60"> -->
 
             <div class="mb-4">
               <TruckSelection
@@ -191,7 +172,7 @@
             <div class="mb-4">
               <TruckSetup />
             </div>
-            <hr class="my-3 opacity-60">
+            <!-- <hr class="my-3 opacity-60"> -->
 
             <div class="flex flex-row gap-auto">
               <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>

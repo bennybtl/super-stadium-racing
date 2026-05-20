@@ -54,6 +54,10 @@ export class Controls {
   }
 
   handleForwardInput(forward, deltaTime) {
+    if (this.state.noDriveUntil && Date.now() < this.state.noDriveUntil) {
+      // Currently in no-drive cooldown (e.g. after head-on collision), skip applying drive force
+      return;
+    }
     // Project forward direction onto the surface tangent plane so engine force follows the slope.
     const normal = this.state.surfaceNormal ?? UP;
     const fwdDotNormal = forward.dot(normal);
@@ -69,7 +73,7 @@ export class Controls {
 
     const forwardSpeed = this.state.velocity.dot(forward);
     
-    if (forwardSpeed < -0.5) {
+    if (forwardSpeed < -1.5) {
       // Moving backward - brake and reverse direction
       const brakeScale = -5 * deltaTime;
       this.state.velocity.x += this.state.velocity.x * brakeScale;

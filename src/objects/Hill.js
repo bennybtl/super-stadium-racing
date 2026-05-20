@@ -1,4 +1,4 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3 } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, Texture } from "@babylonjs/core";
 
 function getHillEllipse(feature) {
   return {
@@ -33,11 +33,14 @@ function getWaterLevelOffset(feature) {
 
 function applyWaterMaterial(mesh, feature, scene) {
   const waterMat = new StandardMaterial(`waterMat_${feature.centerX}_${feature.centerZ}`, scene);
+  const tex = new Texture("/src/assets/textures/water.jpg", scene, true, false);
+  waterMat.diffuseTexture = tex;
+  waterMat.emissiveTexture = tex;
   waterMat.diffuseColor = new Color3(0.08, 0.28, 0.82);
   waterMat.emissiveColor = new Color3(0.02, 0.08, 0.22);
   waterMat.specularColor = new Color3(0.8, 0.9, 1.0);
-  waterMat.specularPower = 64;
-  waterMat.alpha = 0.82;
+  waterMat.specularPower = 34;
+  waterMat.alpha = 0.4;
   waterMat.backFaceCulling = false;
   mesh.material = waterMat;
 }

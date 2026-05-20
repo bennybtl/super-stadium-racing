@@ -140,6 +140,7 @@ export class SquareHillEditor {
       centerZ: newZ,
       width: 10,
       depth: 10,
+      angle: 180,
       height: 3,
       waterLevelOffset: 1,
       transition: 4,
