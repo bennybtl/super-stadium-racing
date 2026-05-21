@@ -46,7 +46,7 @@
       <span>{{ editor.squareHill.angle.toFixed(0) }}°</span>
     </div>
     <input
-      type="range" min="0" max="360" step="1"
+      type="range" min="0" max="180" step="1"
       :value="editor.squareHill.angle"
       @input="editor.setSquareHillAngle(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -96,17 +96,18 @@
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
-
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Water Level</span>
-      <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
-    </div>
-    <input
-      type="range" min="0" max="15" step="0.5"
-      :value="editor.squareHill.waterLevelOffset"
-      @input="editor.setSquareHillWaterLevelOffset(+$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
+    <template v-if="editor.squareHill.terrainType == 'water'" >
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Water Level</span>
+        <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="15" step="0.5"
+        :value="editor.squareHill.waterLevelOffset"
+        @input="editor.setSquareHillWaterLevelOffset(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
 
     <!-- Surface -->
     <div class="text-[12px] mb-1">Surface</div>
@@ -123,6 +124,7 @@
       <option value="mud">Mud</option>
       <option value="water">Water</option>
       <option value="rocky">Rocky</option>
+      <option value="grass">Grass</option>
     </select>
 
     <!-- Hint -->

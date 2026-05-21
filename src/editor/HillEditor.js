@@ -15,7 +15,6 @@ export class HillEditor {
     // Gizmo bookkeeping
     this.meshes = [];          // { feature, node, sphere }
     this.selected = null;
-    this._terrainDirty = false;
 
     // Materials (created lazily in createMaterials)
     this.material = null;
@@ -93,7 +92,7 @@ export class HillEditor {
       centerZ: newZ,
       radiusX: 10,
       radiusZ: 10,
-      angle: 90,
+      angle: 0,
       height: 5,
       waterLevelOffset: 2,
       terrainType: null,
@@ -178,13 +177,10 @@ export class HillEditor {
       this.selected.sphere.isVisible = true;
       this.selected.sphere.isPickable = true;
       this.hideProperties();
-      if (this._terrainDirty) {
-        window.rebuildTerrainTexture?.();
-        this._terrainDirty = false;
-      }
       console.log('[HillEditor] Deselected hill');
       this.selected = null;
       this.editor._rawDragPos = null;
+      this.rebuildTerrain();
     }
   }
 
@@ -224,9 +220,7 @@ export class HillEditor {
     this.hideProperties();
     this.selected = null;
 
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
     console.log('[HillEditor] Deleted hill');
   }
 
@@ -263,11 +257,11 @@ export class HillEditor {
   }
 
   rebuildTerrain() {
-    this._terrainDirty = true;
     if (this.selected) this.updateVisual(this.selected);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
     window.rebuildHillWater?.();
+    window.rebuildTerrainTexture?.();
   }
 
   _maxWaterOffsetForFeature(feature) {

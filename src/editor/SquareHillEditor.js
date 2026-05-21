@@ -14,9 +14,8 @@ export class SquareHillEditor {
     this.editor = editor;
 
     // Gizmo bookkeeping
-    this.meshes = [];   // { feature, node, mesh, sphere }
+    this.meshes = [];   // { feature, node, sphere }
     this.selected = null;
-    this._terrainDirty = false;
 
     // Materials (created lazily in createMaterials)
     this.material = null;
@@ -43,7 +42,6 @@ export class SquareHillEditor {
   /** Dispose all gizmo meshes and reset state, keeping materials alive (used on snapshot restore). */
   clearMeshes() {
     for (const d of this.meshes) {
-      d.mesh.dispose();
       d.node.dispose();
       d.sphere?.dispose();
     }
@@ -63,7 +61,6 @@ export class SquareHillEditor {
   /** Dispose all gizmo meshes and reset state. */
   dispose() {
     for (const d of this.meshes) {
-      d.mesh.dispose();
       d.node.dispose();
       d.sphere?.dispose();
     }
@@ -73,11 +70,14 @@ export class SquareHillEditor {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
-  /** Build a box-shaped editor gizmo for a squareHill feature. */
+  /** Build an editor gizmo for a squareHill feature. */
   createVisual(feature) {
     const scene = this.editor.scene;
+    const track = this.editor.currentTrack;
     const transition = feature.transition ?? 8;
-    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
+    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ)
+      ?? this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ)
+      ?? 0;
     const absH = feature.heightAtMin !== undefined
       ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
       : Math.max(0.5, Math.abs(feature.height ?? 5));
@@ -87,27 +87,21 @@ export class SquareHillEditor {
     node.scaling  = new Vector3(feature.width + transition * 2, absH, (feature.depth ?? feature.width) + transition * 2);
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
 
-    const mesh = MeshBuilder.CreateBox('squareHillMesh', { size: 1 }, scene);
-    mesh.parent = node;
-    mesh.material = this.highlightMaterial;
-    mesh.isPickable = false;
-    mesh.isVisible = false;  // hidden until selected
-
     // Grey sphere: the always-visible click target
     const sphere = MeshBuilder.CreateSphere('squareHillSphere', { diameter: 1.5, segments: 8 }, scene);
-    sphere.position = new Vector3(feature.centerX, terrainH, feature.centerZ);
+    sphere.position = new Vector3(feature.centerX, terrainH > 0 ? terrainH + 0.1 : 0, feature.centerZ);
     sphere.material = this.sphereMaterial;
+    sphere.isVisible = true;
     sphere.isPickable = true;
 
-    const hillData = { feature, node, mesh, sphere };
+    const hillData = { feature, node, sphere };
     this.meshes.push(hillData);
     return hillData;
   }
 
-  /** Sync the box gizmo transform to the feature's current values. */
+  /** Sync the gizmo transform to the feature's current values. */
   updateVisual(hillData) {
     const { feature, node, sphere } = hillData;
-    const track = this.editor.currentTrack;
     const transition = feature.transition ?? 8;
     const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
     const absH = feature.heightAtMin !== undefined
@@ -122,7 +116,7 @@ export class SquareHillEditor {
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
     if (sphere) {
       sphere.position.x = feature.centerX;
-      sphere.position.y = terrainH;
+      sphere.position.y = terrainH > 0 ? terrainH + 0.1 : 0;
       sphere.position.z = feature.centerZ;
     }
   }
@@ -140,7 +134,7 @@ export class SquareHillEditor {
       centerZ: newZ,
       width: 10,
       depth: 10,
-      angle: 180,
+      angle: 0,
       height: 3,
       waterLevelOffset: 1,
       transition: 4,
@@ -156,6 +150,10 @@ export class SquareHillEditor {
     this.select(hillData);
 
     this.rebuildTerrain();
+    this.updateVisual(hillData);
+    requestAnimationFrame(() => {
+      if (this.selected === hillData) this.updateVisual(hillData);
+    });
 
     this.editor.hideAddMenu();
     console.debug('[SquareHillEditor] Added square hill at', newX.toFixed(1), newZ.toFixed(1));
@@ -166,7 +164,7 @@ export class SquareHillEditor {
   /** Returns the hillData if `mesh` belongs to a square hill gizmo, else null. */
   findByMesh(mesh) {
     for (const hillData of this.meshes) {
-      if (mesh === hillData.mesh || mesh === hillData.sphere) return hillData;
+      if (mesh === hillData.sphere) return hillData;
     }
     return null;
   }
@@ -177,10 +175,8 @@ export class SquareHillEditor {
     this.deselect();
     this.selected = hillData;
     this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
-    hillData.sphere.isVisible = false;
-    hillData.sphere.isPickable = false;
-    hillData.mesh.isVisible = this.editor.gizmosVisible;
-    hillData.mesh.isPickable = true;
+    hillData.sphere.isVisible = true;
+    hillData.sphere.isPickable = true;
     this.showProperties(hillData);
     console.debug('[SquareHillEditor] Selected square hill at',
       hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
@@ -188,15 +184,9 @@ export class SquareHillEditor {
 
   deselect() {
     if (this.selected) {
-      this.selected.mesh.isVisible = false;
-      this.selected.mesh.isPickable = false;
       this.selected.sphere.isVisible = true;
       this.selected.sphere.isPickable = true;
       this.hideProperties();
-      if (this._terrainDirty) {
-        window.rebuildTerrainTexture?.();
-        this._terrainDirty = false;
-      }
       console.debug('[SquareHillEditor] Deselected square hill');
       this.selected = null;
       this.editor._rawDragPos = null;
@@ -240,7 +230,6 @@ export class SquareHillEditor {
     const idx = this.editor.currentTrack.features.indexOf(hillData.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
 
-    hillData.mesh.dispose();
     hillData.node.dispose();
     hillData.sphere?.dispose();
 
@@ -250,9 +239,7 @@ export class SquareHillEditor {
     this.hideProperties();
     this.selected = null;
 
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    this.rebuildTerrain();
     console.debug('[SquareHillEditor] Deleted square hill');
   }
 
@@ -297,11 +284,11 @@ export class SquareHillEditor {
   }
 
   rebuildTerrain() {
-    this._terrainDirty = true;
     if (this.selected) this.updateVisual(this.selected);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
     window.rebuildHillWater?.();
+    window.rebuildTerrainTexture?.();
   }
 
   _maxWaterOffsetForFeature(feature) {

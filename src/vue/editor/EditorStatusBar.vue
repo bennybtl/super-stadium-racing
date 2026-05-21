@@ -7,7 +7,7 @@
         🏁 Test Track
       </button>
       <div class="text-slate-400 text-[11px] font-sans">
-        Pan/Move: W,A,S,D | Rotate: Q,E | Delete: Del | Undo: Ctrl+Z | Zoom: +/- | Move Faster: Shift
+        Add Feature: Space | Pan/Move: W,A,S,D | Rotate: Q,E | Delete: Del | Undo: Ctrl+Z | Zoom: +/- | Move Faster: Shift
       </div>
 
       <!-- Default terrain picker -->

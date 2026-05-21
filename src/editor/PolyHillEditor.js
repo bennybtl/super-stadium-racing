@@ -56,6 +56,7 @@ export class PolyHillEditor {
   }
 
   deactivate() {
+    clearTimeout(this._rebuildTimer);
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeHill = null;
@@ -77,10 +78,10 @@ export class PolyHillEditor {
     const feature = {
       type: 'polyHill',
       points: [
-        { x: cx - 10, z: cz - 10, radius: 0 },
-        { x: cx + 10, z: cz - 10, radius: 0 },
-        { x: cx + 10, z: cz + 10, radius: 0 },
-        { x: cx - 10, z: cz + 10, radius: 0 },
+        { x: cx - 10, z: cz - 10, radius: 10 },
+        { x: cx + 10, z: cz - 10, radius: 10 },
+        { x: cx + 10, z: cz + 10, radius: 10 },
+        { x: cx - 10, z: cz + 10, radius: 10 },
       ],
       height: 3,
       width: 5,
@@ -95,24 +96,22 @@ export class PolyHillEditor {
     this._setActiveHill(hg);
     this._syncStoreToFeature(feature);
     this._rebuildHill(feature);
+    this._refreshHillGizmos(hg);
   }
 
   // ─── Gizmo management ─────────────────────────────────────────────────────
 
   _createHillGizmos(feature) {
-    const pointMeshes = feature.points.map((pt, idx) =>
-      this._createPointSphere(feature, idx)
-    );
-    const lineSystem = this._buildLineSystem(feature);
-    const hg = { feature, pointMeshes, lineSystem };
+    const hg = { feature, pointMeshes: [], lineSystem: null };
+    this._rebuildPointMeshes(hg);
+    this._buildLineSystem(hg, true);
     this._hillGizmos.push(hg);
     return hg;
   }
 
   _destroyHillGizmos(hg) {
-    for (const m of hg.pointMeshes) m.dispose();
-    hg.pointMeshes = [];
-    if (hg.lineSystem) { hg.lineSystem.dispose(); hg.lineSystem = null; }
+    this._disposePointMeshes(hg);
+    this._disposeLineSystem(hg);
     const idx = this._hillGizmos.indexOf(hg);
     if (idx > -1) this._hillGizmos.splice(idx, 1);
     if (this._activeHill === hg) this._activeHill = null;
@@ -125,49 +124,68 @@ export class PolyHillEditor {
 
   _createPointSphere(feature, idx) {
     const pt = feature.points[idx];
-    const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature?.height || 0);
+    const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET;
     const mesh = MeshBuilder.CreateSphere(`phPt_${idx}_${Date.now()}`, {
       diameter: 1.4,
       segments: 6,
     }, this.scene);
-    mesh.position = new Vector3(pt.x, y + 0.7, pt.z);
+    mesh.position = new Vector3(pt.x, y, pt.z);
     mesh.material = this._activeHill?.feature === feature ? this.activeMat : this.normalMat;
     mesh.isPickable = true;
     return mesh;
   }
 
-  _buildLineSystem(feature) {
-    if (!feature.points || feature.points.length < 2) return null;
+  _buildLineSystem(hg, rebuild = false) {
+    if (rebuild) this._disposeLineSystem(hg);
+    if (!hg.feature.points || hg.feature.points.length < 2) return null;
 
     // Draw the polyline
-    const ctrlPts = feature.points.map(pt => {
-      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + (feature?.height || 0);
-      return new Vector3(pt.x, y + 0.15, pt.z);
+    const ctrlPts = hg.feature.points.map(pt => {
+      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET;
+      return new Vector3(pt.x, y, pt.z);
     });
 
     const lines = [ctrlPts];
     const ls = MeshBuilder.CreateLineSystem(`phLines_${Date.now()}`, { lines }, this.scene);
     ls.color = LINE_COLOR_POLY_HILL;
     ls.isPickable = false;
+    hg.lineSystem = ls;
     return ls;
   }
 
-  _refreshHillGizmos(hg) {
-    // Rebuild point meshes to match current point count
+  _disposePointMeshes(hg) {
     for (const m of hg.pointMeshes) m.dispose();
+    hg.pointMeshes = [];
+  }
+
+  _disposeLineSystem(hg) {
+    if (hg.lineSystem) {
+      hg.lineSystem.dispose();
+      hg.lineSystem = null;
+    }
+  }
+
+  _rebuildPointMeshes(hg) {
+    this._disposePointMeshes(hg);
+    const selectedIdx = this.selectedPoint?.hg === hg ? this.selectedPoint.idx : null;
     hg.pointMeshes = hg.feature.points.map((_, idx) => {
       const m = this._createPointSphere(hg.feature, idx);
-      // Re-apply correct material
       if (this._activeHill === hg) {
         m.material = this.activeMat;
       }
-      if (this.selectedPoint && this.selectedPoint.hg === hg && this.selectedPoint.idx === idx) {
+      if (selectedIdx === idx) {
         m.material = this.highlightMat;
       }
       return m;
     });
-    if (hg.lineSystem) { hg.lineSystem.dispose(); hg.lineSystem = null; }
-    hg.lineSystem = this._buildLineSystem(hg.feature);
+    if (selectedIdx !== null) {
+      this.selectedPoint.mesh = hg.pointMeshes[selectedIdx] ?? null;
+    }
+  }
+
+  _refreshHillGizmos(hg) {
+    this._rebuildPointMeshes(hg);
+    this._buildLineSystem(hg, true);
   }
 
   _updatePointPositions(hg, { rebuildLines = true } = {}) {
@@ -175,12 +193,11 @@ export class PolyHillEditor {
     for (let i = 0; i < pointMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeHill?.feature?.height || 0);
-      pointMeshes[i].position.set(pt.x, y + 0.7, pt.z);
+      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET;
+      pointMeshes[i].position.set(pt.x, y, pt.z);
     }
     if (rebuildLines) {
-      if (hg.lineSystem) { hg.lineSystem.dispose(); hg.lineSystem = null; }
-      hg.lineSystem = this._buildLineSystem(feature);
+      this._buildLineSystem(hg, true);
     }
   }
 
@@ -192,25 +209,21 @@ export class PolyHillEditor {
     clearTimeout(this._rebuildTimer);
     this._rebuildTimer = setTimeout(() => {
       if (!this.scene) return; // tool was deactivated
-      if (hg.lineSystem) { hg.lineSystem.dispose(); hg.lineSystem = null; }
-      hg.lineSystem = this._buildLineSystem(hg.feature);
+      if (!this.track?.features?.includes(hg.feature)) return; // feature was deleted
+      if (!this._hillGizmos.includes(hg)) return; // gizmo set was destroyed
+      this._buildLineSystem(hg, true);
       this._rebuildHill(hg.feature);
     }, delayMs);
   }
 
   _setActiveHill(hg) {
-    // Dim + hide the previously active hill
+    // Dim the previously active hill
     if (this._activeHill && this._activeHill !== hg) {
       for (const m of this._activeHill.pointMeshes) m.material = this.normalMat;
-      const oldMesh = this._getHillMesh(this._activeHill.feature);
-      if (oldMesh) oldMesh.isVisible = false;
     }
     this._activeHill = hg;
-    window.polyHillActiveFeature = hg?.feature ?? null;
     if (hg) {
       for (const m of hg.pointMeshes) m.material = this.activeMat;
-      const newMesh = this._getHillMesh(hg.feature);
-      if (newMesh) newMesh.isVisible = true;
     }
   }
 
@@ -231,12 +244,9 @@ export class PolyHillEditor {
       mesh.material = this._activeHill === hg ? this.activeMat : this.normalMat;
       this.selectedPoint = null;
     }
-    // Hide and deactivate the active hill (mirrors SquareHillEditor.deselect)
+    // Deactivate the active hill
     if (this._activeHill) {
-      const hillMesh = this._getHillMesh(this._activeHill.feature);
-      if (hillMesh) hillMesh.isVisible = false;
       this._activeHill = null;
-      window.polyHillActiveFeature = null;
     }
     this._rawDrag = null;
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
@@ -265,8 +275,7 @@ export class PolyHillEditor {
     const { hg } = this.selectedPoint;
     // Force immediate rebuild on drag end
     clearTimeout(this._rebuildTimer);
-    if (hg.lineSystem) { hg.lineSystem.dispose(); hg.lineSystem = null; }
-    hg.lineSystem = this._buildLineSystem(hg.feature);
+    this._buildLineSystem(hg, true);
     this._rebuildHill(hg.feature);
   }
 
@@ -322,8 +331,9 @@ export class PolyHillEditor {
 
     this.ec.saveSnapshot();
     hg.feature.points.splice(idx, 1);
-    this.deselectPoint();
     this._refreshHillGizmos(hg);
+    const nextIdx = Math.min(idx, hg.feature.points.length - 1);
+    this.selectPoint(hg, nextIdx);
     this._rebuildHill(hg.feature);
   }
 
@@ -379,6 +389,7 @@ export class PolyHillEditor {
 
   deletePolyHill() {
     if (!this._activeHill) return;
+    clearTimeout(this._rebuildTimer);
     this.ec.saveSnapshot();
     const { feature } = this._activeHill;
     const idx = this.track.features.indexOf(feature);
@@ -434,11 +445,6 @@ export class PolyHillEditor {
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
     window.rebuildNormalMap?.();
-  }
-
-  /** Returns the live PolyHill mesh for a given feature, if it exists. */
-  _getHillMesh(feature) {
-    return window.polyHills?.find(h => h._feature === feature)?.mesh ?? null;
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

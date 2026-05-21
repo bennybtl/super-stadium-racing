@@ -65,10 +65,10 @@ function createRoundHillWater(feature, scene, baseCy) {
 }
 
 function createSquareHillWater(feature, scene, baseCy) {
-  const height = feature.depth ?? feature.width;
+  const depth = feature.depth ?? feature.width;
   const waterMesh = MeshBuilder.CreateGround(
     `water_${feature.centerX}_${feature.centerZ}`,
-    { width: feature.width * 2, height: height * 2, subdivisions: 1 },
+    { width: feature.width + feature.transition * 1.2, height: depth + feature.transition * 1.2, subdivisions: 1 },
     scene
   );
 

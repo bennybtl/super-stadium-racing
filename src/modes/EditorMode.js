@@ -230,34 +230,9 @@ export class EditorMode extends BaseMode {
       bridgeManager.rebuildBridge(targetFeature);
     };
 
-    // Poly hills array to track created hills
-    const polyHills = [];
-    window.polyHills = polyHills; // exposed so PolyHillEditor can toggle mesh visibility
-
     // Rebuild a specific polyHill (or all polyHills if feature is null)
-    window.rebuildPolyHill = async (targetFeature) => {
-      // Remove hills that match the target feature
-      for (let i = polyHills.length - 1; i >= 0; i--) {
-        const hill = polyHills[i];
-        if (hill._feature && (targetFeature === null || hill._feature === targetFeature)) {
-          hill.dispose?.();
-          polyHills.splice(i, 1);
-        }
-      }
-      // Create new hills for matching features
-      const { PolyHill } = await import('../objects/PolyHill.js');
-      for (const f of currentTrack.features) {
-        if (f.type === 'polyHill') {
-          if (targetFeature === null || f === targetFeature) {
-            const hill = new PolyHill(f, currentTrack, scene, shadows);
-            // Restore visibility if this feature is the currently active hill
-            if (hill.mesh && window.polyHillActiveFeature === f) {
-              hill.mesh.isVisible = true;
-            }
-            polyHills.push(hill);
-          }
-        }
-      }
+    window.rebuildPolyHill = (_targetFeature) => {
+      // PolyHill preview ribbon is disabled in editor mode.
       // Rebuild terrain mesh after height modifications
       window.rebuildTerrain?.();
     };
@@ -328,8 +303,6 @@ export class EditorMode extends BaseMode {
     delete window.rebuildHillWater;
     delete window.rebuildPolyWall;
     delete window.rebuildPolyHill;
-    delete window.polyHills;
-    delete window.polyHillActiveFeature;
     delete window.rebuildBezierWall;
     delete window.rebuildPolyCurb;
     delete window.quickTestTrack;

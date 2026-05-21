@@ -1796,8 +1796,8 @@ export class EditorController {
     if (this.hillEditor?.selected?.mesh) {
       this.hillEditor.selected.mesh.isVisible = visible;
     }
-    if (this.squareHillEditor?.selected?.mesh) {
-      this.squareHillEditor.selected.mesh.isVisible = visible;
+    if (this.squareHillEditor?.selected?.sphere) {
+      this.squareHillEditor.selected.sphere.isVisible = visible;
     }
   }
 }
