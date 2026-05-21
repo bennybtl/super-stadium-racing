@@ -22,6 +22,7 @@ export class MenuManager {
     this.selectedTrack   = null;
     this.selectedLaps    = 5;
     this.selectedAIDrivers = 3;
+    this.selectedReverse = false;
     this.selectedVehicle = 'default_truck';
     this.selectedPlayerColor = null;
 
@@ -31,6 +32,7 @@ export class MenuManager {
     this._store.selectedTrack = this.selectedTrack;
     this._store.selectedLaps = this.selectedLaps;
     this._store.selectedAIDrivers = this.selectedAIDrivers;
+    this._store.selectedReverse = this.selectedReverse;
     this._store.selectedVehicle = this.selectedVehicle;
     this._store.mode = null;
     this._store.screen = 'title';

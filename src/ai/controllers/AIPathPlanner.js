@@ -16,16 +16,23 @@ export class AIPathPlanner {
 
   getCheckpointPositions() {
     const checkpoints = [];
+    const runtimeCheckpointFeatures = this.driver.checkpointManager?.checkpointMeshes
+      ?.map(checkpoint => checkpoint.feature)
+      ?.filter(feature => feature?.checkpointNumber != null);
 
-    for (const feature of this.driver.track.features) {
-      if (feature.type === "checkpoint") {
-        checkpoints.push({
-          x: feature.centerX,
-          z: feature.centerZ,
-          index: feature.checkpointNumber || 0,
-          heading: feature.heading,
-        });
-      }
+    const sourceFeatures = Array.isArray(runtimeCheckpointFeatures) && runtimeCheckpointFeatures.length > 0
+      ? runtimeCheckpointFeatures
+      : this.driver.track.features.filter(
+          feature => feature.type === "checkpoint" && feature.checkpointNumber != null
+        );
+
+    for (const feature of sourceFeatures) {
+      checkpoints.push({
+        x: feature.centerX,
+        z: feature.centerZ,
+        index: feature.checkpointNumber,
+        heading: feature.heading,
+      });
     }
 
     checkpoints.sort((a, b) => a.index - b.index);
@@ -117,8 +124,28 @@ export class AIPathPlanner {
     };
 
     const authoredPath = authorNodes ? buildAuthoredNodesWithBranches() : null;
-    const nodes = authoredPath
-      ? authoredPath.nodes
+    const reverseAuthoredLoop = (loopNodes) => {
+      if (!Array.isArray(loopNodes) || loopNodes.length < 3) return loopNodes;
+
+      const first = loopNodes[0];
+      const last = loopNodes[loopNodes.length - 1];
+      const isClosed = Math.abs(first.x - last.x) < 0.001 && Math.abs(first.z - last.z) < 0.001;
+      const openNodes = isClosed ? loopNodes.slice(0, -1) : [...loopNodes];
+      const reversed = [...openNodes].reverse();
+      if (reversed.length > 0) {
+        reversed.push({ ...reversed[0] });
+      }
+      return reversed;
+    };
+
+    const reverseModeEnabled = Boolean(d.checkpointManager?._reverse);
+    const authoredNodes = authoredPath?.nodes ?? null;
+    const effectiveAuthoredNodes = reverseModeEnabled && authoredNodes
+      ? reverseAuthoredLoop(authoredNodes)
+      : authoredNodes;
+
+    const nodes = effectiveAuthoredNodes
+      ? effectiveAuthoredNodes
       : [...d.checkpoints.map(cp => ({ x: cp.x, z: cp.z })), { x: d.checkpoints[0].x, z: d.checkpoints[0].z }];
 
     const interpolateSegment = (a, b) => {

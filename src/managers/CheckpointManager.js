@@ -17,21 +17,46 @@ export class CheckpointManager {
     this._activeCheckpointNumber = null;
   }
 
-  createCheckpoints() {
-    // Find the highest checkpoint number — that gate is the finish line
-    let maxCheckpointNumber = 0;
-    for (const feature of this.track.features) {
-      if (feature.type === "checkpoint" && feature.checkpointNumber !== null) {
-        maxCheckpointNumber = Math.max(maxCheckpointNumber, feature.checkpointNumber);
-      }
+  createCheckpoints(reverse = false) {
+    // Collect all checkpoint features sorted by their original number
+    const cpFeatures = this.track.features
+      .filter(f => f.type === "checkpoint" && f.checkpointNumber != null)
+      .sort((a, b) => a.checkpointNumber - b.checkpointNumber);
+
+    // Build the feature list used for this run (possibly reversed)
+    let orderedFeatures;
+    if (reverse && cpFeatures.length > 0) {
+      // Reverse traversal direction and flip each gate's heading by π.
+      // Keep the original finish gate as the finish line by ordering as:
+      // (max-1 ... 1, max). This makes the first gate after start/finish
+      // become the original (max-1) gate in reverse mode.
+      const finishFeature = cpFeatures[cpFeatures.length - 1];
+      const reverseTraversal = [
+        ...cpFeatures.slice(0, -1).reverse(),
+        finishFeature,
+      ];
+      orderedFeatures = reverseTraversal.map((f, i) => ({
+        ...f,
+        checkpointNumber: i + 1,
+        heading: f.heading + Math.PI,
+        passedBy: new Set(),
+      }));
+    } else {
+      orderedFeatures = cpFeatures;
     }
+
+    const maxCheckpointNumber = orderedFeatures.length > 0
+      ? orderedFeatures[orderedFeatures.length - 1].checkpointNumber
+      : 0;
     this._maxCheckpointNumber = maxCheckpointNumber;
 
-    for (const feature of this.track.features) {
-      if (feature.type === "checkpoint") {
-        const isFinish = maxCheckpointNumber > 0 && feature.checkpointNumber === maxCheckpointNumber;
-        this.createSingleCheckpoint(feature, isFinish);
-      }
+    // Also create any checkpoints with null numbers (unnumbered gates)
+    const unnumbered = this.track.features.filter(
+      f => f.type === "checkpoint" && f.checkpointNumber == null
+    );
+    for (const feature of [...orderedFeatures, ...unnumbered]) {
+      const isFinish = maxCheckpointNumber > 0 && feature.checkpointNumber === maxCheckpointNumber;
+      this.createSingleCheckpoint(feature, isFinish);
     }
 
     this._applyActiveCheckpointHighlight();
@@ -106,7 +131,7 @@ export class CheckpointManager {
 
   rebuild() {
     this.dispose();
-    this.createCheckpoints();
+    this.createCheckpoints(this._reverse ?? false);
   }
 
   resetForTruck(truckId) {

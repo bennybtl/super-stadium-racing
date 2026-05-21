@@ -13,6 +13,7 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedTrack = ref(null);
   const selectedLaps = ref(5);
   const selectedAIDrivers = ref(3);
+  const selectedReverse = ref(false);
   const selectedVehicle = ref('default_truck');
   // Current gameplay mode: null | 'practice' | 'singleRace' | 'season'
   const mode = ref(null);
@@ -47,6 +48,7 @@ export const useMenuStore = defineStore('menu', () => {
   function setSelectedTrack(key) { if (!_bridge.value) return; _bridge.value.setSelectedTrack(key); }
   function setSelectedLaps(laps) { if (!_bridge.value) return; _bridge.value.setSelectedLaps(laps); }
   function setSelectedAIDrivers(count) { if (!_bridge.value) return; _bridge.value.setSelectedAIDrivers(count); }
+  function setSelectedReverse(val) { selectedReverse.value = !!val; if (_bridge.value) _bridge.value.selectedReverse = !!val; }
   function showPitMenu(pitMode = 'singleRace') {
     if (pitMode === 'season') mode.value = 'season';
     else if (pitMode === 'singleRace') mode.value = 'singleRace';
@@ -107,12 +109,14 @@ export const useMenuStore = defineStore('menu', () => {
 
   return {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedVehicle, mode,
+    selectedReverse,
     postRaceData, pitData, seasonFinalData, singleRaceData, upgrades,
     loadingVisible, loadingMessage,
     setBridge,
     showEditorTrackSelect,
     startEditor,
     selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, showPitMenu, startPracticeMode,
+    setSelectedReverse,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,

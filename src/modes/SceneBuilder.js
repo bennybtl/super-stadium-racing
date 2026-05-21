@@ -37,6 +37,7 @@ import {
   buildTerrainWearOverlayPixelData,
   buildTerrainTypePropertyTexturePixelData,
   applySteepGrassTerrainRemap,
+  applySteepWaterTerrainRemap,
 } from "../terrain-utils.js";
 import {
   createTerrainDiffuseOverlayTexture,
@@ -212,6 +213,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   }
 
   applySteepGrassTerrainRemap(terrainManager, currentTrack);
+  applySteepWaterTerrainRemap(terrainManager, currentTrack);
 
   // -- Ground mesh --
   const ground = MeshBuilder.CreateGround(

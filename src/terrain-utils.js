@@ -154,6 +154,32 @@ function _getTerrainSlopeDegAt(track, x, z, sampleDistance) {
   return Math.atan(rise) * 180 / Math.PI;
 }
 
+export function applySteepWaterTerrainRemap(terrainManager, track, options = {}) {
+  const slopeThreshold = options.slopeThreshold ?? 10;
+  const sampleDistance = options.sampleDistance ?? 2.5;
+  const cellsPerSide = terrainManager?.cellsPerSide ?? 0;
+  if (!track || cellsPerSide <= 0) return;
+
+  const worldWidth = terrainManager.worldWidth ?? terrainManager.gridSize;
+  const worldDepth = terrainManager.worldDepth ?? terrainManager.gridSize;
+  const halfWorldW = worldWidth / 2;
+  const halfWorldD = worldDepth / 2;
+  for (let row = 0; row < cellsPerSide; row++) {
+    for (let col = 0; col < cellsPerSide; col++) {
+      const index = row * cellsPerSide + col;
+      const cell = terrainManager.grid[index];
+      if (cell?.name !== 'water') continue;
+
+      const worldX = ((col + 0.5) / cellsPerSide) * worldWidth - halfWorldW;
+      const worldZ = ((row + 0.5) / cellsPerSide) * worldDepth - halfWorldD;
+      const slopeDeg = _getTerrainSlopeDegAt(track, worldX, worldZ, sampleDistance * terrainManager.cellSize);
+      if (slopeDeg >= slopeThreshold) {
+        terrainManager.grid[index] = TERRAIN_TYPES.MUD;
+      }
+    }
+  }
+}
+
 export function applySteepGrassTerrainRemap(terrainManager, track, options = {}) {
   const slopeStart = options.slopeStart ?? 16;
   const sampleDistance = options.sampleDistance ?? 2.5;

@@ -82,6 +82,7 @@ export class MenuMode extends BaseMode {
         aiCount:         menuManager.selectedAIDrivers,
         vehicleKey:      menuManager.selectedVehicle,
         playerColorKey:  menuManager.selectedPlayerColor,
+        reverse:         menuManager.selectedReverse,
       });
     };
 
