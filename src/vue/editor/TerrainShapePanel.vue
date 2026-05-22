@@ -44,29 +44,17 @@
         <span>{{ editor.terrainShape.rotation.toFixed(0) }}°</span>
       </div>
       <input
-        type="range" min="0" max="360" step="1"
+        type="range" min="0" max="180" step="1"
         :value="editor.terrainShape.rotation"
         @input="editor.setTerrainShapeRotation(+$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
 
-    <!-- Surface -->
-    <div class="text-[12px] mb-1">Surface</div>
-    <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.terrainShape.terrainType"
-      @change="editor.setTerrainShapeTerrainType($event.target.value)"
-    >
-      <option value="packed_dirt">Packed Dirt</option>
-      <option value="loose_dirt">Loose Dirt</option>
-      <option value="loamy_dirt">Loamy Dirt</option>
-      <option value="asphalt">Asphalt</option>
-      <option value="mud">Mud</option>
-      <option value="water">Water</option>
-      <option value="rocky">Rocky</option>
-      <option value="grass">Grass</option>
-    </select>
+    <TerrainTypeSelect
+      :model-value="editor.terrainShape.terrainType"
+      @update:modelValue="editor.setTerrainShapeTerrainType"
+    />
 
     <!-- Hint -->
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
@@ -80,6 +68,7 @@
 <script setup>
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
+import TerrainTypeSelect from './TerrainTypeSelect.vue';
 
 const editor = useEditorStore();
 </script>

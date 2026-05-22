@@ -33,22 +33,10 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <!-- Surface -->
-    <div class="text-[12px] mb-1">Surface</div>
-    <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.terrainPath.terrainType"
-      @change="editor.setTerrainPathTerrainType($event.target.value)"
-    >
-      <option value="packed_dirt">Packed Dirt</option>
-      <option value="loose_dirt">Loose Dirt</option>
-      <option value="loamy_dirt">Loamy Dirt</option>
-      <option value="asphalt">Asphalt</option>
-      <option value="mud">Mud</option>
-      <option value="water">Water</option>
-      <option value="rocky">Rocky</option>
-      <option value="grass">Grass</option>
-    </select>
+    <TerrainTypeSelect
+      :model-value="editor.terrainPath.terrainType"
+      @update:modelValue="editor.setTerrainPathTerrainType"
+    />
 
     <button
       class="w-full rounded-md bg-slate-800 text-white py-2 text-[13px] font-sans mb-2 hover:bg-slate-700"
@@ -73,6 +61,7 @@
 <script setup>
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
+import TerrainTypeSelect from './TerrainTypeSelect.vue';
 
 const editor = useEditorStore();
 </script>

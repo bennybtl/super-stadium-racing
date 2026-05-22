@@ -407,6 +407,11 @@ export const useEditorStore = defineStore('editor', () => {
   });
 
   // ── Track defaults ──
+  const trackSettingsOpen = ref(false);
+  const trackSettings = reactive({
+    name: 'Untitled Track',
+    id: 'untitled-track',
+  });
   const trackDefaultTerrain = ref('packed_dirt');
   const trackBorderTerrain = ref('packed_dirt');
 
@@ -495,6 +500,17 @@ export const useEditorStore = defineStore('editor', () => {
   function cycleSnapSize() { const idx = snapSizes.indexOf(snapSize.value); snapSize.value = snapSizes[(idx + 1) % snapSizes.length]; snapEnabled.value = true; }
   function toggleGizmosVisible() { gizmosVisible.value = !gizmosVisible.value; _bridge.value?.toggleGizmosVisible(); }
   function quickTestTrack() { _bridge.value?.quickTestTrack(); }
+  function openTrackSettings() { trackSettingsOpen.value = true; }
+  function closeTrackSettings() { trackSettingsOpen.value = false; }
+  function toggleTrackSettings() { trackSettingsOpen.value = !trackSettingsOpen.value; }
+  function setTrackName(name) {
+    trackSettings.name = name;
+    _bridge.value?.changeTrackName?.(name);
+  }
+  function setTrackId(id) {
+    trackSettings.id = id;
+    _bridge.value?.changeTrackId?.(id);
+  }
 
   // ── Checkpoint actions ──
   function setCheckpointWidth(val)      { checkpoint.width = val;      _bridge.value?.changeCheckpointWidth(val); }
@@ -801,6 +817,8 @@ export const useEditorStore = defineStore('editor', () => {
     setBridgeCollisionEndCaps, setBridgeCollisionEndCapsOnDepth, setBridgeCollisionEndCapsOnWidth,
     setBridgeCollisionEndCapThickness, setBridgeCollisionEndCapDrop,
     duplicateBridge, deleteBridge, closeBridge,
+    trackSettingsOpen, trackSettings,
+    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
     setActiveTool,

@@ -76,22 +76,10 @@
     />
 
     <!-- Terrain Type -->
-    <div class="text-[12px] mb-1">Terrain Type</div>
-    <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.polyHill.terrainType"
-      @change="editor.setPolyHillTerrainType($event.target.value)"
-    >
-      <option value="none">(Default)</option>
-      <option value="packed_dirt">Packed Dirt</option>
-      <option value="loose_dirt">Loose Dirt</option>
-      <option value="loamy_dirt">Loamy Dirt</option>
-      <option value="asphalt">Asphalt</option>
-      <option value="mud">Mud</option>
-      <option value="water">Water</option>
-      <option value="rocky">Rocky</option>
-      <option value="grass">Grass</option>
-    </select>
+    <TerrainTypeSelect
+      :model-value="editor.polyHill.terrainType"
+      @update:modelValue="editor.setPolyHillTerrainType"
+    />
 
     <!-- Closed toggle -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -138,6 +126,7 @@
 import { computed } from 'vue';
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
+import TerrainTypeSelect from './TerrainTypeSelect.vue';
 
 const editor = useEditorStore();
 

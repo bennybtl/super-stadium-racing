@@ -24,6 +24,7 @@
     <BezierWallPanel />
     <DecorationsPanel />
     <TrackSignPanel />
+    <TrackSettingsPanel />
     <ActionZonePanel />
     <PolyCurbPanel />
     <MeshGridPanel />
@@ -56,6 +57,7 @@ import PolyHillPanel      from './editor/PolyHillPanel.vue';
 import BezierWallPanel    from './editor/BezierWallPanel.vue';
 import DecorationsPanel   from './editor/DecorationsPanel.vue';
 import TrackSignPanel     from './editor/TrackSignPanel.vue';
+import TrackSettingsPanel from './editor/TrackSettingsPanel.vue';
 import ActionZonePanel    from './editor/ActionZonePanel.vue';
 import PolyCurbPanel      from './editor/PolyCurbPanel.vue';
 import MeshGridPanel      from './editor/MeshGridPanel.vue';

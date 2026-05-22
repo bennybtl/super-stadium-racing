@@ -203,8 +203,7 @@ export class EditorController {
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
     this.setGizmosVisible(true);
-    this._editorStore.trackDefaultTerrain = track.defaultTerrainType?.name ?? 'packed_dirt';
-    this._editorStore.trackBorderTerrain = track.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
+    this._syncTrackSettingsPanel();
     this._syncAiPathPanel();
   }
 
@@ -250,6 +249,7 @@ export class EditorController {
     if (this._editorStore) {
       this._editorStore.addMenuOpen = false;
       this._editorStore.selectedType = null;
+      this._editorStore.trackSettingsOpen = false;
       this._editorStore.setBridge(null);
     }
 
@@ -333,9 +333,21 @@ export class EditorController {
 
   _serializeSnapshot() {
     return JSON.stringify({
+      name: this.currentTrack.name,
+      id: this.currentTrack.id,
+      defaultTerrainType: this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt',
+      borderTerrainType: this.currentTrack.borderTerrainType?.name ?? this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt',
       features: this.currentTrack.features,
       wear: this.currentTrack.wear ?? null,
     });
+  }
+
+  _syncTrackSettingsPanel() {
+    if (!this._editorStore || !this.currentTrack) return;
+    this._editorStore.trackSettings.name = this.currentTrack.name ?? 'Untitled Track';
+    this._editorStore.trackSettings.id = this.currentTrack.id ?? 'untitled-track';
+    this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
+    this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
   }
 
   _getWearConfig() {
@@ -591,12 +603,23 @@ export class EditorController {
       this.currentTrack.features = parsed;
       this.currentTrack.wear = { ...DEFAULT_TERRAIN_WEAR_CONFIG };
     } else {
+      this.currentTrack.name = parsed.name ?? this.currentTrack.name ?? 'Untitled Track';
+      this.currentTrack.id = parsed.id ?? this.currentTrack.id ?? 'untitled-track';
+      if (parsed.defaultTerrainType) {
+        const defaultKey = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === parsed.defaultTerrainType);
+        if (defaultKey) this.currentTrack.defaultTerrainType = TERRAIN_TYPES[defaultKey];
+      }
+      if (parsed.borderTerrainType) {
+        const borderKey = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === parsed.borderTerrainType);
+        if (borderKey) this.currentTrack.borderTerrainType = TERRAIN_TYPES[borderKey];
+      }
       this.currentTrack.features = parsed.features ?? [];
       this.currentTrack.wear = {
         ...DEFAULT_TERRAIN_WEAR_CONFIG,
         ...(parsed.wear ?? {}),
       };
     }
+      this._syncTrackSettingsPanel();
 
       // Rebuild terrain first so terrain-sampled visuals land at correct heights.
       window.rebuildTerrain?.();
@@ -1320,6 +1343,7 @@ export class EditorController {
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
     window.rebuildNormalMap?.();
+    this._syncTrackSettingsPanel();
   }
 
   changeTrackBorderTerrain(name) {
@@ -1330,6 +1354,26 @@ export class EditorController {
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
     window.rebuildNormalMap?.();
+    this._syncTrackSettingsPanel();
+  }
+
+  changeTrackName(name) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.name = name?.trim() || 'Untitled Track';
+    this._syncTrackSettingsPanel();
+  }
+
+  changeTrackId(id) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    const nextId = (id ?? '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    this.currentTrack.id = nextId || 'untitled-track';
+    this._syncTrackSettingsPanel();
   }
 
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }

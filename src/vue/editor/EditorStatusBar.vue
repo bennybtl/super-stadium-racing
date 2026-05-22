@@ -2,49 +2,13 @@
   <Transition name="status-bar">
     <div v-if="editor.isEditorActive" class="fixed bottom-0 left-0 right-0 h-11 flex items-center gap-3 px-4 bg-black/80 border-t border-slate-900 z-[999] pointer-events-auto select-none box-border">
 
-      <!-- Left: quick-test button -->
-      <button class="rounded-xl bg-emerald-600 text-white px-4 py-2 text-[13px] font-sans shadow-sm shadow-black/40 transition hover:bg-emerald-500 whitespace-nowrap" @click="editor.quickTestTrack()">
-        🏁 Test Track
+      <!-- Left: track settings button -->
+      <button class="rounded-xl bg-emerald-600 text-white px-4 py-2 text-[13px] font-sans shadow-sm shadow-black/40 transition hover:bg-emerald-500 whitespace-nowrap" @click="editor.toggleTrackSettings()">
+        Track Settings
       </button>
+
       <div class="text-slate-400 text-[11px] font-sans">
         Add Feature: Space | Pan/Move: W,A,S,D | Rotate: Q,E | Delete: Del | Undo: Ctrl+Z | Zoom: +/- | Move Faster: Shift
-      </div>
-
-      <!-- Default terrain picker -->
-      <div class="flex items-center gap-2">
-        <span class="text-slate-500 text-[11px] font-sans whitespace-nowrap">Default Terrain</span>
-        <select
-          class="w-full max-w-[180px] bg-white/5 text-slate-200 border border-slate-800 rounded-lg px-2 py-1 text-[12px] font-sans cursor-pointer"
-          :value="editor.trackDefaultTerrain"
-          @change="editor.setTrackDefaultTerrain($event.target.value)"
-        >
-          <option value="packed_dirt">Packed Dirt</option>
-          <option value="loose_dirt">Loose Dirt</option>
-          <option value="asphalt">Asphalt</option>
-          <option value="loamy_dirt">Loamy Soil</option>
-          <option value="mud">Mud</option>
-          <option value="water">Water</option>
-          <option value="rocky">Rocky</option>
-          <option value="grass">Grass</option>
-        </select>
-      </div>
-
-      <!-- Border terrain picker -->
-      <div class="flex items-center gap-2">
-        <span class="text-slate-500 text-[11px] font-sans whitespace-nowrap">Border Terrain</span>
-        <select
-          class="w-full max-w-[180px] bg-white/5 text-slate-200 border border-slate-800 rounded-lg px-2 py-1 text-[12px] font-sans cursor-pointer"
-          :value="editor.trackBorderTerrain"
-          @change="editor.setTrackBorderTerrain($event.target.value)"
-        >
-          <option value="packed_dirt">Packed Dirt</option>
-          <option value="loose_dirt">Loose Dirt</option>
-          <option value="asphalt">Asphalt</option>
-          <option value="mud">Mud</option>
-          <option value="water">Water</option>
-          <option value="rocky">Rocky</option>
-          <option value="grass">Grass</option>
-        </select>
       </div>
 
       <!-- Right: snap controls -->
