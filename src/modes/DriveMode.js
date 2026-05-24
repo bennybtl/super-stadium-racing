@@ -80,21 +80,21 @@ export class DriveMode extends BaseMode {
 
   /**
    * Get ordered checkpoint features and the start/finish checkpoint.
-   * Start/finish is defined as the checkpoint with the highest checkpointNumber.
+   * Start/finish is defined by checkpoint feature order; the last checkpoint is the finish.
    */
   getStartFinishInfo(track) {
-    const checkpointFeatures = track.features.filter(
-      f => f.type === "checkpoint" && f.checkpointNumber != null
-    );
-    const maxCheckpointNumber = checkpointFeatures.reduce(
-      (m, f) => Math.max(m, f.checkpointNumber),
-      0
-    );
-    const startFinishCp = checkpointFeatures.find(
-      f => f.checkpointNumber === maxCheckpointNumber
-    ) || null;
+    const checkpointFeatures = track.features.filter(f => f.type === "checkpoint");
+    const reverseModeEnabled = Boolean(this.controller.checkpointManager?._reverse);
+    const orderedCheckpointFeatures = reverseModeEnabled && checkpointFeatures.length > 0
+      ? [
+          ...checkpointFeatures.slice(0, -1).reverse(),
+          checkpointFeatures[checkpointFeatures.length - 1],
+        ]
+      : checkpointFeatures;
+    const maxCheckpointNumber = orderedCheckpointFeatures.length;
+    const startFinishCp = orderedCheckpointFeatures[maxCheckpointNumber - 1] || null;
 
-    return { checkpointFeatures, maxCheckpointNumber, startFinishCp };
+    return { checkpointFeatures: orderedCheckpointFeatures, maxCheckpointNumber, startFinishCp };
   }
 
   /**

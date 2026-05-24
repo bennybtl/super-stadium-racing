@@ -8,10 +8,10 @@ import {
 } from "@babylonjs/core";
 import { basicColors } from "../constants";
 
-export const POLE_HEIGHT = 8.5;
+export const POLE_HEIGHT = 7.5;
 export const POLE_RADIUS = 0.1;
-export const FLAG_WIDTH  = 1.5;
-export const FLAG_HEIGHT = 1.6;
+export const FLAG_WIDTH  = 2.5;
+export const FLAG_HEIGHT = 2.0;
 export const POLE_MASS   = 0.5;
 
 /** Collision cylinder radius — wider than the pole for easier truck hits */
@@ -76,8 +76,8 @@ export class Flag {
     this.pole.isPickable = true;
 
     const poleMat = new StandardMaterial(`poleMat_${x}_${z}`, scene);
-    poleMat.diffuseColor  = basicColors.gray.diffuse;
-    poleMat.specularColor = basicColors.gray.emissive;
+    poleMat.diffuseColor  = basicColors.white.diffuse;
+    poleMat.specularColor = basicColors.white.emissive;
     this.pole.material = poleMat;
 
     // ── Flag banner parented to pole ─────────────────────────────────
@@ -172,8 +172,8 @@ export class Flag {
 
     mesh.isPickable = true;
     const mat = new StandardMaterial(`flagMat_${x}_${z}`, scene);
-    mat.diffuseColor    = color === 'red' ? basicColors.red.diffuse : basicColors.blue.diffuse;
-    mat.specularColor   = basicColors.gray.emissive;
+    mat.diffuseColor    = basicColors[color]?.diffuse || basicColors.white.diffuse;
+    mat.specularColor   = basicColors[color]?.emissive || basicColors.gray.emissive;
     mat.backFaceCulling = false;
     mesh.material = mat;
     return mesh;
@@ -187,9 +187,8 @@ export class Flag {
 
   setColor(color) {
     this.color = color;
-    this.flag.material.diffuseColor = color === 'red'
-      ? basicColors.red.diffuse
-      : basicColors.blue.diffuse;
+    this.flag.material.diffuseColor = basicColors[color]?.diffuse || basicColors.white.diffuse;
+    this.flag.material.specularColor = basicColors[color]?.emissive || basicColors.gray.emissive;
   }
 
   dispose() {

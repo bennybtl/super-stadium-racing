@@ -18,26 +18,22 @@ export class CheckpointManager {
   }
 
   createCheckpoints(reverse = false) {
-    // Collect all checkpoint features sorted by their original number
-    const cpFeatures = this.track.features
-      .filter(f => f.type === "checkpoint" && f.checkpointNumber != null)
-      .sort((a, b) => a.checkpointNumber - b.checkpointNumber);
+    // Collect checkpoints in track order; sequence now comes from array order.
+    const cpFeatures = this.track.features.filter(f => f.type === "checkpoint");
 
     // Build the feature list used for this run (possibly reversed)
     let orderedFeatures;
     if (reverse && cpFeatures.length > 0) {
       // Reverse traversal direction and flip each gate's heading by π.
       // Keep the original finish gate as the finish line by ordering as:
-      // (max-1 ... 1, max). This makes the first gate after start/finish
-      // become the original (max-1) gate in reverse mode.
+      // (last-1 ... first, last).
       const finishFeature = cpFeatures[cpFeatures.length - 1];
       const reverseTraversal = [
         ...cpFeatures.slice(0, -1).reverse(),
         finishFeature,
       ];
-      orderedFeatures = reverseTraversal.map((f, i) => ({
+      orderedFeatures = reverseTraversal.map(f => ({
         ...f,
-        checkpointNumber: i + 1,
         heading: f.heading + Math.PI,
         passedBy: new Set(),
       }));
@@ -45,16 +41,16 @@ export class CheckpointManager {
       orderedFeatures = cpFeatures;
     }
 
+    orderedFeatures.forEach((feature, index) => {
+      feature.checkpointNumber = index + 1;
+    });
+
     const maxCheckpointNumber = orderedFeatures.length > 0
-      ? orderedFeatures[orderedFeatures.length - 1].checkpointNumber
+      ? orderedFeatures.length
       : 0;
     this._maxCheckpointNumber = maxCheckpointNumber;
 
-    // Also create any checkpoints with null numbers (unnumbered gates)
-    const unnumbered = this.track.features.filter(
-      f => f.type === "checkpoint" && f.checkpointNumber == null
-    );
-    for (const feature of [...orderedFeatures, ...unnumbered]) {
+    for (const feature of orderedFeatures) {
       const isFinish = maxCheckpointNumber > 0 && feature.checkpointNumber === maxCheckpointNumber;
       this.createSingleCheckpoint(feature, isFinish);
     }
@@ -177,11 +173,19 @@ export class CheckpointManager {
    */
   renumberCheckpoints() {
     const checkpointFeatures = this.track.features.filter(f => f.type === 'checkpoint');
+    const checkpointByFeature = new Map(
+      this.checkpointMeshes.map(checkpoint => [checkpoint.feature, checkpoint])
+    );
+
     checkpointFeatures.forEach((feature, index) => {
       feature.checkpointNumber = index + 1;
     });
 
     const maxNum = checkpointFeatures.length;
+    this.checkpointMeshes = checkpointFeatures
+      .map(feature => checkpointByFeature.get(feature))
+      .filter(Boolean);
+
     this._maxCheckpointNumber = maxNum;
     for (const checkpoint of this.checkpointMeshes) {
       const isFinish = maxNum > 0 && checkpoint.feature.checkpointNumber === maxNum;

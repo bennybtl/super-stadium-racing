@@ -28,6 +28,7 @@
     <div class="flex gap-2 mb-3">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        :class="{ 'cursor-not-allowed opacity-50': !editor.polyHill.canDeletePoint }"
         :disabled="!editor.polyHill.canDeletePoint"
         @click="editor.deletePolyHillPoint()"
       >
@@ -36,14 +37,12 @@
 
       <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        :class="{ 'cursor-not-allowed opacity-50': !editor.polyHill.hasSelection }"
         :disabled="!editor.polyHill.hasSelection"
         @click="editor.insertPolyHillPoint()"
       >
         Insert Point
       </button>
-      <div v-if="editor.polyHill.hasSelection && !editor.polyHill.canDeletePoint" class="text-[10px] text-slate-400 mb-3" style="color: #ff9800;">
-        A hill must have more than 2 points before a point can be deleted.
-      </div>
     </div>
 
     <hr class="border-t border-slate-700 my-4" />

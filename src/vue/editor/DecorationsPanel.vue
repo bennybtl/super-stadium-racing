@@ -7,7 +7,7 @@
     <div class="mb-4">
       <label class="block text-[12px] uppercase tracking-[0.14em] text-slate-300 mb-2">Type</label>
       <select
-        class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
         :value="editor.decoration.type"
         @change="editor.setDecorationType($event.target.value)"
       >
@@ -17,26 +17,19 @@
     </div>
 
     <template v-if="editor.decoration.type === 'flag'">
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Color</span>
-        <span>{{ editor.decoration.color }}</span>
-      </div>
-      <div class="flex gap-2 mb-3">
-        <button
-          class="color-btn red"
-          :class="{ active: editor.decoration.color === 'red' }"
-          @click="editor.setDecorationColor('red')"
-        >
-          Red
-        </button>
-        <button
-          class="color-btn blue"
-          :class="{ active: editor.decoration.color === 'blue' }"
-          @click="editor.setDecorationColor('blue')"
-        >
-          Blue
-        </button>
-      </div>
+      <div class="text-[12px] mb-1">Color</div>
+      <select
+        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+        :value="editor.decoration.color"
+        @change="editor.setDecorationColor($event.target.value)"
+      >
+        <option value="black">Black</option>
+        <option value="gray">Gray</option>
+        <option value="white">White</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+        <option value="yellow">Yellow</option>
+      </select>
       <div class="text-[10px] text-slate-400 mb-3">WASD to move · Del to delete</div>
     </template>
 
@@ -52,6 +45,7 @@
         step="1"
         :value="editor.decoration.width"
         @input="editor.setDecorationWidth(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
       <div class="flex justify-between mb-1 mt-3 text-[12px]">
@@ -65,26 +59,34 @@
         step="1"
         :value="editor.decoration.poleHeight"
         @input="editor.setDecorationPoleHeight(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
       <div class="flex justify-between mb-1 mt-3 text-[12px]">
-        <span>Heading</span>
+        <span>Rotation</span>
         <span>{{ editor.decoration.heading }}°</span>
       </div>
       <input
         type="range"
-        min="-180"
+        min="0"
         max="180"
         step="1"
         :value="editor.decoration.heading"
         @input="editor.setDecorationHeading(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
       <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
     </template>
-
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateDecoration()">Duplicate</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteDecoration()">Delete</button>
+    <!-- Actions -->
+    <div class="flex gap-2 mb-3">
+      <button 
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        @click="editor.deleteDecoration()">Delete</button>
+      <button 
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.duplicateDecoration()">Duplicate</button>
+    </div>
   </EditorPanel>
 </template>
 

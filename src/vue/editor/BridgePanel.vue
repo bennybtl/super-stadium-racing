@@ -10,7 +10,7 @@
       <span>{{ editor.bridge.width.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="2" max="60" step="0.5"
+      type="range" min="5" max="60" step="1"
       :value="editor.bridge.width"
       @input="editor.setBridgeWidth(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -22,7 +22,7 @@
       <span>{{ editor.bridge.depth.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="2" max="30" step="0.5"
+      type="range" min="0" max="60" step="1"
       :value="editor.bridge.depth"
       @input="editor.setBridgeDepth(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -34,7 +34,7 @@
       <span>{{ editor.bridge.height.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="0.5" max="20" step="0.25"
+      type="range" min="0.5" max="40" step="0.25"
       :value="editor.bridge.height"
       @input="editor.setBridgeHeight(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -46,19 +46,19 @@
       <span>{{ editor.bridge.thickness.toFixed(2) }}</span>
     </div>
     <input
-      type="range" min="0.1" max="2.0" step="0.05"
+      type="range" min="0.5" max="2.0" step="0.5"
       :value="editor.bridge.thickness"
       @input="editor.setBridgeThickness(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <!-- Angle -->
+    <!-- Rotation -->
     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Angle</span>
+      <span>Rotation</span>
       <span>{{ Math.round(editor.bridge.angle) }}°</span>
     </div>
     <input
-      type="range" min="-180" max="180" step="1"
+      type="range" min="0" max="180" step="1"
       :value="editor.bridge.angle"
       @input="editor.setBridgeAngle(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -94,69 +94,20 @@
       />
     </template>
 
-    <div class="text-[10px] text-slate-400 mb-3">Collision end caps</div>
-    <div class="flex justify-between mb-1 text-[12px]">
-      <label class="flex items-center gap-2">
-        <span>Enable End Caps</span>
-        <input
-          type="checkbox"
-          :checked="editor.bridge.collisionEndCaps"
-          @change="editor.setBridgeCollisionEndCaps($event.target.checked)"
-        />
-      </label>
-    </div>
-
-    <template v-if="editor.bridge.collisionEndCaps">
-      <div class="flex justify-between mb-1 text-[12px]">
-        <label class="flex items-center gap-2">
-          <span>Caps On Depth Ends</span>
-          <input
-            type="checkbox"
-            :checked="editor.bridge.collisionEndCapsOnDepth"
-            @change="editor.setBridgeCollisionEndCapsOnDepth($event.target.checked)"
-          />
-        </label>
-      </div>
-      <div class="flex justify-between mb-1 text-[12px]">
-        <label class="flex items-center gap-2">
-          <span>Caps On Width Sides</span>
-          <input
-            type="checkbox"
-            :checked="editor.bridge.collisionEndCapsOnWidth"
-            @change="editor.setBridgeCollisionEndCapsOnWidth($event.target.checked)"
-          />
-        </label>
-      </div>
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>End Cap Thickness</span>
-        <span>{{ editor.bridge.collisionEndCapThickness.toFixed(2) }}</span>
-      </div>
-      <input
-        type="range" min="0.5" max="6.0" step="0.5"
-        :value="editor.bridge.collisionEndCapThickness"
-        @input="editor.setBridgeCollisionEndCapThickness(+$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
-
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>End Cap Drop</span>
-        <span>{{ editor.bridge.collisionEndCapDrop.toFixed(1) }}</span>
-      </div>
-      <input
-        type="range" min="2" max="80" step="2"
-        :value="editor.bridge.collisionEndCapDrop"
-        @input="editor.setBridgeCollisionEndCapDrop(+$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
-
-    </template>
+    <div class="text-[10px] text-slate-400 mb-3">Collision end caps use fixed defaults.</div>
 
     <!-- Hint -->
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateBridge()">Duplicate Bridge</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteBridge()">Delete Bridge</button>
+    <div class="flex gap-2 mb-3">
+      <button 
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        @click="editor.deleteBridge()">Delete Bridge</button>
+      <button 
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.duplicateBridge()">Duplicate Bridge</button>
+    </div>
   </EditorPanel>
 </template>
 

@@ -399,11 +399,11 @@ export const useEditorStore = defineStore('editor', () => {
     materialType:     'packed_dirt',
     transitionEnabled: true,
     transitionDepth:  10,
-    collisionEndCaps: false,
+    collisionEndCaps: true,
     collisionEndCapsOnDepth: true,
     collisionEndCapsOnWidth: false,
-    collisionEndCapThickness: 1.2,
-    collisionEndCapDrop: 30,
+    collisionEndCapThickness: 0.5,
+    collisionEndCapDrop: 5,
   });
 
   // ── Track defaults ──
@@ -725,10 +725,6 @@ export const useEditorStore = defineStore('editor', () => {
   function setObstacleColor(val) { obstacle.color = val; _bridge.value?.changeObstacleColor?.(val); }
   function resetObstacleDefaults() { _bridge.value?.resetObstacleDefaults?.(); }
   function deleteSelectedObstacle() { _bridge.value?.deleteSelectedObstacle?.(); }
-  function setObstaclePlacementActive(val) {
-    obstacle.placementActive = !!val;
-    _bridge.value?.setObstaclePlacementActive?.(!!val);
-  }
   function closeObstacle()     { _bridge.value?.closeObstacle?.(); }
   function addFlag()           { _bridge.value?.addFlagEntity(); }
   function addMeshGrid()       { _bridge.value?.addMeshGridEntity(); }
@@ -828,7 +824,7 @@ export const useEditorStore = defineStore('editor', () => {
     addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addObstacle,
     setObstacleType, setObstacleScale, setObstacleRotation, setObstacleWeight, setObstacleColor,
-    setObstaclePlacementActive, resetObstacleDefaults, deleteSelectedObstacle, closeObstacle,
+    resetObstacleDefaults, deleteSelectedObstacle, closeObstacle,
     addFlag,
     addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addBridge, addAiWaypoint, deleteAiWaypoint, clearAiPath,

@@ -316,6 +316,28 @@ export class ActionZoneEditor {
     return null;
   }
 
+  /**
+   * Handle pointer selection for zone center/point handles.
+   * Returns true when the click was consumed by this editor.
+   */
+  onPointerDown(mesh) {
+    const zoneData = this.findByMesh(mesh);
+    if (!zoneData) return false;
+
+    const nextPointIndex = zoneData._pendingPointIndex ?? -1;
+    const sameZone = this._selected === zoneData;
+    const samePoint = sameZone && this._selectedPointIndex === nextPointIndex;
+
+    if (samePoint) {
+      delete zoneData._pendingPointIndex;
+      return true;
+    }
+
+    if (!sameZone) this.editor.deselectAll();
+    this.select(zoneData);
+    return true;
+  }
+
   // ── Selection ─────────────────────────────────────────────────────────────
 
   select(zoneData) {
@@ -424,11 +446,6 @@ export class ActionZoneEditor {
 
   deleteSelected() {
     if (!this._selected) return;
-
-    if (this._selected.feature.shape === 'polygon' && this._selectedPointIndex >= 0) {
-      this.deletePoint();
-      return;
-    }
 
     this.editor.saveSnapshot();
     const idx = this.editor.currentTrack.features.indexOf(this._selected.feature);

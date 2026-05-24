@@ -45,11 +45,10 @@ export class Bridge {
     const deckColliderEnabled = collision.deckCollider ?? !transitionEnabled;
     const driveColliderFriction = collision.friction ?? 1.0;
     const driveColliderApplyFriction = collision.applyFriction ?? false;
-    // End-caps are an opt-in safety feature. Default off so bridges remain
-    // passable from below unless explicitly configured per track.
-    const endCapsEnabled = collision.endCaps === true;
-    const endCapsOnDepth = collision.endCapsOnDepth ?? true;
-    const endCapsOnWidth = collision.endCapsOnWidth ?? false;
+    // End-caps use fixed editor/runtime defaults (no longer user-configurable).
+    const endCapsEnabled = true;
+    const endCapsOnDepth = true;
+    const endCapsOnWidth = false;
 
     // Visible bridge deck mesh.
     this.mesh = MeshBuilder.CreateBox(
@@ -179,13 +178,13 @@ export class Bridge {
       const depthLength = transitionDepth;
       const rampHeight = Math.max(0.001, topY - bottomY);
       const halfDepth = depthLength / 2;
-      const halfWidth = rampWidth / 2;
+      const halfWidth = width / 2;
       const halfRampHeight = rampHeight / 2;
       const centerY = bottomY + halfRampHeight / 2;
       const rotY = angleY + (sign === -1 ? Math.PI : 0);
       const cosY = Math.cos(rotY);
       const sinY = Math.sin(rotY);
-      const wallThickness = Math.min(0.5, rampWidth * 0.15);
+      const wallThickness = Math.min(0.5, width * 0.15);
 
       const makeCollider = (name, width, height, depth, localX, localZ, ignoreTop = false) => {
         const collider = MeshBuilder.CreateBox(
@@ -279,7 +278,8 @@ export class Bridge {
     this._endCaps = [];
     this._endCapAggregates = [];
     if (endCapsEnabled && (endCapsOnDepth || endCapsOnWidth)) {
-      const endCapThickness = collision.endCapThickness ?? 1.2;
+      const endCapThickness = 0.5;
+      const endCapHeight = 2;
       const endCapPad = collision.endCapPad ?? 0.4;
       const endCapFriction = collision.endCapFriction ?? 1.0;
       const endCapApplyFriction = collision.endCapApplyFriction ?? false;
@@ -307,7 +307,6 @@ export class Bridge {
         const capX = this.mesh.position.x + dirX * endOffset * sign;
         const capZ = this.mesh.position.z + dirZ * endOffset * sign;
         const terrainY = this.track.getHeightAt(capX, capZ);
-        const endCapHeight = Math.max(0.5, baseY - terrainY - 2);
         const capCenterY = terrainY + endCapHeight / 2;
 
         const cap = MeshBuilder.CreateBox(

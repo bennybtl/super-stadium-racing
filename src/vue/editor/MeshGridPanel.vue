@@ -87,7 +87,7 @@
       type="range" min="0" max="1" step="0.05"
       :value="editor.meshGrid.smoothing"
       @input="editor.setMeshGridSmoothing(+$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="w-full accent-[var(--accent)] mb-8 cursor-pointer"
     />
 
     <div class="flex gap-2 mb-3">

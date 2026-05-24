@@ -44,6 +44,7 @@ export class CheckpointEditor {
         mgr.createSingleCheckpoint(feature);
       }
     }
+    mgr.renumberCheckpoints();
   }
 
   // ── Click test ────────────────────────────────────────────────────────────
@@ -192,12 +193,11 @@ export class CheckpointEditor {
     this.editor.saveSnapshot();
     const src = this.selected.feature;
     // Assign next checkpoint number
-    const maxNum = this.editor.currentTrack.features
-      .filter(f => f.type === 'checkpoint' && f.checkpointNumber != null)
-      .reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
+    const maxNum = this.editor.currentTrack.features.filter(f => f.type === 'checkpoint').length;
     const newFeature = { ...src, centerX: src.centerX + 5, centerZ: src.centerZ + 5, checkpointNumber: maxNum + 1 };
     this.editor.currentTrack.features.push(newFeature);
     const cpMesh = this.editor.checkpointManager.createSingleCheckpoint(newFeature);
+    this.editor.checkpointManager.renumberCheckpoints();
     this.deselect();
     this.select(cpMesh);
   }
@@ -233,6 +233,7 @@ export class CheckpointEditor {
 
     // Create visual representation
     const checkpoint = this.editor.checkpointManager.createSingleCheckpoint(newFeature);
+    this.editor.checkpointManager.renumberCheckpoints();
     this.select(checkpoint);
 
     // Hide menu
@@ -277,24 +278,34 @@ export class CheckpointEditor {
    */
   shiftOrder(direction) {
     if (!this.selected) return;
-    const myNum = this.selected.feature.checkpointNumber;
-    if (myNum == null) return;
-    let targetNum = myNum + direction;
+    const features = this.editor.currentTrack.features;
+    const checkpointFeatures = features.filter(f => f.type === 'checkpoint');
+    const currentIndex = checkpointFeatures.indexOf(this.selected.feature);
+    if (currentIndex < 0 || checkpointFeatures.length < 2) return;
 
-    const checkpointCount = this.editor.currentTrack.features.filter(f => f.type === 'checkpoint' && f.checkpointNumber != null).length;
-    if (targetNum < 1) targetNum = checkpointCount; // Wrap around to end
-    if (targetNum > checkpointCount) targetNum = 1; // Wrap around to start
+    let targetIndex = currentIndex + direction;
+    if (targetIndex < 0) targetIndex = checkpointFeatures.length - 1;
+    if (targetIndex >= checkpointFeatures.length) targetIndex = 0;
 
-    const other = this.editor.currentTrack.features.find(
-      f => f.type === 'checkpoint' && f.checkpointNumber === targetNum
-    );
-    if (!other) return;
+    if (targetIndex === currentIndex) return;
+
+    const reorderedCheckpoints = checkpointFeatures.slice();
+    [reorderedCheckpoints[currentIndex], reorderedCheckpoints[targetIndex]] = [
+      reorderedCheckpoints[targetIndex],
+      reorderedCheckpoints[currentIndex],
+    ];
+
     this.editor.saveSnapshot();
-    this.selected.feature.checkpointNumber = targetNum;
-    other.checkpointNumber = myNum;
-    this.refreshAllDecals();
+    let checkpointIndex = 0;
+    for (let i = 0; i < features.length; i++) {
+      if (features[i].type === 'checkpoint') {
+        features[i] = reorderedCheckpoints[checkpointIndex++];
+      }
+    }
+
+    this.editor.checkpointManager?.renumberCheckpoints();
     const s = this.editor._editorStore;
-    if (s) s.checkpoint.orderNum = targetNum;
+    if (s) s.checkpoint.orderNum = this.selected.feature.checkpointNumber;
   }
 
   /** Re-render the number/finish decal on every checkpoint gate. */

@@ -100,7 +100,15 @@ export class MeshGridEditor {
     this.track.features.push(feature);
     this.activeFeature = feature;
     this.createGizmos(feature);
-    this._syncToStore(feature);
+
+    // Auto-select the first corner so all control points are visible immediately.
+    const firstCorner = this.pointMeshes.find(p => p.r === 0 && p.c === 0) || this.pointMeshes[0] || null;
+    if (firstCorner) {
+      this.selectPoint(firstCorner);
+    } else {
+      this._syncToStore(feature);
+    }
+
     window.rebuildTerrain?.();
   }
 
@@ -182,7 +190,15 @@ export class MeshGridEditor {
 
     this.destroyGizmos();
     this.createGizmos(f);
-    this._syncToStore(f);
+
+    // Keep editing flow continuous: auto-select the first corner after rebuild.
+    const firstCorner = this.pointMeshes.find(p => p.r === 0 && p.c === 0) || this.pointMeshes[0] || null;
+    if (firstCorner) {
+      this.selectPoint(firstCorner);
+    } else {
+      this._syncToStore(f);
+    }
+
     window.rebuildTerrain?.();
   }
 
@@ -204,7 +220,7 @@ export class MeshGridEditor {
         const worldY = this.track.getHeightAt(worldX, worldZ);
 
         const mesh = MeshBuilder.CreateSphere(`mgPt_${r}_${c}`, {
-          diameter: radius * 2,
+          diameter: radius,
           segments: 6,
         }, this.scene);
         mesh.position  = new Vector3(worldX, worldY, worldZ);

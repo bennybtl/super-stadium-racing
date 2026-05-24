@@ -76,13 +76,15 @@ export class ObstacleEditor {
     s.obstacle.rotation = ((feature.angle ?? 0) * 180) / Math.PI;
     s.obstacle.weight = feature.weight ?? spec.mass;
     s.obstacle.color = feature.color ?? 'yellow';
+    s.obstacle.placementActive = true;
     s.selectedType = 'obstacle';
   }
 
   _hideProperties() {
     const s = this.editor._editorStore;
     if (!s) return;
-    if (s.selectedType === 'obstacle' && !s.obstacle.placementActive) {
+    s.obstacle.placementActive = false;
+    if (s.selectedType === 'obstacle' && !s.obstacle.placementActive) {      
       s.selectedType = null;
     }
   }
@@ -140,12 +142,12 @@ export class ObstacleEditor {
       .catch(err => console.warn(`[ObstacleEditor] Failed to clone obstacle '${type}':`, err));
 
     // Sphere floating above — sole pickable click/drag target
-    const mesh = MeshBuilder.CreateSphere('tireStackSphere', { diameter: 1.2, segments: 8 }, this.scene);
-    mesh.position   = new Vector3(feature.x, terrainH + SPHERE_Y_ABOVE, feature.z);
+    const mesh = MeshBuilder.CreateSphere('obstacleSphere', { diameter: 1.2, segments: 8 }, this.scene);
+    mesh.position   = new Vector3(feature.x, terrainH + SPHERE_Y_ABOVE * (feature.scale ?? 1), feature.z);
     mesh.material   = this.material;
     mesh.isPickable = true;
 
-    const stackData = { feature, node, mesh, handleYOffset: SPHERE_Y_ABOVE };
+    const stackData = { feature, node, mesh, handleYOffset: SPHERE_Y_ABOVE * (feature.scale ?? 1)};
     this.meshes.push(stackData);
     return stackData;
   }
@@ -163,7 +165,7 @@ export class ObstacleEditor {
     node.scaling.setAll((spec.modelScale ?? 1) * (feature.scale ?? 1));
 
     mesh.position.x = feature.x;
-    mesh.position.y = terrainH + SPHERE_Y_ABOVE;
+    mesh.position.y = terrainH + SPHERE_Y_ABOVE * (feature.scale ?? 1);
     mesh.position.z = feature.z;
   }
 
@@ -358,13 +360,6 @@ export class ObstacleEditor {
     this.selected.feature.color = normalized;
     this._rebuildNodeVisual(this.selected);
     this.updateVisual(this.selected);
-  }
-
-  setPlacementActive(active) {
-    const s = this.editor._editorStore;
-    if (!s) return;
-    s.obstacle.placementActive = !!active;
-    s.selectedType = 'obstacle';
   }
 
   deleteSelectedObstacle() {

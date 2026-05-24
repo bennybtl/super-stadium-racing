@@ -124,9 +124,10 @@ export class TrackSignEditor {
       width: 10,
     };
     e.currentTrack.features.push(feature);
-    this.createVisual(feature);
+    const sign = this.createVisual(feature);
     e.saveSnapshot();
     e.deselectAll();
+    this.select(sign);
     e.hideAddMenu();
   }
 

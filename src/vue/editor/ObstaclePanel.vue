@@ -4,16 +4,8 @@
     title="Obstacle"
     @close="editor.closeObstacle()"
   >
-    <div class="text-[10px] text-slate-400 mb-3">Click terrain to place. Q/E rotates the selected obstacle.</div>
-    <label class="flex items-center justify-between rounded-md border border-slate-700 bg-slate-900/70 px-3 py-2 text-[12px] mb-3">
-      <span>Click-to-Place Mode</span>
-      <input
-        type="checkbox"
-        :checked="editor.obstacle.placementActive"
-        @change="editor.setObstaclePlacementActive($event.target.checked)"
-        class="h-4 w-4 accent-[var(--accent)]"
-      />
-    </label>
+    {{ editor.obstacle.placementActive ? 'Edit placed obstacle' : 'Right-click to place a new obstacle' }}
+    <div class="text-[10px] text-slate-400 mb-3">Right-click terrain to place. Q/E rotates the selected obstacle.</div>
 
     <div class="text-[12px] mb-1">Obstacle Type</div>
     <select
@@ -38,23 +30,24 @@
       <span>{{ editor.obstacle.scale.toFixed(2) }}x</span>
     </div>
     <input
-      type="range" min="0.1" max="3" step="0.01"
+      type="range" min="0.5" max="5" step="0.1"
       :value="editor.obstacle.scale"
       @input="editor.setObstacleScale(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Rotation</span>
-      <span>{{ editor.obstacle.rotation.toFixed(0) }}°</span>
-    </div>
-    <input
-      type="range" min="-180" max="180" step="1"
-      :value="editor.obstacle.rotation"
-      @input="editor.setObstacleRotation(+$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-
+    <template v-if="editor.obstacle.type !== 'tireStack' && editor.obstacle.type !== 'barrel'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Rotation</span>
+        <span>{{ editor.obstacle.rotation.toFixed(0) }}°</span>
+      </div>
+      <input
+        type="range" min="0" max="180" step="1"
+        :value="editor.obstacle.rotation"
+        @input="editor.setObstacleRotation(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Weight</span>
       <span>{{ editor.obstacle.weight.toFixed(1) }} kg</span>

@@ -137,6 +137,13 @@ export class BridgeEditor {
       materialType: 'packed_dirt',
       transitionEnabled: true,
       transitionDepth: 10,
+      collision: {
+        endCaps: true,
+        endCapsOnDepth: true,
+        endCapsOnWidth: false,
+        endCapThickness: 0.5,
+        endCapDrop: 5,
+      },
     };
 
     this.editor.saveSnapshot();
@@ -259,11 +266,11 @@ export class BridgeEditor {
     s.bridge.materialType = feature.materialType ?? 'packed_dirt';
     s.bridge.transitionEnabled = feature.transitionEnabled ?? true;
     s.bridge.transitionDepth   = feature.transitionDepth ?? 10;
-    s.bridge.collisionEndCaps         = c.endCaps ?? false;
+    s.bridge.collisionEndCaps         = c.endCaps ?? true;
     s.bridge.collisionEndCapsOnDepth  = c.endCapsOnDepth ?? true;
     s.bridge.collisionEndCapsOnWidth  = c.endCapsOnWidth ?? false;
-    s.bridge.collisionEndCapThickness = c.endCapThickness ?? 1.2;
-    s.bridge.collisionEndCapDrop      = c.endCapDrop ?? 30;
+    s.bridge.collisionEndCapThickness = c.endCapThickness ?? 0.5;
+    s.bridge.collisionEndCapDrop      = c.endCapDrop ?? 1;
     s.selectedType = 'bridge';
   }
 

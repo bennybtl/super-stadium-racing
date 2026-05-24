@@ -6,7 +6,7 @@
   >
     <div class="mb-3 rounded-xl border border-slate-700 bg-slate-950/50 p-3">
       <div class="text-slate-200 text-sm font-medium mb-1">Terrain path editing mode</div>
-      <div class="text-slate-400 text-[11px]">Click terrain to add a waypoint. Click an existing waypoint to select it.</div>
+      <div class="text-slate-400 text-[11px]">Right-click terrain to add a waypoint. Click an existing waypoint to select it.</div>
     </div>
 
     <!-- Width -->
@@ -53,7 +53,7 @@
     </button>
 
     <div class="text-[10px] text-slate-400">
-      Click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
+      Right-click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
     </div>
   </EditorPanel>
 </template>

@@ -1033,7 +1033,6 @@ export class EditorController {
       [this.normalMapDecalEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
-      [this.actionZoneEditor, '_selected'],
       [this.bridgeEditor, 'selected'],
       [this.decorationsEditor, '_selected'],
       [this.aiPathEditor, 'selected'],
@@ -1080,7 +1079,7 @@ export class EditorController {
     return true;
   }
 
-  _handleWaypointSelection(clickedMesh, pickedPoint, editor, selectedType) {
+  _handleWaypointSelection(clickedMesh, pickedPoint, editor, selectedType, addPointButton = null, pointerButton = null) {
     if (clickedMesh) {
       const waypoint = editor.findByMesh(clickedMesh);
       if (waypoint) {
@@ -1099,7 +1098,7 @@ export class EditorController {
       }
     }
 
-    if (pickedPoint) {
+    if (pickedPoint && (addPointButton == null || pointerButton === addPointButton)) {
       editor.addPoint(pickedPoint.x, pickedPoint.z);
       return true;
     }
@@ -1126,15 +1125,17 @@ export class EditorController {
         return;
       }
 
-      // AI path panel open: click terrain to add waypoints, click existing point to select it.
+      // AI path panel open: right-click terrain to add waypoints, click waypoint to select.
       if (this._editorStore?.selectedType === 'aiPath') {
-        if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.aiPathEditor, 'aiPath')) return;
+        if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.aiPathEditor, 'aiPath', 2, pointerInfo.event.button)) return;
+        this.deselectAll();
         return;
       }
 
-      // Terrain path panel open: click terrain to add waypoints, click existing point to select it.
+      // Terrain path panel open: right-click terrain to add waypoints, click waypoint to select.
       if (this._editorStore?.selectedType === 'terrainPath') {
-        if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.terrainPathEditor, 'terrainPath')) return;
+        if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.terrainPathEditor, 'terrainPath', 2, pointerInfo.event.button)) return;
+        this.deselectAll();
         return;
       }
 
@@ -1156,6 +1157,9 @@ export class EditorController {
         // Poly curb control points
         if (this.polyCurbEditor?.onPointerDown(clickedMesh)) return;
 
+        // Action zone center/point handles
+        if (this.actionZoneEditor?.onPointerDown(clickedMesh)) return;
+
         const clickHandlers = [
           { editor: this.checkpointEditor },
           { editor: this.hillEditor },
@@ -1165,7 +1169,6 @@ export class EditorController {
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
-          { editor: this.actionZoneEditor },
           { editor: this.bridgeEditor },
         ];
 
@@ -1173,60 +1176,21 @@ export class EditorController {
           if (this._handleMeshSelection(clickedMesh, handler.editor, handler.selectFn)) return;
         }
 
-        // Check if clicked mesh is an AI path waypoint
-        {
-          const wpData = this.aiPathEditor.findByMesh(clickedMesh);
-          if (wpData) {
-            if (this.aiPathEditor.selected === wpData) {
-              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
-              this._aiPathMouseDownMoved = false;
-              this._aiPathMouseDownType = 'aiPath';
-              if (this._editorStore) this._editorStore.selectedType = 'aiPath';
-              return;
-            }
-            this.deselectAll();
-            this.aiPathEditor.select(wpData);
-            if (this._editorStore) this._editorStore.selectedType = 'aiPath';
-            return;
-          }
-        }
+        // Check if clicked mesh is an AI / terrain path waypoint.
+        if (this._handleWaypointSelection(clickedMesh, null, this.aiPathEditor, 'aiPath', null, pointerInfo.event.button)) return;
+        if (this._handleWaypointSelection(clickedMesh, null, this.terrainPathEditor, 'terrainPath', null, pointerInfo.event.button)) return;
 
-        // Check if clicked mesh is a terrain path waypoint
-        {
-          const wpData = this.terrainPathEditor.findByMesh(clickedMesh);
-          if (wpData) {
-            if (this.terrainPathEditor.selected === wpData) {
-              this._aiPathMouseDownSelectedWaypoint = clickedMesh;
-              this._aiPathMouseDownMoved = false;
-              this._aiPathMouseDownType = 'terrainPath';
-              if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
-              return;
-            }
-            this.deselectAll();
-            this.terrainPathEditor.select(wpData);
-            if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
-            return;
-          }
-        }
-
-        if (this._editorStore?.obstacle?.placementActive) {
-          if (pickResult.pickedPoint) {
-            this.addObstacleAt(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
+        const isObstaclePlacementActive = !!this._editorStore?.obstacle?.placementActive;
+        if (pointerInfo.event.button === 2 && isObstaclePlacementActive) {
+          const placementPoint = pickResult.pickedPoint ?? this._pointerWorldXZ();
+          if (placementPoint) {
+            this.addObstacleAt(placementPoint.x, placementPoint.z);
           }
           return;
         }
-
         // Clicked on something else (terrain, etc.) — deselect all
         this.deselectAll();
       } else {
-        if (this._editorStore?.obstacle?.placementActive) {
-          if (pickResult.hit && pickResult.pickedPoint) {
-            this.addObstacleAt(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
-          }
-          return;
-        }
-
-        // Clicked on empty space (sky, etc.) — deselect all
         this.deselectAll();
       }
 
@@ -1445,9 +1409,6 @@ export class EditorController {
   }
   resetObstacleDefaults() {
     this.obstacleEditor.resetToDefaults();
-  }
-  setObstaclePlacementActive(active) {
-    this.obstacleEditor.setPlacementActive(active);
   }
   closeObstacle() {
     if (this._editorStore) {

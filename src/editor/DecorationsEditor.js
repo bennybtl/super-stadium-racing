@@ -268,12 +268,14 @@ export class DecorationsEditor {
     const type = this.editor._editorStore?.decoration?.type || 'flag';
 
     e.saveSnapshot();
+    let created = null;
     if (type === 'bannerString') {
-      this._addBanner(e._snap(newX), e._snap(newZ));
+      created = this._addBanner(e._snap(newX), e._snap(newZ));
     } else {
-      this._addFlag(e._snap(newX), e._snap(newZ));
+      created = this._addFlag(e._snap(newX), e._snap(newZ));
     }
     e.deselectAll();
+    if (created) this.select(created);
     e.hideAddMenu();
   }
 
@@ -281,12 +283,12 @@ export class DecorationsEditor {
     const color = this.editor._editorStore?.decoration?.color || 'red';
     const feature = { type: 'flag', x, z, color };
     this.track.features.push(feature);
-    this._createFlag(feature);
+    return this._createFlag(feature);
   }
 
   _addBanner(x, z) {
     const feature = { type: 'bannerString', x, z, heading: 0, width: 8, poleHeight: 4.2 };
     this.track.features.push(feature);
-    this._createBanner(feature);
+    return this._createBanner(feature);
   }
 }

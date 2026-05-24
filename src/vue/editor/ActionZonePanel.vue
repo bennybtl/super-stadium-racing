@@ -51,16 +51,30 @@
         <span>Selected Point</span>
         <span>{{ editor.actionZone.selectedPointIndex >= 0 ? editor.actionZone.selectedPointIndex + 1 : 'Center' }}</span>
       </div>
-      <button class="w-full rounded-md bg-slate-700 text-white py-2 text-[13px] font-sans mb-2 hover:bg-slate-600" @click="editor.insertActionZonePoint()">Insert Point</button>
-      <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteActionZonePoint()">Delete Point</button>
+      <div class="flex gap-2 mb-3">
+        <button 
+          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+          @click="editor.deleteActionZonePoint()"
+        >Delete Point</button>
+        <button 
+          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+          @click="editor.insertActionZonePoint()"
+        >Insert Point</button>
+      </div>
     </template>
 
     <!-- Hint -->
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · Del to delete{{ editor.actionZone.shape === 'polygon' ? ' point/zone' : '' }}</div>
 
     <!-- Actions -->
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateActionZone()">Duplicate</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteActionZone()">Delete</button>
+    <div class="flex gap-2 mb-3">
+      <button 
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900" 
+        @click="editor.deleteActionZone()">Delete</button>
+      <button 
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.duplicateActionZone()">Duplicate</button>
+    </div>
   </EditorPanel>
 </template>
 
