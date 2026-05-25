@@ -1,12 +1,12 @@
 <template>
   <div>
-    <div v-if="screen === ''" class="flex flex-col items-center">
+    <div v-if="screen === ''" class="flex flex-col">
       <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">Settings</h2>
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="screen = 'controls'">Controls</button>
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="screen = 'sound'">Sound</button>
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="screen = 'display'">Display</button>
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="screen = 'tracks'">Manage Tracks</button>
-      <hr class="my-3 opacity-60">
+      <hr class="my-2 opacity-60">
       <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="$emit('back')">Back</button>
     </div>
     <div v-else-if="screen === 'controls'">

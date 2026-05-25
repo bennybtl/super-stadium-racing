@@ -11,15 +11,15 @@ const TERRAIN_TYPE_INDEX = new Map(TERRAIN_TYPE_LIST.map((terrainType, index) =>
 export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
   enabled: true,
   source: 'aiPath',
-  width: 3.2,
-  intensity: 0.8,
-  laneSpacing: 1.3,
   alphaBreakup: 0.28,
-  pathWander: 0.5,
-  edgeSoftness: 0.75,
-  secondaryPathCount: 4,
-  secondaryPathStrength: 0.62,
-  secondaryPathSpacing: 0.1,
+  width: 4.0,
+  intensity: 0.8,
+  laneSpacing: 2.0,
+  pathWander: 0.7,
+  edgeSoftness: 1.0,
+  secondaryPathCount: 60,
+  secondaryPathStrength: 0.8,
+  secondaryPathSpacing: 0.04,
   seed: 1337,
 });
 
@@ -313,7 +313,7 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
 
   const sideWearPaths = [];
   const buildSideWearPaths = (sideSign) => {
-    const pathCount = Math.max(0, Math.round(wear.secondaryPathCount ?? 4));
+    const pathCount = Math.max(0, Math.round(wear.secondaryPathCount ?? 60));
     const minLength = Math.max(10, Math.round(samples.length * 0.06));
     const maxLength = Math.max(minLength + 4, Math.round(samples.length * 0.18));
     const bandSpacing = Math.max(0.6, wear.laneSpacing * 0.75) * secondaryPathSpacing;

@@ -366,7 +366,6 @@ export class EditorController {
     this._editorStore.aiPathWear.width = wear.width;
     this._editorStore.aiPathWear.intensity = wear.intensity;
     this._editorStore.aiPathWear.laneSpacing = wear.laneSpacing;
-    this._editorStore.aiPathWear.alphaBreakup = wear.alphaBreakup;
     this._editorStore.aiPathWear.pathWander = wear.pathWander;
     this._editorStore.aiPathWear.edgeSoftness = wear.edgeSoftness;
     this._editorStore.aiPathWear.secondaryPathCount = wear.secondaryPathCount;
@@ -1628,6 +1627,11 @@ export class EditorController {
     this.hideAddMenu();
     this._syncAiPathPanel();
   }
+  insertAiWaypointEntity() {
+    this.aiPathEditor.insertAfterSelected();
+    this.hideAddMenu();
+    this._syncAiPathPanel();
+  }
   deleteAiWaypoint()   { this.aiPathEditor.deleteSelected(); }
   clearAiPath()        { this.aiPathEditor.clearAll(); }
   deselectAiWaypoint() { this.aiPathEditor.deselect(); }
@@ -1642,7 +1646,6 @@ export class EditorController {
   changeAiPathWearWidth(val)        { this._updateAiPathWear({ width: val }, true); }
   changeAiPathWearIntensity(val)    { this._updateAiPathWear({ intensity: val }, true); }
   changeAiPathWearLaneSpacing(val)  { this._updateAiPathWear({ laneSpacing: val }, true); }
-  changeAiPathWearAlphaBreakup(val)    { this._updateAiPathWear({ alphaBreakup: val }, true); }
   changeAiPathWearPathWander(val)      { this._updateAiPathWear({ pathWander: val }, true); }
   changeAiPathWearEdgeSoftness(val) { this._updateAiPathWear({ edgeSoftness: val }, true); }
   changeAiPathWearSecondaryPathCount(val) { this._updateAiPathWear({ secondaryPathCount: Math.max(0, Math.round(val)) }, true); }

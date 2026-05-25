@@ -265,6 +265,43 @@ export class AiPathEditor {
   }
 
   /**
+   * Insert a new waypoint immediately after the currently selected waypoint.
+   * For the main path, the insertion wraps between the last and first point.
+   */
+  insertAfterSelected() {
+    if (!this.selected) return;
+
+    const { feature, pointIndex, pathType, branchId } = this.selected;
+    const points = this._pointsForHandle(this.selected);
+    if (!Array.isArray(points) || pointIndex < 0 || pointIndex >= points.length) return;
+
+    const current = points[pointIndex];
+    const next = pathType === 'main'
+      ? (points[pointIndex + 1] ?? points[0])
+      : (points[pointIndex + 1] ?? current);
+    const pt = {
+      x: parseFloat(((current.x + next.x) / 2).toFixed(2)),
+      z: parseFloat(((current.z + next.z) / 2).toFixed(2)),
+    };
+
+    this.editor.saveSnapshot();
+    points.splice(pointIndex + 1, 0, pt);
+
+    this._rebuildHandles(feature);
+    this._rebuildLine(feature);
+    this._scheduleTerrainRebuild();
+
+    const inserted = this.handles.find(h =>
+      h.feature === feature &&
+      h.pointIndex === pointIndex + 1 &&
+      h.pathType === pathType &&
+      h.branchId === branchId
+    );
+    if (inserted) this.select(inserted);
+    this._notifyPanelChanged();
+  }
+
+  /**
    * Delete the currently selected waypoint.
    * If this was the last point, also removes the aiPath feature entirely.
    */

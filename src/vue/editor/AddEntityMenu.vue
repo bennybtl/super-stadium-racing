@@ -46,8 +46,8 @@ import imgObstacle    from '../assets/tire_stack.feature.png';
 import imgActionZone  from '../assets/action_zone.feature.png';
 import imgBridge      from '../assets/bridge.feature.png';
 import imgAiPath      from '../assets/ai_path.feature.png';
-
-// import imgNormalMap   from '../assets/normal_map_decal.feature.png';
+import imgDecal       from '../assets/decals.feature.png';
+import imgTerrainPath from '../assets/terrain_path.feature.png';
 
 const editor = useEditorStore();
 
@@ -63,11 +63,11 @@ const features = [
   { label: 'Obstacle',         img: imgObstacle,      action: () => editor.addObstacle()      },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.addTrackSign()      },
   { label: 'Decoration',       img: imgFlags,         action: () => editor.addDecoration()     },
-  { label: 'Action Zone',      img: imgActionZone,     action: () => editor.addActionZone()     },
-  { label: 'Bridge',           img: imgBridge,             action: () => editor.addBridge()         },
-  { label: 'AI Path',          img: imgAiPath,             action: () => editor.openAiPath()              },
-  { label: 'Terrain Path',     img: imgTerrain,            action: () => editor.addTerrainPath()          },
-  { label: 'Surface Decal',   img: null,                  action: () => editor.openSurfaceDecalStamp()   },
+  { label: 'Action Zone',      img: imgActionZone,    action: () => editor.addActionZone()     },
+  { label: 'Bridge',           img: imgBridge,        action: () => editor.addBridge()         },
+  { label: 'AI Path',          img: imgAiPath,        action: () => editor.openAiPath()              },
+  { label: 'Terrain Path',     img: imgTerrainPath,       action: () => editor.addTerrainPath()          },
+  { label: 'Surface Decal',    img: imgDecal,         action: () => editor.openSurfaceDecalStamp()   },
 ];
 </script>
 

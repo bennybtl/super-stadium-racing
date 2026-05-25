@@ -67,6 +67,59 @@ export class ObstacleEditor {
     return EditorMaterials.for(this.scene).obstaclePaint(color);
   }
 
+  _computeHandleYOffset(feature, spec) {
+    const scale = Math.max(0.05, Number(feature.scale) || 1);
+    const baseHeight = Math.max(0.25, spec.halfExtents?.y ?? 0.6);
+    // Keep handle height proportional to obstacle size so it stays above the
+    // mesh at larger scales, with a small capped clearance for readability.
+    const scaledHalfHeight = baseHeight * scale;
+    const clearance = Math.min(2.2, 1.0 + scale * 0.25);
+    return scaledHalfHeight + clearance;
+  }
+
+  _maxVisualY(node) {
+    const meshes = node?.getChildMeshes?.() ?? [];
+    let maxY = -Infinity;
+    for (const m of meshes) {
+      m.computeWorldMatrix(true);
+      const bb = m.getBoundingInfo?.()?.boundingBox;
+      if (!bb) continue;
+      if (bb.maximumWorld.y > maxY) maxY = bb.maximumWorld.y;
+    }
+    return Number.isFinite(maxY) ? maxY : null;
+  }
+
+  _syncHandleYOffsetFromVisual(stackData, spec, terrainH) {
+    const fallback = this._computeHandleYOffset(stackData.feature, spec);
+    const maxVisualY = this._maxVisualY(stackData.node);
+    if (maxVisualY == null) {
+      stackData.handleYOffset = fallback;
+      return fallback;
+    }
+
+    const visualTopOffset = Math.max(0, maxVisualY - terrainH);
+    const offset = Math.max(fallback, visualTopOffset + 0.8);
+    stackData.handleYOffset = offset;
+    return offset;
+  }
+
+  _cloneVisualMeshes(stackData, type, spec) {
+    const { feature, node } = stackData;
+    Obstacle._getSourceMeshes(this.scene, type)
+      .then(sourceMeshes => {
+        for (const src of sourceMeshes) {
+          const m = src.clone('obstacleEditorMesh', node);
+          m.isVisible = true;
+          m.isPickable = false;
+          m.material = this._obstacleMaterial(feature.color ?? 'yellow');
+        }
+        const terrainNow = this.editor.terrainQuery.heightAt(feature.x, feature.z);
+        const offset = this._syncHandleYOffsetFromVisual(stackData, spec, terrainNow);
+        if (stackData.mesh) stackData.mesh.position.y = terrainNow + offset;
+      })
+      .catch(err => console.warn(`[ObstacleEditor] Failed to clone obstacle '${type}':`, err));
+  }
+
   _syncStoreFromFeature(feature) {
     const s = this.editor._editorStore;
     if (!s) return;
@@ -102,23 +155,14 @@ export class ObstacleEditor {
     node.rotation.y = feature.angle ?? 0;
     node.scaling.setAll((spec.modelScale ?? 1) * (feature.scale ?? 1));
     stackData.node = node;
-    stackData.handleYOffset = (spec.halfExtents.y * (feature.scale ?? 1)) + 1.2;
+    stackData.handleYOffset = this._computeHandleYOffset(feature, spec);
 
-    Obstacle._getSourceMeshes(this.scene, type)
-      .then(sourceMeshes => {
-        for (const src of sourceMeshes) {
-          const m = src.clone('obstacleEditorMesh', node);
-          m.isVisible  = true;
-          m.isPickable = false;
-          m.material = this._obstacleMaterial(feature.color ?? 'yellow');
-        }
-      })
-      .catch(err => console.warn(`[ObstacleEditor] Failed to clone obstacle '${type}':`, err));
+    this._cloneVisualMeshes(stackData, type, spec);
   }
 
   createVisual(feature) {
     const { type, spec } = this._ensureObstacleDefaults(feature);
-    const SPHERE_Y_ABOVE = (spec.halfExtents.y * (feature.scale ?? 1)) + 1.2;
+    const SPHERE_Y_ABOVE = this._computeHandleYOffset(feature, spec);
 
     const terrainH = this.editor.terrainQuery.heightAt(feature.x, feature.z);
 
@@ -129,25 +173,17 @@ export class ObstacleEditor {
     node.rotation.y = feature.angle ?? 0;
     node.scaling.setAll((spec.modelScale ?? 1) * (feature.scale ?? 1));
 
-    // Clone from shared cache — no extra network request
-    Obstacle._getSourceMeshes(this.scene, type)
-      .then(sourceMeshes => {
-        for (const src of sourceMeshes) {
-          const m = src.clone('obstacleEditorMesh', node);
-          m.isVisible  = true;
-          m.isPickable = false;
-          m.material = this._obstacleMaterial(feature.color ?? 'yellow');
-        }
-      })
-      .catch(err => console.warn(`[ObstacleEditor] Failed to clone obstacle '${type}':`, err));
-
     // Sphere floating above — sole pickable click/drag target
     const mesh = MeshBuilder.CreateSphere('obstacleSphere', { diameter: 1.2, segments: 8 }, this.scene);
-    mesh.position   = new Vector3(feature.x, terrainH + SPHERE_Y_ABOVE * (feature.scale ?? 1), feature.z);
+    mesh.position   = new Vector3(feature.x, terrainH + SPHERE_Y_ABOVE, feature.z);
     mesh.material   = this.material;
     mesh.isPickable = true;
 
-    const stackData = { feature, node, mesh, handleYOffset: SPHERE_Y_ABOVE * (feature.scale ?? 1)};
+    const stackData = { feature, node, mesh, handleYOffset: SPHERE_Y_ABOVE };
+
+    // Clone from shared cache — no extra network request
+    this._cloneVisualMeshes(stackData, type, spec);
+
     this.meshes.push(stackData);
     return stackData;
   }
@@ -155,8 +191,8 @@ export class ObstacleEditor {
   updateVisual(stackData) {
     const { feature, node, mesh } = stackData;
     const terrainH = this.editor.terrainQuery.heightAt(feature.x, feature.z);
-    const { type, spec } = this._ensureObstacleDefaults(feature);
-    const SPHERE_Y_ABOVE = stackData.handleYOffset ?? (spec.halfExtents.y + 1.2);
+    const { spec } = this._ensureObstacleDefaults(feature);
+    const SPHERE_Y_ABOVE = this._syncHandleYOffsetFromVisual(stackData, spec, terrainH);
 
     node.position.x = feature.x;
     node.position.y = terrainH;
@@ -165,7 +201,7 @@ export class ObstacleEditor {
     node.scaling.setAll((spec.modelScale ?? 1) * (feature.scale ?? 1));
 
     mesh.position.x = feature.x;
-    mesh.position.y = terrainH + SPHERE_Y_ABOVE * (feature.scale ?? 1);
+    mesh.position.y = terrainH + SPHERE_Y_ABOVE;
     mesh.position.z = feature.z;
   }
 

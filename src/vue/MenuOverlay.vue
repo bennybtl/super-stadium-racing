@@ -24,22 +24,22 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('practice')">Practice</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('singleRace')">Single Race</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('season')">Start Season</button>
-          <hr>
+          <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
         </template>
 
         <!-- ── Editor track select ── -->
         <template v-else-if="store.screen === 'editorTrackSelect'">
-          <button
-            v-for="t in store.trackList"
-            :key="t.key"
-            class="menu-button pointer-events-auto px-10 py-2 text-xl"
-            @click="store.startEditor(t.key)"
-          >{{ t.name }}</button>
+          <TrackSelectionCarousel
+            :tracks="store.trackList"
+            :modelValue="store.selectedTrack"
+            @update:modelValue="store.setSelectedTrack($event)"
+          />
+          <button class="menu-button pointer-events-auto px-10 py-2 text-xl" @click="store.startEditor(store.selectedTrack)">Edit Selected</button>
           <button class="menu-button pointer-events-auto px-10 py-2 text-xl" @click="store.startEditor('new')">+ New Track</button>
           <hr class="my-2 opacity-60">
-          <button class="menu-button pointer-events-auto mt-1 px-10 py-2 text-xl" @click="store.back('start')">Back</button>
+          <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-2 text-xl" @click="store.back('start')">Back</button>
         </template>
 
         <!-- ── In-game pause ── -->
@@ -55,7 +55,8 @@
           </ul>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.resume()">Resume</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.reset()">Reset</button>
-          <button class="menu-button pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.exit()">Exit</button>
+          <hr class="my-2 opacity-60">
+          <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.exit()">Exit</button>
         </template>
 
         <!-- ── Editor pause ── -->
@@ -63,7 +64,8 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.editorResume()">Resume Editing</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.editorSave()">Save Track</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.editorLoad()">Load Track</button>
-          <button class="menu-button pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.editorExit()">Exit to Menu</button>
+          <hr class="my-2 opacity-60">
+          <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.editorExit()">Exit to Menu</button>
         </template>
 
         <!-- ── Settings ── -->

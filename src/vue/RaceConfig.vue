@@ -23,7 +23,9 @@
         class="rounded-[10px] border-2 bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
         :class="store.selectedReverse ? 'border-[#ffe066] text-[#ffe066]' : 'border-[#444]'"
         @click="store.setSelectedReverse(!store.selectedReverse)"
-      >⇄ Reverse</button>
+      >
+        <i v-if="store.selectedReverse" class="bi bi-check-lg mr-1" aria-hidden="true"></i>Reverse
+      </button>
     </div>
   </div>
 </template>
