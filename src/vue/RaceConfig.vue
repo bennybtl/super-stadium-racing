@@ -19,20 +19,41 @@
       </select>
     </div>
     <div>
+      <select
+        class="w-full rounded-[10px] flex-grow border-2 border-[#444] bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
+        :value="store.selectedAIVehicleType"
+        @change="store.setSelectedAIVehicleType($event.target.value)"
+      >
+        <option v-for="vehicle in aiVehicleOptions" :key="vehicle.key" :value="vehicle.key">{{ vehicle.name }}</option>
+      </select>
+    </div>
+    <div>
       <button
         class="rounded-[10px] border-2 bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
         :class="store.selectedReverse ? 'border-[#ffe066] text-[#ffe066]' : 'border-[#444]'"
         @click="store.setSelectedReverse(!store.selectedReverse)"
       >
-        <i v-if="store.selectedReverse" class="bi bi-check-lg mr-1" aria-hidden="true"></i>Reverse
+        <i class="bi mr-1"
+          :class="{ 
+            'bi-square-fill': !store.selectedReverse, 
+            'bi-check-square-fill': store.selectedReverse
+          }"></i> Reverse
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-  import { computed, onMounted, onUnmounted } from 'vue';
+  import { computed } from 'vue';
   import { useMenuStore } from './store.js';
 
   const store = useMenuStore();
+
+  const aiVehicleOptions = computed(() => ([
+    { key: 'random', name: 'Random' },
+    ...store.vehicleList.map(vehicle => ({
+      key: vehicle.key,
+      name: vehicle.name ?? vehicle.key,
+    })),
+  ]));
 </script>

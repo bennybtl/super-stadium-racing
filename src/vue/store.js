@@ -13,6 +13,7 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedTrack = ref(null);
   const selectedLaps = ref(5);
   const selectedAIDrivers = ref(3);
+  const selectedAIVehicleType = ref('random');
   const selectedReverse = ref(false);
   const selectedVehicle = ref('default_truck');
   // Current gameplay mode: null | 'practice' | 'singleRace' | 'season'
@@ -48,6 +49,7 @@ export const useMenuStore = defineStore('menu', () => {
   function setSelectedTrack(key) { if (!_bridge.value) return; _bridge.value.setSelectedTrack(key); }
   function setSelectedLaps(laps) { if (!_bridge.value) return; _bridge.value.setSelectedLaps(laps); }
   function setSelectedAIDrivers(count) { if (!_bridge.value) return; _bridge.value.setSelectedAIDrivers(count); }
+  function setSelectedAIVehicleType(key) { if (!_bridge.value) return; _bridge.value.setSelectedAIVehicleType(key); }
   function setSelectedReverse(val) { selectedReverse.value = !!val; if (_bridge.value) _bridge.value.selectedReverse = !!val; }
   function showPitMenu(pitMode = 'singleRace') {
     if (pitMode === 'season') mode.value = 'season';
@@ -108,14 +110,14 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   return {
-    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedVehicle, mode,
+    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, mode,
     selectedReverse,
     postRaceData, pitData, seasonFinalData, singleRaceData, upgrades,
     loadingVisible, loadingMessage,
     setBridge,
     showEditorTrackSelect,
     startEditor,
-    selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, showPitMenu, startPracticeMode,
+    selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, setSelectedAIVehicleType, showPitMenu, startPracticeMode,
     setSelectedReverse,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,

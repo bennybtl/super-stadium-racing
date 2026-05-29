@@ -165,15 +165,19 @@ export class DriftPhysics {
     // When already drifting, use lower thresholds so the drift can bleed out
     // naturally through grip rather than snapping off abruptly.
     // rearTractionFactor < 1 when braking (weight forward) — use tighter hold threshold.
+    const minDriftSpeed = this.state.minDriftSpeed ?? MIN_DRIFT_SPEED;
+    const minDriftSpeedHoldThrottle = this.state.minDriftSpeedHoldThrottle ?? MIN_DRIFT_SPEED_HOLD_THROTTLE;
+    const minDriftSpeedHoldCoast = this.state.minDriftSpeedHoldCoast ?? MIN_DRIFT_SPEED_HOLD_COAST;
+    const minDriftSpeedHoldBrake = this.state.minDriftSpeedHoldBrake ?? MIN_DRIFT_SPEED_HOLD_BRAKE;
     const isBraking    = rearTractionFactor < 0.85;
     const isThrottling = rearTractionFactor < 1.0 && !isBraking;
     let minSpeed;
     if (this.state.isDrifting) {
-      if (isBraking)       minSpeed = MIN_DRIFT_SPEED_HOLD_BRAKE;
-      else if (isThrottling) minSpeed = MIN_DRIFT_SPEED_HOLD_THROTTLE;
-      else                 minSpeed = MIN_DRIFT_SPEED_HOLD_COAST;
+      if (isBraking)       minSpeed = minDriftSpeedHoldBrake;
+      else if (isThrottling) minSpeed = minDriftSpeedHoldThrottle;
+      else                 minSpeed = minDriftSpeedHoldCoast;
     } else {
-      minSpeed = MIN_DRIFT_SPEED;
+      minSpeed = minDriftSpeed;
     }
 
     if (speed <= minSpeed) {
@@ -228,20 +232,24 @@ export class DriftPhysics {
     // driftGrip caps the traction used in the drift zone so that no truck —
     // regardless of grip upgrades — can self-correct fast enough to prevent sliding.
     // The grip zone taper ends at the same driftGrip value so the boundary is seamless.
-    const driftGrip = Math.min(effectiveGrip, MAX_DRIFT_GRIP);
+    const maxDriftGrip = this.state.maxDriftGrip ?? MAX_DRIFT_GRIP;
+    const gripZoneCorrection = this.state.gripZoneCorrection ?? GRIP_ZONE_CORRECTION;
+    const minSlipFactor = this.state.minSlipFactor ?? MIN_SLIP_FACTOR;
+    const slipDropoffRate = this.state.slipDropoffRate ?? SLIP_DROPOFF_RATE;
+    const driftGrip = Math.min(effectiveGrip, maxDriftGrip);
     const driftThresh = this.state.driftThreshold || 0.3;
     const excessSlip = Math.max(0, this.state.slipAngle - driftThresh);
 
     let gripFactor;
     if (this.state.slipAngle <= driftThresh) {
-      // Grip zone: linear taper from GRIP_ZONE_CORRECTION → driftGrip
+      // Grip zone: linear taper from gripZoneCorrection → driftGrip
       const t = this.state.slipAngle / driftThresh; // 0 at straight-ahead, 1 at threshold
-      gripFactor = GRIP_ZONE_CORRECTION * (1 - t) + driftGrip * t;
+      gripFactor = gripZoneCorrection * (1 - t) + driftGrip * t;
     } else {
       // Drift zone: exponential drop-off — lateral momentum carries.
       // rearTractionFactor already encodes both throttle looseness (mild) and
       // brake rear-unloading (significant), so no separate THROTTLE_LOOSE_FACTOR needed.
-      gripFactor = Math.max(MIN_SLIP_FACTOR, Math.exp(-excessSlip * SLIP_DROPOFF_RATE))
+      gripFactor = Math.max(minSlipFactor, Math.exp(-excessSlip * slipDropoffRate))
                  * driftGrip;
     }
 
@@ -278,11 +286,12 @@ export class DriftPhysics {
       //   coasting (no input) → medium drag
       //   braking (back held) → heavy drag
       const airborne = groundedness <= 0;
+      const dragCoasting = this.state.dragCoasting ?? DRAG_COASTING;
       let coastingMultiplier;
       if (airborne)           coastingMultiplier = DRAG_AIRBORNE;
       else if (input.forward) coastingMultiplier = DRAG_ACCELERATING;
       else if (input.back)    coastingMultiplier = DRAG_BRAKING;
-      else                    coastingMultiplier = DRAG_COASTING;
+      else                    coastingMultiplier = dragCoasting;
       const drag = airborne ? 1.0 : terrainDragMultiplier;
       const dragFactor = coastingMultiplier * drag * deltaTime;
       this.state.velocity.x -= this.state.velocity.x * dragFactor;

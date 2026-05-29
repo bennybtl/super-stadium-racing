@@ -22,6 +22,7 @@ export class MenuManager {
     this.selectedTrack   = null;
     this.selectedLaps    = 5;
     this.selectedAIDrivers = 3;
+    this.selectedAIVehicleType = 'random';
     this.selectedReverse = false;
     this.selectedVehicle = 'default_truck';
     this.selectedPlayerColor = null;
@@ -32,6 +33,7 @@ export class MenuManager {
     this._store.selectedTrack = this.selectedTrack;
     this._store.selectedLaps = this.selectedLaps;
     this._store.selectedAIDrivers = this.selectedAIDrivers;
+    this._store.selectedAIVehicleType = this.selectedAIVehicleType;
     this._store.selectedReverse = this.selectedReverse;
     this._store.selectedVehicle = this.selectedVehicle;
     this._store.mode = null;
@@ -74,6 +76,7 @@ export class MenuManager {
     }
     this._store.selectedLaps = this.selectedLaps;
     this._store.selectedAIDrivers = this.selectedAIDrivers;
+    this._store.selectedAIVehicleType = this.selectedAIVehicleType;
 
     const isSeasonStart = mode === 'season';
     const nextTrackKey = isSeasonStart
@@ -142,6 +145,11 @@ export class MenuManager {
     if (this._store.pitData && !this._store.pitData.isSeason) {
       this._store.pitData.aiDrivers = count;
     }
+  }
+
+  setSelectedAIVehicleType(key) {
+    this.selectedAIVehicleType = key;
+    this._store.selectedAIVehicleType = key;
   }
 
   showSettingsMenu() {

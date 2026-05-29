@@ -80,6 +80,7 @@ export class MenuMode extends BaseMode {
         trackKey:        menuManager.selectedTrack,
         laps:            menuManager.selectedLaps,
         aiCount:         menuManager.selectedAIDrivers,
+        aiVehicleKey:    menuManager.selectedAIVehicleType,
         vehicleKey:      menuManager.selectedVehicle,
         playerColorKey:  menuManager.selectedPlayerColor,
         reverse:         menuManager.selectedReverse,

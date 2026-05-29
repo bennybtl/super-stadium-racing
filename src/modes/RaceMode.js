@@ -35,7 +35,7 @@ export class RaceMode extends DriveMode {
     this.telemetryRecorder = null;
   }
 
-  async setup({ trackKey, laps, aiCount = 9, season = false, vehicleKey = 'default_truck', playerColorKey = null, reverse = false }) {
+  async setup({ trackKey, laps, aiCount = 9, season = false, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false }) {
     const { engine, menuManager, seasonManager } = this.controller;
     const totalLaps = laps || 3;
 
@@ -251,6 +251,7 @@ export class RaceMode extends DriveMode {
       getAISkill,
       getAIDriver,
       trackKey,
+      aiVehicleKey,
       telemetryCheckpoints: null, // resolved below
       excludeColorKey: playerColorKey,
     });

@@ -180,27 +180,36 @@ export class Truck {
 
       // Control parameters that can be tweaked for different handling characteristics
       springStrength: 150,
-      damping: 22,
-      maxSpeed: 25,
+      damping: 7,
+      maxSpeed: 26,
       maxReverseSpeed: -10,
-      acceleration: 13,
-      braking: 2,
-      drag: 0.2,
-      turnSpeed: 8.2,
-      grip: 0.03,
-      driftThreshold: 0.15,
+      acceleration: 18,
+      braking: 1.5,
+      drag: 3,
+      turnSpeed: 3.6,
+      grip: 0.12,
+      driftThreshold: 0.16,
+      minDriftSpeed: 15.0,
+      minDriftSpeedHoldThrottle: 10.0,
+      minDriftSpeedHoldCoast: 3.0,
+      minDriftSpeedHoldBrake: 12.0,
+      slipDropoffRate: 6,
+      gripZoneCorrection: 0.35,
+      minSlipFactor: 0.09,
+      maxDriftGrip: 0.13,
+      dragCoasting: 0.45,
       // How dramatically weight shifts under acceleration/braking.
       // Higher = more understeer on throttle, more oversteer on brakes.
       // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.
-      weightTransfer: 1.0,
+      weightTransfer: 1.35,
       // Fraction of turn speed available when stationary (0 = can't spin, 1 = full rate).
       // Gives an arcade feel when > 0. Tune per vehicle.
-      stationarySpinRate: 0.35,
+      stationarySpinRate: 0.6,
 
       // Boost parameters
       boostCount: 5,
-      maxBoosts: 5,
-      boostDuration: 1.5,
+      maxBoosts: 9,
+      boostDuration: 1.6,
       boostAccelMult: 2,
       boostSpeedMult: 1.5,
 

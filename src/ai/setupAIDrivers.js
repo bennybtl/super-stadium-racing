@@ -37,6 +37,7 @@ const AI_COLOR_KEYS = [
  * @param {Function} opts.getAISkill     (i) => skillConfig object
  * @param {Function} [opts.getAIDriver]  (i) => AIDriver instance (optional preset factory)
  * @param {string}   opts.trackKey       Track key for telemetry lookup.
+ * @param {string}   [opts.aiVehicleKey] Vehicle key for AI trucks, or 'random'.
  * @param {Array}    opts.telemetryCheckpoints  Checkpoint list for telemetry replay.
  *
  * @returns {{ aiTruckDataList: Array, aiDrivers: Array }}
@@ -58,6 +59,7 @@ export function setupAIDrivers({
   getAISkill,
   getAIDriver,
   trackKey,
+  aiVehicleKey = 'random',
   telemetryCheckpoints,
   excludeColorKey = null,
 }) {
@@ -73,6 +75,11 @@ export function setupAIDrivers({
     .map(key => basicColors[key]?.diffuse)
     .filter(Boolean);
 
+  const availableAIVehicleKeys = window.vehicleLoader?.getVehicleList?.().map(vehicle => vehicle.key) ?? [];
+  const selectedAIVehicleDef = aiVehicleKey !== 'random'
+    ? window.vehicleLoader?.getVehicle(aiVehicleKey) ?? null
+    : null;
+
   for (let i = 0; i < count; i++) {
     const skillConfig = getAISkill(i);
     const presetDriver = typeof getAIDriver === 'function' ? getAIDriver(i) : null;
@@ -86,7 +93,14 @@ export function setupAIDrivers({
 
     const color  = availableAIColors[i % availableAIColors.length];
     const spawn  = getGridSpawn(AI_GRID_OFFSET + i);
-    const truck  = new Truck(scene, shadows, color, driver, vehicleDef);
+    let aiVehicleDef = selectedAIVehicleDef;
+    if (!aiVehicleDef && availableAIVehicleKeys.length > 0) {
+      const randomVehicleKey = availableAIVehicleKeys[Math.floor(Math.random() * availableAIVehicleKeys.length)];
+      aiVehicleDef = window.vehicleLoader?.getVehicle(randomVehicleKey) ?? null;
+    }
+    if (!aiVehicleDef) aiVehicleDef = vehicleDef;
+
+    const truck  = new Truck(scene, shadows, color, driver, aiVehicleDef);
     truck.mesh.position.copyFrom(spawn.pos);
     truck.state.heading   = spawn.heading;
     truck.mesh.rotation.y = spawn.heading;

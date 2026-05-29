@@ -1,9 +1,9 @@
 {
   "id": "blaster",
   "packId": "offroad_pack_1",
+  "hidden": false,
   "name": "Blaster",
   "image": "blaster.jpg",
-  "hidden": false,
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -11,10 +11,10 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
+    "alphaBreakup": 0.73,
     "width": 3.2,
     "intensity": 0.32,
     "laneSpacing": 1.4,
-    "alphaBreakup": 0.73,
     "pathWander": 0.96,
     "edgeSoftness": 0.75,
     "secondaryPathCount": 63,
@@ -586,19 +586,12 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -27,
-      "centerZ": -24.71008524206502,
-      "heading": 1.5707963267948966,
-      "width": 22.5,
-      "checkpointNumber": 7
-    },
-    {
-      "type": "checkpoint",
       "centerX": 69.5,
       "centerZ": -44.21008524206502,
       "heading": -3.141592653589793,
       "width": 19,
-      "checkpointNumber": 1
+      "checkpointNumber": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -606,7 +599,8 @@
       "centerZ": -39.21008524206502,
       "heading": 0,
       "width": 24.5,
-      "checkpointNumber": 2
+      "checkpointNumber": 2,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -614,7 +608,8 @@
       "centerZ": 30.78991475793498,
       "heading": 0,
       "width": 24.5,
-      "checkpointNumber": 3
+      "checkpointNumber": 3,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -622,7 +617,8 @@
       "centerZ": 42.78991475793498,
       "heading": 3.0415926535897935,
       "width": 21,
-      "checkpointNumber": 4
+      "checkpointNumber": 4,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -630,7 +626,8 @@
       "centerZ": 16.830640246663023,
       "heading": -1.5707963267948966,
       "width": 24,
-      "checkpointNumber": 5
+      "checkpointNumber": 5,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -638,7 +635,17 @@
       "centerZ": 27.78991475793498,
       "heading": -3.141592653589793,
       "width": 16,
-      "checkpointNumber": 6
+      "checkpointNumber": 6,
+      "passedBy": {}
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -27,
+      "centerZ": -24.71008524206502,
+      "heading": 1.5707963267948966,
+      "width": 22.5,
+      "checkpointNumber": 7,
+      "passedBy": {}
     },
     {
       "type": "hill",
@@ -722,12 +729,16 @@
           "z": 28.68
         },
         {
-          "x": -46.4813927878533,
-          "z": 53.3905453986742
+          "x": -45.326685551379015,
+          "z": 50.752326568187556
         },
         {
-          "x": -62.68952819962322,
-          "z": 64.04846179762635
+          "x": -56.89661771804979,
+          "z": 62.953949107375664
+        },
+        {
+          "x": -68.56151045229923,
+          "z": 51.320347779733275
         },
         {
           "x": -69.28565190225956,
@@ -740,6 +751,32 @@
         {
           "x": -32.37,
           "z": -25.64
+        }
+      ],
+      "branches": [
+        {
+          "id": "branch_1",
+          "fromMainIndex": 13,
+          "toMainIndex": 16,
+          "weight": 1,
+          "points": [
+            {
+              "x": -44.24821249699268,
+              "z": 40.45361595556041
+            },
+            {
+              "x": -56.99737601124355,
+              "z": 45.86550352117783
+            },
+            {
+              "x": -66.94446154781016,
+              "z": 34.34651347255887
+            },
+            {
+              "x": -69.28565190225956,
+              "z": 9.347228239182837
+            }
+          ]
         }
       ]
     },

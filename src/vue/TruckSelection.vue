@@ -2,18 +2,14 @@
   <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white">Choose Your Truck</h3>
   <section class="flex flex-row gap-4">
       <div class="min-w-0 flex-1 basis-0">
-        <div class="flex flex-col gap-3">
-          <button
-            v-for="vehicle in vehicles"
-            :key="vehicle.key"
-            type="button"
-            class="w-full rounded-[10px] flex-grow border-2 border-[#444] bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:scale-[1.02] hover:border-white hover:text-[#ffe066]"
-            :class="{ 'border-white bg-[#222]': vehicle.key === selectedVehicle }"
-            @click="$emit('update:selectedVehicle', vehicle.key)"
-          >
-            {{ vehicle.name }}
-          </button>
-        </div>
+        <select
+          class="w-full rounded-[10px] flex-grow border-2 border-[#444] bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
+          :value="selectedVehicle"
+          @change="$emit('update:selectedVehicle', $event.target.value)"
+        >
+          <option v-for="vehicle in vehicles" :key="vehicle.key" :value="vehicle.key">{{ vehicle.name }}</option>
+        </select>
+
       </div>
 
       <div class="min-w-0 flex-1 basis-0">

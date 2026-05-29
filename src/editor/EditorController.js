@@ -1729,8 +1729,12 @@ export class EditorController {
     }
 
     if (this.meshGridEditor) {
-      for (const p of this.meshGridEditor.pointMeshes || []) {
-        if (p.mesh) p.mesh.isVisible = visible;
+      if (visible) {
+        this.meshGridEditor._updatePointVisibility?.();
+      } else {
+        for (const p of this.meshGridEditor.pointMeshes || []) {
+          if (p.mesh) p.mesh.isVisible = false;
+        }
       }
       if (this.meshGridEditor.lineSystem) this.meshGridEditor.lineSystem.isVisible = visible;
     }

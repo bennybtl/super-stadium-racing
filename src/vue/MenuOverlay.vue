@@ -36,8 +36,11 @@
             :modelValue="store.selectedTrack"
             @update:modelValue="store.setSelectedTrack($event)"
           />
-          <button class="menu-button pointer-events-auto px-10 py-2 text-xl" @click="store.startEditor(store.selectedTrack)">Edit Selected</button>
-          <button class="menu-button pointer-events-auto px-10 py-2 text-xl" @click="store.startEditor('new')">+ New Track</button>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="menu-button pointer-events-auto px-10 py-2 text-xl" @click="store.startEditor('new')">
+              <i class="bi bi-plus"></i> New Track</button>
+            <button class="menu-button pointer-events-auto px-10 py-2 text-xl" @click="store.startEditor(store.selectedTrack)">Edit Selected</button>
+          </div>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-2 text-xl" @click="store.back('start')">Back</button>
         </template>
