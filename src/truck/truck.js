@@ -97,6 +97,7 @@ export class Truck {
       x: 0,
       y: 0,
       z: 0,
+      bodyHeightY: 0,
     };
 
     // Visual puppet — sits on top of the invisible physics box
@@ -162,6 +163,10 @@ export class Truck {
   }
 
   createState() {
+    const bodyTransform = this.vehicleDef?.bodyTransform ?? {};
+    const bodyPosition = bodyTransform.position ?? [0, 0.66, 0.0];
+    const bodyHeightY = bodyPosition[1] ?? 0.66;
+
     const base = {
       heading: 0,
       velocity: Vector3.Zero(),
@@ -198,6 +203,7 @@ export class Truck {
       minSlipFactor: 0.09,
       maxDriftGrip: 0.13,
       dragCoasting: 0.45,
+      bodyHeightY,
       // How dramatically weight shifts under acceleration/braking.
       // Higher = more understeer on throttle, more oversteer on brakes.
       // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.

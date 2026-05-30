@@ -31,7 +31,7 @@
   "params": {
     "springStrength": 130,
     "damping": 3,
-    "maxSpeed": 23,
+    "maxSpeed": 26,
     "maxReverseSpeed": -12,
     "acceleration": 22,
     "braking": 1.5,

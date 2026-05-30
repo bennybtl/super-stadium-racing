@@ -92,6 +92,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const terrainSize = maxTrackDim + 20;
   const groundWidth = trackWidth + 20;
   const groundDepth = trackDepth + 20;
+  const terrainResolutionTarget = 192;
+  const terrainCellSize = terrainSize <= terrainResolutionTarget
+    ? 1
+    : Math.max(2, Math.ceil(terrainSize / terrainResolutionTarget));
 
   // -- Stadium lights --
   // 4 point lights at the corners of the track, elevated like stadium floodlights.
@@ -199,10 +203,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
   });
 
   // -- Terrain manager --
-  // Use 1m terrain cells for smoother visual blending between terrain types.
-  // Physics still samples from this grid, but the finer resolution reduces
-  // visible blockiness and better matches authored terrain feature boundaries.
-  const terrainManager = new TerrainManager(terrainSize, 1, groundWidth, groundDepth);
+  // Use 1m terrain cells for the common case, then scale the cell size up for
+  // larger tracks so terrain baking and lookup work do not grow without bound.
+  const terrainManager = new TerrainManager(terrainSize, terrainCellSize, groundWidth, groundDepth);
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const worldX = ((col + 0.5) / terrainManager.cellsPerSide) * groundWidth - groundWidth / 2;
@@ -216,9 +219,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   applySteepWaterTerrainRemap(terrainManager, currentTrack);
 
   // -- Ground mesh --
+  const groundSubdivisions = Math.max(32, Math.min(64, Math.floor(Math.max(groundWidth, groundDepth) / 2)));
   const ground = MeshBuilder.CreateGround(
     "ground",
-    { width: groundWidth, height: groundDepth, subdivisions: Math.floor(Math.max(groundWidth, groundDepth) / 2) },
+    { width: groundWidth, height: groundDepth, subdivisions: groundSubdivisions },
     scene
   );
   const positions = ground.getVerticesData(VertexBuffer.PositionKind);

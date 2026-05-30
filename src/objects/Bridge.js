@@ -247,7 +247,7 @@ export class Bridge {
         const endZ = feature.centerZ + rampOffsetZ * sign;
         const groundY = this.track.getHeightAt(endX, endZ);
         const ramp = createRampMesh(sign, startX, startZ, deckTopY, groundY);
-        const rampColliders = createRampColliderPerimeter(sign, startX, startZ, deckTopY - thickness, groundY - thickness);
+        const rampColliders = createRampColliderPerimeter(sign, startX, startZ, groundY + thickness, groundY - thickness);
 
         if (this._driveSurfaceManager) {
           this._driveSurfaceManager.register(ramp, {
@@ -279,7 +279,7 @@ export class Bridge {
     this._endCapAggregates = [];
     if (endCapsEnabled && (endCapsOnDepth || endCapsOnWidth)) {
       const endCapThickness = 0.5;
-      const endCapHeight = 2;
+      const endCapHeight = 1;
       const endCapPad = collision.endCapPad ?? 0.4;
       const endCapFriction = collision.endCapFriction ?? 1.0;
       const endCapApplyFriction = collision.endCapApplyFriction ?? false;

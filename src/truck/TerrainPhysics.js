@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT as _DEFAULT_HALF_HEIGHT } from "../constants.js";
 
-const GRAVITY    = -20;           // m/s²
+const GRAVITY    = -30;           // m/s²
 const DEG_TO_RAD = Math.PI / 180;
 const RAY_OFFSET = 0.1;           // vertical offset above truck centre for raycasts (m)
 const UP         = new Vector3(0, 1, 0);  // world-up — reused to avoid per-frame allocation
@@ -14,17 +14,17 @@ const UP         = new Vector3(0, 1, 0);  // world-up — reused to avoid per-fr
 const DOWNHILL_FOLLOW = {
   maxGap:          0.15,  // max gap above terrain to still trigger following (m)
   minSpeed:        2,     // minimum truck speed to check (m/s)
-  lookAhead:       1.5,   // look-ahead distance for height sample (m)
-  heightDrop:      0.3,   // terrain must drop at least this much to trigger (m)
-  vertVelMin:     -1.5,   // must be descending faster than this (m/s)
+  lookAhead:       1.0,   // look-ahead distance for height sample (m)
+  heightDrop:      0.1,   // terrain must drop at least this much to trigger (m)
+  vertVelMin:     -0.1,   // must be descending faster than this (m/s)
   fakeCompression: 0.5,   // suspension compression injected when following
 };
 
 /** Suspension compression: converts penetration depth + velocity into a 0–1 value. */
 const SUSPENSION = {
   velCompressionFactor: 0.03,  // downward velocity contribution to compression
-  compressionBaseScale: 0.08,  // scale applied to base compression
-  smoothing:            0.5,   // exponential smoothing factor (0–1, higher = snappier)
+  compressionBaseScale: 0.06,  // scale applied to base compression
+  smoothing:            0.25,   // exponential smoothing factor (0–1, higher = snappier)
   maxCompression:       0.25,  // maximum suspension compression value
   groundednessRef:      0.08,  // compression at which groundedness reaches 1.0
 };
@@ -32,10 +32,10 @@ const SUSPENSION = {
 /** Pass 2: boost groundedness when clearly tracking a descending slope. */
 const DOWNHILL_BOOST = {
   maxGap:       0.4,   // max gap above terrain to still check boost (m)
-  vertVelMin:  -0.5,   // must be descending faster than this (m/s)
+  vertVelMin:  -0.1,   // must be descending faster than this (m/s)
   minSpeed:     2,     // minimum truck speed to check (m/s)
   lookAhead:    2.0,   // look-ahead distance for boost check (m)
-  heightDrop:   0.3,   // terrain must drop at least this much to apply boost (m)
+  heightDrop:   0.1,   // terrain must drop at least this much to apply boost (m)
   groundedness: 0.8,   // groundedness clamped to at least this when tracking
 };
 
@@ -110,6 +110,7 @@ export class TerrainPhysics {
     this._smoothedPitch = 0;
     this._forward = new Vector3();
     this._right = new Vector3();
+    this._travelDirection = new Vector3();
 
     // 0 = sample terrain normal every frame. >0 = sample at fixed cadence.
     this._normalSampleInterval = Math.max(0, options?.normalSampleInterval ?? 0);
@@ -273,9 +274,19 @@ export class TerrainPhysics {
     return this._forward;
   }
 
-  /** Heading angle derived from the current horizontal velocity vector. */
-  _moveDirHeading() {
-    return Math.atan2(this.state.velocity.x, this.state.velocity.z);
+  /** Horizontal travel direction derived from the current velocity vector. */
+  _travelDirectionVector() {
+    const vx = this.state.velocity.x;
+    const vz = this.state.velocity.z;
+    const speedSq = vx * vx + vz * vz;
+    if (speedSq > 1e-6) {
+      const invSpeed = 1 / Math.sqrt(speedSq);
+      this._travelDirection.set(vx * invSpeed, 0, vz * invSpeed);
+      return this._travelDirection;
+    }
+
+    this._travelDirection.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
+    return this._travelDirection;
   }
 
   /**
@@ -304,15 +315,15 @@ export class TerrainPhysics {
   /**
    * Sample signed slope angle in the given heading direction from floor probes.
    */
-  _sampleSlopeDegAt(x, z, heading, fwdSlopeDist, offset, fromY, track) {
-    const sinH = Math.sin(heading);
-    const cosH = Math.cos(heading);
-    const ox  = x + sinH * offset;
-    const oz  = z + cosH * offset;
-    const hx  = ox + sinH * fwdSlopeDist;
-    const hz  = oz + cosH * fwdSlopeDist;
-    const hbx = ox - sinH * fwdSlopeDist;
-    const hbz = oz - cosH * fwdSlopeDist;
+  _sampleSlopeDegAt(x, z, direction, fwdSlopeDist, offset, fromY, track) {
+    const dirX = direction?.x ?? Math.sin(this.state.heading);
+    const dirZ = direction?.z ?? Math.cos(this.state.heading);
+    const ox  = x + dirX * offset;
+    const oz  = z + dirZ * offset;
+    const hx  = ox + dirX * fwdSlopeDist;
+    const hz  = oz + dirZ * fwdSlopeDist;
+    const hbx = ox - dirX * fwdSlopeDist;
+    const hbz = oz - dirZ * fwdSlopeDist;
 
     const hAhead = this._sampleFloorYAt(hx,  hz,  fromY, track, 0);
     const hBack  = this._sampleFloorYAt(hbx, hbz, fromY, track, 0);
@@ -353,10 +364,11 @@ export class TerrainPhysics {
    * Returns the effective penetration remaining after the position correction.
    */
   _applyDepenetration(mesh, deltaTime, track, penetration, truckBottomY) {
+    const travelDirection = this._travelDirectionVector();
     const slopeAtPos  = this._sampleSlopeDegAt(
       mesh.position.x,
       mesh.position.z,
-      this._moveDirHeading(),
+      travelDirection,
       1,
       3,
       mesh.position.y + RAY_OFFSET,
@@ -431,7 +443,7 @@ export class TerrainPhysics {
    */
   _updateSuspension(mesh, track, penetration, forward, speed, lowDetail = false) {
     const hasSurfaceSampling = !!this._terrainQuery || !!track;
-
+    const travelDirection = this._travelDirectionVector();
     // Base compression from current overlap depth.
     let baseCompression = Math.max(0, Math.min(1, penetration / SPRING.compressionNorm));
 
@@ -473,8 +485,8 @@ export class TerrainPhysics {
     ) {
       const heightHere  = sampleHeightHere();
       const heightAhead = this._sampleFloorYAt(
-        mesh.position.x + forward.x * DOWNHILL_FOLLOW.lookAhead,
-        mesh.position.z + forward.z * DOWNHILL_FOLLOW.lookAhead,
+        mesh.position.x + travelDirection.x * DOWNHILL_FOLLOW.lookAhead,
+        mesh.position.z + travelDirection.z * DOWNHILL_FOLLOW.lookAhead,
         mesh.position.y + RAY_OFFSET,
         track,
         heightHere
@@ -509,13 +521,13 @@ export class TerrainPhysics {
     ) {
       const heightHere  = sampleHeightHere();
       const heightAhead = this._sampleFloorYAt(
-        mesh.position.x + forward.x * DOWNHILL_BOOST.lookAhead,
-        mesh.position.z + forward.z * DOWNHILL_BOOST.lookAhead,
+        mesh.position.x + travelDirection.x * DOWNHILL_BOOST.lookAhead,
+        mesh.position.z + travelDirection.z * DOWNHILL_BOOST.lookAhead,
         mesh.position.y + RAY_OFFSET,
         track,
         heightHere
       );
-      if (heightAhead < heightHere - DOWNHILL_BOOST.heightDrop) {
+      if (heightAhead < heightHere - (DOWNHILL_BOOST.heightDrop)) {
         groundedness = Math.max(groundedness, DOWNHILL_BOOST.groundedness);
       }
     }
