@@ -11,10 +11,10 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
+    "alphaBreakup": 0.61,
     "width": 4.7,
     "intensity": 1.1,
     "laneSpacing": 1.3,
-    "alphaBreakup": 0.61,
     "pathWander": 0.92,
     "edgeSoftness": 0.78,
     "secondaryPathCount": 61,
@@ -492,19 +492,11 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -3.5,
-      "centerZ": -64.50129926073684,
-      "heading": -1.5707963267948966,
-      "width": 20.5,
-      "checkpointNumber": 5
-    },
-    {
-      "type": "checkpoint",
       "centerX": -27.5,
       "centerZ": -21.00130756578561,
       "heading": 0.8726646259971648,
       "width": 24,
-      "checkpointNumber": 2
+      "checkpointNumber": 1
     },
     {
       "type": "checkpoint",
@@ -512,7 +504,7 @@
       "centerZ": 34.4986098209597,
       "heading": 0.8726646259971648,
       "width": 25,
-      "checkpointNumber": 3
+      "checkpointNumber": 2
     },
     {
       "type": "checkpoint",
@@ -520,7 +512,7 @@
       "centerZ": 38.99854425504647,
       "heading": -3.141592653589793,
       "width": 25.5,
-      "checkpointNumber": 1
+      "checkpointNumber": 3
     },
     {
       "type": "checkpoint",
@@ -529,6 +521,14 @@
       "heading": 2.1816615649929116,
       "width": 24,
       "checkpointNumber": 4
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -3.5,
+      "centerZ": -64.50129926073684,
+      "heading": -1.5707963267948966,
+      "width": 20.5,
+      "checkpointNumber": 5
     },
     {
       "type": "hill",

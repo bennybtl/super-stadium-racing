@@ -83,14 +83,13 @@ export class MeshGridEditor {
 
     const trackWidth = this.track.width ?? 160;
     const trackDepth = this.track.depth ?? 160;
-    const meshGridSize = Math.max(trackWidth, trackDepth);
     const cols = 9, rows = 9;
     const feature = {
       type:    'meshGrid',
       centerX: 0,
       centerZ: 0,
-      width:   meshGridSize,
-      depth:   meshGridSize,
+      width:   trackWidth,
+      depth:   trackDepth,
       cols,
       rows,
       heights: new Array(cols * rows).fill(0),

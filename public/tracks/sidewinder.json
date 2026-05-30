@@ -11,10 +11,10 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
+    "alphaBreakup": 0.69,
     "width": 3.2,
     "intensity": 1.1,
     "laneSpacing": 1.5,
-    "alphaBreakup": 0.69,
     "pathWander": 1.03,
     "edgeSoftness": 0.75,
     "secondaryPathCount": 62,
@@ -376,15 +376,6 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -32,
-      "centerZ": -58,
-      "heading": -1.4835298641951802,
-      "width": 17,
-      "checkpointNumber": 4,
-      "passedBy": {}
-    },
-    {
-      "type": "checkpoint",
       "centerX": -18,
       "centerZ": 56,
       "heading": 1.5707963267948966,
@@ -408,6 +399,15 @@
       "heading": 1.6580627893946132,
       "width": 24,
       "checkpointNumber": 3,
+      "passedBy": {}
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -32,
+      "centerZ": -58,
+      "heading": -1.4835298641951802,
+      "width": 17,
+      "checkpointNumber": 4,
       "passedBy": {}
     },
     {
@@ -681,7 +681,8 @@
           "x": 44.48,
           "z": -62.599999999999994
         }
-      ]
+      ],
+      "branches": []
     },
     {
       "type": "actionZone",

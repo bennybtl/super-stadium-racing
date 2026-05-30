@@ -359,6 +359,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
     const mat = new StandardMaterial(name + "Mat", scene);
     mat.diffuseColor = new Color3(0.5, 0.5, 0.5);
     mat.specularColor = new Color3(0.1, 0.1, 0.1);
+    mat.bumpTexture = new Texture(new URL("../assets/normals/8648-normal.jpg", import.meta.url).href, scene);
+    mat.bumpTexture.level = 0.7;
+    mat.invertNormalMapY = true;
     wall.material = mat;
     
     new PhysicsAggregate(wall, PhysicsShapeType.BOX, { mass: 0 }, scene);

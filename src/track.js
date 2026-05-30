@@ -252,11 +252,19 @@ export class Track {
         case "meshGrid": {
           const { centerX: cx, centerZ: cz, width, depth, cols, rows, heights } = feature;
           if (!heights || cols < 2 || rows < 2) break;
-          const halfW = width / 2, halfD = depth / 2;
-          if (x < cx - halfW || x > cx + halfW || z < cz - halfD || z > cz + halfD) break;
+          const trackHalfW = (this.width ?? width ?? 160) / 2;
+          const trackHalfD = (this.depth ?? depth ?? 160) / 2;
+          const effectiveWidth = Math.min(width, trackHalfW * 2);
+          const effectiveDepth = Math.min(depth, trackHalfD * 2);
+          const halfW = effectiveWidth / 2;
+          const halfD = effectiveDepth / 2;
+          // Clamp sampling at mesh bounds so edge height can blend out across the
+          // border area instead of dropping to zero immediately outside the mesh.
+          const sampleX = Math.max(cx - halfW, Math.min(cx + halfW, x));
+          const sampleZ = Math.max(cz - halfD, Math.min(cz + halfD, z));
           // Fractional grid coordinate [0, cols-1] and [0, rows-1]
-          const fc = (x - (cx - halfW)) * (cols - 1) / width;
-          const fr = (z - (cz - halfD)) * (rows - 1) / depth;
+          const fc = (sampleX - (cx - halfW)) * (cols - 1) / Math.max(effectiveWidth, 1e-6);
+          const fr = (sampleZ - (cz - halfD)) * (rows - 1) / Math.max(effectiveDepth, 1e-6);
           const c0 = Math.max(0, Math.min(Math.floor(fc), cols - 2));
           const r0 = Math.max(0, Math.min(Math.floor(fr), rows - 2));
           const c1 = c0 + 1, r1 = r0 + 1;
@@ -369,7 +377,39 @@ export class Track {
       }
     }
 
-    return totalHeight;
+    // Fade height from the editable boundary through the full outside border area
+    // so elevation transitions smoothly to flat terrain.
+    const halfW = (this.width ?? 160) / 2;
+    const halfD = (this.depth ?? 160) / 2;
+    const HEIGHT_BLEND_INNER = 0;
+    const HEIGHT_BLEND_OUTER = 10;
+    const signedDistToEdge = Math.min(halfW - Math.abs(x), halfD - Math.abs(z));
+
+    let blendedHeight;
+    if (signedDistToEdge >= HEIGHT_BLEND_INNER) {
+      blendedHeight = totalHeight;
+    } else if (signedDistToEdge <= -HEIGHT_BLEND_OUTER) {
+      blendedHeight = 0;
+    } else {
+      const span = HEIGHT_BLEND_INNER + HEIGHT_BLEND_OUTER;
+      const t = (signedDistToEdge + HEIGHT_BLEND_OUTER) / span;
+      const blend = Math.max(0, Math.min(1, t));
+      blendedHeight = totalHeight * blend;
+    }
+
+    // Add subtle vertical breakup in the outside border strip so the border
+    // is less uniformly flat while keeping the track edge transition smooth.
+    if (signedDistToEdge < 0) {
+      const BORDER_Y_JITTER = 1.0;
+      const borderT = Math.max(0, Math.min(1, -signedDistToEdge / HEIGHT_BLEND_OUTER));
+      const jitterMask = Math.max(0, Math.min(1, (borderT - 0.2) / 0.8));
+      const n1 = Math.sin((x + 31.7) * 0.37 + (z - 17.3) * 0.53) * 43758.5453;
+      const n2 = Math.sin((x - 11.1) * 0.91 - (z + 23.9) * 0.41) * 24634.6345;
+      const jitter = ((n1 - Math.floor(n1)) * 2 - 1) * 0.65 + ((n2 - Math.floor(n2)) * 2 - 1) * 0.35;
+      blendedHeight += jitter * BORDER_Y_JITTER * jitterMask;
+    }
+
+    return blendedHeight;
   }
 
   // Get the terrain type at a world position (returns null if not specified)
@@ -506,12 +546,33 @@ export class Track {
 
     const halfW = (this.width ?? 160) / 2;
     const halfD = (this.depth ?? 160) / 2;
-    const inEditableArea = Math.abs(x) <= halfW && Math.abs(z) <= halfD;
-    if (!inEditableArea) {
+
+    // Blend across the full border transition zone around the editable area:
+    // inside the edge + outside the edge. This avoids a hard ring where border
+    // terrain starts and gives the shader enough gradient to smooth the seam.
+    const BORDER_BLEND_INNER = 10;
+    const BORDER_BLEND_OUTER = 10;
+    const signedDistToEdge = Math.min(halfW - Math.abs(x), halfD - Math.abs(z));
+
+    if (signedDistToEdge >= BORDER_BLEND_INNER) {
+      return this.defaultTerrainType;
+    }
+
+    if (signedDistToEdge <= -BORDER_BLEND_OUTER) {
       return this.borderTerrainType ?? this.defaultTerrainType;
     }
 
-    return this.defaultTerrainType;
+    const span = BORDER_BLEND_INNER + BORDER_BLEND_OUTER;
+    const t = (signedDistToEdge + BORDER_BLEND_OUTER) / span;
+    const blend = 1 - Math.max(0, Math.min(1, t));
+
+    const qx = Math.floor(x);
+    const qz = Math.floor(z);
+    const hash = Math.sin(qx * 12.9898 + qz * 78.233) * 43758.5453;
+    const noise = hash - Math.floor(hash);
+    return noise < blend
+      ? (this.borderTerrainType ?? this.defaultTerrainType)
+      : this.defaultTerrainType;
   }
 
   // Expand a polyline with optional rounded corners at each point
@@ -598,17 +659,12 @@ export class Track {
       if (key) track.defaultTerrainType = TERRAIN_TYPES[key];
     }
 
-    if (data.borderTerrainType) {
-      const borderKey = Object.keys(TERRAIN_TYPES).find(
-        k => TERRAIN_TYPES[k].name === data.borderTerrainType
-      );
-      if (borderKey) {
-        track.borderTerrainType = TERRAIN_TYPES[borderKey];
-      } else {
-        track.borderTerrainType = track.defaultTerrainType;
-      }
+    const borderKey = Object.keys(TERRAIN_TYPES).find(
+      k => TERRAIN_TYPES[k].name === data.borderTerrainType
+    );
+    if (borderKey) {
+      track.borderTerrainType = TERRAIN_TYPES[borderKey];
     } else {
-      // Backwards compatibility: legacy tracks had one terrain default for all empty cells.
       track.borderTerrainType = track.defaultTerrainType;
     }
 

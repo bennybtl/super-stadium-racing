@@ -14,6 +14,7 @@ const TRACK_FILENAMES = [
   'pig_bog.json',
   'rc_pro_1.json',
   'rc_pro_2.json',
+  'rc_pro_3.json',
   'redoubt_about.json',
   'rio_trio.json',
   'shortcut.json',

@@ -74,6 +74,17 @@ const ROLL_FROM_TURNING = 0.03;
 /** Maximum body roll angle in radians (~15°). */
 const MAX_ROLL = 0.24;
 
+/** Body height baseline used for MAX_ROLL scaling (default truck ride height). */
+const MAX_ROLL_BODY_Y_BASE = 0.66;
+
+/** Prevent extreme roll changes for very low/high body offsets. */
+const MAX_ROLL_SCALE_MIN = 0.5;
+const MAX_ROLL_SCALE_MAX = 1.6;
+
+/** Prevent extreme pitch changes for very low/high body offsets. */
+const PITCH_SCALE_MIN = 0.5;
+const PITCH_SCALE_MAX = 1.6;
+
 /** Roll interpolation speed when grounded. */
 const ROLL_SPEED_GROUNDED = 8;
 
@@ -316,7 +327,11 @@ export class DriftPhysics {
       rollFromLateral = lateralSpeed * ROLL_FROM_LATERAL;
       rollFromTurning = turnRate * speed * ROLL_FROM_TURNING;
       this.state.targetRoll = rollFromLateral + rollFromTurning;
-      this.state.targetRoll = Math.max(-MAX_ROLL, Math.min(MAX_ROLL, this.state.targetRoll));
+      const bodyHeightY = Math.max(0.05, this.state.bodyHeightY ?? MAX_ROLL_BODY_Y_BASE);
+      const rollScaleRaw = bodyHeightY / MAX_ROLL_BODY_Y_BASE;
+      const rollScale = Math.max(MAX_ROLL_SCALE_MIN, Math.min(MAX_ROLL_SCALE_MAX, rollScaleRaw));
+      const maxRoll = MAX_ROLL * rollScale;
+      this.state.targetRoll = Math.max(-maxRoll, Math.min(maxRoll, this.state.targetRoll));
     } else {
       this.state.targetRoll = 0;
     }
@@ -333,8 +348,11 @@ export class DriftPhysics {
     let targetPitchOffset = 0;
     if (groundedness > 0.2 && speed > 1) {
       const wt = this.state.weightTransfer ?? 1.0;
-      if (input.forward) targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.throttle * speedRatio * wt;
-      if (input.back)    targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.brake    * speedRatio * wt;
+      const bodyHeightY = Math.max(0.05, this.state.bodyHeightY ?? MAX_ROLL_BODY_Y_BASE);
+      const pitchScaleRaw = bodyHeightY / MAX_ROLL_BODY_Y_BASE;
+      const pitchScale = Math.max(PITCH_SCALE_MIN, Math.min(PITCH_SCALE_MAX, pitchScaleRaw));
+      if (input.forward) targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.throttle * speedRatio * wt * pitchScale;
+      if (input.back)    targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.brake    * speedRatio * wt * pitchScale;
     }
     this._currentPitchOffset += (targetPitchOffset - this._currentPitchOffset) * Math.min(1, PITCH_WEIGHT_TRANSFER_SPEED * deltaTime);
     mesh.rotation.x += this._currentPitchOffset;

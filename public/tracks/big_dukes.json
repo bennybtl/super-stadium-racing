@@ -11,10 +11,10 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
+    "alphaBreakup": 1,
     "width": 3.2,
     "intensity": 2,
     "laneSpacing": 1.6,
-    "alphaBreakup": 1,
     "pathWander": 1.07,
     "edgeSoftness": 0.75,
     "secondaryPathCount": 100,
@@ -279,19 +279,19 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 22,
-      "centerZ": -64,
-      "heading": -1.5707963267948966,
-      "width": 22,
-      "checkpointNumber": 4
-    },
-    {
-      "type": "checkpoint",
       "centerX": 53.5,
       "centerZ": 45.5,
       "heading": 0.08726646259971647,
       "width": 22.5,
       "checkpointNumber": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -60.5,
+      "centerZ": 16.789914757934966,
+      "heading": -3.141592653589793,
+      "width": 20,
+      "checkpointNumber": 2
     },
     {
       "type": "terrain",
@@ -305,19 +305,19 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -60.5,
-      "centerZ": 16.789914757934966,
-      "heading": -3.141592653589793,
-      "width": 20,
-      "checkpointNumber": 2
-    },
-    {
-      "type": "checkpoint",
       "centerX": 36.5,
       "centerZ": -14.210085242065034,
       "heading": 1.6580627893946132,
       "width": 28,
       "checkpointNumber": 3
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 22,
+      "centerZ": -64,
+      "heading": -1.5707963267948966,
+      "width": 22,
+      "checkpointNumber": 4
     },
     {
       "type": "bannerString",

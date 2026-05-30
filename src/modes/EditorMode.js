@@ -269,6 +269,12 @@ export class EditorMode extends BaseMode {
       this.controller.goToTest({ trackKey: testKey, returnToEditor: trackKey });
     };
 
+    window.rebuildEditorScene = () => {
+      const liveTrackKey = trackKey === 'new' ? '__editor_live__' : trackKey;
+      trackLoader.tracks.set(liveTrackKey, currentTrack);
+      this.controller.goToEditor({ trackKey: liveTrackKey });
+    };
+
     // -- Game loop --
     scene.onBeforeRenderObservable.add(() => {
       if (menuManager.isMenuActive() || document.hidden) return;
@@ -306,6 +312,7 @@ export class EditorMode extends BaseMode {
     delete window.rebuildBezierWall;
     delete window.rebuildPolyCurb;
     delete window.quickTestTrack;
+    delete window.rebuildEditorScene;
 
     // (race HUD visibility is managed by UIManager / Pinia — nothing to restore here)
 

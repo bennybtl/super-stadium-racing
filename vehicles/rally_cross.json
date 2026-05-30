@@ -5,8 +5,11 @@
   "modelFile": "rally_cross.obj",
   "imageFile": "rally_cross.png",
   "defaultColor": [0.8, 0.2, 0.1],
+  "meshColors": {
+    "cabin_cabin": [0.0, 0.0, 0.0]
+  },
   "bodyTransform": {
-    "position": [0, 0.36, 0.0],
+    "position": [0, 0.16, 0.0],
     "rotation": [-1.5708, 0, 0],
     "scaling":  [1, 1, 1]
   },
@@ -16,23 +19,23 @@
     "depth": 3.0
   },
   "wheels": {
-    "trackWidth": 2.0,
-    "frontAxle":  1.5,
-    "rearAxle":  -1.2,
-    "frontScale": [0.9,0.9,0.9],
-    "rearScale": [0.9, 0.9, 0.9]
+    "trackWidth": 1.9,
+    "frontAxle":  1.4,
+    "rearAxle":  -1.1,
+    "frontScale": [0.8,0.9,0.9],
+    "rearScale": [0.8, 0.9, 0.9]
   },
   "params": {
     "springStrength": 180,
     "damping": 10,
-    "maxSpeed": 32,
+    "maxSpeed": 30,
     "maxReverseSpeed": -10,
     "acceleration": 16,
     "braking": 2.0,
     "drag": 3,
-    "turnSpeed": 3.9,
-    "grip": 0.14,
-    "driftThreshold": 0.19,
+    "turnSpeed": 4.0,
+    "grip": 0.15,
+    "driftThreshold": 0.18,
 
     "minDriftSpeed": 15,
     "minDriftSpeedHoldThrottle": 10,
@@ -48,8 +51,8 @@
 
     "boostCount": 5,
     "maxBoosts": 9,
-    "boostDuration": 1.8,
+    "boostDuration": 1.6,
     "boostAccelMult": 2.1,
-    "boostSpeedMult": 1.6
+    "boostSpeedMult": 1.5
   }
 }

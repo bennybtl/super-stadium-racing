@@ -11,10 +11,10 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
+    "alphaBreakup": 0.62,
     "width": 3.2,
     "intensity": 1.5,
     "laneSpacing": 1.3,
-    "alphaBreakup": 0.62,
     "pathWander": 0.96,
     "edgeSoftness": 0.75,
     "secondaryPathCount": 72,
@@ -268,11 +268,11 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 6.5,
-      "centerZ": -68.50048036756216,
-      "heading": -1.5707963267948966,
-      "width": 22.5,
-      "checkpointNumber": 4
+      "centerX": -63.5,
+      "centerZ": -4.000480367562161,
+      "heading": 0,
+      "width": 30,
+      "checkpointNumber": 1
     },
     {
       "type": "hill",
@@ -295,19 +295,19 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -63.5,
-      "centerZ": -4.000480367562161,
-      "heading": 0,
-      "width": 30,
-      "checkpointNumber": 1
-    },
-    {
-      "type": "checkpoint",
       "centerX": -20.5,
       "centerZ": -6.500480367562162,
       "heading": 3.0543261909900763,
       "width": 30,
       "checkpointNumber": 3
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 6.5,
+      "centerZ": -68.50048036756216,
+      "heading": -1.5707963267948966,
+      "width": 22.5,
+      "checkpointNumber": 4
     },
     {
       "type": "obstacle",
@@ -365,6 +365,9 @@
       "shape": "circle",
       "x": 49.5,
       "z": -32.50180979840892,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
       "radius": 15
     },
     {
@@ -373,6 +376,9 @@
       "shape": "circle",
       "x": 49.5,
       "z": 14.998190201591079,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
       "radius": 15
     },
     {
@@ -381,6 +387,9 @@
       "shape": "circle",
       "x": -19.5,
       "z": 7.998190201591079,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
       "radius": 15
     },
     {
@@ -389,6 +398,9 @@
       "shape": "circle",
       "x": -38.5,
       "z": -65.50180979840891,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
       "radius": 15
     },
     {

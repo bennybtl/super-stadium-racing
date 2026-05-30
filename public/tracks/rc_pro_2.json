@@ -11,10 +11,10 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
+    "alphaBreakup": 0.65,
     "width": 6.4,
     "intensity": 1.7,
     "laneSpacing": 1.3,
-    "alphaBreakup": 0.65,
     "pathWander": 1.12,
     "edgeSoftness": 0.75,
     "secondaryPathCount": 65,
@@ -122,11 +122,11 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -15.032686747415486,
-      "centerZ": 27.362703303200703,
-      "heading": 1.8453292519943296,
-      "width": 21.5,
-      "checkpointNumber": 2
+      "centerX": -105.87564454421533,
+      "centerZ": -18.49657425069146,
+      "heading": 0.02453292519943294,
+      "width": 22.5,
+      "checkpointNumber": 1
     },
     {
       "type": "polyWall",
@@ -181,11 +181,11 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -105.87564454421533,
-      "centerZ": -18.49657425069146,
-      "heading": 0.02453292519943294,
-      "width": 22.5,
-      "checkpointNumber": 1
+      "centerX": -15.032686747415486,
+      "centerZ": 27.362703303200703,
+      "heading": 1.8453292519943296,
+      "width": 21.5,
+      "checkpointNumber": 2
     },
     {
       "type": "obstacle",
@@ -894,6 +894,9 @@
       "shape": "circle",
       "x": 101.04679236297706,
       "z": 40.63431805052328,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
       "radius": 15
     },
     {
@@ -932,6 +935,9 @@
       "shape": "circle",
       "x": 100.67909792427155,
       "z": -56.20804943998983,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
       "radius": 15
     },
     {
@@ -940,6 +946,9 @@
       "shape": "circle",
       "x": -28.325195141999522,
       "z": -60.96390667851304,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
       "radius": 15
     }
   ]

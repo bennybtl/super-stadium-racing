@@ -5,7 +5,7 @@ import { TERRAIN_COLORS } from "./constants";
 export const TERRAIN_TYPES = {
   ASPHALT: {
     name: "asphalt",
-    gripMultiplier: 2.8,    // Best grip
+    gripMultiplier: 3.8,    // Best grip
     color: TERRAIN_COLORS.asphalt,
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     diffuseTexture: 'textures/asphalt_2.texture.png',

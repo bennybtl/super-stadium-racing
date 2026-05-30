@@ -413,6 +413,8 @@ export const useEditorStore = defineStore('editor', () => {
   const trackSettings = reactive({
     name: 'Untitled Track',
     id: 'untitled-track',
+    width: 160,
+    depth: 160,
   });
   const trackDefaultTerrain = ref('packed_dirt');
   const trackBorderTerrain = ref('packed_dirt');
@@ -500,6 +502,7 @@ export const useEditorStore = defineStore('editor', () => {
   function cycleSnapSize() { const idx = snapSizes.indexOf(snapSize.value); snapSize.value = snapSizes[(idx + 1) % snapSizes.length]; snapEnabled.value = true; }
   function toggleGizmosVisible() { gizmosVisible.value = !gizmosVisible.value; _bridge.value?.toggleGizmosVisible(); }
   function quickTestTrack() { _bridge.value?.quickTestTrack(); }
+  function rebuildScene() { _bridge.value?.rebuildScene?.(); }
   function openTrackSettings() { trackSettingsOpen.value = true; }
   function closeTrackSettings() { trackSettingsOpen.value = false; }
   function toggleTrackSettings() { trackSettingsOpen.value = !trackSettingsOpen.value; }
@@ -510,6 +513,21 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackId(id) {
     trackSettings.id = id;
     _bridge.value?.changeTrackId?.(id);
+  }
+  function _normalizeTrackDimension(val, fallback) {
+    const numeric = Number(val);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.min(320, Math.max(80, Math.round(numeric)));
+  }
+  function setTrackWidth(width) {
+    const next = _normalizeTrackDimension(width, trackSettings.width);
+    trackSettings.width = next;
+    _bridge.value?.changeTrackWidth?.(next);
+  }
+  function setTrackDepth(depth) {
+    const next = _normalizeTrackDimension(depth, trackSettings.depth);
+    trackSettings.depth = next;
+    _bridge.value?.changeTrackDepth?.(next);
   }
 
   // ── Checkpoint actions ──
@@ -815,12 +833,13 @@ export const useEditorStore = defineStore('editor', () => {
     setBridgeCollisionEndCapThickness, setBridgeCollisionEndCapDrop,
     duplicateBridge, deleteBridge, closeBridge,
     trackSettingsOpen, trackSettings,
-    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId,
+    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
     toggleSnap, cycleSnapSize, quickTestTrack,
+    rebuildScene,
     openAddMenu, closeAddMenu, toggleAddMenu,
     addCheckpoint, addHill, addSquareHill, addTerrain,
     addNormalMapDecal, addObstacle,

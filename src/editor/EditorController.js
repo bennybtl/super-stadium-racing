@@ -335,6 +335,8 @@ export class EditorController {
     return JSON.stringify({
       name: this.currentTrack.name,
       id: this.currentTrack.id,
+      width: this.currentTrack.width,
+      depth: this.currentTrack.depth,
       defaultTerrainType: this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt',
       borderTerrainType: this.currentTrack.borderTerrainType?.name ?? this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt',
       features: this.currentTrack.features,
@@ -346,6 +348,8 @@ export class EditorController {
     if (!this._editorStore || !this.currentTrack) return;
     this._editorStore.trackSettings.name = this.currentTrack.name ?? 'Untitled Track';
     this._editorStore.trackSettings.id = this.currentTrack.id ?? 'untitled-track';
+    this._editorStore.trackSettings.width = this.currentTrack.width ?? 160;
+    this._editorStore.trackSettings.depth = this.currentTrack.depth ?? 160;
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
   }
@@ -604,6 +608,8 @@ export class EditorController {
     } else {
       this.currentTrack.name = parsed.name ?? this.currentTrack.name ?? 'Untitled Track';
       this.currentTrack.id = parsed.id ?? this.currentTrack.id ?? 'untitled-track';
+      this.currentTrack.width = parsed.width ?? this.currentTrack.width ?? 160;
+      this.currentTrack.depth = parsed.depth ?? this.currentTrack.depth ?? 160;
       if (parsed.defaultTerrainType) {
         const defaultKey = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === parsed.defaultTerrainType);
         if (defaultKey) this.currentTrack.defaultTerrainType = TERRAIN_TYPES[defaultKey];
@@ -1262,6 +1268,10 @@ export class EditorController {
     window.quickTestTrack?.();
   }
 
+  rebuildScene() {
+    window.rebuildEditorScene?.();
+  }
+
   // ─── Hill Editing (delegated to HillEditor) ──────────────────────────────
 
   addHillEntity() { this.hillEditor.addEntity(); }
@@ -1336,6 +1346,30 @@ export class EditorController {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
     this.currentTrack.id = nextId || 'untitled-track';
+    this._syncTrackSettingsPanel();
+  }
+
+  _normalizeTrackDimension(value, fallback = 160) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.max(80, Math.min(320, Math.round(numeric)));
+  }
+
+  changeTrackWidth(val) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.width = this._normalizeTrackDimension(val, this.currentTrack.width ?? 160);
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
+    this._syncTrackSettingsPanel();
+  }
+
+  changeTrackDepth(val) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.depth = this._normalizeTrackDimension(val, this.currentTrack.depth ?? 160);
+    window.rebuildTerrainGrid?.();
+    window.rebuildTerrainTexture?.();
     this._syncTrackSettingsPanel();
   }
 

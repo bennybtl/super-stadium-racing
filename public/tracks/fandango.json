@@ -1,9 +1,9 @@
 {
   "id": "fandango",
   "packId": "offroad_pack_1",
+  "hidden": false,
   "name": "Fandango",
   "image": "fandango.jpg",
-  "hidden": false,
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -11,10 +11,10 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
+    "alphaBreakup": 0.48,
     "width": 3.2,
     "intensity": 0.28,
     "laneSpacing": 1.3,
-    "alphaBreakup": 0.48,
     "pathWander": 0.72,
     "edgeSoftness": 0.75,
     "secondaryPathCount": 59,
@@ -327,11 +327,11 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 0.4738422189265883,
-      "centerZ": -59.51407625122488,
-      "heading": -1.5707963267948966,
-      "width": 19.5,
-      "checkpointNumber": 8,
+      "centerX": -67,
+      "centerZ": 44.5,
+      "heading": 0,
+      "width": 16.5,
+      "checkpointNumber": 3,
       "passedBy": {}
     },
     {
@@ -495,15 +495,6 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -67,
-      "centerZ": 44.5,
-      "heading": 0,
-      "width": 16.5,
-      "checkpointNumber": 3,
-      "passedBy": {}
-    },
-    {
-      "type": "checkpoint",
       "centerX": -0.5,
       "centerZ": 69,
       "heading": 1.550000000000001,
@@ -536,6 +527,15 @@
       "heading": 3.141592653589793,
       "width": 25,
       "checkpointNumber": 7,
+      "passedBy": {}
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 0.4738422189265883,
+      "centerZ": -59.51407625122488,
+      "heading": -1.5707963267948966,
+      "width": 19.5,
+      "checkpointNumber": 8,
       "passedBy": {}
     },
     {
@@ -708,8 +708,8 @@
           "z": -57.92157499676163
         },
         {
-          "x": -60.507582243615985,
-          "z": -41.19777503756841
+          "x": -58.976683259197046,
+          "z": -41.28190674532014
         },
         {
           "x": -48.72348049417797,
@@ -779,7 +779,8 @@
           "x": 46.631249592526856,
           "z": -58.36753125578191
         }
-      ]
+      ],
+      "branches": []
     },
     {
       "type": "trackSign",

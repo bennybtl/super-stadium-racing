@@ -309,7 +309,7 @@ export class TruckBody {
 
       // Body: allow up to 0.25 units of dip below ground for suspension feel,
       // but never more than that
-      const bodyAllowance = 0.25;
+      const bodyAllowance = this._bodyYOffset / 3;
       const bodyDeficit = deficit - bodyAllowance;
       this._visualRoot.position.y = (bodyDeficit > 0 ? bodyDeficit : 0) + this._bodyYOffset;
 

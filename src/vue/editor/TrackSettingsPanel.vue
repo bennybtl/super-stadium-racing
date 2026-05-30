@@ -28,20 +28,55 @@
     />
     <div class="mt-2 text-[10px] text-slate-400">Used for exported filenames. Non-slug characters are normalized automatically.</div>
 
-    <div class="mt-4 text-[12px] mb-1">Default Terrain</div>
+    <div class="mt-4 grid grid-cols-2 gap-2">
+      <div>
+        <div class="text-[12px] mb-1">Width</div>
+        <input
+          class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+          type="number"
+          min="80"
+          max="320"
+          step="1"
+          :value="editor.trackSettings.width"
+          @input="editor.setTrackWidth($event.target.value)"
+        />
+      </div>
+      <div>
+        <div class="text-[12px] mb-1">Depth</div>
+        <input
+          class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+          type="number"
+          min="80"
+          max="320"
+          step="1"
+          :value="editor.trackSettings.depth"
+          @input="editor.setTrackDepth($event.target.value)"
+        />
+      </div>
+    </div>
+    <div class="mt-2 text-[10px] text-slate-400">Track size range: 80 to 320 meters.</div>
+
+    <button
+      class="mt-3 w-full rounded-md border border-slate-600 bg-slate-800/70 px-3 py-2 text-[12px] font-semibold text-slate-100 transition hover:border-slate-400 hover:bg-slate-700/70"
+      type="button"
+      @click="editor.rebuildScene"
+    >
+      Rebuild Scene
+    </button>
+
     <TerrainTypeSelect
       :label="'Default Terrain'"
-      class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
       :model-value="editor.trackDefaultTerrain"
       @update:modelValue="editor.setTrackDefaultTerrain"
     />
 
-    <div class="mt-4 text-[12px] mb-1">Border Terrain</div>
     <TerrainTypeSelect
       :label="'Border Terrain'"
       :model-value="editor.trackBorderTerrain"
       @update:modelValue="editor.setTrackBorderTerrain"
     />
+
+    
 
     <div class="mt-3 text-[10px] text-slate-400">Track metadata and terrain defaults participate in undo/redo.</div>
   </EditorPanel>
