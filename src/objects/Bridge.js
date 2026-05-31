@@ -42,6 +42,7 @@ export class Bridge {
     const depth = feature.depth ?? 8;
     const transitionEnabled = feature.transitionEnabled === true;
     const transitionDepth = feature.transitionDepth ?? 10;
+    const transitionYOffset = Math.min(0, feature.transitionYOffset ?? 0);
     const deckColliderEnabled = collision.deckCollider ?? !transitionEnabled;
     const driveColliderFriction = collision.friction ?? 1.0;
     const driveColliderApplyFriction = collision.applyFriction ?? false;
@@ -246,8 +247,9 @@ export class Bridge {
         const endX = feature.centerX + rampOffsetX * sign;
         const endZ = feature.centerZ + rampOffsetZ * sign;
         const groundY = this.track.getHeightAt(endX, endZ);
-        const ramp = createRampMesh(sign, startX, startZ, deckTopY, groundY);
-        const rampColliders = createRampColliderPerimeter(sign, startX, startZ, groundY + thickness, groundY - thickness);
+        const rampBottomY = groundY + transitionYOffset;
+        const ramp = createRampMesh(sign, startX, startZ, deckTopY, rampBottomY);
+        const rampColliders = createRampColliderPerimeter(sign, startX, startZ, rampBottomY + thickness, rampBottomY - thickness);
 
         if (this._driveSurfaceManager) {
           this._driveSurfaceManager.register(ramp, {

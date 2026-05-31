@@ -92,6 +92,17 @@
         @input="editor.setBridgeTransitionDepth(+$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
+
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Transition Y Offset</span>
+        <span>{{ editor.bridge.transitionYOffset.toFixed(2) }}</span>
+      </div>
+      <input
+        type="range" min="-6" max="0" step="0.1"
+        :value="editor.bridge.transitionYOffset"
+        @input="editor.setBridgeTransitionYOffset(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
     </template>
 
     <div class="text-[10px] text-slate-400 mb-3">Collision end caps use fixed defaults.</div>

@@ -30,10 +30,10 @@
     "damping": 10,
     "maxSpeed": 28,
     "maxReverseSpeed": -10,
-    "acceleration": 16,
+    "acceleration": 15,
     "braking": 2.0,
     "drag": 3,
-    "turnSpeed": 4.0,
+    "turnSpeed": 3.9,
     "grip": 0.15,
     "driftThreshold": 0.18,
 

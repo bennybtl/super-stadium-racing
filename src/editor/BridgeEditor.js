@@ -11,7 +11,7 @@ import { EditorMaterials } from './EditorMaterials.js';
  * Feature data shape:
  *   {
  *     type:'bridge', centerX, centerZ, width, depth, height, thickness, angle,
- *     materialType?, transitionEnabled?, transitionDepth?,
+ *     materialType?, transitionEnabled?, transitionDepth?, transitionYOffset?,
  *     level?,
  *     collision?: { width?, depth?, thickness?, yOffset? }
  *   }
@@ -137,6 +137,7 @@ export class BridgeEditor {
       materialType: 'packed_dirt',
       transitionEnabled: true,
       transitionDepth: 10,
+      transitionYOffset: 0,
       collision: {
         endCaps: true,
         endCapsOnDepth: true,
@@ -266,6 +267,7 @@ export class BridgeEditor {
     s.bridge.materialType = feature.materialType ?? 'packed_dirt';
     s.bridge.transitionEnabled = feature.transitionEnabled ?? true;
     s.bridge.transitionDepth   = feature.transitionDepth ?? 10;
+    s.bridge.transitionYOffset = feature.transitionYOffset ?? 0;
     s.bridge.collisionEndCaps         = c.endCaps ?? true;
     s.bridge.collisionEndCapsOnDepth  = c.endCapsOnDepth ?? true;
     s.bridge.collisionEndCapsOnWidth  = c.endCapsOnWidth ?? false;
@@ -339,6 +341,13 @@ export class BridgeEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.transitionDepth = val;
+    this._scheduleRuntimeSync(this.selected.feature);
+  }
+
+  changeTransitionYOffset(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.transitionYOffset = Math.min(0, val);
     this._scheduleRuntimeSync(this.selected.feature);
   }
 

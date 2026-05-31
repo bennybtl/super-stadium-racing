@@ -31,7 +31,7 @@
     "damping": 7,
     "maxSpeed": 26,
     "maxReverseSpeed": -10,
-    "acceleration": 18,
+    "acceleration": 19,
     "braking": 1.5,
     "drag": 3,
     "turnSpeed": 3.6,

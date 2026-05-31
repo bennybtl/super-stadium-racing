@@ -1590,6 +1590,7 @@ export class EditorController {
   changeBridgeMaterialType(val) { this.bridgeEditor?.changeMaterialType(val); }
   changeBridgeTransitionEnabled(val) { this.bridgeEditor?.changeTransitionEnabled(val); }
   changeBridgeTransitionDepth(val)   { this.bridgeEditor?.changeTransitionDepth(val); }
+  changeBridgeTransitionYOffset(val) { this.bridgeEditor?.changeTransitionYOffset(val); }
   changeBridgeCollisionEndCaps(val)         { this.bridgeEditor?.changeCollisionEndCaps(val); }
   changeBridgeCollisionEndCapsOnDepth(val)  { this.bridgeEditor?.changeCollisionEndCapsOnDepth(val); }
   changeBridgeCollisionEndCapsOnWidth(val)  { this.bridgeEditor?.changeCollisionEndCapsOnWidth(val); }

@@ -401,6 +401,7 @@ export const useEditorStore = defineStore('editor', () => {
     materialType:     'packed_dirt',
     transitionEnabled: true,
     transitionDepth:  10,
+    transitionYOffset: 0,
     collisionEndCaps: true,
     collisionEndCapsOnDepth: true,
     collisionEndCapsOnWidth: false,
@@ -690,6 +691,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setBridgeMaterialType(val) { bridge.materialType = val; _bridge.value?.changeBridgeMaterialType(val); }
   function setBridgeTransitionEnabled(val) { bridge.transitionEnabled = val; _bridge.value?.changeBridgeTransitionEnabled(val); }
   function setBridgeTransitionDepth(val)   { bridge.transitionDepth = val;   _bridge.value?.changeBridgeTransitionDepth(val); }
+  function setBridgeTransitionYOffset(val) { bridge.transitionYOffset = Math.min(0, val); _bridge.value?.changeBridgeTransitionYOffset(Math.min(0, val)); }
   function setBridgeCollisionEndCaps(val)         { bridge.collisionEndCaps = val;         _bridge.value?.changeBridgeCollisionEndCaps(val); }
   function setBridgeCollisionEndCapsOnDepth(val)  { bridge.collisionEndCapsOnDepth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnDepth(val); }
   function setBridgeCollisionEndCapsOnWidth(val)  { bridge.collisionEndCapsOnWidth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnWidth(val); }
@@ -828,7 +830,7 @@ export const useEditorStore = defineStore('editor', () => {
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
     bridge,
     setBridgeWidth, setBridgeDepth, setBridgeHeight, setBridgeThickness, setBridgeAngle,
-    setBridgeMaterialType, setBridgeTransitionEnabled, setBridgeTransitionDepth,
+    setBridgeMaterialType, setBridgeTransitionEnabled, setBridgeTransitionDepth, setBridgeTransitionYOffset,
     setBridgeCollisionEndCaps, setBridgeCollisionEndCapsOnDepth, setBridgeCollisionEndCapsOnWidth,
     setBridgeCollisionEndCapThickness, setBridgeCollisionEndCapDrop,
     duplicateBridge, deleteBridge, closeBridge,
