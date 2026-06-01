@@ -252,6 +252,7 @@ export const useEditorStore = defineStore('editor', () => {
     width: 10,
     depth: 10,
     rotation: 0,
+    blendWidth: 0,
     terrainType: 'mud',
   });
 
@@ -477,6 +478,7 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Terrain path panel ──
   const terrainPath = reactive({
     width: 8,
+    blendWidth: 0,
     cornerRadius: 0,
     terrainType: 'mud',
   });
@@ -484,6 +486,7 @@ export const useEditorStore = defineStore('editor', () => {
   function openTerrainPath()                  { _bridge.value?.openTerrainPath?.(); }
   function closeTerrainPath()                 { _bridge.value?.closeTerrainPath?.(); }
   function setTerrainPathWidth(val)           { terrainPath.width = val;         _bridge.value?.changeTerrainPathWidth?.(val); }
+  function setTerrainPathBlendWidth(val)      { terrainPath.blendWidth = val;    _bridge.value?.changeTerrainPathBlendWidth?.(val); }
   function setTerrainPathCornerRadius(val)    { terrainPath.cornerRadius = val;  _bridge.value?.changeTerrainPathCornerRadius?.(val); }
   function setTerrainPathTerrainType(val)     { terrainPath.terrainType = val;   _bridge.value?.changeTerrainPathTerrainType?.(val); }
   function deleteTerrainPathWaypoint()        { _bridge.value?.deleteTerrainPathWaypoint?.(); }
@@ -571,6 +574,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setTerrainShapeWidth(val)      { terrainShape.width = val;       _bridge.value?.changeTerrainShapeWidth(val); }
   function setTerrainShapeDepth(val)      { terrainShape.depth = val;       _bridge.value?.changeTerrainShapeDepth(val); }
   function setTerrainShapeRotation(val)   { terrainShape.rotation = val;    _bridge.value?.changeTerrainShapeRotation(val); }
+  function setTerrainShapeBlendWidth(val) { terrainShape.blendWidth = val;  _bridge.value?.changeTerrainShapeBlendWidth(val); }
   function setTerrainShapeTerrainType(n)  { terrainShape.terrainType = n;   _bridge.value?.changeTerrainShapeTerrainType(n); }
   function duplicateTerrainShape()        { _bridge.value?.duplicateSelectedTerrainShape(); }
   function deleteTerrainShape()           { _bridge.value?.deleteSelectedTerrainShape(); }
@@ -798,7 +802,7 @@ export const useEditorStore = defineStore('editor', () => {
     setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
     setSquareHillHeight, setSquareHillWaterLevelOffset, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
-    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation,
+    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation, setTerrainShapeBlendWidth,
     setTerrainShapeTerrainType, duplicateTerrainShape, deleteTerrainShape, closeTerrainShape,
     setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
     setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,
@@ -859,7 +863,7 @@ export const useEditorStore = defineStore('editor', () => {
     editMainAiPath, createAiPathBranchFromSelected, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, deleteActiveAiPathBranch, clearAiPathBranches,
     terrainPath,
     openTerrainPath, closeTerrainPath,
-    setTerrainPathWidth, setTerrainPathCornerRadius, setTerrainPathTerrainType,
+    setTerrainPathWidth, setTerrainPathBlendWidth, setTerrainPathCornerRadius, setTerrainPathTerrainType,
     deleteTerrainPathWaypoint, clearTerrainPath, addTerrainPath,
     surfaceDecal,
     openSurfaceDecalStamp, closeSurfaceDecalStamp,

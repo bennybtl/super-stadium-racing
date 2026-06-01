@@ -1388,6 +1388,7 @@ export class EditorController {
   changeTerrainShapeWidth(val)    { this.terrainShapeEditor.changeWidth(val); }
   changeTerrainShapeDepth(val)    { this.terrainShapeEditor.changeDepth(val); }
   changeTerrainShapeRotation(val) { this.terrainShapeEditor.changeRotation(val); }
+  changeTerrainShapeBlendWidth(val) { this.terrainShapeEditor.changeBlendWidth(val); }
   changeTerrainShapeTerrainType(n) { this.terrainShapeEditor.changeTerrainType(n); }
 
   // ─── Normal Map Decal Editing (delegated to NormalMapDecalEditor) ──────────
@@ -1710,6 +1711,7 @@ export class EditorController {
   deleteTerrainPathWaypoint()   { this.terrainPathEditor.deleteSelected(); }
   clearTerrainPath()            { this.terrainPathEditor.clearActivePath(); }
   changeTerrainPathWidth(val)          { this.terrainPathEditor.changeWidth(val); }
+  changeTerrainPathBlendWidth(val)     { this.terrainPathEditor.changeBlendWidth(val); }
   changeTerrainPathCornerRadius(val)   { this.terrainPathEditor.changeCornerRadius(val); }
   changeTerrainPathTerrainType(name)   { this.terrainPathEditor.changeTerrainType(name); }
 
@@ -1718,6 +1720,7 @@ export class EditorController {
     if (!s || !this.terrainPathEditor.activeFeature) return;
     const f = this.terrainPathEditor.activeFeature;
     s.terrainPath.width        = f.width ?? 8;
+    s.terrainPath.blendWidth   = f.blendWidth ?? 0;
     s.terrainPath.cornerRadius = f.cornerRadius ?? 0;
     s.terrainPath.terrainType  = f.terrainType?.name ?? 'mud';
   }

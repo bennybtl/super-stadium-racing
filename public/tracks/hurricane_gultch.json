@@ -594,7 +594,8 @@
       "terrainType": "rocky",
       "width": 21.5,
       "depth": 20,
-      "rotation": 0
+      "rotation": 0,
+      "blendWidth": 3.5
     },
     {
       "type": "polyHill",
@@ -898,7 +899,8 @@
       "terrainType": "loamy_dirt",
       "width": 25,
       "depth": 37.5,
-      "rotation": 102
+      "rotation": 102,
+      "blendWidth": 3
     },
     {
       "type": "terrain",
@@ -908,7 +910,8 @@
       "terrainType": "loamy_dirt",
       "width": 25,
       "depth": 37.5,
-      "rotation": 11
+      "rotation": 11,
+      "blendWidth": 3
     },
     {
       "type": "aiPath",

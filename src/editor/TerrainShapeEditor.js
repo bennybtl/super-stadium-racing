@@ -233,6 +233,7 @@ export class TerrainShapeEditor {
       terrainType: TERRAIN_TYPES.MUD,
     };
     const newFeature = { ...base, width: 10, depth: 10, rotation: 0 };
+    newFeature.blendWidth = 0;
     this.editor.saveSnapshot();
     this.editor.currentTrack.features.push(newFeature);
     const data = this.createVisual(newFeature);
@@ -287,6 +288,7 @@ export class TerrainShapeEditor {
     ts.width       = feature.width ?? 10;
     ts.depth       = feature.depth ?? 10;
     ts.rotation    = feature.rotation ?? 0;
+    ts.blendWidth  = feature.blendWidth ?? 0;
     s.selectedType = 'terrainShape';
   }
 
@@ -335,6 +337,13 @@ export class TerrainShapeEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.rotation = val;
+    this.rebuildTerrain();
+  }
+
+  changeBlendWidth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.blendWidth = Math.max(0, val);
     this.rebuildTerrain();
   }
 

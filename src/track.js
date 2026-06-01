@@ -1,5 +1,6 @@
 import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline } from "./polyline-utils.js";
+import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
 
 function getHillEllipseParams(feature) {
   return {
@@ -432,6 +433,7 @@ export class Track {
         }
 
         case "terrain": {
+          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           if (feature.shape === 'rect') {
             const halfWidth = feature.width / 2;
             const halfDepth = feature.depth / 2;
@@ -442,7 +444,13 @@ export class Track {
             const sinA = Math.sin(angleRad);
             const lx =  wx * cosA + wz * sinA;
             const lz = -wx * sinA + wz * cosA;
-            if (Math.abs(lx) <= halfWidth && Math.abs(lz) <= halfDepth) {
+            const edgeDx = Math.max(0, Math.abs(lx) - halfWidth);
+            const edgeDz = Math.max(0, Math.abs(lz) - halfDepth);
+            const insideDist = Math.min(halfWidth - Math.abs(lx), halfDepth - Math.abs(lz));
+            const signedDistToEdge = insideDist >= 0
+              ? insideDist
+              : -Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
+            if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
               return feature.terrainType;
             }
           } else if (feature.shape === 'circle') {
@@ -460,7 +468,9 @@ export class Track {
             const hd = (feature.depth ?? 10) / 2;
 
             // Standard ellipse formula inside bounds check
-            if ((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd) <= 1) {
+            const ellipseDist = Math.sqrt((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd));
+            const signedDistToEdge = (1 - ellipseDist) * Math.min(hw, hd);
+            if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
               return feature.terrainType;
             }
           }
@@ -489,10 +499,12 @@ export class Track {
           const pts = feature.points;
           if (!pts || pts.length < 2) break;
           const halfWidth = (feature.width ?? 8) / 2;
+          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const cornerRadius = feature.cornerRadius ?? 0;
           const expanded = cornerRadius > 0.1
             ? this._expandPolylineForHill(pts.map(p => ({ ...p, radius: cornerRadius })))
             : pts;
+          let minDist = Infinity;
           for (let j = 0; j < expanded.length - 1; j++) {
             const p1 = expanded[j];
             const p2 = expanded[j + 1];
@@ -504,7 +516,12 @@ export class Track {
             const projX = p1.x + t * dx;
             const projZ = p1.z + t * dz;
             const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-            if (dist <= halfWidth) return feature.terrainType;
+            minDist = Math.min(minDist, dist);
+          }
+          if (!Number.isFinite(minDist)) break;
+          const signedDistToEdge = halfWidth - minDist;
+          if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
+            return feature.terrainType;
           }
           break;
         }
@@ -554,25 +571,16 @@ export class Track {
     const BORDER_BLEND_OUTER = 10;
     const signedDistToEdge = Math.min(halfW - Math.abs(x), halfD - Math.abs(z));
 
-    if (signedDistToEdge >= BORDER_BLEND_INNER) {
-      return this.defaultTerrainType;
-    }
-
-    if (signedDistToEdge <= -BORDER_BLEND_OUTER) {
-      return this.borderTerrainType ?? this.defaultTerrainType;
-    }
-
-    const span = BORDER_BLEND_INNER + BORDER_BLEND_OUTER;
-    const t = (signedDistToEdge + BORDER_BLEND_OUTER) / span;
-    const blend = 1 - Math.max(0, Math.min(1, t));
-
-    const qx = Math.floor(x);
-    const qz = Math.floor(z);
-    const hash = Math.sin(qx * 12.9898 + qz * 78.233) * 43758.5453;
-    const noise = hash - Math.floor(hash);
-    return noise < blend
-      ? (this.borderTerrainType ?? this.defaultTerrainType)
-      : this.defaultTerrainType;
+    const useDefaultTerrain = usePrimaryTerrainWithBlend(
+      x,
+      z,
+      signedDistToEdge,
+      BORDER_BLEND_INNER,
+      BORDER_BLEND_OUTER
+    );
+    return useDefaultTerrain
+      ? this.defaultTerrainType
+      : (this.borderTerrainType ?? this.defaultTerrainType);
   }
 
   // Expand a polyline with optional rounded corners at each point

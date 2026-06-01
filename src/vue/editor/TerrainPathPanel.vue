@@ -21,6 +21,17 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Edge Blend</span>
+      <span>{{ editor.terrainPath.blendWidth.toFixed(1) }}</span>
+    </div>
+    <input
+      type="range" min="0" max="20" step="0.5"
+      :value="editor.terrainPath.blendWidth"
+      @input="editor.setTerrainPathBlendWidth(+$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <!-- Corner radius -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Corner Radius</span>

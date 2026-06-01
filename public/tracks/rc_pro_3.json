@@ -434,19 +434,20 @@
       "centerZ": 24.172741451832735,
       "width": 9,
       "depth": 0,
-      "height": 2.25,
+      "height": 3.25,
       "thickness": 0.4,
       "angle": 100,
       "materialType": "rocky",
       "transitionEnabled": true,
-      "transitionDepth": 10,
+      "transitionDepth": 11,
       "collision": {
         "endCaps": true,
         "endCapsOnDepth": true,
         "endCapsOnWidth": false,
         "endCapThickness": 0.5,
         "endCapDrop": 5
-      }
+      },
+      "transitionYOffset": -0.2
     },
     {
       "type": "bridge",
@@ -454,19 +455,20 @@
       "centerZ": 7.041146988787666,
       "width": 9,
       "depth": 0,
-      "height": 2.25,
+      "height": 3.25,
       "thickness": 0.4,
       "angle": 100,
       "materialType": "rocky",
       "transitionEnabled": true,
-      "transitionDepth": 10,
+      "transitionDepth": 11,
       "collision": {
         "endCaps": true,
         "endCapsOnDepth": true,
         "endCapsOnWidth": false,
         "endCapThickness": 0.5,
         "endCapDrop": 5
-      }
+      },
+      "transitionYOffset": -0.5
     },
     {
       "type": "polyWall",
@@ -922,6 +924,38 @@
           ]
         }
       ]
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 90.37165091486129,
+      "z": -23.92606631569786,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 75.67707948869783,
+      "z": 9.660637950485658,
+      "radius": 13
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -131.3091664054975,
+      "z": 24.501207793218317,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -84.2620799745471,
+      "z": -25.80561916558898,
+      "radius": 12
     }
   ]
 }

@@ -265,6 +265,7 @@ export class TerrainPathEditor {
       type: 'terrainPath',
       points: [],
       width: 8,
+      blendWidth: 0,
       cornerRadius: 0,
       terrainType: entry,
     };
@@ -362,6 +363,7 @@ export class TerrainPathEditor {
     if (!s || !this.activeFeature) return;
     const f = this.activeFeature;
     s.terrainPath.width        = f.width ?? 8;
+    s.terrainPath.blendWidth   = f.blendWidth ?? 0;
     s.terrainPath.cornerRadius = f.cornerRadius ?? 0;
     s.terrainPath.terrainType  = f.terrainType?.name ?? 'mud';
     s.selectedType = 'terrainPath';
@@ -386,6 +388,13 @@ export class TerrainPathEditor {
     this.editor.saveSnapshot(true);
     this.activeFeature.cornerRadius = val;
     this._rebuildLineForFeature(this.activeFeature);
+    this._scheduleTerrainRebuild();
+  }
+
+  changeBlendWidth(val) {
+    if (!this.activeFeature) return;
+    this.editor.saveSnapshot(true);
+    this.activeFeature.blendWidth = Math.max(0, val);
     this._scheduleTerrainRebuild();
   }
 
