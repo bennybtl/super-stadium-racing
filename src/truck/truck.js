@@ -102,6 +102,7 @@ export class Truck {
       surfaceId: '-',
       surfaceType: '-',
       surfaceKind: '-',
+      surfaceFace: '-',
       surfaceLevel: '-',
       bodyHeightY: 0,
     };
@@ -465,6 +466,7 @@ export class Truck {
       payload.surfaceId = floorSurface?.surfaceId ?? '-';
       payload.surfaceType = floorSurface?.surfaceType ?? '-';
       payload.surfaceKind = floorSurface?.surfaceKind ?? '-';
+      payload.surfaceFace = floorSurface?.surfaceFace ?? '-';
       payload.surfaceLevel = floorSurface?.surfaceLevel ?? '-';
       return payload;
     });

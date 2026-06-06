@@ -131,11 +131,16 @@ export class DriveSurfaceManager {
 
     const requestedLayer = options.layer;
     const requestedRole = options.role ?? "drive";
+    const requestedSurfaceFace = options.surfaceFace;
     const record = this.getSurfaceByMesh(mesh);
 
     if (record) {
       if (requestedRole && record.role !== requestedRole) return false;
       if (Number.isFinite(requestedLayer) && record.level !== requestedLayer) return false;
+      if (requestedSurfaceFace) {
+        const face = record.tags?.surfaceFace ?? "top";
+        if (face !== requestedSurfaceFace) return false;
+      }
       return true;
     }
 
@@ -144,6 +149,10 @@ export class DriveSurfaceManager {
     if (!isLegacyDriveMesh) return false;
     if (requestedRole && requestedRole !== "drive") return false;
     if (Number.isFinite(requestedLayer) && mesh.metadata?.level !== requestedLayer) return false;
+    if (requestedSurfaceFace) {
+      const face = mesh.metadata?.surfaceFace ?? "top";
+      if (face !== requestedSurfaceFace) return false;
+    }
     return true;
   }
 
@@ -155,6 +164,17 @@ export class DriveSurfaceManager {
 
     const normal = hit.getNormal?.(true, true);
     if (!normal) return true;
+
+    const record = this.getSurfaceByMesh(hit.pickedMesh);
+    const normalFilterMode =
+      record?.tags?.normalFilterMode ??
+      hit.pickedMesh?.metadata?.normalFilterMode ??
+      "upwardY";
+
+    if (normalFilterMode === "absoluteY") {
+      return Math.abs(normal.y) >= minNormalY;
+    }
+
     return normal.y >= minNormalY;
   }
 

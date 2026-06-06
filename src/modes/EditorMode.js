@@ -45,7 +45,7 @@ export class EditorMode extends BaseMode {
       obstacleManager,
       trackSignManager,
       bannerStringManager,
-      bridgeManager,
+      bridgeMeshManager,
       steepSlopeColliderManager,
       surfaceDecalManager,
     } = await buildScene(engine, trackLoader, trackKey);
@@ -225,9 +225,9 @@ export class EditorMode extends BaseMode {
       }
     };
 
-    // Rebuild a specific bridge (or all bridges if feature is null)
-    window.rebuildBridge = (targetFeature = null) => {
-      bridgeManager.rebuildBridge(targetFeature);
+    // Rebuild a specific bridgeMesh (or all bridgeMesh features if null)
+    window.rebuildBridgeMesh = (targetFeature = null) => {
+      bridgeMeshManager.rebuild(currentTrack.features, targetFeature);
     };
 
     // Rebuild a specific polyHill (or all polyHills if feature is null)
@@ -311,6 +311,7 @@ export class EditorMode extends BaseMode {
     delete window.rebuildPolyHill;
     delete window.rebuildBezierWall;
     delete window.rebuildPolyCurb;
+    delete window.rebuildBridge;
     delete window.quickTestTrack;
     delete window.rebuildEditorScene;
 

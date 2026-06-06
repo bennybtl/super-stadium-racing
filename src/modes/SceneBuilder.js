@@ -27,7 +27,7 @@ import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { BannerStringManager } from "../managers/BannerStringManager.js";
 import { PickupManager } from "../managers/PickupManager.js";
-import { BridgeManager } from "../managers/BridgeManager.js";
+import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
@@ -423,7 +423,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
-  const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager, surfaceTopologyGraph);
+  const bridgeMeshManager = new BridgeMeshManager(scene, currentTrack, shadows, driveSurfaceManager);
   const surfaceDecalManager = new SurfaceDecalManager(scene, currentTrack, ground);
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
@@ -450,8 +450,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (feature.type === "bannerString") {
       bannerStringManager.createBanner(feature);
-    } else if (feature.type === "bridge") {
-      bridgeManager.createBridge(feature);
+    } else if (feature.type === "bridgeMesh") {
+      bridgeMeshManager.create(feature);
     } else if (feature.type === "surfaceDecal") {
       surfaceDecalManager.createDecal(feature);
     } else if (feature.type === 'hill' || feature.type === 'squareHill') {
@@ -482,7 +482,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     trackSignManager,
     bannerStringManager,
     pickupManager,
-    bridgeManager,
+    bridgeMeshManager,
     steepSlopeColliderManager,
     surfaceDecalManager,
     driveSurfaceManager,

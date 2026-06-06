@@ -430,48 +430,6 @@
       "checkpointNumber": 1
     },
     {
-      "type": "bridge",
-      "centerX": -59.87157835918343,
-      "centerZ": 24.172741451832735,
-      "width": 9,
-      "depth": 0,
-      "height": 3.25,
-      "thickness": 0.4,
-      "angle": 100,
-      "materialType": "rocky",
-      "transitionEnabled": true,
-      "transitionDepth": 11,
-      "collision": {
-        "endCaps": true,
-        "endCapsOnDepth": true,
-        "endCapsOnWidth": false,
-        "endCapThickness": 0.5,
-        "endCapDrop": 5
-      },
-      "transitionYOffset": -0.2
-    },
-    {
-      "type": "bridge",
-      "centerX": -13.50726555294812,
-      "centerZ": 7.041146988787666,
-      "width": 9,
-      "depth": 0,
-      "height": 3.25,
-      "thickness": 0.4,
-      "angle": 100,
-      "materialType": "rocky",
-      "transitionEnabled": true,
-      "transitionDepth": 11,
-      "collision": {
-        "endCaps": true,
-        "endCapsOnDepth": true,
-        "endCapsOnWidth": false,
-        "endCapThickness": 0.5,
-        "endCapDrop": 5
-      },
-      "transitionYOffset": -0.5
-    },
-    {
       "type": "polyWall",
       "points": [
         {

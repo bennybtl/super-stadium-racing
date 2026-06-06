@@ -28,7 +28,7 @@
     <ActionZonePanel />
     <PolyCurbPanel />
     <MeshGridPanel />
-    <BridgePanel />
+    <BridgeMeshPanel />
     <AiPathPanel />
     <TerrainPathPanel />
     <SurfaceDecalPanel />
@@ -61,7 +61,7 @@ import TrackSettingsPanel from './editor/TrackSettingsPanel.vue';
 import ActionZonePanel    from './editor/ActionZonePanel.vue';
 import PolyCurbPanel      from './editor/PolyCurbPanel.vue';
 import MeshGridPanel      from './editor/MeshGridPanel.vue';
-import BridgePanel        from './editor/BridgePanel.vue';
+import BridgeMeshPanel    from './editor/BridgeMeshPanel.vue';
 import AiPathPanel        from './editor/AiPathPanel.vue';
 import TerrainPathPanel   from './editor/TerrainPathPanel.vue';
 import SurfaceDecalPanel  from './editor/SurfaceDecalPanel.vue';

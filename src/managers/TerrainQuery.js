@@ -34,6 +34,7 @@ import { Ray, Vector3 } from "@babylonjs/core";
 // without smearing over large-scale curvature changes.
 const SAMPLE_DIST = 0.5;
 const MIN_DRIVABLE_NORMAL_Y = 0.15;
+const MAX_UPWARD_FALLBACK_RISE = 1.0;
 
 export class TerrainQuery {
   constructor(scene) {
@@ -99,7 +100,10 @@ export class TerrainQuery {
         fromY - 0.05,
         likelyPenetrated ? (fromY - hit.pickedPoint.y + 1) : 50
       );
-      if (upHit?.hit && upHit.pickedPoint) {
+      const upRise = (upHit?.hit && upHit.pickedPoint)
+        ? (upHit.pickedPoint.y - fromY)
+        : Infinity;
+      if (upHit?.hit && upHit.pickedPoint && upRise <= MAX_UPWARD_FALLBACK_RISE) {
         hit = upHit;
         usedUpward = true;
       } else if (downMissed) {
@@ -110,6 +114,10 @@ export class TerrainQuery {
     }
 
     const hitY = hit.pickedPoint.y;
+    const resolvedSurface = this._resolveSurfaceInfo(hit);
+    const probeLayer = Number.isFinite(resolvedSurface?.surfaceLevel)
+      ? resolvedSurface.surfaceLevel
+      : undefined;
 
     // -------------------------------------------------------------------------
     // Normal computation — cross-pattern height sampling.
@@ -123,10 +131,10 @@ export class TerrainQuery {
     //       yPZ
     // -------------------------------------------------------------------------
     const probeFromY = hitY + 5; // always above the surface
-    const yPX = this._probeHeight(x + SAMPLE_DIST, z,             probeFromY) ?? hitY;
-    const yNX = this._probeHeight(x - SAMPLE_DIST, z,             probeFromY) ?? hitY;
-    const yPZ = this._probeHeight(x,               z + SAMPLE_DIST, probeFromY) ?? hitY;
-    const yNZ = this._probeHeight(x,               z - SAMPLE_DIST, probeFromY) ?? hitY;
+    const yPX = this._probeHeight(x + SAMPLE_DIST, z,               probeFromY, probeLayer) ?? hitY;
+    const yNX = this._probeHeight(x - SAMPLE_DIST, z,               probeFromY, probeLayer) ?? hitY;
+    const yPZ = this._probeHeight(x,               z + SAMPLE_DIST, probeFromY, probeLayer) ?? hitY;
+    const yNZ = this._probeHeight(x,               z - SAMPLE_DIST, probeFromY, probeLayer) ?? hitY;
 
     // tanX points in the +X direction across the surface.
     // tanZ points in the +Z direction across the surface.
@@ -145,12 +153,17 @@ export class TerrainQuery {
     // suppresses per-triangle faceting artifacts over bumpy displacement.
     // Skip the blend when the hit came from the upward fallback — getNormal() on
     // a back-face returns a downward-pointing normal that corrupts the result.
-    const rayNormal = usedUpward ? null : hit.getNormal(true, true);
+    let rayNormal = usedUpward ? null : hit.getNormal(true, true);
+    if (rayNormal && Vector3.Dot(rayNormal, crossNormal) < 0) {
+      // Some custom meshes can report opposite-facing triangle normals.
+      // Flip to match the sampled slope frame so pitch/roll remain correct.
+      rayNormal = rayNormal.scale(-1);
+    }
     const normal = rayNormal
       ? Vector3.Normalize(crossNormal.add(rayNormal).scale(0.5))
       : crossNormal;
 
-    this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
+    this._lastResolvedSurface = resolvedSurface;
 
     return { y: hitY, normal };
   }
@@ -191,7 +204,10 @@ export class TerrainQuery {
     this._rayUp.origin.set(x, fromY - 0.05, z);
     this._rayUp.length = 50;
     hit = this._pickUp(x, z, fromY - 0.05, 50);
-    if (hit?.hit && hit.pickedPoint) {
+    const upRise = (hit?.hit && hit.pickedPoint)
+      ? (hit.pickedPoint.y - fromY)
+      : Infinity;
+    if (hit?.hit && hit.pickedPoint && upRise <= MAX_UPWARD_FALLBACK_RISE) {
       this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
       return hit.pickedPoint.y;
     }
@@ -209,15 +225,17 @@ export class TerrainQuery {
    * Uses the dedicated _rayProbe object so it never clobbers _rayDown mid-frame.
    * @returns {number|null}
    */
-  _probeHeight(x, z, fromY) {
-    const hit = this._pickDown(x, z, fromY, fromY + 50);
+  _probeHeight(x, z, fromY, layer = undefined) {
+    const hit = this._pickDown(x, z, fromY, fromY + 50, layer);
     return hit?.hit && hit.pickedPoint ? hit.pickedPoint.y : null;
   }
 
-  _pickDown(x, z, fromY, maxDistance) {
+  _pickDown(x, z, fromY, maxDistance, layer = undefined) {
     if (this._driveSurfaceManager?.castDownToDriveSurface) {
       const res = this._driveSurfaceManager.castDownToDriveSurface(x, z, fromY, {
         role: "drive",
+        surfaceFace: "top",
+        ...(Number.isFinite(layer) ? { layer } : {}),
         maxDistance,
         minNormalY: MIN_DRIVABLE_NORMAL_Y,
       });
@@ -233,6 +251,7 @@ export class TerrainQuery {
     if (this._driveSurfaceManager?.castUpToDriveSurface) {
       const res = this._driveSurfaceManager.castUpToDriveSurface(x, z, fromY, {
         role: "drive",
+        surfaceFace: "top",
         maxDistance,
         minNormalY: MIN_DRIVABLE_NORMAL_Y,
       });
@@ -254,6 +273,7 @@ export class TerrainQuery {
         surfaceId: record.surfaceId,
         surfaceType: record.surfaceType ?? "generic",
         surfaceKind: record.tags?.surfaceKind ?? "unknown",
+        surfaceFace: record.tags?.surfaceFace ?? "top",
         surfaceLevel: record.level ?? 0,
       };
     }
@@ -262,6 +282,7 @@ export class TerrainQuery {
       surfaceId: mesh.metadata?.surfaceId ?? null,
       surfaceType: mesh.metadata?.surfaceType ?? "generic",
       surfaceKind: mesh.metadata?.surfaceKind ?? "unknown",
+      surfaceFace: mesh.metadata?.surfaceFace ?? "top",
       surfaceLevel: mesh.metadata?.level ?? 0,
     };
   }
