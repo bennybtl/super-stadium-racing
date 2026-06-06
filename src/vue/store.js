@@ -359,6 +359,7 @@ export const useEditorStore = defineStore('editor', () => {
     contentType: 'text', // 'text' | 'brand'
     brandImage: 'energizer-racing.png',
     background: 'black', // 'black' | 'white'
+    primaryColor: 'red',
     scale: 1,
     heightOffset: 0,
     width: 10,
@@ -649,6 +650,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackSignContentType(val) { trackSign.contentType = val; _bridge.value?.changeTrackSignContentType(val); }
   function setTrackSignBrandImage(val)  { trackSign.brandImage = val; _bridge.value?.changeTrackSignBrandImage(val); }
   function setTrackSignBackground(val)  { trackSign.background = val; _bridge.value?.changeTrackSignBackground(val); }
+  function setTrackSignPrimaryColor(val){ trackSign.primaryColor = val; _bridge.value?.changeTrackSignPrimaryColor(val); }
   function setTrackSignScale(val)       { trackSign.scale = val; _bridge.value?.changeTrackSignScale(val); }
   function setTrackSignHeightOffset(val){ trackSign.heightOffset = val; _bridge.value?.changeTrackSignHeightOffset(val); }
   function setTrackSignWidth(val)       { trackSign.width = val; _bridge.value?.changeTrackSignWidth(val); }
@@ -820,7 +822,7 @@ export const useEditorStore = defineStore('editor', () => {
     duplicateDecoration, closeDecoration, addDecoration,
     trackSign,
     setTrackSignName, setTrackSignRotation,
-    setTrackSignContentType, setTrackSignBrandImage, setTrackSignBackground,
+    setTrackSignContentType, setTrackSignBrandImage, setTrackSignBackground, setTrackSignPrimaryColor,
     setTrackSignScale, setTrackSignHeightOffset, setTrackSignWidth,
     deleteTrackSign, duplicateTrackSign, closeTrackSign,
     bannerString,

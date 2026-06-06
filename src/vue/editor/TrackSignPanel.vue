@@ -54,6 +54,21 @@
       <option value="yellow">Yellow</option>
     </select>
 
+    <!-- Primary color (text + border) -->
+    <div class="text-[12px] mb-1">Primary Color</div>
+    <select
+      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+      :value="editor.trackSign.primaryColor"
+      @change="editor.setTrackSignPrimaryColor($event.target.value)"
+    >
+      <option value="black">Black</option>
+      <option value="gray">Gray</option>
+      <option value="white">White</option>
+      <option value="red">Red</option>
+      <option value="blue">Blue</option>
+      <option value="yellow">Yellow</option>
+    </select>
+
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Width</span>
@@ -106,7 +121,7 @@
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <div class="flex gap-2 mb-3">
+    <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.deleteTrackSign()"

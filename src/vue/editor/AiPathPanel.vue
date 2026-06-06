@@ -22,7 +22,6 @@
     </div>
 
       <template v-if="activeTab === 'path'">
-      <div class="text-slate-200 text-sm font-medium mb-1">Click terrain to add a waypoint. Click an existing waypoint to select it.</div>
 
       <div class="flex gap-2 mb-3">
         <button
@@ -116,7 +115,7 @@
       </div>
 
       <div class="text-[10px] text-slate-400">
-        Click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
+        Right-Click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
       </div>
     </template>
 

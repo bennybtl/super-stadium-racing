@@ -60,6 +60,7 @@ export class TrackSign {
     feature.contentType = feature.contentType ?? 'text';
     feature.brandImage = feature.brandImage ?? 'energizer-racing.png';
     feature.background = feature.background ?? 'black';
+    feature.primaryColor = feature.primaryColor ?? 'red';
     feature.scale = feature.scale ?? 1;
     feature.heightOffset = feature.heightOffset ?? 0;
     feature.width = Math.max(MIN_BANNER_W, Math.min(MAX_BANNER_W, feature.width ?? BASE_BANNER_W));
@@ -235,13 +236,15 @@ export class TrackSign {
   }
 
   _drawBorder(ctx) {
-    ctx.strokeStyle = this.feature.background === 'white' ? '#151515' : '#cc0000';
+    const primary = basicColors[this.feature.primaryColor] ?? basicColors.red;
+    ctx.strokeStyle = primary.emissive.toHexString();
     ctx.lineWidth = 8;
     ctx.strokeRect(4, 4, TEX_W - 8, TEX_H - 8);
   }
 
   _drawTextContent(ctx, text) {
-    const color = '#ff2222';
+    const primary = basicColors[this.feature.primaryColor] ?? basicColors.red;
+    const color = primary.diffuse.toHexString();
     this._drawFittedCenteredText(ctx, text, color, 180);
   }
 
@@ -284,6 +287,11 @@ export class TrackSign {
   setBackground(background) {
     this.feature.background = background;
     this._updateBackFaceColor();
+    this._drawContent();
+  }
+
+  setPrimaryColor(primaryColor) {
+    this.feature.primaryColor = primaryColor;
     this._drawContent();
   }
 

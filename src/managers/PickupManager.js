@@ -83,8 +83,9 @@ export class PickupManager {
 
   /**
    * Returns up to `count` positions spaced at least MIN_PICKUP_DIST apart.
-   * If the track has one or more "pickupSpawn" action zones, positions are
-   * constrained to those circles; otherwise the full track surface is used.
+   * If the track has one or more "pickupSpawn" action zones, exactly one
+   * pickup position is generated per zone feature; otherwise the full track
+   * surface is used with the requested count.
    */
   _generatePositions(count) {
     if (count <= 0) return [];
@@ -94,7 +95,7 @@ export class PickupManager {
     );
 
     return spawnZones.length > 0
-      ? this._generatePositionsInZones(count, spawnZones)
+      ? this._generateOnePositionPerZone(spawnZones)
       : this._generatePositionsRandom(count);
   }
 
@@ -119,55 +120,44 @@ export class PickupManager {
   }
 
   /**
-   * Scatter positions within the supplied circular zones.
-   * Zones are weighted by area (radius²) so larger zones receive proportionally
-   * more pickups.  A uniform-disk distribution (√rand · r) is used so points
-   * don't bunch up at the centre.
+   * Generate one spawn position per action-zone feature.
+   * This ensures polygon zones do not create extra pickups based on point count.
    */
-  _generatePositionsInZones(count, zones) {
-    const positions   = [];
-    let attempts      = 0;
-    const maxAttempts = count * 60;
+  _generateOnePositionPerZone(zones) {
+    const positions = [];
+    for (const zone of zones) {
+      let chosen = null;
 
-    // Pre-compute cumulative area weights for weighted zone selection
-    const weights = zones.map(z => Math.max(1, this._zoneArea(z)));
-    const totalWeight = weights.reduce((s, w) => s + w, 0);
+      // Try a few candidate points to keep zone pickups reasonably separated.
+      for (let i = 0; i < 24; i++) {
+        const candidate = this._randomPointInZone(zone);
+        if (!Number.isFinite(candidate.x) || !Number.isFinite(candidate.z)) continue;
 
-    while (positions.length < count && attempts < maxAttempts) {
-      attempts++;
-
-      // Pick a zone weighted by area
-      let pick = Math.random() * totalWeight;
-      let zone = zones[zones.length - 1];
-      for (let i = 0; i < zones.length; i++) {
-        pick -= weights[i];
-        if (pick <= 0) { zone = zones[i]; break; }
+        const tooClose = positions.some(p => {
+          const dx = p.x - candidate.x;
+          const dz = p.z - candidate.z;
+          return Math.sqrt(dx * dx + dz * dz) < MIN_PICKUP_DIST;
+        });
+        if (!tooClose) {
+          chosen = candidate;
+          break;
+        }
       }
 
-      const { x, z } = this._randomPointInZone(zone);
-      if (!Number.isFinite(x) || !Number.isFinite(z)) continue;
+      // Fallback to any valid sample so each zone still contributes one pickup.
+      if (!chosen) {
+        for (let i = 0; i < 12; i++) {
+          const candidate = this._randomPointInZone(zone);
+          if (Number.isFinite(candidate.x) && Number.isFinite(candidate.z)) {
+            chosen = candidate;
+            break;
+          }
+        }
+      }
 
-      const tooClose = positions.some(p => {
-        const dx = p.x - x, dz = p.z - z;
-        return Math.sqrt(dx * dx + dz * dz) < MIN_PICKUP_DIST;
-      });
-      if (!tooClose) positions.push({ x, z });
+      if (chosen) positions.push(chosen);
     }
     return positions;
-  }
-
-  _zoneArea(zone) {
-    if (zone?.shape === 'polygon' && Array.isArray(zone.points) && zone.points.length >= 3) {
-      // Shoelace area
-      let area = 0;
-      const pts = zone.points;
-      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-        area += (pts[j].x * pts[i].z) - (pts[i].x * pts[j].z);
-      }
-      return Math.abs(area) * 0.5;
-    }
-    const r = Math.max(0, zone?.radius ?? 0);
-    return Math.PI * r * r;
   }
 
   _pointInZone(x, z, zone) {

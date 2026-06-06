@@ -14,7 +14,7 @@
     "scaling":  [1, 1, 1]
   },
   "physicsBox": {
-    "width": 1.5,
+    "width": 1.2,
     "height": 0.8,
     "depth": 3.0
   },

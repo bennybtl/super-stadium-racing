@@ -180,8 +180,7 @@ export class Bridge {
       const rampHeight = Math.max(0.001, topY - bottomY);
       const halfDepth = depthLength / 2;
       const halfWidth = width / 2;
-      const halfRampHeight = rampHeight / 2;
-      const centerY = bottomY + halfRampHeight / 2;
+      const centerY = bottomY + rampHeight / 2;
       const rotY = angleY + (sign === -1 ? Math.PI : 0);
       const cosY = Math.cos(rotY);
       const sinY = Math.sin(rotY);
@@ -217,7 +216,7 @@ export class Bridge {
       colliders.push(makeCollider(
         `bridge_ramp_collider_side_left_${sign}_${feature.centerX}_${feature.centerZ}`,
         wallThickness,
-        halfRampHeight,
+        rampHeight,
         depthLength - 2,
         -halfWidth + wallThickness,
         halfDepth,
@@ -226,7 +225,7 @@ export class Bridge {
       colliders.push(makeCollider(
         `bridge_ramp_collider_side_right_${sign}_${feature.centerX}_${feature.centerZ}`,
         wallThickness,
-        halfRampHeight,
+        rampHeight,
         depthLength - 2,
         halfWidth - wallThickness,
         halfDepth,
@@ -249,7 +248,7 @@ export class Bridge {
         const groundY = this.track.getHeightAt(endX, endZ);
         const rampBottomY = groundY + transitionYOffset;
         const ramp = createRampMesh(sign, startX, startZ, deckTopY, rampBottomY);
-        const rampColliders = createRampColliderPerimeter(sign, startX, startZ, rampBottomY + thickness, rampBottomY - thickness);
+        const rampColliders = createRampColliderPerimeter(sign, startX, startZ, deckTopY, rampBottomY);
 
         if (this._driveSurfaceManager) {
           this._driveSurfaceManager.register(ramp, {

@@ -4,6 +4,11 @@ export const DEFAULT_STEERING_CONFIG = {
   avoidanceRadius: 10,
   avoidanceMaxPush: 6,
   avoidanceIgnoreBehind: 3,
+  collisionProbeStart: 3,
+  collisionProbeEnd: 20,
+  collisionProbeStep: 2,
+  collisionProbeLateral: 3.5,
+  collisionAvoidanceMaxPush: 6,
   steeringSmooth: 0.18,
   steeringThreshold: 0.05,
 };
@@ -20,6 +25,11 @@ export class AISteeringController {
     this.avoidanceRadius = config.avoidanceRadius ?? DEFAULT_STEERING_CONFIG.avoidanceRadius;
     this.avoidanceMaxPush = config.avoidanceMaxPush ?? DEFAULT_STEERING_CONFIG.avoidanceMaxPush;
     this.avoidanceIgnoreBehind = config.avoidanceIgnoreBehind ?? DEFAULT_STEERING_CONFIG.avoidanceIgnoreBehind;
+    this.collisionProbeStart = Math.max(1, config.collisionProbeStart ?? DEFAULT_STEERING_CONFIG.collisionProbeStart);
+    this.collisionProbeEnd = Math.max(this.collisionProbeStart + 1, config.collisionProbeEnd ?? DEFAULT_STEERING_CONFIG.collisionProbeEnd);
+    this.collisionProbeStep = Math.max(0.5, config.collisionProbeStep ?? DEFAULT_STEERING_CONFIG.collisionProbeStep);
+    this.collisionProbeLateral = Math.max(0.5, config.collisionProbeLateral ?? DEFAULT_STEERING_CONFIG.collisionProbeLateral);
+    this.collisionAvoidanceMaxPush = Math.max(0, config.collisionAvoidanceMaxPush ?? DEFAULT_STEERING_CONFIG.collisionAvoidanceMaxPush);
     this.steeringSmooth = config.steeringSmooth ?? DEFAULT_STEERING_CONFIG.steeringSmooth;
     this.steeringThreshold = config.steeringThreshold ?? DEFAULT_STEERING_CONFIG.steeringThreshold;
 
@@ -63,6 +73,14 @@ export class AISteeringController {
 
     lateralOffset = Math.max(-this.avoidanceMaxPush, Math.min(this.avoidanceMaxPush, lateralOffset));
 
+    // Collision-body avoidance: probe blocked cells ahead and nudge the virtual
+    // target away from nearby wall/curb/collider lanes before impact.
+    const collisionOffset = this._computeCollisionAvoidanceOffset(position, forward, rightVec);
+    lateralOffset += collisionOffset;
+
+    const maxTotalOffset = this.avoidanceMaxPush + this.collisionAvoidanceMaxPush;
+    lateralOffset = Math.max(-maxTotalOffset, Math.min(maxTotalOffset, lateralOffset));
+
     const virtualTarget = {
       x: targetWaypoint.x + rightVec.x * lateralOffset,
       z: targetWaypoint.z + rightVec.z * lateralOffset,
@@ -91,5 +109,60 @@ export class AISteeringController {
     turnStrength = this._smoothedTurn;
 
     return { forward, rightVec, turnStrength };
+  }
+
+  _computeCollisionAvoidanceOffset(position, forward, rightVec) {
+    const driver = this.driver;
+    if (!driver?.worldToGrid || !driver?.isBlocked || this.collisionAvoidanceMaxPush <= 0) {
+      return 0;
+    }
+
+    const isBlockedAt = (dist, lateral = 0) => {
+      const sampleX = position.x + forward.x * dist + rightVec.x * lateral;
+      const sampleZ = position.z + forward.z * dist + rightVec.z * lateral;
+      const cell = driver.worldToGrid(sampleX, sampleZ);
+      return driver.isBlocked(cell.x, cell.z);
+    };
+
+    const start = this.collisionProbeStart;
+    const end = this.collisionProbeEnd;
+    const step = this.collisionProbeStep;
+    const lateral = this.collisionProbeLateral;
+    const farLateral = lateral * 1.8;
+    const span = Math.max(1e-6, end - start);
+
+    let push = 0;
+    let samples = 0;
+
+    for (let dist = start; dist <= end; dist += step) {
+      const proximity = 1 - (dist - start) / span;
+
+      const centerBlocked = isBlockedAt(dist, 0);
+      const rightNearBlocked = isBlockedAt(dist, lateral);
+      const leftNearBlocked = isBlockedAt(dist, -lateral);
+      const rightFarBlocked = isBlockedAt(dist, farLateral);
+      const leftFarBlocked = isBlockedAt(dist, -farLateral);
+
+      if (rightNearBlocked) push -= proximity * 1.0;
+      if (leftNearBlocked) push += proximity * 1.0;
+      if (rightFarBlocked) push -= proximity * 0.6;
+      if (leftFarBlocked) push += proximity * 0.6;
+
+      if (centerBlocked) {
+        if (leftNearBlocked !== rightNearBlocked) {
+          push += (leftNearBlocked ? 1.2 : -1.2) * proximity;
+        } else if (leftFarBlocked !== rightFarBlocked) {
+          push += (leftFarBlocked ? 0.8 : -0.8) * proximity;
+        }
+      }
+
+      samples += 1;
+    }
+
+    if (samples <= 0) return 0;
+
+    const normalized = push / samples;
+    const offset = normalized * this.collisionAvoidanceMaxPush;
+    return Math.max(-this.collisionAvoidanceMaxPush, Math.min(this.collisionAvoidanceMaxPush, offset));
   }
 }

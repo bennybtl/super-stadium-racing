@@ -1543,6 +1543,7 @@ export class EditorController {
   changeTrackSignContentType(val) { this.trackSignEditor.changeContentType(val); }
   changeTrackSignBrandImage(val) { this.trackSignEditor.changeBrandImage(val); }
   changeTrackSignBackground(val) { this.trackSignEditor.changeBackground(val); }
+  changeTrackSignPrimaryColor(val) { this.trackSignEditor.changePrimaryColor(val); }
   changeTrackSignScale(val) { this.trackSignEditor.changeScale(val); }
   changeTrackSignHeightOffset(val) { this.trackSignEditor.changeHeightOffset(val); }
   changeTrackSignWidth(val) { this.trackSignEditor.changeWidth(val); }

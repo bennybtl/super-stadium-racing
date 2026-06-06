@@ -3,11 +3,11 @@
   "packId": "offroad_pack_2",
   "hidden": false,
   "name": "Redoubt-About",
-  "image": "redoubt_about.jpg",
+  "image": "redoubt_about.png",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
-  "borderTerrainType": "packed_dirt",
+  "borderTerrainType": "mud",
   "wear": {
     "enabled": true,
     "source": "aiPath",
@@ -82,7 +82,7 @@
           "radius": 0
         }
       ],
-      "height": 8.5,
+      "height": 6,
       "width": 27.5,
       "terrainType": "loose_dirt",
       "closed": false,
@@ -229,12 +229,13 @@
       "background": "black",
       "scale": 1,
       "heightOffset": 0,
-      "width": 10
+      "width": 10,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
-      "x": 2.298741468798452,
-      "z": -48.432028524409446,
+      "x": 15.574325938716465,
+      "z": -52.920566742690006,
       "name": "Redoubt About",
       "rotation": 0,
       "contentType": "text",
@@ -242,7 +243,8 @@
       "background": "black",
       "scale": 1.7,
       "heightOffset": 2.1,
-      "width": 10
+      "width": 10,
+      "primaryColor": "red"
     },
     {
       "type": "hill",
@@ -419,12 +421,12 @@
           "z": -52.71634772791861
         },
         {
-          "x": -54.55726183790729,
-          "z": 15.913721548557366
+          "x": -56.01217990112367,
+          "z": 17.818084425811254
         },
         {
-          "x": -35.23161303772412,
-          "z": 47.814118530437675
+          "x": -35.60576007322678,
+          "z": 48.27342069177458
         },
         {
           "x": 46.52739507695701,
@@ -435,16 +437,16 @@
           "z": 26.88904696328765
         },
         {
-          "x": -8.477584155697993,
-          "z": 6.179277026014627
+          "x": -8.686617490781032,
+          "z": 5.238214362489994
         },
         {
           "x": -6.570954120404245,
           "z": -14.631131379089148
         },
         {
-          "x": 42.92030219603014,
-          "z": -33.3585889219912
+          "x": 32.70413091459539,
+          "z": -31.532126665818424
         },
         {
           "x": 46.26713676567975,
@@ -460,7 +462,7 @@
           "id": "branch_1",
           "fromMainIndex": 0,
           "toMainIndex": 3,
-          "weight": 1,
+          "weight": 0.4,
           "points": [
             {
               "x": -27.51,
@@ -488,7 +490,7 @@
           "id": "branch_2",
           "fromMainIndex": 5,
           "toMainIndex": 8,
-          "weight": 1,
+          "weight": 0.3,
           "points": [
             {
               "x": 52.878616438835806,
@@ -509,6 +511,138 @@
           ]
         }
       ]
+    },
+    {
+      "type": "trackSign",
+      "x": -7.378380099093919,
+      "z": -52.117172331297,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "luck-dice.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 32.47141899948149,
+      "z": -4.818460690952833,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "phoenix-auto.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 59.509425031553306,
+      "z": -4.79930801212096,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "power-lube.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 15.25207762005197,
+      "z": 38.74264622129712,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "rally-master.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -11.723331282435591,
+      "z": 38.92980819410789,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -35.79849224932005,
+      "z": 26.98313220337659,
+      "name": "Track Name",
+      "rotation": -0.9424777960769379,
+      "contentType": "brand",
+      "brandImage": "ultra-grip.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "flag",
+      "x": 41.622103353950145,
+      "z": -48.91785994439644,
+      "color": "black"
+    },
+    {
+      "type": "flag",
+      "x": -6.0699780118922,
+      "z": -3.8826676802141122,
+      "color": "black"
+    },
+    {
+      "type": "flag",
+      "x": 46.673746457754724,
+      "z": 39.48197969931728,
+      "color": "black"
+    },
+    {
+      "type": "bannerString",
+      "x": 4.405900726929074,
+      "z": -68.34202175651313,
+      "heading": 1.6231562043547265,
+      "width": 27,
+      "poleHeight": 10
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 67.04813344406625,
+      "centerZ": -70.16852037549134,
+      "terrainType": "mud",
+      "width": 23,
+      "depth": 10,
+      "rotation": 40,
+      "blendWidth": 1.5
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -22.967266010882593,
+      "centerZ": -36.53693875412445,
+      "terrainType": "mud",
+      "width": 23,
+      "depth": 10,
+      "rotation": 143,
+      "blendWidth": 1.5
     }
   ]
 }

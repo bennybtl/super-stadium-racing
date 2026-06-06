@@ -83,6 +83,8 @@ export class Truck {
 
     // Terrain physics LOD: far AI trucks can use a cheaper suspension path.
     this._terrainPhysicsLodFarDistanceSq = 55 * 55;
+    // Keep full terrain sampling at speed so AI doesn't miss ramp/bridge transitions.
+    this._terrainPhysicsLodMaxSpeed = 12;
 
     // Reused debug payload to avoid per-frame object allocation.
     this._debugInfo = {
@@ -265,8 +267,14 @@ export class Truck {
       const dx = this.mesh.position.x - effectsFocusPosition.x;
       const dz = this.mesh.position.z - effectsFocusPosition.z;
       const distSq = dx * dx + dz * dz;
+      const preTerrainHSpeed = Math.sqrt(
+        this.state.velocity.x * this.state.velocity.x +
+        this.state.velocity.z * this.state.velocity.z
+      );
       terrainDistance = Math.sqrt(distSq);
-      terrainLowDetail = distSq > this._terrainPhysicsLodFarDistanceSq;
+      terrainLowDetail =
+        distSq > this._terrainPhysicsLodFarDistanceSq &&
+        preTerrainHSpeed <= this._terrainPhysicsLodMaxSpeed;
     }
 
     const { groundedness, penetration } = profile(

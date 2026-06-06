@@ -4,10 +4,6 @@
     title="Terrain Path"
     @close="editor.closeTerrainPath()"
   >
-    <div class="mb-3 rounded-xl border border-slate-700 bg-slate-950/50 p-3">
-      <div class="text-slate-200 text-sm font-medium mb-1">Terrain path editing mode</div>
-      <div class="text-slate-400 text-[11px]">Right-click terrain to add a waypoint. Click an existing waypoint to select it.</div>
-    </div>
 
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -21,7 +17,8 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <div class="flex justify-between mb-1 text-[12px]">
+    <!-- Edge blend -->
+     <div class="flex justify-between mb-1 text-[12px]">
       <span>Edge Blend</span>
       <span>{{ editor.terrainPath.blendWidth.toFixed(1) }}</span>
     </div>
@@ -49,19 +46,21 @@
       @update:modelValue="editor.setTerrainPathTerrainType"
     />
 
-    <button
-      class="w-full rounded-md bg-slate-800 text-white py-2 text-[13px] font-sans mb-2 hover:bg-slate-700"
-      @click="editor.deleteTerrainPathWaypoint()"
-    >
-      Delete selected waypoint
-    </button>
+    <div class="flex gap-2">
+      <button
+          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.deleteTerrainPathWaypoint()"
+      >
+        Delete selected waypoint
+      </button>
 
-    <button
-      class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-3 hover:bg-rose-500"
-      @click="editor.clearTerrainPath()"
-    >
-      Clear path
-    </button>
+      <button
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        @click="editor.clearTerrainPath()"
+      >
+        Clear path
+      </button>
+    </div>
 
     <div class="text-[10px] text-slate-400">
       Right-click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.

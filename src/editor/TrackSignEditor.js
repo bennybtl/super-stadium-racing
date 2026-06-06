@@ -68,6 +68,7 @@ export class TrackSignEditor {
     s.trackSign.contentType = signObj.feature.contentType ?? 'text';
     s.trackSign.brandImage = signObj.feature.brandImage ?? TRACK_SIGN_BRANDS[0].value;
     s.trackSign.background = signObj.feature.background ?? 'black';
+    s.trackSign.primaryColor = signObj.feature.primaryColor ?? 'red';
     s.trackSign.scale = signObj.feature.scale ?? 1;
     s.trackSign.heightOffset = signObj.feature.heightOffset ?? 0;
     s.trackSign.width = signObj.feature.width ?? 10;
@@ -119,6 +120,7 @@ export class TrackSignEditor {
       contentType: 'text',
       brandImage: TRACK_SIGN_BRANDS[0].value,
       background: 'black',
+      primaryColor: 'red',
       scale: 1,
       heightOffset: 0,
       width: 10,
@@ -182,6 +184,13 @@ export class TrackSignEditor {
     if (!this._selected) return;
     this._selected.setBackground(val);
     this.editor._editorStore.trackSign.background = val;
+    this.editor.saveSnapshot(true);
+  }
+
+  changePrimaryColor(val) {
+    if (!this._selected) return;
+    this._selected.setPrimaryColor(val);
+    this.editor._editorStore.trackSign.primaryColor = val;
     this.editor.saveSnapshot(true);
   }
 

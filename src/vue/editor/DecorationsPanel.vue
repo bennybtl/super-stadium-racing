@@ -79,7 +79,7 @@
       <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
     </template>
     <!-- Actions -->
-    <div class="flex gap-2 mb-3">
+    <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.deleteDecoration()">Delete</button>
