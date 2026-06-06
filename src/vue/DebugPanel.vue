@@ -16,11 +16,21 @@
     <div class="flex justify-between mb-1"><span class="text-slate-400">Surface Type:</span><span class="text-emerald-400">{{ debug.data.surfaceType }}</span></div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Surface Kind:</span><span class="text-emerald-400">{{ debug.data.surfaceKind }}</span></div>
     <div class="flex justify-between mb-2"><span class="text-slate-400">Surface Level:</span><span class="text-emerald-400">{{ debug.data.surfaceLevel }}</span></div>
+    <div class="flex justify-between mb-1"><span class="text-slate-400">Topology Nodes:</span><span class="text-emerald-400">{{ debug.data.topologyNodes }}</span></div>
+    <div class="flex justify-between mb-1"><span class="text-slate-400">Topology Edges:</span><span class="text-emerald-400">{{ debug.data.topologyConnectors }}</span></div>
+    <div class="flex justify-between mb-2"><span class="text-slate-400">Connectors:</span><span class="text-emerald-400 text-right max-w-[170px] truncate">{{ debug.data.topologySummary }}</span></div>
     <div class="flex justify-between mb-2"><span class="text-slate-400">Normal:</span><span class="text-emerald-400">{{ debug.data.nx }}, {{ debug.data.ny }}, {{ debug.data.nz }}</span></div>
     <div class="flex items-center gap-2 mt-2 pointer-events-auto">
       <button v-if="!debug.recording" @click="debug.startRecording()" class="rounded border border-emerald-400 bg-slate-900 px-2 py-1 text-[11px] text-emerald-400 hover:bg-slate-800">⏺ Record</button>
       <button v-else @click="debug.stopRecording()" class="rounded border border-red-400 bg-slate-900 px-2 py-1 text-[11px] text-red-400 hover:bg-slate-800 animate-[blink_1s_step-start_infinite]">⏹ Stop</button>
       <button @click="debug.dumpLog()" class="rounded border border-emerald-400 bg-slate-900 px-2 py-1 text-[11px] text-emerald-400 hover:bg-slate-800">⬇ Dump</button>
+      <button
+        @click="debug.toggleBridgeDriveSurfaces()"
+        class="rounded border bg-slate-900 px-2 py-1 text-[11px] hover:bg-slate-800"
+        :class="debug.showBridgeDriveSurfaces ? 'border-amber-300 text-amber-300' : 'border-emerald-400 text-emerald-400'"
+      >
+        {{ debug.showBridgeDriveSurfaces ? 'Hide Proxies' : 'Show Proxies' }}
+      </button>
       <span class="text-slate-400 text-[11px]" v-if="debug.frameCount > 0">{{ debug.frameCount }} frames</span>
     </div>
   </div>

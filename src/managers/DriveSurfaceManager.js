@@ -33,6 +33,13 @@ export class DriveSurfaceManager {
     });
   }
 
+  registerBoundary(mesh, options = {}) {
+    return this._surfaceRegistry.registerSurface(mesh, {
+      ...options,
+      role: "boundary",
+    });
+  }
+
   unregisterByMesh(mesh) {
     this._surfaceRegistry.unregisterByMesh(mesh);
   }

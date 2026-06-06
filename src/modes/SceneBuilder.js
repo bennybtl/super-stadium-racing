@@ -29,6 +29,7 @@ import { BannerStringManager } from "../managers/BannerStringManager.js";
 import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeManager } from "../managers/BridgeManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
+import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
 import { createHill } from "../objects/Hill.js";
@@ -59,9 +60,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
   const driveSurfaceManager = new DriveSurfaceManager(scene);
+  const surfaceTopologyGraph = new SurfaceTopologyGraph(scene);
   scene.metadata = {
     ...(scene.metadata ?? {}),
     driveSurfaceManager,
+    surfaceTopologyGraph,
   };
 
   // -- Physics --
@@ -420,7 +423,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
-  const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager);
+  const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager, surfaceTopologyGraph);
   const surfaceDecalManager = new SurfaceDecalManager(scene, currentTrack, ground);
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
@@ -483,5 +486,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
     steepSlopeColliderManager,
     surfaceDecalManager,
     driveSurfaceManager,
+    surfaceTopologyGraph,
   };
 }

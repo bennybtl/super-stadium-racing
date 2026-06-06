@@ -4,11 +4,12 @@ import { Bridge } from "../objects/Bridge.js";
  * BridgeManager — creates and manages bridge objects on the track.
  */
 export class BridgeManager {
-  constructor(scene, track, shadows, driveSurfaceManager = null) {
+  constructor(scene, track, shadows, driveSurfaceManager = null, surfaceTopologyGraph = null) {
     this.scene = scene;
     this.track = track;
     this.shadows = shadows;
     this.driveSurfaceManager = driveSurfaceManager;
+    this.surfaceTopologyGraph = surfaceTopologyGraph;
     this._bridges = [];
   }
 
@@ -22,7 +23,8 @@ export class BridgeManager {
       terrainY,
       this.scene,
       this.shadows,
-      this.driveSurfaceManager
+      this.driveSurfaceManager,
+      this.surfaceTopologyGraph
     );
     this._bridges.push(bridge);
     return bridge;

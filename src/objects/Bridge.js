@@ -25,12 +25,14 @@ export class Bridge {
    * @param {BABYLON.Scene} scene
    * @param {BABYLON.ShadowGenerator} shadows
    * @param {object} driveSurfaceManager — Optional drive surface registration manager
+   * @param {object} surfaceTopologyGraph — Optional connectivity graph for layered surfaces
    */
-  constructor(feature, track, terrainY, scene, shadows, driveSurfaceManager = null) {
+  constructor(feature, track, terrainY, scene, shadows, driveSurfaceManager = null, surfaceTopologyGraph = null) {
     this.feature = feature;
     this.track = track;
     this.scene = scene;
     this._driveSurfaceManager = driveSurfaceManager;
+    this._surfaceTopologyGraph = surfaceTopologyGraph;
 
     const thickness = feature.thickness ?? 0.4;
     const deckY = terrainY + (feature.height ?? 5) + thickness / 2;
@@ -103,6 +105,14 @@ export class Bridge {
         driveColliderApplyFriction,
         true // ignoreTop
       );
+      this._driveSurfaceManager?.registerBoundary?.(this.colliderMesh, {
+        surfaceType: "bridgeBoundary",
+        level: feature.level ?? 1,
+        tags: {
+          surfaceKind: "bridge-deck-boundary",
+          bridgeSurfaceKey: feature.id ?? `${feature.centerX}_${feature.centerZ}`,
+        },
+      });
       this.colliderAggregate = new PhysicsAggregate(
         this.colliderMesh,
         PhysicsShapeType.BOX,
@@ -127,8 +137,91 @@ export class Bridge {
     this.mesh.material = this._material;
 
     this._ramps = [];
+    this._rampDriveSurfaces = [];
+    this._rampDriveSurfaceIds = [];
+    this._deckDriveSurface = null;
+    this._deckDriveSurfaceId = null;
+    this._topologyOwner = {};
     this._rampColliders = [];
     this._rampColliderAggregates = [];
+    const driveProxyThickness = 0.12;
+
+    const createDeckDriveSurface = () => {
+      const drive = MeshBuilder.CreateBox(
+        `bridge_drive_deck_${feature.centerX}_${feature.centerZ}`,
+        {
+          width,
+          height: driveProxyThickness,
+          depth,
+        },
+        scene
+      );
+      drive.position = new Vector3(
+        feature.centerX,
+        deckTopY - driveProxyThickness / 2,
+        feature.centerZ
+      );
+      drive.rotation.y = angleY;
+      drive.isVisible = true;
+      drive.visibility = 0;
+      drive.isPickable = true;
+      drive.receiveShadows = false;
+      return drive;
+    };
+
+    const registerTopologyNode = (mesh, kind, tags = {}) => {
+      return this._surfaceTopologyGraph?.registerNode?.(this._topologyOwner, {
+        mesh,
+        layerId: surfaceLevel,
+        role: 'drive',
+        kind,
+        tags: {
+          bridgeSurfaceKey,
+          ...tags,
+        },
+      }) ?? null;
+    };
+
+    const registerTopologyConnector = (fromNodeId, toNodeId, type, tags = {}, oneWay = false) => {
+      return this._surfaceTopologyGraph?.registerConnector?.(this._topologyOwner, {
+        fromNodeId,
+        toNodeId,
+        type,
+        oneWay,
+        tags: {
+          bridgeSurfaceKey,
+          ...tags,
+        },
+      }) ?? null;
+    };
+
+    const createRampDriveSurface = (sign, startX, startZ, topY, bottomY) => {
+      const depthLength = transitionDepth;
+      const slopeDown = Math.max(0, topY - bottomY);
+      const pitch = Math.atan2(slopeDown, depthLength);
+      const rotY = angleY + (sign === -1 ? Math.PI : 0);
+      const dirX = Math.sin(rotY);
+      const dirZ = Math.cos(rotY);
+      const midX = startX + dirX * (depthLength / 2);
+      const midZ = startZ + dirZ * (depthLength / 2);
+      const drive = MeshBuilder.CreateBox(
+        `bridge_drive_ramp_${sign}_${feature.centerX}_${feature.centerZ}`,
+        {
+          width,
+          height: driveProxyThickness,
+          depth: depthLength,
+        },
+        scene
+      );
+      drive.position = new Vector3(midX, (topY + bottomY) / 2, midZ);
+      drive.rotation.y = rotY;
+      drive.rotation.x = pitch;
+      drive.isVisible = true;
+      drive.visibility = 0;
+      drive.isPickable = true;
+      drive.receiveShadows = false;
+      return drive;
+    };
 
     const createRampMesh = (sign, startX, startZ, topY, bottomY) => {
       const depthLength = transitionDepth;
@@ -250,10 +343,15 @@ export class Bridge {
         const groundY = this.track.getHeightAt(endX, endZ);
         const rampBottomY = groundY + transitionYOffset;
         const ramp = createRampMesh(sign, startX, startZ, deckTopY, rampBottomY);
+        const rampDrive = createRampDriveSurface(sign, startX, startZ, deckTopY, rampBottomY);
         const rampColliders = createRampColliderPerimeter(sign, startX, startZ, deckTopY, rampBottomY);
+        const rampDriveSurfaceId = registerTopologyNode(rampDrive, 'bridge-ramp', {
+          rampSign: sign,
+          transitionEnabled,
+        });
 
         if (this._driveSurfaceManager) {
-          this._driveSurfaceManager.register(ramp, {
+          this._driveSurfaceManager.register(rampDrive, {
             surfaceType: 'bridgeRamp',
             level: surfaceLevel,
             tags: {
@@ -264,14 +362,29 @@ export class Bridge {
             },
           });
         } else {
-          ramp.metadata = {
-            ...(ramp.metadata ?? {}),
+          rampDrive.metadata = {
+            ...(rampDrive.metadata ?? {}),
             isTerrain: true,
+            isDriveSurface: true,
+            surfaceType: 'bridgeRamp',
+            level: surfaceLevel,
+            surfaceKind: 'bridge-ramp',
           };
         }
 
         this._ramps.push(ramp);
+        this._rampDriveSurfaces.push(rampDrive);
+        this._rampDriveSurfaceIds.push(rampDriveSurfaceId);
         for (const collider of rampColliders) {
+          this._driveSurfaceManager?.registerBoundary?.(collider, {
+            surfaceType: "bridgeBoundary",
+            level: surfaceLevel,
+            tags: {
+              surfaceKind: "bridge-ramp-boundary",
+              bridgeSurfaceKey,
+              rampSign: sign,
+            },
+          });
           this._rampColliders.push(collider);
           this._rampColliderAggregates.push(new PhysicsAggregate(collider, PhysicsShapeType.BOX, { mass: 0 }, scene));
         }
@@ -342,6 +455,16 @@ export class Bridge {
           false // ignoreTop
         );
 
+        this._driveSurfaceManager?.registerBoundary?.(cap, {
+          surfaceType: "bridgeBoundary",
+          level: surfaceLevel,
+          tags: {
+            surfaceKind: "bridge-endcap-boundary",
+            bridgeSurfaceKey,
+            capAxis: axis,
+          },
+        });
+
         this._endCaps.push(cap);
         this._endCapAggregates.push(new PhysicsAggregate(cap, PhysicsShapeType.BOX, { mass: 0 }, scene));
       };
@@ -359,9 +482,14 @@ export class Bridge {
     this.mesh.receiveShadows = true;
     shadows?.addShadowCaster(this.mesh);
 
+    this._deckDriveSurface = createDeckDriveSurface();
+    this._deckDriveSurfaceId = registerTopologyNode(this._deckDriveSurface, 'bridge-deck', {
+      transitionEnabled,
+    });
+
     // Register bridge mesh as drivable surface for raycasts and future nav layers.
     if (this._driveSurfaceManager) {
-      this._driveSurfaceManager.register(this.mesh, {
+      this._driveSurfaceManager.register(this._deckDriveSurface, {
         surfaceType: "bridgeDeck",
         level: surfaceLevel,
         tags: {
@@ -372,10 +500,27 @@ export class Bridge {
       });
     } else {
       // Fallback path used by old call sites.
-      this.mesh.metadata = {
-        ...(this.mesh.metadata ?? {}),
+      this._deckDriveSurface.metadata = {
+        ...(this._deckDriveSurface.metadata ?? {}),
         isTerrain: true,
+        isDriveSurface: true,
+        surfaceType: "bridgeDeck",
+        level: surfaceLevel,
+        surfaceKind: "bridge-deck",
       };
+    }
+    for (let i = 0; i < this._rampDriveSurfaceIds.length; i++) {
+      const rampNodeId = this._rampDriveSurfaceIds[i];
+      if (!Number.isFinite(rampNodeId) || !Number.isFinite(this._deckDriveSurfaceId)) continue;
+      const sign = i === 0 ? 1 : -1;
+      registerTopologyConnector(rampNodeId, this._deckDriveSurfaceId, 'DeckJoin', {
+        rampSign: sign,
+        direction: 'up',
+      });
+      registerTopologyConnector(this._deckDriveSurfaceId, rampNodeId, 'DeckJoin', {
+        rampSign: sign,
+        direction: 'down',
+      });
     }
   }
 
@@ -389,9 +534,18 @@ export class Bridge {
   }
 
   dispose() {
-    this._driveSurfaceManager?.unregisterByMesh(this.mesh);
+    this._surfaceTopologyGraph?.removeByOwner?.(this._topologyOwner);
+    this._driveSurfaceManager?.unregisterByMesh(this._deckDriveSurface);
+    this._deckDriveSurface?.dispose();
+    this._deckDriveSurface = null;
+    this._deckDriveSurfaceId = null;
+    for (const drive of this._rampDriveSurfaces ?? []) {
+      this._driveSurfaceManager?.unregisterByMesh(drive);
+      drive.dispose();
+    }
+    this._rampDriveSurfaces = [];
+    this._rampDriveSurfaceIds = [];
     for (const ramp of this._ramps ?? []) {
-      this._driveSurfaceManager?.unregisterByMesh(ramp);
       ramp.dispose();
     }
     this._ramps = [];

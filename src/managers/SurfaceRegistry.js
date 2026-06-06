@@ -34,6 +34,7 @@ export class SurfaceRegistry {
       priority = 0,
       tags = {},
     } = options;
+    const isDriveRole = role === "drive";
 
     const existingId = mesh.metadata?.surfaceId;
     const surfaceId = Number.isFinite(existingId) ? existingId : this._nextSurfaceId++;
@@ -41,8 +42,8 @@ export class SurfaceRegistry {
     mesh.metadata = {
       ...(mesh.metadata ?? {}),
       // Legacy flags still used by TerrainQuery and existing systems.
-      isTerrain: true,
-      isDriveSurface: true,
+      isTerrain: isDriveRole,
+      isDriveSurface: isDriveRole,
       // Layered-surface metadata.
       surfaceId,
       surfaceType,

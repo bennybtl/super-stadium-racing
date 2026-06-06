@@ -95,14 +95,19 @@ Add explicit graph connectivity between drivable layers.
 
 Deliverables:
 1. Surface connectivity graph:
-   - nodes: drivable surfaces or lane segments
-   - edges: legal transitions
+   - nodes: drivable surface segments or lane segments
+   - edges: legal transitions between adjacent segments
 2. Connector types:
    - RampUp
    - RampDown
    - TunnelPortal
    - DeckJoin
 3. Validation pass for disconnected topology or invalid one-way links.
+
+Notes:
+1. Treat transition surfaces as mesh segments with explicit entry/exit points rather than ad hoc planes.
+2. Preserve a small seam overlap or stitching rule at segment boundaries so floor queries never see a gap.
+3. Record connector directionality and source/target layer ids at authoring and runtime.
 
 ### Phase 5: Runtime Integration
 Migrate truck physics and AI to active-surface state.

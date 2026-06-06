@@ -185,12 +185,14 @@ export const useRaceStore = defineStore('race', () => {
 // ─── Debug panel store ────────────────────────────────────────────────────────
 export const useDebugStore = defineStore('debug', () => {
   const visible = ref(false);
+  const showBridgeDriveSurfaces = ref(false);
   const data = reactive({
     compression: '-', groundedness: '-', penetration: '-',
     vvel: '-', speed: '-', grip: '-', slip: '-',
     terrain: '-', slope: '-', x: '0.00', y: '0.00', z: '0.00',
     nx: '0.000', ny: '1.000', nz: '0.000',
     surfaceId: '-', surfaceType: '-', surfaceKind: '-', surfaceLevel: '-',
+    topologyNodes: '-', topologyConnectors: '-', topologySummary: '-',
   });
   const recording  = ref(false);
   const frameCount = ref(0);
@@ -199,7 +201,22 @@ export const useDebugStore = defineStore('debug', () => {
   function startRecording() { _bridge.value?.startRecording(); }
   function stopRecording()  { _bridge.value?.stopRecording();  }
   function dumpLog()        { _bridge.value?.dumpLog();        }
-  return { visible, data, recording, frameCount, setBridge, startRecording, stopRecording, dumpLog };
+  function toggleBridgeDriveSurfaces() {
+    showBridgeDriveSurfaces.value = !showBridgeDriveSurfaces.value;
+    _bridge.value?.setBridgeDriveSurfaceDebug?.(showBridgeDriveSurfaces.value);
+  }
+  return {
+    visible,
+    showBridgeDriveSurfaces,
+    data,
+    recording,
+    frameCount,
+    setBridge,
+    startRecording,
+    stopRecording,
+    dumpLog,
+    toggleBridgeDriveSurfaces,
+  };
 });
 
 // ─── Editor store ─────────────────────────────────────────────────────────────

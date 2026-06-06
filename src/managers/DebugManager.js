@@ -34,6 +34,9 @@ export class DebugManager {
     this._trackedTruck = null;  // truck whose physics box we toggled visible
     this._colliderDebugMat = null;
     this._colliderDebugState = new Map(); // mesh.uniqueId -> { mesh, isVisible, visibility, material }
+    this._bridgeDriveDebugEnabled = false;
+    this._bridgeDriveDebugMat = null;
+    this._bridgeDriveDebugState = new Map(); // mesh.uniqueId -> { mesh, isVisible, visibility, material }
 
     // ---- Logger state ----
     this._log        = [];     // ring buffer rows
@@ -58,6 +61,13 @@ export class DebugManager {
   hide() {
     this._store.visible = false;
     this._destroyVisuals();
+  }
+
+  setBridgeDriveSurfaceDebug(enabled) {
+    this._bridgeDriveDebugEnabled = enabled === true;
+    if (!this._bridgeDriveDebugEnabled) {
+      this._restoreBridgeDriveDebugMeshes();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -151,6 +161,12 @@ export class DebugManager {
     this._colliderDebugState.clear();
     this._colliderDebugMat?.dispose();
     this._colliderDebugMat = null;
+
+    this._store.showBridgeDriveSurfaces = false;
+    this._bridgeDriveDebugEnabled = false;
+    this._restoreBridgeDriveDebugMeshes();
+    this._bridgeDriveDebugMat?.dispose();
+    this._bridgeDriveDebugMat = null;
   }
 
   _ensureColliderDebugMaterial() {
@@ -206,6 +222,76 @@ export class DebugManager {
     }
   }
 
+  _ensureBridgeDriveDebugMaterial() {
+    if (this._bridgeDriveDebugMat || !this._scene) return;
+    const mat = new StandardMaterial('dbgBridgeDriveSurfaceMat', this._scene);
+    mat.diffuseColor = new Color3(0.1, 0.9, 1.0);
+    mat.emissiveColor = new Color3(0.1, 0.5, 0.7);
+    mat.alpha = 0.45;
+    mat.backFaceCulling = false;
+    this._bridgeDriveDebugMat = mat;
+  }
+
+  _restoreBridgeDriveDebugMeshes() {
+    for (const [id, saved] of this._bridgeDriveDebugState.entries()) {
+      const mesh = saved.mesh;
+      if (!mesh || mesh.isDisposed()) {
+        this._bridgeDriveDebugState.delete(id);
+        continue;
+      }
+      mesh.isVisible = saved.isVisible;
+      mesh.visibility = saved.visibility;
+      mesh.material = saved.material;
+      this._bridgeDriveDebugState.delete(id);
+    }
+  }
+
+  _updateBridgeDriveDebugMeshes() {
+    if (!this._scene) return;
+    if (!this._bridgeDriveDebugEnabled) {
+      this._restoreBridgeDriveDebugMeshes();
+      return;
+    }
+
+    this._ensureBridgeDriveDebugMaterial();
+
+    const driveMeshes = this._scene.meshes.filter(mesh =>
+      !mesh.isDisposed() &&
+      mesh.isEnabled() &&
+      typeof mesh.name === 'string' &&
+      mesh.name.startsWith('bridge_drive_')
+    );
+
+    for (const mesh of driveMeshes) {
+      if (!this._bridgeDriveDebugState.has(mesh.uniqueId)) {
+        this._bridgeDriveDebugState.set(mesh.uniqueId, {
+          mesh,
+          isVisible: mesh.isVisible,
+          visibility: mesh.visibility,
+          material: mesh.material,
+        });
+      }
+
+      mesh.isVisible = true;
+      mesh.visibility = 1;
+      mesh.material = this._bridgeDriveDebugMat;
+    }
+
+    for (const [id, saved] of this._bridgeDriveDebugState.entries()) {
+      const mesh = saved.mesh;
+      if (!mesh || mesh.isDisposed()) {
+        this._bridgeDriveDebugState.delete(id);
+        continue;
+      }
+      if (typeof mesh.name === 'string' && mesh.name.startsWith('bridge_drive_')) continue;
+
+      mesh.isVisible = saved.isVisible;
+      mesh.visibility = saved.visibility;
+      mesh.material = saved.material;
+      this._bridgeDriveDebugState.delete(id);
+    }
+  }
+
   /**
    * Editor-mode helper: update only static collision debug geometry.
    * Useful when no Truck/debugInfo is available.
@@ -213,6 +299,7 @@ export class DebugManager {
   updateCollisionDebugOnly() {
     if (!this._store.visible) return;
     this._updateCollisionDebugMeshes();
+    this._updateBridgeDriveDebugMeshes();
   }
 
   /**
@@ -228,6 +315,7 @@ export class DebugManager {
 
     // Keep collider visualisation in sync while debug is enabled.
     this._updateCollisionDebugMeshes();
+    this._updateBridgeDriveDebugMeshes();
 
     if (!debugInfo) return;
 
@@ -289,6 +377,34 @@ export class DebugManager {
     d.surfaceType  = String(debugInfo.surfaceType ?? '-');
     d.surfaceKind  = String(debugInfo.surfaceKind ?? '-');
     d.surfaceLevel = String(debugInfo.surfaceLevel ?? '-');
+
+    const topologyGraph = this._scene?.metadata?.surfaceTopologyGraph ?? null;
+    const topologyNodes = topologyGraph?.getAllNodes?.() ?? [];
+    const topologyConnectors = topologyGraph?.getAllConnectors?.() ?? [];
+    const topologyValidation = topologyGraph?.validate?.() ?? { issues: [], valid: true };
+    const connectorSummary = topologyConnectors.length > 0
+      ? Object.entries(topologyConnectors.reduce((counts, connector) => {
+          const type = String(connector?.type ?? 'unknown');
+          counts[type] = (counts[type] ?? 0) + 1;
+          return counts;
+        }, {}))
+        .map(([type, count]) => `${type}:${count}`)
+        .join(' ')
+      : '-';
+    const issueSummary = topologyValidation.issues.length > 0
+      ? Object.entries(topologyValidation.issues.reduce((counts, issue) => {
+          const type = String(issue?.type ?? 'unknown');
+          counts[type] = (counts[type] ?? 0) + 1;
+          return counts;
+        }, {}))
+        .map(([type, count]) => `${type}:${count}`)
+        .join(' ')
+      : '-';
+    d.topologyNodes = String(topologyNodes.length);
+    d.topologyConnectors = String(topologyConnectors.length);
+    d.topologySummary = topologyValidation.issues.length > 0
+      ? `issues:${topologyValidation.issues.length} ${issueSummary} ${connectorSummary}`
+      : connectorSummary;
 
     // ---- Ring-buffer logger -------------------------------------------------
     if (this._recording) {
