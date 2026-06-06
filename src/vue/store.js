@@ -190,6 +190,7 @@ export const useDebugStore = defineStore('debug', () => {
     vvel: '-', speed: '-', grip: '-', slip: '-',
     terrain: '-', slope: '-', x: '0.00', y: '0.00', z: '0.00',
     nx: '0.000', ny: '1.000', nz: '0.000',
+    surfaceId: '-', surfaceType: '-', surfaceKind: '-', surfaceLevel: '-',
   });
   const recording  = ref(false);
   const frameCount = ref(0);

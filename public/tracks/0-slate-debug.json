@@ -1,0 +1,38 @@
+{
+  "id": "0-slate-debug",
+  "packId": null,
+  "hidden": false,
+  "name": "0 Slate Debug",
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "alphaBreakup": 0.28,
+    "width": 4,
+    "intensity": 0.8,
+    "laneSpacing": 2,
+    "pathWander": 0.7,
+    "edgeSoftness": 1,
+    "secondaryPathCount": 60,
+    "secondaryPathStrength": 0.8,
+    "secondaryPathSpacing": 0.04,
+    "seed": 1337
+  },
+  "features": [
+    {
+      "type": "squareHill",
+      "centerX": -2.91287063351939,
+      "centerZ": 24.95533474401939,
+      "width": 17,
+      "depth": 18.5,
+      "angle": 0,
+      "height": 3,
+      "waterLevelOffset": 1,
+      "transition": 4,
+      "terrainType": null
+    }
+  ]
+}

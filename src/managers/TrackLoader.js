@@ -6,7 +6,7 @@ const TRACK_FILENAMES = [
   'boulder_hill.json',
   'cliff_hanger.json',
   'cut_off_pass.json',
-  'debug.json',
+  '0-slate-debug.json',
   'fandango.json',
   'huevos_grande.json',
   'hurricane_gultch.json',

@@ -123,6 +123,7 @@ export class TerrainPhysics {
 
   /** Most-recently resolved terrain surface normal (world space, unit length). */
   get floorNormal() { return this._lastFloorNormal; }
+  get floorSurface() { return this._terrainQuery?.getLastResolvedSurface?.() ?? null; }
 
   update(mesh, deltaTime, track, options = null) {
     const lowDetail = options?.lowDetail === true;
@@ -137,12 +138,13 @@ export class TerrainPhysics {
     let effectiveFloor;
     const fromY = mesh.position.y + RAY_OFFSET;
     if (this._terrainQuery) {
+      const fallbackFloor = Number.isFinite(this.lastFloorY) ? this.lastFloorY : 0;
       // Height-only query is much cheaper than full normal sampling.
       effectiveFloor = this._terrainQuery.heightAtFast(
         mesh.position.x,
         mesh.position.z,
         fromY,
-        0
+        fallbackFloor
       );
 
       // Optionally throttle full normal sampling for non-player trucks.

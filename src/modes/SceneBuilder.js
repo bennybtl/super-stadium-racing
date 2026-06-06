@@ -59,6 +59,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
   const driveSurfaceManager = new DriveSurfaceManager(scene);
+  scene.metadata = {
+    ...(scene.metadata ?? {}),
+    driveSurfaceManager,
+  };
 
   // -- Physics --
   const havok = await HavokPhysics();
@@ -344,7 +348,13 @@ export async function buildScene(engine, trackLoader, trackKey) {
   };
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
-  driveSurfaceManager.register(ground, { surfaceType: "ground", level: 0 });
+  driveSurfaceManager.register(ground, {
+    surfaceType: "ground",
+    level: 0,
+    tags: {
+      surfaceKind: "ground-base",
+    },
+  });
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 

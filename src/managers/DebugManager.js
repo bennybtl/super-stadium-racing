@@ -21,7 +21,8 @@ const LOG_CAPACITY = 1200;
  *   (capped at LOG_CAPACITY frames).  dumpLog() prints console.table() and
  *   triggers a CSV download so the data can be pasted into a spreadsheet.
  *   Columns: t, x, y, z, fromY, floorY, rayDepth, nx, ny, nz,
- *            penetration, vvel, groundedness, speed, slope
+ *            penetration, vvel, groundedness, speed, slope,
+ *            surfaceId, surfaceType, surfaceKind, surfaceLevel
  */
 export class DebugManager {
   /** @param {import('@babylonjs/core').Scene} scene */
@@ -284,6 +285,10 @@ export class DebugManager {
     d.nx           = (normal?.x ?? 0).toFixed(3);
     d.ny           = (normal?.y ?? 1).toFixed(3);
     d.nz           = (normal?.z ?? 0).toFixed(3);
+    d.surfaceId    = String(debugInfo.surfaceId ?? '-');
+    d.surfaceType  = String(debugInfo.surfaceType ?? '-');
+    d.surfaceKind  = String(debugInfo.surfaceKind ?? '-');
+    d.surfaceLevel = String(debugInfo.surfaceLevel ?? '-');
 
     // ---- Ring-buffer logger -------------------------------------------------
     if (this._recording) {
@@ -305,6 +310,10 @@ export class DebugManager {
         groundedness: +(debugInfo.groundedness     ?? 0).toFixed(3),
         speed:        +(debugInfo.speed            ?? 0).toFixed(2),
         slope:        slopeDeg !== null ? +slopeDeg.toFixed(2) : 0,
+        surfaceId:    debugInfo.surfaceId ?? '-',
+        surfaceType:  debugInfo.surfaceType ?? '-',
+        surfaceKind:  debugInfo.surfaceKind ?? '-',
+        surfaceLevel: debugInfo.surfaceLevel ?? '-',
       };
 
       this._log[this._logPtr] = row;

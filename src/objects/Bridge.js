@@ -43,6 +43,8 @@ export class Bridge {
     const transitionEnabled = feature.transitionEnabled === true;
     const transitionDepth = feature.transitionDepth ?? 10;
     const transitionYOffset = Math.min(0, feature.transitionYOffset ?? 0);
+    const surfaceLevel = feature.level ?? 1;
+    const bridgeSurfaceKey = feature.id ?? `${feature.centerX}_${feature.centerZ}`;
     const deckColliderEnabled = collision.deckCollider ?? !transitionEnabled;
     const driveColliderFriction = collision.friction ?? 1.0;
     const driveColliderApplyFriction = collision.applyFriction ?? false;
@@ -252,8 +254,14 @@ export class Bridge {
 
         if (this._driveSurfaceManager) {
           this._driveSurfaceManager.register(ramp, {
-            surfaceType: 'bridge',
-            level: feature.level ?? 1,
+            surfaceType: 'bridgeRamp',
+            level: surfaceLevel,
+            tags: {
+              surfaceKind: 'bridge-ramp',
+              bridgeSurfaceKey,
+              rampSign: sign,
+              transitionEnabled,
+            },
           });
         } else {
           ramp.metadata = {
@@ -354,8 +362,13 @@ export class Bridge {
     // Register bridge mesh as drivable surface for raycasts and future nav layers.
     if (this._driveSurfaceManager) {
       this._driveSurfaceManager.register(this.mesh, {
-        surfaceType: "bridge",
-        level: feature.level ?? 1,
+        surfaceType: "bridgeDeck",
+        level: surfaceLevel,
+        tags: {
+          surfaceKind: "bridge-deck",
+          bridgeSurfaceKey,
+          transitionEnabled,
+        },
       });
     } else {
       // Fallback path used by old call sites.

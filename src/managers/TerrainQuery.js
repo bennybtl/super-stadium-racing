@@ -33,10 +33,13 @@ import { Ray, Vector3 } from "@babylonjs/core";
 // 0.5 m spans roughly one terrain subdivision, giving a good slope average
 // without smearing over large-scale curvature changes.
 const SAMPLE_DIST = 0.5;
+const MIN_DRIVABLE_NORMAL_Y = 0.15;
 
 export class TerrainQuery {
   constructor(scene) {
     this._scene = scene;
+    this._driveSurfaceManager = scene?.metadata?.driveSurfaceManager ?? null;
+    this._lastResolvedSurface = null;
 
     // Primary downward ray — resolves the correct surface layer.
     this._rayDown = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 2000);
@@ -66,7 +69,7 @@ export class TerrainQuery {
     this._rayDown.origin.set(x, fromY, z);
     this._rayDown.length = fromY + 200;
 
-    let hit = this._scene.pickWithRay(this._rayDown, this._predicate);
+    let hit = this._pickDown(x, z, fromY, fromY + 200);
 
     // -------------------------------------------------------------------------
     // Pass 2 — upward fallback.
@@ -90,11 +93,17 @@ export class TerrainQuery {
     if (downMissed || likelyPenetrated) {
       this._rayUp.origin.set(x, fromY - 0.05, z);
       this._rayUp.length = likelyPenetrated ? (fromY - hit.pickedPoint.y + 1) : 50;
-      const upHit = this._scene.pickWithRay(this._rayUp, this._predicate);
+      const upHit = this._pickUp(
+        x,
+        z,
+        fromY - 0.05,
+        likelyPenetrated ? (fromY - hit.pickedPoint.y + 1) : 50
+      );
       if (upHit?.hit && upHit.pickedPoint) {
         hit = upHit;
         usedUpward = true;
       } else if (downMissed) {
+        this._lastResolvedSurface = null;
         return null;
       }
       // If upward also missed but downward found something, keep the downward hit.
@@ -141,7 +150,13 @@ export class TerrainQuery {
       ? Vector3.Normalize(crossNormal.add(rayNormal).scale(0.5))
       : crossNormal;
 
+    this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
+
     return { y: hitY, normal };
+  }
+
+  getLastResolvedSurface() {
+    return this._lastResolvedSurface;
   }
 
   /**
@@ -166,14 +181,23 @@ export class TerrainQuery {
     this._rayDown.origin.set(x, fromY, z);
     this._rayDown.length = fromY + 200;
 
-    let hit = this._scene.pickWithRay(this._rayDown, this._predicate);
-    if (hit?.hit && hit.pickedPoint) return hit.pickedPoint.y;
+    let hit = this._pickDown(x, z, fromY, fromY + 200);
+    if (hit?.hit && hit.pickedPoint) {
+      this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
+      return hit.pickedPoint.y;
+    }
 
     // Fallback for penetration/underside cases.
     this._rayUp.origin.set(x, fromY - 0.05, z);
     this._rayUp.length = 50;
-    hit = this._scene.pickWithRay(this._rayUp, this._predicate);
-    return (hit?.hit && hit.pickedPoint) ? hit.pickedPoint.y : fallback;
+    hit = this._pickUp(x, z, fromY - 0.05, 50);
+    if (hit?.hit && hit.pickedPoint) {
+      this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
+      return hit.pickedPoint.y;
+    }
+
+    this._lastResolvedSurface = null;
+    return fallback;
   }
 
   // ---------------------------------------------------------------------------
@@ -186,9 +210,59 @@ export class TerrainQuery {
    * @returns {number|null}
    */
   _probeHeight(x, z, fromY) {
-    this._rayProbe.origin.set(x, fromY, z);
-    this._rayProbe.length = fromY + 50;
-    const hit = this._scene.pickWithRay(this._rayProbe, this._predicate);
+    const hit = this._pickDown(x, z, fromY, fromY + 50);
     return hit?.hit && hit.pickedPoint ? hit.pickedPoint.y : null;
+  }
+
+  _pickDown(x, z, fromY, maxDistance) {
+    if (this._driveSurfaceManager?.castDownToDriveSurface) {
+      const res = this._driveSurfaceManager.castDownToDriveSurface(x, z, fromY, {
+        role: "drive",
+        maxDistance,
+        minNormalY: MIN_DRIVABLE_NORMAL_Y,
+      });
+      if (res?.pickInfo) return res.pickInfo;
+    }
+
+    this._rayDown.origin.set(x, fromY, z);
+    this._rayDown.length = maxDistance;
+    return this._scene.pickWithRay(this._rayDown, this._predicate);
+  }
+
+  _pickUp(x, z, fromY, maxDistance) {
+    if (this._driveSurfaceManager?.castUpToDriveSurface) {
+      const res = this._driveSurfaceManager.castUpToDriveSurface(x, z, fromY, {
+        role: "drive",
+        maxDistance,
+        minNormalY: MIN_DRIVABLE_NORMAL_Y,
+      });
+      if (res?.pickInfo) return res.pickInfo;
+    }
+
+    this._rayUp.origin.set(x, fromY, z);
+    this._rayUp.length = maxDistance;
+    return this._scene.pickWithRay(this._rayUp, this._predicate);
+  }
+
+  _resolveSurfaceInfo(hit) {
+    const mesh = hit?.pickedMesh;
+    if (!mesh) return null;
+
+    const record = this._driveSurfaceManager?.getSurfaceByMesh?.(mesh) ?? null;
+    if (record) {
+      return {
+        surfaceId: record.surfaceId,
+        surfaceType: record.surfaceType ?? "generic",
+        surfaceKind: record.tags?.surfaceKind ?? "unknown",
+        surfaceLevel: record.level ?? 0,
+      };
+    }
+
+    return {
+      surfaceId: mesh.metadata?.surfaceId ?? null,
+      surfaceType: mesh.metadata?.surfaceType ?? "generic",
+      surfaceKind: mesh.metadata?.surfaceKind ?? "unknown",
+      surfaceLevel: mesh.metadata?.level ?? 0,
+    };
   }
 }

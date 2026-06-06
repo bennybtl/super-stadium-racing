@@ -99,6 +99,10 @@ export class Truck {
       x: 0,
       y: 0,
       z: 0,
+      surfaceId: '-',
+      surfaceType: '-',
+      surfaceKind: '-',
+      surfaceLevel: '-',
       bodyHeightY: 0,
     };
 
@@ -457,6 +461,11 @@ export class Truck {
       payload.x = this.mesh.position.x;
       payload.y = this.mesh.position.y;
       payload.z = this.mesh.position.z;
+      const floorSurface = this.terrainPhysics.floorSurface;
+      payload.surfaceId = floorSurface?.surfaceId ?? '-';
+      payload.surfaceType = floorSurface?.surfaceType ?? '-';
+      payload.surfaceKind = floorSurface?.surfaceKind ?? '-';
+      payload.surfaceLevel = floorSurface?.surfaceLevel ?? '-';
       return payload;
     });
     return debug;
