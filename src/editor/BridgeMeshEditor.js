@@ -94,11 +94,10 @@ export class BridgeMeshEditor {
       cols,
       rows,
       heights,
+      rotation: 0,
       thickness: 0.4,
-      transitionEnabled: true,
-      transitionDepth: 8,
-      transitionYOffset: 0,
       materialType: 'packed_dirt',
+      layerId: 1,
       level: 1,
     };
 
@@ -132,6 +131,7 @@ export class BridgeMeshEditor {
       centerX: feature.centerX + 5,
       centerZ: feature.centerZ + 5,
       heights: [...feature.heights],
+      connectorEndpoints: null,
     };
     this.track.features.push(newFeature);
     this._addGizmosForFeature(newFeature);
@@ -143,14 +143,10 @@ export class BridgeMeshEditor {
     if (!this.activeFeature) return;
     this.ec.saveSnapshot();
     const f = this.activeFeature;
-    const halfW = f.width / 2, halfD = f.depth / 2;
-    const stepX = f.cols > 1 ? f.width / (f.cols - 1) : 0;
-    const stepZ = f.rows > 1 ? f.depth / (f.rows - 1) : 0;
 
     for (let r = 0; r < f.rows; r++) {
       for (let c = 0; c < f.cols; c++) {
-        const wx = f.centerX - halfW + c * stepX;
-        const wz = f.centerZ - halfD + r * stepZ;
+        const { x: wx, z: wz } = this._gridPoint(f, r, c);
         const terrainY = this.track.getHeightAt(wx, wz) ?? 0;
         const target = elevation !== null ? elevation : (terrainY + 5);
         f.heights[r * f.cols + c] = target;
@@ -203,15 +199,13 @@ export class BridgeMeshEditor {
 
   _addGizmosForFeature(feature) {
     const { cols, rows, centerX, centerZ, width, depth, heights } = feature;
-    const halfW = width / 2, halfD = depth / 2;
     const stepX = cols > 1 ? width / (cols - 1) : 0;
     const stepZ = rows > 1 ? depth / (rows - 1) : 0;
     const radius = Math.max(0.35, Math.min(1.4, Math.min(stepX || 1, stepZ || 1) * 0.18));
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const wx = centerX - halfW + c * stepX;
-        const wz = centerZ - halfD + r * stepZ;
+        const { x: wx, z: wz } = this._gridPoint(feature, r, c);
         const wy = heights[r * cols + c] ?? 0;
 
         const mesh = MeshBuilder.CreateSphere(`bmPt_${centerX}_${centerZ}_${r}_${c}`, {
@@ -278,10 +272,7 @@ export class BridgeMeshEditor {
   _buildLineSystemForFeature(feature) {
     if (this.lineSystem) { this.lineSystem.dispose(); this.lineSystem = null; }
 
-    const { cols, rows, centerX, centerZ, width, depth, heights } = feature;
-    const halfW = width / 2, halfD = depth / 2;
-    const stepX = cols > 1 ? width / (cols - 1) : 0;
-    const stepZ = rows > 1 ? depth / (rows - 1) : 0;
+    const { cols, rows, heights } = feature;
     const OFFSET = 0.08;
 
     const lines = [];
@@ -289,8 +280,7 @@ export class BridgeMeshEditor {
     for (let r = 0; r < rows; r++) {
       const row = [];
       for (let c = 0; c < cols; c++) {
-        const wx = centerX - halfW + c * stepX;
-        const wz = centerZ - halfD + r * stepZ;
+        const { x: wx, z: wz } = this._gridPoint(feature, r, c);
         const wy = (heights[r * cols + c] ?? 0) + OFFSET;
         row.push(new Vector3(wx, wy, wz));
       }
@@ -300,8 +290,7 @@ export class BridgeMeshEditor {
     for (let c = 0; c < cols; c++) {
       const col = [];
       for (let r = 0; r < rows; r++) {
-        const wx = centerX - halfW + c * stepX;
-        const wz = centerZ - halfD + r * stepZ;
+        const { x: wx, z: wz } = this._gridPoint(feature, r, c);
         const wy = (heights[r * cols + c] ?? 0) + OFFSET;
         col.push(new Vector3(wx, wy, wz));
       }
@@ -315,15 +304,11 @@ export class BridgeMeshEditor {
 
   _updateGizmoPositions() {
     if (!this.activeFeature) return;
-    const { cols, rows, centerX, centerZ, width, depth, heights } = this.activeFeature;
-    const halfW = width / 2, halfD = depth / 2;
-    const stepX = cols > 1 ? width / (cols - 1) : 0;
-    const stepZ = rows > 1 ? depth / (rows - 1) : 0;
+    const { cols, rows, centerX, centerZ, heights } = this.activeFeature;
 
     for (const p of this.pointMeshes) {
       if (p.featureRef !== this.activeFeature) continue;
-      const wx = centerX - halfW + p.c * stepX;
-      const wz = centerZ - halfD + p.r * stepZ;
+      const { x: wx, z: wz } = this._gridPoint(this.activeFeature, p.r, p.c);
       p.mesh.position.set(wx, heights[p.r * cols + p.c] ?? 0, wz);
     }
 
@@ -503,10 +488,17 @@ export class BridgeMeshEditor {
     s.bridgeMesh.rows      = feature.rows;
     s.bridgeMesh.width     = feature.width;
     s.bridgeMesh.depth     = feature.depth;
+    s.bridgeMesh.rotation  = feature.rotation ?? 0;
     s.bridgeMesh.thickness = feature.thickness ?? 0.4;
-    s.bridgeMesh.transitionEnabled = feature.transitionEnabled ?? true;
-    s.bridgeMesh.transitionDepth = feature.transitionDepth ?? 8;
-    s.bridgeMesh.transitionYOffset = feature.transitionYOffset ?? 0;
+    s.bridgeMesh.materialType = feature.materialType ?? 'packed_dirt';
+    s.bridgeMesh.layerId = feature.layerId ?? feature.level ?? 1;
+    const endpoints = _normalizeBridgeMeshConnectorEndpoints(feature.connectorEndpoints);
+    for (let i = 0; i < endpoints.length; i++) {
+      s.bridgeMesh.connectorEndpoints[i].enabled = endpoints[i].enabled;
+      s.bridgeMesh.connectorEndpoints[i].side = endpoints[i].side;
+      s.bridgeMesh.connectorEndpoints[i].offset = endpoints[i].offset;
+      s.bridgeMesh.connectorEndpoints[i].targetLayerId = endpoints[i].targetLayerId;
+    }
     s.selectedType         = 'bridgeMesh';
   }
 
@@ -558,4 +550,46 @@ export class BridgeMeshEditor {
     const maxY = safeHeights.length > 0 ? Math.max(...safeHeights) : 0;
     return maxY + 1.5;
   }
+
+  _gridPoint(feature, r, c) {
+    const cols = feature.cols;
+    const rows = feature.rows;
+    const width = feature.width;
+    const depth = feature.depth;
+    const centerX = feature.centerX;
+    const centerZ = feature.centerZ;
+    const rotation = feature.rotation ?? 0;
+    const halfW = width / 2;
+    const halfD = depth / 2;
+    const stepX = cols > 1 ? width / (cols - 1) : 0;
+    const stepZ = rows > 1 ? depth / (rows - 1) : 0;
+    const localX = -halfW + c * stepX;
+    const localZ = -halfD + r * stepZ;
+    const rad = rotation * Math.PI / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    return {
+      x: centerX + localX * cos - localZ * sin,
+      z: centerZ + localX * sin + localZ * cos,
+    };
+  }
+}
+
+function _normalizeBridgeMeshConnectorEndpoints(endpoints = null) {
+  const defaults = [
+    { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
+    { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
+  ];
+
+  return defaults.map((fallback, index) => {
+    const source = endpoints?.[index] ?? {};
+    return {
+      enabled: source.enabled === true,
+      side: typeof source.side === 'string' ? source.side : fallback.side,
+      offset: Number.isFinite(source.offset) ? source.offset : fallback.offset,
+      targetLayerId: Number.isFinite(source.targetLayerId)
+        ? Math.max(0, Math.round(source.targetLayerId))
+        : fallback.targetLayerId,
+    };
+  });
 }

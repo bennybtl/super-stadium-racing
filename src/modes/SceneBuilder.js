@@ -358,6 +358,16 @@ export async function buildScene(engine, trackLoader, trackKey) {
       surfaceKind: "ground-base",
     },
   });
+  surfaceTopologyGraph.registerNode(ground, {
+    mesh: ground,
+    surfaceId: ground.metadata?.surfaceId ?? null,
+    layerId: 0,
+    role: 'drive',
+    kind: 'ground-base',
+    tags: {
+      surfaceKind: 'ground-base',
+    },
+  });
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
@@ -436,7 +446,16 @@ export async function buildScene(engine, trackLoader, trackKey) {
   steepSlopeColliderManager.rebuild();
   checkpointManager.createCheckpoints();
 
-  // Create movable obstacles, flags, and track signs from track features.
+  // Build bridge drive surfaces first so downstream terrain-following features
+  // (poly walls/curbs) can sample across all bridge meshes in one pass.
+  for (const feature of currentTrack.features) {
+    if (feature.type === "bridgeMesh") {
+      bridgeMeshManager.create(feature);
+    }
+  }
+  bridgeMeshManager.rebuildAutoConnectorLinks();
+
+  // Create movable obstacles, walls, flags, and track signs from track features.
   for (const feature of currentTrack.features) {
     if (feature.type === "obstacle") {
       obstacleManager.createStack(feature);
@@ -450,8 +469,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (feature.type === "bannerString") {
       bannerStringManager.createBanner(feature);
-    } else if (feature.type === "bridgeMesh") {
-      bridgeMeshManager.create(feature);
     } else if (feature.type === "surfaceDecal") {
       surfaceDecalManager.createDecal(feature);
     } else if (feature.type === 'hill' || feature.type === 'squareHill') {

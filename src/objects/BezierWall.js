@@ -1,4 +1,5 @@
 import { WallSegment } from "./WallSegment.js";
+import { TerrainQuery } from "../managers/TerrainQuery.js";
 
 /**
  * Evaluate a cubic Bezier curve at parameter t (0 to 1).
@@ -69,6 +70,8 @@ export class BezierWall {
   constructor(feature, track, scene, shadows) {
     this.segments = [];
     this._feature = feature;
+    this._terrainQuery = new TerrainQuery(scene);
+    this._useBridgeSurfaceSampling = this._featureUsesBridgeSurface(feature);
     const { height, thickness, friction = 0.1, closed = false } = feature;
     const rawPoints = feature.points;
     if (!rawPoints || rawPoints.length < 2) return;
@@ -102,8 +105,8 @@ export class BezierWall {
         const pz      = p0.z + dirZ * t;
 
         const half = segLen / 2;
-        const yA = track.getHeightAt(px - dirX * half, pz - dirZ * half);
-        const yB = track.getHeightAt(px + dirX * half, pz + dirZ * half);
+        const yA = this._sampleHeight(track, px - dirX * half, pz - dirZ * half);
+        const yB = this._sampleHeight(track, px + dirX * half, pz + dirZ * half);
 
         const avgY    = (yA + yB) / 2;
         const totalH  = height + SKIRT;
@@ -124,5 +127,21 @@ export class BezierWall {
   dispose() {
     for (const seg of this.segments) seg.dispose();
     this.segments = [];
+  }
+
+  _featureUsesBridgeSurface(feature) {
+    const points = feature?.points;
+    if (!Array.isArray(points) || points.length === 0) return false;
+    return points.some(pt => {
+      this._terrainQuery.heightAt(pt.x, pt.z);
+      return this._terrainQuery.getLastResolvedSurface?.()?.surfaceType === 'bridgeMesh';
+    });
+  }
+
+  _sampleHeight(track, x, z) {
+    if (this._useBridgeSurfaceSampling) {
+      return this._terrainQuery.heightAt(x, z);
+    }
+    return track.getHeightAt(x, z);
   }
 }

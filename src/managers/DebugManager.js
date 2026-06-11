@@ -300,6 +300,52 @@ export class DebugManager {
     if (!this._store.visible) return;
     this._updateCollisionDebugMeshes();
     this._updateBridgeDriveDebugMeshes();
+    this._updateTopologyDebugFields();
+  }
+
+  _updateTopologyDebugFields() {
+    const d = this._store.data;
+    const topologyGraph = this._scene?.metadata?.surfaceTopologyGraph ?? null;
+    const topologyNodes = topologyGraph?.getAllNodes?.() ?? [];
+    const topologyConnectors = topologyGraph?.getAllConnectors?.() ?? [];
+    const topologyValidation = topologyGraph?.validate?.() ?? { issues: [], valid: true };
+    const connectorEndpointNodes = topologyNodes.filter(node => node?.kind === 'bridge-mesh-connector-endpoint');
+    const autoLinkedNodeIds = new Set();
+    for (const connector of topologyConnectors) {
+      if (connector?.tags?.autoLinked !== true) continue;
+      if (Number.isFinite(connector.fromNodeId)) autoLinkedNodeIds.add(connector.fromNodeId);
+      if (Number.isFinite(connector.toNodeId)) autoLinkedNodeIds.add(connector.toNodeId);
+    }
+    const linkedEndpointCount = connectorEndpointNodes.reduce((count, node) => (
+      autoLinkedNodeIds.has(node.nodeId) ? count + 1 : count
+    ), 0);
+    const unlinkedEndpointCount = Math.max(0, connectorEndpointNodes.length - linkedEndpointCount);
+    const connectorSummary = topologyConnectors.length > 0
+      ? Object.entries(topologyConnectors.reduce((counts, connector) => {
+          const type = String(connector?.type ?? 'unknown');
+          counts[type] = (counts[type] ?? 0) + 1;
+          return counts;
+        }, {}))
+        .map(([type, count]) => `${type}:${count}`)
+        .join(' ')
+      : '-';
+    const issueSummary = topologyValidation.issues.length > 0
+      ? Object.entries(topologyValidation.issues.reduce((counts, issue) => {
+          const type = String(issue?.type ?? 'unknown');
+          counts[type] = (counts[type] ?? 0) + 1;
+          return counts;
+        }, {}))
+        .map(([type, count]) => `${type}:${count}`)
+        .join(' ')
+      : '-';
+
+    d.topologyNodes = String(topologyNodes.length);
+    d.topologyConnectors = String(topologyConnectors.length);
+    d.topologyAutoLinked = `${linkedEndpointCount}`;
+    d.topologyAutoUnlinked = `${unlinkedEndpointCount}`;
+    d.topologySummary = topologyValidation.issues.length > 0
+      ? `issues:${topologyValidation.issues.length} ${issueSummary} ${connectorSummary}`
+      : connectorSummary;
   }
 
   /**
@@ -316,6 +362,7 @@ export class DebugManager {
     // Keep collider visualisation in sync while debug is enabled.
     this._updateCollisionDebugMeshes();
     this._updateBridgeDriveDebugMeshes();
+    this._updateTopologyDebugFields();
 
     if (!debugInfo) return;
 
@@ -377,34 +424,6 @@ export class DebugManager {
     d.surfaceType  = String(debugInfo.surfaceType ?? '-');
     d.surfaceKind  = String(debugInfo.surfaceKind ?? '-');
     d.surfaceLevel = String(debugInfo.surfaceLevel ?? '-');
-
-    const topologyGraph = this._scene?.metadata?.surfaceTopologyGraph ?? null;
-    const topologyNodes = topologyGraph?.getAllNodes?.() ?? [];
-    const topologyConnectors = topologyGraph?.getAllConnectors?.() ?? [];
-    const topologyValidation = topologyGraph?.validate?.() ?? { issues: [], valid: true };
-    const connectorSummary = topologyConnectors.length > 0
-      ? Object.entries(topologyConnectors.reduce((counts, connector) => {
-          const type = String(connector?.type ?? 'unknown');
-          counts[type] = (counts[type] ?? 0) + 1;
-          return counts;
-        }, {}))
-        .map(([type, count]) => `${type}:${count}`)
-        .join(' ')
-      : '-';
-    const issueSummary = topologyValidation.issues.length > 0
-      ? Object.entries(topologyValidation.issues.reduce((counts, issue) => {
-          const type = String(issue?.type ?? 'unknown');
-          counts[type] = (counts[type] ?? 0) + 1;
-          return counts;
-        }, {}))
-        .map(([type, count]) => `${type}:${count}`)
-        .join(' ')
-      : '-';
-    d.topologyNodes = String(topologyNodes.length);
-    d.topologyConnectors = String(topologyConnectors.length);
-    d.topologySummary = topologyValidation.issues.length > 0
-      ? `issues:${topologyValidation.issues.length} ${issueSummary} ${connectorSummary}`
-      : connectorSummary;
 
     // ---- Ring-buffer logger -------------------------------------------------
     if (this._recording) {

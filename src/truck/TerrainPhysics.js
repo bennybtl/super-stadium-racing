@@ -115,6 +115,10 @@ export class TerrainPhysics {
     // 0 = sample terrain normal every frame. >0 = sample at fixed cadence.
     this._normalSampleInterval = Math.max(0, options?.normalSampleInterval ?? 0);
     this._normalSampleTimer = 0;
+    this._multiProbeSurfaceSampling = options?.multiProbeSurfaceSampling === true;
+    this._multiProbeHalfTrack = Math.max(0, options?.multiProbeHalfTrack ?? 0.45);
+    this._multiProbeMaxLift = Math.max(0, options?.multiProbeMaxLift ?? 0.35);
+    this._lastFloorSurface = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -123,10 +127,11 @@ export class TerrainPhysics {
 
   /** Most-recently resolved terrain surface normal (world space, unit length). */
   get floorNormal() { return this._lastFloorNormal; }
-  get floorSurface() { return this._terrainQuery?.getLastResolvedSurface?.() ?? null; }
+  get floorSurface() { return this._lastFloorSurface ?? this._terrainQuery?.getLastResolvedSurface?.() ?? null; }
 
   update(mesh, deltaTime, track, options = null) {
     const lowDetail = options?.lowDetail === true;
+    const useMultiProbe = this._multiProbeSurfaceSampling || options?.forceMultiProbe === true;
     this.state.velocity.y += this.gravity * deltaTime;
 
     // Single downward raycast from just above the truck centre.
@@ -138,14 +143,23 @@ export class TerrainPhysics {
     let effectiveFloor;
     const fromY = mesh.position.y + RAY_OFFSET;
     if (this._terrainQuery) {
+      const continuityOptions = this._buildSurfaceContinuityOptions();
       const fallbackFloor = Number.isFinite(this.lastFloorY) ? this.lastFloorY : 0;
-      // Height-only query is much cheaper than full normal sampling.
-      effectiveFloor = this._terrainQuery.heightAtFast(
-        mesh.position.x,
-        mesh.position.z,
-        fromY,
-        fallbackFloor
-      );
+      if (useMultiProbe) {
+        const probe = this._sampleFloorFromProbes(mesh, fromY, fallbackFloor, continuityOptions);
+        effectiveFloor = probe.y;
+        this._lastFloorSurface = probe.surface ?? null;
+      } else {
+        // Height-only query is much cheaper than full normal sampling.
+        effectiveFloor = this._terrainQuery.heightAtFast(
+          mesh.position.x,
+          mesh.position.z,
+          fromY,
+          fallbackFloor,
+          continuityOptions
+        );
+        this._lastFloorSurface = this._terrainQuery.getLastResolvedSurface?.() ?? null;
+      }
 
       // Optionally throttle full normal sampling for non-player trucks.
       this._normalSampleTimer -= deltaTime;
@@ -160,11 +174,13 @@ export class TerrainPhysics {
         const hit = this._terrainQuery.castDown(
           mesh.position.x,
           mesh.position.z,
-          fromY
+          fromY,
+          continuityOptions
         );
         if (hit) {
           effectiveFloor = hit.y;
           this._lastFloorNormal.copyFrom(hit.normal ?? UP);
+          this._lastFloorSurface = this._lastFloorSurface ?? this._terrainQuery.getLastResolvedSurface?.() ?? null;
         } else {
           this._lastFloorNormal.copyFrom(UP);
         }
@@ -179,6 +195,7 @@ export class TerrainPhysics {
         0
       );
       this._lastFloorNormal.copyFrom(UP);
+      this._lastFloorSurface = null;
     }
     this.lastFloorY = effectiveFloor;
 
@@ -296,7 +313,13 @@ export class TerrainPhysics {
    */
   sampleSurfaceYFastAt(x, z, fromY, track, fallback = 0) {
     if (this._terrainQuery?.heightAtFast) {
-      return this._terrainQuery.heightAtFast(x, z, fromY, fallback);
+      return this._terrainQuery.heightAtFast(
+        x,
+        z,
+        fromY,
+        fallback,
+        this._buildSurfaceContinuityOptions()
+      );
     }
     return this._sampleFloorYAt(x, z, fromY, track, fallback);
   }
@@ -307,11 +330,141 @@ export class TerrainPhysics {
    */
   _sampleFloorYAt(x, z, fromY, track, fallback = 0) {
     if (this._terrainQuery) {
-      return this._terrainQuery.heightAtFast(x, z, fromY, fallback);
+      return this._terrainQuery.heightAtFast(
+        x,
+        z,
+        fromY,
+        fallback,
+        this._buildSurfaceContinuityOptions()
+      );
     }
 
     if (!track) return fallback;
     return track.getHeightAt(x, z);
+  }
+
+  _buildSurfaceContinuityOptions() {
+    const surface = this.floorSurface;
+    const surfaceId = surface?.surfaceId;
+
+    if (!Number.isFinite(surfaceId)) {
+      return {};
+    }
+
+    return {
+      transitionLock: {
+        mode: "prefer",
+        // Keep continuity only when candidate hits are nearly tied.
+        // This avoids sticky behavior when climbing ramps/bridge decks.
+        maxDistanceDelta: 0.08,
+        surfaceId,
+      },
+    };
+  }
+
+  _sampleFloorFromProbes(mesh, fromY, fallbackFloor, continuityOptions) {
+    const center = this._sampleFastSurface(
+      mesh.position.x,
+      mesh.position.z,
+      fromY,
+      fallbackFloor,
+      continuityOptions
+    );
+    if (!Number.isFinite(center.y) || this._multiProbeHalfTrack <= 0) {
+      return center;
+    }
+
+    this._right.set(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
+    const offsetX = this._right.x * this._multiProbeHalfTrack;
+    const offsetZ = this._right.z * this._multiProbeHalfTrack;
+
+    const left = this._sampleFastSurface(
+      mesh.position.x - offsetX,
+      mesh.position.z - offsetZ,
+      fromY,
+      center.y,
+      continuityOptions
+    );
+    const right = this._sampleFastSurface(
+      mesh.position.x + offsetX,
+      mesh.position.z + offsetZ,
+      fromY,
+      center.y,
+      continuityOptions
+    );
+
+    const samples = [center, left, right];
+
+    const hSpeed = Math.sqrt(
+      this.state.velocity.x * this.state.velocity.x +
+      this.state.velocity.z * this.state.velocity.z
+    );
+    if (hSpeed >= 6) {
+      const forward = this._travelDirectionVector();
+      const lookAhead = Math.min(3.5, Math.max(0.5, hSpeed * 0.08));
+      const forwardSample = this._sampleFastSurface(
+        mesh.position.x + forward.x * lookAhead,
+        mesh.position.z + forward.z * lookAhead,
+        fromY,
+        center.y,
+        continuityOptions
+      );
+      samples.push(forwardSample);
+
+      if (this._multiProbeHalfTrack > 0) {
+        const forwardLeft = this._sampleFastSurface(
+          mesh.position.x + forward.x * lookAhead - offsetX,
+          mesh.position.z + forward.z * lookAhead - offsetZ,
+          fromY,
+          center.y,
+          continuityOptions
+        );
+        const forwardRight = this._sampleFastSurface(
+          mesh.position.x + forward.x * lookAhead + offsetX,
+          mesh.position.z + forward.z * lookAhead + offsetZ,
+          fromY,
+          center.y,
+          continuityOptions
+        );
+        samples.push(forwardLeft, forwardRight);
+      }
+    }
+
+    const validSamples = samples.filter(sample => Number.isFinite(sample.y));
+    if (validSamples.length === 0) return center;
+
+    const highest = validSamples.reduce((best, sample) => (sample.y > best.y ? sample : best), center);
+    if (!Number.isFinite(highest.y) || highest.y <= center.y) {
+      return center;
+    }
+
+    const allowFullRise = highest.surface?.surfaceType === "bridgeMesh";
+    const targetY = allowFullRise
+      ? highest.y
+      : Math.min(highest.y, center.y + this._multiProbeMaxLift);
+
+    if (!Number.isFinite(targetY) || targetY <= center.y) {
+      return center;
+    }
+
+    return {
+      y: targetY,
+      surface: highest.surface ?? center.surface ?? null,
+    };
+  }
+
+  _sampleFastSurface(x, z, fromY, fallback, continuityOptions) {
+    const y = this._terrainQuery.heightAtFast(
+      x,
+      z,
+      fromY,
+      fallback,
+      continuityOptions
+    );
+    return {
+      y,
+      surface: this._terrainQuery.getLastResolvedSurface?.() ?? null,
+    };
   }
 
   /**

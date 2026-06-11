@@ -1,5 +1,45 @@
-import { Mesh, VertexData, StandardMaterial, Color3 } from "@babylonjs/core";
+import { Mesh, VertexData, StandardMaterial, Color3, PhysicsAggregate, PhysicsShapeType, Texture } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
+
+const _bridgeTextureModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
+const _bridgeNormalModules = import.meta.glob('../assets/normals/*', { eager: true, query: '?url', import: 'default' });
+
+const _bridgeTextureUrls = {};
+for (const [path, url] of Object.entries(_bridgeTextureModules)) {
+  const relativePath = path.replace('../assets/', '');
+  const filename = path.split('/').at(-1);
+  _bridgeTextureUrls[relativePath] = url;
+  _bridgeTextureUrls[filename] = url;
+}
+
+const _bridgeNormalUrls = {};
+for (const [path, url] of Object.entries(_bridgeNormalModules)) {
+  const relativePath = path.replace('../assets/', '');
+  const filename = path.split('/').at(-1);
+  _bridgeNormalUrls[relativePath] = url;
+  _bridgeNormalUrls[filename] = url;
+}
+
+function _resolveBridgeAssetUrl(pathOrName, map) {
+  if (!pathOrName || typeof pathOrName !== 'string') return null;
+  return map[pathOrName] ?? map[pathOrName.split('/').at(-1)] ?? null;
+}
+
+function _clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function _lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function _lerpColor(colorA, colorB, t) {
+  return new Color3(
+    _lerp(colorA.r, colorB.r, t),
+    _lerp(colorA.g, colorB.g, t),
+    _lerp(colorA.b, colorB.b, t)
+  );
+}
 
 /**
  * BridgeMesh — a drivable elevated surface defined by a grid of control points
@@ -16,9 +56,11 @@ import { TERRAIN_TYPES } from "../terrain.js";
  *     cols:         number,        // control-point columns (≥ 2)
  *     rows:         number,        // control-point rows    (≥ 2)
  *     heights:      number[],      // absolute world Y, row-major (rows × cols)
+ *     rotation:     number,        // yaw in degrees
  *     thickness:    number,        // vertical thickness of the slab
  *     materialType: string,        // terrain type name (e.g. 'packed_dirt')
- *     level:        number,        // surface layer level (default 1)
+ *     layerId:      number,        // surface layer id (default 1)
+ *     level:        number,        // legacy alias for layerId
  *   }
  *
  * The top face is registered as a drive surface so TerrainQuery raycasts land
@@ -28,40 +70,75 @@ export class BridgeMesh {
   constructor(feature, track, scene, shadows = null, driveSurfaceManager = null) {
     this.feature = feature;
     this._driveSurfaceManager = driveSurfaceManager;
-    this._transitionMeshes = [];
-    this._transitionVisualMeshes = [];
+    this._surfaceTopologyGraph = scene?.metadata?.surfaceTopologyGraph ?? null;
 
     const {
       centerX, centerZ,
       cols, rows,
       width, depth,
       heights,
+      rotation = 0,
       thickness = 0.4,
       materialType = 'packed_dirt',
       level = 1,
-      transitionEnabled = true,
-      transitionDepth = 8,
-      transitionYOffset = 0,
+      layerId = level,
     } = feature;
+    const resolvedLayerId = Number.isFinite(layerId) ? layerId : 1;
+    const safeHeights = Array.isArray(heights) ? heights : new Array(cols * rows).fill(0);
+    const connectorEndpoints = _buildAutoBridgeMeshConnectorEndpoints({
+      track,
+      centerX,
+      centerZ,
+      cols,
+      rows,
+      width,
+      depth,
+      heights: safeHeights,
+      rotation,
+    });
 
     const bridgeMeshKey = `${centerX}_${centerZ}`;
 
-    const safeHeights = Array.isArray(heights) ? heights : new Array(cols * rows).fill(0);
     const terrainType = Object.values(TERRAIN_TYPES).find(t => t.name === materialType) || TERRAIN_TYPES.PACKED_DIRT;
+    const terrainColor = terrainType.color ?? new Color3(0.52, 0.40, 0.22);
 
     // ── Material ─────────────────────────────────────────────────────────────
     this._material = new StandardMaterial(`bmMat_${centerX}_${centerZ}`, scene);
-    this._material.diffuseColor = terrainType.color ?? new Color3(0.52, 0.40, 0.22);
+    this._material.diffuseColor = terrainColor;
     this._material.specularColor = new Color3(
       terrainType.specular ?? 0.13,
       terrainType.specular ?? 0.13,
       terrainType.specular ?? 0.13
     );
+    const textureWorldTile = Math.max(1, terrainType.diffuseTextureWorldUnitsPerTile ?? 24);
+    const diffuseTilesU = Math.max(0.01, width / textureWorldTile);
+    const diffuseTilesV = Math.max(0.01, depth / textureWorldTile);
+    const diffuseUrl = _resolveBridgeAssetUrl(terrainType.diffuseTexture, _bridgeTextureUrls);
+    if (diffuseUrl) {
+      const diffuseTexture = new Texture(diffuseUrl, scene, true, false);
+      diffuseTexture.uScale = diffuseTilesU;
+      diffuseTexture.vScale = diffuseTilesV;
+      this._material.diffuseTexture = diffuseTexture;
+      // StandardMaterial multiplies texture by diffuseColor. Approximate
+      // texture-opacity blending by tinting toward white as texture influence
+      // increases, without darkening the whole surface.
+      const textureInfluence = _clamp01(terrainType.diffuseTextureOpacity ?? 1);
+      this._material.diffuseColor = _lerpColor(terrainColor, Color3.White(), textureInfluence);
+    }
+
+    const normalUrl = _resolveBridgeAssetUrl(terrainType.normalMap, _bridgeNormalUrls);
+    if (normalUrl) {
+      const bumpTexture = new Texture(normalUrl, scene, true, false);
+      bumpTexture.uScale = diffuseTilesU;
+      bumpTexture.vScale = diffuseTilesV;
+      this._material.bumpTexture = bumpTexture;
+      this._material.bumpTexture.level = (terrainType.normalMapIntensity ?? 1) * 0.6;
+    }
     this._material.backFaceCulling = false;
 
     // ── Visual mesh (top + bottom + sides) ───────────────────────────────────
     this._mesh = new Mesh(`bridge_mesh_${centerX}_${centerZ}`, scene);
-    const solidVD = _buildSolidVD(centerX, centerZ, cols, rows, width, depth, safeHeights, thickness);
+    const solidVD = _buildSolidVD(centerX, centerZ, cols, rows, width, depth, safeHeights, thickness, rotation);
     solidVD.applyToMesh(this._mesh);
     this._mesh.material = this._material;
     this._mesh.isPickable = false;
@@ -72,17 +149,19 @@ export class BridgeMesh {
     // This is what TerrainQuery raycasts onto. Its vertex heights exactly match
     // the visual top surface so normal computation and floor-Y are correct.
     this._driveMesh = new Mesh(`bridge_mesh_drive_${centerX}_${centerZ}`, scene);
-    const driveVD = _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, safeHeights);
+    const driveVD = _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, safeHeights, rotation);
     driveVD.applyToMesh(this._driveMesh);
     this._driveMesh.isVisible = true;
     this._driveMesh.visibility = 0;
     this._driveMesh.isPickable = true;
     this._driveMesh.receiveShadows = false;
+    this._driveMeshPhysics = new PhysicsAggregate(this._driveMesh, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
+    let deckSurfaceId = null;
     if (driveSurfaceManager) {
-      driveSurfaceManager.register(this._driveMesh, {
+      deckSurfaceId = driveSurfaceManager.register(this._driveMesh, {
         surfaceType: 'bridgeMesh',
-        level,
+        level: resolvedLayerId,
         tags: {
           surfaceKind: 'bridge-mesh',
           surfaceFace: 'top',
@@ -102,81 +181,124 @@ export class BridgeMesh {
       };
     }
 
-    if (transitionEnabled && transitionDepth > 0 && track?.getHeightAt) {
-      const strips = _createTransitionStrips({
-        scene,
-        track,
+    this._registerTopologyGraph({
+      bridgeMeshKey,
+      level: resolvedLayerId,
+      deckSurfaceId,
+      connectorEndpoints,
+      centerX,
+      centerZ,
+      cols,
+      rows,
+      width,
+      depth,
+      heights: safeHeights,
+      rotation,
+    });
+  }
+
+  _registerTopologyGraph({
+    bridgeMeshKey,
+    level,
+    deckSurfaceId,
+    connectorEndpoints,
+    centerX,
+    centerZ,
+    cols,
+    rows,
+    width,
+    depth,
+    heights,
+    rotation,
+  }) {
+    if (!this._surfaceTopologyGraph) return;
+
+    const resolvedDeckSurfaceId = deckSurfaceId ?? this._driveMesh?.metadata?.surfaceId ?? null;
+    const deckNodeId = this._surfaceTopologyGraph.registerNode(this, {
+      mesh: this._driveMesh,
+      surfaceId: resolvedDeckSurfaceId,
+      layerId: level,
+      role: 'drive',
+      kind: 'bridge-mesh-deck',
+      tags: {
+        bridgeMeshKey,
+      },
+    });
+
+    if (!Number.isFinite(deckNodeId)) return;
+
+    for (let index = 0; index < (connectorEndpoints?.length ?? 0); index++) {
+      const endpoint = connectorEndpoints[index];
+      const endpointWorld = _computeBridgeMeshEndpointWorldPosition({
         centerX,
         centerZ,
         cols,
         rows,
         width,
         depth,
-        heights: safeHeights,
-        transitionDepth,
-        transitionYOffset,
-        bridgeMeshKey,
+        heights,
+        rotation,
+        side: endpoint.side,
+        offset: endpoint.offset,
       });
 
-      for (const strip of strips) {
-        // Keep drive strips hidden; they exist only for TerrainQuery/physics sampling.
-        strip.isVisible = true;
-        strip.visibility = 0;
-        strip.isPickable = true;
-        strip.receiveShadows = false;
-        this._transitionMeshes.push(strip);
+      const endpointNodeId = this._surfaceTopologyGraph.registerNode(this, {
+        mesh: null,
+        surfaceId: null,
+        layerId: level,
+        role: 'drive',
+        kind: 'bridge-mesh-connector-endpoint',
+        connectorType: 'DeckJoin',
+        tags: {
+          bridgeMeshKey,
+          endpointIndex: index,
+          endpointSide: endpoint.side,
+          endpointOffset: endpoint.offset,
+          targetLayerId: endpoint.targetLayerId,
+          endpointAutoTerrainDy: endpoint.autoTerrainDy,
+          endpointWorldX: endpointWorld.x,
+          endpointWorldY: endpointWorld.y,
+          endpointWorldZ: endpointWorld.z,
+        },
+      });
 
-        const visual = strip.clone(`bridge_mesh_transition_visual_${strip.name}`, null, false);
-        if (visual) {
-          visual.isVisible = true;
-          visual.visibility = 1;
-          visual.isPickable = false;
-          visual.material = this._material;
-          visual.receiveShadows = true;
-          shadows?.addShadowCaster?.(visual);
-          this._transitionVisualMeshes.push(visual);
-        }
+      if (!Number.isFinite(endpointNodeId)) continue;
 
-        if (driveSurfaceManager) {
-          driveSurfaceManager.register(strip, {
-            surfaceType: 'bridgeMeshTransition',
-            level,
-            tags: {
-              surfaceKind: 'bridge-mesh-transition',
-              surfaceFace: 'top',
-              normalFilterMode: 'absoluteY',
-              bridgeMeshKey,
-              transitionSide: strip.metadata?.transitionSide ?? 'unknown',
-            },
-          });
-        } else {
-          strip.metadata = {
-            ...(strip.metadata ?? {}),
-            isTerrain: true,
-            isDriveSurface: true,
-            surfaceType: 'bridgeMeshTransition',
-            level,
-            surfaceKind: 'bridge-mesh-transition',
-            surfaceFace: 'top',
-            normalFilterMode: 'absoluteY',
-          };
-        }
-      }
+      this._surfaceTopologyGraph.registerConnector(this, {
+        fromNodeId: deckNodeId,
+        toNodeId: endpointNodeId,
+        fromSurfaceId: resolvedDeckSurfaceId,
+        toSurfaceId: null,
+        type: 'DeckJoin',
+        oneWay: true,
+        tags: {
+          bridgeMeshKey,
+          endpointIndex: index,
+          direction: 'deck-to-endpoint',
+        },
+      });
+
+      this._surfaceTopologyGraph.registerConnector(this, {
+        fromNodeId: endpointNodeId,
+        toNodeId: deckNodeId,
+        fromSurfaceId: null,
+        toSurfaceId: resolvedDeckSurfaceId,
+        type: 'DeckJoin',
+        oneWay: true,
+        tags: {
+          bridgeMeshKey,
+          endpointIndex: index,
+          direction: 'endpoint-to-deck',
+        },
+      });
     }
   }
 
   dispose() {
-    for (const mesh of this._transitionVisualMeshes ?? []) {
-      mesh.dispose();
-    }
-    this._transitionVisualMeshes = [];
-
-    for (const mesh of this._transitionMeshes ?? []) {
-      this._driveSurfaceManager?.unregisterByMesh?.(mesh);
-      mesh.dispose();
-    }
-    this._transitionMeshes = [];
+    this._surfaceTopologyGraph?.removeByOwner?.(this);
     this._driveSurfaceManager?.unregisterByMesh?.(this._driveMesh);
+    this._driveMeshPhysics?.dispose?.();
+    this._driveMeshPhysics = null;
     this._driveMesh?.dispose();
     this._driveMesh = null;
     this._mesh?.dispose();
@@ -186,8 +308,26 @@ export class BridgeMesh {
   }
 }
 
-function _createTransitionStrips({
-  scene,
+function _normalizeBridgeMeshConnectorEndpoints(endpoints = null) {
+  const defaults = [
+    { enabled: true, side: 'north', offset: 0, targetLayerId: 0 },
+    { enabled: true, side: 'south', offset: 0, targetLayerId: 0 },
+  ];
+
+  return defaults.map((fallback, index) => {
+    const source = endpoints?.[index] ?? {};
+    return {
+      enabled: source.enabled !== false,
+      side: typeof source.side === 'string' ? source.side : fallback.side,
+      offset: Number.isFinite(source.offset) ? source.offset : fallback.offset,
+      targetLayerId: Number.isFinite(source.targetLayerId)
+        ? Math.max(0, Math.round(source.targetLayerId))
+        : fallback.targetLayerId,
+    };
+  });
+}
+
+function _buildAutoBridgeMeshConnectorEndpoints({
   track,
   centerX,
   centerZ,
@@ -196,174 +336,155 @@ function _createTransitionStrips({
   width,
   depth,
   heights,
-  transitionDepth,
-  transitionYOffset,
-  bridgeMeshKey,
+  rotation,
 }) {
-  const xs = _xs(centerX, cols, width);
-  const zs = _zs(centerZ, rows, depth);
-  const h = (r, c) => heights[r * cols + c] ?? 0;
+  const candidateSides = ['north', 'south', 'east', 'west'];
+  const candidates = candidateSides.map(side => {
+    const endpointWorld = _computeBridgeMeshEndpointWorldPosition({
+      centerX,
+      centerZ,
+      cols,
+      rows,
+      width,
+      depth,
+      heights,
+      rotation,
+      side,
+      offset: 0,
+    });
 
-  const mkStrip = (name, side, points) => {
-    if (!Array.isArray(points) || points.length < 2) return null;
-    const strip = new Mesh(name, scene);
-    const vd = _buildEdgeStripVD(points);
-    vd.applyToMesh(strip);
-    strip.metadata = {
-      ...(strip.metadata ?? {}),
-      bridgeMeshKey,
-      transitionSide: side,
+    const terrainY = track?.getHeightAt?.(endpointWorld.x, endpointWorld.z);
+    const dy = Number.isFinite(terrainY)
+      ? Math.abs(endpointWorld.y - terrainY)
+      : Infinity;
+
+    return {
+      enabled: true,
+      side,
+      offset: 0,
+      targetLayerId: 0,
+      autoTerrainDy: dy,
     };
-    return strip;
-  };
+  });
 
-  const strips = [];
-
-  {
-    const points = [];
-    for (let c = 0; c < cols; c++) {
-      const x = xs[c];
-      const z = zs[0];
-      const outX = x;
-      const outZ = z - transitionDepth;
-      points.push({
-        x,
-        z,
-        topY: h(0, c),
-        outX,
-        outZ,
-        outY: (track.getHeightAt(outX, outZ) ?? 0) + transitionYOffset,
-      });
-    }
-    const strip = mkStrip(`bridge_mesh_transition_north_${centerX}_${centerZ}`, 'north', points);
-    if (strip) strips.push(strip);
-  }
-
-  {
-    const points = [];
-    for (let c = 0; c < cols; c++) {
-      const x = xs[c];
-      const z = zs[rows - 1];
-      const outX = x;
-      const outZ = z + transitionDepth;
-      points.push({
-        x,
-        z,
-        topY: h(rows - 1, c),
-        outX,
-        outZ,
-        outY: (track.getHeightAt(outX, outZ) ?? 0) + transitionYOffset,
-      });
-    }
-    const strip = mkStrip(`bridge_mesh_transition_south_${centerX}_${centerZ}`, 'south', points);
-    if (strip) strips.push(strip);
-  }
-
-  {
-    const points = [];
-    for (let r = 0; r < rows; r++) {
-      const x = xs[0];
-      const z = zs[r];
-      const outX = x - transitionDepth;
-      const outZ = z;
-      points.push({
-        x,
-        z,
-        topY: h(r, 0),
-        outX,
-        outZ,
-        outY: (track.getHeightAt(outX, outZ) ?? 0) + transitionYOffset,
-      });
-    }
-    const strip = mkStrip(`bridge_mesh_transition_west_${centerX}_${centerZ}`, 'west', points);
-    if (strip) strips.push(strip);
-  }
-
-  {
-    const points = [];
-    for (let r = 0; r < rows; r++) {
-      const x = xs[cols - 1];
-      const z = zs[r];
-      const outX = x + transitionDepth;
-      const outZ = z;
-      points.push({
-        x,
-        z,
-        topY: h(r, cols - 1),
-        outX,
-        outZ,
-        outY: (track.getHeightAt(outX, outZ) ?? 0) + transitionYOffset,
-      });
-    }
-    const strip = mkStrip(`bridge_mesh_transition_east_${centerX}_${centerZ}`, 'east', points);
-    if (strip) strips.push(strip);
-  }
-
-  return strips;
+  candidates.sort((a, b) => a.autoTerrainDy - b.autoTerrainDy);
+  return candidates.slice(0, 2);
 }
 
-function _buildEdgeStripVD(points) {
-  const n = points.length;
-  const positions = [];
-  const uvs = [];
-  const indices = [];
+function _computeBridgeMeshEndpointWorldPosition({
+  centerX,
+  centerZ,
+  cols,
+  rows,
+  width,
+  depth,
+  heights,
+  rotation,
+  side,
+  offset,
+}) {
+  const halfW = width / 2;
+  const halfD = depth / 2;
+  const safeOffset = Number.isFinite(offset) ? Math.max(-1, Math.min(1, offset)) : 0;
 
-  for (let i = 0; i < n; i++) {
-    const p = points[i];
-    positions.push(p.x, p.topY, p.z);
-    uvs.push(i / Math.max(n - 1, 1), 0);
+  let localX = 0;
+  let localZ = 0;
+  switch (side) {
+    case 'south':
+      localX = safeOffset * halfW;
+      localZ = halfD;
+      break;
+    case 'east':
+      localX = halfW;
+      localZ = safeOffset * halfD;
+      break;
+    case 'west':
+      localX = -halfW;
+      localZ = safeOffset * halfD;
+      break;
+    case 'north':
+    default:
+      localX = safeOffset * halfW;
+      localZ = -halfD;
+      break;
   }
 
-  for (let i = 0; i < n; i++) {
-    const p = points[i];
-    positions.push(p.outX, p.outY, p.outZ);
-    uvs.push(i / Math.max(n - 1, 1), 1);
-  }
+  const rotated = _rotateVector(localX, localZ, rotation);
+  return {
+    x: centerX + rotated.x,
+    y: _sampleBridgeHeightAtLocal({ cols, rows, width, depth, heights, localX, localZ }),
+    z: centerZ + rotated.z,
+  };
+}
 
-  for (let i = 0; i < n - 1; i++) {
-    const t0 = i;
-    const t1 = i + 1;
-    const o0 = n + i;
-    const o1 = n + i + 1;
-    indices.push(t0, o1, o0);
-    indices.push(t0, t1, o1);
-  }
+function _sampleBridgeHeightAtLocal({ cols, rows, width, depth, heights, localX, localZ }) {
+  if (!Array.isArray(heights) || heights.length === 0) return 0;
 
-  const vd = new VertexData();
-  vd.positions = positions;
-  vd.indices = indices;
-  vd.uvs = uvs;
-  VertexData.ComputeNormals(positions, indices, vd.normals = []);
-  return vd;
+  const maxCol = Math.max(0, cols - 1);
+  const maxRow = Math.max(0, rows - 1);
+  const u = width > 0 ? Math.max(0, Math.min(1, (localX + width / 2) / width)) : 0;
+  const v = depth > 0 ? Math.max(0, Math.min(1, (localZ + depth / 2) / depth)) : 0;
+  const col = u * maxCol;
+  const row = v * maxRow;
+
+  const c0 = Math.max(0, Math.min(Math.floor(col), maxCol));
+  const r0 = Math.max(0, Math.min(Math.floor(row), maxRow));
+  const c1 = Math.max(0, Math.min(c0 + 1, maxCol));
+  const r1 = Math.max(0, Math.min(r0 + 1, maxRow));
+  const tc = col - c0;
+  const tr = row - r0;
+
+  const h00 = heights[r0 * cols + c0] ?? 0;
+  const h10 = heights[r0 * cols + c1] ?? h00;
+  const h01 = heights[r1 * cols + c0] ?? h00;
+  const h11 = heights[r1 * cols + c1] ?? h10;
+
+  return (
+    h00 * (1 - tc) * (1 - tr) +
+    h10 * tc * (1 - tr) +
+    h01 * (1 - tc) * tr +
+    h11 * tc * tr
+  );
 }
 
 // ── Private mesh-building helpers ─────────────────────────────────────────────
 
-/**
- * Compute evenly-spaced world X positions for each column.
- */
-function _xs(centerX, cols, width) {
-  const halfW = width / 2;
-  const step = cols > 1 ? width / (cols - 1) : 0;
-  return Array.from({ length: cols }, (_, c) => centerX - halfW + c * step);
+function _rotateVector(x, z, rotationDeg = 0) {
+  const rad = rotationDeg * Math.PI / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return {
+    x: x * cos - z * sin,
+    z: x * sin + z * cos,
+  };
 }
 
-/**
- * Compute evenly-spaced world Z positions for each row.
- */
-function _zs(centerZ, rows, depth) {
+function _gridPoints(centerX, centerZ, cols, rows, width, depth, rotationDeg = 0) {
+  const halfW = width / 2;
   const halfD = depth / 2;
-  const step = rows > 1 ? depth / (rows - 1) : 0;
-  return Array.from({ length: rows }, (_, r) => centerZ - halfD + r * step);
+  const stepX = cols > 1 ? width / (cols - 1) : 0;
+  const stepZ = rows > 1 ? depth / (rows - 1) : 0;
+  const points = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const localX = -halfW + c * stepX;
+      const localZ = -halfD + r * stepZ;
+      const rotated = _rotateVector(localX, localZ, rotationDeg);
+      points.push({
+        x: centerX + rotated.x,
+        z: centerZ + rotated.z,
+      });
+    }
+  }
+  return points;
 }
 
 /**
  * Build VertexData for the top face only.
  * Winding is chosen so ComputeNormals produces upward-facing normals.
  */
-function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights) {
-  const xs = _xs(centerX, cols, width);
-  const zs = _zs(centerZ, rows, depth);
+function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights, rotation = 0) {
+  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation);
 
   const positions = [];
   const uvs = [];
@@ -371,7 +492,8 @@ function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights) {
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      positions.push(xs[c], heights[r * cols + c] ?? 0, zs[r]);
+      const p = grid[r * cols + c];
+      positions.push(p.x, heights[r * cols + c] ?? 0, p.z);
       uvs.push(c / Math.max(cols - 1, 1), r / Math.max(rows - 1, 1));
     }
   }
@@ -399,9 +521,8 @@ function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights) {
 /**
  * Build VertexData for a solid slab: top face + bottom face + four sides.
  */
-function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thickness) {
-  const xs = _xs(centerX, cols, width);
-  const zs = _zs(centerZ, rows, depth);
+function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thickness, rotation = 0) {
+  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation);
   const n = cols * rows;
 
   const positions = [];
@@ -411,7 +532,8 @@ function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thic
   // Top vertices (indices 0 .. n-1)
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      positions.push(xs[c], heights[r * cols + c] ?? 0, zs[r]);
+      const p = grid[r * cols + c];
+      positions.push(p.x, heights[r * cols + c] ?? 0, p.z);
       uvs.push(c / Math.max(cols - 1, 1), r / Math.max(rows - 1, 1));
     }
   }
@@ -419,7 +541,8 @@ function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thic
   // Bottom vertices (indices n .. 2n-1), shifted down by thickness
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      positions.push(xs[c], (heights[r * cols + c] ?? 0) - thickness, zs[r]);
+      const p = grid[r * cols + c];
+      positions.push(p.x, (heights[r * cols + c] ?? 0) - thickness, p.z);
       uvs.push(c / Math.max(cols - 1, 1), r / Math.max(rows - 1, 1));
     }
   }

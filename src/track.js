@@ -2,6 +2,15 @@ import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline } from "./polyline-utils.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
 
+const TRACK_SCHEMA_VERSION = 2;
+
+function getFeatureSerializationPriority(feature) {
+  if (!feature || typeof feature !== 'object') return 10;
+  if (feature.type === 'meshGrid') return 0;
+  if (feature.type === 'bridgeMesh') return 1;
+  return 10;
+}
+
 function getHillEllipseParams(feature) {
   return {
     radiusX: Math.max(0.001, feature.radiusX ?? 10),
@@ -48,6 +57,7 @@ function isPointInPolygon(x, z, points) {
 
 export class Track {
   constructor(name = "Untitled Track", width = 160, depth = 160) {
+    this.schemaVersion = TRACK_SCHEMA_VERSION;
     this.name = name;
     this.id = name.toLowerCase().replace(/\s+/g, '-');
     this.hidden = true;
@@ -588,56 +598,28 @@ export class Track {
     return expandPolyline(points, closed);
   }
 
-  /**
-   * Returns the highest bridge deck Y that is beneath `currentY` at (x, z),
-   * or -Infinity if no bridge covers this XZ position.
-   *
-   * Used by TerrainPhysics so the truck spring lands on the bridge deck
-   * instead of falling through to the ground below.
-   *
-   * @param {number} x
-   * @param {number} z
-   * @param {number} truckCenterY  — truck mesh center Y; used to skip decks the truck is passing under
-   */
-  getBridgeFloorAt(x, z, truckCenterY = Infinity) {
-    let best = -Infinity;
-    for (const feature of this.features) {
-      if (feature.type !== 'bridge') continue;
-      const hw = (feature.width ?? 20) / 2;
-      const hd = (feature.depth ?? 8)  / 2;
-      const angleRad = (feature.angle ?? 0) * Math.PI / 180;
-      const cosA = Math.cos(angleRad);
-      const sinA = Math.sin(angleRad);
-      const dx = x - feature.centerX;
-      const dz = z - feature.centerZ;
-      const lx =  dx * cosA + dz * sinA;
-      const lz = -dx * sinA + dz * cosA;
-      const inFootprint = Math.abs(lx) <= hw && Math.abs(lz) <= hd;
-      if (!inFootprint) continue;
-      const terrainY   = this.getHeightAt(feature.centerX, feature.centerZ);
-      const deckBottom = terrainY + (feature.height ?? 5);
-      const deckTop    = deckBottom + (feature.thickness ?? 0.4);
-      // If the truck center is below the deck's underside, the truck is driving
-      // under the bridge — don't snap it up onto the deck.
-      if (truckCenterY < deckBottom) continue;
-      if (deckTop > best) best = deckTop;
-    }
-    return best;
-  }
-
   // Serialize track to JSON string
   toJSON() {
-    // Deep clone features and convert terrainType objects to names
-    const serializedFeatures = this.features.map(feature => {
-      const serialized = { ...feature };
-      if (feature.terrainType && typeof feature.terrainType === 'object') {
-        // Convert terrainType object to just the name
-        serialized.terrainType = feature.terrainType.name;
-      }
-      return serialized;
-    });
+    // Deep clone features, convert terrainType objects to names, and emit
+    // drive surfaces first so runtime reconstruction sees their surfaces before
+    // walls/curbs that may sample them while building.
+    const serializedFeatures = this.features
+      .map((feature, index) => ({ feature, index }))
+      .sort((a, b) => {
+        const priorityDiff = getFeatureSerializationPriority(a.feature) - getFeatureSerializationPriority(b.feature);
+        return priorityDiff !== 0 ? priorityDiff : a.index - b.index;
+      })
+      .map(({ feature }) => {
+        const serialized = { ...feature };
+        if (feature.terrainType && typeof feature.terrainType === 'object') {
+          // Convert terrainType object to just the name
+          serialized.terrainType = feature.terrainType.name;
+        }
+        return serialized;
+      });
 
     return JSON.stringify({
+      schemaVersion: this.schemaVersion ?? TRACK_SCHEMA_VERSION,
       id: this.id,
       packId: this.packId,
       hidden: this.hidden,
@@ -656,6 +638,9 @@ export class Track {
   static fromJSON(jsonString) {
     const data = JSON.parse(jsonString);
     const track = new Track(data.name, data.width ?? 160, data.depth ?? 160);
+    track.schemaVersion = Number.isFinite(data.schemaVersion)
+      ? data.schemaVersion
+      : 1;
     track.image = data.image ?? null;
     track.id = data.id ?? track.id;
     track.packId = data.packId ?? track.packId;

@@ -32,11 +32,12 @@ Key findings:
 1. Surface registry foundation exists (`SurfaceRegistry` + `DriveSurfaceManager`) with surface id/level/role metadata.
 2. Ground and bridgeMesh top surfaces are registered as drivable surfaces.
 3. TerrainQuery already resolves layered drivable hits with top-face filtering and normal filtering.
-4. BridgeMesh transitions are generated and registered as drivable transition surfaces.
-5. SurfaceTopologyGraph exists (nodes/connectors/validation), but runtime registration wiring is not yet implemented.
-6. AI pathing remains mostly 2D/checkpoint or authored path based, without topology/layer routing.
-7. Track schema/editor tools do not yet expose explicit layer/connector authoring workflows.
-8. Legacy bridge helper code still exists in `Track` but is non-authoritative and can be removed later.
+4. BridgeMesh transition strips have been removed; bridgeMesh now registers deck-only drivable surfaces.
+5. SurfaceTopologyGraph exists and bridgeMesh runtime node/connector wiring is now in place for the bridge pilot.
+6. Truck runtime now feeds continuity hints from last resolved surface into query selection; multi-probe floor sampling is active, with AI running always-on multi-probe at full terrain sampling cadence to harden bridge-edge reliability.
+7. AI pathing remains mostly 2D/checkpoint or authored path based, without topology/layer routing.
+8. Track schema/editor tools now expose bridgeMesh metadata controls (layer id, thickness, rotation, connector endpoints); transition controls were removed.
+9. Legacy bridge helper code in Track has been removed; TerrainQuery + drive-surface registration are authoritative.
 
 ## Goals
 1. Support multiple drivable layers at the same XZ location.
@@ -69,8 +70,8 @@ Deliverables:
 
 Status:
 1. Done for registry foundations (`SurfaceRegistry`, `DriveSurfaceManager`).
-2. Done for ground + bridgeMesh + bridgeMesh transitions.
-3. Remaining: broaden registration coverage for future multi-level feature types (tunnels/overpasses beyond bridgeMesh).
+2. Done for ground + bridgeMesh deck surfaces.
+3. In progress: registration infrastructure is ready; broaden runtime registration coverage as future multi-level feature producers (tunnels/overpasses beyond bridgeMesh) are implemented.
 
 ### Phase 2: Unified Surface Query API
 Replace direct ad hoc picking with a stable query contract.
@@ -89,9 +90,9 @@ Notes:
 2. Legacy fallback remains enabled during migration.
 
 Status:
-1. Partially done: `castDownToDriveSurface`, `castUpToDriveSurface`, and `queryDriveSurfaceAt` exist.
-2. Partially done: TerrainQuery uses the drive-surface API with layered top-face filtering.
-3. Remaining: implement `querySurfacesInBounds(bounds, filter)` and explicit transition-lock continuity options in query calls.
+1. Done: `castDownToDriveSurface`, `castUpToDriveSurface`, and `queryDriveSurfaceAt` are implemented and now serve as the authoritative query path when DriveSurfaceManager is present.
+2. Done: TerrainQuery now resolves `castDown`/`heightAtFast` through DriveSurfaceManager query APIs (layered top-face filtering + continuity lock + upward-fallback guard); legacy scene-raycast fallback is explicit opt-in for migration-only use.
+3. Done: `querySurfacesInBounds(bounds, filter)` and explicit transition-lock continuity options in query calls are implemented.
 
 ### Phase 3: Geometry Separation
 Split visual terrain concerns from gameplay collision/navigation concerns.
@@ -102,12 +103,12 @@ Deliverables:
 3. Classify non-drivable colliders by role so floor queries cannot select them.
 
 Notes:
-1. Bridge transitions should produce drivable ramp surfaces plus independent side/ceiling blockers.
+1. BridgeMesh currently ships without transition strips; any future ramp/connectors should be modeled as explicit layered features plus side/ceiling blockers.
 2. Decorative meshes should never be authoritative for floor resolution.
 
 Status:
-1. Mostly done for bridgeMesh: visible mesh is separate from hidden drivable top/transition meshes.
-2. Remaining: formalize side/ceiling blocker role tagging and apply consistently to future layered feature types.
+1. Done for bridgeMesh: visible mesh is separate from hidden drivable top mesh.
+2. Remaining: if future layered feature types need non-drivable sides/ceilings, handle those as explicit authored blockers rather than relying on the visual mesh.
 
 ### Phase 4: Layer Connectivity Topology
 Add explicit graph connectivity between drivable layers.
@@ -124,14 +125,14 @@ Deliverables:
 3. Validation pass for disconnected topology or invalid one-way links.
 
 Notes:
-1. Treat transition surfaces as mesh segments with explicit entry/exit points rather than ad hoc planes.
+1. Treat any future connector surfaces as explicit mesh segments with entry/exit points rather than ad hoc planes.
 2. Preserve a small seam overlap or stitching rule at segment boundaries so floor queries never see a gap.
-3. Record connector directionality and source/target layer ids at authoring and runtime.
+3. Record source/target layer ids at authoring and runtime, with connector directionality deferred until endpoint authoring is in place.
 
 Status:
 1. Scaffold done: `SurfaceTopologyGraph` supports nodes/connectors and validation.
-2. Remaining: register runtime nodes/connectors from bridgeMesh and transitions.
-3. Remaining: expose connector directionality and layer linkage from authoring data.
+2. Done for bridgeMesh pilot: runtime topology registration covers bridgeMesh deck nodes.
+3. In progress: bridgeMesh authoring/runtime now carries explicit connector endpoint metadata and target-layer hints; external linkage behavior and validation overlays still remain.
 
 ### Phase 5: Runtime Integration
 Migrate truck physics and AI to active-surface state.
@@ -144,9 +145,9 @@ Deliverables:
 
 Status:
 1. Partially done: truck debug/state includes resolved surface metadata from TerrainQuery.
-2. Remaining: persist active surface/layer state as first-class runtime state for decision making.
-3. Remaining: integrate AI planner with topology graph and layer transitions.
-4. Remaining: add layer-aware recovery/respawn connector selection.
+2. In progress: runtime surface continuity uses last resolved surface metadata in query selection; multi-probe sampling is enabled for player trucks and always-on full-cadence for AI trucks, which resolved intermittent bridge-edge misses in validation.
+3. Remaining: integrate AI planner with topology graph and layered connectors.
+4. In progress: AI spawn recovery now prefers nearby topology connector nodes with layer-aware matching, with path/spiral fallback.
 
 ### Phase 6: Editor and Data Schema
 Extend authoring to layered surfaces and connectors.
@@ -156,7 +157,9 @@ Deliverables:
 2. Authoring fields:
    - layerId
    - connector endpoints
-   - transition directionality
+   - transition directionality (deferred)
+   - bridgeMesh rotation
+   - bridgeMesh thickness
 3. Validation overlays:
    - active layer view
    - connector flow arrows
@@ -167,9 +170,10 @@ Notes:
 2. Focus migration/tooling effort on bridgeMesh and future layered feature types.
 
 Status:
-1. Partially done: bridgeMesh authoring/UI exists.
-2. Remaining: schema version bump + explicit layer/connector fields.
-3. Remaining: validation overlays for layer view, connector flow, and unreachable surfaces.
+1. In progress: bridgeMesh authoring/UI now includes layer id, thickness, rotation, and connector endpoint metadata.
+2. Done: track schema version bump added with backward-compatible loading defaults.
+3. Done: explicit bridgeMesh connector endpoint fields are wired through schema/editor/runtime metadata.
+4. Remaining: validation overlays for layer view, connector flow, and unreachable surfaces.
 
 ### Phase 7: Performance and Validation
 Lock correctness and runtime cost.
@@ -191,7 +195,7 @@ Deliverables:
    - collision update cost
 
 Status:
-1. Remaining: build layered regression scenes and query correctness tests.
+1. In progress: added layered query regression assets/check script (`public/tracks/layered_query_regression.json`, `npm run check:surfaces`) covering overlapping surface over/under resolution + layer filtering.
 2. Remaining: add telemetry counters for layer switches and invalid transitions.
 3. Remaining: codify and enforce budgets in profiling passes.
 
@@ -238,10 +242,9 @@ Prioritized order to reduce breakage and unlock over/under drivability early:
 7. Full validation and migration hardening.
 
 ## Remaining Work Checklist
-1. Add `querySurfacesInBounds(bounds, filter)` to `DriveSurfaceManager` and wire consumers.
-2. Register topology nodes/connectors for bridgeMesh deck and transition strips at runtime.
-3. Add layer/connectivity metadata to bridgeMesh feature schema and editor controls.
-4. Integrate AI path planning with topology graph transitions.
-5. Add layer-aware recovery/respawn selection using connector graph.
-6. Remove stale legacy bridge helper logic from `Track` once no callers remain.
-7. Create layered regression tracks and automated correctness/perf checks.
+1. Expand runtime topology registration beyond the bridgeMesh pilot and expose authoring-driven connector metadata.
+2. Complete bridgeMesh schema/editor metadata with explicit connector endpoint authoring.
+3. Integrate AI path planning with topology graph connectors.
+4. Add layer-aware recovery/respawn selection using connector graph.
+5. Done: removed stale legacy bridge helper logic from `Track` after confirming no callers.
+6. In progress: layered regression fixture + automated query correctness check added; expand to more scenarios and perf assertions.

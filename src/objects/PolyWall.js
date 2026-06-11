@@ -1,8 +1,9 @@
 import { WallSegment } from "./WallSegment.js";
 import { expandPolyline } from "../polyline-utils.js";
+import { TerrainQuery } from "../managers/TerrainQuery.js";
 
-// How far below the lowest sampled terrain point to extend the box
-const SKIRT = 2;
+// Poly walls should sit flush on the sampled surface.
+const SKIRT = 0;
 
 /**
  * PolyWall — builds terrain-following WallSegments along a polyline of world-space points.
@@ -17,6 +18,8 @@ export class PolyWall {
   constructor(feature, track, scene, shadows) {
     this.segments = [];
     this._feature = feature;   // stored so the editor can identify this wall
+    this._terrainQuery = new TerrainQuery(scene);
+    this._useBridgeSurfaceSampling = this._featureUsesBridgeSurface(feature);
     const visualHeight = Number(feature.height ?? 2);
     const collisionHeight = Number(feature.collisionHeight ?? visualHeight);
     const thickness = Number(feature.thickness ?? 0.5);
@@ -55,8 +58,8 @@ export class PolyWall {
 
         // Sample terrain at both ends of this segment
         const half = segLen / 2;
-        const yA = track.getHeightAt(px - dirX * half, pz - dirZ * half);
-        const yB = track.getHeightAt(px + dirX * half, pz + dirZ * half);
+        const yA = this._sampleHeight(track, px - dirX * half, pz - dirZ * half);
+        const yB = this._sampleHeight(track, px + dirX * half, pz + dirZ * half);
 
         // Parallelogram: each end matches its local terrain height
         const avgY       = (yA + yB) / 2;
@@ -80,5 +83,21 @@ export class PolyWall {
   dispose() {
     for (const seg of this.segments) seg.dispose();
     this.segments = [];
+  }
+
+  _featureUsesBridgeSurface(feature) {
+    const points = feature?.points;
+    if (!Array.isArray(points) || points.length === 0) return false;
+    return points.some(pt => {
+      this._terrainQuery.heightAt(pt.x, pt.z);
+      return this._terrainQuery.getLastResolvedSurface?.()?.surfaceType === 'bridgeMesh';
+    });
+  }
+
+  _sampleHeight(track, x, z) {
+    if (this._useBridgeSurfaceSampling) {
+      return this._terrainQuery.heightAt(x, z);
+    }
+    return track.getHeightAt(x, z);
   }
 }

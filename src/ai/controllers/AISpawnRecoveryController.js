@@ -2,6 +2,7 @@ import { Vector3 } from "@babylonjs/core";
 
 export const DEFAULT_SPAWN_RECOVERY_CONFIG = {
   pathAdvance: 5,
+  topologySearchRadius: 70,
 };
 
 /**
@@ -14,6 +15,7 @@ export class AISpawnRecoveryController {
   constructor(driver, config = {}) {
     this.driver = driver;
     this.pathAdvance = config.pathAdvance ?? DEFAULT_SPAWN_RECOVERY_CONFIG.pathAdvance;
+    this.topologySearchRadius = config.topologySearchRadius ?? DEFAULT_SPAWN_RECOVERY_CONFIG.topologySearchRadius;
   }
 
   snapPathIndexToPosition(pos) {
@@ -76,6 +78,8 @@ export class AISpawnRecoveryController {
 
   findClearPosition(currentPos) {
     const d = this.driver;
+    const topologyCandidate = this._findTopologyConnectorSpawn(currentPos);
+    if (topologyCandidate) return topologyCandidate;
 
     for (let i = Math.max(0, d.currentPathIndex - 1); i >= 0; i--) {
       const wp = d.path[i];
@@ -103,5 +107,56 @@ export class AISpawnRecoveryController {
     }
 
     return { x: currentPos.x, z: currentPos.z };
+  }
+
+  _findTopologyConnectorSpawn(currentPos) {
+    const d = this.driver;
+    const topologyGraph = d.scene?.metadata?.surfaceTopologyGraph ?? null;
+    if (!topologyGraph?.getAllNodes) return null;
+
+    const nodes = topologyGraph.getAllNodes();
+    if (!Array.isArray(nodes) || nodes.length === 0) return null;
+
+    const connectorNodes = nodes.filter(node =>
+      node?.role === 'drive' &&
+      (node?.connectorType || String(node?.kind ?? '').includes('transition'))
+    );
+    if (connectorNodes.length === 0) return null;
+
+    const currentSurface = d.truck?.terrainPhysics?.floorSurface ?? null;
+    const preferredLayer = Number.isFinite(currentSurface?.surfaceLevel)
+      ? currentSurface.surfaceLevel
+      : null;
+
+    const byLayer = Number.isFinite(preferredLayer)
+      ? connectorNodes.filter(node => node.layerId === preferredLayer)
+      : [];
+    const candidates = byLayer.length > 0 ? byLayer : connectorNodes;
+
+    const radiusSq = this.topologySearchRadius * this.topologySearchRadius;
+    const clearCandidates = [];
+
+    for (const node of candidates) {
+      const meshPos = node?.mesh?.position;
+      if (!meshPos) continue;
+
+      const dx = meshPos.x - currentPos.x;
+      const dz = meshPos.z - currentPos.z;
+      const distSq = dx * dx + dz * dz;
+      if (distSq > radiusSq) continue;
+
+      const cell = d.worldToGrid(meshPos.x, meshPos.z);
+      if (!d.isValidCell(cell.x, cell.z) || d.isBlocked(cell.x, cell.z)) continue;
+
+      clearCandidates.push({
+        x: meshPos.x,
+        z: meshPos.z,
+        distSq,
+      });
+    }
+
+    if (clearCandidates.length === 0) return null;
+    clearCandidates.sort((a, b) => a.distSq - b.distSq);
+    return { x: clearCandidates[0].x, z: clearCandidates[0].z };
   }
 }

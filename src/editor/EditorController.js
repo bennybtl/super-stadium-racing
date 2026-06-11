@@ -1615,26 +1615,62 @@ export class EditorController {
   addBridgeMeshEntity()              { this.bridgeMeshEditor?.addBridgeMeshFeature(); this.hideAddMenu(); }
   changeBridgeMeshStepSize(v)        { if (this.bridgeMeshEditor) this.bridgeMeshEditor.stepSize = v; }
   setBridgeMeshPointHeight(v)        { this.bridgeMeshEditor?.setPointHeight(v); }
+  changeBridgeMeshRotation(v) {
+    if (!this.bridgeMeshEditor?.activeFeature) return;
+    this.saveSnapshot();
+    this.bridgeMeshEditor.activeFeature.rotation = v;
+    this.bridgeMeshEditor._updateGizmoPositions?.();
+    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+  }
   bridgeMeshAdjustUp()               { if (this.bridgeMeshEditor) this.bridgeMeshEditor.adjustHeight(this.bridgeMeshEditor.stepSize); }
   bridgeMeshAdjustDown()             { if (this.bridgeMeshEditor) this.bridgeMeshEditor.adjustHeight(-this.bridgeMeshEditor.stepSize); }
   applyBridgeMeshChanges(c, r, w, d) { this.bridgeMeshEditor?.applyGridChanges(c, r, w, d); }
-  changeBridgeMeshTransitionEnabled(v) {
+  changeBridgeMeshThickness(v) {
     if (!this.bridgeMeshEditor?.activeFeature) return;
     this.saveSnapshot();
-    this.bridgeMeshEditor.activeFeature.transitionEnabled = !!v;
+    this.bridgeMeshEditor.activeFeature.thickness = Math.max(0.1, v);
     window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
-  changeBridgeMeshTransitionDepth(v) {
+  changeBridgeMeshLayerId(v) {
     if (!this.bridgeMeshEditor?.activeFeature) return;
     this.saveSnapshot();
-    this.bridgeMeshEditor.activeFeature.transitionDepth = Math.max(0, v);
+    const nextLayerId = Math.max(0, Math.round(v));
+    // Keep legacy `level` mirrored for backward-compatible consumers.
+    this.bridgeMeshEditor.activeFeature.layerId = nextLayerId;
+    this.bridgeMeshEditor.activeFeature.level = nextLayerId;
     window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
-  changeBridgeMeshTransitionYOffset(v) {
+  changeBridgeMeshMaterialType(value) {
     if (!this.bridgeMeshEditor?.activeFeature) return;
     this.saveSnapshot();
-    this.bridgeMeshEditor.activeFeature.transitionYOffset = v;
+    this.bridgeMeshEditor.activeFeature.materialType = typeof value === 'string' && value.length > 0
+      ? value
+      : 'packed_dirt';
     window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+  }
+  changeBridgeMeshConnectorEnabled(index, enabled) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].enabled = enabled === true;
+  }
+  changeBridgeMeshConnectorSide(index, side) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].side = typeof side === 'string' ? side : endpoints[index].side;
+  }
+  changeBridgeMeshConnectorOffset(index, offset) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].offset = Math.max(-1, Math.min(1, offset));
+  }
+  changeBridgeMeshConnectorTargetLayerId(index, layerId) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].targetLayerId = Math.max(0, Math.round(layerId));
   }
   flattenBridgeMesh()                { this.bridgeMeshEditor?.flattenBridgeMesh(); }
   deleteBridgeMesh()                 { this.bridgeMeshEditor?.deleteBridgeMesh(); }
@@ -1642,6 +1678,21 @@ export class EditorController {
   closeBridgeMesh() {
     this.bridgeMeshEditor?.deselect?.();
     if (this._editorStore) this._editorStore.selectedType = null;
+  }
+
+  _ensureBridgeMeshConnectorEndpoints() {
+    const feature = this.bridgeMeshEditor?.activeFeature;
+    if (!feature) return null;
+    if (!Array.isArray(feature.connectorEndpoints)) {
+      feature.connectorEndpoints = [
+        { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
+        { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
+      ];
+    }
+    while (feature.connectorEndpoints.length < 2) {
+      feature.connectorEndpoints.push({ enabled: false, side: 'south', offset: 0, targetLayerId: 0 });
+    }
+    return feature.connectorEndpoints;
   }
 
   // ── Surface Decal helper methods ──────────────────────────────────────────

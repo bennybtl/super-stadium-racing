@@ -193,6 +193,7 @@ export const useDebugStore = defineStore('debug', () => {
     nx: '0.000', ny: '1.000', nz: '0.000',
     surfaceId: '-', surfaceType: '-', surfaceKind: '-', surfaceLevel: '-',
     topologyNodes: '-', topologyConnectors: '-', topologySummary: '-',
+    topologyAutoLinked: '-', topologyAutoUnlinked: '-',
   });
   const recording  = ref(false);
   const frameCount = ref(0);
@@ -328,10 +329,14 @@ export const useEditorStore = defineStore('editor', () => {
     rows: 2,
     width: 20,
     depth: 20,
+    rotation: 0,
     thickness: 0.4,
-    transitionEnabled: true,
-    transitionDepth: 8,
-    transitionYOffset: 0,
+    materialType: 'packed_dirt',
+    layerId: 1,
+    connectorEndpoints: [
+      { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
+      { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
+    ],
     stepSize: 0.5,
     hasSelection: false,
     pointHeight: 0,
@@ -721,18 +726,50 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Bridge Mesh actions ──
   function setBridgeMeshPointHeight(v) { bridgeMesh.pointHeight = v; _bridge.value?.setBridgeMeshPointHeight(v); }
   function setBridgeMeshStepSize(v)    { bridgeMesh.stepSize = v;   _bridge.value?.changeBridgeMeshStepSize(v); }
-  function setBridgeMeshTransitionEnabled(v) {
-    bridgeMesh.transitionEnabled = !!v;
-    _bridge.value?.changeBridgeMeshTransitionEnabled(!!v);
+  function setBridgeMeshRotation(v) {
+    bridgeMesh.rotation = v;
+    _bridge.value?.changeBridgeMeshRotation(v);
   }
-  function setBridgeMeshTransitionDepth(v) {
-    const next = Math.max(0, v);
-    bridgeMesh.transitionDepth = next;
-    _bridge.value?.changeBridgeMeshTransitionDepth(next);
+  function setBridgeMeshThickness(v) {
+    const next = Math.max(0.1, v);
+    bridgeMesh.thickness = next;
+    _bridge.value?.changeBridgeMeshThickness(next);
   }
-  function setBridgeMeshTransitionYOffset(v) {
-    bridgeMesh.transitionYOffset = v;
-    _bridge.value?.changeBridgeMeshTransitionYOffset(v);
+  function setBridgeMeshLayerId(v) {
+    const next = Math.max(0, Math.round(v));
+    bridgeMesh.layerId = next;
+    _bridge.value?.changeBridgeMeshLayerId(next);
+  }
+  function setBridgeMeshMaterialType(value) {
+    const next = typeof value === 'string' && value.length > 0 ? value : 'packed_dirt';
+    bridgeMesh.materialType = next;
+    _bridge.value?.changeBridgeMeshMaterialType(next);
+  }
+  function setBridgeMeshConnectorEnabled(index, enabled) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    endpoint.enabled = enabled === true;
+    _bridge.value?.changeBridgeMeshConnectorEnabled(index, endpoint.enabled);
+  }
+  function setBridgeMeshConnectorSide(index, side) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    endpoint.side = side;
+    _bridge.value?.changeBridgeMeshConnectorSide(index, side);
+  }
+  function setBridgeMeshConnectorOffset(index, offset) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    const next = Math.max(-1, Math.min(1, offset));
+    endpoint.offset = next;
+    _bridge.value?.changeBridgeMeshConnectorOffset(index, next);
+  }
+  function setBridgeMeshConnectorTargetLayerId(index, layerId) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    const next = Math.max(0, Math.round(layerId));
+    endpoint.targetLayerId = next;
+    _bridge.value?.changeBridgeMeshConnectorTargetLayerId(index, next);
   }
   function bridgeMeshAdjustUp()        { _bridge.value?.bridgeMeshAdjustUp(); }
   function bridgeMeshAdjustDown()      { _bridge.value?.bridgeMeshAdjustDown(); }
@@ -890,8 +927,10 @@ export const useEditorStore = defineStore('editor', () => {
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     meshGridAdjustUp, meshGridAdjustDown,
     applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, duplicateMeshGrid, closeMeshGrid,
-    setBridgeMeshPointHeight, setBridgeMeshStepSize,
-    setBridgeMeshTransitionEnabled, setBridgeMeshTransitionDepth, setBridgeMeshTransitionYOffset,
+    setBridgeMeshPointHeight, setBridgeMeshStepSize, setBridgeMeshRotation,
+    setBridgeMeshThickness, setBridgeMeshLayerId, setBridgeMeshMaterialType,
+    setBridgeMeshConnectorEnabled, setBridgeMeshConnectorSide,
+    setBridgeMeshConnectorOffset, setBridgeMeshConnectorTargetLayerId,
     bridgeMeshAdjustUp, bridgeMeshAdjustDown,
     applyBridgeMeshSettings, flattenBridgeMesh, deleteBridgeMesh, duplicateBridgeMesh, closeBridgeMesh,
   };

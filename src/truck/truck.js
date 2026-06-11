@@ -58,8 +58,13 @@ export class Truck {
     this.audioController = null;
     const terrainQuery = new TerrainQuery(scene);
     const terrainPhysicsOptions = this.driver
-      ? { normalSampleInterval: 1 / 20 }
-      : { normalSampleInterval: 0 };
+      ? { normalSampleInterval: 0 }
+      : {
+          normalSampleInterval: 0,
+          multiProbeSurfaceSampling: true,
+          multiProbeHalfTrack: this.width * 0.42,
+          multiProbeMaxLift: this.height * 0.35,
+        };
     this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight, terrainQuery, terrainPhysicsOptions);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
@@ -80,11 +85,6 @@ export class Truck {
     this._bodyUpdateIntervalMid = this.driver ? (1 / 20) : 0;
     this._bodyUpdateIntervalFar = this.driver ? (1 / 12) : 0;
     this._bodyUpdateAccumulator = 0;
-
-    // Terrain physics LOD: far AI trucks can use a cheaper suspension path.
-    this._terrainPhysicsLodFarDistanceSq = 55 * 55;
-    // Keep full terrain sampling at speed so AI doesn't miss ramp/bridge transitions.
-    this._terrainPhysicsLodMaxSpeed = 12;
 
     // Reused debug payload to avoid per-frame object allocation.
     this._debugInfo = {
@@ -267,25 +267,18 @@ export class Truck {
     
     // Terrain physics (gravity, suspension, slopes)
     let terrainLowDetail = false;
-    let terrainDistance = 0;
-    if (this.driver && effectsFocusPosition) {
-      const dx = this.mesh.position.x - effectsFocusPosition.x;
-      const dz = this.mesh.position.z - effectsFocusPosition.z;
-      const distSq = dx * dx + dz * dz;
-      const preTerrainHSpeed = Math.sqrt(
-        this.state.velocity.x * this.state.velocity.x +
-        this.state.velocity.z * this.state.velocity.z
-      );
-      terrainDistance = Math.sqrt(distSq);
-      terrainLowDetail =
-        distSq > this._terrainPhysicsLodFarDistanceSq &&
-        preTerrainHSpeed <= this._terrainPhysicsLodMaxSpeed;
+    let forceMultiProbeTerrainSampling = false;
+
+    if (this.driver) {
+      // AI uses robust floor sampling at all times for reliable bridge/ramp capture.
+      forceMultiProbeTerrainSampling = true;
     }
 
     const { groundedness, penetration } = profile(
       'truck.terrainPhysics',
       () => this.terrainPhysics.update(this.mesh, deltaTime, track, {
         lowDetail: terrainLowDetail,
+        forceMultiProbe: forceMultiProbeTerrainSampling,
       })
     );
     
