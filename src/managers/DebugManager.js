@@ -311,10 +311,18 @@ export class DebugManager {
     const topologyValidation = topologyGraph?.validate?.() ?? { issues: [], valid: true };
     const connectorEndpointNodes = topologyNodes.filter(node => node?.kind === 'bridge-mesh-connector-endpoint');
     const autoLinkedNodeIds = new Set();
+    let terrainLinkCount = 0;
+    let bridgeLinkCount = 0;
     for (const connector of topologyConnectors) {
       if (connector?.tags?.autoLinked !== true) continue;
       if (Number.isFinite(connector.fromNodeId)) autoLinkedNodeIds.add(connector.fromNodeId);
       if (Number.isFinite(connector.toNodeId)) autoLinkedNodeIds.add(connector.toNodeId);
+      const autoLinkMode = String(connector?.tags?.autoLinkMode ?? '');
+      if (autoLinkMode.startsWith('terrain-')) {
+        terrainLinkCount += 1;
+      } else if (autoLinkMode === 'proximity') {
+        bridgeLinkCount += 1;
+      }
     }
     const linkedEndpointCount = connectorEndpointNodes.reduce((count, node) => (
       autoLinkedNodeIds.has(node.nodeId) ? count + 1 : count
@@ -343,6 +351,8 @@ export class DebugManager {
     d.topologyConnectors = String(topologyConnectors.length);
     d.topologyAutoLinked = `${linkedEndpointCount}`;
     d.topologyAutoUnlinked = `${unlinkedEndpointCount}`;
+    d.topologyTerrainLinks = `${terrainLinkCount}`;
+    d.topologyBridgeLinks = `${bridgeLinkCount}`;
     d.topologySummary = topologyValidation.issues.length > 0
       ? `issues:${topologyValidation.issues.length} ${issueSummary} ${connectorSummary}`
       : connectorSummary;

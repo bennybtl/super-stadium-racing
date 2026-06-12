@@ -133,6 +133,7 @@ Status:
 1. Scaffold done: `SurfaceTopologyGraph` supports nodes/connectors and validation.
 2. Done for bridgeMesh pilot: runtime topology registration covers bridgeMesh deck nodes.
 3. In progress: bridgeMesh authoring/runtime now carries explicit connector endpoint metadata and target-layer hints; external linkage behavior and validation overlays still remain.
+4. Done: bridgeMesh hidden drive/collision surfaces now include a small seam-overlap margin so bridge-to-terrain transitions no longer rely on exact edge-to-edge collider contact.
 
 ### Phase 5: Runtime Integration
 Migrate truck physics and AI to active-surface state.
@@ -173,7 +174,8 @@ Status:
 1. In progress: bridgeMesh authoring/UI now includes layer id, thickness, rotation, and connector endpoint metadata.
 2. Done: track schema version bump added with backward-compatible loading defaults.
 3. Done: explicit bridgeMesh connector endpoint fields are wired through schema/editor/runtime metadata.
-4. Remaining: validation overlays for layer view, connector flow, and unreachable surfaces.
+4. In progress: debug panel exposes topology auto-link counts; seam-link-specific counts now distinguish terrain seam autolinks from bridge-to-bridge autolinks.
+5. Remaining: validation overlays for layer view, connector flow, and unreachable surfaces.
 
 ### Phase 7: Performance and Validation
 Lock correctness and runtime cost.
@@ -248,3 +250,5 @@ Prioritized order to reduce breakage and unlock over/under drivability early:
 4. Add layer-aware recovery/respawn selection using connector graph.
 5. Done: removed stale legacy bridge helper logic from `Track` after confirming no callers.
 6. In progress: layered regression fixture + automated query correctness check added; expand to more scenarios and perf assertions.
+7. Done: added seam-overlap hardening for bridgeMesh-to-terrain collision continuity.
+8. In progress: extend validation/debug output to separate terrain seam autolinks from bridge-to-bridge autolinks.

@@ -73,6 +73,7 @@ export class BridgeMeshManager {
     });
 
     const linkedPairs = new Set();
+    const terrainSeamSidesByBridgeKey = new Map();
 
     for (const sourceNode of endpointNodes) {
       const targetNode = this._findNearestEndpointTarget(sourceNode, endpointNodes);
@@ -134,6 +135,20 @@ export class BridgeMeshManager {
           sourceBridgeMeshKey: sourceNode.tags?.bridgeMeshKey ?? null,
         },
       });
+
+      const bridgeMeshKey = sourceNode.tags?.bridgeMeshKey ?? null;
+      const endpointSide = sourceNode.tags?.endpointSide ?? null;
+      if (bridgeMeshKey && typeof endpointSide === 'string') {
+        if (!terrainSeamSidesByBridgeKey.has(bridgeMeshKey)) {
+          terrainSeamSidesByBridgeKey.set(bridgeMeshKey, new Set());
+        }
+        terrainSeamSidesByBridgeKey.get(bridgeMeshKey).add(endpointSide);
+      }
+    }
+
+    for (const bridgeMesh of this._meshes) {
+      const seamSides = terrainSeamSidesByBridgeKey.get(bridgeMesh._bridgeMeshKey);
+      bridgeMesh.updateTerrainSeamSurfaces(seamSides ? [...seamSides] : []);
     }
   }
 

@@ -194,6 +194,7 @@ export const useDebugStore = defineStore('debug', () => {
     surfaceId: '-', surfaceType: '-', surfaceKind: '-', surfaceLevel: '-',
     topologyNodes: '-', topologyConnectors: '-', topologySummary: '-',
     topologyAutoLinked: '-', topologyAutoUnlinked: '-',
+    topologyTerrainLinks: '-', topologyBridgeLinks: '-',
   });
   const recording  = ref(false);
   const frameCount = ref(0);

@@ -41,6 +41,11 @@ function _lerpColor(colorA, colorB, t) {
   );
 }
 
+const DRIVE_COLLIDER_OVERLAP = 0.35;
+const TERRAIN_SEAM_MIN_LENGTH = 0.75;
+const TERRAIN_SEAM_MAX_LENGTH = 3.0;
+const TERRAIN_SEAM_SLOPE_LENGTH_SCALE = 1.5;
+
 /**
  * BridgeMesh — a drivable elevated surface defined by a grid of control points
  * with absolute world-Y heights, similar to the terrain meshGrid feature but
@@ -69,8 +74,13 @@ function _lerpColor(colorA, colorB, t) {
 export class BridgeMesh {
   constructor(feature, track, scene, shadows = null, driveSurfaceManager = null) {
     this.feature = feature;
+    this._track = track;
+    this._scene = scene;
     this._driveSurfaceManager = driveSurfaceManager;
     this._surfaceTopologyGraph = scene?.metadata?.surfaceTopologyGraph ?? null;
+    this._terrainSeamMeshes = [];
+    this._terrainSeamPhysics = [];
+    this._terrainSeamSides = [];
 
     const {
       centerX, centerZ,
@@ -98,6 +108,18 @@ export class BridgeMesh {
     });
 
     const bridgeMeshKey = `${centerX}_${centerZ}`;
+    this._bridgeMeshKey = bridgeMeshKey;
+    this._resolvedLayerId = resolvedLayerId;
+    this._geometryState = {
+      centerX,
+      centerZ,
+      cols,
+      rows,
+      width,
+      depth,
+      heights: safeHeights,
+      rotation,
+    };
 
     const terrainType = Object.values(TERRAIN_TYPES).find(t => t.name === materialType) || TERRAIN_TYPES.PACKED_DIRT;
     const terrainColor = terrainType.color ?? new Color3(0.52, 0.40, 0.22);
@@ -149,7 +171,17 @@ export class BridgeMesh {
     // This is what TerrainQuery raycasts onto. Its vertex heights exactly match
     // the visual top surface so normal computation and floor-Y are correct.
     this._driveMesh = new Mesh(`bridge_mesh_drive_${centerX}_${centerZ}`, scene);
-    const driveVD = _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, safeHeights, rotation);
+    const driveVD = _buildTopFaceVD(
+      centerX,
+      centerZ,
+      cols,
+      rows,
+      width,
+      depth,
+      safeHeights,
+      rotation,
+      DRIVE_COLLIDER_OVERLAP
+    );
     driveVD.applyToMesh(this._driveMesh);
     this._driveMesh.isVisible = true;
     this._driveMesh.visibility = 0;
@@ -195,6 +227,75 @@ export class BridgeMesh {
       heights: safeHeights,
       rotation,
     });
+  }
+
+  updateTerrainSeamSurfaces(sides = []) {
+    this._disposeTerrainSeamSurfaces();
+
+    const uniqueSides = [...new Set((Array.isArray(sides) ? sides : []).filter(side =>
+      side === 'north' || side === 'south' || side === 'east' || side === 'west'
+    ))];
+    this._terrainSeamSides = uniqueSides;
+    if (uniqueSides.length === 0 || !this._track || !this._scene) return;
+
+    for (const side of uniqueSides) {
+      const seamVD = _buildTerrainSeamVD({
+        track: this._track,
+        ...this._geometryState,
+        side,
+      });
+      if (!seamVD) continue;
+
+      const seamMesh = new Mesh(`bridge_mesh_seam_${this._bridgeMeshKey}_${side}`, this._scene);
+      seamVD.applyToMesh(seamMesh);
+      seamMesh.isVisible = true;
+      seamMesh.visibility = 0;
+      seamMesh.isPickable = true;
+      seamMesh.receiveShadows = false;
+
+      const seamPhysics = new PhysicsAggregate(seamMesh, PhysicsShapeType.MESH, { mass: 0 }, this._scene);
+      this._terrainSeamMeshes.push(seamMesh);
+      this._terrainSeamPhysics.push(seamPhysics);
+
+      if (this._driveSurfaceManager) {
+        this._driveSurfaceManager.register(seamMesh, {
+          surfaceType: 'bridgeMeshSeam',
+          level: this._resolvedLayerId,
+          tags: {
+            surfaceKind: 'bridge-mesh-seam',
+            surfaceFace: 'top',
+            normalFilterMode: 'absoluteY',
+            bridgeMeshKey: this._bridgeMeshKey,
+            seamSide: side,
+          },
+        });
+      } else {
+        seamMesh.metadata = {
+          ...(seamMesh.metadata ?? {}),
+          isTerrain: true,
+          isDriveSurface: true,
+          surfaceType: 'bridgeMeshSeam',
+          level: this._resolvedLayerId,
+          surfaceKind: 'bridge-mesh-seam',
+          surfaceFace: 'top',
+          normalFilterMode: 'absoluteY',
+          bridgeMeshKey: this._bridgeMeshKey,
+          seamSide: side,
+        };
+      }
+    }
+  }
+
+  _disposeTerrainSeamSurfaces() {
+    for (const mesh of this._terrainSeamMeshes) {
+      this._driveSurfaceManager?.unregisterByMesh?.(mesh);
+      mesh?.dispose?.();
+    }
+    for (const aggregate of this._terrainSeamPhysics) {
+      aggregate?.dispose?.();
+    }
+    this._terrainSeamMeshes = [];
+    this._terrainSeamPhysics = [];
   }
 
   _registerTopologyGraph({
@@ -295,6 +396,7 @@ export class BridgeMesh {
   }
 
   dispose() {
+    this._disposeTerrainSeamSurfaces();
     this._surfaceTopologyGraph?.removeByOwner?.(this);
     this._driveSurfaceManager?.unregisterByMesh?.(this._driveMesh);
     this._driveMeshPhysics?.dispose?.();
@@ -483,8 +585,11 @@ function _gridPoints(centerX, centerZ, cols, rows, width, depth, rotationDeg = 0
  * Build VertexData for the top face only.
  * Winding is chosen so ComputeNormals produces upward-facing normals.
  */
-function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights, rotation = 0) {
-  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation);
+function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights, rotation = 0, overlap = 0) {
+  const safeOverlap = Math.max(0, overlap);
+  const expandedWidth = width + safeOverlap * 2;
+  const expandedDepth = depth + safeOverlap * 2;
+  const grid = _gridPoints(centerX, centerZ, cols, rows, expandedWidth, expandedDepth, rotation);
 
   const positions = [];
   const uvs = [];
@@ -516,6 +621,153 @@ function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights, ro
   vd.uvs = uvs;
   VertexData.ComputeNormals(positions, indices, vd.normals = []);
   return vd;
+}
+
+function _buildTerrainSeamVD({
+  track,
+  centerX,
+  centerZ,
+  cols,
+  rows,
+  width,
+  depth,
+  heights,
+  rotation = 0,
+  side,
+}) {
+  const edgePoints = _getBridgeEdgePoints({
+    centerX,
+    centerZ,
+    cols,
+    rows,
+    width,
+    depth,
+    heights,
+    rotation,
+    side,
+  });
+  if (!edgePoints || edgePoints.length < 2) return null;
+
+  const avgDelta = edgePoints.reduce((sum, point) => {
+    const terrainY = track?.getHeightAt?.(point.x, point.z);
+    return sum + Math.abs(point.y - (Number.isFinite(terrainY) ? terrainY : point.y));
+  }, 0) / edgePoints.length;
+  const seamLength = Math.max(
+    TERRAIN_SEAM_MIN_LENGTH,
+    Math.min(TERRAIN_SEAM_MAX_LENGTH, avgDelta * TERRAIN_SEAM_SLOPE_LENGTH_SCALE + DRIVE_COLLIDER_OVERLAP)
+  );
+
+  const outward = _getBridgeSideOutwardNormal(side, rotation);
+  const outerPoints = edgePoints.map(point => {
+    const x = point.x + outward.x * seamLength;
+    const z = point.z + outward.z * seamLength;
+    const terrainY = track?.getHeightAt?.(x, z);
+    return {
+      x,
+      y: Number.isFinite(terrainY) ? terrainY : point.y,
+      z,
+    };
+  });
+
+  const positions = [];
+  const uvs = [];
+  const indices = [];
+  const segmentCount = edgePoints.length - 1;
+  if (segmentCount < 1) return null;
+
+  for (let index = 0; index < edgePoints.length; index++) {
+    const inner = edgePoints[index];
+    const outer = outerPoints[index];
+    const u = segmentCount > 0 ? index / segmentCount : 0;
+    positions.push(inner.x, inner.y, inner.z);
+    uvs.push(u, 0);
+    positions.push(outer.x, outer.y, outer.z);
+    uvs.push(u, 1);
+  }
+
+  for (let index = 0; index < segmentCount; index++) {
+    const v0 = index * 2;
+    const v1 = v0 + 1;
+    const v2 = v0 + 3;
+    const v3 = v0 + 2;
+    indices.push(v0, v1, v2);
+    indices.push(v0, v2, v3);
+  }
+
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.uvs = uvs;
+  VertexData.ComputeNormals(positions, indices, vd.normals = []);
+  return vd;
+}
+
+function _getBridgeEdgePoints({
+  centerX,
+  centerZ,
+  cols,
+  rows,
+  width,
+  depth,
+  heights,
+  rotation,
+  side,
+}) {
+  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation);
+  const points = [];
+
+  if (side === 'north') {
+    for (let c = 0; c < cols; c++) {
+      const index = c;
+      const point = grid[index];
+      points.push({ x: point.x, y: heights[index] ?? 0, z: point.z });
+    }
+    return points;
+  }
+
+  if (side === 'south') {
+    const rowStart = (rows - 1) * cols;
+    for (let c = 0; c < cols; c++) {
+      const index = rowStart + c;
+      const point = grid[index];
+      points.push({ x: point.x, y: heights[index] ?? 0, z: point.z });
+    }
+    return points;
+  }
+
+  if (side === 'west') {
+    for (let r = 0; r < rows; r++) {
+      const index = r * cols;
+      const point = grid[index];
+      points.push({ x: point.x, y: heights[index] ?? 0, z: point.z });
+    }
+    return points;
+  }
+
+  if (side === 'east') {
+    for (let r = 0; r < rows; r++) {
+      const index = r * cols + (cols - 1);
+      const point = grid[index];
+      points.push({ x: point.x, y: heights[index] ?? 0, z: point.z });
+    }
+    return points;
+  }
+
+  return null;
+}
+
+function _getBridgeSideOutwardNormal(side, rotation = 0) {
+  switch (side) {
+    case 'south':
+      return _rotateVector(0, 1, rotation);
+    case 'east':
+      return _rotateVector(1, 0, rotation);
+    case 'west':
+      return _rotateVector(-1, 0, rotation);
+    case 'north':
+    default:
+      return _rotateVector(0, -1, rotation);
+  }
 }
 
 /**
