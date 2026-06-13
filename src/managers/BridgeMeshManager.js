@@ -8,17 +8,25 @@ const AUTO_TERRAIN_PROJECTION_MAX_VERTICAL_DELTA = 1.5;
  * BridgeMeshManager — creates and manages BridgeMesh objects from track features.
  */
 export class BridgeMeshManager {
-  constructor(scene, track, shadows = null, driveSurfaceManager = null) {
+  constructor(scene, track, shadows = null, driveSurfaceManager = null, terrainBlendConfig = null) {
     this.scene = scene;
     this.track = track;
     this.shadows = shadows;
     this.driveSurfaceManager = driveSurfaceManager;
+    this.terrainBlendConfig = terrainBlendConfig;
     this.surfaceTopologyGraph = scene?.metadata?.surfaceTopologyGraph ?? null;
     this._meshes = [];
   }
 
   create(feature) {
-    const bm = new BridgeMesh(feature, this.track, this.scene, this.shadows, this.driveSurfaceManager);
+    const bm = new BridgeMesh(
+      feature,
+      this.track,
+      this.scene,
+      this.shadows,
+      this.driveSurfaceManager,
+      this.terrainBlendConfig
+    );
     this._meshes.push(bm);
     return bm;
   }

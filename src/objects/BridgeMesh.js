@@ -63,7 +63,7 @@ const TERRAIN_SEAM_SLOPE_LENGTH_SCALE = 1.5;
  *     heights:      number[],      // absolute world Y, row-major (rows × cols)
  *     rotation:     number,        // yaw in degrees
  *     thickness:    number,        // vertical thickness of the slab
- *     materialType: string,        // terrain type name (e.g. 'packed_dirt')
+ *     materialType: string,        // 'inherit' or terrain type name (e.g. 'packed_dirt')
  *     layerId:      number,        // surface layer id (default 1)
  *     level:        number,        // legacy alias for layerId
  *   }
@@ -72,7 +72,7 @@ const TERRAIN_SEAM_SLOPE_LENGTH_SCALE = 1.5;
  * directly on it at the correct height and slope — no separate proxy needed.
  */
 export class BridgeMesh {
-  constructor(feature, track, scene, shadows = null, driveSurfaceManager = null) {
+  constructor(feature, track, scene, shadows = null, driveSurfaceManager = null, terrainBlendConfig = null) {
     this.feature = feature;
     this._track = track;
     this._scene = scene;
@@ -89,7 +89,7 @@ export class BridgeMesh {
       heights,
       rotation = 0,
       thickness = 0.4,
-      materialType = 'packed_dirt',
+      materialType = 'inherit',
       level = 1,
       layerId = level,
     } = feature;
@@ -121,8 +121,23 @@ export class BridgeMesh {
       rotation,
     };
 
+    const shouldInheritTerrainMaterial = materialType === 'inherit';
     const terrainType = Object.values(TERRAIN_TYPES).find(t => t.name === materialType) || TERRAIN_TYPES.PACKED_DIRT;
     const terrainColor = terrainType.color ?? new Color3(0.52, 0.40, 0.22);
+    const webglVersion = scene?.getEngine?.()?.webGLVersion ?? 2;
+    const hasTerrainBlendResources =
+      webglVersion >= 2 &&
+      typeof terrainBlendConfig?.pluginClass === 'function' &&
+      typeof terrainBlendConfig?.resolveTerrainTypeIndex === 'function' &&
+      !!terrainBlendConfig?.terrainIdTexture &&
+      !!terrainBlendConfig?.terrainPropertyTexture &&
+      !!terrainBlendConfig?.terrainWaterOverlayTexture &&
+      !!terrainBlendConfig?.terrainWearOverlayTexture &&
+      !!terrainBlendConfig?.terrainDiffuseOverlayTexture &&
+      Number.isFinite(terrainBlendConfig?.terrainTypeCount) &&
+      Number.isFinite(terrainBlendConfig?.terrainCellCount) &&
+      Number.isFinite(terrainBlendConfig?.terrainWorldHalfWidth) &&
+      Number.isFinite(terrainBlendConfig?.terrainWorldHalfDepth);
 
     // ── Material ─────────────────────────────────────────────────────────────
     this._material = new StandardMaterial(`bmMat_${centerX}_${centerZ}`, scene);
@@ -135,17 +150,36 @@ export class BridgeMesh {
     const textureWorldTile = Math.max(1, terrainType.diffuseTextureWorldUnitsPerTile ?? 24);
     const diffuseTilesU = Math.max(0.01, width / textureWorldTile);
     const diffuseTilesV = Math.max(0.01, depth / textureWorldTile);
-    const diffuseUrl = _resolveBridgeAssetUrl(terrainType.diffuseTexture, _bridgeTextureUrls);
-    if (diffuseUrl) {
-      const diffuseTexture = new Texture(diffuseUrl, scene, true, false);
-      diffuseTexture.uScale = diffuseTilesU;
-      diffuseTexture.vScale = diffuseTilesV;
-      this._material.diffuseTexture = diffuseTexture;
-      // StandardMaterial multiplies texture by diffuseColor. Approximate
-      // texture-opacity blending by tinting toward white as texture influence
-      // increases, without darkening the whole surface.
-      const textureInfluence = _clamp01(terrainType.diffuseTextureOpacity ?? 1);
-      this._material.diffuseColor = _lerpColor(terrainColor, Color3.White(), textureInfluence);
+    if (hasTerrainBlendResources && shouldInheritTerrainMaterial) {
+      new terrainBlendConfig.pluginClass(
+        this._material,
+        terrainBlendConfig.terrainIdTexture,
+        terrainBlendConfig.terrainPropertyTexture,
+        terrainBlendConfig.terrainWaterOverlayTexture,
+        terrainBlendConfig.terrainWearOverlayTexture,
+        terrainBlendConfig.terrainDiffuseOverlayTexture,
+        terrainBlendConfig.terrainTypeCount,
+        terrainBlendConfig.terrainCellCount,
+        terrainBlendConfig.terrainWorldHalfWidth,
+        terrainBlendConfig.terrainWorldHalfDepth,
+        { forcedTerrainTypeIndex: -1 }
+      );
+      this._material.diffuseColor = Color3.White();
+      this._material.specularColor = Color3.White();
+      this._material.specularPower = 48;
+    } else {
+      const diffuseUrl = _resolveBridgeAssetUrl(terrainType.diffuseTexture, _bridgeTextureUrls);
+      if (diffuseUrl) {
+        const diffuseTexture = new Texture(diffuseUrl, scene, true, false);
+        diffuseTexture.uScale = diffuseTilesU;
+        diffuseTexture.vScale = diffuseTilesV;
+        this._material.diffuseTexture = diffuseTexture;
+        // StandardMaterial multiplies texture by diffuseColor. Approximate
+        // texture-opacity blending by tinting toward white as texture influence
+        // increases, without darkening the whole surface.
+        const textureInfluence = _clamp01(terrainType.diffuseTextureOpacity ?? 1);
+        this._material.diffuseColor = _lerpColor(terrainColor, Color3.White(), textureInfluence);
+      }
     }
 
     const normalUrl = _resolveBridgeAssetUrl(terrainType.normalMap, _bridgeNormalUrls);

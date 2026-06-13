@@ -332,7 +332,7 @@ export const useEditorStore = defineStore('editor', () => {
     depth: 20,
     rotation: 0,
     thickness: 0.4,
-    materialType: 'packed_dirt',
+    materialType: 'inherit',
     layerId: 1,
     connectorEndpoints: [
       { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
@@ -742,7 +742,7 @@ export const useEditorStore = defineStore('editor', () => {
     _bridge.value?.changeBridgeMeshLayerId(next);
   }
   function setBridgeMeshMaterialType(value) {
-    const next = typeof value === 'string' && value.length > 0 ? value : 'packed_dirt';
+    const next = typeof value === 'string' && value.length > 0 ? value : 'inherit';
     bridgeMesh.materialType = next;
     _bridge.value?.changeBridgeMeshMaterialType(next);
   }

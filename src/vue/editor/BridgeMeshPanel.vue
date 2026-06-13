@@ -126,6 +126,7 @@
     <TerrainTypeSelect
       :model-value="editor.bridgeMesh.materialType"
       :include-none="false"
+      :include-inherit="true"
       @update:modelValue="editor.setBridgeMeshMaterialType"
     />
 

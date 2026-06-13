@@ -252,6 +252,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
     createTerrainMaterial,
     createWaterDepthOverlayTexture,
     updateWaterDepthOverlayTexture,
+    TerrainBlendPlugin,
+    getTerrainTypeIndexByName,
   } = await import('../shaders/ground-shader.js');
 
   const terrainIdData = buildTerrainIdTexturePixelData(terrainManager);
@@ -433,7 +435,25 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
-  const bridgeMeshManager = new BridgeMeshManager(scene, currentTrack, shadows, driveSurfaceManager);
+  const bridgeMeshManager = new BridgeMeshManager(
+    scene,
+    currentTrack,
+    shadows,
+    driveSurfaceManager,
+    {
+      pluginClass: TerrainBlendPlugin,
+      resolveTerrainTypeIndex: getTerrainTypeIndexByName,
+      terrainIdTexture: terrainIdTex,
+      terrainPropertyTexture: terrainPropertyTex,
+      terrainWaterOverlayTexture: waterDepthOverlayTex,
+      terrainWearOverlayTexture: terrainWearOverlayTex,
+      terrainDiffuseOverlayTexture: terrainDiffuseOverlayTex,
+      terrainTypeCount: terrainTypePropertyData.width,
+      terrainCellCount: terrainManager.cellsPerSide,
+      terrainWorldHalfWidth: groundWidth / 2,
+      terrainWorldHalfDepth: groundDepth / 2,
+    }
+  );
   const surfaceDecalManager = new SurfaceDecalManager(scene, currentTrack, ground);
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,

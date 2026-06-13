@@ -1645,7 +1645,7 @@ export class EditorController {
     this.saveSnapshot();
     this.bridgeMeshEditor.activeFeature.materialType = typeof value === 'string' && value.length > 0
       ? value
-      : 'packed_dirt';
+      : 'inherit';
     window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
   changeBridgeMeshConnectorEnabled(index, enabled) {

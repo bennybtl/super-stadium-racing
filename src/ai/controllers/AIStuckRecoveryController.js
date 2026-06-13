@@ -36,17 +36,32 @@ export class AIStuckRecoveryController {
 
   update({ dt, input, fwdSpeed, currentPos, targetWaypoint }) {
     const dtMs = dt * 1000;
+    const absFwdSpeed = Math.abs(fwdSpeed);
 
     // Stuck detection — control-input stalls
     // Case A: no throttle intent for too long
     // Case B: throttle held but forward speed stays very low (wall press)
-    const controlStall = (!input.forward && !input.back) ||
-      (input.forward && fwdSpeed < this.wallPressMaxSpeed);
+    const lowSpeed = absFwdSpeed < this.wallPressMaxSpeed;
+    const noThrottleIntent = !input.forward && !input.back;
+    const pushingForwardButNotMoving = input.forward && fwdSpeed < this.wallPressMaxSpeed;
+    const controlStall = (noThrottleIntent && lowSpeed) || pushingForwardButNotMoving;
 
     if (controlStall) {
       this.stuckTimer += dtMs;
       if (this.stuckTimer >= this.stuckThreshold && this.driver.truckMesh) {
-        this._respawnFromStuck(targetWaypoint, currentPos);
+        this._respawnFromStuck(targetWaypoint, currentPos, {
+          reason: 'control-stall',
+          input,
+          fwdSpeed,
+          absFwdSpeed,
+          stuckTimerMs: this.stuckTimer,
+          stuckThresholdMs: this.stuckThreshold,
+          wallPressMaxSpeed: this.wallPressMaxSpeed,
+          lowSpeed,
+          noThrottleIntent,
+          pushingForwardButNotMoving,
+          controlStall,
+        });
       }
     } else {
       this.stuckTimer = 0;
@@ -63,7 +78,16 @@ export class AIStuckRecoveryController {
         if (moved < this.positionStuckMinDist) {
           this.positionStuckTimer += this.positionCheckInterval;
           if (this.positionStuckTimer >= this.positionStuckThreshold && this.driver.truckMesh) {
-            this._respawnFromStuck(targetWaypoint, currentPos);
+            this._respawnFromStuck(targetWaypoint, currentPos, {
+              reason: 'position-stall',
+              input,
+              fwdSpeed,
+              movedDist: moved,
+              movedThreshold: this.positionStuckMinDist,
+              positionStuckTimerMs: this.positionStuckTimer,
+              positionStuckThresholdMs: this.positionStuckThreshold,
+              positionCheckIntervalMs: this.positionCheckInterval,
+            });
           }
         } else {
           this.positionStuckTimer = 0;
@@ -73,7 +97,29 @@ export class AIStuckRecoveryController {
     }
   }
 
-  _respawnFromStuck(targetWaypoint, currentPos) {
+  _respawnFromStuck(targetWaypoint, currentPos, details = {}) {
+    const truckName = this.driver?.truck?.mesh?.name ?? this.driver?.truckMesh?.name ?? 'ai-truck';
+    const posX = Number.isFinite(currentPos?.x) ? currentPos.x.toFixed(2) : 'n/a';
+    const posZ = Number.isFinite(currentPos?.z) ? currentPos.z.toFixed(2) : 'n/a';
+    const wpX = Number.isFinite(targetWaypoint?.x) ? targetWaypoint.x.toFixed(2) : 'n/a';
+    const wpZ = Number.isFinite(targetWaypoint?.z) ? targetWaypoint.z.toFixed(2) : 'n/a';
+    const speed = Number.isFinite(details?.fwdSpeed) ? details.fwdSpeed.toFixed(2) : 'n/a';
+    const movedDist = Number.isFinite(details?.movedDist) ? details.movedDist.toFixed(3) : 'n/a';
+    const inputForward = Boolean(details?.input?.forward);
+    const inputBack = Boolean(details?.input?.back);
+    const inputLeft = Boolean(details?.input?.left);
+    const inputRight = Boolean(details?.input?.right);
+
+    console.warn(
+      `[AIStuckRecovery] respawn reason=${details?.reason ?? 'unknown'} ` +
+      `truck=${truckName} pos=(${posX},${posZ}) wp=(${wpX},${wpZ}) ` +
+      `speed=${speed} moved=${movedDist} ` +
+      `timers(stuck=${Math.round(this.stuckTimer)}ms/${Math.round(this.stuckThreshold)}ms, ` +
+      `position=${Math.round(this.positionStuckTimer)}ms/${Math.round(this.positionStuckThreshold)}ms) ` +
+      `thresholds(movedMin=${this.positionStuckMinDist}, wallPressMaxSpeed=${this.wallPressMaxSpeed}) ` +
+      `input(fwd=${inputForward}, back=${inputBack}, left=${inputLeft}, right=${inputRight})`
+    );
+
     this.driver.respawnFacingTarget(targetWaypoint);
     this.stuckTimer = 0;
     this.positionStuckTimer = 0;

@@ -9,6 +9,14 @@
 import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 
+const _terrainTypeList = Object.values(TERRAIN_TYPES);
+const _terrainTypeIndexByName = new Map(_terrainTypeList.map((terrainType, index) => [terrainType?.name, index]));
+
+export function getTerrainTypeIndexByName(name) {
+  if (typeof name !== 'string' || name.length === 0) return -1;
+  return _terrainTypeIndexByName.get(name) ?? -1;
+}
+
 const STEEP_DIRT_NORMAL_MAP = 'normals/7733-normal.jpg';
 const STEEP_DIRT_SLOPE_START = 18;
 const STEEP_DIRT_SLOPE_END = 34;
@@ -703,6 +711,7 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   const float terrainCellCount = __TERRAIN_CELL_COUNT__;
   const float terrainWorldHalfWidth = __TERRAIN_WORLD_HALF_WIDTH__;
   const float terrainWorldHalfDepth = __TERRAIN_WORLD_HALF_DEPTH__;
+  const float terrainForcedTypeIndex = __TERRAIN_FORCED_TYPE_INDEX__;
 
   // Declared as module-level so both CUSTOM_FRAGMENT_UPDATE_DIFFUSE and the
   // specularColor override can access the result.
@@ -741,6 +750,9 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
     // This keeps blending continuous inside each tile instead of a constant
     // value per tile.
   vec4 _computeTerrainBlend(vec2 tUV) {
+      if (terrainForcedTypeIndex >= 0.0) {
+        return _sampleTypeProps(terrainForcedTypeIndex);
+      }
       float n  = terrainCellCount;
       float nm = n - 1.0;
       vec2 coord = clamp(tUV * n, vec2(0.001), vec2(nm + 0.999));
@@ -795,7 +807,7 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
  * StandardMaterial keeps CSM shadow receiving, lighting, and normal mapping.
  */
 export class TerrainBlendPlugin extends MaterialPluginBase {
-  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth) {
+  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth, options = {}) {
     super(material, "TerrainBlend", 200, {});
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
@@ -806,6 +818,9 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     this._terrainCellCount    = terrainCellCount;
     this._terrainWorldHalfWidth = terrainWorldHalfWidth;
     this._terrainWorldHalfDepth = terrainWorldHalfDepth;
+    this._forcedTerrainTypeIndex = Number.isFinite(options?.forcedTerrainTypeIndex)
+      ? Math.max(-1, Math.round(options.forcedTerrainTypeIndex))
+      : -1;
     this._enable(true);
   }
 
@@ -830,11 +845,13 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     const terrainCellCount = Number(this._terrainCellCount || 1).toFixed(1);
     const terrainWorldHalfWidth = Number(this._terrainWorldHalfWidth || 80).toFixed(1);
     const terrainWorldHalfDepth = Number(this._terrainWorldHalfDepth || 80).toFixed(1);
+    const terrainForcedTypeIndex = Number(this._forcedTerrainTypeIndex ?? -1).toFixed(1);
     const defs = _TERRAIN_BLEND_GLSL_DEFS
       .replace("__TERRAIN_TYPE_COUNT__", terrainTypeCount)
       .replace("__TERRAIN_CELL_COUNT__", terrainCellCount)
       .replace("__TERRAIN_WORLD_HALF_WIDTH__", terrainWorldHalfWidth)
-      .replace("__TERRAIN_WORLD_HALF_DEPTH__", terrainWorldHalfDepth);
+      .replace("__TERRAIN_WORLD_HALF_DEPTH__", terrainWorldHalfDepth)
+      .replace("__TERRAIN_FORCED_TYPE_INDEX__", terrainForcedTypeIndex);
 
     return {
       "CUSTOM_FRAGMENT_DEFINITIONS": defs,
