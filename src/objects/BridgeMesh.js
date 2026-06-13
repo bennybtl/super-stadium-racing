@@ -63,7 +63,6 @@ const TERRAIN_SEAM_SLOPE_LENGTH_SCALE = 1.5;
  *     heights:      number[],      // absolute world Y, row-major (rows × cols)
  *     rotation:     number,        // yaw in degrees
  *     thickness:    number,        // vertical thickness of the slab
- *     materialType: string,        // 'inherit' or terrain type name (e.g. 'packed_dirt')
  *     layerId:      number,        // surface layer id (default 1)
  *     level:        number,        // legacy alias for layerId
  *   }
@@ -89,7 +88,6 @@ export class BridgeMesh {
       heights,
       rotation = 0,
       thickness = 0.4,
-      materialType = 'inherit',
       level = 1,
       layerId = level,
     } = feature;
@@ -121,8 +119,7 @@ export class BridgeMesh {
       rotation,
     };
 
-    const shouldInheritTerrainMaterial = materialType === 'inherit';
-    const terrainType = Object.values(TERRAIN_TYPES).find(t => t.name === materialType) || TERRAIN_TYPES.PACKED_DIRT;
+    const terrainType = TERRAIN_TYPES.PACKED_DIRT;
     const terrainColor = terrainType.color ?? new Color3(0.52, 0.40, 0.22);
     const webglVersion = scene?.getEngine?.()?.webGLVersion ?? 2;
     const hasTerrainBlendResources =
@@ -150,7 +147,7 @@ export class BridgeMesh {
     const textureWorldTile = Math.max(1, terrainType.diffuseTextureWorldUnitsPerTile ?? 24);
     const diffuseTilesU = Math.max(0.01, width / textureWorldTile);
     const diffuseTilesV = Math.max(0.01, depth / textureWorldTile);
-    if (hasTerrainBlendResources && shouldInheritTerrainMaterial) {
+    if (hasTerrainBlendResources) {
       new terrainBlendConfig.pluginClass(
         this._material,
         terrainBlendConfig.terrainIdTexture,

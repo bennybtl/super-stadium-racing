@@ -1640,14 +1640,6 @@ export class EditorController {
     this.bridgeMeshEditor.activeFeature.level = nextLayerId;
     window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
-  changeBridgeMeshMaterialType(value) {
-    if (!this.bridgeMeshEditor?.activeFeature) return;
-    this.saveSnapshot();
-    this.bridgeMeshEditor.activeFeature.materialType = typeof value === 'string' && value.length > 0
-      ? value
-      : 'inherit';
-    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
-  }
   changeBridgeMeshConnectorEnabled(index, enabled) {
     const endpoints = this._ensureBridgeMeshConnectorEndpoints();
     if (!endpoints || !endpoints[index]) return;

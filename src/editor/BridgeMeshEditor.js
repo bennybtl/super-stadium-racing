@@ -96,7 +96,6 @@ export class BridgeMeshEditor {
       heights,
       rotation: 0,
       thickness: 0.4,
-      materialType: 'inherit',
       layerId: 1,
       level: 1,
     };
@@ -490,7 +489,6 @@ export class BridgeMeshEditor {
     s.bridgeMesh.depth     = feature.depth;
     s.bridgeMesh.rotation  = feature.rotation ?? 0;
     s.bridgeMesh.thickness = feature.thickness ?? 0.4;
-    s.bridgeMesh.materialType = feature.materialType ?? 'inherit';
     s.bridgeMesh.layerId = feature.layerId ?? feature.level ?? 1;
     const endpoints = _normalizeBridgeMeshConnectorEndpoints(feature.connectorEndpoints);
     for (let i = 0; i < endpoints.length; i++) {
