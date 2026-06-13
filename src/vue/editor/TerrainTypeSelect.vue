@@ -7,6 +7,7 @@
     @change="$emit('update:modelValue', $event.target.value)"
   >
     <option v-if="includeNone" :value="noneValue">{{ noneLabel }}</option>
+    <option v-if="includeInherit" :value="inheritValue">{{ inheritLabel }}</option>
     <option value="packed_dirt">Packed Dirt</option>
     <option value="loose_dirt">Loose Dirt</option>
     <option value="loamy_dirt">Loamy Dirt</option>
@@ -32,6 +33,10 @@ defineProps({
     type: Boolean,
     default: true,
   },
+  includeInherit: {
+    type: Boolean,
+    default: false,
+  },
   noneLabel: {
     type: String,
     default: 'Default',
@@ -39,6 +44,14 @@ defineProps({
   noneValue: {
     type: String,
     default: 'none',
+  },
+  inheritLabel: {
+    type: String,
+    default: 'Inherit',
+  },
+  inheritValue: {
+    type: String,
+    default: 'inherit',
   },
 });
 

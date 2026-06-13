@@ -132,7 +132,7 @@ export class BezierWallEditor {
 
   _createAnchorSphere(feature, idx) {
     const pt = feature.points[idx];
-    const y = this.track.getHeightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature?.height || 0);
+    const y = this._sampleFeatureHeight(feature, pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature?.height || 0);
     const mesh = MeshBuilder.CreateSphere(`bzAnchor_${idx}_${Date.now()}`, {
       diameter: 1.4,
       segments: 6,
@@ -147,7 +147,7 @@ export class BezierWallEditor {
     const handles = [];
     for (let i = 0; i < feature.points.length; i++) {
       const pt = feature.points[i];
-      const y = this.track.getHeightAt(pt.x, pt.z) + HANDLE_HEIGHT_OFFSET + (feature?.height || 0);
+      const y = this._sampleFeatureHeight(feature, pt.x, pt.z) + HANDLE_HEIGHT_OFFSET + (feature?.height || 0);
       
       if (pt.handleIn) {
         const mesh = MeshBuilder.CreateSphere(`bzHandleIn_${i}_${Date.now()}`, {
@@ -182,7 +182,7 @@ export class BezierWallEditor {
     // Draw anchor points and handle lines
     for (let i = 0; i < feature.points.length; i++) {
       const pt = feature.points[i];
-      const y = this.track.getHeightAt(pt.x, pt.z) + (feature?.height || 0);
+      const y = this._sampleFeatureHeight(feature, pt.x, pt.z) + (feature?.height || 0);
       const anchor = new Vector3(pt.x, y + 0.15, pt.z);
       
       if (pt.handleIn) {
@@ -198,7 +198,7 @@ export class BezierWallEditor {
     // Draw the bezier curve preview
     const curvePoints = this._expandBezierPreview(feature.points, feature.closed);
     const curveLine = curvePoints.map(pt => {
-      const y = this.track.getHeightAt(pt.x, pt.z);
+      const y = this._sampleFeatureHeight(feature, pt.x, pt.z);
       return new Vector3(pt.x, y + 0.12, pt.z);
     });
     lines.push(curveLine);
@@ -276,7 +276,7 @@ export class BezierWallEditor {
     for (let i = 0; i < anchorMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = this.track.getHeightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeWall?.feature?.height || 0);
+      const y = this._sampleFeatureHeight(feature, pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeWall?.feature?.height || 0);
       anchorMeshes[i].position.set(pt.x, y + 0.7, pt.z);
     }
     
@@ -285,7 +285,7 @@ export class BezierWallEditor {
       const pt = feature.points[hm.anchorIdx];
       const handle = hm.type === 'in' ? pt.handleIn : pt.handleOut;
       if (!handle) continue;
-      const y = this.track.getHeightAt(pt.x, pt.z) + HANDLE_HEIGHT_OFFSET + (this._activeWall?.feature?.height || 0);
+      const y = this._sampleFeatureHeight(feature, pt.x, pt.z) + HANDLE_HEIGHT_OFFSET + (this._activeWall?.feature?.height || 0);
       hm.mesh.position.set(pt.x + handle.x, y, pt.z + handle.z);
     }
     
@@ -412,6 +412,22 @@ export class BezierWallEditor {
       wg.lineSystem = this._buildLineSystem(wg.feature);
       this._rebuildWall(wg.feature);
     }
+  }
+
+  _featureUsesBridgeSurface(feature) {
+    const points = feature?.points;
+    if (!Array.isArray(points) || points.length === 0) return false;
+    return points.some(pt => {
+      this.ec.terrainQuery.heightAt(pt.x, pt.z);
+      return this.ec.terrainQuery.getLastResolvedSurface?.()?.surfaceType === 'bridgeMesh';
+    });
+  }
+
+  _sampleFeatureHeight(feature, x, z) {
+    if (this._featureUsesBridgeSurface(feature)) {
+      return this.ec.terrainQuery.heightAt(x, z);
+    }
+    return this.track.getHeightAt(x, z);
   }
 
   // ─── Pointer delegation ───────────────────────────────────────────────────

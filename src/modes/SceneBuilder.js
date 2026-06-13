@@ -27,8 +27,9 @@ import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { BannerStringManager } from "../managers/BannerStringManager.js";
 import { PickupManager } from "../managers/PickupManager.js";
-import { BridgeManager } from "../managers/BridgeManager.js";
+import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
+import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
 import { createHill } from "../objects/Hill.js";
@@ -59,6 +60,12 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
   const driveSurfaceManager = new DriveSurfaceManager(scene);
+  const surfaceTopologyGraph = new SurfaceTopologyGraph(scene);
+  scene.metadata = {
+    ...(scene.metadata ?? {}),
+    driveSurfaceManager,
+    surfaceTopologyGraph,
+  };
 
   // -- Physics --
   const havok = await HavokPhysics();
@@ -245,6 +252,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
     createTerrainMaterial,
     createWaterDepthOverlayTexture,
     updateWaterDepthOverlayTexture,
+    TerrainBlendPlugin,
+    getTerrainTypeIndexByName,
   } = await import('../shaders/ground-shader.js');
 
   const terrainIdData = buildTerrainIdTexturePixelData(terrainManager);
@@ -344,7 +353,23 @@ export async function buildScene(engine, trackLoader, trackKey) {
   };
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
-  driveSurfaceManager.register(ground, { surfaceType: "ground", level: 0 });
+  driveSurfaceManager.register(ground, {
+    surfaceType: "ground",
+    level: 0,
+    tags: {
+      surfaceKind: "ground-base",
+    },
+  });
+  surfaceTopologyGraph.registerNode(ground, {
+    mesh: ground,
+    surfaceId: ground.metadata?.surfaceId ?? null,
+    layerId: 0,
+    role: 'drive',
+    kind: 'ground-base',
+    tags: {
+      surfaceKind: 'ground-base',
+    },
+  });
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
@@ -410,7 +435,25 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows, 0); // Spawning disabled by default inside shared scene
-  const bridgeManager = new BridgeManager(scene, currentTrack, shadows, driveSurfaceManager);
+  const bridgeMeshManager = new BridgeMeshManager(
+    scene,
+    currentTrack,
+    shadows,
+    driveSurfaceManager,
+    {
+      pluginClass: TerrainBlendPlugin,
+      resolveTerrainTypeIndex: getTerrainTypeIndexByName,
+      terrainIdTexture: terrainIdTex,
+      terrainPropertyTexture: terrainPropertyTex,
+      terrainWaterOverlayTexture: waterDepthOverlayTex,
+      terrainWearOverlayTexture: terrainWearOverlayTex,
+      terrainDiffuseOverlayTexture: terrainDiffuseOverlayTex,
+      terrainTypeCount: terrainTypePropertyData.width,
+      terrainCellCount: terrainManager.cellsPerSide,
+      terrainWorldHalfWidth: groundWidth / 2,
+      terrainWorldHalfDepth: groundDepth / 2,
+    }
+  );
   const surfaceDecalManager = new SurfaceDecalManager(scene, currentTrack, ground);
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
@@ -423,7 +466,16 @@ export async function buildScene(engine, trackLoader, trackKey) {
   steepSlopeColliderManager.rebuild();
   checkpointManager.createCheckpoints();
 
-  // Create movable obstacles, flags, and track signs from track features.
+  // Build bridge drive surfaces first so downstream terrain-following features
+  // (poly walls/curbs) can sample across all bridge meshes in one pass.
+  for (const feature of currentTrack.features) {
+    if (feature.type === "bridgeMesh") {
+      bridgeMeshManager.create(feature);
+    }
+  }
+  bridgeMeshManager.rebuildAutoConnectorLinks();
+
+  // Create movable obstacles, walls, flags, and track signs from track features.
   for (const feature of currentTrack.features) {
     if (feature.type === "obstacle") {
       obstacleManager.createStack(feature);
@@ -437,8 +489,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (feature.type === "bannerString") {
       bannerStringManager.createBanner(feature);
-    } else if (feature.type === "bridge") {
-      bridgeManager.createBridge(feature);
     } else if (feature.type === "surfaceDecal") {
       surfaceDecalManager.createDecal(feature);
     } else if (feature.type === 'hill' || feature.type === 'squareHill') {
@@ -469,9 +519,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
     trackSignManager,
     bannerStringManager,
     pickupManager,
-    bridgeManager,
+    bridgeMeshManager,
     steepSlopeColliderManager,
     surfaceDecalManager,
     driveSurfaceManager,
+    surfaceTopologyGraph,
   };
 }

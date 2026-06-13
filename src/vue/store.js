@@ -185,11 +185,16 @@ export const useRaceStore = defineStore('race', () => {
 // ─── Debug panel store ────────────────────────────────────────────────────────
 export const useDebugStore = defineStore('debug', () => {
   const visible = ref(false);
+  const showBridgeDriveSurfaces = ref(false);
   const data = reactive({
     compression: '-', groundedness: '-', penetration: '-',
     vvel: '-', speed: '-', grip: '-', slip: '-',
     terrain: '-', slope: '-', x: '0.00', y: '0.00', z: '0.00',
     nx: '0.000', ny: '1.000', nz: '0.000',
+    surfaceId: '-', surfaceType: '-', surfaceKind: '-', surfaceLevel: '-',
+    topologyNodes: '-', topologyConnectors: '-', topologySummary: '-',
+    topologyAutoLinked: '-', topologyAutoUnlinked: '-',
+    topologyTerrainLinks: '-', topologyBridgeLinks: '-',
   });
   const recording  = ref(false);
   const frameCount = ref(0);
@@ -198,7 +203,22 @@ export const useDebugStore = defineStore('debug', () => {
   function startRecording() { _bridge.value?.startRecording(); }
   function stopRecording()  { _bridge.value?.stopRecording();  }
   function dumpLog()        { _bridge.value?.dumpLog();        }
-  return { visible, data, recording, frameCount, setBridge, startRecording, stopRecording, dumpLog };
+  function toggleBridgeDriveSurfaces() {
+    showBridgeDriveSurfaces.value = !showBridgeDriveSurfaces.value;
+    _bridge.value?.setBridgeDriveSurfaceDebug?.(showBridgeDriveSurfaces.value);
+  }
+  return {
+    visible,
+    showBridgeDriveSurfaces,
+    data,
+    recording,
+    frameCount,
+    setBridge,
+    startRecording,
+    stopRecording,
+    dumpLog,
+    toggleBridgeDriveSurfaces,
+  };
 });
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
@@ -304,6 +324,24 @@ export const useEditorStore = defineStore('editor', () => {
     pointHeight: 0,
   });
 
+  // ── Bridge Mesh panel ──
+  const bridgeMesh = reactive({
+    cols: 4,
+    rows: 2,
+    width: 20,
+    depth: 20,
+    rotation: 0,
+    thickness: 0.4,
+    layerId: 1,
+    connectorEndpoints: [
+      { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
+      { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
+    ],
+    stepSize: 0.5,
+    hasSelection: false,
+    pointHeight: 0,
+  });
+
   // ── Poly wall panel ──
   const polyWall = reactive({
     hasSelection: false,
@@ -391,24 +429,6 @@ export const useEditorStore = defineStore('editor', () => {
     width: 0.9,
     closed: false,
     style: 'red_white',
-  });
-
-  // ── Bridge panel ──
-  const bridge = reactive({
-    width:            20,
-    depth:            8,
-    height:           5,
-    thickness:        0.4,
-    angle:            0,
-    materialType:     'packed_dirt',
-    transitionEnabled: true,
-    transitionDepth:  10,
-    transitionYOffset: 0,
-    collisionEndCaps: true,
-    collisionEndCapsOnDepth: true,
-    collisionEndCapsOnWidth: false,
-    collisionEndCapThickness: 0.5,
-    collisionEndCapDrop: 5,
   });
 
   // ── Track defaults ──
@@ -688,25 +708,6 @@ export const useEditorStore = defineStore('editor', () => {
   function duplicatePolyCurb()     { _bridge.value?.duplicatePolyCurb(); }
   function closePolyCurb()         { _bridge.value?.deselectPolyCurb(); }
 
-  // ── Bridge actions ──
-  function setBridgeWidth(val)     { bridge.width = val;     _bridge.value?.changeBridgeWidth(val); }
-  function setBridgeDepth(val)     { bridge.depth = val;     _bridge.value?.changeBridgeDepth(val); }
-  function setBridgeHeight(val)    { bridge.height = val;    _bridge.value?.changeBridgeHeight(val); }
-  function setBridgeThickness(val) { bridge.thickness = val; _bridge.value?.changeBridgeThickness(val); }
-  function setBridgeAngle(val)     { bridge.angle = val;     _bridge.value?.changeBridgeAngle(val); }
-  function setBridgeMaterialType(val) { bridge.materialType = val; _bridge.value?.changeBridgeMaterialType(val); }
-  function setBridgeTransitionEnabled(val) { bridge.transitionEnabled = val; _bridge.value?.changeBridgeTransitionEnabled(val); }
-  function setBridgeTransitionDepth(val)   { bridge.transitionDepth = val;   _bridge.value?.changeBridgeTransitionDepth(val); }
-  function setBridgeTransitionYOffset(val) { bridge.transitionYOffset = Math.min(0, val); _bridge.value?.changeBridgeTransitionYOffset(Math.min(0, val)); }
-  function setBridgeCollisionEndCaps(val)         { bridge.collisionEndCaps = val;         _bridge.value?.changeBridgeCollisionEndCaps(val); }
-  function setBridgeCollisionEndCapsOnDepth(val)  { bridge.collisionEndCapsOnDepth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnDepth(val); }
-  function setBridgeCollisionEndCapsOnWidth(val)  { bridge.collisionEndCapsOnWidth = val;  _bridge.value?.changeBridgeCollisionEndCapsOnWidth(val); }
-  function setBridgeCollisionEndCapThickness(val) { bridge.collisionEndCapThickness = val; _bridge.value?.changeBridgeCollisionEndCapThickness(val); }
-  function setBridgeCollisionEndCapDrop(val)      { bridge.collisionEndCapDrop = val;      _bridge.value?.changeBridgeCollisionEndCapDrop(val); }
-  function duplicateBridge()       { _bridge.value?.duplicateSelectedBridge(); }
-  function deleteBridge()          { _bridge.value?.deleteBridge(); }
-  function closeBridge()           { _bridge.value?.deselectBridge(); }
-
   // ── Mesh grid actions ──
   function setMeshGridSmoothing(v)   { meshGrid.smoothing = v;  _bridge.value?.changeMeshGridSmoothing(v); }
   function setMeshGridStepSize(v)    { meshGrid.stepSize = v;   _bridge.value?.changeMeshGridStepSize(v); }
@@ -721,6 +722,57 @@ export const useEditorStore = defineStore('editor', () => {
   function deleteMeshGrid()          { _bridge.value?.deleteMeshGrid(); }
   function duplicateMeshGrid()       { _bridge.value?.duplicateMeshGrid(); }
   function closeMeshGrid()           { _bridge.value?.closeMeshGrid(); }
+
+  // ── Bridge Mesh actions ──
+  function setBridgeMeshPointHeight(v) { bridgeMesh.pointHeight = v; _bridge.value?.setBridgeMeshPointHeight(v); }
+  function setBridgeMeshStepSize(v)    { bridgeMesh.stepSize = v;   _bridge.value?.changeBridgeMeshStepSize(v); }
+  function setBridgeMeshRotation(v) {
+    bridgeMesh.rotation = v;
+    _bridge.value?.changeBridgeMeshRotation(v);
+  }
+  function setBridgeMeshThickness(v) {
+    const next = Math.max(0.1, v);
+    bridgeMesh.thickness = next;
+    _bridge.value?.changeBridgeMeshThickness(next);
+  }
+  function setBridgeMeshLayerId(v) {
+    const next = Math.max(0, Math.round(v));
+    bridgeMesh.layerId = next;
+    _bridge.value?.changeBridgeMeshLayerId(next);
+  }
+  function setBridgeMeshConnectorEnabled(index, enabled) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    endpoint.enabled = enabled === true;
+    _bridge.value?.changeBridgeMeshConnectorEnabled(index, endpoint.enabled);
+  }
+  function setBridgeMeshConnectorSide(index, side) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    endpoint.side = side;
+    _bridge.value?.changeBridgeMeshConnectorSide(index, side);
+  }
+  function setBridgeMeshConnectorOffset(index, offset) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    const next = Math.max(-1, Math.min(1, offset));
+    endpoint.offset = next;
+    _bridge.value?.changeBridgeMeshConnectorOffset(index, next);
+  }
+  function setBridgeMeshConnectorTargetLayerId(index, layerId) {
+    const endpoint = bridgeMesh.connectorEndpoints[index];
+    if (!endpoint) return;
+    const next = Math.max(0, Math.round(layerId));
+    endpoint.targetLayerId = next;
+    _bridge.value?.changeBridgeMeshConnectorTargetLayerId(index, next);
+  }
+  function bridgeMeshAdjustUp()        { _bridge.value?.bridgeMeshAdjustUp(); }
+  function bridgeMeshAdjustDown()      { _bridge.value?.bridgeMeshAdjustDown(); }
+  function applyBridgeMeshSettings()   { _bridge.value?.applyBridgeMeshChanges(bridgeMesh.cols, bridgeMesh.rows, bridgeMesh.width, bridgeMesh.depth); }
+  function flattenBridgeMesh()         { _bridge.value?.flattenBridgeMesh(); }
+  function deleteBridgeMesh()          { _bridge.value?.deleteBridgeMesh(); }
+  function duplicateBridgeMesh()       { _bridge.value?.duplicateBridgeMesh(); }
+  function closeBridgeMesh()           { _bridge.value?.closeBridgeMesh(); }
 
   function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
   function setTrackBorderTerrain(name) { trackBorderTerrain.value = name; _bridge.value?.changeTrackBorderTerrain(name); }
@@ -754,6 +806,7 @@ export const useEditorStore = defineStore('editor', () => {
   function closeObstacle()     { _bridge.value?.closeObstacle?.(); }
   function addFlag()           { _bridge.value?.addFlagEntity(); }
   function addMeshGrid()       { _bridge.value?.addMeshGridEntity(); }
+  function addBridgeMesh()     { _bridge.value?.addBridgeMeshEntity(); }
   function addPolyWall()       { _bridge.value?.addPolyWallEntity(); }
   function addPolyHill()       { _bridge.value?.addPolyHillEntity(); }
   function addBezierWall()     { _bridge.value?.addBezierWallEntity(); }
@@ -761,7 +814,6 @@ export const useEditorStore = defineStore('editor', () => {
   function addBannerString()   { _bridge.value?.addBannerStringEntity(); }
   function addActionZone()     { _bridge.value?.addActionZoneEntity(); }
   function addPolyCurb()       { _bridge.value?.addPolyCurbEntity(); }
-  function addBridge()         { _bridge.value?.addBridgeEntity(); }
   function addAiWaypoint()     { _bridge.value?.addAiWaypointEntity(); }
   function insertAiWaypoint()  { _bridge.value?.insertAiWaypointEntity(); }
   function deleteAiWaypoint()  { _bridge.value?.deleteAiWaypoint(); }
@@ -792,6 +844,7 @@ export const useEditorStore = defineStore('editor', () => {
     normalMapDecal,
     obstacle,
     meshGrid,
+    bridgeMesh,
     polyWall,
     polyHill,
     bezierWall,
@@ -834,12 +887,6 @@ export const useEditorStore = defineStore('editor', () => {
     polyCurb,
     setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed, setPolyCurbStyle,
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
-    bridge,
-    setBridgeWidth, setBridgeDepth, setBridgeHeight, setBridgeThickness, setBridgeAngle,
-    setBridgeMaterialType, setBridgeTransitionEnabled, setBridgeTransitionDepth, setBridgeTransitionYOffset,
-    setBridgeCollisionEndCaps, setBridgeCollisionEndCapsOnDepth, setBridgeCollisionEndCapsOnWidth,
-    setBridgeCollisionEndCapThickness, setBridgeCollisionEndCapDrop,
-    duplicateBridge, deleteBridge, closeBridge,
     trackSettingsOpen, trackSettings,
     openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
@@ -854,8 +901,8 @@ export const useEditorStore = defineStore('editor', () => {
     setObstacleType, setObstacleScale, setObstacleRotation, setObstacleWeight, setObstacleColor,
     resetObstacleDefaults, deleteSelectedObstacle, closeObstacle,
     addFlag,
-    addMeshGrid, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
-    addActionZone, addPolyCurb, addBridge, addAiWaypoint, insertAiWaypoint, deleteAiWaypoint, clearAiPath,
+    addMeshGrid, addBridgeMesh, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
+    addActionZone, addPolyCurb, addAiWaypoint, insertAiWaypoint, deleteAiWaypoint, clearAiPath,
     openAiPath, closeAiPath,
     aiPathWear,
     aiPathBranch, aiPathBranches,
@@ -875,5 +922,11 @@ export const useEditorStore = defineStore('editor', () => {
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     meshGridAdjustUp, meshGridAdjustDown,
     applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, duplicateMeshGrid, closeMeshGrid,
+    setBridgeMeshPointHeight, setBridgeMeshStepSize, setBridgeMeshRotation,
+    setBridgeMeshThickness, setBridgeMeshLayerId,
+    setBridgeMeshConnectorEnabled, setBridgeMeshConnectorSide,
+    setBridgeMeshConnectorOffset, setBridgeMeshConnectorTargetLayerId,
+    bridgeMeshAdjustUp, bridgeMeshAdjustDown,
+    applyBridgeMeshSettings, flattenBridgeMesh, deleteBridgeMesh, duplicateBridgeMesh, closeBridgeMesh,
   };
 });

@@ -1,0 +1,495 @@
+{
+  "schemaVersion": 1,
+  "id": "0-slate-debug",
+  "packId": null,
+  "hidden": false,
+  "name": "0 Slate Debug",
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "alphaBreakup": 0.28,
+    "width": 4,
+    "intensity": 0.8,
+    "laneSpacing": 2,
+    "pathWander": 0.7,
+    "edgeSoftness": 1,
+    "secondaryPathCount": 60,
+    "secondaryPathStrength": 0.8,
+    "secondaryPathSpacing": 0.04,
+    "seed": 1337
+  },
+  "features": [
+    {
+      "type": "squareHill",
+      "centerX": -2.91287063351939,
+      "centerZ": 24.95533474401939,
+      "width": 17,
+      "depth": 18.5,
+      "angle": 0,
+      "height": 3,
+      "waterLevelOffset": 1,
+      "transition": 4,
+      "terrainType": null
+    },
+    {
+      "type": "bridgeMesh",
+      "centerX": -25.5,
+      "centerZ": -46.5,
+      "width": 34,
+      "depth": 20,
+      "cols": 4,
+      "rows": 2,
+      "heights": [
+        -0.5,
+        7,
+        7,
+        0,
+        -0.5,
+        7,
+        7,
+        0
+      ],
+      "thickness": 2.05,
+      "transitionEnabled": false,
+      "transitionDepth": 8,
+      "transitionYOffset": 0,
+      "materialType": "packed_dirt",
+      "level": 1
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -31.481663593070373,
+          "z": 20.40230919617707,
+          "radius": 0
+        },
+        {
+          "x": 68.15926416248179,
+          "z": 20.673151984688346,
+          "radius": 0
+        },
+        {
+          "x": 71.13797988231339,
+          "z": -26.53992827952831,
+          "radius": 0
+        },
+        {
+          "x": -13.12691732289862,
+          "z": -24.64994769960272,
+          "radius": 0
+        },
+        {
+          "x": -34.62783635523948,
+          "z": -25.378872155711363,
+          "radius": 0
+        },
+        {
+          "x": -43.12875538758035,
+          "z": -24.607796611820003,
+          "radius": 0
+        },
+        {
+          "x": -43.59326607855753,
+          "z": -38.40218102036137,
+          "radius": 0
+        },
+        {
+          "x": -18.690630159905677,
+          "z": -37.8039408440001,
+          "radius": 0
+        },
+        {
+          "x": 68.82493630567217,
+          "z": -40.22744641808596,
+          "radius": 0
+        },
+        {
+          "x": 64.66602541305005,
+          "z": -79.5,
+          "radius": 0
+        },
+        {
+          "x": -32.223839925143736,
+          "z": -74.30892817416334,
+          "radius": 14
+        },
+        {
+          "x": -33.493906158673994,
+          "z": -60.87532742966552,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": 49.40022146743008,
+          "z": -8.960129922221675,
+          "radius": 0
+        },
+        {
+          "x": 2.5116559882916185,
+          "z": -7.80551457546229,
+          "radius": 0
+        },
+        {
+          "x": -32.09294033750349,
+          "z": -7.941841522601742,
+          "radius": 0
+        },
+        {
+          "x": -66.6975366632986,
+          "z": -7.078168469741193,
+          "radius": 7
+        },
+        {
+          "x": -67.69566922856106,
+          "z": -54.8397057549027,
+          "radius": 4.5
+        },
+        {
+          "x": -29.896841529152407,
+          "z": -56.04829502624559,
+          "radius": 0
+        },
+        {
+          "x": -18.88570591699665,
+          "z": -55.97975539507163,
+          "radius": 0
+        },
+        {
+          "x": 11.521781500090004,
+          "z": -56.4603538382821,
+          "radius": 0
+        },
+        {
+          "x": 41.92926891717666,
+          "z": -60.94095228149258,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 28.414761366675233,
+      "centerZ": -17.995933664767364,
+      "heading": -1.4835298641951802,
+      "width": 17.5,
+      "checkpointNumber": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -55.298195907913474,
+      "centerZ": -30.399541541558754,
+      "heading": -3.141592653589793,
+      "width": 21,
+      "checkpointNumber": 2
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 53.716563541215606,
+      "centerZ": -60.41109487240189,
+      "heading": -3.141592653589793,
+      "width": 22,
+      "checkpointNumber": 3
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 30.411311431200716,
+      "centerZ": 7.606223471946528,
+      "heading": 1.6580627893946132,
+      "width": 28.5,
+      "checkpointNumber": 4
+    },
+    {
+      "type": "aiPath",
+      "points": [
+        {
+          "x": 47.774967370865696,
+          "z": 8.25142735594015
+        },
+        {
+          "x": 61.80947136271771,
+          "z": -6.709064476438835
+        },
+        {
+          "x": 47.86140064475321,
+          "z": -21.602606821006752
+        },
+        {
+          "x": -2.2,
+          "z": -15.65
+        },
+        {
+          "x": -51.15,
+          "z": -16.62
+        },
+        {
+          "x": -59.28,
+          "z": -31.2
+        },
+        {
+          "x": -48.72,
+          "z": -48.77
+        },
+        {
+          "x": -3.64,
+          "z": -49.06
+        },
+        {
+          "x": 50.26722424313894,
+          "z": -50.33721692709029
+        },
+        {
+          "x": 54.7,
+          "z": -61.41
+        },
+        {
+          "x": 48.51388092626756,
+          "z": -71.13609090830187
+        },
+        {
+          "x": -21.22,
+          "z": -68.67
+        },
+        {
+          "x": -27.71680031018728,
+          "z": -57.60142873273923
+        },
+        {
+          "x": -25.86,
+          "z": -1.02
+        },
+        {
+          "x": -12.44,
+          "z": 10.97
+        }
+      ],
+      "branches": []
+    },
+    {
+      "type": "bridgeMesh",
+      "centerX": -25,
+      "centerZ": -16,
+      "width": 34,
+      "depth": 20,
+      "cols": 6,
+      "rows": 2,
+      "heights": [
+        -0.5,
+        4.3,
+        7,
+        7,
+        4.5,
+        0,
+        -0.5,
+        4.3,
+        6.5,
+        6.5,
+        4.5,
+        0
+      ],
+      "thickness": 1.85,
+      "transitionEnabled": false,
+      "transitionDepth": 8,
+      "transitionYOffset": 0,
+      "materialType": "packed_dirt",
+      "level": 1
+    },
+    {
+      "type": "bridgeMesh",
+      "centerX": -20,
+      "centerZ": 50,
+      "width": 34,
+      "depth": 20,
+      "cols": 6,
+      "rows": 2,
+      "heights": [
+        -0.5,
+        2.8,
+        5,
+        5,
+        3.0000000000000004,
+        0,
+        -0.5,
+        2.8,
+        5,
+        5,
+        3.0000000000000004,
+        0
+      ],
+      "thickness": 1,
+      "transitionEnabled": false,
+      "transitionDepth": 8,
+      "transitionYOffset": 0,
+      "materialType": "packed_dirt",
+      "level": 1
+    },
+    {
+      "type": "bridgeMesh",
+      "centerX": 39.5,
+      "centerZ": 49,
+      "width": 44,
+      "depth": 20,
+      "cols": 4,
+      "rows": 2,
+      "heights": [
+        -0.5,
+        6.5,
+        6.5,
+        0,
+        -0.5,
+        6.5,
+        6.5,
+        0
+      ],
+      "thickness": 2,
+      "transitionEnabled": false,
+      "transitionDepth": 8,
+      "transitionYOffset": 0,
+      "materialType": "packed_dirt",
+      "level": 1
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 38.063585339574,
+      "z": 57.96106778221722,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 41.34055925666239,
+      "z": 58.24714087629678,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 44.01399844963312,
+      "z": 57.90482641472138,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 34.931669422675355,
+      "z": 58.04769083976708,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": 16.37416862091266,
+          "z": 40.009325851678945,
+          "radius": 0
+        },
+        {
+          "x": 34.16830453151965,
+          "z": 39.68219533744292,
+          "radius": 0
+        },
+        {
+          "x": 45.252205917159685,
+          "z": 39.47620289070299,
+          "radius": 0
+        },
+        {
+          "x": 67.5652420861094,
+          "z": 39.653730675847044,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -31.09149545424188,
+          "z": 20.18806965641245,
+          "radius": 0
+        },
+        {
+          "x": -32.00698713736398,
+          "z": -5.276545989453869,
+          "radius": 0
+        },
+        {
+          "x": -33.72248061974382,
+          "z": -60.79727486156663,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -1.274977410943542,
+          "z": -7.649681491269774,
+          "radius": 0
+        },
+        {
+          "x": -12.769081238195813,
+          "z": -5.6301943177299165,
+          "radius": 0
+        },
+        {
+          "x": -15.897155991170214,
+          "z": -57.84896099979977,
+          "radius": 0
+        },
+        {
+          "x": -4.735245511322393,
+          "z": -56.6794982628675,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false
+    }
+  ]
+}

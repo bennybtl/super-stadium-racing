@@ -14,7 +14,7 @@ import { DecorationsEditor } from "./DecorationsEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
 import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
-import { BridgeEditor } from './BridgeEditor.js';
+import { BridgeMeshEditor } from './BridgeMeshEditor.js';
 import { AiPathEditor } from './AiPathEditor.js';
 import { TerrainPathEditor } from './TerrainPathEditor.js';
 import { SurfaceDecalEditor } from './SurfaceDecalEditor.js';
@@ -105,8 +105,8 @@ export class EditorController {
     // Poly curb editing editor
     this.polyCurbEditor = new PolyCurbEditor(this);
 
-    // Bridge editing editor
-    this.bridgeEditor = new BridgeEditor(this);
+    // Bridge mesh editor (arbitrary elevated mesh grid)
+    this.bridgeMeshEditor = new BridgeMeshEditor(this);
 
     // AI path waypoint editor
     this.aiPathEditor = new AiPathEditor(this);
@@ -188,8 +188,8 @@ export class EditorController {
     // Poly curb editing editor
     this.polyCurbEditor.activate(this.scene, track);
 
-    // Bridge editing editor
-    this.bridgeEditor.activate(this.scene, track);
+    // Bridge mesh editing editor
+    this.bridgeMeshEditor.activate(this.scene, track);
 
     // AI path waypoint editor
     this.aiPathEditor.activate(this.scene, track);
@@ -292,8 +292,11 @@ export class EditorController {
     // Action zone editor
     this.actionZoneEditor.dispose();
 
-    // Bridge editor
-    this.bridgeEditor.dispose();
+    // Bridge mesh editor
+    if (this.bridgeMeshEditor) {
+      this.bridgeMeshEditor.deactivate();
+      this.bridgeMeshEditor = null;
+    }
 
     // AI path waypoint editor
     this.aiPathEditor.dispose();
@@ -512,8 +515,8 @@ export class EditorController {
       return this._createVectorSelectionInteraction(this.actionZoneEditor);
     }
 
-    if (this.bridgeEditor?.selected) {
-      return this._createVectorSelectionInteraction(this.bridgeEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    if (this.bridgeMeshEditor?.selected) {
+      return this._createVectorSelectionInteraction(this.bridgeMeshEditor);
     }
 
     if (this.aiPathEditor?.selected) {
@@ -558,10 +561,10 @@ export class EditorController {
       { selected: () => this.decorationsEditor.selected, duplicate: () => this.decorationsEditor.duplicateSelected(), delete: () => this.decorationsEditor.deleteSelected() },
       { selected: () => this.trackSignEditor.selected, duplicate: () => this.trackSignEditor.duplicateSelected(), delete: () => this.trackSignEditor.deleteSelected() },
       { selected: () => this.actionZoneEditor.selected, duplicate: () => this.actionZoneEditor.duplicateSelected(), delete: () => this.actionZoneEditor.deleteSelected() },
-      { selected: () => this.bridgeEditor?.selected, duplicate: () => this.bridgeEditor?.duplicateSelected?.(), delete: () => this.bridgeEditor?.deleteSelected?.() },
       { selected: () => this.aiPathEditor?.selected, delete: () => this.aiPathEditor?.deleteSelected?.() },
       { selected: () => this.terrainPathEditor?.selected, delete: () => this.terrainPathEditor?.deleteSelected?.() },
       { selected: () => this.meshGridEditor?.activeFeature, delete: () => this.meshGridEditor?.deleteMeshGrid?.() },
+      { selected: () => this.bridgeMeshEditor?.activeFeature, delete: () => this.bridgeMeshEditor?.deleteBridgeMesh?.() },
       { selected: () => this.polyWallEditor?.selectedPoint, delete: () => this.polyWallEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyHillEditor?.selectedPoint, delete: () => this.polyHillEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyCurbEditor?.selectedPoint, delete: () => this.polyCurbEditor?.deletePolyCurbPoint?.() },
@@ -583,7 +586,6 @@ export class EditorController {
     this.decorationsEditor.deselect();
     this.trackSignEditor.deselect();
     this.actionZoneEditor.deselect();
-    this.bridgeEditor.deselect();
     this.aiPathEditor.deselect();
     this.terrainPathEditor.deselect();
 
@@ -598,7 +600,6 @@ export class EditorController {
     this.decorationsEditor.clearMeshes();
     this.trackSignEditor.clearMeshes();
     this.actionZoneEditor.clearMeshes();
-    this.bridgeEditor.clearMeshes();
 
     // Restore editable track state
     const parsed = JSON.parse(snap);
@@ -641,7 +642,6 @@ export class EditorController {
         else if (feature.type === 'flag' || feature.type === 'bannerString') this.decorationsEditor.createVisual(feature);
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
-        else if (feature.type === 'bridge') this.bridgeEditor.createVisual(feature);
       }
       // Restore AI path waypoint gizmos
       this.aiPathEditor.onSnapshotRestored(this.currentTrack);
@@ -651,6 +651,9 @@ export class EditorController {
 
       // Restore mesh grid gizmos
       this.meshGridEditor?.onSnapshotRestored();
+      // Restore bridge mesh gizmos
+      this.bridgeMeshEditor?.onSnapshotRestored();
+      window.rebuildBridgeMesh?.(null);
       // Restore poly wall gizmos
       this.polyWallEditor?.onSnapshotRestored();
       // Restore poly hill gizmos
@@ -662,7 +665,6 @@ export class EditorController {
       // Restore poly curb gizmos
       this.polyCurbEditor?.onSnapshotRestored();
       window.rebuildPolyCurb?.(null);
-      window.rebuildBridge?.(null);
       // Checkpoints are managed by CheckpointManager — rebuild from features
       this.checkpointEditor.rebuildFromFeatures();
 
@@ -794,6 +796,12 @@ export class EditorController {
 
     // Delegate [ / ] to mesh grid editor for height adjustment
     if (this.meshGridEditor?.onKeyDown(event)) {
+      event.preventDefault();
+      return;
+    }
+
+    // Delegate [ / ] to bridge mesh editor for height adjustment
+    if (this.bridgeMeshEditor?.onKeyDown(event)) {
       event.preventDefault();
       return;
     }
@@ -1038,7 +1046,6 @@ export class EditorController {
       [this.normalMapDecalEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
-      [this.bridgeEditor, 'selected'],
       [this.decorationsEditor, '_selected'],
       [this.aiPathEditor, 'selected'],
       [this.terrainPathEditor, 'selected'],
@@ -1150,6 +1157,9 @@ export class EditorController {
         // Mesh grid control points take priority
         if (this.meshGridEditor?.onPointerDown(clickedMesh)) return;
 
+        // Bridge mesh control points
+        if (this.bridgeMeshEditor?.onPointerDown(clickedMesh)) return;
+
         // Poly wall control points
         if (this.polyWallEditor?.onPointerDown(clickedMesh)) return;
 
@@ -1174,7 +1184,6 @@ export class EditorController {
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
-          { editor: this.bridgeEditor },
         ];
 
         for (const handler of clickHandlers) {
@@ -1484,10 +1493,10 @@ export class EditorController {
     this.decorationsEditor.deselect();
     this.trackSignEditor.deselect();
     this.actionZoneEditor.deselect();
-    this.bridgeEditor?.deselect();
     this.aiPathEditor?.deselect();
     this.terrainPathEditor?.deselect();
     this.meshGridEditor?.deselectPoint();
+    this.bridgeMeshEditor?.deselect?.();
     this.polyWallEditor?.deselectPoint();
     this.polyHillEditor?.deselectPoint();
     this.bezierWallEditor?.deselectAll();
@@ -1561,7 +1570,6 @@ export class EditorController {
 
   // ── Action Zone Vue bridge methods ──
   addActionZoneEntity()           { this.actionZoneEditor.addEntity(); }
-  addBridgeEntity()               { this.bridgeEditor.addEntity(); }
   deselectActionZone()            { this.actionZoneEditor.deselect(); }
   changeActionZoneRadius(val)     { this.actionZoneEditor.changeRadius(val); }
   changeActionZoneType(val)       { this.actionZoneEditor.changeZoneType(val); }
@@ -1583,25 +1591,6 @@ export class EditorController {
   duplicatePolyCurb()        { this.polyCurbEditor?.duplicatePolyCurb(); }
   deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
 
-  // ── Bridge Vue bridge methods ──────────────────────────────────────────────
-  changeBridgeWidth(val)     { this.bridgeEditor?.changeWidth(val); }
-  changeBridgeDepth(val)     { this.bridgeEditor?.changeDepth(val); }
-  changeBridgeHeight(val)    { this.bridgeEditor?.changeHeight(val); }
-  changeBridgeThickness(val) { this.bridgeEditor?.changeThickness(val); }
-  changeBridgeAngle(val)     { this.bridgeEditor?.changeAngle(val); }
-  changeBridgeMaterialType(val) { this.bridgeEditor?.changeMaterialType(val); }
-  changeBridgeTransitionEnabled(val) { this.bridgeEditor?.changeTransitionEnabled(val); }
-  changeBridgeTransitionDepth(val)   { this.bridgeEditor?.changeTransitionDepth(val); }
-  changeBridgeTransitionYOffset(val) { this.bridgeEditor?.changeTransitionYOffset(val); }
-  changeBridgeCollisionEndCaps(val)         { this.bridgeEditor?.changeCollisionEndCaps(val); }
-  changeBridgeCollisionEndCapsOnDepth(val)  { this.bridgeEditor?.changeCollisionEndCapsOnDepth(val); }
-  changeBridgeCollisionEndCapsOnWidth(val)  { this.bridgeEditor?.changeCollisionEndCapsOnWidth(val); }
-  changeBridgeCollisionEndCapThickness(val) { this.bridgeEditor?.changeCollisionEndCapThickness(val); }
-  changeBridgeCollisionEndCapDrop(val)      { this.bridgeEditor?.changeCollisionEndCapDrop(val); }
-  duplicateSelectedBridge()  { this.bridgeEditor?.duplicateSelected(); }
-  deleteBridge()             { this.bridgeEditor?.deleteSelected(); }
-  deselectBridge()           { this.bridgeEditor?.deselect(); }
-
   // ── Mesh grid bridge ─────────────────────────────────────────────────────
   changeMeshGridSmoothing(v) {
     if (this.meshGridEditor?.activeFeature) {
@@ -1620,6 +1609,82 @@ export class EditorController {
   closeMeshGrid() {
     this.meshGridEditor?.deselectPoint();
     if (this._editorStore) this._editorStore.selectedType = null;
+  }
+
+  // ── Bridge Mesh bridge methods ────────────────────────────────────────────
+  addBridgeMeshEntity()              { this.bridgeMeshEditor?.addBridgeMeshFeature(); this.hideAddMenu(); }
+  changeBridgeMeshStepSize(v)        { if (this.bridgeMeshEditor) this.bridgeMeshEditor.stepSize = v; }
+  setBridgeMeshPointHeight(v)        { this.bridgeMeshEditor?.setPointHeight(v); }
+  changeBridgeMeshRotation(v) {
+    if (!this.bridgeMeshEditor?.activeFeature) return;
+    this.saveSnapshot();
+    this.bridgeMeshEditor.activeFeature.rotation = v;
+    this.bridgeMeshEditor._updateGizmoPositions?.();
+    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+  }
+  bridgeMeshAdjustUp()               { if (this.bridgeMeshEditor) this.bridgeMeshEditor.adjustHeight(this.bridgeMeshEditor.stepSize); }
+  bridgeMeshAdjustDown()             { if (this.bridgeMeshEditor) this.bridgeMeshEditor.adjustHeight(-this.bridgeMeshEditor.stepSize); }
+  applyBridgeMeshChanges(c, r, w, d) { this.bridgeMeshEditor?.applyGridChanges(c, r, w, d); }
+  changeBridgeMeshThickness(v) {
+    if (!this.bridgeMeshEditor?.activeFeature) return;
+    this.saveSnapshot();
+    this.bridgeMeshEditor.activeFeature.thickness = Math.max(0.1, v);
+    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+  }
+  changeBridgeMeshLayerId(v) {
+    if (!this.bridgeMeshEditor?.activeFeature) return;
+    this.saveSnapshot();
+    const nextLayerId = Math.max(0, Math.round(v));
+    // Keep legacy `level` mirrored for backward-compatible consumers.
+    this.bridgeMeshEditor.activeFeature.layerId = nextLayerId;
+    this.bridgeMeshEditor.activeFeature.level = nextLayerId;
+    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+  }
+  changeBridgeMeshConnectorEnabled(index, enabled) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].enabled = enabled === true;
+  }
+  changeBridgeMeshConnectorSide(index, side) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].side = typeof side === 'string' ? side : endpoints[index].side;
+  }
+  changeBridgeMeshConnectorOffset(index, offset) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].offset = Math.max(-1, Math.min(1, offset));
+  }
+  changeBridgeMeshConnectorTargetLayerId(index, layerId) {
+    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
+    if (!endpoints || !endpoints[index]) return;
+    this.saveSnapshot();
+    endpoints[index].targetLayerId = Math.max(0, Math.round(layerId));
+  }
+  flattenBridgeMesh()                { this.bridgeMeshEditor?.flattenBridgeMesh(); }
+  deleteBridgeMesh()                 { this.bridgeMeshEditor?.deleteBridgeMesh(); }
+  duplicateBridgeMesh()              { this.bridgeMeshEditor?.duplicateBridgeMesh(); }
+  closeBridgeMesh() {
+    this.bridgeMeshEditor?.deselect?.();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
+
+  _ensureBridgeMeshConnectorEndpoints() {
+    const feature = this.bridgeMeshEditor?.activeFeature;
+    if (!feature) return null;
+    if (!Array.isArray(feature.connectorEndpoints)) {
+      feature.connectorEndpoints = [
+        { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
+        { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
+      ];
+    }
+    while (feature.connectorEndpoints.length < 2) {
+      feature.connectorEndpoints.push({ enabled: false, side: 'south', offset: 0, targetLayerId: 0 });
+    }
+    return feature.connectorEndpoints;
   }
 
   // ── Surface Decal helper methods ──────────────────────────────────────────
@@ -1759,7 +1824,6 @@ export class EditorController {
     setListVisibility(this.terrainShapeEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.normalMapDecalEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.obstacleEditor?.meshes, ['node', 'mesh']);
-    setListVisibility(this.bridgeEditor?.meshes, ['node', 'sphere']);
 
     if (this.checkpointManager) {
       for (const cp of this.checkpointManager.checkpointMeshes || []) {

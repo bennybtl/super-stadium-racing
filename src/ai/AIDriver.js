@@ -81,9 +81,17 @@ export class AIDriver {
     this._usingTelemetry = false;
     
     // Lightweight occupancy grid used for wall/curb blocked checks.
-    this.gridSize = Math.max(track.width ?? 160, track.depth ?? 160);
+    // Keep independent X/Z extents so blocked probes stay aligned on
+    // rectangular tracks (for example 320x160).
+    this.gridWidth = Math.max(1, track.width ?? 160);
+    this.gridDepth = Math.max(1, track.depth ?? 160);
     this.gridResolution = 2; // 2 units per cell
-    this.gridCells = Math.floor(this.gridSize / this.gridResolution);
+    this.gridCellsX = Math.max(1, Math.floor(this.gridWidth / this.gridResolution));
+    this.gridCellsZ = Math.max(1, Math.floor(this.gridDepth / this.gridResolution));
+
+    // Legacy aliases retained for older debug tooling that expects these fields.
+    this.gridSize = Math.max(this.gridWidth, this.gridDepth);
+    this.gridCells = Math.max(this.gridCellsX, this.gridCellsZ);
     
     // Steering parameters (skill-based)
     this.lookAheadDistance = lookAheadDistance;
@@ -252,7 +260,7 @@ export class AIDriver {
    * Check if cell is within bounds
    */
   isValidCell(x, z) {
-    return x >= 0 && x < this.gridCells && z >= 0 && z < this.gridCells;
+    return x >= 0 && x < this.gridCellsX && z >= 0 && z < this.gridCellsZ;
   }
 
   /**
@@ -292,12 +300,13 @@ export class AIDriver {
    * Convert world coordinates to grid cell
    */
   worldToGrid(worldX, worldZ) {
-    const halfSize = this.gridSize / 2;
-    const gridX = Math.floor((worldX + halfSize) / this.gridResolution);
-    const gridZ = Math.floor((worldZ + halfSize) / this.gridResolution);
+    const halfWidth = this.gridWidth / 2;
+    const halfDepth = this.gridDepth / 2;
+    const gridX = Math.floor((worldX + halfWidth) / this.gridResolution);
+    const gridZ = Math.floor((worldZ + halfDepth) / this.gridResolution);
     return { 
-      x: Math.max(0, Math.min(this.gridCells - 1, gridX)),
-      z: Math.max(0, Math.min(this.gridCells - 1, gridZ))
+      x: Math.max(0, Math.min(this.gridCellsX - 1, gridX)),
+      z: Math.max(0, Math.min(this.gridCellsZ - 1, gridZ))
     };
   }
 
@@ -305,10 +314,11 @@ export class AIDriver {
    * Convert grid cell to world coordinates
    */
   gridToWorld(gridX, gridZ) {
-    const halfSize = this.gridSize / 2;
+    const halfWidth = this.gridWidth / 2;
+    const halfDepth = this.gridDepth / 2;
     return {
-      x: gridX * this.gridResolution - halfSize + this.gridResolution / 2,
-      z: gridZ * this.gridResolution - halfSize + this.gridResolution / 2
+      x: gridX * this.gridResolution - halfWidth + this.gridResolution / 2,
+      z: gridZ * this.gridResolution - halfDepth + this.gridResolution / 2
     };
   }
 
@@ -402,14 +412,14 @@ export class AIDriver {
     this._boostController.reset();
   }
 
-  /**
-   * Snap currentPathIndex to the closest waypoint to `pos`, then advance it
-   * by a small look-ahead so the AI immediately drives away from the spawn
-   * rather than toward the waypoint it's already sitting on top of.
-   */
-  _snapPathIndexToPosition(pos) {
-    this._spawnRecovery.snapPathIndexToPosition(pos);
-  }
+  // /**
+  //  * Snap currentPathIndex to the closest waypoint to `pos`, then advance it
+  //  * by a small look-ahead so the AI immediately drives away from the spawn
+  //  * rather than toward the waypoint it's already sitting on top of.
+  //  */
+  // _snapPathIndexToPosition(pos) {
+  //   this._spawnRecovery.snapPathIndexToPosition(pos);
+  // }
 
   /**
    * Respawn truck facing target waypoint, moving it clear of any nearby walls first.
@@ -418,13 +428,13 @@ export class AIDriver {
     this._spawnRecovery.respawnFacingTarget(targetWaypoint);
   }
 
-  /**
-   * Find the nearest position clear of walls.
-   * Prefers a recent path waypoint; falls back to a radial sweep.
-   */
-  _findClearPosition(currentPos) {
-    return this._spawnRecovery.findClearPosition(currentPos);
-  }
+  // /**
+  //  * Find the nearest position clear of walls.
+  //  * Prefers a recent path waypoint; falls back to a radial sweep.
+  //  */
+  // _findClearPosition(currentPos) {
+  //   return this._spawnRecovery.findClearPosition(currentPos);
+  // }
 
   /**
    * Update visual debug representation of path
