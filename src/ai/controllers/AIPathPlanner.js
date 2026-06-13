@@ -32,6 +32,7 @@ export class AIPathPlanner {
         z: feature.centerZ,
         index: feature.checkpointNumber,
         heading: feature.heading,
+        width: feature.width ?? 10,
       });
     }
 

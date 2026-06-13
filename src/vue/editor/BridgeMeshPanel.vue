@@ -15,9 +15,9 @@
     <input
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       type="range"
-      min="-50"
-      max="50"
-      step="0.2"
+      min="-20"
+      max="20"
+      :step="tor.bridgeMesh.stepSize"
       :value="editor.bridgeMesh.hasSelection ? editor.bridgeMesh.pointHeight.toFixed(2) : ''"
       :placeholder="editor.bridgeMesh.hasSelection ? '' : '— select a point —'"
       :disabled="!editor.bridgeMesh.hasSelection"
@@ -30,7 +30,7 @@
       <span>{{ editor.bridgeMesh.stepSize.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="0.1" max="5" step="0.1"
+      type="range" min="0.1" max="2" step="0.1"
       :value="editor.bridgeMesh.stepSize"
       @input="editor.setBridgeMeshStepSize(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -73,7 +73,7 @@
       <span>{{ editor.bridgeMesh.width }}</span>
     </div>
     <input
-      type="range" min="4" max="120" step="2"
+      type="range" min="4" max="60" step="2"
       :value="editor.bridgeMesh.width"
       @input="editor.bridgeMesh.width = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -85,7 +85,7 @@
       <span>{{ editor.bridgeMesh.depth }}</span>
     </div>
     <input
-      type="range" min="4" max="120" step="2"
+      type="range" min="4" max="60" step="2"
       :value="editor.bridgeMesh.depth"
       @input="editor.bridgeMesh.depth = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

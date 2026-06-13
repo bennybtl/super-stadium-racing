@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "id": "rio_trio",
-  "packId": null,
-  "hidden": true,
+  "packId": "offroad_pack_2",
+  "hidden": false,
   "name": "Rio-Trio",
   "width": 160,
   "depth": 160,

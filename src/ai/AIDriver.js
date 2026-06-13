@@ -6,6 +6,7 @@ import { AIPathPlanner } from "./controllers/AIPathPlanner.js";
 import { AISteeringController, DEFAULT_STEERING_CONFIG } from "./controllers/AISteeringController.js";
 import { AIThrottleController, DEFAULT_THROTTLE_CONFIG } from "./controllers/AIThrottleController.js";
 import { AISpawnRecoveryController, DEFAULT_SPAWN_RECOVERY_CONFIG } from "./controllers/AISpawnRecoveryController.js";
+import { AICheckpointGuidanceController } from "./controllers/AICheckpointGuidanceController.js";
 import { AIDebugRenderer } from "./controllers/AIDebugRenderer.js";
 
 /**
@@ -163,6 +164,7 @@ export class AIDriver {
     this._spawnRecovery = new AISpawnRecoveryController(this, {
       pathAdvance,
     });
+    this._checkpointGuidance = new AICheckpointGuidanceController(this);
     this._debugRenderer = new AIDebugRenderer(this);
 
     // Debug visualization — enabled state is driven by the global DebugManager store
@@ -352,10 +354,16 @@ export class AIDriver {
       return { forward: true, back: false, left: false, right: false };
     }
     
+    // When near the next gate, steer through it so the AI doesn't cut around
+    // the posts and miss a sequential checkpoint. Falls back to the look-ahead
+    // path target when not in a gate approach.
+    const gateTarget = this._checkpointGuidance.getApproachTarget(position);
+    const steerTarget = gateTarget ?? targetWaypoint;
+
     const { forward, rightVec, turnStrength } = this._steeringController.compute({
       position,
       heading,
-      targetWaypoint,
+      targetWaypoint: steerTarget,
       dt: aiDt,
     });
 
@@ -386,6 +394,9 @@ export class AIDriver {
       currentPos,
       targetWaypoint,
     });
+
+    // Backup: detect a driven-around gate and respawn through it after a delay.
+    this._checkpointGuidance.update({ position, dt: aiDt });
     
     // Update debug visualization
     this._debugRenderer.updateTarget(targetWaypoint);
@@ -410,6 +421,7 @@ export class AIDriver {
     this._steeringController.reset();
     this._stuckRecovery.reset();
     this._boostController.reset();
+    this._checkpointGuidance.reset();
   }
 
   // /**

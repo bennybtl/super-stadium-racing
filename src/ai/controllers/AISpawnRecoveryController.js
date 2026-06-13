@@ -3,6 +3,8 @@ import { Vector3 } from "@babylonjs/core";
 export const DEFAULT_SPAWN_RECOVERY_CONFIG = {
   pathAdvance: 5,
   topologySearchRadius: 70,
+  // How far before a missed gate (world units) to place a through-gate respawn.
+  gateRespawnBackup: 10,
 };
 
 /**
@@ -67,6 +69,46 @@ export class AISpawnRecoveryController {
     d.truck.state.velocity.set(0, 0, 0);
     d.truck.state.velocity.y = 0;
 
+    if (d.truck.physics && d.truck.physics.body) {
+      d.truck.physics.body.setLinearVelocity(new Vector3(0, 0, 0));
+      d.truck.physics.body.setAngularVelocity(new Vector3(0, 0, 0));
+    }
+
+    d._staticBodyCollisionManager?.notifyTeleport(d.truck);
+    this.snapPathIndexToPosition(spawnPos);
+  }
+
+  /**
+   * Teleport the truck to the approach side of `gate` facing through it, so a
+   * driver that drove around the gate can re-attempt the pass cleanly.
+   * @param {{x:number, z:number, heading:number}} gate
+   */
+  respawnThroughGate(gate) {
+    const d = this.driver;
+    if (!d.truck || !d.truckMesh || !gate) return;
+
+    const fwdX = Math.sin(gate.heading);
+    const fwdZ = Math.cos(gate.heading);
+    const backup = DEFAULT_SPAWN_RECOVERY_CONFIG.gateRespawnBackup;
+
+    // Approach point a short distance before the gate, on its entry side.
+    const basePos = new Vector3(
+      gate.x - fwdX * backup,
+      d.truckMesh.position.y,
+      gate.z - fwdZ * backup
+    );
+    const spawnPos = this.findClearPosition(basePos);
+
+    d.truckMesh.position.x = spawnPos.x;
+    d.truckMesh.position.z = spawnPos.z;
+    d.truckMesh.position.y = d._terrainQuery.heightAt(spawnPos.x, spawnPos.z) + 0.6;
+
+    // Face straight through the gate (entry → exit direction).
+    const targetHeading = Math.atan2(fwdX, fwdZ);
+    d.truckMesh.rotation.y = targetHeading;
+    d.truck.state.heading = targetHeading;
+
+    d.truck.state.velocity.set(0, 0, 0);
     if (d.truck.physics && d.truck.physics.body) {
       d.truck.physics.body.setLinearVelocity(new Vector3(0, 0, 0));
       d.truck.physics.body.setAngularVelocity(new Vector3(0, 0, 0));
