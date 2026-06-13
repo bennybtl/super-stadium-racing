@@ -1,12 +1,100 @@
 {
+  "schemaVersion": 2,
   "id": "rio_trio",
-  "packId": "offroad_pack_2",
-  "image": "rio_trio.jpg",
-  "name": "Rio Trio",
+  "packId": null,
   "hidden": true,
+  "name": "Rio-Trio",
   "width": 160,
   "depth": 160,
-  "defaultTerrainType": "packed_dirt",
+  "defaultTerrainType": "mud",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "alphaBreakup": 0.28,
+    "width": 4,
+    "intensity": 0.8,
+    "laneSpacing": 2,
+    "pathWander": 0.7,
+    "edgeSoftness": 1,
+    "secondaryPathCount": 60,
+    "secondaryPathStrength": 0.8,
+    "secondaryPathSpacing": 0.04,
+    "seed": 1337
+  },
   "features": [
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": -56.01893918870786,
+          "z": -63.76354758076501
+        },
+        {
+          "x": 52.59550013540064,
+          "z": -60.55359163395695
+        },
+        {
+          "x": 59.26,
+          "z": -37.97
+        },
+        {
+          "x": 40.22,
+          "z": -12.67
+        },
+        {
+          "x": 41.98,
+          "z": 25.62
+        },
+        {
+          "x": 57.326492009311,
+          "z": 70.01742145588781
+        },
+        {
+          "x": -52.17471866068594,
+          "z": 70.39205270973682
+        },
+        {
+          "x": -60.09499808484607,
+          "z": 47.74882049871654
+        },
+        {
+          "x": -50.13702216240914,
+          "z": 25.475384438642095
+        },
+        {
+          "x": 12.692487164759543,
+          "z": 23.95743655208861
+        },
+        {
+          "x": 14.845748042265846,
+          "z": 12.796452392504527
+        },
+        {
+          "x": 9.78418997505268,
+          "z": -29.209634155423544
+        },
+        {
+          "x": -2.769095352467634,
+          "z": -35.21441897191551
+        },
+        {
+          "x": -53.32,
+          "z": -35.83
+        },
+        {
+          "x": -65.77,
+          "z": -42.68
+        },
+        {
+          "x": -59.954368317277584,
+          "z": -60.5654972588499
+        }
+      ],
+      "width": 14.5,
+      "blendWidth": 3,
+      "cornerRadius": 0,
+      "terrainType": "loose_dirt"
+    }
   ]
 }

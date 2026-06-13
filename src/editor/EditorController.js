@@ -1640,51 +1640,12 @@ export class EditorController {
     this.bridgeMeshEditor.activeFeature.level = nextLayerId;
     window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
-  changeBridgeMeshConnectorEnabled(index, enabled) {
-    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
-    if (!endpoints || !endpoints[index]) return;
-    this.saveSnapshot();
-    endpoints[index].enabled = enabled === true;
-  }
-  changeBridgeMeshConnectorSide(index, side) {
-    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
-    if (!endpoints || !endpoints[index]) return;
-    this.saveSnapshot();
-    endpoints[index].side = typeof side === 'string' ? side : endpoints[index].side;
-  }
-  changeBridgeMeshConnectorOffset(index, offset) {
-    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
-    if (!endpoints || !endpoints[index]) return;
-    this.saveSnapshot();
-    endpoints[index].offset = Math.max(-1, Math.min(1, offset));
-  }
-  changeBridgeMeshConnectorTargetLayerId(index, layerId) {
-    const endpoints = this._ensureBridgeMeshConnectorEndpoints();
-    if (!endpoints || !endpoints[index]) return;
-    this.saveSnapshot();
-    endpoints[index].targetLayerId = Math.max(0, Math.round(layerId));
-  }
   flattenBridgeMesh()                { this.bridgeMeshEditor?.flattenBridgeMesh(); }
   deleteBridgeMesh()                 { this.bridgeMeshEditor?.deleteBridgeMesh(); }
   duplicateBridgeMesh()              { this.bridgeMeshEditor?.duplicateBridgeMesh(); }
   closeBridgeMesh() {
     this.bridgeMeshEditor?.deselect?.();
     if (this._editorStore) this._editorStore.selectedType = null;
-  }
-
-  _ensureBridgeMeshConnectorEndpoints() {
-    const feature = this.bridgeMeshEditor?.activeFeature;
-    if (!feature) return null;
-    if (!Array.isArray(feature.connectorEndpoints)) {
-      feature.connectorEndpoints = [
-        { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
-        { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
-      ];
-    }
-    while (feature.connectorEndpoints.length < 2) {
-      feature.connectorEndpoints.push({ enabled: false, side: 'south', offset: 0, targetLayerId: 0 });
-    }
-    return feature.connectorEndpoints;
   }
 
   // ── Surface Decal helper methods ──────────────────────────────────────────

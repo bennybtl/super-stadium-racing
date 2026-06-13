@@ -21,9 +21,9 @@ export class BridgeMeshEditor {
 
     this.pointMeshes   = [];   // [{ mesh, r, c, featureRef }]
     this.centerGizmos  = [];   // [{ mesh, featureRef }]
+    this.lineSystems   = [];   // [{ mesh, featureRef }]
     this.selectedPoint = null;
     this.selectedCenter = null;
-    this.lineSystem    = null;
 
     this.normalMat    = null;
     this.highlightMat = null;
@@ -130,7 +130,6 @@ export class BridgeMeshEditor {
       centerX: feature.centerX + 5,
       centerZ: feature.centerZ + 5,
       heights: [...feature.heights],
-      connectorEndpoints: null,
     };
     this.track.features.push(newFeature);
     this._addGizmosForFeature(newFeature);
@@ -245,10 +244,9 @@ export class BridgeMeshEditor {
     for (const c of centersToRemove) c.mesh.dispose();
     this.centerGizmos = this.centerGizmos.filter(c => c.featureRef !== feature);
 
-    if (this.lineSystem) {
-      this.lineSystem.dispose();
-      this.lineSystem = null;
-    }
+    const linesToRemove = this.lineSystems.filter(l => l.featureRef === feature);
+    for (const l of linesToRemove) l.mesh.dispose();
+    this.lineSystems = this.lineSystems.filter(l => l.featureRef !== feature);
 
     if (this.selectedPoint?.featureRef === feature) {
       this.selectedPoint = null;
@@ -263,13 +261,17 @@ export class BridgeMeshEditor {
     this.pointMeshes = [];
     for (const c of this.centerGizmos) c.mesh.dispose();
     this.centerGizmos = [];
-    if (this.lineSystem) { this.lineSystem.dispose(); this.lineSystem = null; }
+    for (const l of this.lineSystems) l.mesh.dispose();
+    this.lineSystems = [];
     this.selectedPoint = null;
     this.selectedCenter = null;
   }
 
   _buildLineSystemForFeature(feature) {
-    if (this.lineSystem) { this.lineSystem.dispose(); this.lineSystem = null; }
+    // Replace only this feature's line grid, leaving other features' grids intact.
+    const existing = this.lineSystems.filter(l => l.featureRef === feature);
+    for (const l of existing) l.mesh.dispose();
+    this.lineSystems = this.lineSystems.filter(l => l.featureRef !== feature);
 
     const { cols, rows, heights } = feature;
     const OFFSET = 0.08;
@@ -296,9 +298,10 @@ export class BridgeMeshEditor {
       lines.push(col);
     }
 
-    this.lineSystem = MeshBuilder.CreateLineSystem('bmLines', { lines }, this.scene);
-    this.lineSystem.color = LINE_COLOR_MESH_GRID;
-    this.lineSystem.isPickable = false;
+    const lineSystem = MeshBuilder.CreateLineSystem('bmLines', { lines }, this.scene);
+    lineSystem.color = LINE_COLOR_MESH_GRID;
+    lineSystem.isPickable = false;
+    this.lineSystems.push({ mesh: lineSystem, featureRef: feature });
   }
 
   _updateGizmoPositions() {
@@ -490,13 +493,6 @@ export class BridgeMeshEditor {
     s.bridgeMesh.rotation  = feature.rotation ?? 0;
     s.bridgeMesh.thickness = feature.thickness ?? 0.4;
     s.bridgeMesh.layerId = feature.layerId ?? feature.level ?? 1;
-    const endpoints = _normalizeBridgeMeshConnectorEndpoints(feature.connectorEndpoints);
-    for (let i = 0; i < endpoints.length; i++) {
-      s.bridgeMesh.connectorEndpoints[i].enabled = endpoints[i].enabled;
-      s.bridgeMesh.connectorEndpoints[i].side = endpoints[i].side;
-      s.bridgeMesh.connectorEndpoints[i].offset = endpoints[i].offset;
-      s.bridgeMesh.connectorEndpoints[i].targetLayerId = endpoints[i].targetLayerId;
-    }
     s.selectedType         = 'bridgeMesh';
   }
 
@@ -571,23 +567,4 @@ export class BridgeMeshEditor {
       z: centerZ + localX * sin + localZ * cos,
     };
   }
-}
-
-function _normalizeBridgeMeshConnectorEndpoints(endpoints = null) {
-  const defaults = [
-    { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
-    { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
-  ];
-
-  return defaults.map((fallback, index) => {
-    const source = endpoints?.[index] ?? {};
-    return {
-      enabled: source.enabled === true,
-      side: typeof source.side === 'string' ? source.side : fallback.side,
-      offset: Number.isFinite(source.offset) ? source.offset : fallback.offset,
-      targetLayerId: Number.isFinite(source.targetLayerId)
-        ? Math.max(0, Math.round(source.targetLayerId))
-        : fallback.targetLayerId,
-    };
-  });
 }

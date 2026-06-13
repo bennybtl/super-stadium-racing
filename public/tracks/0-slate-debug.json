@@ -24,18 +24,6 @@
   },
   "features": [
     {
-      "type": "squareHill",
-      "centerX": -2.91287063351939,
-      "centerZ": 24.95533474401939,
-      "width": 17,
-      "depth": 18.5,
-      "angle": 0,
-      "height": 3,
-      "waterLevelOffset": 1,
-      "transition": 4,
-      "terrainType": null
-    },
-    {
       "type": "bridgeMesh",
       "centerX": -25.5,
       "centerZ": -46.5,
@@ -59,6 +47,97 @@
       "transitionYOffset": 0,
       "materialType": "packed_dirt",
       "level": 1
+    },
+    {
+      "type": "bridgeMesh",
+      "centerX": -25,
+      "centerZ": -16,
+      "width": 34,
+      "depth": 20,
+      "cols": 6,
+      "rows": 2,
+      "heights": [
+        -0.5,
+        4.3,
+        7,
+        7,
+        4.5,
+        0,
+        -0.5,
+        4.3,
+        6.5,
+        6.5,
+        4.5,
+        0
+      ],
+      "thickness": 1.2,
+      "transitionEnabled": false,
+      "transitionDepth": 8,
+      "transitionYOffset": 0,
+      "materialType": "packed_dirt",
+      "level": 1
+    },
+    {
+      "type": "bridgeMesh",
+      "centerX": -20,
+      "centerZ": 50,
+      "width": 42,
+      "depth": 20,
+      "cols": 4,
+      "rows": 2,
+      "heights": [
+        -0.5,
+        4.6000000000000005,
+        4.333333333333333,
+        0,
+        -0.5,
+        4.1,
+        4,
+        0
+      ],
+      "thickness": 1,
+      "transitionEnabled": false,
+      "transitionDepth": 8,
+      "transitionYOffset": 0,
+      "materialType": "packed_dirt",
+      "level": 1
+    },
+    {
+      "type": "bridgeMesh",
+      "centerX": 39.5,
+      "centerZ": 49,
+      "width": 44,
+      "depth": 20,
+      "cols": 4,
+      "rows": 2,
+      "heights": [
+        -0.5,
+        6.5,
+        6.5,
+        0,
+        -0.5,
+        6.5,
+        6.5,
+        0
+      ],
+      "thickness": 2,
+      "transitionEnabled": false,
+      "transitionDepth": 8,
+      "transitionYOffset": 0,
+      "materialType": "packed_dirt",
+      "level": 1
+    },
+    {
+      "type": "squareHill",
+      "centerX": -2.91287063351939,
+      "centerZ": 24.95533474401939,
+      "width": 17,
+      "depth": 18.5,
+      "angle": 0,
+      "height": 3,
+      "waterLevelOffset": 1,
+      "transition": 4,
+      "terrainType": null
     },
     {
       "type": "polyWall",
@@ -91,12 +170,12 @@
         {
           "x": -43.12875538758035,
           "z": -24.607796611820003,
-          "radius": 0
+          "radius": 3
         },
         {
           "x": -43.59326607855753,
           "z": -38.40218102036137,
-          "radius": 0
+          "radius": 4.5
         },
         {
           "x": -18.690630159905677,
@@ -114,13 +193,13 @@
           "radius": 0
         },
         {
-          "x": -32.223839925143736,
-          "z": -74.30892817416334,
+          "x": -19.723839925143736,
+          "z": -73.80892817416334,
           "radius": 14
         },
         {
-          "x": -33.493906158673994,
-          "z": -60.87532742966552,
+          "x": -30.493906158673994,
+          "z": -77.87532742966552,
           "radius": 0
         }
       ],
@@ -187,10 +266,10 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 28.414761366675233,
-      "centerZ": -17.995933664767364,
+      "centerX": 27.914761366675233,
+      "centerZ": -16.995933664767364,
       "heading": -1.4835298641951802,
-      "width": 17.5,
+      "width": 15.5,
       "checkpointNumber": 1
     },
     {
@@ -212,9 +291,9 @@
     {
       "type": "checkpoint",
       "centerX": 30.411311431200716,
-      "centerZ": 7.606223471946528,
+      "centerZ": 6.106223471946528,
       "heading": 1.6580627893946132,
-      "width": 28.5,
+      "width": 25.5,
       "checkpointNumber": 4
     },
     {
@@ -282,89 +361,6 @@
         }
       ],
       "branches": []
-    },
-    {
-      "type": "bridgeMesh",
-      "centerX": -25,
-      "centerZ": -16,
-      "width": 34,
-      "depth": 20,
-      "cols": 6,
-      "rows": 2,
-      "heights": [
-        -0.5,
-        4.3,
-        7,
-        7,
-        4.5,
-        0,
-        -0.5,
-        4.3,
-        6.5,
-        6.5,
-        4.5,
-        0
-      ],
-      "thickness": 1.85,
-      "transitionEnabled": false,
-      "transitionDepth": 8,
-      "transitionYOffset": 0,
-      "materialType": "packed_dirt",
-      "level": 1
-    },
-    {
-      "type": "bridgeMesh",
-      "centerX": -20,
-      "centerZ": 50,
-      "width": 34,
-      "depth": 20,
-      "cols": 6,
-      "rows": 2,
-      "heights": [
-        -0.5,
-        2.8,
-        5,
-        5,
-        3.0000000000000004,
-        0,
-        -0.5,
-        2.8,
-        5,
-        5,
-        3.0000000000000004,
-        0
-      ],
-      "thickness": 1,
-      "transitionEnabled": false,
-      "transitionDepth": 8,
-      "transitionYOffset": 0,
-      "materialType": "packed_dirt",
-      "level": 1
-    },
-    {
-      "type": "bridgeMesh",
-      "centerX": 39.5,
-      "centerZ": 49,
-      "width": 44,
-      "depth": 20,
-      "cols": 4,
-      "rows": 2,
-      "heights": [
-        -0.5,
-        6.5,
-        6.5,
-        0,
-        -0.5,
-        6.5,
-        6.5,
-        0
-      ],
-      "thickness": 2,
-      "transitionEnabled": false,
-      "transitionDepth": 8,
-      "transitionYOffset": 0,
-      "materialType": "packed_dirt",
-      "level": 1
     },
     {
       "type": "obstacle",
@@ -446,12 +442,12 @@
         },
         {
           "x": -32.00698713736398,
-          "z": -5.276545989453869,
+          "z": -2.2765459894538687,
           "radius": 0
         },
         {
           "x": -33.72248061974382,
-          "z": -60.79727486156663,
+          "z": -68.79727486156662,
           "radius": 0
         }
       ],
@@ -470,26 +466,48 @@
           "radius": 0
         },
         {
-          "x": -12.769081238195813,
+          "x": -14.269081238195813,
           "z": -5.6301943177299165,
           "radius": 0
         },
         {
-          "x": -15.897155991170214,
+          "x": -16.397155991170216,
           "z": -57.84896099979977,
           "radius": 0
         },
         {
-          "x": -4.735245511322393,
-          "z": -56.6794982628675,
+          "x": -7.235245511322393,
+          "z": -56.1794982628675,
           "radius": 0
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 1.5,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -7.5,
+      "centerZ": -47.00007271092194,
+      "terrainType": "mud",
+      "width": 10,
+      "depth": 18.5,
+      "rotation": 0,
+      "blendWidth": 2.5
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -33,
+      "centerZ": -73.00062086162002,
+      "terrainType": "mud",
+      "width": 10,
+      "depth": 10,
+      "rotation": 0,
+      "blendWidth": 3
     }
   ]
 }

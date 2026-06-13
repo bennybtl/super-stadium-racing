@@ -57,14 +57,16 @@ export class Truck {
     });
     this.audioController = null;
     const terrainQuery = new TerrainQuery(scene);
-    const terrainPhysicsOptions = this.driver
-      ? { normalSampleInterval: 0 }
-      : {
-          normalSampleInterval: 0,
-          multiProbeSurfaceSampling: true,
-          multiProbeHalfTrack: this.width * 0.42,
-          multiProbeMaxLift: this.height * 0.35,
-        };
+    // Multi-probe geometry is always derived from this truck's footprint so the
+    // probes match its actual width — AI trucks enable multi-probe per-frame via
+    // forceMultiProbe (see update()), and must not fall back to the default track.
+    const terrainPhysicsOptions = {
+      normalSampleInterval: 0,
+      // Player trucks run multi-probe continuously; AI trucks force it per-frame.
+      multiProbeSurfaceSampling: !this.driver,
+      multiProbeHalfTrack: this.width * 0.42,
+      multiProbeMaxLift: this.height * 0.35,
+    };
     this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight, terrainQuery, terrainPhysicsOptions);
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);

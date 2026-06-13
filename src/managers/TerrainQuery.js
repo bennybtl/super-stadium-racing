@@ -72,7 +72,7 @@ export class TerrainQuery {
     let usedUpward = false;
 
     if (this._driveSurfaceManager?.queryDriveSurfaceAt) {
-      const resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
+      const queryOptions = {
         role: "drive",
         surfaceFace: "top",
         ...(continuityOptions ?? {}),
@@ -80,8 +80,20 @@ export class TerrainQuery {
         minNormalY: MIN_DRIVABLE_NORMAL_Y,
         penetrationThreshold: 1.5,
         maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
-      });
+      };
+      let resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, queryOptions);
       hit = resolved?.pickInfo ?? null;
+      // Steep terrain faces fail the minNormalY drivability filter, leaving
+      // callers (object placement: flags, obstacles, pickups, and the truck on
+      // very steep ground) with no height at all.  Retry once without the
+      // normal filter so we still resolve a surface height to sit on.
+      if (!hit?.hit || !hit.pickedPoint) {
+        resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
+          ...queryOptions,
+          minNormalY: 0,
+        });
+        hit = resolved?.pickInfo ?? null;
+      }
       if (!hit?.hit || !hit.pickedPoint) {
         this._lastResolvedSurface = null;
         return null;

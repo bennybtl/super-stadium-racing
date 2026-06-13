@@ -441,25 +441,6 @@ export class BridgeMesh {
   }
 }
 
-function _normalizeBridgeMeshConnectorEndpoints(endpoints = null) {
-  const defaults = [
-    { enabled: true, side: 'north', offset: 0, targetLayerId: 0 },
-    { enabled: true, side: 'south', offset: 0, targetLayerId: 0 },
-  ];
-
-  return defaults.map((fallback, index) => {
-    const source = endpoints?.[index] ?? {};
-    return {
-      enabled: source.enabled !== false,
-      side: typeof source.side === 'string' ? source.side : fallback.side,
-      offset: Number.isFinite(source.offset) ? source.offset : fallback.offset,
-      targetLayerId: Number.isFinite(source.targetLayerId)
-        ? Math.max(0, Math.round(source.targetLayerId))
-        : fallback.targetLayerId,
-    };
-  });
-}
-
 function _buildAutoBridgeMeshConnectorEndpoints({
   track,
   centerX,

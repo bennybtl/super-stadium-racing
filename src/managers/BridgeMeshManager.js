@@ -37,6 +37,11 @@ export class BridgeMeshManager {
    * @param {object|null} targetFeature
    */
   rebuild(allFeatures, targetFeature = null) {
+    // Drop the manager's auto-connectors first so they never reference endpoint
+    // nodes that bm.dispose() is about to remove below (rebuildAutoConnectorLinks
+    // re-creates them once the new meshes and nodes are in place).
+    this.surfaceTopologyGraph?.removeByOwner?.(this);
+
     this._meshes = this._meshes.filter(bm => {
       if (targetFeature === null || bm.feature === targetFeature) {
         bm.dispose();
@@ -161,6 +166,17 @@ export class BridgeMeshManager {
   }
 
   _findTerrainProjectionTarget(sourceNode, terrainNodes) {
+    return this._findTerrainTarget(sourceNode, terrainNodes, AUTO_TERRAIN_PROJECTION_MAX_VERTICAL_DELTA);
+  }
+
+  /**
+   * Resolve the terrain node a bridge endpoint should link to.  Validates the
+   * endpoint is within `maxDy` of the terrain height beneath it, then selects
+   * the terrain node whose mesh bounding box contains the endpoint XZ (so tracks
+   * with more than one registered ground surface link to the right one), falling
+   * back to the first terrain node when none contains it.
+   */
+  _findTerrainTarget(sourceNode, terrainNodes, maxDy) {
     if (!Array.isArray(terrainNodes) || terrainNodes.length === 0) return null;
 
     const sourceTags = sourceNode?.tags ?? {};
@@ -173,9 +189,57 @@ export class BridgeMeshManager {
     if (!Number.isFinite(terrainY)) return null;
 
     const dy = Math.abs(sourceY - terrainY);
-    if (dy > AUTO_TERRAIN_PROJECTION_MAX_VERTICAL_DELTA) return null;
+    if (dy > maxDy) return null;
 
-    return terrainNodes[0] ?? null;
+    return this._selectTerrainNodeAt(terrainNodes, sourceX, sourceZ);
+  }
+
+  /**
+   * Pick the terrain node a point (x, z) belongs to. Prefers a node whose XZ
+   * bounding box contains the point; when several contain it (overlapping
+   * surfaces) or none do, falls back to the node with the smallest horizontal
+   * distance to its bounds. Distance-to-bounds (clamp the point into the AABB)
+   * is used instead of distance-to-centre so large area surfaces rank by their
+   * actual extent, not their midpoint. Degrades to the first node when no node
+   * exposes usable bounds.
+   */
+  _selectTerrainNodeAt(terrainNodes, x, z) {
+    let bestContaining = null;
+    let bestContainingArea = Infinity;
+    let nearest = null;
+    let nearestDistSq = Infinity;
+
+    for (const node of terrainNodes) {
+      const bounds = node?.mesh?.getBoundingInfo?.()?.boundingBox;
+      if (!bounds) continue;
+      const min = bounds.minimumWorld;
+      const max = bounds.maximumWorld;
+
+      const contains = x >= min.x && x <= max.x && z >= min.z && z <= max.z;
+      if (contains) {
+        // Multiple surfaces can overlap a point; prefer the most specific
+        // (smallest footprint) so a small patch wins over the base ground.
+        const area = (max.x - min.x) * (max.z - min.z);
+        if (area < bestContainingArea) {
+          bestContainingArea = area;
+          bestContaining = node;
+        }
+        continue;
+      }
+
+      // Not contained — measure the gap to the nearest edge of this AABB.
+      const cx = Math.max(min.x, Math.min(x, max.x));
+      const cz = Math.max(min.z, Math.min(z, max.z));
+      const dx = x - cx;
+      const dz = z - cz;
+      const distSq = dx * dx + dz * dz;
+      if (distSq < nearestDistSq) {
+        nearestDistSq = distSq;
+        nearest = node;
+      }
+    }
+
+    return bestContaining ?? nearest ?? terrainNodes[0] ?? null;
   }
 
   _findNearestEndpointTarget(sourceNode, endpointNodes) {
@@ -217,21 +281,7 @@ export class BridgeMeshManager {
   }
 
   _findTerrainIntersectionTarget(sourceNode, terrainNodes) {
-    if (!Array.isArray(terrainNodes) || terrainNodes.length === 0) return null;
-
-    const sourceTags = sourceNode?.tags ?? {};
-    const sourceX = sourceTags.endpointWorldX;
-    const sourceY = sourceTags.endpointWorldY;
-    const sourceZ = sourceTags.endpointWorldZ;
-    if (!Number.isFinite(sourceX) || !Number.isFinite(sourceY) || !Number.isFinite(sourceZ)) return null;
-
-    const terrainY = this.track?.getHeightAt?.(sourceX, sourceZ);
-    if (!Number.isFinite(terrainY)) return null;
-
-    const dy = Math.abs(sourceY - terrainY);
-    if (dy > AUTO_TERRAIN_LINK_MAX_VERTICAL_DELTA) return null;
-
-    return terrainNodes[0] ?? null;
+    return this._findTerrainTarget(sourceNode, terrainNodes, AUTO_TERRAIN_LINK_MAX_VERTICAL_DELTA);
   }
 
   dispose() {

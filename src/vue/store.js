@@ -333,10 +333,6 @@ export const useEditorStore = defineStore('editor', () => {
     rotation: 0,
     thickness: 0.4,
     layerId: 1,
-    connectorEndpoints: [
-      { enabled: false, side: 'north', offset: 0, targetLayerId: 0 },
-      { enabled: false, side: 'south', offset: 0, targetLayerId: 0 },
-    ],
     stepSize: 0.5,
     hasSelection: false,
     pointHeight: 0,
@@ -740,32 +736,6 @@ export const useEditorStore = defineStore('editor', () => {
     bridgeMesh.layerId = next;
     _bridge.value?.changeBridgeMeshLayerId(next);
   }
-  function setBridgeMeshConnectorEnabled(index, enabled) {
-    const endpoint = bridgeMesh.connectorEndpoints[index];
-    if (!endpoint) return;
-    endpoint.enabled = enabled === true;
-    _bridge.value?.changeBridgeMeshConnectorEnabled(index, endpoint.enabled);
-  }
-  function setBridgeMeshConnectorSide(index, side) {
-    const endpoint = bridgeMesh.connectorEndpoints[index];
-    if (!endpoint) return;
-    endpoint.side = side;
-    _bridge.value?.changeBridgeMeshConnectorSide(index, side);
-  }
-  function setBridgeMeshConnectorOffset(index, offset) {
-    const endpoint = bridgeMesh.connectorEndpoints[index];
-    if (!endpoint) return;
-    const next = Math.max(-1, Math.min(1, offset));
-    endpoint.offset = next;
-    _bridge.value?.changeBridgeMeshConnectorOffset(index, next);
-  }
-  function setBridgeMeshConnectorTargetLayerId(index, layerId) {
-    const endpoint = bridgeMesh.connectorEndpoints[index];
-    if (!endpoint) return;
-    const next = Math.max(0, Math.round(layerId));
-    endpoint.targetLayerId = next;
-    _bridge.value?.changeBridgeMeshConnectorTargetLayerId(index, next);
-  }
   function bridgeMeshAdjustUp()        { _bridge.value?.bridgeMeshAdjustUp(); }
   function bridgeMeshAdjustDown()      { _bridge.value?.bridgeMeshAdjustDown(); }
   function applyBridgeMeshSettings()   { _bridge.value?.applyBridgeMeshChanges(bridgeMesh.cols, bridgeMesh.rows, bridgeMesh.width, bridgeMesh.depth); }
@@ -924,8 +894,6 @@ export const useEditorStore = defineStore('editor', () => {
     applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, duplicateMeshGrid, closeMeshGrid,
     setBridgeMeshPointHeight, setBridgeMeshStepSize, setBridgeMeshRotation,
     setBridgeMeshThickness, setBridgeMeshLayerId,
-    setBridgeMeshConnectorEnabled, setBridgeMeshConnectorSide,
-    setBridgeMeshConnectorOffset, setBridgeMeshConnectorTargetLayerId,
     bridgeMeshAdjustUp, bridgeMeshAdjustDown,
     applyBridgeMeshSettings, flattenBridgeMesh, deleteBridgeMesh, duplicateBridgeMesh, closeBridgeMesh,
   };

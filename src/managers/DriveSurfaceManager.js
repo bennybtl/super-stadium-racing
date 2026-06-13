@@ -133,10 +133,21 @@ export class DriveSurfaceManager {
       ? Math.max(0, options.maxUpwardRise)
       : Infinity;
 
+    // The upward fallback exists to recover the surface the truck has sunk into
+    // (a steep slope it overshot, its own deck). It must never snap the truck up
+    // onto a HIGHER-level surface it is driving underneath. Cap the acceptable
+    // up-hit level at the surface below (down hit) or the caller's continuity
+    // layer hint; an up hit resolving a level above that ceiling is rejected.
+    const ceilingLevel = this._hitLevel(down)
+      ?? (Number.isFinite(options.preferredLayer) ? options.preferredLayer : null);
+
     const isUpwardHitAllowed = hit => {
       if (!hit?.pickInfo?.pickedPoint) return false;
       const upRise = hit.pickInfo.pickedPoint.y - hintY;
-      return upRise <= maxUpwardRise;
+      if (upRise > maxUpwardRise) return false;
+      const upLevel = this._hitLevel(hit);
+      if (ceilingLevel !== null && Number.isFinite(upLevel) && upLevel > ceilingLevel) return false;
+      return true;
     };
 
     if (down?.pickInfo?.pickedPoint) {
@@ -156,6 +167,11 @@ export class DriveSurfaceManager {
       maxDistance: options.maxDistance ?? 50,
     });
     return isUpwardHitAllowed(up) ? up : null;
+  }
+
+  _hitLevel(hit) {
+    const level = hit?.surface?.level ?? hit?.pickInfo?.pickedMesh?.metadata?.level;
+    return Number.isFinite(level) ? level : null;
   }
 
   castUpToDriveSurface(x, z, fromY = 0, options = {}) {

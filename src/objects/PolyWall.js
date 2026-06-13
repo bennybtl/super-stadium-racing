@@ -3,7 +3,7 @@ import { expandPolyline } from "../polyline-utils.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 
 // Poly walls should sit flush on the sampled surface.
-const SKIRT = 0;
+const SKIRT = 2;
 
 /**
  * PolyWall — builds terrain-following WallSegments along a polyline of world-space points.
