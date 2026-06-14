@@ -339,12 +339,22 @@ centre query — it needs the precise hit + cross-pattern normal there, and merg
 it would flip the multi-probe-lift / castDown precedence the bridge handling
 relies on, so that one duplicate is left intentionally.
 
-**Remaining levers (not yet implemented):** a single-pick fast path replacing
-`multiPickWithRay` when no drivable layers overlap in range, distance/speed
-`lowDetail` gating for far AI (the `lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL`
-plumbing exists in `TerrainPhysics.js`), and rasterizing walls/curbs into the AI
-occupancy grid (`AIDriver.isBlocked`) are the next biggest wins. Measure with the
-`FrameProfiler` (`truck.terrainPhysics` label is already instrumented).
+**Single-pick fast path:** `DriveSurfaceManager._castRayToSurface` skips the
+`multiPickWithRay` scan (and its per-call array allocation) and uses a single
+`pickWithRay` when there are no elevated surfaces registered — with no overlapping
+layers there is at most one drivable surface under any XZ, so the nearest hit is
+correct. Bridge tracks still take the multi-hit + continuity path.
+
+**AI occupancy grid:** `AIDriver.isBlocked` no longer scans every wall/curb
+segment per call. Segments are static during a race, so they are rasterized once
+(lazily) into a cached `Uint8Array` grid (`_ensureBlockedGrid`); subsequent
+queries — many per AI tick from steering/boost probes — are O(1) lookups.
+`invalidateBlockedGrid()` drops the cache if walls change.
+
+**Remaining levers (not yet implemented):** distance/speed `lowDetail` gating for
+far AI (the `lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL` plumbing exists in
+`TerrainPhysics.js`) is the main one left. Measure with the `FrameProfiler`
+(`truck.terrainPhysics` label is already instrumented).
 
 ---
 

@@ -89,6 +89,8 @@ export class AIDriver {
     this.gridResolution = 2; // 2 units per cell
     this.gridCellsX = Math.max(1, Math.floor(this.gridWidth / this.gridResolution));
     this.gridCellsZ = Math.max(1, Math.floor(this.gridDepth / this.gridResolution));
+    // Cached wall/curb occupancy grid, built lazily on first isBlocked() query.
+    this._blockedGrid = null;
 
     // Legacy aliases retained for older debug tooling that expects these fields.
     this.gridSize = Math.max(this.gridWidth, this.gridDepth);
@@ -269,33 +271,60 @@ export class AIDriver {
    * Check if a grid cell is blocked by a wall or curb segment.
    * Polycurbs mark track limits — the AI should route around them even
    * though trucks can physically drive over them.
+   *
+   * Walls/curbs are static during a race, so the per-segment test is run once
+   * per cell into a cached occupancy grid (built lazily). Subsequent calls — many
+   * per AI tick from steering/boost probes — are O(1) lookups.
    */
   isBlocked(gridX, gridZ) {
     if (!this.wallManager) return false;
+    if (!this.isValidCell(gridX, gridZ)) return false;
+    const grid = this._ensureBlockedGrid();
+    return grid[gridZ * this.gridCellsX + gridX] === 1;
+  }
 
-    const worldPos = this.gridToWorld(gridX, gridZ);
+  /**
+   * Drop the cached occupancy grid so it rebuilds on next query. Call if the
+   * track's walls/curbs change (e.g. editor edits).
+   */
+  invalidateBlockedGrid() {
+    this._blockedGrid = null;
+  }
+
+  /** Build (once) the occupancy grid by rasterizing wall + curb segments. */
+  _ensureBlockedGrid() {
+    if (this._blockedGrid) return this._blockedGrid;
+
+    const grid = new Uint8Array(this.gridCellsX * this.gridCellsZ);
     const safetyMargin = 2; // extra clearance around each segment
+    const segments = [
+      ...this.wallManager.getWallSegments(),
+      ...this.wallManager.getCurbSegments(),
+    ];
 
-    const segmentBlocks = (segments) => {
-      for (const seg of segments) {
-        // Transform worldPos into the segment's local space to do AABB test
-        const dx = worldPos.x - seg.x;
-        const dz = worldPos.z - seg.z;
-        const cos = Math.cos(-seg.heading);
-        const sin = Math.sin(-seg.heading);
-        const localX = cos * dx - sin * dz;
-        const localZ = sin * dx + cos * dz;
+    for (let gz = 0; gz < this.gridCellsZ; gz++) {
+      for (let gx = 0; gx < this.gridCellsX; gx++) {
+        const worldPos = this.gridToWorld(gx, gz);
+        for (const seg of segments) {
+          // Transform worldPos into the segment's local space for an AABB test.
+          const dx = worldPos.x - seg.x;
+          const dz = worldPos.z - seg.z;
+          const cos = Math.cos(-seg.heading);
+          const sin = Math.sin(-seg.heading);
+          const localX = cos * dx - sin * dz;
+          const localZ = sin * dx + cos * dz;
 
-        if (Math.abs(localX) < seg.halfLength + safetyMargin &&
-            Math.abs(localZ) < seg.halfDepth  + safetyMargin) {
-          return true;
+          if (Math.abs(localX) < seg.halfLength + safetyMargin &&
+              Math.abs(localZ) < seg.halfDepth  + safetyMargin) {
+            grid[gz * this.gridCellsX + gx] = 1;
+            break;
+          }
         }
       }
-      return false;
-    };
+    }
 
-    return segmentBlocks(this.wallManager.getWallSegments()) ||
-           segmentBlocks(this.wallManager.getCurbSegments());
+    this._blockedGrid = grid;
+    return grid;
   }
 
   /**

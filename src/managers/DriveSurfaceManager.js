@@ -263,6 +263,14 @@ export class DriveSurfaceManager {
     const filtered = hit => this._isHitAllowed(hit, options);
     const continuity = this._normalizeContinuityOptions(options);
 
+    // Fast path: with no elevated surfaces, at most one drivable surface lies
+    // under any XZ, so a single nearest pick is correct and avoids the multi-hit
+    // scan + per-call array allocation. Layer disambiguation/continuity only
+    // matters where a bridge deck overlaps the ground.
+    if (this._elevatedSurfaceMeshes.length === 0) {
+      return this._singlePick(ray, options, filtered, continuity);
+    }
+
     const multiHits = this.scene.multiPickWithRay?.(ray, mesh => this._isMeshEligible(mesh, options));
     if (Array.isArray(multiHits) && multiHits.length > 0) {
       const sortedHits = multiHits
@@ -279,11 +287,13 @@ export class DriveSurfaceManager {
       return null;
     }
 
+    return this._singlePick(ray, options, filtered, continuity);
+  }
+
+  _singlePick(ray, options, filtered, continuity) {
     const single = this.scene.pickWithRay(ray, mesh => this._isMeshEligible(mesh, options));
     if (!single?.hit || !single.pickedPoint || !filtered(single)) return null;
-    if (!this._hitMatchesContinuity(single, continuity)) {
-      if (continuity.mode === "strict") return null;
-    }
+    if (!this._hitMatchesContinuity(single, continuity) && continuity.mode === "strict") return null;
     return {
       pickInfo: single,
       surface: this.getSurfaceByMesh(single.pickedMesh),
