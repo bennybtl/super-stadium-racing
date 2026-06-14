@@ -2,6 +2,7 @@
   "schemaVersion": 2,
   "id": "rio_trio",
   "packId": "offroad_pack_2",
+  "image": "rio_trio.png",
   "hidden": false,
   "name": "Rio-Trio",
   "width": 160,
@@ -11,7 +12,7 @@
   "wear": {
     "enabled": true,
     "source": "aiPath",
-    "alphaBreakup": 0.28,
+    "alphaBreakup": 0.18,
     "width": 4,
     "intensity": 0.8,
     "laneSpacing": 2,
@@ -456,7 +457,7 @@
       "points": [
         {
           "x": -28.84049673852509,
-          "z": -17.209100119469596,
+          "z": -18.709100119469596,
           "radius": 10
         },
         {
@@ -476,7 +477,7 @@
         },
         {
           "x": -12.408123468342769,
-          "z": -14.813868647282469,
+          "z": -15.313868647282469,
           "radius": 10
         }
       ],
@@ -491,7 +492,7 @@
       "points": [
         {
           "x": -24.117348036780925,
-          "z": -17.784967502181075,
+          "z": -18.284967502181075,
           "radius": 10
         },
         {
@@ -516,7 +517,7 @@
         },
         {
           "x": -16.82348625708188,
-          "z": -17.260607527102366,
+          "z": -17.760607527102366,
           "radius": 10
         }
       ],
@@ -531,7 +532,7 @@
       "points": [
         {
           "x": 1.9158451473503462,
-          "z": 73.24515690722325,
+          "z": 74.74515690722325,
           "radius": 10
         },
         {
@@ -571,7 +572,7 @@
       "points": [
         {
           "x": 4.479001992795759,
-          "z": 73.3872273162421,
+          "z": 74.8872273162421,
           "radius": 10
         },
         {
@@ -590,13 +591,13 @@
           "radius": 0
         },
         {
-          "x": 3.6880519931907303,
+          "x": 6.18805199319073,
           "z": 66.71767727829999,
           "radius": 0
         },
         {
-          "x": 30.324637375101062,
-          "z": 72.42097542424249,
+          "x": 32.32463737510106,
+          "z": 73.42097542424249,
           "radius": 10
         }
       ],
@@ -636,13 +637,13 @@
           "radius": 5.5
         },
         {
-          "x": 2.479836640936749,
+          "x": 1.4798366409367492,
           "z": 13.292314667046412,
           "radius": 4
         },
         {
-          "x": -3.435907581401433,
-          "z": -16.012747752602806,
+          "x": -4,
+          "z": -16,
           "radius": 4.5
         },
         {
@@ -677,7 +678,7 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 7,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": true
@@ -686,8 +687,23 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -41.430201201884934,
-          "z": -48.86115705786901,
+          "x": 20.719904446139523,
+          "z": -8.952137779479571,
+          "radius": 6
+        },
+        {
+          "x": 26.36135925822597,
+          "z": -37.30474096631082,
+          "radius": 9
+        },
+        {
+          "x": -39.615575243605505,
+          "z": -47.857666807848254,
+          "radius": 0
+        },
+        {
+          "x": -38.02632208856414,
+          "z": -52.63716117881203,
           "radius": 0
         },
         {
@@ -701,9 +717,9 @@
           "radius": 0
         },
         {
-          "x": 23.453590111330175,
+          "x": 26.953590111330175,
           "z": -8.790901876374818,
-          "radius": 0
+          "radius": 5
         },
         {
           "x": 31.406560047214327,
@@ -711,51 +727,66 @@
           "radius": 8.5
         },
         {
-          "x": -29.91641740716083,
-          "z": 47.840402624268734,
-          "radius": 0
+          "x": -13.563963798447606,
+          "z": 53.0571900420029,
+          "radius": 7
+        },
+        {
+          "x": -28.34754853218945,
+          "z": 48.06330045218612,
+          "radius": 7.5
+        },
+        {
+          "x": -28.99290333932034,
+          "z": 42.026760458284514,
+          "radius": 7.5
+        },
+        {
+          "x": 24.028712281862482,
+          "z": 41.54176360473879,
+          "radius": 7
         }
       ],
       "height": 2,
       "collisionHeight": 2,
       "thickness": 1.4,
       "friction": 0.05,
-      "closed": false,
+      "closed": true,
       "style": "grey"
     },
     {
       "type": "hill",
-      "centerX": 21.837812952231143,
-      "centerZ": -35.41562325869458,
+      "centerX": -41,
+      "centerZ": -51,
       "radiusX": 15,
       "radiusZ": 10,
       "angle": 35,
-      "height": 8.5,
+      "height": 2.5,
       "waterLevelOffset": 0,
       "terrainType": null
     },
     {
       "type": "checkpoint",
-      "centerX": 12.2002516835608,
-      "centerZ": 1.259773777954507,
+      "centerX": 9.2002516835608,
+      "centerZ": -3.740226222045493,
       "heading": 0.08726646259971647,
-      "width": 22,
+      "width": 19.5,
       "checkpointNumber": 1
     },
     {
       "type": "checkpoint",
-      "centerX": -14.2997483164392,
-      "centerZ": 62.25977377795451,
+      "centerX": -13.7997483164392,
+      "centerZ": 65.2597737779545,
       "heading": 1.5707963267948966,
-      "width": 26,
+      "width": 21,
       "checkpointNumber": 2
     },
     {
       "type": "checkpoint",
-      "centerX": 10.7002516835608,
-      "centerZ": -63.74022622204549,
+      "centerX": 11,
+      "centerZ": -64,
       "heading": -1.5707963267948966,
-      "width": 29,
+      "width": 23,
       "checkpointNumber": 3
     },
     {
@@ -815,6 +846,253 @@
         }
       ],
       "branches": []
+    },
+    {
+      "type": "flag",
+      "x": -44,
+      "z": -49,
+      "color": "blue"
+    },
+    {
+      "type": "flag",
+      "x": 43.77958493756066,
+      "z": -45.48067998461593,
+      "color": "blue"
+    },
+    {
+      "type": "flag",
+      "x": 33.79565244031663,
+      "z": 46.7660662927707,
+      "color": "blue"
+    },
+    {
+      "type": "flag",
+      "x": -34.05507057276588,
+      "z": 48.761853038051015,
+      "color": "blue"
+    },
+    {
+      "type": "bannerString",
+      "x": 10.856207415000725,
+      "z": 3.933869593086712,
+      "heading": 0.08726646259971647,
+      "width": 24,
+      "poleHeight": 8
+    },
+    {
+      "type": "bannerString",
+      "x": 9.856207415000725,
+      "z": -3.066130406913288,
+      "heading": 0.08726646259971647,
+      "width": 25,
+      "poleHeight": 8
+    },
+    {
+      "type": "bannerString",
+      "x": 8.856207415000725,
+      "z": -11.566130406913288,
+      "heading": 0.08726646259971647,
+      "width": 23,
+      "poleHeight": 8
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 14,
+      "z": -51,
+      "angle": 1.5707963267948966,
+      "scale": 1,
+      "weight": 80,
+      "color": "white"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 7,
+      "z": -51,
+      "angle": 1.5707963267948966,
+      "scale": 1,
+      "weight": 80,
+      "color": "red"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 28,
+      "z": -50,
+      "angle": 1.4660765716752369,
+      "scale": 1,
+      "weight": 80,
+      "color": "white"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": -7,
+      "z": -50,
+      "angle": 1.780235837034216,
+      "scale": 1,
+      "weight": 80,
+      "color": "red"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 0,
+      "z": -51,
+      "angle": 1.5707963267948966,
+      "scale": 1,
+      "weight": 80,
+      "color": "white"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 21,
+      "z": -51,
+      "angle": 1.5707963267948966,
+      "scale": 1,
+      "weight": 80,
+      "color": "red"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 21,
+      "z": -77,
+      "angle": 1.7627825445142729,
+      "scale": 1,
+      "weight": 80,
+      "color": "red"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 0,
+      "z": -77,
+      "angle": 1.361356816555577,
+      "scale": 1,
+      "weight": 80,
+      "color": "white"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 7,
+      "z": -76,
+      "angle": 1.5707963267948966,
+      "scale": 1,
+      "weight": 80,
+      "color": "red"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "softWall",
+      "x": 14,
+      "z": -76,
+      "angle": 1.5707963267948966,
+      "scale": 1,
+      "weight": 80,
+      "color": "white"
+    },
+    {
+      "type": "trackSign",
+      "x": 11,
+      "z": -49,
+      "name": "Rio-Trio",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.85,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "hill",
+      "centerX": 24.837812952231143,
+      "centerZ": -32.41562325869458,
+      "radiusX": 15,
+      "radiusZ": 10,
+      "angle": 35,
+      "height": 8.5,
+      "waterLevelOffset": 0,
+      "terrainType": null
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 46,
+      "z": 57,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 12,
+      "z": 29,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 57,
+      "z": -52,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -57,
+      "z": 36,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "outOfBounds",
+      "shape": "polygon",
+      "x": -44.83791285138986,
+      "z": -8.934489158746306,
+      "radius": 15,
+      "points": [
+        {
+          "x": -79.7682697503359,
+          "z": -39.537360297221
+        },
+        {
+          "x": -61.18807212375369,
+          "z": -20.38369802478714
+        },
+        {
+          "x": -4.23322238285972,
+          "z": -14.75133472061272
+        },
+        {
+          "x": 0.75,
+          "z": 12.49997362444466
+        },
+        {
+          "x": -79.75,
+          "z": 17.49997362444466
+        }
+      ]
     }
   ]
 }
