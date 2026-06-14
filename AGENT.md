@@ -331,14 +331,20 @@ long frame surfaces there (e.g. `60 (min 32)`) and is colored amber below ~50 /
 red below ~30. Use **min**, not the average, to judge hitches; the `FrameProfiler`
 console report (`maxFrameMs` + per-section `truck.terrainPhysics`) localizes them.
 
-**Remaining levers (not yet implemented):** per-frame center-sample caching (the
-truck centre is sampled 3+ times per frame across multi-probe / castDown /
-suspension), a single-pick fast path replacing `multiPickWithRay` when no drivable
-layers overlap in range, distance/speed `lowDetail` gating for far AI (the
-`lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL` plumbing exists in
-`TerrainPhysics.js`), and rasterizing walls/curbs into the AI occupancy grid
-(`AIDriver.isBlocked`) are the next biggest wins. Measure with the `FrameProfiler`
-(`truck.terrainPhysics` label is already instrumented).
+**Center-sample reuse:** `TerrainPhysics.update()` resolves the truck's centre
+floor once per frame (`centerFloorY`) and reuses it for the multi-probe lift
+comparison and the suspension downhill passes (`_updateSuspension` no longer
+re-queries the centre XZ). The normal-sampling `castDown` still issues its own
+centre query — it needs the precise hit + cross-pattern normal there, and merging
+it would flip the multi-probe-lift / castDown precedence the bridge handling
+relies on, so that one duplicate is left intentionally.
+
+**Remaining levers (not yet implemented):** a single-pick fast path replacing
+`multiPickWithRay` when no drivable layers overlap in range, distance/speed
+`lowDetail` gating for far AI (the `lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL`
+plumbing exists in `TerrainPhysics.js`), and rasterizing walls/curbs into the AI
+occupancy grid (`AIDriver.isBlocked`) are the next biggest wins. Measure with the
+`FrameProfiler` (`truck.terrainPhysics` label is already instrumented).
 
 ---
 

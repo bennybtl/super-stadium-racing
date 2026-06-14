@@ -134,75 +134,12 @@ export class TerrainPhysics {
     const useMultiProbe = this._multiProbeSurfaceSampling || options?.forceMultiProbe === true;
     this.state.velocity.y += this.gravity * deltaTime;
 
-    // Single downward raycast from just above the truck centre.
-    // Firing from the truck's current Y means the ray naturally selects the right surface:
-    //   • on bridge deck  → origin is above the deck → hits the deck
-    //   • under bridge    → origin is below the deck → hits the ground
-    //   • open terrain    → hits the ground mesh
-    // Falls back to the analytical path when no TerrainQuery is available.
-    let effectiveFloor;
+    // Resolve the floor height + surface + normal for this frame.
     const fromY = mesh.position.y + RAY_OFFSET;
-    if (this._terrainQuery) {
-      const continuityOptions = this._buildSurfaceContinuityOptions();
-      const fallbackFloor = Number.isFinite(this.lastFloorY) ? this.lastFloorY : 0;
-      if (useMultiProbe) {
-        const probe = this._sampleFloorFromProbes(mesh, fromY, fallbackFloor, continuityOptions);
-        effectiveFloor = probe.y;
-        this._lastFloorSurface = probe.surface ?? null;
-      } else {
-        // Height-only query is much cheaper than full normal sampling.
-        effectiveFloor = this._terrainQuery.heightAtFast(
-          mesh.position.x,
-          mesh.position.z,
-          fromY,
-          fallbackFloor,
-          continuityOptions
-        );
-        this._lastFloorSurface = this._terrainQuery.getLastResolvedSurface?.() ?? null;
-      }
+    const { floorY, centerY } = this._resolveFloor(mesh, fromY, deltaTime, lowDetail, useMultiProbe, track);
+    this.lastFloorY = floorY;
 
-      // Optionally throttle full normal sampling for non-player trucks.
-      this._normalSampleTimer -= deltaTime;
-      const normalSampleInterval = lowDetail
-        ? Math.max(this._normalSampleInterval, LOW_DETAIL_NORMAL_SAMPLE_INTERVAL)
-        : this._normalSampleInterval;
-      const shouldSampleNormal =
-        normalSampleInterval <= 0 ||
-        this._normalSampleTimer <= 0 ||
-        // Near bridges (multi-probe active) sample every frame so ramp slope
-        // and edge normals stay accurate regardless of the throttled cadence.
-        useMultiProbe;
-
-      if (shouldSampleNormal) {
-        const hit = this._terrainQuery.castDown(
-          mesh.position.x,
-          mesh.position.z,
-          fromY,
-          continuityOptions
-        );
-        if (hit) {
-          effectiveFloor = hit.y;
-          this._lastFloorNormal.copyFrom(hit.normal ?? UP);
-          this._lastFloorSurface = this._lastFloorSurface ?? this._terrainQuery.getLastResolvedSurface?.() ?? null;
-        } else {
-          this._lastFloorNormal.copyFrom(UP);
-        }
-        this._normalSampleTimer = normalSampleInterval;
-      }
-    } else {
-      effectiveFloor        = this._sampleFloorYAt(
-        mesh.position.x,
-        mesh.position.z,
-        fromY,
-        track,
-        0
-      );
-      this._lastFloorNormal.copyFrom(UP);
-      this._lastFloorSurface = null;
-    }
-    this.lastFloorY = effectiveFloor;
-
-    const truckBottomY = effectiveFloor + this.halfHeight + SPRING.rideHeight;
+    const truckBottomY = floorY + this.halfHeight + SPRING.rideHeight;
     const penetration  = truckBottomY - mesh.position.y;
 
     this._applySpring(mesh, deltaTime, track, penetration, truckBottomY, lowDetail);
@@ -214,10 +151,8 @@ export class TerrainPhysics {
     );
     const forward = this._forwardVector();
 
-    const groundedness = this._updateSuspension(mesh, track, penetration, forward, hSpeed, lowDetail);
-    
-    // Debug: track lowDetail flag for profiling analysis
-    this._lastLowDetail = lowDetail;
+    const groundedness = this._updateSuspension(mesh, track, penetration, forward, hSpeed, lowDetail, centerY);
+
     if (groundedness > ORIENTATION.groundednessThreshold && track) {
       this.updateTerrainOrientation(mesh, deltaTime);
     }
@@ -245,6 +180,87 @@ export class TerrainPhysics {
     this._updatePitch(mesh, deltaTime, groundedness, forward, hSpeed);
 
     return { groundedness, penetration };
+  }
+
+  /**
+   * Resolve the drivable floor for this frame: floor height, the truck's
+   * surface (`_lastFloorSurface`), and its normal (`_lastFloorNormal`).
+   *
+   * The downward ray fires from just above the truck centre, so its origin Y
+   * naturally selects the right surface layer:
+   *   • on a bridge deck → origin above the deck → hits the deck
+   *   • under a bridge   → origin below the deck → hits the ground
+   *   • open terrain     → hits the ground mesh
+   *
+   * @returns {{ floorY: number, centerY: number }}
+   *   floorY  — the floor height the truck rides on (multi-probe lifted).
+   *   centerY — the unlifted centre height, reused by the suspension passes.
+   */
+  _resolveFloor(mesh, fromY, deltaTime, lowDetail, useMultiProbe, track) {
+    // Analytical fallback when no TerrainQuery is available.
+    if (!this._terrainQuery) {
+      const floorY = this._sampleFloorYAt(mesh.position.x, mesh.position.z, fromY, track, 0);
+      this._lastFloorNormal.copyFrom(UP);
+      this._lastFloorSurface = null;
+      return { floorY, centerY: floorY };
+    }
+
+    const continuityOptions = this._buildSurfaceContinuityOptions();
+    const fallbackFloor = Number.isFinite(this.lastFloorY) ? this.lastFloorY : 0;
+
+    // 1. Resolve the centre floor once (height + surface). Reused below for the
+    //    multi-probe lift comparison and by the suspension downhill passes.
+    const center = this._sampleFastSurface(
+      mesh.position.x,
+      mesh.position.z,
+      fromY,
+      fallbackFloor,
+      continuityOptions
+    );
+    let floorY = center.y;
+    let centerY = center.y;
+
+    // 2. Height: multi-probe lifts the truck onto the highest nearby surface
+    //    (keeps it on bridge edges/ramps); otherwise the centre height is used.
+    if (useMultiProbe) {
+      const probe = this._sampleFloorFromProbes(mesh, fromY, center, continuityOptions);
+      floorY = probe.y;
+      this._lastFloorSurface = probe.surface ?? null;
+    } else {
+      this._lastFloorSurface = center.surface ?? null;
+    }
+
+    // 3. Normal: sampled at a throttled cadence (every frame for players and near
+    //    bridges). When sampled, castDown also yields a precise centre height
+    //    that supersedes the cheap centre/probe height above.
+    if (this._shouldSampleNormal(deltaTime, lowDetail, useMultiProbe)) {
+      const hit = this._terrainQuery.castDown(mesh.position.x, mesh.position.z, fromY, continuityOptions);
+      if (hit) {
+        floorY = hit.y;
+        centerY = hit.y;
+        this._lastFloorNormal.copyFrom(hit.normal ?? UP);
+        this._lastFloorSurface = this._lastFloorSurface ?? this._terrainQuery.getLastResolvedSurface?.() ?? null;
+      } else {
+        this._lastFloorNormal.copyFrom(UP);
+      }
+    }
+
+    return { floorY, centerY };
+  }
+
+  /**
+   * Advance the normal-sample timer and decide whether to run a full normal
+   * sample this frame. Players (interval 0) and trucks near bridges
+   * (`useMultiProbe`) sample every frame; throttled AI sample on a cadence.
+   */
+  _shouldSampleNormal(deltaTime, lowDetail, useMultiProbe) {
+    this._normalSampleTimer -= deltaTime;
+    const interval = lowDetail
+      ? Math.max(this._normalSampleInterval, LOW_DETAIL_NORMAL_SAMPLE_INTERVAL)
+      : this._normalSampleInterval;
+    const should = interval <= 0 || this._normalSampleTimer <= 0 || useMultiProbe;
+    if (should) this._normalSampleTimer = interval;
+    return should;
   }
 
   updateTerrainOrientation(mesh, deltaTime) {
@@ -365,14 +381,9 @@ export class TerrainPhysics {
     };
   }
 
-  _sampleFloorFromProbes(mesh, fromY, fallbackFloor, continuityOptions) {
-    const center = this._sampleFastSurface(
-      mesh.position.x,
-      mesh.position.z,
-      fromY,
-      fallbackFloor,
-      continuityOptions
-    );
+  // `center` is the already-resolved centre sample ({ y, surface }) from update();
+  // only the offset probes (left/right/forward) are sampled here.
+  _sampleFloorFromProbes(mesh, fromY, center, continuityOptions) {
     if (!Number.isFinite(center.y) || this._multiProbeHalfTrack <= 0) {
       return center;
     }
@@ -599,7 +610,7 @@ export class TerrainPhysics {
    * Handles both downhill terrain-following passes.
    * @returns {number} groundedness (0–1)
    */
-  _updateSuspension(mesh, track, penetration, forward, speed, lowDetail = false) {
+  _updateSuspension(mesh, track, penetration, forward, speed, lowDetail = false, centerFloorY = null) {
     const hasSurfaceSampling = !!this._terrainQuery || !!track;
     const travelDirection = this._travelDirectionVector();
     // Base compression from current overlap depth.
@@ -619,8 +630,9 @@ export class TerrainPhysics {
       return Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
     }
 
-    // Reuse downhill probe values between follow/boost passes.
-    let sampledHeightHere = null;
+    // Reuse the centre floor already resolved this frame (update() passes it in)
+    // so the downhill passes don't re-query the truck's XZ.
+    let sampledHeightHere = Number.isFinite(centerFloorY) ? centerFloorY : null;
     const sampleHeightHere = () => {
       if (sampledHeightHere !== null) return sampledHeightHere;
       sampledHeightHere = this._sampleFloorYAt(
