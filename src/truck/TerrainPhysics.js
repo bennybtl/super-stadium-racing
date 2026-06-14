@@ -55,11 +55,19 @@ const SPRING = {
   rideHeight:            0.08,  // keep chassis slightly above sampled floor (m)
 
   // Slope-tunneling depenetration
-  depenetrationMinDepth: 1.2,   // minimum penetration before running tunneling check (m)
-  tunnelingSlope:       -5,     // slope below this (degrees) confirms tunneling
+  depenetrationMinDepth: 1.2,   // penetration past which the truck is snapped back to the surface (m)
+  tunnelingSlope:       -5,     // travel-direction slope below this (deg) = tunnelling downhill → bleed speed
   depenetrationSpeed:    18,    // max Y correction speed during depenetration (m/s)
   bleedRatePerMetre:     0.10,  // horizontal speed fraction bled per metre of excess penetration
   bleedCap:              0.30,  // max horizontal speed fraction bled per frame
+
+  // Hard backstop: the truck centre may never sit deeper than this below its
+  // resting height, regardless of speed/slope. The soft spring/depenetration
+  // above handle shallow penetration (feel); this caps the worst case so a truck
+  // climbing a steep face faster than the spring can lift it still can't sink
+  // fully under the surface and tunnel through. Kept below ~truck height so the
+  // truck never fully submerges.
+  maxPenetrationDepth:   0.75,
 };
 
 /** Visual roll smoothing when grounded or airborne. */
@@ -526,15 +534,42 @@ export class TerrainPhysics {
     if (effectivePenetration > 0 || this.state.velocity.y < 0) {
       this.state.velocity.y += -this.state.velocity.y * this.state.damping * deltaTime;
     }
+
+    // Hard backstop: after the soft response, the truck centre is never allowed
+    // deeper than maxPenetrationDepth below its resting height. This is the
+    // guarantee against tunnelling — when a fast truck climbs a steep face the
+    // soft spring can't lift it quickly enough, so without this it sinks under
+    // the surface and emerges on the far side. Recomputed from the live position
+    // since _applyDepenetration may have already moved it.
+    const finalPenetration = truckBottomY - mesh.position.y;
+    if (finalPenetration > SPRING.maxPenetrationDepth) {
+      mesh.position.y = truckBottomY - SPRING.maxPenetrationDepth;
+      // Cancel remaining into-surface (downward) velocity so it doesn't re-sink
+      // next frame; preserve upward velocity so it keeps climbing out.
+      if (this.state.velocity.y < 0) this.state.velocity.y = 0;
+    }
   }
 
   /**
-   * Detect and smoothly correct slope-face tunneling.
+   * Correct deep slope penetration so the truck stays on the surface instead of
+   * tunnelling through it. Only runs once penetration exceeds depenetrationMinDepth.
    * Returns the effective penetration remaining after the position correction.
    */
   _applyDepenetration(mesh, deltaTime, track, penetration, truckBottomY) {
+    // Always snap the truck up toward the surface when it has penetrated deeply.
+    // This keeps it on top of steep slopes — depression walls, ramps, fast hill
+    // climbs — rather than sinking under the mesh. (Previously this bailed on any
+    // uphill slope, which let trucks drive *into* steep hills and emerge on the
+    // far side once the surface dropped back down to meet them.)
+    const frameCorrection = Math.min(penetration, SPRING.depenetrationSpeed * deltaTime);
+    mesh.position.y += frameCorrection;
+    const remaining = Math.max(0, truckBottomY - mesh.position.y);
+
+    // Bleed horizontal speed only when tunnelling *through* to the downhill side
+    // (the slope in the travel direction reads downhill). Climbing a hill or
+    // driving up out of a depression keeps its speed so it stays driveable.
     const travelDirection = this._travelDirectionVector();
-    const slopeAtPos  = this._sampleSlopeDegAt(
+    const slopeAtPos = this._sampleSlopeDegAt(
       mesh.position.x,
       mesh.position.z,
       travelDirection,
@@ -543,17 +578,11 @@ export class TerrainPhysics {
       mesh.position.y + RAY_OFFSET,
       track
     );
-    if (slopeAtPos >= SPRING.tunnelingSlope) return penetration; // legitimate hill climb
-
-    // Move toward the surface at a capped speed — avoids a single-frame jump.
-    const frameCorrection = Math.min(penetration, SPRING.depenetrationSpeed * deltaTime);
-    mesh.position.y += frameCorrection;
-    const remaining = Math.max(0, truckBottomY - mesh.position.y);
-
-    // Bleed horizontal velocity: slope face resists forward motion.
-    const excess      = penetration - SPRING.depenetrationMinDepth;
-    const bleedFactor = Math.min(SPRING.bleedCap, excess * SPRING.bleedRatePerMetre);
-    this.state.velocity.scaleInPlace(1 - bleedFactor);
+    if (slopeAtPos < SPRING.tunnelingSlope) {
+      const excess      = penetration - SPRING.depenetrationMinDepth;
+      const bleedFactor = Math.min(SPRING.bleedCap, excess * SPRING.bleedRatePerMetre);
+      this.state.velocity.scaleInPlace(1 - bleedFactor);
+    }
 
     if (this.state.velocity.y < 0) this.state.velocity.y = 0;
 

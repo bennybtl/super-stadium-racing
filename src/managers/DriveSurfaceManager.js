@@ -1,9 +1,5 @@
 import { SurfaceRegistry } from "./SurfaceRegistry.js";
 import { Ray, Vector3 } from "@babylonjs/core";
-// Side-effect import: registers AbstractMesh.prototype.createOrUpdateSubmeshesOctree
-// and the picking-octree scene component (tree-shaken out otherwise). Required by
-// _enablePickingAcceleration below.
-import "@babylonjs/core/Culling/Octrees/octreeSceneComponent.js";
 
 /**
  * DriveSurfaceManager
@@ -40,14 +36,12 @@ export class DriveSurfaceManager {
       role: "drive",
     });
     // Drive surfaces are raycast many times per frame by terrain physics and AI
-    // (one ray per truck per probe). Build a submesh picking octree on large
-    // STATIC meshes (the ground especially) so each pick tests only the triangles
-    // under the ray instead of the whole mesh. See AGENT.md "Performance".
+    // (one ray per truck per probe). Partition large STATIC meshes (the ground)
+    // into submeshes so each pick tests only the triangles under the ray instead
+    // of the whole mesh. See AGENT.md "Performance".
     //
     // Only ground-level static surfaces are accelerated. Bridge decks/seams are
-    // dynamic — rebuilt on edit/reposition — and a submesh octree built once here
-    // would go stale after a rebuild and silently fail to pick, dropping trucks
-    // through the deck. They are also small, so brute-force picking is cheap.
+    // small (so brute-force picking is already cheap) and dynamic.
     const isBridgeSurface = String(options.surfaceType ?? "").startsWith("bridge");
     if (mesh && (options.level ?? 0) === 0 && !isBridgeSurface) {
       this._enablePickingAcceleration(mesh);
@@ -72,6 +66,11 @@ export class DriveSurfaceManager {
    * @param {number} radius
    * @returns {boolean}
    */
+  /** True when the track has any elevated drive surface (a bridge deck/seam). */
+  hasElevatedSurfaces() {
+    return this._elevatedSurfaceMeshes.length > 0;
+  }
+
   hasElevatedSurfaceNear(x, z, radius) {
     if (this._elevatedSurfaceMeshes.length === 0) return false;
     const r2 = radius * radius;
@@ -91,9 +90,18 @@ export class DriveSurfaceManager {
   }
 
   /**
-   * Partition a large drive-surface mesh into submeshes and build a submesh
-   * octree so downward terrain raycasts cull to a handful of triangles. Small
-   * meshes (bridge decks, seams) already pick fast and are left untouched.
+   * Partition a large drive-surface mesh into submeshes so downward terrain
+   * raycasts cull to a handful of triangles. Small meshes (bridge decks, seams)
+   * already pick fast and are left untouched.
+   *
+   * Only `subdivide()` is used — NOT a submesh octree. `mesh.intersects` culls
+   * each submesh by its exact bounding box (`SubMesh.canIntersects`), so a ray
+   * only tri-tests the band it actually passes through (~128 tris vs the whole
+   * ~8k-tri ground). That AABB cull can never drop a real hit. A submesh octree
+   * was tried but its limited-depth spatial ray query dropped the correct band
+   * at steep terrain transitions (tall, thin band AABBs), resolving a wrong
+   * surface and letting trucks drive "underground". With only ~64 submeshes the
+   * linear AABB scan the octree would have saved is negligible.
    * @param {BABYLON.AbstractMesh} mesh
    */
   _enablePickingAcceleration(mesh) {
@@ -110,11 +118,9 @@ export class DriveSurfaceManager {
       if ((mesh.subMeshes?.length ?? 0) <= 1) {
         mesh.subdivide(submeshCount);
       }
-      mesh.createOrUpdateSubmeshesOctree?.(32, 2);
-      mesh.useOctreeForPicking = true;
     } catch (err) {
-      // Non-fatal: picking still works (just slower) without the octree.
-      console.warn("[DriveSurfaceManager] picking octree build failed", err);
+      // Non-fatal: picking still works (just slower) without partitioning.
+      console.warn("[DriveSurfaceManager] picking acceleration failed", err);
     }
   }
 

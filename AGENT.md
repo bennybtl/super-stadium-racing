@@ -281,7 +281,7 @@ Drivable elevated mesh with solid top/bottom/sides.
 
 ---
 
-### 3b. Terrain Raycast Performance (drive-surface picking octree)
+### 3b. Terrain Raycast Performance (drive-surface picking)
 Terrain physics and AI floor detection fire **many downward raycasts per truck per
 frame** (multi-probe sampling + cross-pattern normal sampling, each resolved
 through `DriveSurfaceManager`/`TerrainQuery` via `scene.multiPickWithRay`). This
@@ -290,18 +290,25 @@ factor in frame time when many AI drivers are present.
 
 **Picking acceleration:** `DriveSurfaceManager.register()` calls
 `_enablePickingAcceleration(mesh)` on every drive surface. For meshes above ~512
-triangles (the ground, ~16k tris) it:
-1. `mesh.subdivide(n)` — partitions the single submesh into `n` submeshes
-   (~128 tris each) so per-submesh AABB culling skips most geometry, and
-2. `mesh.createOrUpdateSubmeshesOctree(32, 2)` — builds a submesh octree so the
-   candidate-gathering itself is sub-linear.
+triangles (the ground, ~8k tris) it calls `mesh.subdivide(n)` to split the single
+submesh into `n` submeshes (~128 tris each). Babylon's `mesh.intersects` then culls
+each submesh by its exact bounding box (`SubMesh.canIntersects`), so a downward ray
+only tri-tests the band it actually passes through (~128 tris vs the whole mesh).
+This AABB cull is exact — a submesh's box always bounds its own triangles, so it
+can never drop a real hit.
 
-Each downward ray then tests only the triangles beneath its XZ cell instead of
-the whole mesh. Only static, ground-level surfaces are accelerated — bridge decks
-and seams are excluded: they are built from the coarse control-point grid
-(~16–32 triangles) so they already pick in microseconds, and they are *dynamic*
-(rebuilt on edit), which would leave a once-built submesh octree stale and
-silently mis-pick. (Small meshes are also caught by the `triCount < 512` guard.)
+**No submesh octree.** An earlier version also built `createOrUpdateSubmeshesOctree`,
+but the octree's limited-depth *spatial* ray query dropped the correct band at
+steep terrain transitions (tall, thin band AABBs), resolving a wrong surface and
+letting trucks drive "underground". It was removed; with only ~64 submeshes the
+linear AABB scan it would have saved is negligible. If you re-add any octree-style
+acceleration, validate it against steep depressions (e.g. the `rio_trio` track).
+
+Only static, ground-level surfaces are accelerated — bridge decks and seams are
+excluded (`level > 0` / `surfaceType` starting with `bridge`): they are built from
+the coarse control-point grid (~16–32 triangles) so they already pick in
+microseconds, and they are dynamic (rebuilt on edit). Small meshes are also caught
+by the `triCount < 512` guard.
 
 **AI terrain-sampling LOD (multi-probe gated to bridges):** AI trucks no longer
 run the expensive multi-probe floor sampling every frame. `Truck.update()` enables
@@ -369,6 +376,14 @@ The `Truck` class coordinates four subsystems updated each frame:
 - **Downhill tracking**: `DOWNHILL` config object at file top holds all tuning knobs:
   - Pass 1 (`followMaxGap`, `followHeightDrop`, …) — injects fake suspension compression when slightly airborne on a downward slope
   - Pass 2 (`boostMaxGap`, `boostGroundedness`, …) — clamps `groundedness` to a minimum so the truck retains steering through descents
+- **Anti-tunnelling — max-penetration backstop** (`SPRING.maxPenetrationDepth`, in `_applySpring`): after the soft spring/depenetration, the truck centre is hard-clamped so it can never sit more than `maxPenetrationDepth` (0.75 m) below its resting height, with into-surface velocity cancelled. This is the guarantee against driving "underground": when a fast truck climbs a steep face the soft spring can't lift it quickly enough, so the clamp caps how deep it can ever sink. Shallow penetration keeps the soft response (feel preserved). Depends on floor resolution being correct first — see `TerrainQuery` upward-recovery (`_maxUpwardRise`), which is uncapped on bridgeless tracks so the steep surface is actually found.
+
+  **Terrain-collision robustness — TODO (deferred, in priority order):**
+  1. **Swept floor sampling** — march prev→current XZ in ≤cell steps and ride over the max height on the path, so geometry can't be skipped between frames (matters at low fps / very high speed; the per-frame center sample already covers normal speed).
+  2. **Slope-limiting** — project out into-slope velocity when entering a face steeper than climbable, so over-steep faces decelerate the truck at the base (wall-like) instead of being plowed into.
+  3. **Footprint sampling** — sample at the truck's front/corners (max), so the front catches a rising face before the centre is underground.
+  4. **Sub-stepping** — split the physics update into smaller steps on fast frames so a feature can't be jumped.
+  5. **Havok CCD contact** (heaviest) — hand truck-vs-terrain contact to the physics engine with continuous collision detection instead of the custom spring/raycast model.
 
 **`DriftPhysics.js`** — horizontal traction
 - `applyGripAndDrift(speed, forward, groundedness)` — early-returns when `groundedness <= 0`

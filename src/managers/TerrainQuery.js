@@ -34,7 +34,13 @@ import { Ray, Vector3 } from "@babylonjs/core";
 // without smearing over large-scale curvature changes.
 const SAMPLE_DIST = 0.5;
 const MIN_DRIVABLE_NORMAL_Y = 0.15;
+// Cap on how far above the ray origin an upward-recovery hit may be accepted.
+// The tight value keeps a truck driving *under* a bridge from snapping up onto
+// the deck. With no bridges there is exactly one surface per XZ (a heightfield),
+// so any upward hit is the truck's own terrain — accept it from any depth so a
+// truck that has sunk into a steep slope always recovers, no matter how steep.
 const MAX_UPWARD_FALLBACK_RISE = 1.0;
+const DEEP_UPWARD_FALLBACK_RISE = Infinity;
 
 export class TerrainQuery {
   constructor(scene, options = {}) {
@@ -55,6 +61,13 @@ export class TerrainQuery {
       mesh.metadata?.isTerrain === true;
   }
 
+  /** Max upward-recovery rise: deep on bridgeless tracks, tight where bridges exist. */
+  _maxUpwardRise() {
+    return this._driveSurfaceManager?.hasElevatedSurfaces?.()
+      ? MAX_UPWARD_FALLBACK_RISE
+      : DEEP_UPWARD_FALLBACK_RISE;
+  }
+
   /**
    * Resolve terrain height and smooth surface normal at (x, z).
    *
@@ -66,6 +79,7 @@ export class TerrainQuery {
    */
   castDown(x, z, fromY = 500, options = {}) {
     const continuityOptions = this._buildContinuityOptions(options);
+    const maxUpwardRise = this._maxUpwardRise();
     let hit = null;
     // getNormal() on a back-face (upward hit) returns a downward-pointing normal,
     // so skip normal blending when queryDriveSurfaceAt resolved from upward fallback.
@@ -79,7 +93,7 @@ export class TerrainQuery {
         maxDistance: fromY + 200,
         minNormalY: MIN_DRIVABLE_NORMAL_Y,
         penetrationThreshold: 1.5,
-        maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
+        maxUpwardRise,
       };
       let resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, queryOptions);
       hit = resolved?.pickInfo ?? null;
@@ -129,7 +143,7 @@ export class TerrainQuery {
         const upRise = (upHit?.hit && upHit.pickedPoint)
           ? (upHit.pickedPoint.y - fromY)
           : Infinity;
-        if (upHit?.hit && upHit.pickedPoint && upRise <= MAX_UPWARD_FALLBACK_RISE) {
+        if (upHit?.hit && upHit.pickedPoint && upRise <= maxUpwardRise) {
           hit = upHit;
           usedUpward = true;
         } else if (downMissed) {
@@ -218,6 +232,7 @@ export class TerrainQuery {
    */
   heightAtFast(x, z, fromY = 500, fallback = 0, options = {}) {
     const continuityOptions = this._buildContinuityOptions(options);
+    const maxUpwardRise = this._maxUpwardRise();
     if (this._driveSurfaceManager?.queryDriveSurfaceAt) {
       const resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
         role: "drive",
@@ -226,7 +241,7 @@ export class TerrainQuery {
         maxDistance: fromY + 200,
         minNormalY: MIN_DRIVABLE_NORMAL_Y,
         penetrationThreshold: 1.5,
-        maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
+        maxUpwardRise,
       });
       const hit = resolved?.pickInfo ?? null;
       if (hit?.hit && hit.pickedPoint) {
@@ -258,7 +273,7 @@ export class TerrainQuery {
     const upRise = (hit?.hit && hit.pickedPoint)
       ? (hit.pickedPoint.y - fromY)
       : Infinity;
-    if (hit?.hit && hit.pickedPoint && upRise <= MAX_UPWARD_FALLBACK_RISE) {
+    if (hit?.hit && hit.pickedPoint && upRise <= maxUpwardRise) {
       this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
       return hit.pickedPoint.y;
     }
