@@ -168,7 +168,10 @@ export class TerrainPhysics {
         : this._normalSampleInterval;
       const shouldSampleNormal =
         normalSampleInterval <= 0 ||
-        this._normalSampleTimer <= 0;
+        this._normalSampleTimer <= 0 ||
+        // Near bridges (multi-probe active) sample every frame so ramp slope
+        // and edge normals stay accurate regardless of the throttled cadence.
+        useMultiProbe;
 
       if (shouldSampleNormal) {
         const hit = this._terrainQuery.castDown(

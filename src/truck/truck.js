@@ -15,6 +15,16 @@ import { TruckBody } from "./TruckBody.js";
 import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js"; // used as fallback defaults only
 import { UPGRADES } from "../managers/UpgradeStorage.js";
 
+// --- AI terrain-sampling LOD -------------------------------------------------
+// AI trucks only need the expensive multi-probe floor sampling near bridges,
+// where edge capture matters. On open ground a single probe suffices. These
+// gate that decision (see Truck.update / AGENT.md "Performance").
+const AI_BRIDGE_MULTIPROBE_RADIUS = 14;  // enable multi-probe within this of a deck (m)
+const AI_BRIDGE_MULTIPROBE_STICKY_S = 1.0; // keep it on this long after leaving (s)
+// AI surface normals (visual roll/pitch + slope grip) tolerate a lower cadence
+// than the every-frame sampling player trucks use.
+const AI_NORMAL_SAMPLE_INTERVAL = 1 / 30; // seconds between full normal samples
+
 /**
  * Main Truck class that coordinates all truck subsystems
  */
@@ -61,13 +71,20 @@ export class Truck {
     // probes match its actual width — AI trucks enable multi-probe per-frame via
     // forceMultiProbe (see update()), and must not fall back to the default track.
     const terrainPhysicsOptions = {
-      normalSampleInterval: 0,
-      // Player trucks run multi-probe continuously; AI trucks force it per-frame.
+      // Player trucks sample normals every frame; AI throttle to a lower cadence
+      // except when near a bridge (forced every-frame via forceMultiProbe).
+      normalSampleInterval: this.driver ? AI_NORMAL_SAMPLE_INTERVAL : 0,
+      // Player trucks run multi-probe continuously; AI force it per-frame only
+      // near bridges (see update()).
       multiProbeSurfaceSampling: !this.driver,
       multiProbeHalfTrack: this.width * 0.42,
       multiProbeMaxLift: this.height * 0.35,
     };
     this.terrainPhysics = new TerrainPhysics(this.state, this.halfHeight, terrainQuery, terrainPhysicsOptions);
+
+    // AI bridge-proximity gate state (see update()).
+    this._driveSurfaceManager = scene?.metadata?.driveSurfaceManager ?? null;
+    this._aiMultiProbeSticky = 0;
     this.driftPhysics = new DriftPhysics(this.state);
     this.controls = new Controls(this.state);
 
@@ -272,8 +289,26 @@ export class Truck {
     let forceMultiProbeTerrainSampling = false;
 
     if (this.driver) {
-      // AI uses robust floor sampling at all times for reliable bridge/ramp capture.
-      forceMultiProbeTerrainSampling = true;
+      // Multi-probe floor sampling is only needed near elevated surfaces, where
+      // edge/ramp capture matters; on open ground a single probe is reliable and
+      // far cheaper. Enable it when on or near a bridge, with a sticky timer so it
+      // stays on briefly through approaches and exits.
+      const onElevated = (this.terrainPhysics.floorSurface?.surfaceLevel ?? 0) > 0;
+      const nearBridge = onElevated || (
+        this._driveSurfaceManager?.hasElevatedSurfaceNear(
+          this.mesh.position.x,
+          this.mesh.position.z,
+          AI_BRIDGE_MULTIPROBE_RADIUS
+        ) ?? false
+      );
+
+      if (nearBridge) {
+        this._aiMultiProbeSticky = AI_BRIDGE_MULTIPROBE_STICKY_S;
+      } else if (this._aiMultiProbeSticky > 0) {
+        this._aiMultiProbeSticky = Math.max(0, this._aiMultiProbeSticky - deltaTime);
+      }
+
+      forceMultiProbeTerrainSampling = this._aiMultiProbeSticky > 0;
     }
 
     const { groundedness, penetration } = profile(

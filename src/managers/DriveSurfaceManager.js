@@ -19,6 +19,10 @@ export class DriveSurfaceManager {
     this._surfaceRegistry = new SurfaceRegistry(scene);
     this._rayDown = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 2000);
     this._rayUp = new Ray(Vector3.Zero(), new Vector3(0, 1, 0), 2000);
+    // Meshes of elevated drive surfaces (bridge decks, level > 0). Used by
+    // hasElevatedSurfaceNear() to gate expensive AI multi-probe sampling to
+    // trucks actually near a bridge. Empty on the common no-bridge track.
+    this._elevatedSurfaceMeshes = [];
   }
 
   /**
@@ -37,10 +41,53 @@ export class DriveSurfaceManager {
     });
     // Drive surfaces are raycast many times per frame by terrain physics and AI
     // (one ray per truck per probe). Build a submesh picking octree on large
-    // meshes (the ground especially) so each pick tests only the triangles under
-    // the ray instead of the whole mesh. See AGENT.md "Performance".
-    this._enablePickingAcceleration(mesh);
+    // STATIC meshes (the ground especially) so each pick tests only the triangles
+    // under the ray instead of the whole mesh. See AGENT.md "Performance".
+    //
+    // Only ground-level static surfaces are accelerated. Bridge decks/seams are
+    // dynamic — rebuilt on edit/reposition — and a submesh octree built once here
+    // would go stale after a rebuild and silently fail to pick, dropping trucks
+    // through the deck. They are also small, so brute-force picking is cheap.
+    const isBridgeSurface = String(options.surfaceType ?? "").startsWith("bridge");
+    if (mesh && (options.level ?? 0) === 0 && !isBridgeSurface) {
+      this._enablePickingAcceleration(mesh);
+    }
+
+    // Track elevated decks so AI multi-probe sampling can be gated to bridge
+    // proximity (see hasElevatedSurfaceNear).
+    if (mesh && ((options.level ?? 0) > 0 || options.surfaceType === "bridgeMesh")) {
+      if (!this._elevatedSurfaceMeshes.includes(mesh)) {
+        this._elevatedSurfaceMeshes.push(mesh);
+      }
+    }
     return surfaceId;
+  }
+
+  /**
+   * True when (x, z) is within `radius` (XZ) of any elevated drive surface
+   * (bridge deck). Returns immediately when the track has no elevated surfaces,
+   * so flat tracks pay nothing.
+   * @param {number} x
+   * @param {number} z
+   * @param {number} radius
+   * @returns {boolean}
+   */
+  hasElevatedSurfaceNear(x, z, radius) {
+    if (this._elevatedSurfaceMeshes.length === 0) return false;
+    const r2 = radius * radius;
+    for (const mesh of this._elevatedSurfaceMeshes) {
+      const bb = mesh?.getBoundingInfo?.()?.boundingBox;
+      if (!bb) continue;
+      const min = bb.minimumWorld;
+      const max = bb.maximumWorld;
+      // Distance from the point to the mesh's XZ AABB (0 when inside).
+      const cx = Math.max(min.x, Math.min(x, max.x));
+      const cz = Math.max(min.z, Math.min(z, max.z));
+      const dx = x - cx;
+      const dz = z - cz;
+      if (dx * dx + dz * dz <= r2) return true;
+    }
+    return false;
   }
 
   /**
@@ -80,6 +127,8 @@ export class DriveSurfaceManager {
 
   unregisterByMesh(mesh) {
     this._surfaceRegistry.unregisterByMesh(mesh);
+    const idx = this._elevatedSurfaceMeshes.indexOf(mesh);
+    if (idx !== -1) this._elevatedSurfaceMeshes.splice(idx, 1);
   }
 
   getAll() {
@@ -171,21 +220,17 @@ export class DriveSurfaceManager {
       ? Math.max(0, options.maxUpwardRise)
       : Infinity;
 
-    // The upward fallback exists to recover the surface the truck has sunk into
-    // (a steep slope it overshot, its own deck). It must never snap the truck up
-    // onto a HIGHER-level surface it is driving underneath. Cap the acceptable
-    // up-hit level at the surface below (down hit) or the caller's continuity
-    // layer hint; an up hit resolving a level above that ceiling is rejected.
-    const ceilingLevel = this._hitLevel(down)
-      ?? (Number.isFinite(options.preferredLayer) ? options.preferredLayer : null);
-
+    // The upward fallback recovers the surface the truck has sunk into (a steep
+    // slope it overshot, or its own bridge deck when the down-ray slipped past an
+    // edge/seam to the ground below). The maxUpwardRise cap is what keeps it from
+    // snapping the truck onto a bridge it is driving *under*. (An earlier level
+    // guard here also rejected up-hits onto a higher layer than the down hit, but
+    // that blocked the legitimate "re-grab the deck above the ground" case and
+    // dropped trucks through bridges — see git history.)
     const isUpwardHitAllowed = hit => {
       if (!hit?.pickInfo?.pickedPoint) return false;
       const upRise = hit.pickInfo.pickedPoint.y - hintY;
-      if (upRise > maxUpwardRise) return false;
-      const upLevel = this._hitLevel(hit);
-      if (ceilingLevel !== null && Number.isFinite(upLevel) && upLevel > ceilingLevel) return false;
-      return true;
+      return upRise <= maxUpwardRise;
     };
 
     if (down?.pickInfo?.pickedPoint) {
@@ -205,11 +250,6 @@ export class DriveSurfaceManager {
       maxDistance: options.maxDistance ?? 50,
     });
     return isUpwardHitAllowed(up) ? up : null;
-  }
-
-  _hitLevel(hit) {
-    const level = hit?.surface?.level ?? hit?.pickInfo?.pickedMesh?.metadata?.level;
-    return Number.isFinite(level) ? level : null;
   }
 
   castUpToDriveSurface(x, z, fromY = 0, options = {}) {

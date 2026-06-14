@@ -297,8 +297,24 @@ triangles (the ground, ~16k tris) it:
    candidate-gathering itself is sub-linear.
 
 Each downward ray then tests only the triangles beneath its XZ cell instead of
-the whole mesh. Small meshes (bridge decks, seams) pick fast already and are
-skipped (the `triCount < 512` guard).
+the whole mesh. Only static, ground-level surfaces are accelerated — bridge decks
+and seams are excluded: they are built from the coarse control-point grid
+(~16–32 triangles) so they already pick in microseconds, and they are *dynamic*
+(rebuilt on edit), which would leave a once-built submesh octree stale and
+silently mis-pick. (Small meshes are also caught by the `triCount < 512` guard.)
+
+**AI terrain-sampling LOD (multi-probe gated to bridges):** AI trucks no longer
+run the expensive multi-probe floor sampling every frame. `Truck.update()` enables
+`forceMultiProbe` only when the truck is on an elevated surface
+(`floorSurface.surfaceLevel > 0`) or within `AI_BRIDGE_MULTIPROBE_RADIUS` of a
+bridge deck (`DriveSurfaceManager.hasElevatedSurfaceNear`), with a
+`AI_BRIDGE_MULTIPROBE_STICKY_S` hysteresis timer so it stays on through approaches
+and exits. On flat tracks the elevated-surface list is empty, so the proximity
+check returns instantly and AI use the cheap single-probe `heightAtFast` path.
+AI also sample full normals at `AI_NORMAL_SAMPLE_INTERVAL` (1/30 s) instead of
+every frame — except near bridges, where `TerrainPhysics` forces every-frame
+normals so ramp slope stays accurate. Player trucks are unchanged (continuous
+multi-probe + every-frame normals).
 
 **Required side-effect import:** `createOrUpdateSubmeshesOctree` and the picking
 octree scene component are tree-shaken out of `@babylonjs/core` by default.
@@ -315,14 +331,14 @@ long frame surfaces there (e.g. `60 (min 32)`) and is colored amber below ~50 /
 red below ~30. Use **min**, not the average, to judge hitches; the `FrameProfiler`
 console report (`maxFrameMs` + per-section `truck.terrainPhysics`) localizes them.
 
-**Remaining levers (not yet implemented):** AI trucks currently force the most
-expensive sampling config every frame (`forceMultiProbe: true`,
-`normalSampleInterval: 0` in `truck/truck.js`); distance/speed/near-bridge LOD
-gating (the `lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL` plumbing still
-exists in `TerrainPhysics.js`), per-frame center-sample caching, a single-pick
-fast path when no layers overlap, and rasterizing walls/curbs into the AI
-occupancy grid (`AIDriver.isBlocked`) are the next biggest wins. Measure with the
-`FrameProfiler` (`truck.terrainPhysics` label is already instrumented).
+**Remaining levers (not yet implemented):** per-frame center-sample caching (the
+truck centre is sampled 3+ times per frame across multi-probe / castDown /
+suspension), a single-pick fast path replacing `multiPickWithRay` when no drivable
+layers overlap in range, distance/speed `lowDetail` gating for far AI (the
+`lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL` plumbing exists in
+`TerrainPhysics.js`), and rasterizing walls/curbs into the AI occupancy grid
+(`AIDriver.isBlocked`) are the next biggest wins. Measure with the `FrameProfiler`
+(`truck.terrainPhysics` label is already instrumented).
 
 ---
 
