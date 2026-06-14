@@ -1736,10 +1736,14 @@ export class EditorController {
     this._syncTerrainPathPanel();
   }
   deleteTerrainPathWaypoint()   { this.terrainPathEditor.deleteSelected(); }
+  insertTerrainPathWaypoint()   { this.terrainPathEditor.insertAfterSelected(); }
+  duplicateTerrainPath()        { this.terrainPathEditor.duplicateActivePath(); }
+  deleteTerrainPath()           { this.terrainPathEditor.clearActivePath(); }
   clearTerrainPath()            { this.terrainPathEditor.clearActivePath(); }
   changeTerrainPathWidth(val)          { this.terrainPathEditor.changeWidth(val); }
   changeTerrainPathBlendWidth(val)     { this.terrainPathEditor.changeBlendWidth(val); }
   changeTerrainPathCornerRadius(val)   { this.terrainPathEditor.changeCornerRadius(val); }
+  changeTerrainPathClosed(val)         { this.terrainPathEditor.setClosed(val); }
   changeTerrainPathTerrainType(name)   { this.terrainPathEditor.changeTerrainType(name); }
 
   _syncTerrainPathPanel() {
@@ -1749,6 +1753,7 @@ export class EditorController {
     s.terrainPath.width        = f.width ?? 8;
     s.terrainPath.blendWidth   = f.blendWidth ?? 0;
     s.terrainPath.cornerRadius = f.cornerRadius ?? 0;
+    s.terrainPath.closed       = f.closed ?? false;
     s.terrainPath.terrainType  = f.terrainType?.name ?? 'mud';
   }
 

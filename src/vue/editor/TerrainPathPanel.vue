@@ -4,6 +4,32 @@
     title="Terrain Path"
     @close="editor.closeTerrainPath()"
   >
+    <div class="text-[10px] text-slate-400 mb-3">
+      Right-click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
+    </div>
+
+    <!-- Selected Point Section -->
+    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Selected Point</div>
+    <div class="text-[10px] text-slate-400 mb-2">WASD to move selected waypoint</div>
+    <div class="flex gap-2 mb-3">
+      <button
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        @click="editor.deleteTerrainPathWaypoint()"
+      >
+        Delete Point
+      </button>
+      <button
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.insertTerrainPathWaypoint()"
+      >
+        Insert After
+      </button>
+    </div>
+
+    <hr class="border-t border-slate-700 my-4" />
+
+    <!-- Path Properties Section -->
+    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Path Properties</div>
 
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -46,25 +72,35 @@
       @update:modelValue="editor.setTerrainPathTerrainType"
     />
 
+    <!-- Closed toggle -->
+    <div class="flex justify-between mt-3 mb-3 text-[12px]">
+      <span>Closed Loop</span>
+      <input
+        type="checkbox"
+        :checked="editor.terrainPath.closed"
+        @change="editor.setTerrainPathClosed($event.target.checked)"
+        class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+      />
+    </div>
+
+    <hr class="border-t border-slate-700 my-4" />
+
+    <!-- Actions -->
     <div class="flex gap-2">
       <button
-          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.deleteTerrainPathWaypoint()"
-      >
-        Delete selected waypoint
-      </button>
-
-      <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.clearTerrainPath()"
+        @click="editor.deleteTerrainPath()"
       >
-        Clear path
+        Delete
+      </button>
+      <button
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.duplicateTerrainPath()"
+      >
+        Duplicate
       </button>
     </div>
 
-    <div class="text-[10px] text-slate-400">
-      Right-click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
-    </div>
   </EditorPanel>
 </template>
 

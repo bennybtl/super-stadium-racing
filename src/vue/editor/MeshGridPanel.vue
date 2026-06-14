@@ -90,7 +90,7 @@
       class="w-full accent-[var(--accent)] mb-8 cursor-pointer"
     />
 
-    <div class="flex gap-2 mb-3">
+    <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.flattenMeshGrid()"
@@ -110,7 +110,7 @@
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->
-    <div class="flex gap-2 mb-3">
+    <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.deleteMeshGrid()"

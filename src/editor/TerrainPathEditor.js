@@ -147,14 +147,19 @@ export class TerrainPathEditor {
     const color4 = new Color4(col.r, col.g, col.b, 0.85);
 
     const cornerRadius = feature.cornerRadius ?? 0;
+    const closed = feature.closed ?? false;
     const displayPts = cornerRadius > 0.1
-      ? expandPolyline(pts.map(p => ({ ...p, radius: cornerRadius })))
+      ? expandPolyline(pts.map(p => ({ ...p, radius: cornerRadius })), closed)
       : pts;
 
     const positions = displayPts.map(p => {
       const y = this.editor.terrainQuery.heightAt(p.x, p.z) + 1.6;
       return new Vector3(p.x, y, p.z);
     });
+    // Close the visual loop back to the first point.
+    if (closed && positions.length > 1) {
+      positions.push(positions[0].clone());
+    }
 
     const lineMesh = MeshBuilder.CreateLines(`tpLine_${Date.now()}`, {
       points: positions,
@@ -267,6 +272,7 @@ export class TerrainPathEditor {
       width: 8,
       blendWidth: 0,
       cornerRadius: 0,
+      closed: false,
       terrainType: entry,
     };
     track.features.push(feature);
@@ -350,6 +356,61 @@ export class TerrainPathEditor {
     this._scheduleTerrainRebuild();
   }
 
+  /**
+   * Insert a new waypoint just after the selected one (at the midpoint to the
+   * next point), then select it. Mirrors PolyWall's "Insert After".
+   */
+  insertAfterSelected() {
+    if (!this.selected) return;
+    const { feature, pointIndex } = this.selected;
+    const pts = feature.points;
+    const p1 = pts[pointIndex];
+    const p2 = pts[Math.min(pointIndex + 1, pts.length - 1)];
+
+    this.editor.saveSnapshot();
+    pts.splice(pointIndex + 1, 0, {
+      x: parseFloat(((p1.x + p2.x) / 2).toFixed(2)),
+      z: parseFloat(((p1.z + p2.z) / 2).toFixed(2)),
+    });
+
+    this._rebuildHandlesForFeature(feature);
+    this._rebuildLineForFeature(feature);
+    this._scheduleTerrainRebuild();
+
+    const newHandle = this.handles.find(
+      h => h.feature === feature && h.pointIndex === pointIndex + 1
+    );
+    if (newHandle) this.select(newHandle);
+  }
+
+  /** Duplicate the active path, offset slightly, and make the copy active. */
+  duplicateActivePath() {
+    if (!this.activeFeature) return;
+    this.editor.saveSnapshot();
+    this.deselect();
+    const src = this.activeFeature;
+    const feature = {
+      ...src,
+      points: src.points.map(p => ({ ...p, x: p.x + 5, z: p.z + 5 })),
+    };
+    this.editor.currentTrack.features.push(feature);
+
+    this._rebuildHandlesForFeature(feature);
+    this._rebuildLineForFeature(feature);
+    this.activeFeature = feature;
+    this._scheduleTerrainRebuild();
+    this._showProperties();
+  }
+
+  /** Toggle whether the path forms a closed loop. */
+  setClosed(val) {
+    if (!this.activeFeature) return;
+    this.editor.saveSnapshot(true);
+    this.activeFeature.closed = !!val;
+    this._rebuildLineForFeature(this.activeFeature);
+    this._scheduleTerrainRebuild();
+  }
+
   /** Called after an undo/redo snapshot restore. */
   onSnapshotRestored(track) {
     this.clearMeshes();
@@ -365,6 +426,7 @@ export class TerrainPathEditor {
     s.terrainPath.width        = f.width ?? 8;
     s.terrainPath.blendWidth   = f.blendWidth ?? 0;
     s.terrainPath.cornerRadius = f.cornerRadius ?? 0;
+    s.terrainPath.closed       = f.closed ?? false;
     s.terrainPath.terrainType  = f.terrainType?.name ?? 'mud';
     s.selectedType = 'terrainPath';
   }

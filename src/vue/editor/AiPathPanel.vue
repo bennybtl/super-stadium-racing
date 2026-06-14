@@ -22,6 +22,8 @@
     </div>
 
       <template v-if="activeTab === 'path'">
+      <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">AI Path</div>
+      <div class="text-[10px] text-slate-400 mb-3">Right-Click terrain to add waypoints. Select a node to edit it. WASD to move selected point</div>
 
       <div class="flex gap-2 mb-3">
         <button
@@ -39,7 +41,7 @@
       </div>
 
       <hr class="border-t border-slate-700 my-4" />
-      <div class="text-slate-200 text-sm font-medium mb-2">Branches</div>
+      <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Branches</div>
       <div class="text-[11px] text-slate-400 mb-3">Select a main waypoint and click "Create branch" to add an alternate route.</div>
 
       <label class="block text-[12px] text-slate-200 mb-1">Active Branch</label>
@@ -58,6 +60,7 @@
         </option>
       </select>
 
+      <template v-show="editor.aiPathBranch.activeBranchId">
         <div class="flex justify-between mb-1 text-[12px]" :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'">
           <span>Branch Weight</span>
           <span>{{ editor.aiPathBranch.activeBranchWeight.toFixed(2) }}</span>
@@ -86,23 +89,24 @@
             {{ idx - 1 }}
           </option>
         </select>
+      </template>
 
-        <div class="flex gap-2">
-          <button
-          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-            :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'"
-            :disabled="!editor.aiPathBranch.activeBranchId"
-            @click="editor.deleteActiveAiPathBranch()"
-          >
-            Delete Active Branch
-          </button>
-          <button
-          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-            @click="editor.createAiPathBranchFromSelected()"
-          >
-            Create Branch
-          </button>
-        </div>
+      <div class="flex gap-2">
+        <button
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+          :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'"
+          :disabled="!editor.aiPathBranch.activeBranchId"
+          @click="editor.deleteActiveAiPathBranch()"
+        >
+          Delete Active Branch
+        </button>
+        <button
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+          @click="editor.createAiPathBranchFromSelected()"
+        >
+          Create Branch
+        </button>
+      </div>
 
       <hr class="border-t border-slate-700 my-4" />
       <div class="flex gap-2 mb-3">
@@ -112,10 +116,6 @@
         >
           Clear AI path
         </button>
-      </div>
-
-      <div class="text-[10px] text-slate-400">
-        Right-Click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
       </div>
     </template>
 

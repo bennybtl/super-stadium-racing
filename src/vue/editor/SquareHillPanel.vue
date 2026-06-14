@@ -4,6 +4,16 @@
     title="Square Hill"
     @close="editor.closeSquareHill()"
   >
+    <!-- Hint -->
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
+
+    <!-- Mode toggle: Flat | Sloped -->
+    <div class="text-[12px] mb-1">Mode</div>
+    <div class="flex gap-2 mb-3">
+      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(false)" @click="editor.setSquareHillMode(false)">Flat</button>
+      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(true)"  @click="editor.setSquareHillMode(true)">Sloped</button>
+    </div>
+
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Width</span>
@@ -51,13 +61,6 @@
       @input="editor.setSquareHillAngle(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
-
-    <!-- Mode toggle: Flat | Sloped -->
-    <div class="text-[12px] mb-1">Mode</div>
-    <div class="flex gap-2 mb-3">
-      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(false)" @click="editor.setSquareHillMode(false)">Flat</button>
-      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(true)"  @click="editor.setSquareHillMode(true)">Sloped</button>
-    </div>
 
     <!-- Flat section -->
     <template v-if="!editor.squareHill.slopeMode">
@@ -114,11 +117,10 @@
       @update:modelValue="editor.setSquareHillTerrainType"
     />
 
-    <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
+    <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->
-    <div class="flex gap-2 mb-3">
+    <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.deleteSquareHill()"

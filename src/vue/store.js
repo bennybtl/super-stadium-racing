@@ -497,6 +497,7 @@ export const useEditorStore = defineStore('editor', () => {
     width: 8,
     blendWidth: 0,
     cornerRadius: 0,
+    closed: false,
     terrainType: 'mud',
   });
 
@@ -505,8 +506,12 @@ export const useEditorStore = defineStore('editor', () => {
   function setTerrainPathWidth(val)           { terrainPath.width = val;         _bridge.value?.changeTerrainPathWidth?.(val); }
   function setTerrainPathBlendWidth(val)      { terrainPath.blendWidth = val;    _bridge.value?.changeTerrainPathBlendWidth?.(val); }
   function setTerrainPathCornerRadius(val)    { terrainPath.cornerRadius = val;  _bridge.value?.changeTerrainPathCornerRadius?.(val); }
+  function setTerrainPathClosed(val)          { terrainPath.closed = val;        _bridge.value?.changeTerrainPathClosed?.(val); }
   function setTerrainPathTerrainType(val)     { terrainPath.terrainType = val;   _bridge.value?.changeTerrainPathTerrainType?.(val); }
   function deleteTerrainPathWaypoint()        { _bridge.value?.deleteTerrainPathWaypoint?.(); }
+  function insertTerrainPathWaypoint()        { _bridge.value?.insertTerrainPathWaypoint?.(); }
+  function duplicateTerrainPath()             { _bridge.value?.duplicateTerrainPath?.(); }
+  function deleteTerrainPath()                { _bridge.value?.deleteTerrainPath?.(); }
   function clearTerrainPath()                 { _bridge.value?.clearTerrainPath?.(); }
   function addTerrainPath()                   { _bridge.value?.addTerrainPathEntity?.(); }
 
@@ -882,8 +887,8 @@ export const useEditorStore = defineStore('editor', () => {
     editMainAiPath, createAiPathBranchFromSelected, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, deleteActiveAiPathBranch, clearAiPathBranches,
     terrainPath,
     openTerrainPath, closeTerrainPath,
-    setTerrainPathWidth, setTerrainPathBlendWidth, setTerrainPathCornerRadius, setTerrainPathTerrainType,
-    deleteTerrainPathWaypoint, clearTerrainPath, addTerrainPath,
+    setTerrainPathWidth, setTerrainPathBlendWidth, setTerrainPathCornerRadius, setTerrainPathClosed, setTerrainPathTerrainType,
+    deleteTerrainPathWaypoint, insertTerrainPathWaypoint, duplicateTerrainPath, deleteTerrainPath, clearTerrainPath, addTerrainPath,
     surfaceDecal,
     openSurfaceDecalStamp, closeSurfaceDecalStamp,
     setSurfaceDecalType, setSurfaceDecalRandomRotation, setSurfaceDecalAngle,

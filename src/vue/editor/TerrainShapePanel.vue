@@ -4,6 +4,9 @@
     title="Terrain Shape"
     @close="editor.closeTerrainShape()"
   >
+    <!-- Hint -->
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+
     <!-- Shape selector -->
     <div class="text-[12px] mb-1">Shape</div>
     <select
@@ -58,7 +61,7 @@
         type="range" min="0" max="20" step="0.5"
         :value="editor.terrainShape.blendWidth"
         @input="editor.setTerrainShapeBlendWidth(+$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="w-full accent-[var(--accent)] cursor-pointer"
       />
     </template>
 
@@ -67,11 +70,10 @@
       @update:modelValue="editor.setTerrainShapeTerrainType"
     />
 
-    <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+    <hr class="border-t border-slate-700 mb-3" />
 
     <!-- Actions -->
-    <div class="flex gap-2 mb-3">
+    <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.deleteTerrainShape()"

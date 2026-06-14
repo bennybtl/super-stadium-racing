@@ -4,6 +4,9 @@
     title="Flag"
     @close="closeFlag()"
   >
+    <!-- Hint -->
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Del to delete</div>
+
     <!-- Color -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Color</span>
@@ -26,12 +29,23 @@
       </button>
     </div>
 
-    <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Del to delete</div>
+    <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateFlag()">Duplicate</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteFlag()">Delete</button>
+    <div class="flex gap-2">
+      <button 
+        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        @click="editor.deleteFlag()"
+      >
+        Delete
+      </button>
+      <button
+        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        @click="editor.duplicateFlag()"
+      >
+        Duplicate
+      </button>
+    </div>
   </EditorPanel>
 </template>
 

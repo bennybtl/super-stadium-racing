@@ -511,13 +511,15 @@ export class Track {
           const halfWidth = (feature.width ?? 8) / 2;
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const cornerRadius = feature.cornerRadius ?? 0;
+          const closed = feature.closed ?? false;
           const expanded = cornerRadius > 0.1
-            ? this._expandPolylineForHill(pts.map(p => ({ ...p, radius: cornerRadius })))
+            ? this._expandPolylineForHill(pts.map(p => ({ ...p, radius: cornerRadius })), closed)
             : pts;
+          const numSegments = closed ? expanded.length : expanded.length - 1;
           let minDist = Infinity;
-          for (let j = 0; j < expanded.length - 1; j++) {
+          for (let j = 0; j < numSegments; j++) {
             const p1 = expanded[j];
-            const p2 = expanded[j + 1];
+            const p2 = expanded[(j + 1) % expanded.length];
             const dx = p2.x - p1.x;
             const dz = p2.z - p1.z;
             const len2 = dx * dx + dz * dz;

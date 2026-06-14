@@ -76,7 +76,7 @@
     </div>
 
     <!-- Style -->
-    <div class="flex justify-between items-center mb-6 text-[12px]">
+    <div class="flex justify-between items-center mb-3 text-[12px]">
       <span>Style</span>
       <select
         :value="editor.polyCurb.style"
@@ -89,8 +89,10 @@
       </select>
     </div>
 
+    <hr class="border-t border-slate-700 my-4" />
+
     <!-- Actions -->
-    <div class="flex gap-2 mb-3">
+    <div class="flex gap-2">
     <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
       @click="editor.deletePolyCurb()"

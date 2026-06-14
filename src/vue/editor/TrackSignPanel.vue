@@ -4,6 +4,9 @@
     title="Track Sign"
     @close="editor.closeTrackSign()"
   >
+    <!-- Hint -->
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+
     <!-- Content type -->
     <div class="text-[12px] mb-1">Content</div>
     <select
@@ -117,8 +120,7 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+    <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->
     <div class="flex gap-2">

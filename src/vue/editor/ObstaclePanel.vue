@@ -4,8 +4,7 @@
     title="Obstacle"
     @close="editor.closeObstacle()"
   >
-    {{ editor.obstacle.placementActive ? 'Edit placed obstacle' : 'Right-click to place a new obstacle' }}
-    <div class="text-[10px] text-slate-400 mb-3">Right-click terrain to place. Q/E rotates the selected obstacle.</div>
+    <div class="text-[10px] text-slate-400 mb-3">Right-click terrain to place copy of. Q/E rotates the selected obstacle.</div>
 
     <div class="text-[12px] mb-1">Obstacle Type</div>
     <select
@@ -56,10 +55,13 @@
       type="range" min="5" max="120" step="1"
       :value="editor.obstacle.weight"
       @input="editor.setObstacleWeight(+$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="w-full accent-[var(--accent)] cursor-pointer"
     />
 
-    <div class="flex gap-2 mb-3">
+    <hr class="border-t border-slate-700 my-4" />
+
+    <!-- Actions -->
+    <div class="flex gap-2">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.deleteSelectedObstacle()"
