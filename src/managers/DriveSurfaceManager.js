@@ -1,5 +1,9 @@
 import { SurfaceRegistry } from "./SurfaceRegistry.js";
 import { Ray, Vector3 } from "@babylonjs/core";
+// Side-effect import: registers AbstractMesh.prototype.createOrUpdateSubmeshesOctree
+// and the picking-octree scene component (tree-shaken out otherwise). Required by
+// _enablePickingAcceleration below.
+import "@babylonjs/core/Culling/Octrees/octreeSceneComponent.js";
 
 /**
  * DriveSurfaceManager
@@ -27,10 +31,44 @@ export class DriveSurfaceManager {
    * @returns {number|null} surfaceId
    */
   register(mesh, options = {}) {
-    return this._surfaceRegistry.registerSurface(mesh, {
+    const surfaceId = this._surfaceRegistry.registerSurface(mesh, {
       ...options,
       role: "drive",
     });
+    // Drive surfaces are raycast many times per frame by terrain physics and AI
+    // (one ray per truck per probe). Build a submesh picking octree on large
+    // meshes (the ground especially) so each pick tests only the triangles under
+    // the ray instead of the whole mesh. See AGENT.md "Performance".
+    this._enablePickingAcceleration(mesh);
+    return surfaceId;
+  }
+
+  /**
+   * Partition a large drive-surface mesh into submeshes and build a submesh
+   * octree so downward terrain raycasts cull to a handful of triangles. Small
+   * meshes (bridge decks, seams) already pick fast and are left untouched.
+   * @param {BABYLON.AbstractMesh} mesh
+   */
+  _enablePickingAcceleration(mesh) {
+    try {
+      const indices = mesh?.getIndices?.();
+      const triCount = indices ? indices.length / 3 : 0;
+      // Below this, a brute-force pick is already cheap; partitioning adds overhead.
+      if (triCount < 512) return;
+
+      const TARGET_TRIS_PER_SUBMESH = 128;
+      const submeshCount = Math.max(2, Math.min(64, Math.ceil(triCount / TARGET_TRIS_PER_SUBMESH)));
+
+      // subdivide() replaces submeshes; only run on a still-single-submesh mesh.
+      if ((mesh.subMeshes?.length ?? 0) <= 1) {
+        mesh.subdivide(submeshCount);
+      }
+      mesh.createOrUpdateSubmeshesOctree?.(32, 2);
+      mesh.useOctreeForPicking = true;
+    } catch (err) {
+      // Non-fatal: picking still works (just slower) without the octree.
+      console.warn("[DriveSurfaceManager] picking octree build failed", err);
+    }
   }
 
   registerBoundary(mesh, options = {}) {

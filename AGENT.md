@@ -240,7 +240,7 @@ Canonical registry for all gameplay-relevant world surfaces.
 
 **`DriveSurfaceManager` (`managers/DriveSurfaceManager.js`)**
 Central entry point for registering and querying drivable surfaces. Wraps `SurfaceRegistry`.
-- `register(mesh, options)` — register drive surface (sets `role: "drive"`)
+- `register(mesh, options)` — register drive surface (sets `role: "drive"`); also builds a picking octree on large meshes (see §3b)
 - `registerBoundary(mesh, options)` — register boundary (wall/barrier)
 - `getAll()` — returns all drivable meshes
 
@@ -278,6 +278,51 @@ Drivable elevated mesh with solid top/bottom/sides.
 - `heights` array is row-major (rows × cols), absolute world Y
 - Top face registered as a drive surface so raycasts land at correct height/slope
 - Uses Havok MESH collider for the top face; terrain seam meshes connect bridge edges to ground to prevent gaps
+
+---
+
+### 3b. Terrain Raycast Performance (drive-surface picking octree)
+Terrain physics and AI floor detection fire **many downward raycasts per truck per
+frame** (multi-probe sampling + cross-pattern normal sampling, each resolved
+through `DriveSurfaceManager`/`TerrainQuery` via `scene.multiPickWithRay`). This
+cost scales linearly with the number of trucks (AI count) and is the dominant
+factor in frame time when many AI drivers are present.
+
+**Picking acceleration:** `DriveSurfaceManager.register()` calls
+`_enablePickingAcceleration(mesh)` on every drive surface. For meshes above ~512
+triangles (the ground, ~16k tris) it:
+1. `mesh.subdivide(n)` — partitions the single submesh into `n` submeshes
+   (~128 tris each) so per-submesh AABB culling skips most geometry, and
+2. `mesh.createOrUpdateSubmeshesOctree(32, 2)` — builds a submesh octree so the
+   candidate-gathering itself is sub-linear.
+
+Each downward ray then tests only the triangles beneath its XZ cell instead of
+the whole mesh. Small meshes (bridge decks, seams) pick fast already and are
+skipped (the `triCount < 512` guard).
+
+**Required side-effect import:** `createOrUpdateSubmeshesOctree` and the picking
+octree scene component are tree-shaken out of `@babylonjs/core` by default.
+`DriveSurfaceManager.js` imports `@babylonjs/core/Culling/Octrees/octreeSceneComponent.js`
+for its side effects — without it the method is `undefined` and acceleration
+silently no-ops. The prototype method lazily registers the scene component on
+first use, so no scene-level setup is needed.
+
+**Reading the FPS overlay (`vue/AppShell.vue`):** the top-right counter shows
+`<avg> (min <worst>)`. The average is a 500 ms, vsync-capped, rounded frame
+*count* — it reads a steady 60 even through hitches and **cannot reveal stutter**.
+The `min` value is `1000 / longest-frame-ms` within the same window, so a single
+long frame surfaces there (e.g. `60 (min 32)`) and is colored amber below ~50 /
+red below ~30. Use **min**, not the average, to judge hitches; the `FrameProfiler`
+console report (`maxFrameMs` + per-section `truck.terrainPhysics`) localizes them.
+
+**Remaining levers (not yet implemented):** AI trucks currently force the most
+expensive sampling config every frame (`forceMultiProbe: true`,
+`normalSampleInterval: 0` in `truck/truck.js`); distance/speed/near-bridge LOD
+gating (the `lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL` plumbing still
+exists in `TerrainPhysics.js`), per-frame center-sample caching, a single-pick
+fast path when no layers overlap, and rasterizing walls/curbs into the AI
+occupancy grid (`AIDriver.isBlocked`) are the next biggest wins. Measure with the
+`FrameProfiler` (`truck.terrainPhysics` label is already instrumented).
 
 ---
 
