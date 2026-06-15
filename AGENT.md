@@ -290,19 +290,14 @@ factor in frame time when many AI drivers are present.
 
 **Picking acceleration:** `DriveSurfaceManager.register()` calls
 `_enablePickingAcceleration(mesh)` on every drive surface. For meshes above ~512
-triangles (the ground, ~8k tris) it calls `mesh.subdivide(n)` to split the single
-submesh into `n` submeshes (~128 tris each). Babylon's `mesh.intersects` then culls
-each submesh by its exact bounding box (`SubMesh.canIntersects`), so a downward ray
-only tri-tests the band it actually passes through (~128 tris vs the whole mesh).
-This AABB cull is exact — a submesh's box always bounds its own triangles, so it
-can never drop a real hit.
+triangles (the ground, ~8k tris) it (1) `mesh.subdivide(n)` partitions the single
+submesh into `n` submeshes (~128 tris each), and (2) `mesh.createOrUpdateSubmeshesOctree(32, 2)`
+builds a submesh octree so candidate-gathering is sub-linear. Each downward ray
+then tests only the triangles beneath its XZ instead of the whole mesh.
 
-**No submesh octree.** An earlier version also built `createOrUpdateSubmeshesOctree`,
-but the octree's limited-depth *spatial* ray query dropped the correct band at
-steep terrain transitions (tall, thin band AABBs), resolving a wrong surface and
-letting trucks drive "underground". It was removed; with only ~64 submeshes the
-linear AABB scan it would have saved is negligible. If you re-add any octree-style
-acceleration, validate it against steep depressions (e.g. the `rio_trio` track).
+> **Note:** the terrain-surface picking itself is correct; do NOT replace
+> `multiPickWithRay` with a single `pickWithRay` in `_castRayToSurface` (a
+> "single-pick fast path" was tried and reverted — see §Single-pick below).
 
 Only static, ground-level surfaces are accelerated — bridge decks and seams are
 excluded (`level > 0` / `surfaceType` starting with `bridge`): they are built from
@@ -346,11 +341,15 @@ centre query — it needs the precise hit + cross-pattern normal there, and merg
 it would flip the multi-probe-lift / castDown precedence the bridge handling
 relies on, so that one duplicate is left intentionally.
 
-**Single-pick fast path:** `DriveSurfaceManager._castRayToSurface` skips the
-`multiPickWithRay` scan (and its per-call array allocation) and uses a single
-`pickWithRay` when there are no elevated surfaces registered — with no overlapping
-layers there is at most one drivable surface under any XZ, so the nearest hit is
-correct. Bridge tracks still take the multi-hit + continuity path.
+**Single-pick — TRIED AND REVERTED (do not re-add).** A "fast path" once made
+`_castRayToSurface` use a single `pickWithRay` when no elevated surfaces exist.
+`pickWithRay` returns only the *nearest* triangle; on a steep hill that nearest
+triangle can be a near-vertical sliver that fails the `_isHitAllowed` normal
+filter, so the whole query returns null → stale floor → the truck tunnels
+through ("drive underground, emerge when the slope eases"). `multiPickWithRay`
+keeps every hit and selects the nearest *valid* one, so it always resolves the
+surface. Always use the multi-pick path; the single pick is only the empty
+fallback.
 
 **AI occupancy grid:** `AIDriver.isBlocked` no longer scans every wall/curb
 segment per call. Segments are static during a race, so they are rasterized once
@@ -376,9 +375,9 @@ The `Truck` class coordinates four subsystems updated each frame:
 - **Downhill tracking**: `DOWNHILL` config object at file top holds all tuning knobs:
   - Pass 1 (`followMaxGap`, `followHeightDrop`, …) — injects fake suspension compression when slightly airborne on a downward slope
   - Pass 2 (`boostMaxGap`, `boostGroundedness`, …) — clamps `groundedness` to a minimum so the truck retains steering through descents
-- **Anti-tunnelling — max-penetration backstop** (`SPRING.maxPenetrationDepth`, in `_applySpring`): after the soft spring/depenetration, the truck centre is hard-clamped so it can never sit more than `maxPenetrationDepth` (0.75 m) below its resting height, with into-surface velocity cancelled. This is the guarantee against driving "underground": when a fast truck climbs a steep face the soft spring can't lift it quickly enough, so the clamp caps how deep it can ever sink. Shallow penetration keeps the soft response (feel preserved). Depends on floor resolution being correct first — see `TerrainQuery` upward-recovery (`_maxUpwardRise`), which is uncapped on bridgeless tracks so the steep surface is actually found.
+- **Slope-tunnelling depenetration** (`_applyDepenetration`): when penetration exceeds `SPRING.depenetrationMinDepth`, checks the travel-direction slope; if it reads downhill past `tunnelingSlope` the truck has tunnelled through a face, so it's eased back to the surface (`depenetrationSpeed`) and horizontal speed is bled. A legitimate uphill climb is left alone.
 
-  **Terrain-collision robustness — TODO (deferred, in priority order):**
+  **Terrain-collision robustness — TODO (deferred, in priority order).** Note: the prior "underground" bug was NOT a physics-correction problem — it was the single-pick floor-resolution regression (see §3b). These remain as hardening for fast/low-fps edge cases:
   1. **Swept floor sampling** — march prev→current XZ in ≤cell steps and ride over the max height on the path, so geometry can't be skipped between frames (matters at low fps / very high speed; the per-frame center sample already covers normal speed).
   2. **Slope-limiting** — project out into-slope velocity when entering a face steeper than climbable, so over-steep faces decelerate the truck at the base (wall-like) instead of being plowed into.
   3. **Footprint sampling** — sample at the truck's front/corners (max), so the front catches a rising face before the centre is underground.

@@ -1,5 +1,9 @@
 import { SurfaceRegistry } from "./SurfaceRegistry.js";
 import { Ray, Vector3 } from "@babylonjs/core";
+// Side-effect import: registers AbstractMesh.prototype.createOrUpdateSubmeshesOctree
+// and the picking-octree scene component (tree-shaken out otherwise). Required by
+// _enablePickingAcceleration below.
+import "@babylonjs/core/Culling/Octrees/octreeSceneComponent.js";
 
 /**
  * DriveSurfaceManager
@@ -66,11 +70,6 @@ export class DriveSurfaceManager {
    * @param {number} radius
    * @returns {boolean}
    */
-  /** True when the track has any elevated drive surface (a bridge deck/seam). */
-  hasElevatedSurfaces() {
-    return this._elevatedSurfaceMeshes.length > 0;
-  }
-
   hasElevatedSurfaceNear(x, z, radius) {
     if (this._elevatedSurfaceMeshes.length === 0) return false;
     const r2 = radius * radius;
@@ -90,18 +89,9 @@ export class DriveSurfaceManager {
   }
 
   /**
-   * Partition a large drive-surface mesh into submeshes so downward terrain
-   * raycasts cull to a handful of triangles. Small meshes (bridge decks, seams)
-   * already pick fast and are left untouched.
-   *
-   * Only `subdivide()` is used — NOT a submesh octree. `mesh.intersects` culls
-   * each submesh by its exact bounding box (`SubMesh.canIntersects`), so a ray
-   * only tri-tests the band it actually passes through (~128 tris vs the whole
-   * ~8k-tri ground). That AABB cull can never drop a real hit. A submesh octree
-   * was tried but its limited-depth spatial ray query dropped the correct band
-   * at steep terrain transitions (tall, thin band AABBs), resolving a wrong
-   * surface and letting trucks drive "underground". With only ~64 submeshes the
-   * linear AABB scan the octree would have saved is negligible.
+   * Partition a large drive-surface mesh into submeshes and build a submesh
+   * octree so downward terrain raycasts cull to a handful of triangles. Small
+   * meshes (bridge decks, seams) already pick fast and are left untouched.
    * @param {BABYLON.AbstractMesh} mesh
    */
   _enablePickingAcceleration(mesh) {
@@ -118,9 +108,11 @@ export class DriveSurfaceManager {
       if ((mesh.subMeshes?.length ?? 0) <= 1) {
         mesh.subdivide(submeshCount);
       }
+      mesh.createOrUpdateSubmeshesOctree?.(32, 2);
+      mesh.useOctreeForPicking = true;
     } catch (err) {
-      // Non-fatal: picking still works (just slower) without partitioning.
-      console.warn("[DriveSurfaceManager] picking acceleration failed", err);
+      // Non-fatal: picking still works (just slower) without the octree.
+      console.warn("[DriveSurfaceManager] picking octree build failed", err);
     }
   }
 
@@ -269,14 +261,13 @@ export class DriveSurfaceManager {
     const filtered = hit => this._isHitAllowed(hit, options);
     const continuity = this._normalizeContinuityOptions(options);
 
-    // Fast path: with no elevated surfaces, at most one drivable surface lies
-    // under any XZ, so a single nearest pick is correct and avoids the multi-hit
-    // scan + per-call array allocation. Layer disambiguation/continuity only
-    // matters where a bridge deck overlaps the ground.
-    if (this._elevatedSurfaceMeshes.length === 0) {
-      return this._singlePick(ray, options, filtered, continuity);
-    }
-
+    // NOTE: do NOT short-circuit to a single pickWithRay even when there are no
+    // elevated surfaces. pickWithRay returns only the *nearest* triangle; if that
+    // triangle fails the normal filter (a near-vertical sliver on a steep hill),
+    // the whole query returns null → stale floor → the truck tunnels through.
+    // multiPickWithRay keeps every hit and selects the nearest *valid* one, so a
+    // neighbouring drivable triangle still resolves the surface. The single pick
+    // below is only a fallback for when multiPick returns nothing.
     const multiHits = this.scene.multiPickWithRay?.(ray, mesh => this._isMeshEligible(mesh, options));
     if (Array.isArray(multiHits) && multiHits.length > 0) {
       const sortedHits = multiHits
