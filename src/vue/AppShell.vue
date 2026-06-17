@@ -9,8 +9,6 @@
     <LoadingOverlay />
     <MenuOverlay />
     <SingleRaceOverlay />
-    <PostRaceOverlay />
-    <SeasonFinalOverlay />
     <RaceHUD />
     <DebugPanel />
     <!-- Editor property panels (each self-gates on selectedType) -->
@@ -43,8 +41,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import MenuOverlay        from './MenuOverlay.vue';
 import LoadingOverlay     from './LoadingOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
-import PostRaceOverlay    from './PostRaceOverlay.vue';
-import SeasonFinalOverlay from './SeasonFinalOverlay.vue';
 import RaceHUD            from './RaceHUD.vue';
 import DebugPanel         from './DebugPanel.vue';
 import CheckpointPanel    from './editor/CheckpointPanel.vue';

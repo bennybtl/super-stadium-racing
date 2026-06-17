@@ -35,8 +35,8 @@ export class RaceMode extends DriveMode {
     this.telemetryRecorder = null;
   }
 
-  async setup({ trackKey, laps, aiCount = 9, season = false, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false }) {
-    const { engine, menuManager, seasonManager } = this.controller;
+  async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false }) {
+    const { engine, menuManager } = this.controller;
     const totalLaps = laps || 3;
 
     const {
@@ -112,7 +112,7 @@ export class RaceMode extends DriveMode {
     let raceStartTime = null;
     let countdownActive = false;
 
-    // -- Finish / DNF tracking (season mode) --
+    // -- Finish / DNF tracking --
     const finishOrder  = [];   // truckData entries in finish order
     let dnfTimer       = null; // started when the first driver begins their last lap
     let raceEnded      = false;
@@ -140,56 +140,30 @@ export class RaceMode extends DriveMode {
         }
       });
 
-      if (season && seasonManager) {
-        // Build results — finishOrder first, then DNFs in truck-array order
-        const finishedIds = new Set(finishOrder.map(td => td.id));
-        const dnfTrucks   = trucks.filter(td => !finishedIds.has(td.id));
-
-        const resultsArray = [
-          ...finishOrder.map((td, idx) => ({
-            id:               td.id,
-            finishPosition:   idx + 1,
-            totalRaceTimeMs:  td.gameState.totalRaceTime,
-            fastestLapMs:     td.gameState.fastestLap,
-          })),
-          ...dnfTrucks.map((td, idx) => ({
-            id:               td.id,
-            finishPosition:   finishOrder.length + idx + 1,
-            totalRaceTimeMs:  null,
-            fastestLapMs:     null,
-            dnf:              true,
-          })),
-        ];
-
-        const postRaceData = seasonManager.recordRaceResult(resultsArray);
-        console.log('[RaceMode] Season race recorded. Showing post-race screen.');
-        menuManager.showPostRace(postRaceData);
-      } else {
-        // Non-season: show a simple post-race results screen
-        const finishedIds = new Set(finishOrder.map(td => td.id));
-        const dnfTrucks   = trucks.filter(td => !finishedIds.has(td.id));
-        const rows = [
-          ...finishOrder.map((td, idx) => ({
-            id:              td.id,
-            name:            td.name,
-            isPlayer:        td.isPlayer,
-            finishPosition:  idx + 1,
-            totalRaceTimeMs: td.gameState.totalRaceTime,
-            fastestLapMs:    td.gameState.fastestLap,
-            dnf:             false,
-          })),
-          ...dnfTrucks.map((td, idx) => ({
-            id:              td.id,
-            name:            td.name,
-            isPlayer:        td.isPlayer,
-            finishPosition:  finishOrder.length + idx + 1,
-            totalRaceTimeMs: null,
-            fastestLapMs:    null,
-            dnf:             true,
-          })),
-        ];
-        menuManager.showSingleRaceResults({ trackKey, rows });
-      }
+      // Show the post-race results screen.
+      const finishedIds = new Set(finishOrder.map(td => td.id));
+      const dnfTrucks   = trucks.filter(td => !finishedIds.has(td.id));
+      const rows = [
+        ...finishOrder.map((td, idx) => ({
+          id:              td.id,
+          name:            td.name,
+          isPlayer:        td.isPlayer,
+          finishPosition:  idx + 1,
+          totalRaceTimeMs: td.gameState.totalRaceTime,
+          fastestLapMs:    td.gameState.fastestLap,
+          dnf:             false,
+        })),
+        ...dnfTrucks.map((td, idx) => ({
+          id:              td.id,
+          name:            td.name,
+          isPlayer:        td.isPlayer,
+          finishPosition:  finishOrder.length + idx + 1,
+          totalRaceTimeMs: null,
+          fastestLapMs:    null,
+          dnf:             true,
+        })),
+      ];
+      menuManager.showSingleRaceResults({ trackKey, rows });
     };
 
     const handleDNF = () => {
@@ -222,22 +196,18 @@ export class RaceMode extends DriveMode {
     this.telemetryRecorder = telemetryRecorder;
 
     // ── AI drivers ───────────────────────────────────────────────────────────
-    // Season driver info helpers — passed into setupAIDrivers so it can name/id each slot
-    const seasonAIDrivers = season && seasonManager ? seasonManager.getAIDrivers() : null;
-    const getAIName  = (i) => seasonAIDrivers?.[i]?.name ?? `AI ${i + 1}`;
-    const getAIId    = (i) => seasonAIDrivers?.[i]?.id   ?? `ai${i + 1}`;
-    const getAISkill = (i) => seasonAIDrivers?.[i]?.skillConfig ?? {};
+    const getAIName  = (i) => `AI ${i + 1}`;
+    const getAIId    = (i) => `ai${i + 1}`;
+    const getAISkill = (_i) => ({});
     const getAIDriver = (i) => {
-      if (seasonAIDrivers?.[i]) return null;
       const slot = i % 3;
       if (slot === 0) return AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
       if (slot === 1) return AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
       return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
     };
 
-    const AI_COUNT = seasonAIDrivers ? seasonAIDrivers.length : aiCount;
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({
-      count: AI_COUNT,
+      count: aiCount,
       scene,
       shadows,
       currentTrack,
@@ -394,13 +364,6 @@ export class RaceMode extends DriveMode {
           uiManager.updateBoosts(truckData.gameState.boostCount);
         }
         return;
-      }
-
-      if (type === 'coin' && truckData?.isPlayer && season && seasonManager) {
-        const credits = Math.max(0, Math.round(payload?.credits ?? 0));
-        if (credits > 0) {
-          seasonManager.addPlayerBalance(credits);
-        }
       }
     };
 

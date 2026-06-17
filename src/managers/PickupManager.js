@@ -20,8 +20,9 @@ const SPAWN_HALF_EXTENT = 65;
 
 /** Minimum distance (m) between any two pickup spawn points. */
 const MIN_PICKUP_DIST = 10;
-const COIN_VALUES = [100, 200, 300, 400, 500];
-const COIN_SPAWN_CHANCE = 0.35;
+// const COIN_VALUES = [100, 200, 300, 400, 500];
+// const COIN_SPAWN_CHANCE = 0.35;
+
 
 // =============================================================================
 
@@ -78,7 +79,9 @@ export class PickupManager {
   }
 
   _pickType() {
-    return Math.random() < COIN_SPAWN_CHANCE ? 'coin' : 'boost';
+    // Coins were the (removed) season economy; only boosts spawn now.
+    // return Math.random() < COIN_SPAWN_CHANCE ? 'coin' : 'boost';
+    return 'boost';
   }
 
   /**
@@ -244,14 +247,15 @@ export class PickupManager {
               this.audioManager?.playSound('reload');
             }
           }
-          let payload = undefined;
-          if (pickup.type === 'coin') {
-            payload = {
-              credits: COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)],
-              position: { x: pp.x, y: pp.y, z: pp.z },
-            };
-          }
-          this.onPickupCollected?.(pickup.type, truckData, payload);
+          // let payload = undefined;
+          // if (pickup.type === 'coin') {
+          //   payload = {
+          //     credits: COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)],
+          //     position: { x: pp.x, y: pp.y, z: pp.z },
+          //   };
+          // }
+          // this.onPickupCollected?.(pickup.type, truckData, payload);
+          this.onPickupCollected?.(pickup.type, truckData);
 
           const t = setTimeout(() => pickup.setVisible(true), RESPAWN_DELAY_MS);
           this._respawnTimers.push(t);

@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "id": "rio_trio",
   "packId": "offroad_pack_2",
-  "image": "rio_trio.png",
   "hidden": false,
   "name": "Rio-Trio",
+  "image": "rio_trio.png",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "mud",
@@ -376,7 +376,7 @@
           "radius": 0
         }
       ],
-      "height": -2.4,
+      "height": -1.3,
       "width": 5,
       "terrainType": "water",
       "closed": true,
@@ -491,8 +491,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -24.117348036780925,
-          "z": -18.284967502181075,
+          "x": -21.131068529113787,
+          "z": -13.064519355175719,
           "radius": 10
         },
         {
@@ -516,8 +516,8 @@
           "radius": 0
         },
         {
-          "x": -16.82348625708188,
-          "z": -17.760607527102366,
+          "x": -15.36219416437283,
+          "z": -6.072992088946705,
           "radius": 10
         }
       ],
@@ -732,12 +732,12 @@
           "radius": 7
         },
         {
-          "x": -28.34754853218945,
-          "z": 48.06330045218612,
+          "x": -31.84754853218945,
+          "z": 49.56330045218612,
           "radius": 7.5
         },
         {
-          "x": -28.99290333932034,
+          "x": -34.992903339320335,
           "z": 42.026760458284514,
           "radius": 7.5
         },
@@ -761,7 +761,7 @@
       "radiusX": 15,
       "radiusZ": 10,
       "angle": 35,
-      "height": 2.5,
+      "height": 4.5,
       "waterLevelOffset": 0,
       "terrainType": null
     },
@@ -850,7 +850,7 @@
     {
       "type": "flag",
       "x": -44,
-      "z": -49,
+      "z": -49.5,
       "color": "blue"
     },
     {
@@ -867,8 +867,8 @@
     },
     {
       "type": "flag",
-      "x": -34.05507057276588,
-      "z": 48.761853038051015,
+      "x": -35.55507057276588,
+      "z": 47.261853038051015,
       "color": "blue"
     },
     {
@@ -997,10 +997,10 @@
     },
     {
       "type": "trackSign",
-      "x": 11,
-      "z": -49,
+      "x": 12.512390472981668,
+      "z": -45.52312044489553,
       "name": "Rio-Trio",
-      "rotation": 0,
+      "rotation": -0.05235987755982989,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "background": "black",
@@ -1093,6 +1093,186 @@
           "z": 17.49997362444466
         }
       ]
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -31.867790418031515,
+      "z": 39.75699129132306,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -34.89244189915659,
+      "z": 41.24434235400577,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -29.031455534744566,
+      "z": 39.75902233401161,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -30.34218548698764,
+      "z": 37.250559404242544,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -33.903709987643786,
+      "z": 38.31189359592713,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -1.1950953263034858,
+      "z": -14.589555945762122,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 0.28760594243611615,
+      "z": -9.934471834391815,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 65.68621263070554,
+      "z": -24.424477196349066,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 68.30823634999827,
+      "z": -28.07084914279607,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 70.16330309021664,
+      "z": -32.381245514335625,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "trackSign",
+      "x": -43.987609527018336,
+      "z": -16.023120444895532,
+      "name": "Rio-Trio",
+      "rotation": -0.05235987755982989,
+      "contentType": "brand",
+      "brandImage": "roll-fast.png",
+      "background": "white",
+      "primaryColor": "white",
+      "scale": 1.85,
+      "heightOffset": 1.5,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 18.814970241419832,
+      "z": 44.10069015718273,
+      "name": "Rio-Trio",
+      "rotation": 0.17453292519943295,
+      "contentType": "brand",
+      "brandImage": "roll-fast.png",
+      "background": "white",
+      "primaryColor": "white",
+      "scale": 1.85,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -24.676000122016276,
+      "z": -48.37900557023266,
+      "name": "Rio-Trio",
+      "rotation": -0.10471975511965978,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "background": "white",
+      "primaryColor": "white",
+      "scale": 1.65,
+      "heightOffset": 1.7,
+      "width": 15
+    },
+    {
+      "type": "trackSign",
+      "x": -21.5916339666377,
+      "z": 44.95992649830537,
+      "name": "Rio-Trio",
+      "rotation": 0.05235987755982989,
+      "contentType": "brand",
+      "brandImage": "power-lube.png",
+      "background": "white",
+      "primaryColor": "white",
+      "scale": 1.85,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -64.80452158876395,
+      "z": -21.75597934277406,
+      "name": "Rio-Trio",
+      "rotation": -0.4363323129985824,
+      "contentType": "brand",
+      "brandImage": "rally-master.png",
+      "background": "white",
+      "primaryColor": "white",
+      "scale": 1.85,
+      "heightOffset": 1.5,
+      "width": 10
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 70.62741197934473,
+      "z": -37.08781397694038,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
     }
   ]
 }

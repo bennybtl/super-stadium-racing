@@ -16,13 +16,11 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedAIVehicleType = ref('random');
   const selectedReverse = ref(false);
   const selectedVehicle = ref('default_truck');
-  // Current gameplay mode: null | 'practice' | 'singleRace' | 'season'
+  // Current gameplay mode: null | 'practice' | 'singleRace'
   const mode = ref(null);
 
-  // Season overlay data (null when not showing)
-  const postRaceData    = ref(null);
+  // Overlay data (null when not showing)
   const pitData         = ref(null);
-  const seasonFinalData = ref(null);
   const singleRaceData  = ref(null);
   const loadingVisible = ref(false);
   const loadingMessage = ref('Loading…');
@@ -52,8 +50,7 @@ export const useMenuStore = defineStore('menu', () => {
   function setSelectedAIVehicleType(key) { if (!_bridge.value) return; _bridge.value.setSelectedAIVehicleType(key); }
   function setSelectedReverse(val) { selectedReverse.value = !!val; if (_bridge.value) _bridge.value.selectedReverse = !!val; }
   function showPitMenu(pitMode = 'singleRace') {
-    if (pitMode === 'season') mode.value = 'season';
-    else if (pitMode === 'singleRace') mode.value = 'singleRace';
+    if (pitMode === 'singleRace') mode.value = 'singleRace';
     _bridge.value?.showPitMenu(pitMode);
   }
 
@@ -76,31 +73,14 @@ export const useMenuStore = defineStore('menu', () => {
     if (target === 'start')            _bridge.value.showStartMenu();
   }
 
-  // ── Season actions (called by Vue overlays) ──────────────────────────────
-  function startSeasonMode() {
-    mode.value = 'season';
-    _bridge.value?.onSeasonStart(selectedLaps.value);
-  }
-  function continueSeason()        { mode.value = 'season'; _bridge.value?.onContinueSeason(); }
-  function retireFromSeason()      { _bridge.value?.onRetireFromSeason(); }
-  function goToPit()               { _bridge.value?.onGoToPit(); }
+  // ── Upgrade / pit actions ────────────────────────────────────────────────
   function purchaseUpgrade(id)     { _bridge.value?.onPurchaseUpgrade(id); }
   function resetUpgrades() {
-    // If in season mode, delegate to bridge (game logic may need to refresh pit, etc)
-    if (mode.value === 'season' && _bridge.value?.onResetUpgrades) {
-      _bridge.value.onResetUpgrades();
-      return;
-    }
-    // Otherwise, reset upgrades directly and update state
     resetPlayerUpgrades();
-    // Always ignore balance outside of season
-    // (If you want to show balance-aware upgrades, pass pitData.playerBalance)
     upgrades.value = getUpgradeCatalog({ balance: 0, ignoreBalance: true });
   }
-  function selectPlayerColor(key)  { _bridge.value?.onSelectPlayerColor(key); }
   function selectPlayerColor(key)  { if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
   function startSingleRace()        { mode.value = 'singleRace'; _bridge.value?.onStartSingleRace(); }
-  function exitSeason()            { mode.value = null; postRaceData.value = null; pitData.value = null; seasonFinalData.value = null; _bridge.value?.onRetireFromSeason(); }
   function singleRaceExit()        { mode.value = null; singleRaceData.value = null; _bridge.value?.onExit(); }
   function setMode(nextMode)       { mode.value = nextMode; }
 
@@ -112,7 +92,7 @@ export const useMenuStore = defineStore('menu', () => {
   return {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, mode,
     selectedReverse,
-    postRaceData, pitData, seasonFinalData, singleRaceData, upgrades,
+    pitData, singleRaceData, upgrades,
     loadingVisible, loadingMessage,
     setBridge,
     showEditorTrackSelect,
@@ -122,7 +102,7 @@ export const useMenuStore = defineStore('menu', () => {
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
-    continueSeason, retireFromSeason, goToPit, purchaseUpgrade, resetUpgrades, selectPlayerColor, startSingleRace, startSeasonMode, exitSeason, singleRaceExit,
+    purchaseUpgrade, resetUpgrades, selectPlayerColor, startSingleRace, singleRaceExit,
     setMode,
     setLoading,
   };

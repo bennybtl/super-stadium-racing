@@ -23,7 +23,6 @@
         <template v-if="store.screen === 'start'">
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('practice')">Practice</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('singleRace')">Single Race</button>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('season')">Start Season</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
@@ -89,106 +88,40 @@
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
         <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
 
-          <template v-if="store.pitData.isSeason">
-            <template v-if="!store.pitData.isSeasonComplete">
-              <div class="text-[#ccc] text-sm mb-3">
-                Next track: <strong class="text-white">{{ store.pitData.nextTrackKey }}</strong>
-                <div class="text-slate-500 text-[11px]">This track is fixed for the season.</div>
-              </div>
-              <div class="flex flex-row gap-4 mb-4">
-                <div>
-                  <div v-if="store.pitData.isSeason && store.pitData.raceNumber === 1 && !store.pitData.isSeasonComplete" class="text-left mb-4">
-                    <label class="block text-slate-400 text-xs uppercase tracking-[2px] mb-2">Laps</label>
-                    <select
-                      class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-3 text-left text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                      :value="store.selectedLaps"
-                      @change="store.setSelectedLaps(Number($event.target.value))"
-                    >
-                      <option v-for="n in [1, 3, 5, 10]" :key="n" :value="n">{{ n }} Lap{{ n > 1 ? 's' : '' }}</option>
-                    </select>
-                  </div>
-                  <div class="grid gap-4 mb-4">
-                    <TruckSelection
-                      :vehicles="store.vehicleList"
-                      :selectedVehicle="store.selectedVehicle"
-                      :colorOptions="colorOptions"
-                      :selectedColor="store.pitData.selectedColorKey"
-                      @update:selectedVehicle="store.selectPlayerVehicle($event)"
-                      @update:selectedColor="store.selectPlayerColor($event)"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div class="flex flex-col gap-3">
-                <template v-if="store.pitData.isSeason && store.pitData.raceNumber === 1 && !store.pitData.isSeasonComplete">
-                  <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-8 py-4 text-base font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition duration-150 ease-in-out hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.startSeasonMode()">
-                    Start Season
-                  </button>
-                  <button
-                    class="bg-slate-700 text-white border-0 px-8 py-4 text-base font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.2)] transition duration-150 ease-in-out hover:bg-slate-600"
-                    @click="store.back('start')"
-                  >
-                    Back to Menu
-                  </button>
-                </template>
-                <template v-else>
-                  <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-8 py-4 text-base font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition duration-150 ease-in-out hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.continueSeason()">
-                    Continue to Race {{ store.pitData.nextRaceNumber }}
-                  </button>
-                  <button class="bg-gradient-to-b from-slate-700 to-slate-900 text-white border-0 px-8 py-4 text-sm font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition duration-150 ease-in-out hover:from-slate-600 hover:to-slate-700" @click="store.retireFromSeason()">
-                    Retire from Season
-                  </button>
-                </template>
-              </div>
-            </template>
-
-            <template v-else>
-              <div class="text-emerald-400 text-2xl font-bold mb-5 tracking-[2px]">Season complete!</div>
-              <button class="bg-gradient-to-b from-[#ff2222] to-[#d81515] text-white border-0 px-8 py-4 text-base font-bold rounded-xl uppercase tracking-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition duration-150 ease-in-out hover:from-[#ff4343] hover:to-[#ff2222]" @click="store.continueSeason()">
-                Final Standings →
-              </button>
-            </template>
-          </template>
-
-          <template v-else>
-            <div class="grid gap-3 text-left text-sm text-slate-300 mb-4">
-              <TrackSelectionCarousel
-                :tracks="store.trackList"
-                :modelValue="store.selectedTrack"
-                @update:modelValue="store.setSelectedTrack($event)"
-              />
-              <div v-if="store.pitData.pitMode !== 'practice'">
-                <RaceConfig />
-              </div>
+          <div class="grid gap-3 text-left text-sm text-slate-300 mb-4">
+            <TrackSelectionCarousel
+              :tracks="store.trackList"
+              :modelValue="store.selectedTrack"
+              @update:modelValue="store.setSelectedTrack($event)"
+            />
+            <div v-if="store.pitData.pitMode !== 'practice'">
+              <RaceConfig />
             </div>
+          </div>
 
-            <!-- <hr class="my-3 opacity-60"> -->
+          <div class="mb-4">
+            <TruckSelection
+              :vehicles="store.vehicleList"
+              :selectedVehicle="store.selectedVehicle"
+              :colorOptions="colorOptions"
+              :selectedColor="store.pitData.selectedColorKey"
+              @update:selectedVehicle="store.selectPlayerVehicle($event)"
+              @update:selectedColor="store.selectPlayerColor($event)"
+            />
+          </div>
+          <div class="mb-4">
+            <TruckSetup />
+          </div>
 
-            <div class="mb-4">
-              <TruckSelection
-                :vehicles="store.vehicleList"
-                :selectedVehicle="store.selectedVehicle"
-                :colorOptions="colorOptions"
-                :selectedColor="store.pitData.selectedColorKey"
-                @update:selectedVehicle="store.selectPlayerVehicle($event)"
-                @update:selectedColor="store.selectPlayerColor($event)"
-              />
-            </div>
-            <div class="mb-4">
-              <TruckSetup />
-            </div>
-            <!-- <hr class="my-3 opacity-60"> -->
-
-            <div class="flex flex-row gap-auto">
-              <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
-              <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
-                Start Practice
-              </button>
-              <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow " v-else @click="store.startSingleRace()">
-                Start Race
-              </button>
-            </div>
-          </template>
+          <div class="flex flex-row gap-auto">
+            <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
+              Start Practice
+            </button>
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow " v-else @click="store.startSingleRace()">
+              Start Race
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -209,7 +142,7 @@ import TruckSetup from './TruckSetup.vue';
 const store = useMenuStore();
 const colorOptions = Object.entries(basicColors).map(([key, value]) => ({ key, value }));
 function handleKeyDown(event) {
-  if (event.code === 'Escape' && store.pitData && !store.pitData.isSeason) {
+  if (event.code === 'Escape' && store.pitData) {
     store.back('start');
   }
 }

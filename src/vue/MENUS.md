@@ -37,7 +37,6 @@ tracks/
 
 # Local Storage Namespacing
 
-season.save
 settings.controls
 settings.audio
 settings.display
@@ -57,11 +56,6 @@ Navigation
 - A vertical menu consisting of these options:
   - PRACTICE
   - SINGLE RACE
-  - START SEASON
-    - will clear a saved season in localStorage. 
-    - In case of saved season, prompt to [ buttons: RESUME SAVED SEASON, START NEW SEASON] 
-  - RESUME SEASON
-    - available if saved season is in localStorage
   - ------------
   - TRACK EDITOR (#999 grey instead of white)
   - SETTINGS (#999 grey instead of white)
@@ -69,8 +63,6 @@ Navigation
 Navigation
 - Clicking the PRACTICE button navigates to the PRACTICE screen
 - Clicking the SINGLE RACE button navigates to the RACE screen
-- Clicking the START SEASON button navigates to the SEASON screen
-- Clicking the RESUME SEASON button navigates to the PIT SCREEN with the current saved season state loaded
 - Clicking the TRACK EDITOR button navigates to the TRACK EDITOR screen
 - Clicking the SETTINGS button navigates to the SETTINGS screen
 
@@ -106,35 +98,11 @@ Navigation
   - EXIT
     - Display "ARE YOU SURE?" pop-up
 
-# SEASON
-> Season state and progress should be saved to localStorage after each race is completed
-> When a season is completed, localStorage is cleared.
-  - Display the src/vue/SeasonSetup.vue component
-  - A horizontal menu consisting of these options:
-    - BACK
-      - return to the MAIN MENU
-    - START SEASON
-      - Navigates to the PIT SCREEN
-
-## SEASON RACE PAUSE
-  > Escape while in a season race displays this menu
-  - RESUME
-  - FORFEIT RACE
-    - Display "ARE YOU SURE?" pop-up
-    - continues to next race
-  - EXIT
-    - Display "ARE YOU SURE?" pop-up
-
 # PIT SCREEN
 - Display the src/vue/TruckSelection.vue component (need to create)
 - Display the src/vue/TruckUpgrades.vue component (need to create)
-  - if season: SAVE & EXIT
-    - Save state to localStorage
-    - Exits to MAIN MENU
-  - if season: END SEASON
-    - Display "ARE YOU SURE?" pop-up
   - START RACE
-  - if not season: EXIT
+  - EXIT
     - Display "ARE YOU SURE?" pop-up
 
 # TRACK EDITOR

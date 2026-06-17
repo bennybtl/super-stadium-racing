@@ -1,7 +1,7 @@
 # Offroad Racing Game — Agent Documentation
 
 ## Project Overview
-An isometric offroad racing game built with Babylon.js and Havok Physics. Features arcade-style truck physics, terrain effects, AI drivers, checkpoints, lap tracking, a track editor, season championship mode, and a full Vue-based menu/HUD. Inspired by classic Super Off-Road.
+An isometric offroad racing game built with Babylon.js and Havok Physics. Features arcade-style truck physics, terrain effects, AI drivers, checkpoints, lap tracking, a track editor, and a full Vue-based menu/HUD. Inspired by classic Super Off-Road.
 
 ## Technology Stack
 - **Babylon.js 7** — 3D rendering engine
@@ -70,7 +70,6 @@ offroad/
     │   ├── MenuManager.js           # Main menu UI coordination
     │   ├── ObstacleManager.js       # Tire stacks and cones (movable physics objects)
     │   ├── PickupManager.js         # Item pickups (boosts, repairs)
-    │   ├── SeasonManager.js         # Season championship: points, tracks, AI drivers, persistence
     │   ├── StaticBodyCollisionManager.js  # Truck-to-static mesh collision handling
     │   ├── SteepSlopeColliderManager.js   # Invisible colliders on steep terrain faces
     │   ├── SurfaceDecalManager.js   # Normal-map decals on terrain
@@ -458,23 +457,10 @@ new AIDriver(track, checkpointManager, wallManager, scene, AI_SKILL_PRESETS.good
 
 ---
 
-### 7. Season Mode (`managers/SeasonManager.js`)
-Pure-JS manager (no Babylon or Vue imports). Persists to localStorage.
-
-**Season Tracks:** Fandango → Huevos Grande → Sidewinder → Big Dukes → Blaster → Cliff Hanger → Wipeout
-
-**Points:** 1st = 10, 2nd = 5, 3rd = 3, 4th = 1
-
-**AI Drivers:**
-| Name | Skill |
-|------|-------|
-| Crusher | hard (`AI_SKILL_PRESETS.good`) |
-| Wheels | medium (`AI_SKILL_PRESETS.ok`) |
-| Dusty | easy (`AI_SKILL_PRESETS.bad`) |
-
-**State persistence:** `localStorage.season_state` — JSON-serialized `SeasonState`
-
-**`UpgradeStorage.js`** — vehicle upgrade system; persists per-vehicle upgrade levels and player balance to localStorage.
+### 7. Vehicle Upgrades (`managers/UpgradeStorage.js`)
+Vehicle upgrade system; persists per-vehicle upgrade levels to localStorage. Shown
+in the Pit screen (`TruckSetup.vue`); applied to truck stats at spawn. (Season mode
+was removed; upgrades are currently free — `getUpgradeCatalog({ ignoreBalance: true })`.)
 
 ---
 

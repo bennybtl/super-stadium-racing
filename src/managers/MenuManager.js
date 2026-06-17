@@ -1,5 +1,4 @@
 import { useMenuStore } from '../vue/store.js';
-import { SEASON_TRACKS } from './SeasonManager.js';
 import { getUpgradeCatalog } from './UpgradeStorage.js';
 
 /**
@@ -45,9 +44,7 @@ export class MenuManager {
   showStartMenu() {
     this.currentMenu = 'start';
     this._store.mode = null;
-    this._store.postRaceData = null;
     this._store.pitData = null;
-    this._store.seasonFinalData = null;
     this._store.screen = 'start';
   }
 
@@ -78,42 +75,24 @@ export class MenuManager {
     this._store.selectedAIDrivers = this.selectedAIDrivers;
     this._store.selectedAIVehicleType = this.selectedAIVehicleType;
 
-    const isSeasonStart = mode === 'season';
-    const nextTrackKey = isSeasonStart
-      ? SEASON_TRACKS[0].replace('.json', '')
-      : this.selectedTrack;
-    const nextTrackName = isSeasonStart
-      ? window.trackLoader?.getTrack(nextTrackKey)?.name ?? nextTrackKey
-      : this._store.trackList.find(t => t.key === this.selectedTrack)?.name ?? this.selectedTrack;
+    const nextTrackKey = this.selectedTrack;
+    const nextTrackName = this._store.trackList.find(t => t.key === this.selectedTrack)?.name ?? this.selectedTrack;
 
-    if (!isSeasonStart && !this.selectedTrack && this._store.trackList.length > 0) {
+    if (!this.selectedTrack && this._store.trackList.length > 0) {
       this.selectedTrack = this._store.trackList[0]?.key ?? null;
       this._store.selectedTrack = this.selectedTrack;
     }
 
-    const upgrades = getUpgradeCatalog({
-      balance: 0,
-      ignoreBalance: mode !== 'season',
-    });
-
     this.currentMenu = 'pit';
-    this._store.postRaceData = null;
     this._store.pitData = {
-      pitMode:          isSeasonStart ? 'seasonStart' : mode,
-      raceNumber:       1,
-      totalRaces:       isSeasonStart ? SEASON_TRACKS.length : 1,
+      pitMode:          mode,
       nextTrackKey,
       trackName:        nextTrackName,
       laps:             this.selectedLaps,
-      aiDrivers:        isSeasonStart ? null : this.selectedAIDrivers,
-      isSeason:         isSeasonStart,
-      isSeasonComplete: false,
-      standings:        [],
-      playerBalance:    0,
+      aiDrivers:        this.selectedAIDrivers,
       selectedColorKey: this.selectedPlayerColor,
     };
-    this._store.upgrades = upgrades;
-    this._store.seasonFinalData = null;
+    this._store.upgrades = getUpgradeCatalog({ balance: 0, ignoreBalance: true });
     this._store.screen = null;
   }
 
@@ -142,7 +121,7 @@ export class MenuManager {
   setSelectedAIDrivers(count) {
     this.selectedAIDrivers = count;
     this._store.selectedAIDrivers = count;
-    if (this._store.pitData && !this._store.pitData.isSeason) {
+    if (this._store.pitData) {
       this._store.pitData.aiDrivers = count;
     }
   }
@@ -164,14 +143,6 @@ export class MenuManager {
     this._store.isPaused = true;
   }
 
-  showPostRace(data) {
-    this.currentMenu = 'postRace';
-    this._store.postRaceData = data;
-    this._store.pitData = null;
-    this._store.seasonFinalData = null;
-    this._store.screen = null; // hide MenuOverlay; PostRaceOverlay gates on postRaceData
-  }
-
   showSingleRaceResults(data) {
     this.currentMenu = 'singleRaceResults';
     this._store.singleRaceData = data;
@@ -181,27 +152,14 @@ export class MenuManager {
   showPit(data) {
     this._refreshVehicleList();
     this.currentMenu = 'pit';
-    this._store.mode = data.isSeason ? 'season' : 'singleRace';
-    this._store.postRaceData = null;
+    this._store.mode = 'singleRace';
     this._store.pitData = {
-      pitMode:          data.pitMode ?? (data.isSeason ? 'season' : 'singleRace'),
+      pitMode:          data.pitMode ?? 'singleRace',
       ...data,
       selectedColorKey: this.selectedPlayerColor,
       selectedVehicleKey: this.selectedVehicle,
     };
-    this._store.seasonFinalData = null;
-    this._store.upgrades = data.upgrades ?? getUpgradeCatalog({
-      balance: data.playerBalance ?? 0,
-      ignoreBalance: !data.isSeason,
-    });
-    this._store.screen = null;
-  }
-
-  showSeasonFinal(data) {
-    this.currentMenu = 'seasonFinal';
-    this._store.postRaceData = null;
-    this._store.pitData = null;
-    this._store.seasonFinalData = data;
+    this._store.upgrades = data.upgrades ?? getUpgradeCatalog({ balance: 0, ignoreBalance: true });
     this._store.screen = null;
   }
 
@@ -244,7 +202,6 @@ export class MenuManager {
   onEditorLoad()   { this.showEditorTrackSelect(); }
   onEditorExit()   { this.editorMode = false; this.gameStarted = false; this.showStartMenu(); }
 
-  // Season callbacks — overridden by MenuMode
   setSelectedPlayerColor(colorKey) {
     this.selectedPlayerColor = colorKey;
     if (this._store?.pitData) {
@@ -252,11 +209,8 @@ export class MenuManager {
     }
   }
 
-  onSeasonStart(_laps) {}
-  onContinueSeason()   {}
-  onRetireFromSeason() {}
-  onGoToPit()          {}
-  onStartSingleRace()  {}
+  onPurchaseUpgrade(_id) {}
+  onStartSingleRace()    {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────
 

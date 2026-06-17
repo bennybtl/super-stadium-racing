@@ -37,26 +37,6 @@ export class MenuMode extends BaseMode {
       this.controller.showSingleRacePit();
     };
 
-    menuManager.onSeasonStart = (laps) => {
-      menuManager.gameStarted = true;
-      menuManager._store.pitData = null;
-      menuManager.hideMenu();
-      this.controller.startSeason(laps);
-      this.controller.continueSeason();
-    };
-
-    menuManager.onContinueSeason = () => {
-      this.controller.continueSeason();
-    };
-
-    menuManager.onRetireFromSeason = () => {
-      this.controller.retireFromSeason();
-    };
-
-    menuManager.onGoToPit = () => {
-      this.controller.goToPit();
-    };
-
     menuManager.onPurchaseUpgrade = (upgradeId) => {
       this.controller.purchaseUpgrade(upgradeId);
     };
