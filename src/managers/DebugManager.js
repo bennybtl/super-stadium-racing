@@ -1,5 +1,10 @@
 import { MeshBuilder, Vector3, Color3, StandardMaterial } from '@babylonjs/core';
 import { useDebugStore } from '../vue/store.js';
+import { DEFAULT_HANDLING, resolveHandling } from '../truck/DriftTuning.js';
+
+// Handling knobs and direct params surfaced in the vehicle debug overlay.
+const VEHICLE_KNOB_KEYS  = ['driftEnter', 'driftMaintain', 'lateralBias', 'driftExit'];
+const VEHICLE_PARAM_KEYS = ['grip', 'turnSpeed', 'weightTransfer'];
 
 // Maximum frames kept in the ring buffer (~20 s at 60 fps).
 const LOG_CAPACITY = 1200;
@@ -32,6 +37,7 @@ export class DebugManager {
     this._scene = scene;
     this._normalArrow  = null;  // Lines mesh — created on first show, disposed on hide
     this._trackedTruck = null;  // truck whose physics box we toggled visible
+    this._truck        = null;  // current player truck (for the vehicle overlay)
     this._colliderDebugMat = null;
     this._colliderDebugState = new Map(); // mesh.uniqueId -> { mesh, isVisible, visibility, material }
     this._bridgeDriveDebugEnabled = false;
@@ -122,6 +128,91 @@ export class DebugManager {
     a.click();
     URL.revokeObjectURL(url);
     console.log(`[DebugManager] Dumped ${rows.length} frames.`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Vehicle handling overlay (called via store bridge from VehicleDebugOverlay)
+  // ---------------------------------------------------------------------------
+
+  /** Toggle the handling overlay; on open, seed the sliders from the live truck. */
+  toggleVehicleOverlay() {
+    const next = !this._store.vehicleVisible;
+    this._store.vehicleVisible = next;
+    if (next) this._syncVehicleStoreFromTruck();
+  }
+
+  hideVehicleOverlay() { this._store.vehicleVisible = false; }
+
+  /** Copy the current state's handling + key params into the store sliders. */
+  _syncVehicleStoreFromTruck() {
+    const truck = this._truck;
+    if (!truck?.state) return;
+    const v = this._store.vehicle;
+    const handling = { ...DEFAULT_HANDLING, ...(truck.state.handling ?? {}) };
+    for (const k of VEHICLE_KNOB_KEYS) v[k] = handling[k];
+    for (const k of VEHICLE_PARAM_KEYS) v[k] = truck.state[k];
+    v.name = truck.vehicleDef?.name ?? truck.vehicleDef?.id ?? 'Vehicle';
+    v.resolved = resolveHandling(handling);
+  }
+
+  /** Re-resolve the 4 knobs and push the low-level drift params onto the truck. */
+  applyVehicleHandling() {
+    const truck = this._truck;
+    if (!truck?.state) return;
+    const v = this._store.vehicle;
+    const handling = {
+      driftEnter: v.driftEnter,
+      driftMaintain: v.driftMaintain,
+      lateralBias: v.lateralBias,
+      driftExit: v.driftExit,
+    };
+    const resolved = resolveHandling(handling);
+    truck.state.handling = handling;
+    Object.assign(truck.state, resolved);
+    v.resolved = resolved;
+  }
+
+  /** Write a direct handling param (grip/turnSpeed/weightTransfer) onto the truck. */
+  applyVehicleParam(key, val) {
+    const truck = this._truck;
+    if (!truck?.state || !VEHICLE_PARAM_KEYS.includes(key)) return;
+    truck.state[key] = val;
+  }
+
+  /** Restore the overlay (and truck) to the vehicle definition's saved values. */
+  resetVehicleHandling() {
+    const truck = this._truck;
+    if (!truck?.state) return;
+    const handling = { ...DEFAULT_HANDLING, ...(truck.vehicleDef?.handling ?? {}) };
+    const params = truck.vehicleDef?.params ?? {};
+    for (const k of VEHICLE_PARAM_KEYS) {
+      if (params[k] !== undefined) truck.state[k] = params[k];
+    }
+    truck.state.handling = handling;
+    Object.assign(truck.state, resolveHandling(handling));
+    this._syncVehicleStoreFromTruck();
+  }
+
+  /** Copy a paste-ready vehicle JSON snippet (handling + tuned params) to clipboard. */
+  copyVehicleJson() {
+    const v = this._store.vehicle;
+    const round = (n, p = 3) => Math.round(n * 10 ** p) / 10 ** p;
+    const snippet = {
+      handling: {
+        driftEnter: round(v.driftEnter, 2),
+        driftMaintain: round(v.driftMaintain, 2),
+        lateralBias: round(v.lateralBias, 2),
+        driftExit: round(v.driftExit, 2),
+      },
+      params: {
+        grip: round(v.grip, 3),
+        turnSpeed: round(v.turnSpeed, 2),
+        weightTransfer: round(v.weightTransfer, 2),
+      },
+    };
+    const text = JSON.stringify(snippet, null, 2);
+    navigator.clipboard?.writeText(text).catch(() => {});
+    console.log('[DebugManager] Vehicle handling JSON:\n' + text);
   }
 
   // ---------------------------------------------------------------------------
@@ -367,6 +458,10 @@ export class DebugManager {
    * @param {Truck}  truck         - player truck instance
    */
   update(debugInfo, terrainManager, track, truck) {
+    // Track the player truck even when the terrain debug panel is hidden, so the
+    // vehicle handling overlay can tune it independently.
+    if (truck) this._truck = truck;
+
     if (!this._store.visible) return;
 
     // Keep collider visualisation in sync while debug is enabled.

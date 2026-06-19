@@ -28,6 +28,12 @@
     "frontScale": [2.1, 1.8, 1.8],
     "rearScale": [2.1, 1.8, 1.8]
   },
+  "handling": {
+    "driftEnter": 0.5,
+    "driftMaintain": 0.45,
+    "lateralBias": -0.1,
+    "driftExit": 0.5
+  },
   "params": {
     "springStrength": 80,
     "damping": 3,
@@ -38,7 +44,6 @@
     "drag": 6,
     "turnSpeed": 3.3,
     "grip": 0.28,
-    "driftThreshold": 0.19,
     "weightTransfer": 1.65,
     "stationarySpinRate": 0.8,
     "boostCount": 5,

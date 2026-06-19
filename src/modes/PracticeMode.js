@@ -85,6 +85,7 @@ export class PracticeMode extends DriveMode {
     inputManager.onPause(() => menuManager.showPauseMenu());
     inputManager.onTogglePhotoMode(() => this.togglePhotoMode());
     this.setupDebugToggle(inputManager, debugManager);
+    inputManager.onToggleVehicleDebug(() => debugManager.toggleVehicleOverlay());
     inputManager.onReset(() => {
       obstacleManager.rebuild();
       this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
@@ -180,6 +181,10 @@ export class PracticeMode extends DriveMode {
   }
 
   teardown() {
+    if (this.debugManager) {
+      this.debugManager.hide();
+      this.debugManager.hideVehicleOverlay();
+    }
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;

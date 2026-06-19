@@ -4,6 +4,35 @@ Vehicle definitions live in `vehicles/*.json`. The `params` block is merged into
 
 Suggested tuning ranges below are pragmatic starting points for arcade/off-road vehicles in this project, not hard validation limits.
 
+## Handling Knobs (drift feel)
+
+Drift behaviour is tuned through a `handling` block — **four** high-level knobs that
+expand into the low-level grip-model values at load time (see `src/truck/DriftTuning.js`).
+The old granular drift params (`driftThreshold`, `maxDriftGrip`, `slipDropoffRate`,
+`minSlipFactor`, `gripZoneCorrection`, `minDriftSpeed`, and the `minDriftSpeedHold*`
+speeds) are **no longer set directly** — they are derived from these knobs.
+
+| Knob | Range | Default | Higher / + value means… |
+| --- | ---: | ---: | --- |
+| `driftEnter` | 0–1 | 0.5 | Breaks into a slide more easily (lower slip threshold, less low-slip bite, lower entry speed). |
+| `driftMaintain` | 0–1 | 0.5 | Slides sustain longer once started (looser, slower-decaying drift zone). |
+| `lateralBias` | −1–1 | 0.0 | Sideways/slidey at +, forward/planted at − (scales how hard lateral velocity is scrubbed). |
+| `driftExit` | 0–1 | 0.5 | Grip returns and the truck straightens sooner (more sideways authority, earlier speed cutoff). |
+
+All knobs at their neutral values (`0.5 / 0.5 / 0 / 0.5`) reproduce the historical
+runtime defaults closely, so a vehicle that omits `handling` gets sane mid handling.
+
+```json
+{
+  "handling": {
+    "driftEnter": 0.55,
+    "driftMaintain": 0.45,
+    "lateralBias": 0.0,
+    "driftExit": 0.45
+  }
+}
+```
+
 ## Params Reference
 
 | Param | Suggested Min | Runtime Default | Suggested Max | Notes |
@@ -16,16 +45,7 @@ Suggested tuning ranges below are pragmatic starting points for arcade/off-road 
 | `braking` | 1.0 | 1.5 | 2.4 | Higher slows harder and can make brake-rotation more aggressive. |
 | `drag` | 0.8 | 3.0 | 4.5 | Terrain drag multiplier. Higher bleeds speed faster on the ground. |
 | `turnSpeed` | 2.6 | 3.6 | 4.8 | Steering authority. |
-| `grip` | 0.06 | 0.12 | 0.24 | Base traction before terrain and drift logic. |
-| `driftThreshold` | 0.12 | 0.16 | 0.34 | Slip angle threshold before the vehicle is considered drifting. |
-| `minDriftSpeed` | 8 | 15 | 22 | Minimum speed to enter drift when not already drifting. |
-| `minDriftSpeedHoldThrottle` | 6 | 10 | 18 | Minimum speed to keep drift alive while on throttle. |
-| `minDriftSpeedHoldCoast` | 1 | 3 | 8 | Minimum speed to keep drift alive while coasting. |
-| `minDriftSpeedHoldBrake` | 8 | 12 | 18 | Minimum speed to keep drift alive while braking. |
-| `slipDropoffRate` | 3 | 6 | 10 | Higher makes drift grip fall off faster after threshold. |
-| `gripZoneCorrection` | 0.18 | 0.35 | 0.55 | Low-slip correction strength for normal cornering response. |
-| `minSlipFactor` | 0.04 | 0.09 | 0.18 | Minimum steering/grip authority while heavily sideways. |
-| `maxDriftGrip` | 0.08 | 0.13 | 0.22 | Caps available grip once in the drift zone. |
+| `grip` | 0.06 | 0.12 | 0.24 | Base cornering traction (grip zone only). Drift-zone grip is governed by the `handling` knobs. |
 | `dragCoasting` | 0.2 | 0.45 | 0.8 | Extra drag while off throttle and not braking. |
 | `weightTransfer` | 0.7 | 1.35 | 1.6 | Higher increases throttle understeer and brake oversteer feel. |
 | `stationarySpinRate` | 0.0 | 0.6 | 0.8 | Fraction of turn speed allowed while nearly stopped. |
@@ -39,26 +59,33 @@ Suggested tuning ranges below are pragmatic starting points for arcade/off-road 
 
 Current shipped vehicles use these values as rough archetypes:
 
-| Vehicle | Grip | Drift Threshold | Weight Transfer | Drag | Turn Speed |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `default_truck` | 0.12 | 0.16 | 1.35 | 3.0 | 3.6 |
-| `default_buggy` | 0.08 | 0.28 | 1.1 | 3.5 | 4.0 |
-| `rally_cross` | 0.21 | 0.24 | 1.2 | 1.0 | 3.4 |
+| Vehicle | Grip | Enter / Maintain / Bias / Exit | Weight Transfer | Drag | Turn Speed |
+| --- | ---: | :--- | ---: | ---: | ---: |
+| `default_truck` | 0.12 | 0.55 / 0.45 / 0.0 / 0.45 | 1.35 | 3.0 | 3.6 |
+| `default_buggy` | 0.08 | 0.30 / 0.70 / +0.25 / 0.35 | 1.1 | 3.5 | 4.0 |
+| `rally_cross` | 0.15 | 0.70 / 0.55 / +0.20 / 0.40 | 1.35 | 3.0 | 3.9 |
+| `monster_truck` | 0.28 | 0.50 / 0.45 / −0.10 / 0.50 | 1.65 | 6.0 | 3.3 |
 
 ## Recommended Starting Points
 
-Use these as a fast way to build a new handling archetype:
+Use these `handling` knob sets as a fast way to build a new archetype:
 
-| Archetype | Grip | Drift Threshold | Max Drift Grip | Grip Zone Correction | Slip Dropoff Rate |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Stable truck | 0.12-0.18 | 0.14-0.20 | 0.10-0.13 | 0.34-0.45 | 6-8 |
-| Loose buggy | 0.07-0.12 | 0.24-0.32 | 0.08-0.12 | 0.22-0.34 | 4-6 |
-| Rally cross | 0.16-0.22 | 0.20-0.28 | 0.12-0.17 | 0.30-0.42 | 5-7 |
+| Archetype | driftEnter | driftMaintain | lateralBias | driftExit |
+| --- | ---: | ---: | ---: | ---: |
+| Stable truck | 0.45–0.60 | 0.40–0.50 | −0.1–0.1 | 0.45–0.55 |
+| Loose buggy | 0.25–0.40 | 0.65–0.80 | +0.2–0.4 | 0.30–0.40 |
+| Rally cross | 0.65–0.80 | 0.50–0.65 | +0.1–0.3 | 0.35–0.45 |
 
-## Example Params Block
+## Example Vehicle Block
 
 ```json
 {
+	"handling": {
+		"driftEnter": 0.55,
+		"driftMaintain": 0.5,
+		"lateralBias": 0.1,
+		"driftExit": 0.45
+	},
 	"params": {
 		"springStrength": 120,
 		"damping": 5,
@@ -69,15 +96,6 @@ Use these as a fast way to build a new handling archetype:
 		"drag": 1.8,
 		"turnSpeed": 3.5,
 		"grip": 0.18,
-		"driftThreshold": 0.24,
-		"minDriftSpeed": 15,
-		"minDriftSpeedHoldThrottle": 10,
-		"minDriftSpeedHoldCoast": 3,
-		"minDriftSpeedHoldBrake": 12,
-		"slipDropoffRate": 6,
-		"gripZoneCorrection": 0.35,
-		"minSlipFactor": 0.09,
-		"maxDriftGrip": 0.13,
 		"dragCoasting": 0.45,
 		"weightTransfer": 1.2,
 		"stationarySpinRate": 0.6,
@@ -92,7 +110,7 @@ Use these as a fast way to build a new handling archetype:
 
 ## Notes
 
-- `turnSpeed`, `grip`, and `driftThreshold` do most of the work for the overall handling personality.
-- `weightTransfer` is one of the highest-value knobs for making a vehicle feel truck-like vs rally-like.
-- The drift hold speeds mainly affect how the vehicle exits a slide under throttle, coast, and braking.
+- `turnSpeed`, `grip`, and the `handling` knobs do most of the work for the overall handling personality.
+- `weightTransfer` is one of the highest-value `params` knobs for making a vehicle feel truck-like vs rally-like.
+- The four `handling` knobs replace the old per-vehicle drift params; tune drift feel there, not in `params`.
 - `drag` and `dragCoasting` are complementary: use `drag` for overall pace and `dragCoasting` for off-throttle settle behavior.

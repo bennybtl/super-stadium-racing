@@ -26,6 +26,12 @@
     "frontAxle":  1.5,
     "rearAxle":  -1.2
   },
+  "handling": {
+    "driftEnter": 0.55,
+    "driftMaintain": 0.45,
+    "lateralBias": 0.0,
+    "driftExit": 0.45
+  },
   "params": {
     "springStrength": 150,
     "damping": 7,
@@ -36,7 +42,6 @@
     "drag": 3,
     "turnSpeed": 3.6,
     "grip": 0.12,
-    "driftThreshold": 0.16,
     "weightTransfer": 1.35,
     "stationarySpinRate": 0.6,
     "boostCount": 5,

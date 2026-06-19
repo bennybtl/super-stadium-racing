@@ -11,6 +11,7 @@
     <SingleRaceOverlay />
     <RaceHUD />
     <DebugPanel />
+    <VehicleDebugOverlay />
     <!-- Editor property panels (each self-gates on selectedType) -->
     <CheckpointPanel />
     <HillPanel />
@@ -43,6 +44,7 @@ import LoadingOverlay     from './LoadingOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
 import RaceHUD            from './RaceHUD.vue';
 import DebugPanel         from './DebugPanel.vue';
+import VehicleDebugOverlay from './VehicleDebugOverlay.vue';
 import CheckpointPanel    from './editor/CheckpointPanel.vue';
 import HillPanel          from './editor/HillPanel.vue';
 import SquareHillPanel    from './editor/SquareHillPanel.vue';

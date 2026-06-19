@@ -76,6 +76,7 @@ export class InputManager {
     this.onBoostCallback = null;
     this.onPauseCallback = null;
     this.onToggleDebugCallback = null;
+    this.onToggleVehicleDebugCallback = null;
     this.onTogglePhotoModeCallback = null;
     
     this.setupEventListeners();
@@ -136,6 +137,11 @@ export class InputManager {
       if (this.onToggleDebugCallback) this.onToggleDebugCallback();
     }
 
+    // Toggle vehicle handling overlay (practice mode debug tuning)
+    if (e.code === "KeyV") {
+      if (this.onToggleVehicleDebugCallback) this.onToggleVehicleDebugCallback();
+    }
+
     // Screenshot camera toggle
     if (e.code === this.drivingCodes.togglePhotoMode) {
       if (this.onTogglePhotoModeCallback) {
@@ -181,5 +187,9 @@ export class InputManager {
 
   onToggleDebug(callback) {
     this.onToggleDebugCallback = callback;
+  }
+
+  onToggleVehicleDebug(callback) {
+    this.onToggleVehicleDebugCallback = callback;
   }
 }

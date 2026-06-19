@@ -115,7 +115,7 @@ export class DriftPhysics {
     this._currentPitchOffset = 0;
   }
 
-  applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0) {
+  applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0, deltaTime = 1 / 60) {
     const surfaceForward = this._surfaceForward;
     const surfaceNormal = this._surfaceNormal;
     const surfaceRight = this._surfaceRight;
@@ -265,13 +265,22 @@ export class DriftPhysics {
     }
 
     const reverseGripBoost = isReversing ? REVERSE_GRIP_BOOST : 1;
-    const gripMultiplier = gripFactor * reverseGripBoost * rearTractionFactor;
+    // lateralRetention (from the Lateral Bias knob) scales how hard the sideways
+    // component is scrubbed: <1 keeps more lateral momentum (slidey), >1 grips harder.
+    const lateralRetention = this.state.lateralRetention ?? 1;
+    const gripMultiplier = gripFactor * reverseGripBoost * rearTractionFactor * lateralRetention;
 
     // Apply grip as lateral-only damping.
     // Only the sideways component decays; the longitudinal (heading-aligned) speed
     // is left untouched. When grip is low (drifting) the lateral speed bleeds off
     // slowly, giving a loose, momentum-driven feel rather than a sharp snap-back.
-    const newLateralSpeed = lateralSpeed * (1 - gripMultiplier);
+    //
+    // gripMultiplier is calibrated as the fraction removed per 1/60 s step, so we
+    // raise the retained fraction to the (dt·60) power to stay framerate-independent
+    // — otherwise the truck grips harder at high FPS than at low FPS.
+    const perStepGrip = Math.min(1, Math.max(0, gripMultiplier));
+    const retained = Math.pow(1 - perStepGrip, deltaTime * 60);
+    const newLateralSpeed = lateralSpeed * retained;
     this.state.velocity.x =
       surfaceForward.x * forwardVelocity +
       this._right.x * newLateralSpeed +

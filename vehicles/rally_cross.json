@@ -25,6 +25,12 @@
     "frontScale": [0.8,0.9,0.9],
     "rearScale": [0.8, 0.9, 0.9]
   },
+  "handling": {
+    "driftEnter": 0.7,
+    "driftMaintain": 0.55,
+    "lateralBias": 0.2,
+    "driftExit": 0.4
+  },
   "params": {
     "springStrength": 180,
     "damping": 10,
@@ -35,16 +41,6 @@
     "drag": 3,
     "turnSpeed": 3.9,
     "grip": 0.15,
-    "driftThreshold": 0.18,
-
-    "minDriftSpeed": 15,
-    "minDriftSpeedHoldThrottle": 10,
-    "minDriftSpeedHoldBrake": 12,
-    "minDriftSpeedHoldCoast": 3,
-    "slipDropoffRate": 5,
-    "gripZoneCorrection": 0.28,
-    "minSlipFactor": 0.09,
-    "maxDriftGrip": 0.11,
     "dragCoasting": 0.25,
     "weightTransfer": 1.35,
     "stationarySpinRate": 0.6,

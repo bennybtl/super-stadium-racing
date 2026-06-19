@@ -10,6 +10,7 @@ import { ParticleEffects } from "./ParticleEffects.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { DriftPhysics } from "./DriftPhysics.js";
+import { DEFAULT_HANDLING, resolveHandling } from "./DriftTuning.js";
 import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
 import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js"; // used as fallback defaults only
@@ -219,15 +220,10 @@ export class Truck {
       drag: 3,
       turnSpeed: 3.6,
       grip: 0.12,
-      driftThreshold: 0.16,
-      minDriftSpeed: 15.0,
-      minDriftSpeedHoldThrottle: 10.0,
-      minDriftSpeedHoldCoast: 3.0,
-      minDriftSpeedHoldBrake: 12.0,
-      slipDropoffRate: 6,
-      gripZoneCorrection: 0.35,
-      minSlipFactor: 0.09,
-      maxDriftGrip: 0.13,
+      // Drift-zone grip params (driftThreshold, maxDriftGrip, slipDropoffRate,
+      // minSlipFactor, gripZoneCorrection, minDriftSpeed + hold speeds, and
+      // lateralRetention) are derived from the high-level `handling` knobs below
+      // via resolveHandling() — see DriftTuning.js. They are not set directly.
       dragCoasting: 0.45,
       bodyHeightY,
       // How dramatically weight shifts under acceleration/braking.
@@ -257,6 +253,12 @@ export class Truck {
     if (this.vehicleDef?.params) {
       Object.assign(base, this.vehicleDef.params);
     }
+
+    // Expand the high-level handling knobs into the low-level drift-grip params.
+    // Resolved after params so the knobs are authoritative for drift behaviour.
+    const handling = { ...DEFAULT_HANDLING, ...(this.vehicleDef?.handling ?? {}) };
+    base.handling = handling;
+    Object.assign(base, resolveHandling(handling));
 
     // Apply upgrades to base stats
     this._applyUpgradesToState(base);
@@ -372,7 +374,7 @@ export class Truck {
     // Apply grip and drift physics — rearTractionFactor encodes weight transfer:
     // throttle loosens rear (mild), braking unloads rear (significant).
     profile('truck.drift', () =>
-      this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor)
+      this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor, deltaTime)
     );
     
     // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)
