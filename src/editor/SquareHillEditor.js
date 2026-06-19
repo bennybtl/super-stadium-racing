@@ -102,8 +102,14 @@ export class SquareHillEditor {
   /** Sync the gizmo transform to the feature's current values. */
   updateVisual(hillData) {
     const { feature, node, sphere } = hillData;
+    const track = this.editor.currentTrack;
     const transition = feature.transition ?? 8;
-    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
+    // Mirror createVisual: use the deterministic track.getHeightAt rather than a
+    // ground-mesh raycast, which runs before the terrain rebuild and falls back
+    // to 0 on a miss — that buried the sphere and made the gizmo vanish on edit.
+    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ)
+      ?? this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ)
+      ?? 0;
     const absH = feature.heightAtMin !== undefined
       ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
       : Math.max(0.5, Math.abs(feature.height ?? 5));
@@ -269,6 +275,7 @@ export class SquareHillEditor {
     s.squareHill.waterLevelOffset = feature.waterLevelOffset ?? 1;
     s.squareHill.slopeMode   = sloped;
     s.squareHill.terrainType = feature.terrainType?.name || 'none';
+    s.squareHill.blendWidth  = feature.blendWidth ?? 0;
     if (sloped) {
       s.squareHill.heightAtMin = feature.heightAtMin ?? 0;
       s.squareHill.heightAtMax = feature.heightAtMax ?? 5;
@@ -402,6 +409,13 @@ export class SquareHillEditor {
     this.editor.saveSnapshot();
     this.selected.feature.terrainType = name === 'none' ? null
       : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
+    this.rebuildTerrain();
+  }
+
+  changeBlendWidth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.blendWidth = Math.max(0, val);
     this.rebuildTerrain();
   }
 }

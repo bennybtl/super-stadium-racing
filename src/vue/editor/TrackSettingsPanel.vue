@@ -26,7 +26,7 @@
       autocomplete="off"
       autocorrect="off"
     />
-    <div class="mt-2 text-[10px] text-slate-400">Used for exported filenames. Non-slug characters are normalized automatically.</div>
+    <div class="mt-2 text-[10px] text-slate-400">Used for exported filenames. Auto-derived from the track name (lowercased, spaces become underscores); edit to override.</div>
 
     <div class="mt-4 grid grid-cols-2 gap-2">
       <div>

@@ -79,6 +79,12 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  // Hidden tracks are work-in-progress and stay out of the drive/race selection.
+  // The track editor opts in so they remain editable before being published.
+  showHidden: {
+    type: Boolean,
+    default: false,
+  },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -89,7 +95,8 @@ const selectedPack = ref('all');
 const visibleTracks = computed(() => {
   return props.tracks.filter(track => {
     const trackData = window.trackLoader?.getTrack(track.key);
-    return !!trackData && trackData.hidden !== true;
+    if (!trackData) return false;
+    return props.showHidden || trackData.hidden !== true;
   });
 });
 

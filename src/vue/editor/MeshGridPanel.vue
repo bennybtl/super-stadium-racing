@@ -78,6 +78,33 @@
       @input="editor.setMeshGridDepth(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
+    <!-- Rotation (live) -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Rotation</span>
+      <span>{{ editor.meshGrid.angle.toFixed(0) }}°</span>
+    </div>
+    <input
+      type="range" min="0" max="360" step="1"
+      :value="editor.meshGrid.angle"
+      @input="editor.setMeshGridAngle(+$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
+    <!-- Edge Blend / falloff (regional meshes only, live) -->
+    <template v-if="editor.meshGrid.regional">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Edge Blend</span>
+        <span>{{ editor.meshGrid.falloff.toFixed(0) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="60" step="1"
+        :value="editor.meshGrid.falloff"
+        @input="editor.setMeshGridFalloff(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+      <div class="text-[10px] text-slate-400 mb-3">Width of the band where this region blends into surrounding terrain. 0 = hard edge.</div>
+    </template>
+
     <!-- Smoothing (live) -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Smoothing</span>

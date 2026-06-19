@@ -66,13 +66,13 @@ const DRAG_AIRBORNE = 0.02;
 // ─── Body roll ────────────────────────────────────────────────────────────────
 
 /** Lateral speed → roll angle scale factor. */
-const ROLL_FROM_LATERAL = 0.05;
+const ROLL_FROM_LATERAL = 0.04;
 
 /** Turn rate → roll angle scale factor (multiplied by speed). */
-const ROLL_FROM_TURNING = 0.03;
+const ROLL_FROM_TURNING = 0.02;
 
 /** Maximum body roll angle in radians (~15°). */
-const MAX_ROLL = 0.24;
+const MAX_ROLL = 0.20;
 
 /** Body height baseline used for MAX_ROLL scaling (default truck ride height). */
 const MAX_ROLL_BODY_Y_BASE = 0.66;
@@ -86,10 +86,10 @@ const PITCH_SCALE_MIN = 0.5;
 const PITCH_SCALE_MAX = 1.6;
 
 /** Roll interpolation speed when grounded. */
-const ROLL_SPEED_GROUNDED = 8;
+const ROLL_SPEED_GROUNDED = 6;
 
 /** Roll interpolation speed when airborne (slower recovery). */
-const ROLL_SPEED_AIRBORNE = 3;
+const ROLL_SPEED_AIRBORNE = 2;
 
 /** Pitch offset smoothing speed from weight transfer. */
 const PITCH_WEIGHT_TRANSFER_SPEED = 5;

@@ -1,18 +1,25 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import { EditorMaterials, LINE_COLOR_MESH_GRID } from './EditorMaterials.js';
 
+// Defaults for a new *regional* mesh grid (added when a base mesh already exists).
+const REGIONAL_DEFAULT = { width: 60, depth: 60, falloff: 15, angle: 0, cols: 9, rows: 9 };
+
 /**
  * MeshGridEditor – terrain mesh deformation via a grid of selectable control points.
  *
- * A single `meshGrid` feature is stored in the track's features array.  Each
- * grid intersection is represented by a pickable sphere gizmo; clicking one
- * selects it and the user can then raise/lower it with the mouse wheel or the
- * [ / ] keys.  Grid density (cols × rows) and bounds (width × depth) are
- * configurable from the panel and take effect when "Apply Grid Changes" is
- * pressed, resampling existing heights into the new resolution.
+ * The track may hold any number of `meshGrid` features. Each is a `cols × rows`
+ * grid of control-point heights (row-major in `feature.heights[]`) placed at
+ * `centerX/Z` with `width/depth`, an optional `angle` (degrees) and, for regional
+ * meshes, a `falloff` blend band. `Track.getHeightAt` samples and sums them.
  *
- * Height values are stored row-major in `feature.heights[]` and are bilinearly
- * interpolated in `Track.getHeightAt`.
+ * The first mesh added is a full-track base (regional: false → clamp-to-edge
+ * spread, unchanged legacy behaviour). Subsequent meshes are smaller regions
+ * (regional: true) that ease to zero across their falloff band so they stack
+ * without bleeding edge heights across the whole map.
+ *
+ * Editing: every mesh shows corner-sphere handles; clicking a corner makes that
+ * mesh active and reveals its full grid. Clicking any sphere on the active mesh
+ * selects that control point for raise/lower via wheel or [ / ] keys.
  */
 export class MeshGridEditor {
   constructor(editorController) {
@@ -21,10 +28,11 @@ export class MeshGridEditor {
     this.track        = null;
     this.activeFeature = null;
 
-    // Gizmo state
-    this.pointMeshes   = [];   // [{ mesh, r, c }]
+    // Gizmo state — pointMeshes span every meshGrid feature; each entry knows
+    // which feature it belongs to so a click can switch the active mesh.
+    this.pointMeshes   = [];   // [{ mesh, r, c, feature }]
     this.selectedPoint = null; // one of pointMeshes entries
-    this.lineSystem    = null;
+    this.lineSystems   = [];   // one LineSystem per feature
 
     // Materials (created in activate)
     this.normalMat    = null;
@@ -48,11 +56,11 @@ export class MeshGridEditor {
 
     document.addEventListener('wheel', this._boundWheel, { passive: false });
 
-    // Build gizmos for a meshGrid that already exists in the track (e.g. loaded file)
-    const existing = track.features.find(f => f.type === 'meshGrid');
-    if (existing) {
-      this.activeFeature = existing;
-      this.createGizmos(existing);
+    // Build handles for any meshGrid features already in the track (loaded file).
+    const features = this._features();
+    this.activeFeature = features[0] ?? null;
+    if (features.length > 0) {
+      this.rebuildGizmos();
       // Panel is intentionally not shown here — it opens when a corner is clicked
       // or when a new mesh grid is added via the Add Entity menu.
     }
@@ -71,37 +79,47 @@ export class MeshGridEditor {
     this.track = null;
   }
 
+  /** All meshGrid features on the track, in array order. */
+  _features() {
+    return this.track ? this.track.features.filter(f => f.type === 'meshGrid') : [];
+  }
+
   // ─── Feature management ───────────────────────────────────────────────────
 
   /** Called from EditorController "Add Entity → Mesh Grid" */
   addMeshGridFeature() {
-    if (this.activeFeature) {
-      // Already exists – just ensure the panel is visible
-      this._syncToStore(this.activeFeature);
-      return;
-    }
+    const existing = this._features();
 
-    const trackWidth = this.track.width ?? 160;
-    const trackDepth = this.track.depth ?? 160;
-    const cols = 9, rows = 9;
-    const feature = {
-      type:    'meshGrid',
-      centerX: 0,
-      centerZ: 0,
-      width:   trackWidth,
-      depth:   trackDepth,
-      cols,
-      rows,
-      heights: new Array(cols * rows).fill(0),
-    };
+    let feature;
+    if (existing.length === 0) {
+      // Base mesh: full-track, legacy clamp-to-edge spread.
+      const trackWidth = this.track.width ?? 160;
+      const trackDepth = this.track.depth ?? 160;
+      const cols = 9, rows = 9;
+      feature = {
+        type: 'meshGrid', regional: false,
+        centerX: 0, centerZ: 0, angle: 0,
+        width: trackWidth, depth: trackDepth,
+        cols, rows, heights: new Array(cols * rows).fill(0),
+      };
+    } else {
+      // Additional region: smaller, rotatable, blends out across a falloff band.
+      const { width, depth, falloff, angle, cols, rows } = REGIONAL_DEFAULT;
+      feature = {
+        type: 'meshGrid', regional: true,
+        centerX: 0, centerZ: 0, angle,
+        width, depth, falloff,
+        cols, rows, heights: new Array(cols * rows).fill(0),
+      };
+    }
 
     this.ec.saveSnapshot();
     this.track.features.push(feature);
     this.activeFeature = feature;
-    this.createGizmos(feature);
+    this.rebuildGizmos();
 
-    // Auto-select the first corner so all control points are visible immediately.
-    const firstCorner = this.pointMeshes.find(p => p.r === 0 && p.c === 0) || this.pointMeshes[0] || null;
+    // Auto-select the active mesh's first corner so all its points are visible.
+    const firstCorner = this.pointMeshes.find(p => p.feature === feature && p.r === 0 && p.c === 0);
     if (firstCorner) {
       this.selectPoint(firstCorner);
     } else {
@@ -116,11 +134,15 @@ export class MeshGridEditor {
     this.ec.saveSnapshot();
     const idx = this.track.features.indexOf(this.activeFeature);
     if (idx > -1) this.track.features.splice(idx, 1);
-    this.destroyGizmos();
     this.deselectPoint();
-    this.activeFeature = null;
-    const s = this.ec._editorStore;
-    if (s) s.selectedType = null;
+    this.activeFeature = this._features()[0] ?? null;
+    this.rebuildGizmos();
+    if (this.activeFeature) {
+      this._syncToStore(this.activeFeature);
+    } else {
+      const s = this.ec._editorStore;
+      if (s) s.selectedType = null;
+    }
     window.rebuildTerrain?.();
     window.rebuildTerrainTexture?.();
   }
@@ -136,9 +158,8 @@ export class MeshGridEditor {
       heights: [...src.heights],
     };
     this.track.features.push(feature);
-    this.destroyGizmos();
     this.activeFeature = feature;
-    this.createGizmos(feature);
+    this.rebuildGizmos();
     this._syncToStore(feature);
     window.rebuildTerrain?.();
   }
@@ -152,7 +173,7 @@ export class MeshGridEditor {
   }
 
   /**
-   * Resample the grid to new density + bounds in a single undo step.
+   * Resample the active grid to new density + bounds in a single undo step.
    * Heights are bilinearly interpolated from the old grid into the new one.
    */
   applyGridChanges(newCols, newRows, newWidth, newDepth) {
@@ -187,11 +208,10 @@ export class MeshGridEditor {
     f.depth  = newDepth;
     f.heights = newH;
 
-    this.destroyGizmos();
-    this.createGizmos(f);
+    this.rebuildGizmos();
 
-    // Keep editing flow continuous: auto-select the first corner after rebuild.
-    const firstCorner = this.pointMeshes.find(p => p.r === 0 && p.c === 0) || this.pointMeshes[0] || null;
+    // Keep editing flow continuous: auto-select the active mesh's first corner.
+    const firstCorner = this.pointMeshes.find(p => p.feature === f && p.r === 0 && p.c === 0);
     if (firstCorner) {
       this.selectPoint(firstCorner);
     } else {
@@ -203,19 +223,40 @@ export class MeshGridEditor {
 
   // ─── Gizmo creation / teardown ────────────────────────────────────────────
 
-  createGizmos(feature) {
-    this.destroyGizmos();
+  /** World position of grid point (r, c), applying the mesh's rotation. */
+  _gridPointWorld(feature, r, c) {
+    const { centerX, centerZ, width, depth, cols, rows } = feature;
+    const halfW = width / 2, halfD = depth / 2;
+    const stepX = cols > 1 ? width / (cols - 1) : 0;
+    const stepZ = rows > 1 ? depth / (rows - 1) : 0;
+    const lx = -halfW + c * stepX;
+    const lz = -halfD + r * stepZ;
+    const a = (feature.angle ?? 0) * Math.PI / 180;
+    const cosA = Math.cos(a), sinA = Math.sin(a);
+    return {
+      x: centerX + lx * cosA - lz * sinA,
+      z: centerZ + lx * sinA + lz * cosA,
+    };
+  }
 
-    const { cols, rows, centerX, centerZ, width, depth } = feature;
-    const halfW  = width  / 2, halfD  = depth  / 2;
+  /** Rebuild handles + grid lines for every meshGrid feature. */
+  rebuildGizmos() {
+    this.destroyGizmos();
+    for (const feature of this._features()) {
+      this._createFeatureGizmos(feature);
+    }
+    this._updatePointVisibility();
+  }
+
+  _createFeatureGizmos(feature) {
+    const { cols, rows, width, depth } = feature;
     const stepX  = cols > 1 ? width  / (cols - 1) : 0;
     const stepZ  = rows > 1 ? depth  / (rows - 1) : 0;
-    const radius = Math.max(0.35, Math.min(1.4, Math.min(stepX, stepZ) * 0.09));
+    const radius = Math.max(0.9, Math.min(2.0, Math.min(stepX, stepZ) * 0.16));
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const worldX = centerX - halfW + c * stepX;
-        const worldZ = centerZ - halfD + r * stepZ;
+        const { x: worldX, z: worldZ } = this._gridPointWorld(feature, r, c);
         const worldY = this.track.getHeightAt(worldX, worldZ);
 
         const mesh = MeshBuilder.CreateSphere(`mgPt_${r}_${c}`, {
@@ -226,53 +267,48 @@ export class MeshGridEditor {
         mesh.material  = this.normalMat;
         mesh.isPickable = true;
 
-        this.pointMeshes.push({ mesh, r, c });
+        this.pointMeshes.push({ mesh, r, c, feature });
       }
     }
 
     this._buildLineSystem(feature);
-    this._updatePointVisibility();
   }
 
   destroyGizmos() {
     for (const p of this.pointMeshes) p.mesh.dispose();
     this.pointMeshes = [];
-    if (this.lineSystem) { this.lineSystem.dispose(); this.lineSystem = null; }
+    for (const ls of this.lineSystems) ls.dispose();
+    this.lineSystems = [];
     this.selectedPoint = null;
   }
 
   /**
-   * Show all gizmos when a point is selected; otherwise show only the four
-   * corner spheres so inner points don't clutter the view.
+   * On the active mesh show all gizmos once a point is selected (otherwise just
+   * its corners); on every other mesh show only the corner spheres so an
+   * inactive region stays a pickable handle without cluttering the view.
    */
   _updatePointVisibility() {
-    if (!this.activeFeature) return;
-    const { cols, rows } = this.activeFeature;
     const hasSelection = !!this.selectedPoint;
     for (const p of this.pointMeshes) {
+      const { cols, rows } = p.feature;
       const isCorner = (p.r === 0 || p.r === rows - 1) && (p.c === 0 || p.c === cols - 1);
-      p.mesh.isVisible = hasSelection || isCorner;
-      p.mesh.isPickable = hasSelection || isCorner;
+      const isActive = p.feature === this.activeFeature;
+      const visible = isCorner || (isActive && hasSelection);
+      p.mesh.isVisible = visible;
+      p.mesh.isPickable = visible;
     }
   }
 
   _buildLineSystem(feature) {
-    if (this.lineSystem) { this.lineSystem.dispose(); this.lineSystem = null; }
-
-    const { cols, rows, centerX, centerZ, width, depth } = feature;
-    const halfW = width / 2, halfD = depth / 2;
-    const stepX = cols > 1 ? width  / (cols - 1) : 0;
-    const stepZ = rows > 1 ? depth  / (rows - 1) : 0;
+    const { cols, rows } = feature;
     const LINE_Y_OFFSET = 0.08;
-
     const lines = [];
 
     // Horizontal lines (each row left→right)
     for (let r = 0; r < rows; r++) {
       const row = [];
       for (let c = 0; c < cols; c++) {
-        const wx = centerX - halfW + c * stepX;
-        const wz = centerZ - halfD + r * stepZ;
+        const { x: wx, z: wz } = this._gridPointWorld(feature, r, c);
         row.push(new Vector3(wx, this.track.getHeightAt(wx, wz) + LINE_Y_OFFSET, wz));
       }
       lines.push(row);
@@ -282,41 +318,42 @@ export class MeshGridEditor {
     for (let c = 0; c < cols; c++) {
       const col = [];
       for (let r = 0; r < rows; r++) {
-        const wx = centerX - halfW + c * stepX;
-        const wz = centerZ - halfD + r * stepZ;
+        const { x: wx, z: wz } = this._gridPointWorld(feature, r, c);
         col.push(new Vector3(wx, this.track.getHeightAt(wx, wz) + LINE_Y_OFFSET, wz));
       }
       lines.push(col);
     }
 
-    this.lineSystem = MeshBuilder.CreateLineSystem('mgLines', { lines }, this.scene);
-    this.lineSystem.color       = LINE_COLOR_MESH_GRID;
-    this.lineSystem.isPickable  = false;
+    const ls = MeshBuilder.CreateLineSystem('mgLines', { lines }, this.scene);
+    ls.color       = LINE_COLOR_MESH_GRID;
+    ls.isPickable  = false;
+    this.lineSystems.push(ls);
   }
 
   /**
-   * Refresh sphere Y positions and the line grid after height changes.
-   * Called after each height adjustment before rebuildTerrain.
+   * Refresh sphere positions (rotation/height aware) and rebuild grid lines.
+   * Called after height, position, angle or size changes before rebuildTerrain.
    */
   _updateGizmoPositions() {
-    if (!this.activeFeature) return;
-    const { cols, rows, centerX, centerZ, width, depth } = this.activeFeature;
-    const halfW = width / 2, halfD = depth / 2;
-    const stepX = cols > 1 ? width  / (cols - 1) : 0;
-    const stepZ = rows > 1 ? depth  / (rows - 1) : 0;
-
     for (const p of this.pointMeshes) {
-      const wx = centerX - halfW + p.c * stepX;
-      const wz = centerZ - halfD + p.r * stepZ;
+      const { x: wx, z: wz } = this._gridPointWorld(p.feature, p.r, p.c);
+      p.mesh.position.x = wx;
+      p.mesh.position.z = wz;
       p.mesh.position.y = this.track.getHeightAt(wx, wz);
     }
-
-    this._buildLineSystem(this.activeFeature);
+    for (const ls of this.lineSystems) ls.dispose();
+    this.lineSystems = [];
+    for (const feature of this._features()) this._buildLineSystem(feature);
   }
 
   // ─── Selection ────────────────────────────────────────────────────────────
 
   selectPoint(pointData) {
+    // Switching to a point on a different mesh makes that mesh active.
+    if (pointData.feature !== this.activeFeature) {
+      this.activeFeature = pointData.feature;
+      this._syncToStore(this.activeFeature);
+    }
     this.deselectPoint();
     this.selectedPoint = pointData;
     pointData.mesh.material = this.highlightMat;
@@ -324,12 +361,10 @@ export class MeshGridEditor {
     this._syncPointToStore();
     // Show panel when a corner point is clicked (corners are the entry point
     // to the tool; inner points are only reachable once the panel is already open).
-    if (this.activeFeature) {
-      const { cols, rows } = this.activeFeature;
-      const isCorner = (pointData.r === 0 || pointData.r === rows - 1) &&
-                       (pointData.c === 0 || pointData.c === cols - 1);
-      if (isCorner) this._syncToStore(this.activeFeature);
-    }
+    const { cols, rows } = pointData.feature;
+    const isCorner = (pointData.r === 0 || pointData.r === rows - 1) &&
+                     (pointData.c === 0 || pointData.c === cols - 1);
+    if (isCorner) this._syncToStore(pointData.feature);
   }
 
   deselectPoint() {
@@ -344,11 +379,10 @@ export class MeshGridEditor {
   // ─── Height adjustment ────────────────────────────────────────────────────
 
   adjustHeight(delta) {
-    if (!this.selectedPoint || !this.activeFeature) return;
+    if (!this.selectedPoint) return;
     this.ec.saveSnapshot(true);
-    const { r, c } = this.selectedPoint;
-    const f = this.activeFeature;
-    f.heights[r * f.cols + c] += delta;
+    const { r, c, feature } = this.selectedPoint;
+    feature.heights[r * feature.cols + c] += delta;
     this._updateGizmoPositions();
     this._syncPointToStore();
     window.rebuildTerrain?.();
@@ -364,6 +398,24 @@ export class MeshGridEditor {
   }
 
   // ─── Pointer / key event delegation ─────────────────────────────────────
+
+  /**
+   * Pick the control-point sphere under the cursor, considering only this
+   * tool's own (visible, pickable) spheres. The coarse ground mesh is pickable
+   * and the spheres sit on the terrain surface, so a normal closest-hit pick
+   * frequently returns the ground instead of a half-buried sphere — restricting
+   * the pick to the handles makes them reliably clickable. Returns the sphere
+   * mesh or null.
+   */
+  pickControlPoint() {
+    if (!this.scene) return null;
+    const pick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (m) => m.isPickable && this.pointMeshes.some(p => p.mesh === m),
+    );
+    return pick?.hit ? pick.pickedMesh : null;
+  }
 
   /**
    * Call from EditorController's handlePointerDown BEFORE other entity checks.
@@ -389,21 +441,13 @@ export class MeshGridEditor {
    * Returns true if this tool consumed the key event.
    */
   onKeyDown(event) {
-    if (!this.activeFeature) return false;
+    if (!this.selectedPoint) return false;
 
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'ArrowDown' || event.key === '[') {
       this.adjustHeight(-this.stepSize);
       return true;
     }
-    if (event.key === 'ArrowUp') {
-      this.adjustHeight(this.stepSize);
-      return true;
-    }
-    if (event.key === '[') {
-      this.adjustHeight(-this.stepSize);
-      return true;
-    }
-    if (event.key === ']') {
+    if (event.key === 'ArrowUp' || event.key === ']') {
       this.adjustHeight(this.stepSize);
       return true;
     }
@@ -414,18 +458,19 @@ export class MeshGridEditor {
 
   /**
    * After undo/redo restores features[], tear down old gizmos and rebuild
-   * from whatever meshGrid feature (if any) now exists in the track.
+   * from whatever meshGrid features now exist in the track.
    */
   onSnapshotRestored() {
-    this.destroyGizmos();
     this.deselectPoint();
-    const f = this.track.features.find(f => f.type === 'meshGrid');
-    if (f) {
-      this.activeFeature = f;
-      this.createGizmos(f);
-      this._syncToStore(f);
+    const features = this._features();
+    // Keep the active mesh if it survived the restore, else fall back to first.
+    if (!features.includes(this.activeFeature)) {
+      this.activeFeature = features[0] ?? null;
+    }
+    this.rebuildGizmos();
+    if (this.activeFeature) {
+      this._syncToStore(this.activeFeature);
     } else {
-      this.activeFeature = null;
       const s = this.ec._editorStore;
       if (s) s.selectedType = null;
     }
@@ -443,9 +488,12 @@ export class MeshGridEditor {
     s.meshGrid.rows      = feature.rows;
     s.meshGrid.width     = feature.width;
     s.meshGrid.depth     = feature.depth;
-    s.meshGrid.maxWidth  = trackWidth;
-    s.meshGrid.maxDepth  = trackDepth;
+    s.meshGrid.maxWidth  = Math.max(trackWidth, feature.width);
+    s.meshGrid.maxDepth  = Math.max(trackDepth, feature.depth);
     s.meshGrid.smoothing = feature.smoothing ?? 0;
+    s.meshGrid.angle     = feature.angle ?? 0;
+    s.meshGrid.falloff   = feature.falloff ?? REGIONAL_DEFAULT.falloff;
+    s.meshGrid.regional  = !!feature.regional;
     s.selectedType       = 'meshGrid';
   }
 
@@ -453,9 +501,9 @@ export class MeshGridEditor {
   _syncPointToStore() {
     const s = this.ec._editorStore;
     if (!s) return;
-    if (this.selectedPoint && this.activeFeature) {
-      const { r, c } = this.selectedPoint;
-      s.meshGrid.pointHeight  = this.activeFeature.heights[r * this.activeFeature.cols + c];
+    if (this.selectedPoint) {
+      const { r, c, feature } = this.selectedPoint;
+      s.meshGrid.pointHeight  = feature.heights[r * feature.cols + c];
       s.meshGrid.hasSelection = true;
     } else {
       s.meshGrid.hasSelection = false;
@@ -465,14 +513,30 @@ export class MeshGridEditor {
 
   /** Called by the bridge when the Vue height input commits a value. */
   setPointHeightFromStore(v) {
-    if (!this.selectedPoint || !this.activeFeature) return;
+    if (!this.selectedPoint) return;
     this.ec.saveSnapshot(true);
-    const { r, c } = this.selectedPoint;
-    const f = this.activeFeature;
-    f.heights[r * f.cols + c] = v;
+    const { r, c, feature } = this.selectedPoint;
+    feature.heights[r * feature.cols + c] = v;
     this._updateGizmoPositions();
     const s = this.ec._editorStore;
     if (s) s.meshGrid.pointHeight = v;
+    window.rebuildTerrain?.();
+  }
+
+  /** Set the active mesh's rotation (degrees). Repositions gizmos live. */
+  setAngle(v) {
+    if (!this.activeFeature) return;
+    this.ec.saveSnapshot(true);
+    this.activeFeature.angle = v;
+    this._updateGizmoPositions();
+    window.rebuildTerrain?.();
+  }
+
+  /** Set the active region's edge-blend band width. */
+  setFalloff(v) {
+    if (!this.activeFeature) return;
+    this.ec.saveSnapshot(true);
+    this.activeFeature.falloff = v;
     window.rebuildTerrain?.();
   }
 }

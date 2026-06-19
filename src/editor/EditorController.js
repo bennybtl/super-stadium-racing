@@ -1154,8 +1154,14 @@ export class EditorController {
       if (pickResult.hit && pickResult.pickedMesh) {
         const clickedMesh = pickResult.pickedMesh;
 
-        // Mesh grid control points take priority
-        if (this.meshGridEditor?.onPointerDown(clickedMesh)) return;
+        // Mesh grid control points take priority. Use a dedicated pick limited
+        // to the grid's own spheres so the pickable ground mesh can't occlude
+        // the handles; fall back to the generic pick (which also deselects when
+        // clicking away from any sphere).
+        if (this.meshGridEditor) {
+          const mgSphere = this.meshGridEditor.pickControlPoint();
+          if (this.meshGridEditor.onPointerDown(mgSphere ?? clickedMesh)) return;
+        }
 
         // Bridge mesh control points
         if (this.bridgeMeshEditor?.onPointerDown(clickedMesh)) return;
@@ -1316,6 +1322,7 @@ export class EditorController {
   changeHillHeight(val) { this.hillEditor.changeHeight(val); }
   changeHillWaterLevelOffset(val) { this.hillEditor.changeWaterLevelOffset(val); }
   changeHillTerrainType(name) { this.hillEditor.changeTerrainType(name); }
+  changeHillBlendWidth(val) { this.hillEditor.changeBlendWidth(val); }
 
   changeTrackDefaultTerrain(name) {
     const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === name);
@@ -1339,22 +1346,32 @@ export class EditorController {
     this._syncTrackSettingsPanel();
   }
 
+  // Track id slug: lowercase, spaces → underscores, drop any other non-slug
+  // characters. Underscores are preserved and no trailing/leading trim is done
+  // so the field stays editable mid-word (otherwise the controlled input would
+  // strip a just-typed separator on every keystroke).
+  _slugifyTrackId(str) {
+    return (str ?? '')
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]+/g, '');
+  }
+
   changeTrackName(name) {
     if (!this.currentTrack) return;
     this.saveSnapshot(true);
-    this.currentTrack.name = name?.trim() || 'Untitled Track';
+    // Keep the raw value (including spaces) so names like "Desert Run" are
+    // typable; only the export path applies the "Untitled Track" fallback.
+    this.currentTrack.name = name ?? '';
+    // Track id automatically follows the name.
+    this.currentTrack.id = this._slugifyTrackId(name);
     this._syncTrackSettingsPanel();
   }
 
   changeTrackId(id) {
     if (!this.currentTrack) return;
     this.saveSnapshot(true);
-    const nextId = (id ?? '')
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    this.currentTrack.id = nextId || 'untitled-track';
+    this.currentTrack.id = this._slugifyTrackId(id);
     this._syncTrackSettingsPanel();
   }
 
@@ -1392,6 +1409,7 @@ export class EditorController {
   changeSquareHillHeightMax(val)    { this.squareHillEditor.changeHeightMax(val); }
   changeSquareHillMode(sloped)      { this.squareHillEditor.changeMode(sloped); }
   changeSquareHillTerrainType(name) { this.squareHillEditor.changeTerrainType(name); }
+  changeSquareHillBlendWidth(val)   { this.squareHillEditor.changeBlendWidth(val); }
 
   changeTerrainShapeShape(val)     { this.terrainShapeEditor.changeShape(val); }
   changeTerrainShapeWidth(val)    { this.terrainShapeEditor.changeWidth(val); }
@@ -1598,6 +1616,8 @@ export class EditorController {
       window.rebuildTerrain?.();
     }
   }
+  changeMeshGridAngle(v)        { this.meshGridEditor?.setAngle(v); }
+  changeMeshGridFalloff(v)      { this.meshGridEditor?.setFalloff(v); }
   changeMeshGridStepSize(v)     { if (this.meshGridEditor) this.meshGridEditor.stepSize = v; }
   setMeshGridPointHeight(v)     { this.meshGridEditor?.setPointHeightFromStore(v); }
   meshGridAdjustUp()            { if (this.meshGridEditor) this.meshGridEditor.adjustHeight(this.meshGridEditor.stepSize); }
@@ -1805,7 +1825,7 @@ export class EditorController {
           if (p.mesh) p.mesh.isVisible = false;
         }
       }
-      if (this.meshGridEditor.lineSystem) this.meshGridEditor.lineSystem.isVisible = visible;
+      for (const ls of this.meshGridEditor.lineSystems || []) ls.isVisible = visible;
     }
 
     if (this.actionZoneEditor) {

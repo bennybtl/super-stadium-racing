@@ -1,0 +1,50 @@
+{
+  "id": "monster_truck",
+  "name": "4WD Truck",
+  "engineAudio": "v8",
+  "modelFile": "truck-assembly-v1.obj",
+  "imageFile": "default_truck.png",
+  "defaultColor": [0.8, 0.2, 0.1],
+  "meshColors": {
+    "truck-assembly-v1_truck-assembly-v1": [0.0, 0.0, 0.0],
+    "truck-assembly-v1.001_truck-assembly-v1.001": [1.0, 1.0, 0.0],
+    "truck-assembly-v1.007_truck-assembly-v1.007": [0.7, 0.7, 0.7],
+    "truck-assembly-v1.008_truck-assembly-v1.008": [0.7, 0.7, 0.7]
+  },
+  "bodyTransform": {
+    "position": [0, 1.20, 0.0],
+    "rotation": [-1.5708, 0, 0],
+    "scaling":  [1, 1.2, 1]
+  },
+  "physicsBox": {
+    "width": 1.8,
+    "height": 0.8,
+    "depth": 3.0
+  },
+  "wheels": {
+    "trackWidth": 2.6,
+    "frontAxle":  1.8,
+    "rearAxle":  -1.5,
+    "frontScale": [2.1, 1.8, 1.8],
+    "rearScale": [2.1, 1.8, 1.8]
+  },
+  "params": {
+    "springStrength": 80,
+    "damping": 3,
+    "maxSpeed": 20,
+    "maxReverseSpeed": -10,
+    "acceleration": 15,
+    "braking": 1.6,
+    "drag": 6,
+    "turnSpeed": 3.3,
+    "grip": 0.28,
+    "driftThreshold": 0.19,
+    "weightTransfer": 1.65,
+    "stationarySpinRate": 0.8,
+    "boostCount": 5,
+    "maxBoosts": 9,
+    "boostDuration": 1.6,
+    "boostAccelMult": 2,
+    "boostSpeedMult": 1.5
+  }
+}

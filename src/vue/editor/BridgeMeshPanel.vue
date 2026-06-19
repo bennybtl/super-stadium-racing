@@ -17,7 +17,7 @@
       type="range"
       min="-20"
       max="20"
-      :step="tor.bridgeMesh.stepSize"
+      :step="editor.bridgeMesh.stepSize"
       :value="editor.bridgeMesh.hasSelection ? editor.bridgeMesh.pointHeight.toFixed(2) : ''"
       :placeholder="editor.bridgeMesh.hasSelection ? '' : '— select a point —'"
       :disabled="!editor.bridgeMesh.hasSelection"

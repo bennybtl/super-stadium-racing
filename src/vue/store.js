@@ -230,6 +230,7 @@ export const useEditorStore = defineStore('editor', () => {
     height: 5,
     waterLevelOffset: 2,
     terrainType: 'none',
+    blendWidth: 0,
   });
 
   // ── Square hill panel ──
@@ -244,6 +245,7 @@ export const useEditorStore = defineStore('editor', () => {
     heightAtMin: 0,
     heightAtMax: 3,
     terrainType: 'none',
+    blendWidth: 0,
   });
 
   // ── Terrain shape panel (rect + circle/ellipse) ──
@@ -299,6 +301,9 @@ export const useEditorStore = defineStore('editor', () => {
     maxWidth: 160,
     maxDepth: 160,
     smoothing: 0,
+    angle: 0,
+    falloff: 15,
+    regional: false,
     stepSize: 0.5,
     hasSelection: false,
     pointHeight: 0,
@@ -552,6 +557,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setHillHeight(val)           { hill.height = val;       _bridge.value?.changeHillHeight(val); }
   function setHillWaterLevelOffset(val) { hill.waterLevelOffset = val; _bridge.value?.changeHillWaterLevelOffset(val); }
   function setHillTerrainType(name)     { hill.terrainType = name; _bridge.value?.changeHillTerrainType(name); }
+  function setHillBlendWidth(val)       { hill.blendWidth = val;   _bridge.value?.changeHillBlendWidth(val); }
   function duplicateHill()              { _bridge.value?.duplicateSelectedHill(); }
   function deleteHill()                 { _bridge.value?.deleteSelectedHill(); }
   function closeHill()                  { _bridge.value?.deselectHill(); }
@@ -567,6 +573,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setSquareHillHeightMax(val)  { squareHill.heightAtMax = val; _bridge.value?.changeSquareHillHeightMax(val); }
   function setSquareHillMode(sloped)    { squareHill.slopeMode = sloped; _bridge.value?.changeSquareHillMode(sloped); }
   function setSquareHillTerrainType(n)  { squareHill.terrainType = n;   _bridge.value?.changeSquareHillTerrainType(n); }
+  function setSquareHillBlendWidth(val) { squareHill.blendWidth = val;  _bridge.value?.changeSquareHillBlendWidth(val); }
   function duplicateSquareHill()        { _bridge.value?.duplicateSelectedSquareHill(); }
   function deleteSquareHill()           { _bridge.value?.deleteSelectedSquareHill(); }
   function closeSquareHill()            { _bridge.value?.deselectSquareHill(); }
@@ -696,6 +703,8 @@ export const useEditorStore = defineStore('editor', () => {
   function setMeshGridDensity(v)     { meshGrid.cols = v; meshGrid.rows = v; }
   function setMeshGridWidth(v)       { meshGrid.width = v; }
   function setMeshGridDepth(v)       { meshGrid.depth = v; }
+  function setMeshGridAngle(v)       { meshGrid.angle = v;   _bridge.value?.changeMeshGridAngle(v); }
+  function setMeshGridFalloff(v)     { meshGrid.falloff = v; _bridge.value?.changeMeshGridFalloff(v); }
   function meshGridAdjustUp()        { _bridge.value?.meshGridAdjustUp(); }
   function meshGridAdjustDown()      { _bridge.value?.meshGridAdjustDown(); }
   function applyMeshGridSettings()   { _bridge.value?.applyMeshGridChanges(meshGrid.cols, meshGrid.rows, meshGrid.width, meshGrid.depth); }
@@ -808,10 +817,10 @@ export const useEditorStore = defineStore('editor', () => {
     setBridge,
     setCheckpointWidth, setCheckpointHeading, shiftCheckpointOrder, duplicateCheckpoint, deleteCheckpoint, closeCheckpoint,
     setHillRadius, setHillRadiusX, setHillRadiusZ, setHillRotation,
-    setHillHeight, setHillWaterLevelOffset, setHillTerrainType, duplicateHill, deleteHill, closeHill,
+    setHillHeight, setHillWaterLevelOffset, setHillTerrainType, setHillBlendWidth, duplicateHill, deleteHill, closeHill,
     setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
     setSquareHillHeight, setSquareHillWaterLevelOffset, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
-    setSquareHillTerrainType, duplicateSquareHill, deleteSquareHill, closeSquareHill,
+    setSquareHillTerrainType, setSquareHillBlendWidth, duplicateSquareHill, deleteSquareHill, closeSquareHill,
     setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation, setTerrainShapeBlendWidth,
     setTerrainShapeTerrainType, duplicateTerrainShape, deleteTerrainShape, closeTerrainShape,
     setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
@@ -875,6 +884,7 @@ export const useEditorStore = defineStore('editor', () => {
     setSurfaceDecalOpacity, setSurfaceDecalWidth, setSurfaceDecalDepth,
     setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
+    setMeshGridAngle, setMeshGridFalloff,
     meshGridAdjustUp, meshGridAdjustDown,
     applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, duplicateMeshGrid, closeMeshGrid,
     setBridgeMeshPointHeight, setBridgeMeshStepSize, setBridgeMeshRotation,

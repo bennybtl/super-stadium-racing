@@ -4,7 +4,7 @@ export const DEFAULT_SPAWN_RECOVERY_CONFIG = {
   pathAdvance: 5,
   topologySearchRadius: 70,
   // How far before a missed gate (world units) to place a through-gate respawn.
-  gateRespawnBackup: 10,
+  gateRespawnBackup: 20,
 };
 
 /**
@@ -89,15 +89,12 @@ export class AISpawnRecoveryController {
 
     const fwdX = Math.sin(gate.heading);
     const fwdZ = Math.cos(gate.heading);
-    const backup = DEFAULT_SPAWN_RECOVERY_CONFIG.gateRespawnBackup;
 
-    // Approach point a short distance before the gate, on its entry side.
-    const basePos = new Vector3(
-      gate.x - fwdX * backup,
-      d.truckMesh.position.y,
-      gate.z - fwdZ * backup
-    );
-    const spawnPos = this.findClearPosition(basePos);
+    // Clear approach point on the gate's entry side. We deliberately do NOT use
+    // the generic findClearPosition here: it can snap to a topology connector or
+    // a path waypoint on the *exit* side of the gate the truck just overshot,
+    // which would respawn the driver in front of the gate instead of behind it.
+    const spawnPos = this._findClearApproach(gate, fwdX, fwdZ);
 
     d.truckMesh.position.x = spawnPos.x;
     d.truckMesh.position.z = spawnPos.z;
@@ -116,6 +113,30 @@ export class AISpawnRecoveryController {
 
     d._staticBodyCollisionManager?.notifyTeleport(d.truck);
     this.snapPathIndexToPosition(spawnPos);
+  }
+
+  /**
+   * Find a clear respawn point strictly on the gate's entry side, backing
+   * straight away from the gate along -forward until an unblocked cell is found.
+   * Guarantees the result is behind the gate (along < 0), never in front of it.
+   */
+  _findClearApproach(gate, fwdX, fwdZ) {
+    const d = this.driver;
+    const base = DEFAULT_SPAWN_RECOVERY_CONFIG.gateRespawnBackup;
+    const maxBackup = base * 3;
+
+    for (let dist = base; dist <= maxBackup; dist += 4) {
+      const x = gate.x - fwdX * dist;
+      const z = gate.z - fwdZ * dist;
+      const cell = d.worldToGrid(x, z);
+      if (d.isValidCell(cell.x, cell.z) && !d.isBlocked(cell.x, cell.z)) {
+        return { x, z };
+      }
+    }
+
+    // Nothing clear found — fall back to the nominal backup point. Still on the
+    // entry side, so the driver at least faces through the gate.
+    return { x: gate.x - fwdX * base, z: gate.z - fwdZ * base };
   }
 
   findClearPosition(currentPos) {

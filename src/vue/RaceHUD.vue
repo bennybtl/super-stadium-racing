@@ -4,19 +4,19 @@
       v-if="race.timerVisible"
       class="fixed left-1/2 top-4 z-[1200] -translate-x-1/2"
     >
-      <div class="rounded-[14px] border border-[#6a5c48] bg-[#0c0c0c]/60 px-6 py-2 shadow-[0_14px_30px_rgba(0,0,0,0.55)]">
+      <div class="rounded-[14px] bg-[#0c0c0c]/60 px-6 py-2 shadow-[0_10px_12px_rgba(0,0,0,0.55)]">
         <div class="flex items-center gap-3">
-          <span class="h-[2px] w-10 rounded-full bg-gradient-to-r from-[#ff6b2e] to-[#ffd166]"></span>
+          <span class="h-[2px] w-10 rounded-full bg-gradient-to-r from-[#2e54ff] to-[#e61515]"></span>
           <span class="font-mono text-[28px] font-black tracking-[0.12em] text-white tabular-nums drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
             {{ formattedTime }}
           </span>
-          <span class="h-[2px] w-10 rounded-full bg-gradient-to-l from-[#ff6b2e] to-[#ffd166]"></span>
+          <span class="h-[2px] w-10 rounded-full bg-gradient-to-l from-[#e61515] to-[#2e54ff]"></span>
         </div>
       </div>
     </div>
 
     <div class="fixed left-1/2 bottom-4 -translate-x-1/2 z-[1200]">
-      <div class="rounded-[14px] overflow-hidden border border-[#6a5c48] bg-[#0c0c0c]/60 px-2 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.62)] backdrop-blur-sm">
+      <div class="rounded-[14px] overflow-hidden bg-[#0c0c0c]/60 px-2 py-2 shadow-[0_10px_12px_rgba(0,0,0,0.62)] backdrop-blur-sm">
         <div class="grid gap-px" :style="gridStyle">
           <div class="flex h-full items-center justify-end text-right font-mono text-[10px] font-black uppercase tracking-[0.28em] text-[#d2cbc3] leading-none">
           </div>

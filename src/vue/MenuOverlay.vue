@@ -33,6 +33,7 @@
           <TrackSelectionCarousel
             :tracks="store.trackList"
             :modelValue="store.selectedTrack"
+            :show-hidden="true"
             @update:modelValue="store.setSelectedTrack($event)"
           />
           <div class="grid grid-cols-2 gap-2">

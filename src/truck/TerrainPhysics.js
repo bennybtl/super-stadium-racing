@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT as _DEFAULT_HALF_HEIGHT } from "../constants.js";
 
-const GRAVITY    = -30;           // m/s²
+const GRAVITY    = -20;           // m/s²
 const DEG_TO_RAD = Math.PI / 180;
 const RAY_OFFSET = 0.1;           // vertical offset above truck centre for raycasts (m)
 const UP         = new Vector3(0, 1, 0);  // world-up — reused to avoid per-frame allocation

@@ -144,17 +144,22 @@ export class HillEditor {
     const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
     const absH = Math.max(0.5, Math.abs(feature.height));
-    const terrainH = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
+    // Mirror createVisual: use track.getHeightAt (deterministic, already
+    // includes this hill) rather than a ground-mesh raycast. The raycast runs
+    // before the terrain rebuild and returns its fallback of 0 on a miss, which
+    // dropped the sphere to y=0 and buried it under the raised hill — making the
+    // gizmo "disappear" on the first edit.
+    const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;
     node.position.y = terrainH + absH / 2;
-    node.scaling.x = this._radiusX(feature);;
+    node.scaling.x = this._radiusX(feature);
     node.scaling.y = absH;
-    node.scaling.z = this._radiusZ(feature);;
+    node.scaling.z = this._radiusZ(feature);
     node.rotation.y = -(this._angleDeg(feature) * Math.PI / 180);
     if (sphere) {
       sphere.position.x = feature.centerX;
-      sphere.position.y = terrainH > 0 ? terrainH + 0.1 : 0;
+      sphere.position.y = node.position.y + node.scaling.y / 2;
       sphere.position.z = feature.centerZ;
     }
   }
@@ -248,6 +253,7 @@ export class HillEditor {
     s.hill.height = feature.height;
     s.hill.waterLevelOffset = feature.waterLevelOffset ?? 2;
     s.hill.terrainType = feature.terrainType?.name || 'none';
+    s.hill.blendWidth = feature.blendWidth ?? 0;
     s.selectedType = 'hill';
   }
 
@@ -341,6 +347,13 @@ export class HillEditor {
     this.editor.saveSnapshot();
     this.selected.feature.terrainType = name === 'none' ? null
       : (Object.values(TERRAIN_TYPES).find(t => t.name === name) || null);
+    this.rebuildTerrain();
+  }
+
+  changeBlendWidth(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.blendWidth = Math.max(0, val);
     this.rebuildTerrain();
   }
 

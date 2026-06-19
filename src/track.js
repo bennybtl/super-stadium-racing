@@ -59,7 +59,7 @@ export class Track {
   constructor(name = "Untitled Track", width = 160, depth = 160) {
     this.schemaVersion = TRACK_SCHEMA_VERSION;
     this.name = name;
-    this.id = name.toLowerCase().replace(/\s+/g, '-');
+    this.id = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]+/g, '');
     this.hidden = true;
     this.packId = null;
     this.width = width;
@@ -263,19 +263,45 @@ export class Track {
         case "meshGrid": {
           const { centerX: cx, centerZ: cz, width, depth, cols, rows, heights } = feature;
           if (!heights || cols < 2 || rows < 2) break;
-          const trackHalfW = (this.width ?? width ?? 160) / 2;
-          const trackHalfD = (this.depth ?? depth ?? 160) / 2;
-          const effectiveWidth = Math.min(width, trackHalfW * 2);
-          const effectiveDepth = Math.min(depth, trackHalfD * 2);
-          const halfW = effectiveWidth / 2;
-          const halfD = effectiveDepth / 2;
-          // Clamp sampling at mesh bounds so edge height can blend out across the
-          // border area instead of dropping to zero immediately outside the mesh.
-          const sampleX = Math.max(cx - halfW, Math.min(cx + halfW, x));
-          const sampleZ = Math.max(cz - halfD, Math.min(cz + halfD, z));
+          const halfW = width / 2;
+          const halfD = depth / 2;
+
+          // Rotate the world point into the mesh's local (axis-aligned) frame so
+          // the grid can carry an arbitrary `angle` (degrees), like squareHill.
+          const dwx = x - cx;
+          const dwz = z - cz;
+          const angleRad = (feature.angle ?? 0) * Math.PI / 180;
+          const cosA = Math.cos(angleRad);
+          const sinA = Math.sin(angleRad);
+          const lx =  dwx * cosA + dwz * sinA;
+          const lz = -dwx * sinA + dwz * cosA;
+
+          // Regional meshes (falloff band defined) contribute only inside their
+          // bounds and ease to zero across the falloff band, so several small
+          // meshes can stack without bleeding edge heights across the whole map.
+          // Legacy full-track meshes (regional !== true) keep the original
+          // clamp-to-edge spread so existing tracks render unchanged.
+          let weight = 1;
+          if (feature.regional) {
+            const edgeDx = Math.max(0, Math.abs(lx) - halfW);
+            const edgeDz = Math.max(0, Math.abs(lz) - halfD);
+            const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
+            const falloff = feature.falloff ?? 0;
+            if (falloff <= 0) {
+              if (dist > 0) break;            // hard bounds — nothing outside
+            } else {
+              if (dist >= falloff) break;     // beyond the blend band
+              weight = dist === 0 ? 1 : Math.cos((dist / falloff) * Math.PI / 2);
+            }
+          }
+
+          // Clamp the sample to mesh bounds (local space) so border heights hold
+          // out to the edge before the falloff weight blends them away.
+          const sampleLx = Math.max(-halfW, Math.min(halfW, lx));
+          const sampleLz = Math.max(-halfD, Math.min(halfD, lz));
           // Fractional grid coordinate [0, cols-1] and [0, rows-1]
-          const fc = (sampleX - (cx - halfW)) * (cols - 1) / Math.max(effectiveWidth, 1e-6);
-          const fr = (sampleZ - (cz - halfD)) * (rows - 1) / Math.max(effectiveDepth, 1e-6);
+          const fc = (sampleLx + halfW) * (cols - 1) / Math.max(width, 1e-6);
+          const fr = (sampleLz + halfD) * (rows - 1) / Math.max(depth, 1e-6);
           const c0 = Math.max(0, Math.min(Math.floor(fc), cols - 2));
           const r0 = Math.max(0, Math.min(Math.floor(fr), rows - 2));
           const c1 = c0 + 1, r1 = r0 + 1;
@@ -295,7 +321,7 @@ export class Track {
 
           const s = feature.smoothing ?? 0;
           if (s <= 0) {
-            totalHeight += bilinear;
+            totalHeight += bilinear * weight;
             break;
           }
 
@@ -319,7 +345,7 @@ export class Track {
           const row3 = cr(H(r1+1,c0-1), H(r1+1,c0), H(r1+1,c1), H(r1+1,c1+1), tc);
           const bicubic = cr(row0, row1, row2, row3, tr);
 
-          totalHeight += bilinear + (bicubic - bilinear) * s;
+          totalHeight += (bilinear + (bicubic - bilinear) * s) * weight;
           break;
         }
 
@@ -436,7 +462,15 @@ export class Track {
           const { radiusX, radiusZ } = getHillEllipseParams(feature);
           const { lx, lz } = getHillLocalCoords(feature, x, z);
           const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
-          if (t2 < 1) {
+          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
+          if (blendWidth <= 0) {
+            if (t2 < 1) return feature.terrainType;
+            break;
+          }
+          // Dither the terrain boundary across the blend band straddling the
+          // ellipse edge. signedDistToEdge > 0 inside, < 0 outside.
+          const signedDistToEdge = (1 - Math.sqrt(t2)) * Math.min(radiusX, radiusZ);
+          if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
             return feature.terrainType;
           }
           break;
@@ -501,7 +535,17 @@ export class Track {
           const edgeDx = Math.max(0, Math.abs(lx) - hw);
           const edgeDz = Math.max(0, Math.abs(lz) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
-          if (dist < transition) return feature.terrainType;
+          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
+          if (blendWidth <= 0) {
+            if (dist < transition) return feature.terrainType;
+            break;
+          }
+          // The terrain region reaches the outer rim of the height transition
+          // zone; dither across the blend band straddling that boundary.
+          const signedDistToEdge = transition - dist;
+          if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
+            return feature.terrainType;
+          }
           break;
         }
 

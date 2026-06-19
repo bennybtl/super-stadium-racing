@@ -73,6 +73,20 @@
       @update:modelValue="editor.setHillTerrainType"
     />
 
+    <!-- Edge Blend: dithers the terrain-type boundary into surrounding terrain -->
+    <template v-if="editor.hill.terrainType !== 'none'">
+      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+        <span>Edge Blend</span>
+        <span>{{ editor.hill.blendWidth.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="20" step="0.5"
+        :value="editor.hill.blendWidth"
+        @input="editor.setHillBlendWidth(+$event.target.value)"
+        class="w-full accent-[var(--accent)] cursor-pointer"
+      />
+    </template>
+
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->
