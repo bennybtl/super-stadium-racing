@@ -419,6 +419,8 @@ export const useEditorStore = defineStore('editor', () => {
     id: 'untitled-track',
     width: 160,
     depth: 160,
+    hidden: true,
+    packId: '',
   });
   const trackDefaultTerrain = ref('packed_dirt');
   const trackBorderTerrain = ref('packed_dirt');
@@ -524,6 +526,14 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackId(id) {
     trackSettings.id = id;
     _bridge.value?.changeTrackId?.(id);
+  }
+  function setTrackHidden(hidden) {
+    trackSettings.hidden = !!hidden;
+    _bridge.value?.changeTrackHidden?.(!!hidden);
+  }
+  function setTrackPackId(packId) {
+    trackSettings.packId = packId;
+    _bridge.value?.changeTrackPackId?.(packId);
   }
   function _normalizeTrackDimension(val, fallback) {
     const numeric = Number(val);
@@ -852,7 +862,7 @@ export const useEditorStore = defineStore('editor', () => {
     setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed, setPolyCurbStyle,
     insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
     trackSettingsOpen, trackSettings,
-    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackWidth, setTrackDepth,
+    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
     setActiveTool,

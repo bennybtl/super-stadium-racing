@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "cliff_hanger",
   "packId": "offroad_pack_1",
   "hidden": false,
@@ -95,6 +96,7 @@
         10.5,
         13.5,
         13.5,
+        17,
         20,
         20,
         20,
@@ -103,8 +105,7 @@
         20,
         20,
         20,
-        20,
-        20,
+        17,
         20,
         20,
         20,
@@ -133,10 +134,11 @@
       "centerZ": 28.493450204230417,
       "width": 0.5,
       "depth": 8,
-      "height": 4.5,
+      "height": 3,
       "transition": 6.5,
       "terrainType": "loose_dirt",
-      "angle": 170
+      "angle": 170,
+      "waterLevelOffset": 0
     },
     {
       "type": "squareHill",
@@ -144,21 +146,23 @@
       "centerZ": 28.4604755878971,
       "width": 0.5,
       "depth": 8,
-      "height": 4.5,
+      "height": 3.5,
       "transition": 6,
       "terrainType": "loose_dirt",
-      "angle": 16
+      "angle": 16,
+      "waterLevelOffset": 0
     },
     {
       "type": "squareHill",
       "centerX": -45.94694764056203,
       "centerZ": 31.260695423559106,
-      "width": 10,
-      "depth": 8,
+      "width": 14.5,
+      "depth": 9.5,
       "transition": 10,
       "terrainType": null,
-      "heightAtMin": 4.5,
-      "heightAtMax": 0
+      "heightAtMin": 2,
+      "heightAtMax": 0,
+      "waterLevelOffset": 0
     },
     {
       "type": "squareHill",
@@ -301,7 +305,7 @@
         }
       ],
       "height": 8,
-      "thickness": 1,
+      "thickness": 1.3,
       "friction": 0.1,
       "closed": true,
       "collisionHeight": 8,
@@ -332,7 +336,7 @@
         }
       ],
       "height": 8,
-      "thickness": 1,
+      "thickness": 1.5,
       "friction": 0.1,
       "closed": true,
       "collisionHeight": 8,
@@ -347,7 +351,7 @@
           "radius": 30
         },
         {
-          "x": 45.5,
+          "x": 43.5,
           "z": 40.5,
           "radius": 13
         },
@@ -363,7 +367,7 @@
         }
       ],
       "height": 8,
-      "thickness": 1,
+      "thickness": 1.7,
       "friction": 0.1,
       "closed": true,
       "collisionHeight": 8,
@@ -474,7 +478,7 @@
           "radius": 0
         },
         {
-          "x": -38.97028546697521,
+          "x": -36.97028546697521,
           "z": -52.5301929819258,
           "radius": 0
         }
@@ -504,19 +508,21 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3
+      "heightAtMax": 4,
+      "waterLevelOffset": 0
     },
     {
       "type": "squareHill",
       "centerX": 14,
-      "centerZ": 68.72478689483741,
+      "centerZ": 69.22478689483741,
       "width": 10,
       "depth": 8.5,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3,
-      "angle": 180
+      "heightAtMax": 4,
+      "angle": 180,
+      "waterLevelOffset": 0
     },
     {
       "type": "hill",
@@ -592,8 +598,12 @@
       "type": "aiPath",
       "points": [
         {
-          "x": -45.418149076882464,
+          "x": -35.418149076882464,
           "z": -71.73775324570003
+        },
+        {
+          "x": -60.033529878468826,
+          "z": -67.30802314566493
         },
         {
           "x": -66.86943312041019,
@@ -608,12 +618,12 @@
           "z": -23.828162352144595
         },
         {
-          "x": 8.761224938910875,
-          "z": -21.46191582211527
+          "x": 11.713730643758737,
+          "z": -16.084784287536948
         },
         {
-          "x": 37.0148576855472,
-          "z": 2.0964723454431526
+          "x": 33.480494173144045,
+          "z": 3.6282890923362237
         },
         {
           "x": 25.35110608852369,
@@ -624,8 +634,8 @@
           "z": 33.28
         },
         {
-          "x": -51.75,
-          "z": 31.33
+          "x": -52.25,
+          "z": 31.83
         },
         {
           "x": -66.66707691041918,
@@ -854,7 +864,7 @@
       "width": 35,
       "depth": 24.5,
       "rotation": 38,
-      "blendWidth": 6.5
+      "blendWidth": 7.5
     },
     {
       "type": "obstacle",

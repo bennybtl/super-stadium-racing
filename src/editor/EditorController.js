@@ -353,6 +353,8 @@ export class EditorController {
     this._editorStore.trackSettings.id = this.currentTrack.id ?? 'untitled-track';
     this._editorStore.trackSettings.width = this.currentTrack.width ?? 160;
     this._editorStore.trackSettings.depth = this.currentTrack.depth ?? 160;
+    this._editorStore.trackSettings.hidden = this.currentTrack.hidden ?? true;
+    this._editorStore.trackSettings.packId = this.currentTrack.packId ?? '';
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
   }
@@ -1372,6 +1374,22 @@ export class EditorController {
     if (!this.currentTrack) return;
     this.saveSnapshot(true);
     this.currentTrack.id = this._slugifyTrackId(id);
+    this._syncTrackSettingsPanel();
+  }
+
+  changeTrackHidden(hidden) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.hidden = !!hidden;
+    this._syncTrackSettingsPanel();
+  }
+
+  changeTrackPackId(packId) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    // Pack ids are slugs like track ids; empty means "no pack".
+    const slug = this._slugifyTrackId(packId);
+    this.currentTrack.packId = slug || null;
     this._syncTrackSettingsPanel();
   }
 

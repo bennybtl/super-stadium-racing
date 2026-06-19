@@ -28,6 +28,31 @@
     />
     <div class="mt-2 text-[10px] text-slate-400">Used for exported filenames. Auto-derived from the track name (lowercased, spaces become underscores); edit to override.</div>
 
+    <div class="mt-4 text-[12px] mb-1">Pack ID</div>
+    <input
+      class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+      type="text"
+      :value="editor.trackSettings.packId"
+      @input="editor.setTrackPackId($event.target.value)"
+      placeholder="(no pack)"
+      spellcheck="false"
+      autocapitalize="off"
+      autocomplete="off"
+      autocorrect="off"
+    />
+    <div class="mt-2 text-[10px] text-slate-400">Groups the track under a pack in the selection menu. Leave blank for no pack.</div>
+
+    <label class="mt-4 flex items-center gap-2 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+        :checked="editor.trackSettings.hidden"
+        @change="editor.setTrackHidden($event.target.checked)"
+      />
+      <span class="text-[13px] text-white">Hidden</span>
+    </label>
+    <div class="mt-2 text-[10px] text-slate-400">Hidden tracks are excluded from the race/practice selection until ready. They still appear in the editor's track list.</div>
+
     <div class="mt-4 grid grid-cols-2 gap-2">
       <div>
         <div class="text-[12px] mb-1">Width</div>
