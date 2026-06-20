@@ -39,9 +39,10 @@ runtime defaults closely, so a vehicle that omits `handling` gets sane mid handl
 | --- | ---: | ---: | ---: | --- |
 | `springStrength` | 80 | 150 | 220 | Higher gives a stiffer, more planted suspension. |
 | `damping` | 2 | 7 | 12 | Higher settles suspension oscillation faster. |
-| `maxSpeed` | 18 | 26 | 34 | Forward top speed on flat ground before drag and terrain effects. |
+| `maxSpeed` | 18 | 26 | 34 | Soft top speed. Throttle pulls hard up to here, then crawls slowly to a hard ceiling at +20% (maxSpeed × 1.2). |
 | `maxReverseSpeed` | -16 | -10 | -6 | More negative is faster reverse. |
-| `acceleration` | 10 | 18 | 28 | Controls how hard the vehicle builds speed under throttle. |
+| `acceleration` | 10 | 18 | 28 | Gear 1 acceleration. Halves each gear, so raising it speeds up the whole curve. |
+| `gearCount` | 3 | 4 | 6 | Number of gears between 0 and maxSpeed; accel halves each gear so the top gear takes the longest. More gears = slower, more drawn-out top end. |
 | `braking` | 1.0 | 1.5 | 2.4 | Higher slows harder and can make brake-rotation more aggressive. |
 | `drag` | 0.8 | 3.0 | 4.5 | Terrain drag multiplier. Higher bleeds speed faster on the ground. |
 | `turnSpeed` | 2.6 | 3.6 | 4.8 | Steering authority. |

@@ -78,8 +78,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
 
   // --- Ambient ---
   const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);
+  // Lower ambient fill deepens shadows: the hemispheric light is never occluded,
+  // so it sets the brightness floor inside every shadowed area.
   ambient.intensity = 0.35;
-  ambient.groundColor = new Color3(0.2, 0.15, 0.1);
+  ambient.groundColor = new Color3(0.1, 0.1, 0.1);
 
   // -- Track --
   let currentTrack;
@@ -116,7 +118,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
   ];
   const _stadiumLights = _stadiumPositions.map((pos, i) => {
     const light = new PointLight(`stadiumLight${i}`, pos, scene);
-    light.intensity = 0.85;
     light.range = terrainSize * 2.2;
     light.diffuse  = new Color3(1.0, 0.97, 1.00);
     light.specular = new Color3(1.0, 0.97, 1.00);
@@ -159,10 +160,16 @@ export async function buildScene(engine, trackLoader, trackKey) {
       });
     } else {
       _centerFloodLight.setEnabled(false);
-      const perLightIntensity = lightCount === 2 ? 1.10 : 0.85;
+      // Rebalance toward the shadow-casting light (index 0): when it dominates
+      // the illumination, occluding it removes a large fraction of the light, so
+      // shadows read dark — while the dimmer fill lights keep the rest of the
+      // scene lit. Net brightness stays close to the old flat setup, but shadow
+      // contrast roughly doubles (no global dimming).
+      const casterIntensity = 1.7;
+      const fillIntensity   = lightCount === 2 ? 0.6 : 0.5;
       _stadiumLights.forEach((light, index) => {
         light.setEnabled(enabledLightIndices.includes(index));
-        light.intensity = perLightIntensity;
+        light.intensity = index === 0 ? casterIntensity : fillIntensity;
       });
     }
 
@@ -351,6 +358,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainWearOverlayTexture: terrainWearOverlayTex,
     terrainDiffuseOverlayTexture: terrainDiffuseOverlayTex,
   };
+  // The ground receives shadows (object/wall/hill shadows land on it) but is
+  // NOT a shadow caster: a large flat caster self-shadows under the single
+  // shadow-casting key light, which left the terrain stuck in its own shadow
+  // and unresponsive to that light.
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
   driveSurfaceManager.register(ground, {

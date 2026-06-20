@@ -6,14 +6,25 @@
   >
     <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70"></div>
 
-    <div v-if="store.screen === 'title'" class="absolute inset-x-0 bottom-0 flex justify-center pb-10">
-      <button
-        class="menu-button start-button pointer-events-auto px-14 py-5 text-4xl"
-        @click="store.back('start')"
-      >
-        Start
-      </button>
-    </div>
+    <template v-if="store.screen === 'title'">
+      <div v-if="showSafariWarning" class="absolute inset-x-0 top-0 flex justify-center p-4">
+        <div class="pointer-events-auto max-w-xl rounded-lg border-2 border-amber-400 bg-black/85 px-5 py-3 text-center shadow-[0_6px_24px_rgba(0,0,0,0.6)]">
+          <div class="text-lg font-bold text-amber-300">⚠ Safari detected</div>
+          <div class="mt-1 text-sm text-amber-100">
+            This game runs on WebGL, which performs poorly in Safari.
+            For smoother gameplay, please switch to <b>Chrome</b>, <b>Edge</b>, or <b>Firefox</b>.
+          </div>
+        </div>
+      </div>
+      <div class="absolute inset-x-0 bottom-0 flex justify-center pb-10">
+        <button
+          class="menu-button start-button pointer-events-auto px-14 py-5 text-4xl"
+          @click="store.back('start')"
+        >
+          Start
+        </button>
+      </div>
+    </template>
 
     <div v-else class="absolute inset-0 flex items-center justify-center pointer-events-auto">
       <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
@@ -133,6 +144,7 @@ import { computed, onMounted, onUnmounted } from 'vue';
 import { useMenuStore } from './store.js';
 import { basicColors } from '../constants.js';
 import { loadControlsSettings } from '../settingsStorage.js';
+import { isSafari } from '../browserSupport.js';
 
 import SettingsMenu from './SettingsMenu.vue';
 import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
@@ -141,6 +153,7 @@ import RaceConfig from './RaceConfig.vue';
 import TruckSetup from './TruckSetup.vue';
 
 const store = useMenuStore();
+const showSafariWarning = isSafari();
 const colorOptions = Object.entries(basicColors).map(([key, value]) => ({ key, value }));
 function handleKeyDown(event) {
   if (event.code === 'Escape' && store.pitData) {

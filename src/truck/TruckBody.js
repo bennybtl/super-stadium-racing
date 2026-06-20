@@ -421,16 +421,8 @@ export class TruckBody {
 
   _meshColorFor(mesh) {
     const rawColorMap = this.vehicleDef?.meshColors ?? this.vehicleDef?.meshColorMap ?? {};
-    if (rawColorMap && typeof rawColorMap === 'object') {
-      if (rawColorMap[mesh.name] != null) {
-        return this._parseColor(rawColorMap[mesh.name]);
-      }
-      for (const key of Object.keys(rawColorMap)) {
-        if (mesh.name.includes(key)) {
-          return this._parseColor(rawColorMap[key]);
-        }
-      }
-    }
+    const value = rawColorMap?.[mesh.name];
+    if (value != null) return this._parseColor(value);
     return this.colors.body;
   }
 

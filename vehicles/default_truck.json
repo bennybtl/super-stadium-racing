@@ -5,10 +5,11 @@
   "modelFile": "truck-assembly-v2.obj",
   "defaultColor": [0.8, 0.2, 0.1],
   "meshColors": {
-    "Body5": [1.0, 1.0, 0.0],
+    "Body1": [0,0,0],
     "Body1:1": [0.7, 0.7, 0.7],
-    "Body2": [0.7, 0.7, 0.7],
-    "Body16": [0.0, 0.0, 0.0]
+    "Body5": [1, 1, 0],
+    "Body16": [0,0,0],
+    "Body2": [0.7, 0.7, 0.7]
   },
   "bodyTransform": {
     "position": [0, 0.66, 0.0],
@@ -34,12 +35,12 @@
   "params": {
     "springStrength": 150,
     "damping": 7,
-    "maxSpeed": 26,
+    "maxSpeed": 36,
     "maxReverseSpeed": -10,
-    "acceleration": 19,
+    "acceleration": 23,
     "braking": 1.5,
     "drag": 3,
-    "turnSpeed": 3.6,
+    "turnSpeed": 4.2,
     "grip": 0.12,
     "weightTransfer": 1.35,
     "stationarySpinRate": 0.6,

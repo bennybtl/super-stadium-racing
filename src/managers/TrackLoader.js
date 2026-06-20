@@ -1,27 +1,8 @@
 import { Track } from '../track.js';
-
-const TRACK_FILENAMES = [
-  'big_dukes.json',
-  'blaster.json',
-  'boulder_hill.json',
-  'cliff_hanger.json',
-  'cut_off_pass.json',
-  '0-slate-debug.json',
-  'fandango.json',
-  'huevos_grande.json',
-  'hurricane_gultch.json',
-  'leapin_lizards.json',
-  'pig_bog.json',
-  'rc_pro_1.json',
-  'rc_pro_2.json',
-  'rc_pro_3.json',
-  'redoubt_about.json',
-  'rio_trio.json',
-  'shortcut.json',
-  'sidewinder.json',
-  'volcano_valley.json',
-  'wipeout.json',
-];
+// Track filenames are scanned from public/tracks/ at build time (and re-scanned
+// on add/remove during dev) by the track-manifest Vite plugin — see
+// vite.config.js. Dropping a new .json there surfaces it without editing source.
+import TRACK_FILENAMES from 'virtual:track-manifest';
 
 /**
  * TrackLoader - Loads tracks from JSON files
@@ -69,7 +50,29 @@ export class TrackLoader {
 
     await Promise.all(loadPromises);
     this.trackList.sort((a, b) => a.localeCompare(b));
+    // Warm the browser cache with track preview images so the selection
+    // carousel shows them instantly instead of streaming in on first open.
+    this.preloadTrackImages();
     return this.tracks;
+  }
+
+  /**
+   * Kick off background fetches for every track's preview image. Fire-and-forget:
+   * the browser caches each one, so the <img> tags in the track-selection
+   * carousel render from cache rather than loading visibly when it first appears.
+   */
+  preloadTrackImages() {
+    if (typeof Image === 'undefined') return; // guard non-browser contexts
+    const base = import.meta.env.BASE_URL;
+    const seen = new Set();
+    for (const track of this.tracks.values()) {
+      const image = track?.image;
+      if (!image || seen.has(image)) continue;
+      seen.add(image);
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = `${base}tracks/${image}`;
+    }
   }
 
   /**

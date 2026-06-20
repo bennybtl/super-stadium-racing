@@ -3,6 +3,20 @@ import { Vector3 } from "@babylonjs/core";
 const UP = new Vector3(0, 1, 0);
 
 /**
+ * Number of "gears". The [0, maxSpeed] range is split into this many equal
+ * speed bands; acceleration halves each band, so higher gears pull weaker and
+ * the top gear takes the longest to climb through. Overridable per vehicle via
+ * `state.gearCount`.
+ */
+const GEAR_COUNT = 4;
+
+/**
+ * Soft speed cap: holding throttle can push past maxSpeed up to this multiple,
+ * but very slowly (one gear weaker than the top gear), before a hard ceiling.
+ */
+const SOFT_CAP_FACTOR = 1.2;
+
+/**
  * Handles input processing and acceleration/braking
  */
 export class Controls {
@@ -86,21 +100,33 @@ export class Controls {
       this.state.velocity.z += accelDir.z * accel;
     } else {
       // Apply boost multipliers if active
-      const effectiveAcceleration = this.getEffectiveAcceleration();
-      const effectiveMaxSpeed = this.getEffectiveMaxSpeed();
-      
-      const accel = effectiveAcceleration * deltaTime;
+      const baseAccel = this.getEffectiveAcceleration();
+      const maxSpeed = this.getEffectiveMaxSpeed();
+      const gearCount = Math.max(1, this.state.gearCount ?? GEAR_COUNT);
+
+      // Gear model: split [0, maxSpeed] into `gearCount` bands and halve the
+      // acceleration each band, so higher gears pull progressively weaker and
+      // the top gear takes the longest to reach.
+      const ratio = maxSpeed > 0 ? Math.max(0, forwardSpeed) / maxSpeed : 0;
+      let gear = Math.min(gearCount - 1, Math.floor(ratio * gearCount));
+      // Soft cap: once past maxSpeed, keep accelerating but one gear weaker than
+      // the top gear, crawling toward the SOFT_CAP_FACTOR × maxSpeed ceiling.
+      if (forwardSpeed >= maxSpeed) gear = gearCount;
+      const accelMult = Math.pow(0.8, gear);
+
+      const accel = baseAccel * accelMult * deltaTime;
       this.state.velocity.x += accelDir.x * accel;
       this.state.velocity.y += accelDir.y * accel;
       this.state.velocity.z += accelDir.z * accel;
-      
+
+      // Hard ceiling at the soft-cap limit (maxSpeed × SOFT_CAP_FACTOR).
+      const ceiling = maxSpeed * SOFT_CAP_FACTOR;
       const speedSq =
         this.state.velocity.x * this.state.velocity.x +
         this.state.velocity.y * this.state.velocity.y +
         this.state.velocity.z * this.state.velocity.z;
-      const maxSpeedSq = effectiveMaxSpeed * effectiveMaxSpeed;
-      if (speedSq > maxSpeedSq) {
-        const invLen = effectiveMaxSpeed / Math.sqrt(speedSq);
+      if (speedSq > ceiling * ceiling) {
+        const invLen = ceiling / Math.sqrt(speedSq);
         this.state.velocity.x *= invLen;
         this.state.velocity.y *= invLen;
         this.state.velocity.z *= invLen;

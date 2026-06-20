@@ -119,28 +119,8 @@ function getBasePlayerColor() {
 
 function colorForMesh(mesh, baseColor) {
   const rawColorMap = props.vehicle?.meshColors ?? {};
-  const meshName = String(mesh.name ?? '');
-  const meshNameLower = meshName.toLowerCase();
-  const meshNameNormalized = meshNameLower.replace(/[^a-z0-9]/g, '');
-
-  if (rawColorMap[meshName] != null) {
-    return parseColor(rawColorMap[meshName], baseColor);
-  }
-
-  for (const key of Object.keys(rawColorMap)) {
-    const keyLower = key.toLowerCase();
-    const keyNormalized = keyLower.replace(/[^a-z0-9]/g, '');
-
-    if (
-      meshNameLower.includes(keyLower)
-      || keyLower.includes(meshNameLower)
-      || (keyNormalized.length > 0 && meshNameNormalized.includes(keyNormalized))
-      || (meshNameNormalized.length > 0 && keyNormalized.includes(meshNameNormalized))
-    ) {
-      return parseColor(rawColorMap[key], baseColor);
-    }
-  }
-
+  const value = rawColorMap[String(mesh.name ?? '')];
+  if (value != null) return parseColor(value, baseColor);
   return baseColor.clone();
 }
 

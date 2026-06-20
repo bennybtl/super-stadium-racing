@@ -25,20 +25,20 @@
     "rearScale": [0.8, 0.9, 0.9]
   },
   "handling": {
-    "driftEnter": 0.7,
-    "driftMaintain": 0.55,
-    "lateralBias": 0.2,
-    "driftExit": 0.4
+    "driftEnter": 0.65,
+    "driftMaintain": 0.65,
+    "lateralBias": 0.3,
+    "driftExit": 0.6
   },
   "params": {
     "springStrength": 180,
     "damping": 10,
-    "maxSpeed": 28,
+    "maxSpeed": 38,
     "maxReverseSpeed": -10,
-    "acceleration": 15,
+    "acceleration": 20,
     "braking": 2.0,
-    "drag": 3,
-    "turnSpeed": 3.9,
+    "drag": 2.2,
+    "turnSpeed": 4.5,
     "grip": 0.15,
     "dragCoasting": 0.25,
     "weightTransfer": 1.35,
