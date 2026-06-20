@@ -3,7 +3,6 @@
   "name": "Rally Cross",
   "engineAudio": "v8",
   "modelFile": "rally_cross.obj",
-  "imageFile": "rally_cross.png",
   "defaultColor": [0.8, 0.2, 0.1],
   "meshColors": {
     "cabin_cabin": [0.0, 0.0, 0.0]

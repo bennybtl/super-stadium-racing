@@ -490,7 +490,7 @@ export const AI_SKILL_PRESETS = {
   good: {
     lookAheadDistance: 24,
     maxSpeed: 1.15,
-    steeringPrecision: 1.0,
+    steeringPrecision: 1.1,
     boostBaseChance: 0.18,
     boostBehindWeight: 0.42,
     boostStockWeight: 0.32,
@@ -500,7 +500,7 @@ export const AI_SKILL_PRESETS = {
   ok: {
     lookAheadDistance: 21,
     maxSpeed: 1.05,
-    steeringPrecision: 0.95,
+    steeringPrecision: 0.98,
     boostBaseChance: 0.16,
     boostBehindWeight: 0.38,
     boostStockWeight: 0.28,
@@ -510,7 +510,7 @@ export const AI_SKILL_PRESETS = {
   bad: {
     lookAheadDistance: 19,
     maxSpeed: 1.0,
-    steeringPrecision: 0.9,
+    steeringPrecision: 0.93,
     boostBaseChance: 0.14,
     boostBehindWeight: 0.35,
     boostStockWeight: 0.24,

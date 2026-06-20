@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "0-slate-debug",
   "packId": null,
-  "hidden": false,
+  "hidden": true,
   "name": "0 Slate Debug",
   "width": 160,
   "depth": 160,
