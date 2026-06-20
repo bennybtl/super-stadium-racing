@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "rc_pro_1",
   "packId": "onroad_pack_1",
   "hidden": false,
@@ -24,36 +25,129 @@
   },
   "features": [
     {
+      "type": "meshGrid",
+      "centerX": 0,
+      "centerZ": 0,
+      "width": 160,
+      "depth": 160,
+      "cols": 9,
+      "rows": 9,
+      "heights": [
+        3,
+        2,
+        1,
+        0,
+        0,
+        1.5,
+        3,
+        4,
+        5.5,
+        2,
+        1,
+        0.5,
+        0,
+        0,
+        0,
+        2,
+        3.5,
+        5,
+        1,
+        0.5,
+        0,
+        0,
+        0,
+        0,
+        0.5,
+        2,
+        4.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.5,
+        1.5,
+        3,
+        1.5,
+        1,
+        1,
+        0.5,
+        0,
+        0,
+        1,
+        1.5,
+        3,
+        3,
+        3.5,
+        2.5,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        2,
+        0,
+        3,
+        1.5,
+        1,
+        0,
+        0.5,
+        0.5,
+        1.5,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1.5,
+        3,
+        3
+      ],
+      "smoothing": 1
+    },
+    {
       "type": "polyWall",
       "points": [
         {
-          "x": -3,
-          "z": 15,
+          "x": -10.5,
+          "z": 8,
           "radius": 6
         },
         {
-          "x": -66,
-          "z": 14,
+          "x": -62.5,
+          "z": 14.5,
           "radius": 15
         },
         {
-          "x": -67,
-          "z": -68,
+          "x": -79.5,
+          "z": -63,
           "radius": 15.5
         },
         {
-          "x": 69.5,
-          "z": -67,
+          "x": 64.5,
+          "z": -68.5,
           "radius": 19.5
         },
         {
-          "x": 69.5,
-          "z": 56,
+          "x": 76,
+          "z": 52.5,
           "radius": 14
         },
         {
-          "x": -3,
-          "z": 57,
+          "x": 5.5,
+          "z": 63,
           "radius": 12.5
         }
       ],
@@ -71,28 +165,28 @@
           "radius": 7
         },
         {
-          "x": -47,
+          "x": -56.5,
           "z": -47,
           "radius": 7
         },
         {
-          "x": 48,
-          "z": -47,
+          "x": 45,
+          "z": -48.5,
           "radius": 5.5
         },
         {
-          "x": 49,
-          "z": 34.5,
+          "x": 53.5,
+          "z": 37,
           "radius": 7
         },
         {
-          "x": 17,
-          "z": 35,
+          "x": 20.5,
+          "z": 41.5,
           "radius": 7
         },
         {
-          "x": 17,
-          "z": -5,
+          "x": 4.5,
+          "z": -14,
           "radius": 14.5
         }
       ],
@@ -109,7 +203,7 @@
           "radius": 0
         },
         {
-          "x": 33,
+          "x": 29,
           "z": -26,
           "radius": 5.5
         },
@@ -126,27 +220,27 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -56,
+      "centerX": -60,
       "centerZ": -25,
-      "heading": 0,
+      "heading": 0.2,
       "width": 18.5,
       "checkpointNumber": 1,
       "passedBy": {}
     },
     {
       "type": "checkpoint",
-      "centerX": 6,
-      "centerZ": 17,
-      "heading": 0,
+      "centerX": 6.095277846865656,
+      "centerZ": 28.956326003903413,
+      "heading": 0.2,
       "width": 18.5,
       "checkpointNumber": 2,
       "passedBy": {}
     },
     {
       "type": "checkpoint",
-      "centerX": 59,
-      "centerZ": 16,
-      "heading": -3.141592653589793,
+      "centerX": 57.19981237941486,
+      "centerZ": -30.516280127405807,
+      "heading": -3.0415926535897935,
       "width": 18.5,
       "checkpointNumber": 3,
       "passedBy": {}
@@ -239,11 +333,11 @@
           "z": -57.82707728053982
         },
         {
-          "x": -47.62389867664764,
+          "x": -53.12389867664764,
           "z": -47.34275093877878
         },
         {
-          "x": -57.39016689779843,
+          "x": -58.89016689779843,
           "z": -23.75684739815938
         },
         {
@@ -251,20 +345,20 @@
           "z": -2.6870104207870966
         },
         {
-          "x": -2.490000000000002,
-          "z": 7.4399999999999995
+          "x": -3.990000000000002,
+          "z": 0.9399999999999995
         },
         {
           "x": 14.07593648937641,
-          "z": 34.688885141303075
+          "z": 37.188885141303075
         },
         {
           "x": 33.36093848039754,
-          "z": 41.67032605791383
+          "z": 44.67032605791383
         },
         {
-          "x": 53.42879024876165,
-          "z": 34.97768678032048
+          "x": 55.42879024876165,
+          "z": 37.97768678032048
         },
         {
           "x": 62.72,
@@ -290,7 +384,7 @@
       "zoneType": "pickupSpawn",
       "shape": "circle",
       "x": 5.560351732640609,
-      "z": 7.247954762896832,
+      "z": 4.747954762896832,
       "width": 30,
       "depth": 30,
       "rotation": 0,
@@ -311,8 +405,8 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "circle",
-      "x": 51.56035173264061,
-      "z": -51.75204523710317,
+      "x": 48.82005833840447,
+      "z": -51.83084571834541,
       "width": 30,
       "depth": 30,
       "rotation": 0,
@@ -330,99 +424,6 @@
       "radius": 15
     },
     {
-      "type": "meshGrid",
-      "centerX": 0,
-      "centerZ": 0,
-      "width": 160,
-      "depth": 160,
-      "cols": 9,
-      "rows": 9,
-      "heights": [
-        3,
-        2,
-        1,
-        0,
-        0,
-        0,
-        0,
-        0,
-        3,
-        2,
-        1,
-        0.5,
-        0,
-        0,
-        0,
-        0,
-        1,
-        3,
-        1,
-        0.5,
-        0,
-        0,
-        0,
-        0,
-        0.5,
-        1.5,
-        3,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.5,
-        1.5,
-        3,
-        1.5,
-        1,
-        1,
-        0.5,
-        0,
-        0,
-        1,
-        1.5,
-        3,
-        3,
-        3.5,
-        2.5,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        2,
-        0,
-        3,
-        1.5,
-        1,
-        0,
-        0.5,
-        0.5,
-        1.5,
-        3,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        3,
-        3,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1,
-        1.5,
-        3,
-        3
-      ],
-      "smoothing": 1
-    },
-    {
       "type": "polyHill",
       "points": [
         {
@@ -431,7 +432,7 @@
           "radius": 0
         },
         {
-          "x": 32.91683761920907,
+          "x": 28.41683761920907,
           "z": -25.64069598499016,
           "radius": 0
         },
@@ -449,7 +450,7 @@
     {
       "type": "trackSign",
       "x": -5.4270016279762885,
-      "z": -31.004963731739274,
+      "z": -33.504963731739274,
       "name": "Pro-Am 01",
       "rotation": 0,
       "contentType": "text",
@@ -457,12 +458,13 @@
       "background": "black",
       "scale": 1.65,
       "heightOffset": 2.3,
-      "width": 11.5
+      "width": 11.5,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
-      "x": 17.422833499332977,
-      "z": -29.712219670808288,
+      "x": 17.922833499332977,
+      "z": -30.212219670808288,
       "name": "Pro-Am 01",
       "rotation": -0.08726646259971647,
       "contentType": "brand",
@@ -470,33 +472,36 @@
       "background": "black",
       "scale": 1.65,
       "heightOffset": 1.3,
-      "width": 11.5
+      "width": 11.5,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
-      "x": 10.97936995225762,
-      "z": 60.26346029571634,
+      "x": 26.103569833665098,
+      "z": 64.15193069315916,
       "name": "Pro-Am 01",
-      "rotation": -0.03490658503988659,
+      "rotation": 0.08726646259971647,
       "contentType": "brand",
       "brandImage": "ultra-grip.png",
       "background": "yellow",
       "scale": 1.65,
       "heightOffset": 1.3,
-      "width": 11.5
+      "width": 11.5,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
-      "x": 57.47936995225762,
-      "z": 59.76346029571634,
+      "x": 59.75016421109996,
+      "z": 58.88730691406035,
       "name": "Pro-Am 01",
-      "rotation": -0.03490658503988659,
+      "rotation": 0.10471975511965978,
       "contentType": "brand",
       "brandImage": "ultra-grip.png",
       "background": "yellow",
       "scale": 1.65,
       "heightOffset": 1.3,
-      "width": 11.5
+      "width": 11.5,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
@@ -509,7 +514,8 @@
       "background": "red",
       "scale": 1.6,
       "heightOffset": 1.3,
-      "width": 15
+      "width": 15,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
@@ -522,30 +528,28 @@
       "background": "black",
       "scale": 1.65,
       "heightOffset": 1.3,
-      "width": 11.5
+      "width": 11.5,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
-      "x": -24.19289347042787,
-      "z": 23.250509353830807,
+      "x": -23.127360186832107,
+      "z": 27.433268889003017,
       "name": "Pro-Am 01",
-      "rotation": -0.03490658503988659,
+      "rotation": 6.073745796940266,
       "contentType": "brand",
       "brandImage": "power-lube.png",
       "background": "white",
       "scale": 1.6,
       "heightOffset": 1.3,
-      "width": 15
+      "width": 15,
+      "primaryColor": "red"
     },
     {
       "type": "terrainPath",
       "points": [
         {
-          "x": 13.37,
-          "z": -56.97
-        },
-        {
-          "x": -55.522789503209616,
+          "x": -66.52278950320962,
           "z": -56.55106454169758
         },
         {
@@ -553,34 +557,31 @@
           "z": 3
         },
         {
-          "x": 8,
-          "z": 6
+          "x": -4,
+          "z": -2.5
         },
         {
-          "x": 7,
-          "z": 46
+          "x": 14,
+          "z": 53.5
         },
         {
-          "x": 60,
+          "x": 65.5,
           "z": 45
         },
         {
-          "x": 58,
-          "z": -55
-        },
-        {
-          "x": 16,
-          "z": -57
+          "x": 53.5,
+          "z": -59.5
         }
       ],
       "width": 19,
       "cornerRadius": 5,
-      "terrainType": "asphalt"
+      "terrainType": "asphalt",
+      "closed": true
     },
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": 43.85890553005542,
+      "centerX": 40.85890553005542,
       "centerZ": -43.814392179241274,
       "terrainType": "mud",
       "width": 14,
@@ -600,8 +601,8 @@
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": -40.72449112023102,
-      "centerZ": -7.895061959104437,
+      "centerX": -41.22449112023102,
+      "centerZ": -8.895061959104437,
       "terrainType": "mud",
       "width": 15.5,
       "depth": 8.5,
@@ -620,8 +621,8 @@
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": -43.36495179304258,
-      "centerZ": -43.630054050140004,
+      "centerX": -50.36495179304258,
+      "centerZ": -43.130054050140004,
       "terrainType": "mud",
       "width": 11.5,
       "depth": 7.5,
@@ -634,6 +635,106 @@
       "heading": 1.5533430342749532,
       "width": 24,
       "poleHeight": 8
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -43.15230271919462,
+      "z": -42.60973127794878,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -48.54528043240003,
+      "z": -36.18015762684518,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 21.07499337881183,
+      "z": -46.360275449472745,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 44.736711801118545,
+      "z": -20.23855925468854,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 47.78523027527841,
+      "z": 24.43370649735192,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 40.4921724327144,
+      "z": 32.28212008850963,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 28.24713867180351,
+      "z": 33.33956005475049,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 19.9017526420648,
+      "z": 27.464276277454445,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -34.52790915814333,
+      "z": -10.635725562451952,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -42.76095008561501,
+      "z": -14.964244374995488,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
     }
   ]
 }

@@ -4,7 +4,7 @@
   "packId": "offroad_pack_2",
   "hidden": false,
   "name": "Leapin' Lizards",
-  "image": "leapin_lizards.jpg",
+  "image": "leapin_lizards.png",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -252,7 +252,7 @@
           "radius": 7
         },
         {
-          "x": 53,
+          "x": 53.5,
           "z": -78,
           "radius": 9.5
         },
@@ -381,71 +381,9 @@
       "checkpointNumber": 1
     },
     {
-      "type": "polyWall",
-      "points": [
-        {
-          "x": -7,
-          "z": -77,
-          "radius": 0
-        },
-        {
-          "x": -2,
-          "z": -75,
-          "radius": 0
-        },
-        {
-          "x": 12,
-          "z": -75,
-          "radius": 0
-        },
-        {
-          "x": 17,
-          "z": -77,
-          "radius": 0
-        }
-      ],
-      "height": 2,
-      "collisionHeight": 2,
-      "thickness": 0.5,
-      "friction": 0.05,
-      "closed": false,
-      "style": "grey"
-    },
-    {
-      "type": "polyWall",
-      "points": [
-        {
-          "x": -8,
-          "z": -52,
-          "radius": 0
-        },
-        {
-          "x": -3,
-          "z": -55,
-          "radius": 0
-        },
-        {
-          "x": 12,
-          "z": -54,
-          "radius": 0
-        },
-        {
-          "x": 17,
-          "z": -51,
-          "radius": 0
-        }
-      ],
-      "height": 2,
-      "collisionHeight": 2,
-      "thickness": 0.5,
-      "friction": 0.05,
-      "closed": false,
-      "style": "grey"
-    },
-    {
       "type": "flag",
       "x": -17,
-      "z": -50,
+      "z": -49.5,
       "color": "red"
     },
     {
@@ -634,6 +572,298 @@
       "heading": -1.5707963267948966,
       "width": 18,
       "checkpointNumber": 3
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": -10.075600216912717,
+          "z": -53.022937432457525,
+          "radius": 10
+        },
+        {
+          "x": 4.848394730370738,
+          "z": -53.85787285777418,
+          "radius": 10
+        },
+        {
+          "x": 18.655551585006197,
+          "z": -50.93550105826025,
+          "radius": 10
+        }
+      ],
+      "height": 4.8,
+      "width": 5,
+      "terrainType": null,
+      "closed": false,
+      "filled": false
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": -7.938472574370042,
+          "z": -77.68868027466844,
+          "radius": 10
+        },
+        {
+          "x": 4.976207349447989,
+          "z": -76.45419428214917,
+          "radius": 10
+        },
+        {
+          "x": 18.154482921250292,
+          "z": -77.11341822322531,
+          "radius": 10
+        }
+      ],
+      "height": 4.8,
+      "width": 5,
+      "terrainType": null,
+      "closed": false,
+      "filled": false
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -35.816050823140316,
+      "z": -59.16048709428718,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "polygon",
+      "x": 55.07565723915812,
+      "z": 63.923473623070635,
+      "radius": 15,
+      "points": [
+        {
+          "x": 71.36533095435922,
+          "z": 37.69676258679228
+        },
+        {
+          "x": 74.46430644747753,
+          "z": 61.303480304070995
+        },
+        {
+          "x": 52.63025808867957,
+          "z": 77.67547762885634
+        },
+        {
+          "x": 21.84273346611616,
+          "z": 79.01817397256293
+        }
+      ]
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 40.34993406222571,
+      "z": -45.44970495238258,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -47.508365167037674,
+      "z": 31.49782071433625,
+      "width": 30,
+      "depth": 30,
+      "rotation": 0,
+      "radius": 15
+    },
+    {
+      "type": "aiPath",
+      "points": [
+        {
+          "x": -1.28,
+          "z": -62.66
+        },
+        {
+          "x": -19.420823213819,
+          "z": -65.40669959593421
+        },
+        {
+          "x": -34.634858782795526,
+          "z": -53.952333830972414
+        },
+        {
+          "x": -29.08,
+          "z": -38.85
+        },
+        {
+          "x": 4.49,
+          "z": 12.75
+        },
+        {
+          "x": 25.02,
+          "z": 29
+        },
+        {
+          "x": 42.11,
+          "z": 49.43
+        },
+        {
+          "x": 32.21,
+          "z": 70.04
+        },
+        {
+          "x": -19.27,
+          "z": 70.7
+        },
+        {
+          "x": -38.06,
+          "z": 58.36
+        },
+        {
+          "x": -36.14,
+          "z": 33.81
+        },
+        {
+          "x": 23.05,
+          "z": -6.01
+        },
+        {
+          "x": 39.33725983989444,
+          "z": -19.23972775107036
+        },
+        {
+          "x": 41.69,
+          "z": -46.29
+        },
+        {
+          "x": 31.497841029660034,
+          "z": -66.18838711346619
+        }
+      ],
+      "branches": [
+        {
+          "id": "branch_1",
+          "fromMainIndex": 12,
+          "toMainIndex": 14,
+          "weight": 1,
+          "points": [
+            {
+              "x": 38.30707503532278,
+              "z": -16.1413598812112
+            },
+            {
+              "x": 66.40586161129704,
+              "z": -26.915703790775225
+            },
+            {
+              "x": 62.62019145807676,
+              "z": -58.4996095270548
+            },
+            {
+              "x": 29.497841029660034,
+              "z": -69.18838711346619
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "trackSign",
+      "x": 56.48187777318313,
+      "z": 16.942631131616352,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 1.7,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -50.19906492281366,
+      "z": -3.611606586992103,
+      "name": "Track Name",
+      "rotation": 0.4188790204786391,
+      "contentType": "brand",
+      "brandImage": "turbo-king.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 1.7,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -0.7799966960626206,
+      "z": 44.31849447727049,
+      "name": "Track Name",
+      "rotation": -0.15707963267948966,
+      "contentType": "brand",
+      "brandImage": "phoenix-auto.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 1.1,
+      "width": 10
+    },
+    {
+      "type": "hill",
+      "centerX": -14.434981940591754,
+      "centerZ": -49.38584329263994,
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0,
+      "height": 2,
+      "waterLevelOffset": 0,
+      "terrainType": null
+    },
+    {
+      "type": "hill",
+      "centerX": -43.688542449908404,
+      "centerZ": -54.89329504779712,
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0,
+      "height": -3.5,
+      "waterLevelOffset": 1.5,
+      "terrainType": null
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "speedBoost",
+      "shape": "polygon",
+      "x": -19.010790702569263,
+      "z": -27.922030142990984,
+      "radius": 15,
+      "boostStrength": 1.8,
+      "boostDuration": 1.5,
+      "points": [
+        {
+          "x": -39.32692197131591,
+          "z": -29.88536768534174
+        },
+        {
+          "x": -15.442980631422005,
+          "z": -44.32986445330047
+        },
+        {
+          "x": 0.04690669878965184,
+          "z": -26.955871332725668
+        },
+        {
+          "x": -21.320166906328794,
+          "z": -10.517017100596053
+        }
+      ]
     }
   ]
 }

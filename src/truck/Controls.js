@@ -43,7 +43,7 @@ export class Controls {
 
     // Boost is treated as its own propulsion source: if active, keep driving
     // forward even when throttle is released (unless player/AI is braking).
-    const boostProvidesThrottle = this.state.boostActive && !input.back;
+    const boostProvidesThrottle = (this.state.boostActive || this.state.speedBoostActive) && !input.back;
 
     if (input.forward || boostProvidesThrottle) {
       this.brakingToStop = false; // Clear if accelerating forward
@@ -165,14 +165,29 @@ export class Controls {
         this.state.boostTimer = 0;
       }
     }
+    // Speed-boost zones arm a separate, timed boost that lingers after the truck
+    // leaves the zone. While inside, the game loop re-arms speedBoostTimer.
+    if (this.state.speedBoostActive) {
+      this.state.speedBoostTimer -= deltaTime;
+      if (this.state.speedBoostTimer <= 0) {
+        this.state.speedBoostActive = false;
+        this.state.speedBoostTimer = 0;
+        this.state.speedBoostSpeedMult = 1;
+        this.state.speedBoostAccelMult = 1;
+      }
+    }
   }
 
   getEffectiveAcceleration() {
-    return this.state.acceleration * (this.state.boostActive ? this.state.boostAccelMult : 1.0);
+    const nitro = this.state.boostActive ? this.state.boostAccelMult : 1.0;
+    const zone  = this.state.speedBoostActive ? this.state.speedBoostAccelMult : 1.0;
+    return this.state.acceleration * nitro * zone;
   }
 
   getEffectiveMaxSpeed() {
-    const base = this.state.maxSpeed * (this.state.boostActive ? this.state.boostSpeedMult : 1.0);
+    const nitro = this.state.boostActive ? this.state.boostSpeedMult : 1.0;
+    const zone  = this.state.speedBoostActive ? this.state.speedBoostSpeedMult : 1.0;
+    const base = this.state.maxSpeed * nitro * zone;
     // Inside a slow zone the truck cannot accelerate past the zone limit
     if (this.state.slowZoneActive) {
       return Math.min(base, this.state.slowZoneMaxSpeed);

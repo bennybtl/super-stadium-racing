@@ -109,6 +109,7 @@ export class PracticeMode extends DriveMode {
     // Pre-filter 'slowZone' action zones for per-frame position checks
     const slowZones = this.getSlowZones(currentTrack);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
+    const speedBoostZones = this.getSpeedBoostZones(currentTrack);
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
@@ -148,6 +149,7 @@ export class PracticeMode extends DriveMode {
       );
 
       frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
+      frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
 
       const oobRemaining = frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
         truckId: 'player',

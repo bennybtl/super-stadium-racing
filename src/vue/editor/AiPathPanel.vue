@@ -60,7 +60,6 @@
         </option>
       </select>
 
-      <template v-show="editor.aiPathBranch.activeBranchId">
         <div class="flex justify-between mb-1 text-[12px]" :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'">
           <span>Branch Weight</span>
           <span>{{ editor.aiPathBranch.activeBranchWeight.toFixed(2) }}</span>
@@ -89,7 +88,6 @@
             {{ idx - 1 }}
           </option>
         </select>
-      </template>
 
       <div class="flex gap-2">
         <button

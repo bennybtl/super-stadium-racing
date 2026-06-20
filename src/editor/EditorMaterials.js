@@ -404,4 +404,29 @@ export class EditorMaterials {
       diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
     }));
   }
+
+  // ── Action Zone — Speed Boost ───────────────────────────────────────────
+
+  /** Translucent green cylinder. */
+  get speedBoostZoneCyl() {
+    return this._get('speedBoostZoneCyl', s => makeMat('edSpeedBoostZoneCyl', s, {
+      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive,
+      alpha: 0.28, backFaceCulling: false,
+    }));
+  }
+
+  /** Translucent bright-green cylinder (selected). */
+  get speedBoostZoneCylHighlight() {
+    return this._get('speedBoostZoneCylHL', s => makeMat('edSpeedBoostZoneCylHL', s, {
+      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive,
+      alpha: 0.5, backFaceCulling: false,
+    }));
+  }
+
+  /** Green handle sphere. */
+  get speedBoostZoneHandle() {
+    return this._get('speedBoostZoneHandle', s => makeMat('edSpeedBoostZoneHandle', s, {
+      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive,
+    }));
+  }
 }

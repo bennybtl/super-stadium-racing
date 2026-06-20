@@ -95,6 +95,7 @@ export class TruckBody {
     this._tmpInvMatrix    = new Matrix();
 
     this._steerAngle = 0;  // current front-wheel steer angle (radians)
+    this._wheelSpin  = 0;  // accumulated wheel-roll angle (radians)
     this._contactShadow = null;
     this._contactShadowMat = null;
     this._contactShadowTex = null;
@@ -379,6 +380,15 @@ export class TruckBody {
     let targetSteer = input.left ? -maxSteer : input.right ? maxSteer : 0;
     this._steerAngle += (targetSteer - this._steerAngle) * Math.min(1, dt * 8);
 
+    // Wheel roll: angular velocity = forward ground speed / radius (rolling
+    // without slip), so the spin stays synced with the truck's engine-driven
+    // speed and reverses when reversing. The forward velocity *component* is
+    // used so a sideways slide doesn't spin the wheels.
+    const h = state.heading ?? 0;
+    const fwdSpeed = state.velocity.x * Math.sin(h) + state.velocity.z * Math.cos(h);
+    const radius = this._wheelRadius || 0.36;
+    this._wheelSpin = (this._wheelSpin + (fwdSpeed / radius) * dt) % (Math.PI * 2);
+
     for (let i = 0; i < this._wheels.length; i++) {
       const w = this._wheels[i];
       if (!w.mesh) continue;
@@ -387,6 +397,9 @@ export class TruckBody {
       const susTravel = state.suspensionCompression * 0.14;
       const baseY = sampledWheelBaseY?.[i] ?? (w.baseLocalY - this._wheelMaxDrop);
       w.mesh.position.y = baseY + susTravel;
+
+      // Roll all wheels around their axle (local X).
+      w.mesh.rotation.x = this._wheelSpin;
 
       // Steer front wheels around local Y
       if (w.isFront) {

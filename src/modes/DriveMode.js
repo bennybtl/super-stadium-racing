@@ -133,6 +133,13 @@ export class DriveMode extends BaseMode {
     );
   }
 
+  /** Resolve all speed-boost action zones from track features. */
+  getSpeedBoostZones(track) {
+    return track.features.filter(
+      f => f.type === "actionZone" && f.zoneType === "speedBoost"
+    );
+  }
+
   _isPointInPolygon(x, z, points) {
     if (!points || points.length < 3) return false;
     let inside = false;
@@ -185,6 +192,33 @@ export class DriveMode extends BaseMode {
       if (truck.state.velocity.length() > limit) {
         truck.state.velocity.normalize().scaleInPlace(limit);
       }
+    }
+  }
+
+  /**
+   * Arm a timed speed boost on any truck inside a speed-boost zone. The boost
+   * re-arms each frame while inside, then lingers for `boostDuration` seconds
+   * after the truck leaves (a boost-pad feel). Strength scales top speed and
+   * acceleration. `trucks` accepts Truck instances or truckData with `.truck`.
+   */
+  applySpeedBoostZones(trucks, boostZones) {
+    if (!boostZones || boostZones.length === 0) return;
+
+    for (const truckOrData of trucks) {
+      const truck = truckOrData?.truck ?? truckOrData;
+      if (!truck?.mesh || !truck?.state) continue;
+
+      const pos = truck.mesh.position;
+      const zone = boostZones.find(z => this.isPointInActionZone(pos.x, pos.z, z));
+      if (!zone) continue;
+
+      const strength = Math.max(1, zone.boostStrength ?? 1.5);
+      truck.state.speedBoostActive = true;
+      truck.state.speedBoostTimer = Math.max(0.05, zone.boostDuration ?? 1.5);
+      truck.state.speedBoostSpeedMult = strength;
+      // Acceleration gets a slightly punchier multiplier so the truck actually
+      // reaches the raised top speed within the boost window.
+      truck.state.speedBoostAccelMult = 1 + (strength - 1) * 1.5;
     }
   }
 

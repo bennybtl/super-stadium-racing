@@ -724,8 +724,10 @@ export class Track {
         loaded.shape = 'circle';
       }
 
-      // Backwards compat for shapes using 'radius' instead of width/depth
-      if (loaded.shape === 'circle' && loaded.radius !== undefined) {
+      // Backwards compat for terrain shapes using 'radius' instead of width/depth.
+      // Action zones legitimately use 'radius' as their circular size, so they
+      // are excluded — otherwise their radius would be stripped on load.
+      if (loaded.type !== 'actionZone' && loaded.shape === 'circle' && loaded.radius !== undefined) {
         loaded.width = loaded.radius * 2;
         loaded.depth = loaded.radius * 2;
         loaded.rotation = 0;

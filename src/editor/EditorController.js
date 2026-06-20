@@ -1171,8 +1171,12 @@ export class EditorController {
         // Poly wall control points
         if (this.polyWallEditor?.onPointerDown(clickedMesh)) return;
 
-        // Poly hill control points
-        if (this.polyHillEditor?.onPointerDown(clickedMesh)) return;
+        // Poly hill control points. Dedicated pick limited to the hill's own
+        // spheres so the pickable ground mesh can't occlude the handles.
+        if (this.polyHillEditor) {
+          const phSphere = this.polyHillEditor.pickControlPoint();
+          if (this.polyHillEditor.onPointerDown(phSphere ?? clickedMesh)) return;
+        }
 
         // Bezier wall control points
         if (this.bezierWallEditor?.onPointerDown(clickedMesh)) return;
@@ -1610,6 +1614,8 @@ export class EditorController {
   changeActionZoneRadius(val)     { this.actionZoneEditor.changeRadius(val); }
   changeActionZoneType(val)       { this.actionZoneEditor.changeZoneType(val); }
   changeActionZoneShape(val)      { this.actionZoneEditor.changeShape(val); }
+  changeActionZoneBoostStrength(val) { this.actionZoneEditor.changeBoostStrength(val); }
+  changeActionZoneBoostDuration(val) { this.actionZoneEditor.changeBoostDuration(val); }
   insertActionZonePoint()         { this.actionZoneEditor.insertPoint(); }
   deleteActionZonePoint()         { this.actionZoneEditor.deletePoint(); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }

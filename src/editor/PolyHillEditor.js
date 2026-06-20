@@ -124,7 +124,7 @@ export class PolyHillEditor {
 
   _createPointSphere(feature, idx) {
     const pt = feature.points[idx];
-    const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET;
+    const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET;
     const mesh = MeshBuilder.CreateSphere(`phPt_${idx}_${Date.now()}`, {
       diameter: 1.4,
       segments: 6,
@@ -141,7 +141,7 @@ export class PolyHillEditor {
 
     // Draw the polyline
     const ctrlPts = hg.feature.points.map(pt => {
-      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET;
+      const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET;
       return new Vector3(pt.x, y, pt.z);
     });
 
@@ -193,7 +193,7 @@ export class PolyHillEditor {
     for (let i = 0; i < pointMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET;
+      const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET;
       pointMeshes[i].position.set(pt.x, y, pt.z);
     }
     if (rebuildLines) {
@@ -280,6 +280,23 @@ export class PolyHillEditor {
   }
 
   // ─── Pointer events (called from EditorController) ────────────────────────
+
+  /**
+   * Pick the control-point sphere under the cursor, considering only this
+   * tool's own spheres. The ground mesh is pickable and the spheres sit on the
+   * terrain surface, so a normal closest-hit pick often returns the ground
+   * instead of a half-buried sphere — restricting the pick to the handles makes
+   * them reliably clickable. Returns the sphere mesh or null.
+   */
+  pickControlPoint() {
+    if (!this.scene) return null;
+    const pick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (m) => m.isPickable && typeof m.name === 'string' && m.name.startsWith('phPt_'),
+    );
+    return pick?.hit ? pick.pickedMesh : null;
+  }
 
   onPointerDown(mesh) {
     if (!mesh || !mesh.name) return false;

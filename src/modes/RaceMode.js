@@ -428,6 +428,17 @@ export class RaceMode extends DriveMode {
         truckData.hasStarted = false;
       });
 
+      // Reset AI navigation + recovery state to match a freshly-built driver.
+      // Without this the stuck-recovery and checkpoint-guidance watchers keep
+      // stale state across the reset (a pending stuck-flag or gate-miss), and
+      // fire a respawn the moment the countdown ends — teleporting AI trucks
+      // off the grid back onto the track instead of starting them on the line.
+      aiDrivers.forEach(d => {
+        d.reset();
+        d.currentCheckpointTarget = 0;
+        d.lastCheckpointPassed = 0;
+      });
+
       checkpointManager.rebuild();
       checkpointManager.updatePlayerCheckpointHighlight(playerTruckData.gameState.lastCheckpointPassed);
       wallManager.rebuild();
@@ -460,6 +471,7 @@ export class RaceMode extends DriveMode {
     // Pre-filter 'slowZone' action zones for per-frame position checks
     const slowZones = this.getSlowZones(currentTrack);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
+    const speedBoostZones = this.getSpeedBoostZones(currentTrack);
     const truckStatusUiIntervalMs = 200;
     const aiGripSampleIntervalMs = 100;
     let truckStatusUiElapsedMs = 0;
@@ -532,6 +544,7 @@ export class RaceMode extends DriveMode {
       frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
 
       frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
+      frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
 
       frameProfiler.measure('zones.oob', () => trucks.forEach((truckData) => {
         const oobRemaining = this.updateOutOfBoundsCountdown({

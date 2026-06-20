@@ -43,6 +43,9 @@ export class ActionZoneEditor {
     this.oobCylMat           = null; // outOfBounds
     this.oobCylMatHighlight  = null;
     this.oobHandleMat        = null;
+    this.boostCylMat           = null; // speedBoost
+    this.boostCylMatHighlight  = null;
+    this.boostHandleMat        = null;
 
     this._polyLineColor = {
       pickupSpawn: {
@@ -56,6 +59,10 @@ export class ActionZoneEditor {
       outOfBounds: {
         normal: new Color3(0.95, 0.2, 0.2),
         highlight: new Color3(1.0, 0.45, 0.45),
+      },
+      speedBoost: {
+        normal: new Color3(0.4, 0.9, 0.3),
+        highlight: new Color3(0.6, 1.0, 0.45),
       },
     };
   }
@@ -82,6 +89,9 @@ export class ActionZoneEditor {
     this.oobCylMat           = m.outOfBoundsZoneCyl;
     this.oobCylMatHighlight  = m.outOfBoundsZoneCylHighlight;
     this.oobHandleMat        = m.outOfBoundsZoneHandle;
+    this.boostCylMat           = m.speedBoostZoneCyl;
+    this.boostCylMatHighlight  = m.speedBoostZoneCylHighlight;
+    this.boostHandleMat        = m.speedBoostZoneHandle;
   }
 
   /** Returns the { cyl, highlight, handle } material set for a given zone type. */
@@ -91,6 +101,9 @@ export class ActionZoneEditor {
     }
     if (zoneType === 'slowZone') {
       return { cyl: this.slowCylMat, highlight: this.slowCylMatHighlight, handle: this.slowHandleMat };
+    }
+    if (zoneType === 'speedBoost') {
+      return { cyl: this.boostCylMat, highlight: this.boostCylMatHighlight, handle: this.boostHandleMat };
     }
     // Default: pickupSpawn (pink)
     return { cyl: this.cylMat, highlight: this.cylMatHighlight, handle: this.handleMat };
@@ -151,6 +164,12 @@ export class ActionZoneEditor {
   _normaliseFeature(feature) {
     if (feature.shape !== 'polygon' && feature.shape !== 'circle') {
       feature.shape = 'circle';
+    }
+
+    // Speed-boost zones carry a configurable strength + linger duration.
+    if (feature.zoneType === 'speedBoost') {
+      feature.boostStrength = feature.boostStrength ?? 1.5;
+      feature.boostDuration = feature.boostDuration ?? 1.5;
     }
 
     if (feature.shape === 'polygon') {
@@ -543,6 +562,8 @@ export class ActionZoneEditor {
     s.actionZone.radius = zoneData.feature.radius ?? 15;
     s.actionZone.pointCount = zoneData.feature.shape === 'polygon' ? (zoneData.feature.points?.length ?? 0) : 0;
     s.actionZone.selectedPointIndex = zoneData.feature.shape === 'polygon' ? this._selectedPointIndex : -1;
+    s.actionZone.boostStrength = zoneData.feature.boostStrength ?? 1.5;
+    s.actionZone.boostDuration = zoneData.feature.boostDuration ?? 1.5;
     s.selectedType = 'actionZone';
   }
 
@@ -563,9 +584,24 @@ export class ActionZoneEditor {
   changeZoneType(val) {
     if (!this._selected) return;
     this._selected.feature.zoneType = val;
+    this._normaliseFeature(this._selected.feature); // seed type-specific defaults
     this._applyZoneVisualState(this._selected, true);
     this._showProperties(this._selected);
     this.editor.saveSnapshot();
+  }
+
+  changeBoostStrength(val) {
+    if (!this._selected) return;
+    this._selected.feature.boostStrength = val;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
+  }
+
+  changeBoostDuration(val) {
+    if (!this._selected) return;
+    this._selected.feature.boostDuration = val;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
   }
 
   changeShape(val) {

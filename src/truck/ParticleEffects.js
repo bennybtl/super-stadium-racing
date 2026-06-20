@@ -389,8 +389,10 @@ export class ParticleEffects {
     }
     this._wasInDeepWater = inDeepWater;
 
-    // Nitro burst: fire a cloud of white smoke the moment boost activates
-    const boostJustStarted = effectiveScale > 0.05 && state.boostActive && !this._wasBoostActive;
+    // Nitro burst: fire a cloud of white smoke the moment a boost activates
+    // (nitro or a speed-boost zone).
+    const boosting = state.boostActive || state.speedBoostActive;
+    const boostJustStarted = effectiveScale > 0.05 && boosting && !this._wasBoostActive;
     if (boostJustStarted) {
       this._fireNitroBurst(state.heading);
     }
@@ -400,6 +402,6 @@ export class ParticleEffects {
         this.nitroParticles.emitRate = 0;
       }
     }
-    this._wasBoostActive = state.boostActive;
+    this._wasBoostActive = boosting;
   }
 }

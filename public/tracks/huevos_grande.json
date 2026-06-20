@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "huevos_grande",
   "packId": "offroad_pack_1",
   "hidden": false,
@@ -320,7 +321,8 @@
       "terrainType": "mud",
       "radiusX": 10,
       "radiusZ": 10,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 2.5
     },
     {
       "type": "trackSign",
@@ -596,7 +598,8 @@
       "terrainType": "mud",
       "radiusX": 10,
       "radiusZ": 10,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 2.5
     },
     {
       "type": "bannerString",
@@ -865,6 +868,38 @@
       "height": -5,
       "transition": 4,
       "terrainType": "water"
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -61.163257957676784,
+      "z": -48.51125012544629,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 62.39173756222751,
+      "z": -9.284691074497172,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 60.678727216563786,
+      "z": 60.83016289521086,
+      "radius": 9
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -22.690021703409705,
+      "z": 0.9595821222842318,
+      "radius": 14.5
     }
   ]
 }

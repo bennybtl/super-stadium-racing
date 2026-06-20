@@ -245,6 +245,13 @@ export class Truck {
       slowZoneActive: false,
       slowZoneMaxSpeed: 5,
 
+      // Speed-boost zone — armed each frame by the game loop while inside a
+      // 'speedBoost' action zone, then lingers for speedBoostTimer seconds.
+      speedBoostActive: false,
+      speedBoostTimer: 0,
+      speedBoostSpeedMult: 1,
+      speedBoostAccelMult: 1,
+
       // suspend driving
       noDriveUntil: false
     };
@@ -530,6 +537,8 @@ export class Truck {
     this.state.suspensionVelocity = 0;
     this.state.boostActive = false;
     this.state.boostTimer = 0;
+    this.state.speedBoostActive = false;
+    this.state.speedBoostTimer = 0;
     const body = this.physics?.body;
     if (body) {
       body.setLinearVelocity(Vector3.Zero());

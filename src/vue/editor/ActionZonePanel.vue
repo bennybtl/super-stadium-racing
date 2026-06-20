@@ -13,8 +13,36 @@
     >
       <option value="pickupSpawn">Pickup Spawn</option>
       <option value="slowZone">Slow Zone</option>
+      <option value="speedBoost">Speed Boost</option>
       <option value="outOfBounds">Out of Bounds</option>
     </select>
+
+    <!-- Speed boost controls -->
+    <template v-if="editor.actionZone.zoneType === 'speedBoost'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Boost Strength</span>
+        <span>{{ editor.actionZone.boostStrength.toFixed(2) }}×</span>
+      </div>
+      <input
+        type="range"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        min="1.1" max="2.5" step="0.05"
+        :value="editor.actionZone.boostStrength"
+        @input="editor.setActionZoneBoostStrength(+$event.target.value)"
+      />
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Boost Duration</span>
+        <span>{{ editor.actionZone.boostDuration.toFixed(1) }}s</span>
+      </div>
+      <input
+        type="range"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        min="0.2" max="4" step="0.1"
+        :value="editor.actionZone.boostDuration"
+        @input="editor.setActionZoneBoostDuration(+$event.target.value)"
+      />
+      <div class="text-[10px] text-slate-400 mb-3">Multiplies top speed &amp; acceleration. Duration is how long the boost lingers after leaving the zone.</div>
+    </template>
 
     <!-- Zone shape -->
     <div class="text-[12px] mb-1">Shape</div>

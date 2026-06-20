@@ -435,6 +435,8 @@ export const useEditorStore = defineStore('editor', () => {
     radius: 15,
     pointCount: 0,
     selectedPointIndex: -1,
+    boostStrength: 1.5,
+    boostDuration: 1.5,
   });
 
   // ── Poly Curb panel ──
@@ -725,6 +727,8 @@ export const useEditorStore = defineStore('editor', () => {
   function setActionZoneRadius(val)   { actionZone.radius   = val; _bridge.value?.changeActionZoneRadius(val); }
   function setActionZoneType(val)     { actionZone.zoneType = val; _bridge.value?.changeActionZoneType(val); }
   function setActionZoneShape(val)    { actionZone.shape    = val; _bridge.value?.changeActionZoneShape(val); }
+  function setActionZoneBoostStrength(val) { actionZone.boostStrength = val; _bridge.value?.changeActionZoneBoostStrength(val); }
+  function setActionZoneBoostDuration(val) { actionZone.boostDuration = val; _bridge.value?.changeActionZoneBoostDuration(val); }
   function insertActionZonePoint()    { _bridge.value?.insertActionZonePoint(); }
   function deleteActionZonePoint()    { _bridge.value?.deleteActionZonePoint(); }
   function deleteActionZone()         { _bridge.value?.deleteActionZone(); }
@@ -893,6 +897,7 @@ export const useEditorStore = defineStore('editor', () => {
     setBannerStringWidth, setBannerStringPoleHeight, setBannerStringHeading, deleteBannerString, duplicateBannerString, closeBannerString,
     actionZone,
     setActionZoneRadius, setActionZoneType, setActionZoneShape,
+    setActionZoneBoostStrength, setActionZoneBoostDuration,
     insertActionZonePoint, deleteActionZonePoint,
     deleteActionZone, duplicateActionZone, closeActionZone,
     polyCurb,

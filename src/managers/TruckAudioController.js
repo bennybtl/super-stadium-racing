@@ -333,13 +333,14 @@ export class TruckAudioController {
       }
     }
 
-    const boostJustStarted = state.boostActive && !this._wasBoostActive;
+    const boosting = state.boostActive || state.speedBoostActive;
+    const boostJustStarted = boosting && !this._wasBoostActive;
     if (boostJustStarted) {
       this.playNitroActivation();
     }
 
     this._prevGroundedness = groundedness;
-    this._wasBoostActive = state.boostActive;
+    this._wasBoostActive = boosting;
     this._wasInDeepWater = inDeepWater;
     this._wasGroundedInDeepWater = inDeepWater && isGrounded;
   }
