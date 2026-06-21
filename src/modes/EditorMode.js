@@ -165,7 +165,7 @@ export class EditorMode extends BaseMode {
       }
       const { createHill } = await import('../objects/Hill.js');
       for (const feature of currentTrack.features) {
-        if (feature.type === 'hill' || feature.type === 'squareHill') {
+        if (feature.type === 'hill' || feature.type === 'squareHill' || feature.type === 'polyHill') {
           createHill(feature, currentTrack, scene);
         }
       }

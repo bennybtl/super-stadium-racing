@@ -104,7 +104,21 @@
         />
       </div>
     </template>
-  
+
+    <!-- Water Level — only for a closed, filled, water-type depression -->
+    <template v-if="editor.polyHill.canHaveWater">
+      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+        <span>Water Level</span>
+        <span>{{ editor.polyHill.waterLevelOffset.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="15" step="0.1"
+        :value="editor.polyHill.waterLevelOffset"
+        @input="editor.setPolyHillWaterLevelOffset(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
+
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->

@@ -40,6 +40,12 @@ const MAX_DRIFT_GRIP = 0.13;
 /** Multiplier applied to reverse-direction grip so reversing corrects quickly. */
 const REVERSE_GRIP_BOOST = 15;
 
+/** How far throttle power-break lowers the drift threshold (0..1). Dropping the
+ *  threshold under power lets the rear tip into the low-grip drift zone at a much
+ *  smaller slip angle, so flooring it from low speed actually breaks loose
+ *  instead of just letting an existing slide decay slower. */
+const THROTTLE_BREAK_THRESHOLD_DROP = 0.6;
+
 /** Slip angle (radians) above which the truck is considered spinning out. */
 const SPINOUT_SLIP_THRESHOLD = 0.6;
 
@@ -115,7 +121,7 @@ export class DriftPhysics {
     this._currentPitchOffset = 0;
   }
 
-  applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0, deltaTime = 1 / 60) {
+  applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0, deltaTime = 1 / 60, throttleBreak = 0) {
     const surfaceForward = this._surfaceForward;
     const surfaceNormal = this._surfaceNormal;
     const surfaceRight = this._surfaceRight;
@@ -191,6 +197,11 @@ export class DriftPhysics {
       minSpeed = minDriftSpeed;
     }
 
+    // Power oversteer can break the rear loose well below the normal drift entry
+    // speed, so lower the gate when throttle is overwhelming grip — this lets a
+    // low-speed throttle-and-steer initiate a slide from near standstill.
+    minSpeed *= (1 - throttleBreak);
+
     if (speed <= minSpeed) {
       // Below threshold: strip lateral velocity and clear drift state so
       // effects don't linger.
@@ -248,7 +259,9 @@ export class DriftPhysics {
     const minSlipFactor = this.state.minSlipFactor ?? MIN_SLIP_FACTOR;
     const slipDropoffRate = this.state.slipDropoffRate ?? SLIP_DROPOFF_RATE;
     const driftGrip = Math.min(effectiveGrip, maxDriftGrip);
-    const driftThresh = this.state.driftThreshold || 0.3;
+    // Power oversteer drops the slip threshold so the rear breaks into the drift
+    // zone at a smaller angle when throttle is overwhelming grip at low speed.
+    const driftThresh = (this.state.driftThreshold || 0.3) * (1 - throttleBreak * THROTTLE_BREAK_THRESHOLD_DROP);
     const excessSlip = Math.max(0, this.state.slipAngle - driftThresh);
 
     let gripFactor;
@@ -268,7 +281,9 @@ export class DriftPhysics {
     // lateralRetention (from the Lateral Bias knob) scales how hard the sideways
     // component is scrubbed: <1 keeps more lateral momentum (slidey), >1 grips harder.
     const lateralRetention = this.state.lateralRetention ?? 1;
-    const gripMultiplier = gripFactor * reverseGripBoost * rearTractionFactor * lateralRetention;
+    // Power oversteer: throttle breaking traction also bleeds off the lateral grip
+    // correction, so the rear actually steps out rather than snapping back.
+    const gripMultiplier = gripFactor * reverseGripBoost * rearTractionFactor * lateralRetention * (1 - throttleBreak);
 
     // Apply grip as lateral-only damping.
     // Only the sideways component decays; the longitudinal (heading-aligned) speed

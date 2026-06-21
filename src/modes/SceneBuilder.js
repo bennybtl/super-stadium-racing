@@ -502,7 +502,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
       bannerStringManager.createBanner(feature);
     } else if (feature.type === "surfaceDecal") {
       surfaceDecalManager.createDecal(feature);
-    } else if (feature.type === 'hill' || feature.type === 'squareHill') {
+    } else if (feature.type === 'hill' || feature.type === 'squareHill' || feature.type === 'polyHill') {
       createHill(feature, currentTrack, scene);
     }
   }

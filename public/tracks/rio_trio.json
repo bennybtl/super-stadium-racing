@@ -692,8 +692,8 @@
           "radius": 6
         },
         {
-          "x": 26.36135925822597,
-          "z": -37.30474096631082,
+          "x": 28.196181349754017,
+          "z": -34.78499114742847,
           "radius": 9
         },
         {
@@ -783,10 +783,10 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 11,
-      "centerZ": -64,
+      "centerX": 10.5,
+      "centerZ": -64.5,
       "heading": -1.5707963267948966,
-      "width": 23,
+      "width": 21.5,
       "checkpointNumber": 3
     },
     {
@@ -899,7 +899,7 @@
       "type": "obstacle",
       "obstacleType": "softWall",
       "x": 14,
-      "z": -51,
+      "z": -52.5,
       "angle": 1.5707963267948966,
       "scale": 1,
       "weight": 80,
@@ -909,7 +909,7 @@
       "type": "obstacle",
       "obstacleType": "softWall",
       "x": 7,
-      "z": -51,
+      "z": -52.5,
       "angle": 1.5707963267948966,
       "scale": 1,
       "weight": 80,
@@ -919,7 +919,7 @@
       "type": "obstacle",
       "obstacleType": "softWall",
       "x": 28,
-      "z": -50,
+      "z": -51,
       "angle": 1.4660765716752369,
       "scale": 1,
       "weight": 80,
@@ -929,7 +929,7 @@
       "type": "obstacle",
       "obstacleType": "softWall",
       "x": -7,
-      "z": -50,
+      "z": -53,
       "angle": 1.780235837034216,
       "scale": 1,
       "weight": 80,
@@ -939,7 +939,7 @@
       "type": "obstacle",
       "obstacleType": "softWall",
       "x": 0,
-      "z": -51,
+      "z": -53,
       "angle": 1.5707963267948966,
       "scale": 1,
       "weight": 80,
@@ -949,7 +949,7 @@
       "type": "obstacle",
       "obstacleType": "softWall",
       "x": 21,
-      "z": -51,
+      "z": -52,
       "angle": 1.5707963267948966,
       "scale": 1,
       "weight": 80,
@@ -1016,7 +1016,7 @@
       "radiusX": 15,
       "radiusZ": 10,
       "angle": 35,
-      "height": 8.5,
+      "height": 2.5,
       "waterLevelOffset": 0,
       "terrainType": null
     },

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "sidewinder",
   "packId": "offroad_pack_1",
   "hidden": false,
@@ -153,7 +154,8 @@
         0,
         0,
         0
-      ]
+      ],
+      "smoothing": 0.4
     },
     {
       "type": "polyWall",
@@ -272,7 +274,8 @@
       "height": 2,
       "thickness": 0.5,
       "friction": 0.1,
-      "closed": true
+      "closed": true,
+      "collisionHeight": 5
     },
     {
       "type": "trackSign",
@@ -297,7 +300,8 @@
       "height": -4,
       "transition": 6,
       "terrainType": "mud",
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 3.5
     },
     {
       "type": "squareHill",
@@ -363,7 +367,8 @@
       "terrainType": "mud",
       "radiusX": 9.5,
       "radiusZ": 9.5,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 4
     },
     {
       "type": "terrain",
@@ -379,7 +384,7 @@
     {
       "type": "checkpoint",
       "centerX": -18,
-      "centerZ": 56,
+      "centerZ": 56.5,
       "heading": 1.5707963267948966,
       "width": 30,
       "checkpointNumber": 1,
@@ -474,7 +479,8 @@
       "terrainType": "rocky",
       "radiusX": 10,
       "radiusZ": 10,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 4
     },
     {
       "type": "hill",
@@ -484,7 +490,8 @@
       "terrainType": "rocky",
       "radiusX": 10,
       "radiusZ": 10,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 2.5
     },
     {
       "type": "hill",
@@ -494,7 +501,8 @@
       "terrainType": "rocky",
       "radiusX": 7,
       "radiusZ": 7,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 1.5
     },
     {
       "type": "squareHill",
@@ -528,7 +536,8 @@
       "terrainType": "mud",
       "radiusX": 9.5,
       "radiusZ": 9.5,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 2.5
     },
     {
       "type": "hill",
@@ -538,7 +547,8 @@
       "terrainType": "mud",
       "radiusX": 6.5,
       "radiusZ": 6.5,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 2
     },
     {
       "type": "squareHill",
@@ -629,8 +639,12 @@
       "type": "aiPath",
       "points": [
         {
-          "x": -56.94,
-          "z": -55.89
+          "x": -41.022255597462404,
+          "z": -59.682348998927026
+        },
+        {
+          "x": -59.056892148661476,
+          "z": -49.318216985082415
         },
         {
           "x": -66.4,
@@ -670,7 +684,7 @@
         },
         {
           "x": -24.53,
-          "z": -24.880000000000003
+          "z": -19.380000000000003
         },
         {
           "x": 48.6,

@@ -16,6 +16,15 @@ const GEAR_COUNT = 4;
  */
 const SOFT_CAP_FACTOR = 1.2;
 
+// ─── Power oversteer / launch break ─────────────────────────────────────────
+/** How strongly throttle overwhelms tire grip from low speed (0 = off). */
+const THROTTLE_BREAK_STRENGTH = 0.9;
+/** The launch break fades to zero by this fraction of maxSpeed — it's a
+ *  low-speed effect; above it the normal speed-based drift takes over. */
+const LOW_SPEED_BREAK_RATIO = 0.7;
+/** Cap on how much grip the power break may remove (keep some control). */
+const MAX_THROTTLE_BREAK = 0.85;
+
 /**
  * Handles input processing and acceleration/braking
  */
@@ -256,6 +265,19 @@ export class Controls {
     const brakeRearLoose    = isDecelerating ? speedRatio * 0.60 * wt : 0;
     const rearTractionFactor = Math.max(0.3, 1.0 - throttleRearLoose - brakeRearLoose);
 
-    return { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor };
+    // Power oversteer / launch break: a high-power engine overwhelms tire grip
+    // from low speed — strongest at a standstill and on low-grip surfaces, fading
+    // out as speed builds (where the normal speed-based drift takes over). Kept
+    // SEPARATE from rearTractionFactor so it doesn't disturb the throttle/brake
+    // classification in the drift model; handed to applyGripAndDrift directly.
+    //   surfaceLoose: ~0 on grippy asphalt (3.8), ~0.8 on packed dirt (2.0),
+    //                 saturating to 1 on loose/muddy surfaces.
+    const lowSpeedFactor = Math.max(0, 1 - speedRatio / LOW_SPEED_BREAK_RATIO);
+    const surfaceLoose = Math.max(0, Math.min(1, 3.4 / Math.max(0.15, terrainGripMultiplier) - 0.9));
+    const throttleBreak = isAccelerating
+      ? Math.min(MAX_THROTTLE_BREAK, lowSpeedFactor * surfaceLoose * THROTTLE_BREAK_STRENGTH * wt * groundedness)
+      : 0;
+
+    return { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak };
   }
 }

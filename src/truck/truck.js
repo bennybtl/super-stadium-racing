@@ -358,7 +358,7 @@ export class Truck {
     this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     
     // Calculate speed-based factors (use hSpeed so velocity.y doesn't inflate understeer)
-    const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor } = profile(
+    const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak } = profile(
       'truck.controls.speedFactors',
       () => this.controls.calculateSpeedFactors(
         hSpeed, terrainGripMultiplier, groundedness, input
@@ -381,7 +381,7 @@ export class Truck {
     // Apply grip and drift physics — rearTractionFactor encodes weight transfer:
     // throttle loosens rear (mild), braking unloads rear (significant).
     profile('truck.drift', () =>
-      this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor, deltaTime)
+      this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor, deltaTime, throttleBreak)
     );
     
     // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)

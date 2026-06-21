@@ -369,7 +369,18 @@ export class PolyHillEditor {
     this.ec.saveSnapshot(true);
     this._activeHill.feature.height = height;
     this._updatePointPositions(this._activeHill, { rebuildLines: true });
+    this._syncStoreToFeature(this._activeHill.feature, this.selectedPoint?.idx ?? null);
     this._rebuildHill(this._activeHill.feature);
+  }
+
+  setWaterLevelOffset(offset) {
+    if (!this._activeHill) return;
+    this.ec.saveSnapshot(true);
+    const f = this._activeHill.feature;
+    const maxOffset = Math.max(0, -(f.height ?? 0)); // can't sit above the rim
+    f.waterLevelOffset = Math.max(0, Math.min(offset, maxOffset));
+    if (this.ec._editorStore) this.ec._editorStore.polyHill.waterLevelOffset = f.waterLevelOffset;
+    window.rebuildHillWater?.();
   }
 
   setWidth(width) {
@@ -394,6 +405,7 @@ export class PolyHillEditor {
     this.ec.saveSnapshot(true);
     this._activeHill.feature.closed = closed;
     this._refreshHillGizmos(this._activeHill);
+    this._syncStoreToFeature(this._activeHill.feature, this.selectedPoint?.idx ?? null);
     this._rebuildHill(this._activeHill.feature);
   }
 
@@ -401,6 +413,7 @@ export class PolyHillEditor {
     if (!this._activeHill) return;
     this.ec.saveSnapshot(true);
     this._activeHill.feature.filled = filled;
+    this._syncStoreToFeature(this._activeHill.feature, this.selectedPoint?.idx ?? null);
     this._rebuildHill(this._activeHill.feature);
   }
 
@@ -446,6 +459,11 @@ export class PolyHillEditor {
     store.polyHill.terrainType = feature.terrainType?.name || 'none';
     store.polyHill.closed = feature.closed ?? false;
     store.polyHill.filled = feature.filled ?? false;
+    // Water level (only meaningful for a closed, filled, water-type depression).
+    store.polyHill.waterLevelOffset = feature.waterLevelOffset ?? 2;
+    store.polyHill.canHaveWater = !!feature.closed && !!feature.filled
+      && (feature.height ?? 0) < 0
+      && (feature.terrainType?.name === 'water');
   }
 
   _canHaveRadius(feature, idx) {
@@ -462,6 +480,7 @@ export class PolyHillEditor {
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
     window.rebuildNormalMap?.();
+    window.rebuildHillWater?.();
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

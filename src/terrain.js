@@ -76,7 +76,7 @@ export const TERRAIN_TYPES = {
     smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
     dragMultiplier: 6.0,     // Very high drag
     roughness: 0,            // Smooth surface — drag is the hazard
-    diffuseTexture: 'textures/water.texture.jpg',
+    // diffuseTexture: 'textures/water.texture.jpg',
     diffuseTextureWorldUnitsPerTile: 12,
     diffuseTextureOpacity: 0.3,
     diffuseDepthThreshold: 0.35,

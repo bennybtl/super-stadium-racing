@@ -384,6 +384,8 @@ export const useEditorStore = defineStore('editor', () => {
     terrainType: 'none',
     closed: false,
     filled: false,
+    waterLevelOffset: 2,
+    canHaveWater: false,
   });
 
   // ── Bezier wall panel ──
@@ -670,6 +672,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setPolyHillTerrainType(name) { polyHill.terrainType = name; _bridge.value?.changePolyHillTerrainType(name); }
   function setPolyHillClosed(val)       { polyHill.closed = val;  _bridge.value?.changePolyHillClosed(val); }
   function setPolyHillFilled(val)       { polyHill.filled = val;  _bridge.value?.changePolyHillFilled(val); }
+  function setPolyHillWaterLevelOffset(val) { polyHill.waterLevelOffset = val; _bridge.value?.changePolyHillWaterLevelOffset(val); }
   function insertPolyHillPoint()        { _bridge.value?.insertPolyHillPoint(); }
   function deletePolyHillPoint()        { _bridge.value?.deletePolyHillPoint(); }
   function deletePolyHill()             { _bridge.value?.deletePolyHill(); }
@@ -880,6 +883,7 @@ export const useEditorStore = defineStore('editor', () => {
     setPolyWallRadius, setPolyWallHeight, setPolyWallCollisionHeight, setPolyWallThickness, setPolyWallClosed, setPolyWallStyle,
     insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, duplicatePolyWall, closePolyWall,
     setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillTerrainType, setPolyHillClosed, setPolyHillFilled,
+    setPolyHillWaterLevelOffset,
     insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, duplicatePolyHill, closePolyHill,
     setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
     insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, duplicateBezierWall, closeBezierWall,
