@@ -80,6 +80,20 @@
       @update:modelValue="editor.setPolyHillTerrainType"
     />
 
+    <!-- Edge Blend: dithers the terrain-type boundary into surrounding terrain -->
+    <template v-if="editor.polyHill.terrainType !== 'none'">
+      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+        <span>Edge Blend</span>
+        <span>{{ editor.polyHill.blendWidth.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="20" step="0.5"
+        :value="editor.polyHill.blendWidth"
+        @input="editor.setPolyHillBlendWidth(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
+
     <!-- Closed toggle -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Closed Loop</span>

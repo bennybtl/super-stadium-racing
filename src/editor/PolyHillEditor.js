@@ -390,6 +390,13 @@ export class PolyHillEditor {
     this._rebuildHill(this._activeHill.feature);
   }
 
+  setBlendWidth(val) {
+    if (!this._activeHill) return;
+    this.ec.saveSnapshot(true);
+    this._activeHill.feature.blendWidth = Math.max(0, val);
+    this._rebuildHill(this._activeHill.feature);
+  }
+
   setTerrainType(name) {
     if (!this._activeHill) return;
     this.ec.saveSnapshot();
@@ -457,6 +464,7 @@ export class PolyHillEditor {
     store.polyHill.height = feature.height ?? 3;
     store.polyHill.width = feature.width ?? feature.slope ?? 5;
     store.polyHill.terrainType = feature.terrainType?.name || 'none';
+    store.polyHill.blendWidth = feature.blendWidth ?? 0;
     store.polyHill.closed = feature.closed ?? false;
     store.polyHill.filled = feature.filled ?? false;
     // Water level (only meaningful for a closed, filled, water-type depression).

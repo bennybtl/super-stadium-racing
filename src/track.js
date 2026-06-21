@@ -589,13 +589,9 @@ export class Track {
           const filled = feature.filled ?? false;
           const expandedPoints = this._expandPolylineForHill(points, closed);
           const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
-          
-          // Filled mode: entire interior is terrain type
-          if (filled && closed && isPointInPolygon(x, z, expandedPoints)) {
-            return feature.terrainType;
-          }
-          
-          // Falloff zone: check distance to polyline
+          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
+
+          // Distance to the polyline boundary.
           const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
           let minDist = Infinity;
           for (let j = 0; j < numSegments; j++) {
@@ -611,7 +607,23 @@ export class Track {
             const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
             minDist = Math.min(minDist, dist);
           }
-          if (minDist <= halfWidth) return feature.terrainType;
+          if (!Number.isFinite(minDist)) break;
+
+          // Signed distance to the terrain edge (>0 inside the terrain region).
+          //   Filled + closed: solid interior, extending halfWidth past the
+          //     boundary; the dithered edge sits at that outer rim.
+          //   Otherwise: a centreline strip of total width `width`.
+          let signedDistToEdge;
+          if (filled && closed) {
+            const inside = isPointInPolygon(x, z, expandedPoints);
+            signedDistToEdge = (inside ? minDist : -minDist) + halfWidth;
+          } else {
+            signedDistToEdge = halfWidth - minDist;
+          }
+
+          if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
+            return feature.terrainType;
+          }
           break;
         }
       }

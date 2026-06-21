@@ -1561,6 +1561,7 @@ export class EditorController {
   changePolyHillHeight(val)     { this.polyHillEditor.setHeight(val); }
   changePolyHillWidth(val)      { this.polyHillEditor.setWidth(val); }
   changePolyHillTerrainType(val){ this.polyHillEditor.setTerrainType(val); }
+  changePolyHillBlendWidth(val) { this.polyHillEditor.setBlendWidth(val); }
   changePolyHillWaterLevelOffset(val) { this.polyHillEditor.setWaterLevelOffset(val); }
   changePolyHillClosed(val)     { this.polyHillEditor.setClosed(val); }
   changePolyHillFilled(val)     { this.polyHillEditor.setFilled(val); }
