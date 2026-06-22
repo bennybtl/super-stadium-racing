@@ -1,4 +1,5 @@
 import { StandardMaterial, Color3, Mesh, VertexData } from "@babylonjs/core";
+import { expandPolyline } from "../polyline-utils.js";
 
 function getHillEllipse(feature) {
   return {
@@ -352,9 +353,12 @@ function createSquareHillWater(feature, scene, baseCy, currentTrack) {
 function createPolyHillWater(feature, scene, baseCy, centroid, currentTrack) {
   const y = baseCy + getWaterLevelOffset(feature);
   const heightAt = (x, z) => currentTrack.getHeightAt(x, z);
+  // Use the same corner-rounded contour the terrain uses (per-point `radius`),
+  // so the water/foam follow the rounded corners instead of hard points.
+  const contour = expandPolyline(feature.points, feature.closed ?? true);
   return buildWaterMesh(
     `water_${centroid.x}_${centroid.z}`,
-    feature.points,
+    contour,
     y,
     centroid,
     heightAt,

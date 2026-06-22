@@ -1,0 +1,445 @@
+{
+  "schemaVersion": 2,
+  "id": "rc_pro_4",
+  "packId": "on_road_1",
+  "hidden": false,
+  "name": "RC Pro 4",
+  "width": 160,
+  "depth": 180,
+  "defaultTerrainType": "grass",
+  "borderTerrainType": "loose_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "alphaBreakup": 0.28,
+    "width": 4,
+    "intensity": 0.8,
+    "laneSpacing": 2,
+    "pathWander": 0.7,
+    "edgeSoftness": 1,
+    "secondaryPathCount": 60,
+    "secondaryPathStrength": 0.8,
+    "secondaryPathSpacing": 0.04,
+    "seed": 1337
+  },
+  "features": [
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": -40.65941301982544,
+          "z": -71.17322309871419
+        },
+        {
+          "x": -59.599533815214784,
+          "z": -55.25257312385146
+        },
+        {
+          "x": -62.200878600581994,
+          "z": 15.493550229189687
+        },
+        {
+          "x": -9.9014703574099,
+          "z": 29.297039111596774
+        },
+        {
+          "x": 2.5700000000000003,
+          "z": -17.27
+        },
+        {
+          "x": 26.53,
+          "z": -16.32
+        },
+        {
+          "x": 30.55,
+          "z": 54.86
+        },
+        {
+          "x": 47.71971568194758,
+          "z": 64.14969547283685
+        },
+        {
+          "x": 67.85465839805714,
+          "z": 44.451090738045075
+        },
+        {
+          "x": 61.75927949080169,
+          "z": -55.296470242342565
+        },
+        {
+          "x": 36.76164092871393,
+          "z": -71.23082362840498
+        }
+      ],
+      "width": 20,
+      "blendWidth": 0.5,
+      "cornerRadius": 7,
+      "closed": true,
+      "terrainType": "asphalt"
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -39.23270344426425,
+      "centerZ": 21.24613112357929,
+      "heading": 1.3089969389957472,
+      "width": 19.5,
+      "checkpointNumber": 1
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -11.332188527667022,
+          "z": -28.257756281169776,
+          "radius": 6.5
+        },
+        {
+          "x": -24.032933815322224,
+          "z": 2.6671332402596093,
+          "radius": 4
+        },
+        {
+          "x": -40.23513262670598,
+          "z": -0.9713506770929783,
+          "radius": 4
+        },
+        {
+          "x": -39.60663980530816,
+          "z": -44.46966640551402,
+          "radius": 8
+        },
+        {
+          "x": -29.685123092611402,
+          "z": -51.32288455401232,
+          "radius": 6.5
+        },
+        {
+          "x": 29.89221318595825,
+          "z": -51.247511850887754,
+          "radius": 10.5
+        },
+        {
+          "x": 41.173535837313054,
+          "z": -43.01536492219627,
+          "radius": 7
+        },
+        {
+          "x": 48.12473557553411,
+          "z": 36.03089132218929,
+          "radius": 0
+        }
+      ],
+      "height": 3,
+      "collisionHeight": 3,
+      "thickness": 1,
+      "friction": 0.05,
+      "closed": false,
+      "style": "grey"
+    },
+    {
+      "type": "polyCurb",
+      "points": [
+        {
+          "x": 25.285538975620785,
+          "z": -27.918978203256408,
+          "radius": 7
+        },
+        {
+          "x": -4.111215244999901,
+          "z": -24.214007005248735,
+          "radius": 7
+        },
+        {
+          "x": -17.150280956182517,
+          "z": 16.649515426170268,
+          "radius": 9
+        },
+        {
+          "x": -51.03426167189132,
+          "z": 7.876539359659645,
+          "radius": 7
+        },
+        {
+          "x": -50.103083363405794,
+          "z": -50.58758515170856,
+          "radius": 6.5
+        },
+        {
+          "x": -35.19687261573743,
+          "z": -62.303205607624776,
+          "radius": 7
+        },
+        {
+          "x": 31.504089428301427,
+          "z": -61.67153131337056,
+          "radius": 7
+        },
+        {
+          "x": 50.83019469733566,
+          "z": -50.575534307466164,
+          "radius": 8
+        },
+        {
+          "x": 57.32074389821479,
+          "z": 39.373169866303364,
+          "radius": 5.5
+        },
+        {
+          "x": 41.41976915717758,
+          "z": 52.849070990663314,
+          "radius": 8.5
+        },
+        {
+          "x": 35.87331705035887,
+          "z": -17.98710230759007,
+          "radius": 7
+        }
+      ],
+      "height": 0.36,
+      "width": 1.5,
+      "closed": true,
+      "style": "black_yellow"
+    },
+    {
+      "type": "trackSign",
+      "x": -5.882199544479594,
+      "z": -57.38016258836459,
+      "name": "RC Pro 4",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1,
+      "heightOffset": 0.9,
+      "width": 17
+    },
+    {
+      "type": "polyCurb",
+      "points": [
+        {
+          "x": 0.40788275234278215,
+          "z": 29.487212168695933,
+          "radius": 0
+        },
+        {
+          "x": 10.461697859745495,
+          "z": -7.3160850862610936,
+          "radius": 6.5
+        },
+        {
+          "x": 16.52208476116248,
+          "z": -6.144406726975905,
+          "radius": 11
+        },
+        {
+          "x": 19.02876797356393,
+          "z": 42.4989783737648,
+          "radius": 0
+        }
+      ],
+      "height": 0.22,
+      "width": 0.9,
+      "closed": false,
+      "style": "black_yellow"
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -65.73563759575202,
+          "z": -61.15903875464849,
+          "radius": 0
+        },
+        {
+          "x": -40.96306713793391,
+          "z": -81.81951999567538,
+          "radius": 8
+        },
+        {
+          "x": 37.506646704363106,
+          "z": -81.91023316049814,
+          "radius": 9.5
+        },
+        {
+          "x": 68.42028326734997,
+          "z": -59.285519715987014,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 1,
+      "friction": 0.05,
+      "closed": false,
+      "style": "grey"
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 15.147130227293605,
+      "centerZ": -16.617067608546975,
+      "heading": 1.3962634015954636,
+      "width": 19.5,
+      "checkpointNumber": 2
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 44.05825981541179,
+      "centerZ": 60.01970664625971,
+      "heading": 1.5707963267948966,
+      "width": 19.5,
+      "checkpointNumber": 3
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -7.743723602842378,
+      "centerZ": -72.45632014253725,
+      "heading": -1.5707963267948966,
+      "width": 19.5,
+      "checkpointNumber": 4
+    },
+    {
+      "type": "flag",
+      "x": 44.314682345474985,
+      "z": 45.03746702551055,
+      "color": "red"
+    },
+    {
+      "type": "flag",
+      "x": -21.23646879346682,
+      "z": 12.081012574666525,
+      "color": "red"
+    },
+    {
+      "type": "flag",
+      "x": 13.148694512703155,
+      "z": -3.3566469726223627,
+      "color": "red"
+    },
+    {
+      "type": "flag",
+      "x": -46.93171119745847,
+      "z": 4.046426181444993,
+      "color": "red"
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 14.503006074298899,
+      "centerZ": -31.38682694449441,
+      "terrainType": "mud",
+      "width": 34.5,
+      "depth": 10,
+      "rotation": 172,
+      "blendWidth": 3.5
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 27.55026075213096,
+      "centerZ": 69.38230986397797,
+      "terrainType": "mud",
+      "width": 34.5,
+      "depth": 10,
+      "rotation": 45,
+      "blendWidth": 3.5
+    },
+    {
+      "type": "squareHill",
+      "centerX": 65.05518197341675,
+      "centerZ": 0.0454601115182669,
+      "width": 10,
+      "depth": 10,
+      "angle": 84,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 2,
+      "heightAtMax": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": -60.90025490302475,
+      "centerZ": -22.14159793179867,
+      "width": 10,
+      "depth": 10,
+      "angle": 94,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 2
+    },
+    {
+      "type": "hill",
+      "centerX": -16.91658704090589,
+      "centerZ": -38.57905115043229,
+      "radiusX": 24,
+      "radiusZ": 16.5,
+      "angle": 163,
+      "height": 2.5,
+      "waterLevelOffset": 0,
+      "terrainType": null
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 1.2340785773096279,
+          "z": 38.50745108973841,
+          "radius": 10
+        },
+        {
+          "x": -19.8020157123952,
+          "z": 51.11502139973152,
+          "radius": 14.5
+        },
+        {
+          "x": -64.73527096340952,
+          "z": 37.818708866703815,
+          "radius": 10
+        },
+        {
+          "x": -76.4236753845392,
+          "z": 19.261773171514864,
+          "radius": 10
+        }
+      ],
+      "height": 3,
+      "width": 12,
+      "terrainType": null,
+      "closed": false,
+      "filled": false
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 79.70968441359038,
+          "z": 10.64318463931987,
+          "radius": 10
+        },
+        {
+          "x": 81.74257820333253,
+          "z": 44.456038213714045,
+          "radius": 10
+        },
+        {
+          "x": 74.52843567307491,
+          "z": 66.97808020766097,
+          "radius": 10
+        },
+        {
+          "x": 42.932254499684774,
+          "z": 79.98872273043689,
+          "radius": 10
+        }
+      ],
+      "height": 3,
+      "width": 13,
+      "terrainType": null,
+      "closed": false,
+      "filled": false
+    }
+  ]
+}
