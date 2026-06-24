@@ -138,7 +138,8 @@
       "transition": 6.5,
       "terrainType": "loose_dirt",
       "angle": 170,
-      "waterLevelOffset": 0
+      "waterLevelOffset": 0,
+      "blendWidth": 4.5
     },
     {
       "type": "squareHill",
@@ -150,7 +151,8 @@
       "transition": 6,
       "terrainType": "loose_dirt",
       "angle": 16,
-      "waterLevelOffset": 0
+      "waterLevelOffset": 0,
+      "blendWidth": 4.5
     },
     {
       "type": "squareHill",
@@ -490,14 +492,15 @@
     },
     {
       "type": "hill",
-      "centerX": 25.622378183031287,
+      "centerX": 26.122378183031287,
       "centerZ": -50.8439262795374,
       "height": -2,
       "terrainType": "water",
       "radiusX": 10,
       "radiusZ": 10,
       "angle": 0,
-      "waterLevelOffset": 1
+      "waterLevelOffset": 1,
+      "blendWidth": 2.5
     },
     {
       "type": "squareHill",
@@ -532,7 +535,8 @@
       "terrainType": "loose_dirt",
       "radiusX": 10,
       "radiusZ": 10,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 5
     },
     {
       "type": "tireStack",
@@ -853,7 +857,7 @@
       "width": 35,
       "depth": 24.5,
       "rotation": 0,
-      "blendWidth": 6.5
+      "blendWidth": 9
     },
     {
       "type": "terrain",

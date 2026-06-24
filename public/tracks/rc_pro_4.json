@@ -1,8 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "rc_pro_4",
-  "packId": "on_road_1",
+  "packId": "onroad_pack_1",
   "hidden": false,
+  "dirtChunks": false,
   "name": "RC Pro 4",
   "width": 160,
   "depth": 180,

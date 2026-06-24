@@ -53,6 +53,17 @@
     </label>
     <div class="mt-2 text-[10px] text-slate-400">Hidden tracks are excluded from the race/practice selection until ready. They still appear in the editor's track list.</div>
 
+    <label class="mt-4 flex items-center gap-2 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+        :checked="editor.trackSettings.dirtChunks"
+        @change="editor.setTrackDirtChunks($event.target.checked)"
+      />
+      <span class="text-[13px] text-white">Dirt Chunks</span>
+    </label>
+    <div class="mt-2 text-[10px] text-slate-400">Scatters procedural dirt debris along walls and off the racing line. Turn off for on-road / paved tracks.</div>
+
     <div class="mt-4 grid grid-cols-2 gap-2">
       <div>
         <div class="text-[12px] mb-1">Width</div>

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "id": "blaster",
   "packId": "offroad_pack_1",
   "hidden": false,
@@ -23,6 +24,99 @@
     "seed": 1337
   },
   "features": [
+    {
+      "type": "meshGrid",
+      "centerX": 0,
+      "centerZ": 0,
+      "width": 160,
+      "depth": 160,
+      "cols": 9,
+      "rows": 9,
+      "heights": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        1.5,
+        1.5,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        2,
+        2,
+        2,
+        1.5,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        1.5,
+        -0.5,
+        -0.5,
+        -0.5,
+        0,
+        0,
+        0,
+        0.5,
+        1.5,
+        1.5,
+        -1.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -1,
+        0,
+        1.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -0.5,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1.5,
+        2,
+        2.5
+      ],
+      "smoothing": 1
+    },
     {
       "type": "polyHill",
       "points": [
@@ -161,7 +255,8 @@
       "centerZ": 18,
       "radius": 8,
       "height": 5,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 3.5
     },
     {
       "type": "hill",
@@ -169,7 +264,8 @@
       "centerZ": 34,
       "radius": 6.5,
       "height": 5,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 4
     },
     {
       "type": "hill",
@@ -177,7 +273,8 @@
       "centerZ": 44,
       "radius": 7.5,
       "height": 2,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 4
     },
     {
       "type": "hill",
@@ -185,7 +282,8 @@
       "centerZ": 28,
       "radius": 6.5,
       "height": 6,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 3
     },
     {
       "type": "hill",
@@ -272,7 +370,8 @@
       "centerZ": -55,
       "radius": 10,
       "height": 5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 5
     },
     {
       "type": "polyWall",
@@ -314,100 +413,8 @@
       "background": "black",
       "scale": 1.45,
       "heightOffset": 0.8,
-      "width": 11.5
-    },
-    {
-      "type": "meshGrid",
-      "centerX": 0,
-      "centerZ": 0,
-      "width": 160,
-      "depth": 160,
-      "cols": 9,
-      "rows": 9,
-      "heights": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        1.5,
-        1.5,
-        2,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        2,
-        2,
-        2,
-        1.5,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        1.5,
-        -0.5,
-        -0.5,
-        -0.5,
-        0,
-        0,
-        0,
-        0.5,
-        1.5,
-        1.5,
-        -1.5,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        -1,
-        0,
-        1.5,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        -0.5,
-        0,
-        2,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1,
-        1.5,
-        2,
-        2.5
-      ],
-      "smoothing": 1
+      "width": 11.5,
+      "primaryColor": "red"
     },
     {
       "type": "hill",
@@ -653,7 +660,8 @@
       "centerZ": 8.78991475793498,
       "radius": 10,
       "height": -1.5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 5
     },
     {
       "type": "terrain",
@@ -663,7 +671,8 @@
       "terrainType": "loose_dirt",
       "width": 17.5,
       "depth": 25.5,
-      "rotation": 0
+      "rotation": 0,
+      "blendWidth": 7.5
     },
     {
       "type": "hill",
@@ -671,7 +680,8 @@
       "centerZ": 20,
       "radius": 7,
       "height": 3.5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 4.5
     },
     {
       "type": "aiPath",
@@ -1017,7 +1027,8 @@
       "background": "black",
       "scale": 1.85,
       "heightOffset": 2,
-      "width": 10
+      "width": 10,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
@@ -1030,7 +1041,8 @@
       "background": "black",
       "scale": 1.85,
       "heightOffset": 2,
-      "width": 10
+      "width": 10,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
@@ -1043,7 +1055,8 @@
       "background": "white",
       "scale": 1.85,
       "heightOffset": 2,
-      "width": 10
+      "width": 10,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
@@ -1056,7 +1069,8 @@
       "background": "white",
       "scale": 1.85,
       "heightOffset": 0.2,
-      "width": 10
+      "width": 10,
+      "primaryColor": "red"
     },
     {
       "type": "trackSign",
@@ -1069,7 +1083,8 @@
       "background": "black",
       "scale": 1.85,
       "heightOffset": 0,
-      "width": 10
+      "width": 10,
+      "primaryColor": "red"
     },
     {
       "type": "obstacle",

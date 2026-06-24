@@ -18,6 +18,7 @@ import { BridgeMeshEditor } from './BridgeMeshEditor.js';
 import { AiPathEditor } from './AiPathEditor.js';
 import { TerrainPathEditor } from './TerrainPathEditor.js';
 import { SurfaceDecalEditor } from './SurfaceDecalEditor.js';
+import { scatterDirtChunks } from '../objects/DirtChunks.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 import { DEFAULT_TERRAIN_WEAR_CONFIG } from '../terrain-utils.js';
@@ -355,6 +356,7 @@ export class EditorController {
     this._editorStore.trackSettings.depth = this.currentTrack.depth ?? 160;
     this._editorStore.trackSettings.hidden = this.currentTrack.hidden ?? true;
     this._editorStore.trackSettings.packId = this.currentTrack.packId ?? '';
+    this._editorStore.trackSettings.dirtChunks = this.currentTrack.dirtChunks ?? true;
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
   }
@@ -1386,6 +1388,30 @@ export class EditorController {
     this.saveSnapshot(true);
     this.currentTrack.hidden = !!hidden;
     this._syncTrackSettingsPanel();
+  }
+
+  changeTrackDirtChunks(enabled) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.dirtChunks = !!enabled;
+    this._syncTrackSettingsPanel();
+    this._refreshDirtChunks();
+  }
+
+  /** Dispose any existing dirt-chunk meshes/materials and regenerate if enabled.
+   *  Done in place so the toggle is instant (a full scene rebuild reloads the
+   *  track from storage and would drop the unsaved setting change). */
+  _refreshDirtChunks() {
+    if (!this.scene) return;
+    for (const mesh of this.scene.meshes.slice()) {
+      if (typeof mesh?.name === 'string' && mesh.name.startsWith('dirtChunk_')) mesh.dispose();
+    }
+    for (const mat of this.scene.materials.slice()) {
+      if (typeof mat?.name === 'string' && mat.name.startsWith('dirtChunkMat_')) mat.dispose();
+    }
+    if (this.currentTrack.dirtChunks !== false) {
+      scatterDirtChunks(this.scene, this.currentTrack);
+    }
   }
 
   changeTrackPackId(packId) {

@@ -33,6 +33,7 @@ import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
 import { createHill } from "../objects/Hill.js";
+import { scatterDirtChunks } from "../objects/DirtChunks.js";
 import {
   buildTerrainIdTexturePixelData,
   buildTerrainWearOverlayPixelData,
@@ -505,6 +506,12 @@ export async function buildScene(engine, trackLoader, trackKey) {
     } else if (feature.type === 'hill' || feature.type === 'squareHill' || feature.type === 'polyHill') {
       createHill(feature, currentTrack, scene);
     }
+  }
+
+  // Procedural dirt-chunk scatter (along walls / outside the AI drive path).
+  // Disabled per-track for on-road / paved tracks.
+  if (currentTrack.dirtChunks !== false) {
+    scatterDirtChunks(scene, currentTrack);
   }
 
   return {

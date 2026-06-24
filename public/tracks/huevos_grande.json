@@ -299,7 +299,8 @@
       "terrainType": "water",
       "radiusX": 12.5,
       "radiusZ": 6.5,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 2
     },
     {
       "type": "squareHill",
@@ -846,7 +847,8 @@
       "radiusX": 9,
       "radiusZ": 9,
       "angle": 0,
-      "waterLevelOffset": 3.5
+      "waterLevelOffset": 3.5,
+      "blendWidth": 2
     },
     {
       "type": "hill",
@@ -857,7 +859,8 @@
       "radiusX": 10.5,
       "radiusZ": 9,
       "angle": 0,
-      "waterLevelOffset": 3.4
+      "waterLevelOffset": 3.4,
+      "blendWidth": 2
     },
     {
       "type": "squareHill",
@@ -867,7 +870,8 @@
       "depth": 17,
       "height": -5,
       "transition": 4,
-      "terrainType": "water"
+      "terrainType": "water",
+      "blendWidth": 2
     },
     {
       "type": "actionZone",

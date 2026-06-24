@@ -3,6 +3,7 @@
   "id": "rc_pro_1",
   "packId": "onroad_pack_1",
   "hidden": false,
+  "dirtChunks": false,
   "name": "RC-PRO 1",
   "image": "rc_pro_1.png",
   "width": 160,

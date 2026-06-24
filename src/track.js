@@ -62,6 +62,9 @@ export class Track {
     this.id = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]+/g, '');
     this.hidden = true;
     this.packId = null;
+    // Procedural dirt-chunk scatter (off-road dressing). On by default; turn off
+    // for on-road / paved tracks.
+    this.dirtChunks = true;
     this.width = width;
     this.depth = depth;
     this.features = [];
@@ -681,6 +684,7 @@ export class Track {
       id: this.id,
       packId: this.packId,
       hidden: this.hidden,
+      dirtChunks: this.dirtChunks,
       name: this.name,
       image: this.image ?? undefined,
       width: this.width,
@@ -703,6 +707,7 @@ export class Track {
     track.id = data.id ?? track.id;
     track.packId = data.packId ?? track.packId;
     track.hidden = data.hidden ?? track.hidden;
+    track.dirtChunks = data.dirtChunks ?? track.dirtChunks;
     if (data.defaultTerrainType) {
       const key = Object.keys(TERRAIN_TYPES).find(
         k => TERRAIN_TYPES[k].name === data.defaultTerrainType
