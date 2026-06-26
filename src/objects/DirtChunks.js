@@ -21,6 +21,10 @@ const DEFAULTS = {
   driveClearance: 7,     // keep this far from the AI path (and its branches)
   boundsPadding: 4,      // stay this far inside the track edge
 
+  // Dirt chunks look wrong on these surfaces, so skip any region whose
+  // terrain type is one of these (matched by terrain type name).
+  excludeTerrain: ["grass", "asphalt"],
+
   // Wall-hugging scatter
   wallBand: 5.0,         // dirt sits within this distance of a wall
   wallMinOffset: 0.4,    // ...but at least this far off it
@@ -145,12 +149,15 @@ export function scatterDirtChunks(scene, track, options = {}) {
   const halfW = (track.width ?? 160) / 2 - cfg.boundsPadding;
   const halfD = (track.depth ?? 160) / 2 - cfg.boundsPadding;
   const rng = makeRng(hashSeed(track.id) ^ 0x1f2e3d4c);
+  const excluded = new Set(cfg.excludeTerrain);
 
   const placements = [];
   const tryPlace = (x, z) => {
     if (placements.length >= cfg.maxChunks) return;
     if (Math.abs(x) > halfW || Math.abs(z) > halfD) return;
     if (minDistToPolylines(x, z, aiPath) < cfg.driveClearance) return; // keep racing line clear
+    // Don't scatter dirt over grass/asphalt regions (null = default dirt ground).
+    if (excluded.has(track.getTerrainTypeAt(x, z)?.name)) return;
     placements.push({ x, z, y: track.getHeightAt(x, z) });
   };
 
