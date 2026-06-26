@@ -83,7 +83,7 @@ export class EditorMaterials {
 
   /**
    * Bright yellow — the "selected node" highlight shared by all polyline
-   * editors: PolyWall, PolyCurb, PolyHill, BezierWall.
+   * editors: PolyWall, PolyCurb, PolyHill.
    */
   get nodeHighlight() {
     return this._get('nodeHighlight', s => makeMat('edNodeHighlight', s, {

@@ -3,7 +3,6 @@ import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { MeshGridEditor } from "./MeshGridEditor.js";
 import { PolyWallEditor } from "./PolyWallEditor.js";
 import { PolyHillEditor } from "./PolyHillEditor.js";
-import { BezierWallEditor } from "./BezierWallEditor.js";
 import { HillEditor } from "./HillEditor.js";
 import { CheckpointEditor } from "./CheckpointEditor.js";
 import { SquareHillEditor } from "./SquareHillEditor.js";
@@ -100,9 +99,6 @@ export class EditorController {
     // Poly hill editing editor
     this.polyHillEditor = new PolyHillEditor(this);
 
-    // Bezier wall editing editor
-    this.bezierWallEditor = new BezierWallEditor(this);
-
     // Poly curb editing editor
     this.polyCurbEditor = new PolyCurbEditor(this);
 
@@ -182,9 +178,6 @@ export class EditorController {
 
     // Poly hill editing editor
     this.polyHillEditor.activate(this.scene, track);
-
-    // Bezier wall editing editor
-    this.bezierWallEditor.activate(this.scene, track);
 
     // Poly curb editing editor
     this.polyCurbEditor.activate(this.scene, track);
@@ -270,12 +263,6 @@ export class EditorController {
     if (this.polyHillEditor) {
       this.polyHillEditor.deactivate();
       this.polyHillEditor = null;
-    }
-
-    // Bezier wall editor
-    if (this.bezierWallEditor) {
-      this.bezierWallEditor.deactivate();
-      this.bezierWallEditor = null;
     }
 
     // Poly curb editor
@@ -539,14 +526,6 @@ export class EditorController {
       return this._createPointSelectionInteraction(this.polyHillEditor, 'moveSelectedPoint');
     }
 
-    if (this.bezierWallEditor?.selectedAnchor) {
-      return this._createPointSelectionInteraction(this.bezierWallEditor, 'moveSelectedAnchor');
-    }
-
-    if (this.bezierWallEditor?.selectedHandle) {
-      return this._createPointSelectionInteraction(this.bezierWallEditor, 'moveSelectedHandle');
-    }
-
     if (this.polyCurbEditor?.selectedPoint) {
       return this._createPointSelectionInteraction(this.polyCurbEditor, 'moveSelectedPoint');
     }
@@ -572,8 +551,6 @@ export class EditorController {
       { selected: () => this.polyWallEditor?.selectedPoint, delete: () => this.polyWallEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyHillEditor?.selectedPoint, delete: () => this.polyHillEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyCurbEditor?.selectedPoint, delete: () => this.polyCurbEditor?.deletePolyCurbPoint?.() },
-      { selected: () => this.bezierWallEditor?.selectedAnchor, delete: () => this.bezierWallEditor?.deleteSelectedPoint?.() },
-      { selected: () => this.bezierWallEditor?.selectedHandle },
     ];
 
     return featureActions.find(action => action.selected()) ?? null;
@@ -663,9 +640,6 @@ export class EditorController {
       // Restore poly hill gizmos
       this.polyHillEditor?.onSnapshotRestored();
       window.rebuildPolyHill?.(null);
-      // Restore bezier wall gizmos
-      this.bezierWallEditor?.onSnapshotRestored();
-      window.rebuildBezierWall?.(null);
       // Restore poly curb gizmos
       this.polyCurbEditor?.onSnapshotRestored();
       window.rebuildPolyCurb?.(null);
@@ -971,7 +945,6 @@ export class EditorController {
       this.polyWallEditor?.endDrag?.();
       this.polyHillEditor?.endDrag?.();
       this.polyCurbEditor?.endDrag?.();
-      this.bezierWallEditor?.endDrag?.();
     }
   }
 
@@ -1017,7 +990,6 @@ export class EditorController {
     this.polyWallEditor?.beginDrag?.();
     this.polyHillEditor?.beginDrag?.();
     this.polyCurbEditor?.beginDrag?.();
-    this.bezierWallEditor?.beginDrag?.();
     return true;
   }
 
@@ -1066,8 +1038,6 @@ export class EditorController {
     if (selectedObjectMatches(this.polyWallEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyHillEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyCurbEditor?.selectedPoint)) return true;
-    if (selectedObjectMatches(this.bezierWallEditor?.selectedAnchor)) return true;
-    if (selectedObjectMatches(this.bezierWallEditor?.selectedHandle)) return true;
 
     const zoneData = this.actionZoneEditor?._selected;
     if (zoneData) {
@@ -1180,9 +1150,6 @@ export class EditorController {
           if (this.polyHillEditor.onPointerDown(phSphere ?? clickedMesh)) return;
         }
 
-        // Bezier wall control points
-        if (this.bezierWallEditor?.onPointerDown(clickedMesh)) return;
-
         // Poly curb control points
         if (this.polyCurbEditor?.onPointerDown(clickedMesh)) return;
 
@@ -1252,7 +1219,6 @@ export class EditorController {
   addMeshGridEntity()   { this.meshGridEditor?.addMeshGridFeature(); this.hideAddMenu(); }
   addPolyWallEntity()   { this.polyWallEditor?.addPolyWallFeature(); this.hideAddMenu(); }
   addPolyHillEntity()   { this.polyHillEditor?.addPolyHillFeature(); this.hideAddMenu(); }
-  addBezierWallEntity() { this.bezierWallEditor?.addBezierWallFeature(); this.hideAddMenu(); }
   addPolyCurbEntity()   { this.polyCurbEditor?.addPolyCurbFeature(); this.hideAddMenu(); }
   
   /**
@@ -1565,7 +1531,6 @@ export class EditorController {
     this.bridgeMeshEditor?.deselect?.();
     this.polyWallEditor?.deselectPoint();
     this.polyHillEditor?.deselectPoint();
-    this.bezierWallEditor?.deselectAll();
     this.polyCurbEditor?.deselectPolyCurb();
   }
 
@@ -1596,16 +1561,6 @@ export class EditorController {
   deletePolyHill()              { this.polyHillEditor.deletePolyHill(); }
   duplicatePolyHill()           { this.polyHillEditor.duplicatePolyHill(); }
   deselectPolyHill()            { this.polyHillEditor.deselectPoint(); }
-
-  // ── Bezier Wall Vue bridge methods ──
-  changeBezierWallHeight(val)   { this.bezierWallEditor.changeBezierWallHeight(val); }
-  changeBezierWallThickness(val){ this.bezierWallEditor.changeBezierWallThickness(val); }
-  changeBezierWallClosed(val)   { this.bezierWallEditor.changeBezierWallClosed(val); }
-  insertBezierWallPoint()       { this.bezierWallEditor.insertBezierWallPoint(); }
-  deleteBezierWallPoint()       { this.bezierWallEditor.deleteBezierWallPoint(); }
-  deleteBezierWall()            { this.bezierWallEditor.deleteBezierWall(); }
-  duplicateBezierWall()         { this.bezierWallEditor.duplicateBezierWall(); }
-  deselectBezierWall()          { this.bezierWallEditor.deselectBezierWall(); }
 
   // ── Flag Vue bridge methods ──
   changeFlagColor(val) { this.decorationsEditor.changeColor(val); }
@@ -1915,18 +1870,6 @@ export class EditorController {
           if (m) m.isVisible = visible;
         }
         if (cg.lineSystem) cg.lineSystem.isVisible = visible;
-      }
-    }
-
-    if (this.bezierWallEditor) {
-      for (const wg of this.bezierWallEditor._wallGizmos || []) {
-        for (const m of wg.anchorMeshes || []) {
-          if (m) m.isVisible = visible;
-        }
-        for (const hm of wg.handleMeshes || []) {
-          if (hm?.mesh) hm.mesh.isVisible = visible;
-        }
-        if (wg.lineSystem) wg.lineSystem.isVisible = visible;
       }
     }
 

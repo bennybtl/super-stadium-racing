@@ -1,5 +1,4 @@
 import { PolyWall } from "../objects/PolyWall.js";
-import { BezierWall } from "../objects/BezierWall.js";
 import { PolyCurb } from "../objects/PolyCurb.js";
 import { TRUCK_RADIUS } from "../constants.js";
 
@@ -21,7 +20,7 @@ export class WallManager {
     this.track = track;
     this.shadows = shadows;
 
-    // Wall objects (PolyWall, BezierWall)
+    // Wall objects (PolyWall)
     this._walls = [];
 
     // Curb objects (PolyCurb) — stored separately so they are never included
@@ -38,10 +37,6 @@ export class WallManager {
 
   createPolyWall(feature) {
     this._walls.push(new PolyWall(feature, this.track, this.scene, this.shadows));
-  }
-
-  createBezierWall(feature) {
-    this._walls.push(new BezierWall(feature, this.track, this.scene, this.shadows));
   }
 
   createPolyCurb(feature) {
@@ -239,7 +234,6 @@ export class WallManager {
     this.reset();
     for (const feature of this.track.features) {
       if (feature.type === "polyWall")   this.createPolyWall(feature);
-      if (feature.type === "bezierWall") this.createBezierWall(feature);
       if (feature.type === "polyCurb")   this.createPolyCurb(feature);
     }
   }

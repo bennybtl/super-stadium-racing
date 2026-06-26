@@ -189,24 +189,6 @@ export class EditorMode extends BaseMode {
       }
     };
 
-    // Rebuild a specific bezierWall (or all bezierWalls if feature is null)
-    window.rebuildBezierWall = (targetFeature) => {
-      wallManager._walls = wallManager._walls.filter(w => {
-        if (w._feature && (targetFeature === null || w._feature === targetFeature)) {
-          w.dispose?.();
-          return false;
-        }
-        return true;
-      });
-      for (const f of currentTrack.features) {
-        if (f.type === 'bezierWall') {
-          if (targetFeature === null || f === targetFeature) {
-            wallManager.createBezierWall(f);
-          }
-        }
-      }
-    };
-
     // Rebuild a specific polyCurb (or all polyCurbs if feature is null)
     window.rebuildPolyCurb = (targetFeature) => {
       wallManager._curbs = wallManager._curbs.filter(c => {
@@ -309,7 +291,6 @@ export class EditorMode extends BaseMode {
     delete window.rebuildHillWater;
     delete window.rebuildPolyWall;
     delete window.rebuildPolyHill;
-    delete window.rebuildBezierWall;
     delete window.rebuildPolyCurb;
     delete window.rebuildBridge;
     delete window.quickTestTrack;

@@ -22,9 +22,9 @@ const DEFAULTS = {
   boundsPadding: 4,      // stay this far inside the track edge
 
   // Wall-hugging scatter
-  wallBand: 4.0,         // dirt sits within this distance of a wall
+  wallBand: 5.0,         // dirt sits within this distance of a wall
   wallMinOffset: 0.4,    // ...but at least this far off it
-  wallStep: 2.8,         // sample a cluster every ~this many units along a wall
+  wallStep: 4.8,         // sample a cluster every ~this many units along a wall
   wallPerStep: 8,        // candidate chunks per wall sample (denser near walls)
 
   // General open-ground scatter
@@ -78,7 +78,7 @@ function minDistToPolylines(px, pz, polylines) {
 function collectWallPolylines(track) {
   const out = [];
   for (const f of track.features) {
-    if ((f.type === "polyWall" || f.type === "bezierWall" || f.type === "polyCurb")
+    if ((f.type === "polyWall" || f.type === "polyCurb")
       && Array.isArray(f.points) && f.points.length >= 2) {
       out.push(f.points);
     }

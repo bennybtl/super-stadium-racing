@@ -389,14 +389,6 @@ export const useEditorStore = defineStore('editor', () => {
     canHaveWater: false,
   });
 
-  // ── Bezier wall panel ──
-  const bezierWall = reactive({
-    hasSelection: false,
-    height: 2,
-    thickness: 0.5,
-    closed: false,
-  });
-
   // ── Flag panel ──
   const flag = reactive({
     color: 'red',
@@ -686,16 +678,6 @@ export const useEditorStore = defineStore('editor', () => {
   function duplicatePolyHill()          { _bridge.value?.duplicatePolyHill(); }
   function closePolyHill()              { _bridge.value?.deselectPolyHill(); }
 
-  // ── Bezier Wall actions ──
-  function setBezierWallHeight(val)     { bezierWall.height = val;     _bridge.value?.changeBezierWallHeight(val); }
-  function setBezierWallThickness(val)  { bezierWall.thickness = val;  _bridge.value?.changeBezierWallThickness(val); }
-  function setBezierWallClosed(val)     { bezierWall.closed = val;     _bridge.value?.changeBezierWallClosed(val); }
-  function insertBezierWallPoint()      { _bridge.value?.insertBezierWallPoint(); }
-  function deleteBezierWallPoint()      { _bridge.value?.deleteBezierWallPoint(); }
-  function deleteBezierWall()           { _bridge.value?.deleteBezierWall(); }
-  function duplicateBezierWall()        { _bridge.value?.duplicateBezierWall(); }
-  function closeBezierWall()            { _bridge.value?.deselectBezierWall(); }
-
   // ── Flag actions ──
   function setFlagColor(val)            { flag.color = val; _bridge.value?.changeFlagColor(val); }
   function deleteFlag()                 { _bridge.value?.deleteFlag(); }
@@ -834,7 +816,6 @@ export const useEditorStore = defineStore('editor', () => {
   function addBridgeMesh()     { _bridge.value?.addBridgeMeshEntity(); }
   function addPolyWall()       { _bridge.value?.addPolyWallEntity(); }
   function addPolyHill()       { _bridge.value?.addPolyHillEntity(); }
-  function addBezierWall()     { _bridge.value?.addBezierWallEntity(); }
   function addTrackSign()      { _bridge.value?.addTrackSignEntity(); }
   function addBannerString()   { _bridge.value?.addBannerStringEntity(); }
   function addActionZone()     { _bridge.value?.addActionZoneEntity(); }
@@ -872,7 +853,6 @@ export const useEditorStore = defineStore('editor', () => {
     bridgeMesh,
     polyWall,
     polyHill,
-    bezierWall,
     flag,
     testModeActive, testModeReturnKey,
     setBridge,
@@ -892,8 +872,6 @@ export const useEditorStore = defineStore('editor', () => {
     setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillTerrainType, setPolyHillBlendWidth, setPolyHillClosed, setPolyHillFilled,
     setPolyHillWaterLevelOffset,
     insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, duplicatePolyHill, closePolyHill,
-    setBezierWallHeight, setBezierWallThickness, setBezierWallClosed,
-    insertBezierWallPoint, deleteBezierWallPoint, deleteBezierWall, duplicateBezierWall, closeBezierWall,
     setFlagColor, deleteFlag, duplicateFlag,
     decoration,
     setDecorationType, setDecorationColor, setDecorationWidth,
@@ -928,7 +906,7 @@ export const useEditorStore = defineStore('editor', () => {
     setObstacleType, setObstacleScale, setObstacleRotation, setObstacleWeight, setObstacleColor,
     resetObstacleDefaults, deleteSelectedObstacle, closeObstacle,
     addFlag,
-    addMeshGrid, addBridgeMesh, addPolyWall, addPolyHill, addBezierWall, addTrackSign, addBannerString,
+    addMeshGrid, addBridgeMesh, addPolyWall, addPolyHill, addTrackSign, addBannerString,
     addActionZone, addPolyCurb, addAiWaypoint, insertAiWaypoint, deleteAiWaypoint, clearAiPath,
     openAiPath, closeAiPath,
     aiPathWear,
