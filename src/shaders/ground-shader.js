@@ -8,6 +8,7 @@
 
 import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
+import { traceAiPathWearStamps, forEachStampPixel } from "../terrain-utils.js";
 
 const _terrainTypeList = Object.values(TERRAIN_TYPES);
 const _terrainTypeIndexByName = new Map(_terrainTypeList.map((terrainType, index) => [terrainType?.name, index]));
@@ -509,6 +510,59 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWi
  * @param {number} worldDepth - Depth of world space the texture covers
  * @returns {Promise<RawTexture>}
  */
+// Tire-rut relief: stamp tangent-space groove normals along the AI path into the
+// composite normal map, reusing the SAME deterministic stamps as the wear colour
+// overlay (terrain-utils) so discolouration and lit relief line up exactly. The
+// canvas already holds tangent-space normals (flat = rgb(128,128,255)); we blend
+// each rut's groove cross-section over the underlying terrain normals.
+const RUT_STRENGTH = 0.5; // groove-wall steepness (tangent tilt magnitude)
+const RUT_OPACITY  = 0.85; // how strongly ruts override the underlying normals
+function _paintAiPathRutNormals(ctx, track, textureSize, worldWidth, worldDepth) {
+  const { width, height, edgeSoftness, stamps } = traceAiPathWearStamps(track, textureSize, worldWidth, worldDepth);
+  if (!stamps.length) return;
+
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const px = imageData.data;
+
+  const pixelsPerUnitX = width / Math.max(1, worldWidth);
+  const pixelsPerUnitZ = height / Math.max(1, worldDepth);
+  const halfWorldX = worldWidth / 2;
+  const halfWorldZ = worldDepth / 2;
+
+  for (const stamp of stamps) {
+    // Asphalt is hard — it picks up rubber/skid marks (the colour overlay) but
+    // never ruts, so skip the normal-map relief over paved sections.
+    const worldX = stamp.sx / pixelsPerUnitX - halfWorldX;
+    const worldZ = stamp.sy / pixelsPerUnitZ - halfWorldZ;
+    const terrainType = track.getTerrainTypeAt(worldX, worldZ);
+    if ((typeof terrainType === 'string' ? terrainType : terrainType?.name) === 'asphalt') continue;
+
+    forEachStampPixel(stamp, width, height, edgeSoftness, (x, y, weight, acrossNorm) => {
+      // Groove cross-section: no tilt at the centre, walls tilt toward the centre.
+      // The surface normal tilts opposite the wall slope, along the across-track
+      // direction (stamp.normalX/normalZ ≈ canvas X/Y for the flat ground plane).
+      const tilt = Math.sin(acrossNorm * Math.PI / 2) * weight * RUT_STRENGTH;
+      let nx = -tilt * stamp.normalX;
+      let ny = -tilt * stamp.normalZ;
+      let nz = 1;
+      const inv = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+      nx *= inv; ny *= inv; nz *= inv;
+
+      const R = (nx * 0.5 + 0.5) * 255;
+      const G = (ny * 0.5 + 0.5) * 255;
+      const B = (nz * 0.5 + 0.5) * 255;
+
+      const a = weight * RUT_OPACITY;
+      const base = (y * width + x) * 4;
+      px[base]     = px[base]     * (1 - a) + R * a;
+      px[base + 1] = px[base + 1] * (1 - a) + G * a;
+      px[base + 2] = px[base + 2] * (1 - a) + B * a;
+    });
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+}
+
 export async function createCompositeNormalMap(scene, normalMapDecals, terrainManager, track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const canvas = document.createElement('canvas');
   canvas.width = textureSize;
@@ -517,7 +571,8 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
   await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth);
   await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
   await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
-  
+  _paintAiPathRutNormals(ctx, track, textureSize, worldWidth, worldDepth);
+
   // If no decals, build the raw texture from the canvas and return it.
   if (!normalMapDecals || normalMapDecals.length === 0) {
     const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
@@ -631,7 +686,8 @@ export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecal
   await _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth);
   await _paintSteepDirtOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
   await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
-  
+  _paintAiPathRutNormals(ctx, track, textureSize, worldWidth, worldDepth);
+
   if (normalMapDecals && normalMapDecals.length > 0) {
     const pixelsPerUnitX = textureSize / worldWidth;
     const pixelsPerUnitY = textureSize / worldDepth;

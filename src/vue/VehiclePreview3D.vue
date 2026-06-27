@@ -34,7 +34,8 @@ import {
 } from '@babylonjs/core';
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/OBJ';
-import truckTireUrl from '../assets/models/truck-tire.obj?url';
+import truckTireUrl from '../assets/models/truck-tire-v2.obj?url';
+import { basicColors } from '../constants';
 
 const props = defineProps({
   vehicle: {
@@ -153,11 +154,11 @@ function applyVehicleColors() {
     }
 
     if (mesh.name.toLowerCase().includes('rim')) {
-      material.diffuseColor = new Color3(1.0, 0.85, 0.12);
+      material.diffuseColor = basicColors.white.diffuse;
       material.specularColor = new Color3(0.25, 0.25, 0.25);
       material.specularPower = 24;
     } else {
-      material.diffuseColor = new Color3(0.12, 0.12, 0.12);
+      material.diffuseColor = basicColors.black.diffuse
       material.specularColor = new Color3(0.02, 0.02, 0.02);
       material.specularPower = 8;
     }

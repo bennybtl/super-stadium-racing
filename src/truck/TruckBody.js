@@ -1,6 +1,7 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, TransformNode, DynamicTexture } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import truckTireUrl  from "../assets/models/truck-tire.obj?url";
+import truckTireUrl  from "../assets/models/truck-tire-v2.obj?url";
+import { basicColors } from "../constants";
 
 // Skip MTL lookup — materials are applied programmatically
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
@@ -75,11 +76,11 @@ export class TruckBody {
     this._wheelRoot.parent = parent;
 
     this.colors = {
-      body:   colors.body   ?? new Color3(0.8, 0.15, 0.05),
-      cabin:  colors.cabin  ?? new Color3(0.25, 0.25, 0.3),
-      wheel:  colors.wheel  ?? new Color3(0.12, 0.12, 0.12),
-      rim:    colors.rim    ?? new Color3(1.0, 0.85, 0.12),
-      detail: colors.detail ?? new Color3(0.7, 0.7, 0.7),
+      body:   colors.body   ?? basicColors.red.diffuse,
+      cabin:  colors.cabin  ?? basicColors.black.diffuse,
+      wheel:  colors.wheel  ?? basicColors.black.diffuse,
+      rim:    colors.rim    ?? basicColors.white.diffuse,
+      detail: colors.detail ?? basicColors.gray.diffuse,
     };
 
     this._parts = [];   // all meshes — for disposal

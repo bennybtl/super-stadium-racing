@@ -269,9 +269,9 @@ export class TerrainPathEditor {
     const feature = {
       type: 'terrainPath',
       points: [],
-      width: 8,
-      blendWidth: 0,
-      cornerRadius: 0,
+      width: 16,
+      blendWidth: 2,
+      cornerRadius: 5,
       closed: false,
       terrainType: entry,
     };

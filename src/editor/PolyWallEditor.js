@@ -321,7 +321,7 @@ export class PolyWallEditor {
     const newPt = {
       x: (p1.x + p2.x) / 2,
       z: (p1.z + p2.z) / 2,
-      radius: 0,
+      radius: 5,
     };
     this.ec.saveSnapshot();
     pts.splice(idx + 1, 0, newPt);

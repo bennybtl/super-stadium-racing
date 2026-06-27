@@ -332,7 +332,7 @@ export class PolyHillEditor {
     const newPt = {
       x: (p1.x + p2.x) / 2,
       z: (p1.z + p2.z) / 2,
-      radius: 0,
+      radius: 10,
     };
     pts.splice(idx + 1, 0, newPt);
     this._refreshHillGizmos(hg);

@@ -259,38 +259,37 @@ export function buildTerrainTypePropertyTexturePixelData() {
   return { width, height, data, normalMapNames };
 }
 
-export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
+// Deterministically trace the AI-path wear lanes into stamp descriptors. Both the
+// colour overlay (buildTerrainWearOverlayPixelData) and the rut normal-map pass
+// (createCompositeNormalMap) consume the SAME stamps — seeded identically — so the
+// discolouration and the lit relief stay perfectly aligned.
+export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const width = Math.max(4, Math.round(textureSize));
   const height = width;
-  const data = new Uint8ClampedArray(width * height * 4);
-
-  for (let i = 0; i < data.length; i += 4) {
-    data[i] = 0;     // R: lighten alpha
-    data[i + 1] = 0; // G: darken alpha
-  }
+  const stamps = [];
 
   const wear = {
     ...DEFAULT_TERRAIN_WEAR_CONFIG,
     ...(track?.wear ?? {}),
   };
-  if (!wear.enabled || wear.source !== 'aiPath') return { width, height, data };
+  if (!wear.enabled || wear.source !== 'aiPath') return { width, height, edgeSoftness: 1, stamps };
 
   const aiPath = track?.features?.find(feature => feature.type === 'aiPath');
   const points = aiPath?.points;
-  if (!Array.isArray(points) || points.length < 3) return { width, height, data };
+  if (!Array.isArray(points) || points.length < 3) return { width, height, edgeSoftness: 1, stamps };
 
   const smoothingRadius = _clamp(wear.width * 4.2, 1, 30);
   const smoothedPoints = expandPolyline(
     points.map(point => ({ ...point, radius: smoothingRadius })),
     true
   );
-  if (!Array.isArray(smoothedPoints) || smoothedPoints.length < 3) return { width, height, data };
+  if (!Array.isArray(smoothedPoints) || smoothedPoints.length < 3) return { width, height, edgeSoftness: 1, stamps };
 
   const pixelsPerUnitX = width / Math.max(1, worldWidth);
   const pixelsPerUnitZ = height / Math.max(1, worldDepth);
   const sampleSpacing = _clamp(wear.width * 0.2, 0.5, 1.0);
   const samples = _sampleClosedPath(smoothedPoints, sampleSpacing);
-  if (samples.length < 3) return { width, height, data };
+  if (samples.length < 3) return { width, height, edgeSoftness: 1, stamps };
 
   const rng = _createSeededRandom(wear.seed);
   const halfWorldX = worldWidth / 2;
@@ -381,35 +380,13 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
     const laneZ = centerZ + normalZ * lane.offset;
     const sx = (laneX + halfWorldX) * pixelsPerUnitX;
     const sy = (laneZ + halfWorldZ) * pixelsPerUnitZ;
-
-    const pad = Math.ceil(Math.max(lane.radiusX, lane.radiusY) + 2);
-    const minX = _clamp(Math.floor(sx - pad), 0, width - 1);
-    const maxX = _clamp(Math.ceil(sx + pad), 0, width - 1);
-    const minY = _clamp(Math.floor(sy - pad), 0, height - 1);
-    const maxY = _clamp(Math.ceil(sy + pad), 0, height - 1);
-
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        const dx = x - sx;
-        const dy = y - sy;
-        const localX = dx * tangentX + dy * tangentZ;
-        const localY = dx * normalX + dy * normalZ;
-        const ellipse = Math.sqrt(
-          (localY * localY) / Math.max(1e-6, lane.radiusX * lane.radiusX) +
-          (localX * localX) / Math.max(1e-6, lane.radiusY * lane.radiusY)
-        );
-        if (ellipse >= 1) continue;
-
-        const falloff = 1 - _smoothstep(1 - edgeSoftness, 1, ellipse);
-        const base = (y * width + x) * 4;
-        const contribution = Math.round(_clamp(lane.alpha * falloff, 0, 1) * 255);
-        if (lane.lighten) {
-          data[base] = Math.min(255, data[base] + contribution);     // R: lighten
-        } else {
-          data[base + 1] = Math.min(255, data[base + 1] + contribution); // G: darken
-        }
-      }
-    }
+    // Record the lane stamp; rasterization (colour or rut normals) happens in the
+    // consumer via forEachStampPixel so both share identical geometry.
+    stamps.push({
+      sx, sy, tangentX, tangentZ, normalX, normalZ,
+      radiusX: lane.radiusX, radiusY: lane.radiusY,
+      alpha: lane.alpha, lighten: lane.lighten,
+    });
   };
 
   for (let i = 0; i < samples.length; i++) {
@@ -489,6 +466,64 @@ export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worl
     }
   }
 
+  return { width, height, edgeSoftness, stamps };
+}
+
+/**
+ * Rasterize one wear stamp's elliptical footprint, invoking `cb(x, y, weight,
+ * acrossNorm)` per covered pixel. `weight` is the edge-faded alpha (0–1) and
+ * `acrossNorm` is the signed across-lane position (−1 wall … 0 centre … +1 wall),
+ * which the rut normal pass uses to shape the groove cross-section.
+ */
+export function forEachStampPixel(stamp, width, height, edgeSoftness, cb) {
+  const { sx, sy, tangentX, tangentZ, normalX, normalZ, radiusX, radiusY, alpha } = stamp;
+  const pad = Math.ceil(Math.max(radiusX, radiusY) + 2);
+  const minX = _clamp(Math.floor(sx - pad), 0, width - 1);
+  const maxX = _clamp(Math.ceil(sx + pad), 0, width - 1);
+  const minY = _clamp(Math.floor(sy - pad), 0, height - 1);
+  const maxY = _clamp(Math.ceil(sy + pad), 0, height - 1);
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const dx = x - sx;
+      const dy = y - sy;
+      const localX = dx * tangentX + dy * tangentZ;
+      const localY = dx * normalX + dy * normalZ;
+      const ellipse = Math.sqrt(
+        (localY * localY) / Math.max(1e-6, radiusX * radiusX) +
+        (localX * localX) / Math.max(1e-6, radiusY * radiusY)
+      );
+      if (ellipse >= 1) continue;
+
+      const falloff = 1 - _smoothstep(1 - edgeSoftness, 1, ellipse);
+      const weight = _clamp(alpha * falloff, 0, 1);
+      const acrossNorm = localY / Math.max(1e-6, radiusX);
+      cb(x, y, weight, acrossNorm);
+    }
+  }
+}
+
+/**
+ * Build the wear colour overlay (R: lighten alpha, G: darken alpha) from the
+ * shared AI-path stamps. Same signature/output as before the rut-normal refactor.
+ */
+export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
+  const { width, height, edgeSoftness, stamps } = traceAiPathWearStamps(track, textureSize, worldWidth, worldDepth);
+  const data = new Uint8ClampedArray(width * height * 4); // R: lighten, G: darken (B/A unused)
+
+  for (const stamp of stamps) {
+    forEachStampPixel(stamp, width, height, edgeSoftness, (x, y, weight) => {
+      const base = (y * width + x) * 4;
+      const contribution = Math.round(weight * 255);
+      if (stamp.lighten) {
+        data[base] = Math.min(255, data[base] + contribution);     // R: lighten
+      } else {
+        data[base + 1] = Math.min(255, data[base + 1] + contribution); // G: darken
+      }
+    });
+  }
+
+  const pixelsPerUnit = (width / Math.max(1, worldWidth) + height / Math.max(1, worldDepth)) * 0.5;
   return {
     width,
     height,

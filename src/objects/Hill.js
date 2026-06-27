@@ -34,6 +34,13 @@ function getPolyHillCentroid(feature) {
   return { x: sx / pts.length, z: sz / pts.length };
 }
 
+// A feature's terrain type may be a TERRAIN_TYPES object (post-load) or a raw
+// name string. True only for water.
+function isWaterTerrain(terrainType) {
+  const name = typeof terrainType === 'string' ? terrainType : terrainType?.name;
+  return name === 'water';
+}
+
 function getWaterLevelOffset(feature) {
   const desired = typeof feature.waterLevelOffset === 'number'
     ? feature.waterLevelOffset
@@ -258,7 +265,7 @@ function clipContourToWaterline(contour, center, waterY, heightAt) {
 }
 
 /** Build a flat, double-sided water surface mesh (+ foam edge) from an XZ contour. */
-function buildWaterMesh(name, contour, y, center, heightAt, materialAnchor, scene) {
+function buildWaterMesh(name, contour, y, center, heightAt, materialAnchor, scene, foamContour = null) {
   const indices = triangulatePolygon(contour);
   if (indices.length === 0) return null;
 
@@ -277,12 +284,13 @@ function buildWaterMesh(name, contour, y, center, heightAt, materialAnchor, scen
   applyWaterMaterial(mesh, materialAnchor, scene);
 
   // Foam follows the actual waterline (clamped to the footprint), not the full
-  // rim, so it isn't buried when shallow water sits in a deep hole. Named with
-  // the same `water_` prefix so the editor's rebuild disposes it with the surface.
-  const foamContour = (center && heightAt)
-    ? clipContourToWaterline(contour, center, y, heightAt)
-    : contour;
-  createWaterFoamRibbon(`${name}_foam`, foamContour, y, scene);
+  // rim, so it isn't buried when shallow water sits in a deep hole. Callers with
+  // a non-radial footprint (polyHill) precompute it along the surface normals;
+  // otherwise fall back to a centroid-ray trace. Named with the same `water_`
+  // prefix so the editor's rebuild disposes it with the surface.
+  const foam = foamContour
+    ?? ((center && heightAt) ? clipContourToWaterline(contour, center, y, heightAt) : contour);
+  createWaterFoamRibbon(`${name}_foam`, foam, y, scene);
   return mesh;
 }
 
@@ -350,12 +358,82 @@ function createSquareHillWater(feature, scene, baseCy, currentTrack) {
   return buildWaterMesh(`water_${feature.centerX}_${feature.centerZ}`, contour, y, center, heightAt, feature, scene);
 }
 
+/**
+ * Outward unit normal of edge a→b, disambiguated by pushing away from `centroid`.
+ */
+function edgeNormalOutward(a, b, centroid) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  let nx = dz, nz = -dx;
+  const len = Math.hypot(nx, nz) || 1;
+  nx /= len; nz /= len;
+  const mx = (a.x + b.x) / 2 - centroid.x;
+  const mz = (a.z + b.z) / 2 - centroid.z;
+  if (nx * mx + nz * mz < 0) { nx = -nx; nz = -nz; }
+  return { x: nx, z: nz };
+}
+
+/**
+ * Per-vertex outward unit normals for a closed XZ contour, each the average of
+ * its two adjacent edge normals (the corner bisector). Used to push the polyHill
+ * surface/foam outward along the actual shape rather than radially from a centroid
+ * that, for elongated or concave loops, doesn't sit centrally.
+ */
+function outwardNormals(contour, centroid) {
+  const n = contour.length;
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const prev = contour[(i - 1 + n) % n];
+    const cur = contour[i];
+    const next = contour[(i + 1) % n];
+    const n1 = edgeNormalOutward(prev, cur, centroid);
+    const n2 = edgeNormalOutward(cur, next, centroid);
+    let nx = n1.x + n2.x, nz = n1.z + n2.z;
+    const len = Math.hypot(nx, nz);
+    out[i] = len < 1e-6 ? { x: 0, z: 0 } : { x: nx / len, z: nz / len };
+  }
+  return out;
+}
+
+/**
+ * Trace the waterline outward from each rim point along its normal: the distance
+ * where the rising slope meets the water surface (`waterY`), clamped to `maxDist`
+ * (the surface skirt). This keeps the foam glued to the *visible* water edge as
+ * the valley deepens and the shoreline climbs the wall, following the polygon
+ * shape instead of a radial cast.
+ */
+function traceWaterlineAlongNormals(rim, normals, waterY, heightAt, maxDist) {
+  return rim.map((p, i) => {
+    const nx = normals[i].x, nz = normals[i].z;
+    // Rim already underwater along this normal out to the skirt → edge is at the
+    // skirt; otherwise binary-search the slope for where terrain reaches waterY.
+    if (heightAt(p.x + nx * maxDist, p.z + nz * maxDist) < waterY) {
+      return { x: p.x + nx * maxDist, z: p.z + nz * maxDist };
+    }
+    let lo = 0, hi = maxDist;
+    for (let k = 0; k < 16; k++) {
+      const mid = (lo + hi) * 0.5;
+      if (heightAt(p.x + nx * mid, p.z + nz * mid) >= waterY) hi = mid; else lo = mid;
+    }
+    // Overshoot the waterline by the same *1.2 the surface uses so the foam edge
+    // tucks under the terrain instead of leaving a sliver gap at the shoreline.
+    const d = Math.min((lo + hi) * 0.5 * 1.2, maxDist);
+    return { x: p.x + nx * d, z: p.z + nz * d };
+  });
+}
+
 function createPolyHillWater(feature, scene, baseCy, centroid, currentTrack) {
   const y = baseCy + getWaterLevelOffset(feature);
   const heightAt = (x, z) => currentTrack.getHeightAt(x, z);
   // Use the same corner-rounded contour the terrain uses (per-point `radius`),
   // so the water/foam follow the rounded corners instead of hard points.
-  const contour = expandPolyline(feature.points, feature.closed ?? true);
+  const rim = expandPolyline(feature.points, feature.closed ?? true);
+  const normals = outwardNormals(rim, centroid);
+  // Push the surface out over the slope skirt (the falloff band outside the
+  // polygon) so the water mesh keeps covering the valley wall as it deepens, and
+  // ride the foam along the same normals so the white edge tracks the waterline.
+  const skirt = ((feature.width ?? feature.slope ?? 5) / 2) * 1.2;
+  const contour = rim.map((p, i) => ({ x: p.x + normals[i].x * skirt, z: p.z + normals[i].z * skirt }));
+  const foamContour = traceWaterlineAlongNormals(rim, normals, y, heightAt, skirt);
   return buildWaterMesh(
     `water_${centroid.x}_${centroid.z}`,
     contour,
@@ -363,7 +441,8 @@ function createPolyHillWater(feature, scene, baseCy, centroid, currentTrack) {
     centroid,
     heightAt,
     { centerX: centroid.x, centerZ: centroid.z },
-    scene
+    scene,
+    foamContour
   );
 }
 
@@ -384,8 +463,10 @@ export function createHill(feature, currentTrack, scene) {
     if (!Array.isArray(feature.points) || feature.points.length < 3) return null;
 
     const centroid = getPolyHillCentroid(feature);
-    const terrainType = currentTrack.getTerrainTypeAt(centroid.x, centroid.z);
-    if (!(terrainType === 'water' || terrainType?.name === 'water')) return null;
+    // Use THIS feature's own terrain type, not getTerrainTypeAt — an overlapping
+    // water feature would otherwise win the centroid lookup and wrongly flag a
+    // non-water polyHill as water.
+    if (!isWaterTerrain(feature.terrainType)) return null;
 
     const baseCy = currentTrack.getHeightAt(centroid.x, centroid.z);
     return createPolyHillWater(feature, scene, baseCy, centroid, currentTrack);
@@ -400,8 +481,7 @@ export function createHill(feature, currentTrack, scene) {
   );
   if (!isNegativeHill && !isNegativeSquareHill) return null;
 
-  const terrainType = currentTrack.getTerrainTypeAt(feature.centerX, feature.centerZ);
-  if (!(terrainType === 'water' || terrainType?.name === 'water')) return null;
+  if (!isWaterTerrain(feature.terrainType)) return null;
 
   const baseCy = currentTrack.getHeightAt(feature.centerX, feature.centerZ);
   return feature.type === 'hill'
