@@ -51,78 +51,19 @@ export class ParticleEffects {
     return name === 'water';
   }
 
-  _hillContributionAt(feature, x, z) {
-    const radiusX = Math.max(0.001, feature.radiusX ?? 10);
-    const radiusZ = Math.max(0.001, feature.radiusZ ?? 10);
-    const angleRad = ((feature.angle ?? 0) * Math.PI) / 180;
-    const wx = x - feature.centerX;
-    const wz = z - feature.centerZ;
-    const cosA = Math.cos(angleRad);
-    const sinA = Math.sin(angleRad);
-    const lx = wx * cosA + wz * sinA;
-    const lz = -wx * sinA + wz * cosA;
-    const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
-    if (t2 >= 1) return 0;
-    const t = Math.sqrt(t2);
-    return feature.height * Math.cos(t * Math.PI / 2);
-  }
-
-  _squareHillContributionAt(feature, x, z) {
-    const hw = feature.width / 2;
-    const hd = (feature.depth ?? feature.width) / 2;
-    const transition = feature.transition ?? 4;
-
-    const wx = x - feature.centerX;
-    const wz = z - feature.centerZ;
-    const angleRad = (feature.angle ?? 0) * Math.PI / 180;
-    const cosA = Math.cos(angleRad);
-    const sinA = Math.sin(angleRad);
-    const lx = wx * cosA + wz * sinA;
-    const lz = -wx * sinA + wz * cosA;
-
-    const edgeDx = Math.max(0, Math.abs(lx) - hw);
-    const edgeDz = Math.max(0, Math.abs(lz) - hd);
-    const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
-    if (dist >= transition) return 0;
-
-    const falloff = dist === 0 ? 1 : Math.cos((dist / transition) * Math.PI / 2);
-    if (feature.heightAtMin !== undefined) {
-      const t = (Math.max(-hw, Math.min(hw, lx)) + hw) / feature.width;
-      const innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
-      return innerHeight * falloff;
-    }
-    return feature.height * falloff;
-  }
 
   _isInDeepWater(track) {
-    if (!track?.features?.length) return false;
+    if (!track) return false;
 
     const x = this.mesh.position.x;
     const z = this.mesh.position.z;
-    const DEEP_WATER_THRESHOLD = -0.9;
+    const DEEP_WATER_THRESHOLD = -0.2;
 
-    for (let i = track.features.length - 1; i >= 0; i--) {
-      const feature = track.features[i];
-      if (!this._isWaterTerrain(feature?.terrainType)) continue;
-
-      if (feature.type === 'hill' && feature.height < 0) {
-        const h = this._hillContributionAt(feature, x, z);
-        if (h <= DEEP_WATER_THRESHOLD) return true;
-      } else if (feature.type === 'squareHill') {
-        const isNegativeFlat = (feature.height ?? 0) < 0;
-        const isNegativeSlope =
-          feature.heightAtMin !== undefined &&
-          feature.heightAtMax !== undefined &&
-          feature.heightAtMin < 0 &&
-          feature.heightAtMax < 0;
-        if (!isNegativeFlat && !isNegativeSlope) continue;
-
-        const h = this._squareHillContributionAt(feature, x, z);
-        if (h <= DEEP_WATER_THRESHOLD) return true;
-      }
-    }
-
-    return false;
+    // Only the region the truck is actually standing in matters. getTerrainTypeAt
+    // and getHeightAt resolve the right feature (hill, squareHill, polyHill,
+    // terrain, …) respecting bounds and priority, so every water shape is covered.
+    if (!this._isWaterTerrain(track.getTerrainTypeAt(x, z))) return false;
+    return track.getHeightAt(x, z) <= DEEP_WATER_THRESHOLD;
   }
 
   /**
@@ -338,7 +279,12 @@ export class ParticleEffects {
     }
 
     // Update drift particles
-    const isGrounded = groundedness > 0.5;
+    const isGrounded = groundedness > 0.2;
+    // Wading through deep water keeps groundedness low (~0.3) because the
+    // suspension is extended over the submerged bed, so the strict isGrounded
+    // test suppresses all spray. Water effects use a looser contact threshold
+    // that still excludes a truck fully airborne over the water (groundedness ~0).
+    const isSplashGrounded = groundedness > 0.1;
 
     if (speed > 0.5) {
       const driftIntensity = Math.max(0, state.slipAngle - state.driftThreshold);
@@ -351,7 +297,7 @@ export class ParticleEffects {
     // Update splash particles when in water and wheels are on the ground
     const isInWater = terrainName === 'water';
     const isInMud = terrainName === 'mud';
-    if (isInWater && isGrounded && speed > 1) {
+    if (isInWater && isSplashGrounded && speed > 1) {
       const rate = speed * 80 * effectiveScale;
       for (const p of this.splashParticles) p.emitRate = rate;
     } else {
@@ -365,18 +311,19 @@ export class ParticleEffects {
       for (const p of this.mudSplashParticles) p.emitRate = 0;
     }
 
-    // Deep-water splash pulse: one strong burst on entry and repeated pulses while driving.
-    const inDeepWater = isInWater && isGrounded && this._isInDeepWater(track);
+    // Deep-water splash: a strong burst on entry, periodic pulses while driving,
+    // and a small steady spray between pulses so the truck visibly churns through.
+    const inDeepWater = isInWater && isSplashGrounded && this._isInDeepWater(track);
     if (inDeepWater && !this._wasInDeepWater) {
       this._deepSplashPulseTimer = 0.16;
-      this._deepSplashPulseCooldown = 0.42;
+      this._deepSplashPulseCooldown = 2.5;
     }
 
     if (inDeepWater && speed > 1.5) {
       this._deepSplashPulseCooldown -= deltaTime;
       if (this._deepSplashPulseCooldown <= 0) {
-        this._deepSplashPulseTimer = 0.11;
-        this._deepSplashPulseCooldown = Math.max(0.18, 0.45 - speed * 0.012);
+        this._deepSplashPulseTimer = 0.16;
+        this._deepSplashPulseCooldown = Math.max(2.5, 0.45 - speed * 0.012);
       }
     }
 
