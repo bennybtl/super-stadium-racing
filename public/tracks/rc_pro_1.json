@@ -582,22 +582,24 @@
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": 40.85890553005542,
-      "centerZ": -43.814392179241274,
+      "centerX": 40.73491100124048,
+      "centerZ": -45.09999642526876,
       "terrainType": "mud",
       "width": 14,
       "depth": 8.5,
-      "rotation": 21
+      "rotation": 21,
+      "blendWidth": 3.5
     },
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": 21.068641488570336,
-      "centerZ": 32.9825620787412,
+      "centerX": 23.933542397754003,
+      "centerZ": 36.61767791455049,
       "terrainType": "mud",
       "width": 13,
       "depth": 9.5,
-      "rotation": 21
+      "rotation": 21,
+      "blendWidth": 6
     },
     {
       "type": "terrain",
@@ -607,17 +609,19 @@
       "terrainType": "mud",
       "width": 15.5,
       "depth": 8.5,
-      "rotation": 21
+      "rotation": 21,
+      "blendWidth": 2
     },
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": 46.73018305509742,
-      "centerZ": 31.592592131116735,
+      "centerX": 48.73018305509742,
+      "centerZ": 32.09259213111673,
       "terrainType": "mud",
       "width": 14.5,
       "depth": 9,
-      "rotation": 134
+      "rotation": 134,
+      "blendWidth": 3.5
     },
     {
       "type": "terrain",
@@ -627,7 +631,8 @@
       "terrainType": "mud",
       "width": 11.5,
       "depth": 7.5,
-      "rotation": 134
+      "rotation": 134,
+      "blendWidth": 3
     },
     {
       "type": "bannerString",

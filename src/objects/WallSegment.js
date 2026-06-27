@@ -50,6 +50,7 @@ export class WallSegment {
     yShiftB = 0,
     collidable = true,
     collisionHeight = null,
+    collisionOnly = false,
   ) {
     this.halfLength = width / 2;
     this.halfThick  = depth / 2;
@@ -58,12 +59,21 @@ export class WallSegment {
     this._index     = index;
     this._style     = style ?? 'red_white';
 
+    // collisionOnly: the visible wall is drawn elsewhere (e.g. PolyWall's ribbon),
+    // so this segment is just an invisible collider. Skip ONLY the visual mesh,
+    // material, and shadow — the collision mesh (and its shear) stays identical so
+    // WallManager and StaticBodyCollisionManager see the same collider as before.
+    this._collisionOnly = collisionOnly;
     this._sheared = Math.abs(yShiftA) > 0.001 || Math.abs(yShiftB) > 0.001;
-    const visualMesh = this._sheared
-      ? this._createParallelogramMesh(name, width, height, depth, yShiftA, yShiftB, scene)
-      : MeshBuilder.CreateBox(name, { width, height, depth }, scene);
-    visualMesh.position = new Vector3(px, centerY, pz);
-    visualMesh.rotation.y = heading;
+
+    let visualMesh = null;
+    if (!collisionOnly) {
+      visualMesh = this._sheared
+        ? this._createParallelogramMesh(name, width, height, depth, yShiftA, yShiftB, scene)
+        : MeshBuilder.CreateBox(name, { width, height, depth }, scene);
+      visualMesh.position = new Vector3(px, centerY, pz);
+      visualMesh.rotation.y = heading;
+    }
 
     const physicalHeight = collisionHeight != null ? Number(collisionHeight) : Number(height);
     const physicalMesh = this._sheared
@@ -75,7 +85,9 @@ export class WallSegment {
     physicalMesh.isVisible = false;
     physicalMesh.isPickable = false;
 
-    this.mesh = visualMesh;
+    // In collisionOnly mode there is no visual mesh; point this.mesh at the
+    // collider so position/dispose still work.
+    this.mesh = visualMesh ?? physicalMesh;
     this._collisionMesh = physicalMesh;
 
     const colliderMesh = this._collisionMesh;
@@ -87,7 +99,7 @@ export class WallSegment {
       truckColliderFriction: Math.max(0, Math.min(1, 1 - friction)),
     };
 
-    this._applyMaterial(scene, shadows);
+    if (!collisionOnly) this._applyMaterial(scene, shadows);
 
     this._aggregate = new PhysicsAggregate(colliderMesh, PhysicsShapeType.BOX, {
       mass: 0,
@@ -103,7 +115,8 @@ export class WallSegment {
   dispose() {
     if (this._aggregate) this._aggregate.dispose();
     this.mesh.dispose();
-    if (this._collisionMesh) this._collisionMesh.dispose();
+    // In collisionOnly mode this.mesh IS the collision mesh — don't double-dispose.
+    if (this._collisionMesh && this._collisionMesh !== this.mesh) this._collisionMesh.dispose();
   }
 
   // ─── Private ─────────────────────────────────────────────────────────────

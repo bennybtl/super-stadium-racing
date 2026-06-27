@@ -3,6 +3,7 @@
   "id": "hurricane_gultch",
   "packId": "offroad_pack_1",
   "hidden": false,
+  "dirtChunks": true,
   "name": "Hurricane Gultch",
   "image": "hurricane_gultch.png",
   "width": 160,
@@ -216,12 +217,12 @@
           "radius": 8
         },
         {
-          "x": -80,
+          "x": -78.5,
           "z": -63.96789252534063,
           "radius": 10
         },
         {
-          "x": -80,
+          "x": -78.5,
           "z": 80,
           "radius": 18
         },
@@ -241,7 +242,7 @@
           "radius": 10.5
         }
       ],
-      "height": 4,
+      "height": 3,
       "collisionHeight": 12,
       "thickness": 0.5,
       "friction": 0.1,
@@ -251,12 +252,13 @@
       "type": "squareHill",
       "centerX": 30.242390140481376,
       "centerZ": -8.833675699181889,
-      "width": 20,
+      "width": 20.5,
       "depth": 3.5,
       "height": -2.5,
-      "waterLevelOffset": 1.5,
+      "waterLevelOffset": 2,
       "transition": 5.5,
-      "terrainType": "water"
+      "terrainType": "water",
+      "blendWidth": 1.5
     },
     {
       "type": "terrainPath",
@@ -309,7 +311,8 @@
       "height": -3,
       "waterLevelOffset": 1,
       "transition": 5,
-      "terrainType": "water"
+      "terrainType": "water",
+      "blendWidth": 2
     },
     {
       "type": "hill",
@@ -320,7 +323,8 @@
       "angle": 155,
       "height": -2.5,
       "waterLevelOffset": 1.5,
-      "terrainType": "water"
+      "terrainType": "water",
+      "blendWidth": 2
     },
     {
       "type": "hill",
@@ -331,7 +335,8 @@
       "angle": 0,
       "height": 3.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 2.5
     },
     {
       "type": "hill",
@@ -342,7 +347,8 @@
       "angle": 0,
       "height": 4,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 3
     },
     {
       "type": "hill",
@@ -353,7 +359,8 @@
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 2.5
     },
     {
       "type": "hill",
@@ -364,7 +371,8 @@
       "angle": 0,
       "height": 3.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 2
     },
     {
       "type": "hill",
@@ -375,7 +383,8 @@
       "angle": 0,
       "height": 3.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 1
     },
     {
       "type": "hill",
@@ -386,7 +395,8 @@
       "angle": 152,
       "height": 2,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 2
     },
     {
       "type": "hill",
@@ -468,7 +478,7 @@
           "radius": 9.5
         },
         {
-          "x": 55.4830413255449,
+          "x": 56.4830413255449,
           "z": -55.973966156742684,
           "radius": 6.5
         }
@@ -488,7 +498,8 @@
       "angle": 0,
       "height": -1.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 2.5
     },
     {
       "type": "hill",
@@ -499,7 +510,8 @@
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 3
     },
     {
       "type": "hill",
@@ -510,7 +522,8 @@
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 1
     },
     {
       "type": "hill",
@@ -521,7 +534,8 @@
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 1
     },
     {
       "type": "hill",
@@ -630,7 +644,8 @@
       "angle": 0,
       "height": 5,
       "waterLevelOffset": 2,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 2
     },
     {
       "type": "obstacle",
@@ -863,8 +878,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 56.99868758817613,
-          "z": -51.62181261888545,
+          "x": 58.49868758817613,
+          "z": -46.12181261888545,
           "radius": 0
         },
         {
