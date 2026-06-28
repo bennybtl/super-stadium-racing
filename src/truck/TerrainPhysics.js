@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import { TRUCK_HALF_HEIGHT as _DEFAULT_HALF_HEIGHT } from "../constants.js";
+import { TRUCK_HALF_HEIGHT as _DEFAULT_HALF_HEIGHT, GROUNDEDNESS } from "../constants.js";
 
 const GRAVITY    = -20;           // m/s²
 const DEG_TO_RAD = Math.PI / 180;
@@ -65,7 +65,7 @@ const SPRING = {
 /** Visual roll smoothing when grounded or airborne. */
 const ORIENTATION = {
   fastSmoothingRate:     6,     // exp smoothing rate for roll transitions (s⁻¹)
-  groundednessThreshold: 0.3,   // minimum groundedness to run terrain orientation
+  groundednessThreshold: GROUNDEDNESS.TERRAIN,  // min groundedness to run terrain orientation
 };
 
 /**
@@ -82,7 +82,7 @@ const PITCH = {
 
 /** Vertical/visual jitter impulses over rough terrain. */
 const ROUGHNESS = {
-  minGroundedness:  0.3,   // minimum groundedness to apply bumps
+  minGroundedness:  GROUNDEDNESS.TERRAIN,   // minimum groundedness to apply bumps
   bumpInterval:     0.25,  // base time between bumps (s); divided by roughness
   vertImpulseScale: 3.6,   // max vertical velocity impulse per bump (m/s)
   rollJitter:       0.20,  // max roll jitter per bump (radians × roughness)
@@ -178,7 +178,7 @@ export class TerrainPhysics {
       }
     }
 
-    this._updatePitch(mesh, deltaTime, groundedness, forward, hSpeed);
+    this._updatePitch(deltaTime, groundedness, forward, hSpeed);
 
     return { groundedness, penetration };
   }
@@ -605,7 +605,7 @@ export class TerrainPhysics {
    * Nose-up on launch, nose-down on descent, level on flat ground.
    * Flipped when reversing so it reads correctly relative to direction of travel.
    */
-  _updatePitch(mesh, deltaTime, groundedness, forward, hSpeed) {
+  _updatePitch(deltaTime, groundedness, forward, hSpeed) {
     let targetPitch;
 
     if (groundedness > ORIENTATION.groundednessThreshold) {
@@ -642,7 +642,9 @@ export class TerrainPhysics {
       : PITCH.airborneSmoothingRate;
     const pitchFactor = 1 - Math.exp(-rate * deltaTime);
     this._smoothedPitch += (targetPitch - this._smoothedPitch) * pitchFactor;
-    mesh.rotation.x = -this._smoothedPitch;
+    // Compute-only: the smoothed pitch is published to state and composed into the
+    // mesh's rotation by DriftPhysics.updateRoll (the single orientation-apply).
+    this.state.flightPitch = this._smoothedPitch;
   }
 
   /**

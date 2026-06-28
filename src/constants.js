@@ -6,6 +6,15 @@ export const TRUCK_WIDTH = 1.5; // full box width (1.5)
 export const TRUCK_DEPTH = 3.0; // full box depth (3.0)
 export const TRUCK_RADIUS = Math.sqrt((TRUCK_WIDTH/2)**2 + (TRUCK_DEPTH/2)**2); // half-diagonal of 1.5×3.0 box, for collision purposes
 
+// Groundedness is a 0..1 wheel-contact factor. Systems engage at increasing
+// contact along this ladder — kept here so the thresholds read consistently
+// across Controls, DriftPhysics, and TerrainPhysics instead of scattered literals.
+export const GROUNDEDNESS = {
+  STEER:       0.1,  // minimal contact: steering + acceleration authority
+  VISUAL_LEAN: 0.2,  // partial contact: body roll / pitch lean
+  TERRAIN:     0.3,  // solid contact: terrain orientation + roughness bumps
+};
+
 export const basicColors = {
   black: { diffuse: new Color3(0.04, 0.04, 0.04), emissive: new Color3(0.0, 0.0, 0.0) },  // X
   gray: { diffuse: new Color3(0.45, 0.45, 0.45), emissive: new Color3(0.1, 0.1, 0.1) },  // X

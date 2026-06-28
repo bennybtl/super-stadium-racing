@@ -1,4 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
+import { projectOnPlane } from "./surface-math.js";
+import { GROUNDEDNESS } from "../constants.js";
 
 const UP = new Vector3(0, 1, 0);
 
@@ -32,6 +34,32 @@ const MAX_THROTTLE_BREAK = 0.85;
  */
 const YAW_AIRBORNE_DECAY = 2.0;
 
+// ─── Weight-transfer steering / grip feel ────────────────────────────────────
+// Gains in calculateSpeedFactors(). All scale with speedRatio; the throttle/brake
+// ones also scale with the vehicle's `weightTransfer` stat. These are the primary
+// "how does it corner" feel knobs — tweak here rather than in the formula.
+
+/** Baseline understeer at top speed (finite tire lateral force). */
+const BASE_UNDERSTEER = 0.10;
+/** Added understeer under throttle (weight shifts rearward, front lightens). */
+const THROTTLE_UNDERSTEER_GAIN = 0.10;
+/** Oversteer under braking (weight shifts forward, rear lightens). */
+const BRAKE_OVERSTEER_GAIN = 0.15;
+/** Floor on steering factor so turn-in is never fully lost. */
+const MIN_STEER_FACTOR = 0.40;
+/** Lateral-grip taper with speed, and its floor (tire limit at speed). */
+const LATERAL_GRIP_SPEED_TAPER = 0.30;
+const MIN_LATERAL_GRIP_FACTOR = 0.50;
+/** Rear-axle unload under throttle / braking, feeding the drift model. */
+const THROTTLE_REAR_UNLOAD = 0.25;
+const BRAKE_REAR_UNLOAD = 0.60;
+/** Floor on rear traction factor. */
+const MIN_REAR_TRACTION = 0.30;
+/** Power-oversteer surface-looseness map: looseness = GAIN/grip − BIAS, clamped 0..1. */
+const SURFACE_LOOSE_GAIN = 3.4;
+const SURFACE_LOOSE_BIAS = 0.9;
+const SURFACE_LOOSE_MIN_GRIP = 0.15;
+
 /**
  * Handles input processing and acceleration/braking
  */
@@ -46,7 +74,7 @@ export class Controls {
   }
 
   updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
-    if (groundedness > 0.1) {
+    if (groundedness > GROUNDEDNESS.STEER) {
       // Invert steering when reversing so the truck turns the natural direction
       this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
       const fwdSpeed = this.state.velocity.dot(this._forward);
@@ -74,7 +102,7 @@ export class Controls {
   }
 
   updateAcceleration(input, forward, groundedness, deltaTime) {
-    if (groundedness <= 0.1) return;
+    if (groundedness <= GROUNDEDNESS.STEER) return;
 
     // Clear brake-to-stop flag when back button is released
     if (!input.back && this.lastBackInput) {
@@ -94,26 +122,22 @@ export class Controls {
     }
   }
 
+  /** Drive direction: heading projected onto the surface tangent plane so engine
+   *  force follows the slope. Writes into and returns the reusable _surfaceFwd. */
+  _surfaceDriveDir(forward) {
+    const normal = this.state.surfaceNormal ?? UP;
+    return projectOnPlane(this._surfaceFwd, forward, normal, forward);
+  }
+
   handleForwardInput(forward, deltaTime) {
     if (this.state.noDriveUntil && Date.now() < this.state.noDriveUntil) {
       // Currently in no-drive cooldown (e.g. after head-on collision), skip applying drive force
       return;
     }
-    // Project forward direction onto the surface tangent plane so engine force follows the slope.
-    const normal = this.state.surfaceNormal ?? UP;
-    const fwdDotNormal = forward.dot(normal);
-    this._surfaceFwd.x = forward.x - normal.x * fwdDotNormal;
-    this._surfaceFwd.y = forward.y - normal.y * fwdDotNormal;
-    this._surfaceFwd.z = forward.z - normal.z * fwdDotNormal;
-    const sfLen = Math.sqrt(
-      this._surfaceFwd.x * this._surfaceFwd.x +
-      this._surfaceFwd.y * this._surfaceFwd.y +
-      this._surfaceFwd.z * this._surfaceFwd.z
-    );
-    const accelDir = sfLen > 0.001 ? this._surfaceFwd.scaleInPlace(1 / sfLen) : forward;
+    const accelDir = this._surfaceDriveDir(forward);
 
     const forwardSpeed = this.state.velocity.dot(forward);
-    
+
     if (forwardSpeed < -1.5) {
       // Moving backward - brake and reverse direction
       const brakeScale = -5 * deltaTime;
@@ -162,17 +186,7 @@ export class Controls {
   }
 
   handleBackwardInput(forward, deltaTime) {
-    const normal = this.state.surfaceNormal ?? UP;
-    const fwdDotNormal = forward.dot(normal);
-    this._surfaceFwd.x = forward.x - normal.x * fwdDotNormal;
-    this._surfaceFwd.y = forward.y - normal.y * fwdDotNormal;
-    this._surfaceFwd.z = forward.z - normal.z * fwdDotNormal;
-    const sfLen = Math.sqrt(
-      this._surfaceFwd.x * this._surfaceFwd.x +
-      this._surfaceFwd.y * this._surfaceFwd.y +
-      this._surfaceFwd.z * this._surfaceFwd.z
-    );
-    const accelDir = sfLen > 0.001 ? this._surfaceFwd.scaleInPlace(1 / sfLen) : forward;
+    const accelDir = this._surfaceDriveDir(forward);
 
     const forwardSpeed = this.state.velocity.dot(forward);
     const speed = this.state.velocity.length();
@@ -264,14 +278,14 @@ export class Controls {
     // Weight transfer magnitude scales with the vehicle's weightTransfer stat.
     // Heavier/stiffer trucks shift weight more dramatically under load.
     const wt = this.state.weightTransfer ?? 1.0;
-    const baseUndersteer     = speedRatio * 0.10;          // tires have finite lateral force
-    const throttleUndersteer = isAccelerating ? speedRatio * 0.10 * wt : 0;
-    const brakeOversteer     = isDecelerating ? speedRatio * 0.15 * wt : 0;
+    const baseUndersteer     = speedRatio * BASE_UNDERSTEER;
+    const throttleUndersteer = isAccelerating ? speedRatio * THROTTLE_UNDERSTEER_GAIN * wt : 0;
+    const brakeOversteer     = isDecelerating ? speedRatio * BRAKE_OVERSTEER_GAIN * wt : 0;
 
-    const steerFactor     = Math.max(0.40, 1 - baseUndersteer - throttleUndersteer + brakeOversteer);
+    const steerFactor     = Math.max(MIN_STEER_FACTOR, 1 - baseUndersteer - throttleUndersteer + brakeOversteer);
     const effectiveTurnSpeed = this.state.turnSpeed * steerFactor;
 
-    const lateralGripFactor = Math.max(0.5, 1 - speedRatio * 0.3);
+    const lateralGripFactor = Math.max(MIN_LATERAL_GRIP_FACTOR, 1 - speedRatio * LATERAL_GRIP_SPEED_TAPER);
     const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness;
 
     // Rear traction factor — how loaded/unloaded the rear axle is due to weight transfer.
@@ -279,9 +293,9 @@ export class Controls {
     // Braking:  weight shifts forward, rear unloads significantly.
     // These mirror the same wt/speedRatio variables used for steerFactor above,
     // so the drift model and the steering model share one consistent weight-transfer source.
-    const throttleRearLoose = isAccelerating ? speedRatio * 0.25 * wt : 0;
-    const brakeRearLoose    = isDecelerating ? speedRatio * 0.60 * wt : 0;
-    const rearTractionFactor = Math.max(0.3, 1.0 - throttleRearLoose - brakeRearLoose);
+    const throttleRearLoose = isAccelerating ? speedRatio * THROTTLE_REAR_UNLOAD * wt : 0;
+    const brakeRearLoose    = isDecelerating ? speedRatio * BRAKE_REAR_UNLOAD * wt : 0;
+    const rearTractionFactor = Math.max(MIN_REAR_TRACTION, 1.0 - throttleRearLoose - brakeRearLoose);
 
     // Power oversteer / launch break: a high-power engine overwhelms tire grip
     // from low speed — strongest at a standstill and on low-grip surfaces, fading
@@ -291,7 +305,8 @@ export class Controls {
     //   surfaceLoose: ~0 on grippy asphalt (3.8), ~0.8 on packed dirt (2.0),
     //                 saturating to 1 on loose/muddy surfaces.
     const lowSpeedFactor = Math.max(0, 1 - speedRatio / LOW_SPEED_BREAK_RATIO);
-    const surfaceLoose = Math.max(0, Math.min(1, 3.4 / Math.max(0.15, terrainGripMultiplier) - 0.9));
+    const surfaceLoose = Math.max(0, Math.min(1,
+      SURFACE_LOOSE_GAIN / Math.max(SURFACE_LOOSE_MIN_GRIP, terrainGripMultiplier) - SURFACE_LOOSE_BIAS));
     const throttleBreak = isAccelerating
       ? Math.min(MAX_THROTTLE_BREAK, lowSpeedFactor * surfaceLoose * THROTTLE_BREAK_STRENGTH * wt * groundedness)
       : 0;

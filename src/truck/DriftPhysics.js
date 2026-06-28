@@ -1,41 +1,16 @@
 import { Vector3 } from "@babylonjs/core";
+import { tangentBasis } from "./surface-math.js";
+import { GROUNDEDNESS } from "../constants.js";
 
 // ─── Grip / drift ────────────────────────────────────────────────────────────
-
-/** Speed below which drift physics is skipped when NOT already drifting (avoids jitter at rest). */
-const MIN_DRIFT_SPEED = 15.0;
-
-/** Minimum speed to hold an active drift while on the throttle. */
-const MIN_DRIFT_SPEED_HOLD_THROTTLE = 10.0;
-
-/** Minimum speed to hold an active drift while coasting (off throttle, no brake).
- *  Low so the drift can bleed out naturally through grip physics rather than
- *  snapping off at an arbitrary threshold. */
-const MIN_DRIFT_SPEED_HOLD_COAST = 3.0;
-
-/** Minimum speed to hold an active drift while braking — kills it sooner. */
-const MIN_DRIFT_SPEED_HOLD_BRAKE = 12.0;
-
-/** Exponent that controls how sharply grip drops off once slip exceeds the drift threshold.
- *  Higher = grip falls faster, shorter drift, snappier recovery.
- *  Lower  = grip falls slowly, longer floaty drift. */
-const SLIP_DROPOFF_RATE = 6;
-
-/** Grip correction strength at the low end of the normal-cornering zone.
- *  Fraction of lateral speed removed per frame at zero slip — gives tight, responsive
- *  cornering well below the drift threshold.
- *  Tapers linearly down to effectiveGrip at the threshold for a seamless transition. */
-const GRIP_ZONE_CORRECTION = 0.35;
-
-/** Minimum grip factor at extreme slip angles — prevents total loss of steering authority. */
-const MIN_SLIP_FACTOR = 0.09;
-
-/** Hard ceiling on the grip value used in the drift zone.
- *  No matter how grippy a truck is, once slip exceeds the drift threshold the
- *  traction available is capped here — guaranteeing any truck can break loose
- *  and slide.  Higher truck grip still improves cornering in the normal grip zone;
- *  only the drift zone is bounded. */
-const MAX_DRIFT_GRIP = 0.13;
+//
+// The per-vehicle drift-grip values — driftThreshold, gripZoneCorrection,
+// maxDriftGrip, slipDropoffRate, minSlipFactor, minDriftSpeed, and the three
+// minDriftSpeedHold* thresholds — are NOT defined here. They are derived from the
+// four high-level handling knobs in DriftTuning.js (resolveHandling) and written
+// onto truck state, which is their single source of truth. This file reads them
+// straight off `this.state`. The constants below are the ones DriftTuning does not
+// own — global feel rules that apply to every vehicle.
 
 /** Multiplier applied to reverse-direction grip so reversing corrects quickly. */
 const REVERSE_GRIP_BOOST = 15;
@@ -112,8 +87,6 @@ const PITCH_FROM_WEIGHT_TRANSFER = {
 export class DriftPhysics {
   constructor(state) {
     this.state = state;
-    this._velocityDir = new Vector3();
-    this._right = new Vector3();
     this._surfaceForward = new Vector3();
     this._surfaceNormal = new Vector3(0, 1, 0);
     this._surfaceRight = new Vector3(1, 0, 0);
@@ -126,96 +99,18 @@ export class DriftPhysics {
     const surfaceNormal = this._surfaceNormal;
     const surfaceRight = this._surfaceRight;
 
-    const stateNormal = this.state.surfaceNormal;
-    if (stateNormal) {
-      surfaceNormal.copyFrom(stateNormal);
-      const normalLenSq =
-        surfaceNormal.x * surfaceNormal.x +
-        surfaceNormal.y * surfaceNormal.y +
-        surfaceNormal.z * surfaceNormal.z;
-      if (normalLenSq > 1e-6) {
-        const invNormalLen = 1 / Math.sqrt(normalLenSq);
-        surfaceNormal.scaleInPlace(invNormalLen);
-      } else {
-        surfaceNormal.set(0, 1, 0);
-      }
-    } else {
-      surfaceNormal.set(0, 1, 0);
-    }
+    // Orthonormal basis on the terrain tangent plane (normal, forward, right).
+    if (this.state.surfaceNormal) surfaceNormal.copyFrom(this.state.surfaceNormal);
+    else surfaceNormal.set(0, 1, 0);
+    tangentBasis(surfaceNormal, forward, surfaceNormal, surfaceForward, surfaceRight);
 
-    const fwdDotNormal =
-      forward.x * surfaceNormal.x +
-      forward.y * surfaceNormal.y +
-      forward.z * surfaceNormal.z;
-    surfaceForward.set(
-      forward.x - surfaceNormal.x * fwdDotNormal,
-      forward.y - surfaceNormal.y * fwdDotNormal,
-      forward.z - surfaceNormal.z * fwdDotNormal
-    );
-    const surfaceFwdLenSq =
-      surfaceForward.x * surfaceForward.x +
-      surfaceForward.y * surfaceForward.y +
-      surfaceForward.z * surfaceForward.z;
-    if (surfaceFwdLenSq > 1e-6) {
-      surfaceForward.scaleInPlace(1 / Math.sqrt(surfaceFwdLenSq));
-    } else {
-      surfaceForward.copyFrom(forward);
-    }
-
-    // Right axis on the terrain tangent plane.
-    surfaceRight.set(
-      surfaceNormal.y * surfaceForward.z - surfaceNormal.z * surfaceForward.y,
-      surfaceNormal.z * surfaceForward.x - surfaceNormal.x * surfaceForward.z,
-      surfaceNormal.x * surfaceForward.y - surfaceNormal.y * surfaceForward.x
-    );
-    const surfaceRightLenSq =
-      surfaceRight.x * surfaceRight.x +
-      surfaceRight.y * surfaceRight.y +
-      surfaceRight.z * surfaceRight.z;
-    if (surfaceRightLenSq > 1e-6) {
-      surfaceRight.scaleInPlace(1 / Math.sqrt(surfaceRightLenSq));
-    } else {
-      surfaceRight.set(surfaceForward.z, 0, -surfaceForward.x);
-    }
-
-    // Pick the appropriate minimum speed threshold.
-    // When already drifting, use lower thresholds so the drift can bleed out
-    // naturally through grip rather than snapping off abruptly.
-    // rearTractionFactor < 1 when braking (weight forward) — use tighter hold threshold.
-    const minDriftSpeed = this.state.minDriftSpeed ?? MIN_DRIFT_SPEED;
-    const minDriftSpeedHoldThrottle = this.state.minDriftSpeedHoldThrottle ?? MIN_DRIFT_SPEED_HOLD_THROTTLE;
-    const minDriftSpeedHoldCoast = this.state.minDriftSpeedHoldCoast ?? MIN_DRIFT_SPEED_HOLD_COAST;
-    const minDriftSpeedHoldBrake = this.state.minDriftSpeedHoldBrake ?? MIN_DRIFT_SPEED_HOLD_BRAKE;
-    const isBraking    = rearTractionFactor < 0.85;
-    const isThrottling = rearTractionFactor < 1.0 && !isBraking;
-    let minSpeed;
-    if (this.state.isDrifting) {
-      if (isBraking)       minSpeed = minDriftSpeedHoldBrake;
-      else if (isThrottling) minSpeed = minDriftSpeedHoldThrottle;
-      else                 minSpeed = minDriftSpeedHoldCoast;
-    } else {
-      minSpeed = minDriftSpeed;
-    }
-
-    // Power oversteer can break the rear loose well below the normal drift entry
-    // speed, so lower the gate when throttle is overwhelming grip — this lets a
-    // low-speed throttle-and-steer initiate a slide from near standstill.
-    minSpeed *= (1 - throttleBreak);
+    const minSpeed = this._resolveMinDriftSpeed(rearTractionFactor, throttleBreak);
 
     if (speed <= minSpeed) {
-      // Below threshold: strip lateral velocity and clear drift state so
-      // effects don't linger.
+      // Below threshold: strip lateral velocity and clear drift state so effects don't linger.
       const forwardVelocity = this.state.velocity.dot(surfaceForward);
       const normalVelocity = this.state.velocity.dot(surfaceNormal);
-      this.state.velocity.x =
-        surfaceForward.x * forwardVelocity +
-        surfaceNormal.x * normalVelocity;
-      this.state.velocity.y =
-        surfaceForward.y * forwardVelocity +
-        surfaceNormal.y * normalVelocity;
-      this.state.velocity.z =
-        surfaceForward.z * forwardVelocity +
-        surfaceNormal.z * normalVelocity;
+      this._setSurfaceVelocity(surfaceForward, forwardVelocity, surfaceRight, 0, surfaceNormal, normalVelocity);
       this.state.slipAngle = 0;
       this.state.isDrifting = false;
       this.state.isSpinningOut = false;
@@ -225,92 +120,81 @@ export class DriftPhysics {
     // No traction correction while airborne — effectiveGrip reaches 0 when groundedness = 0
     if (effectiveGrip <= 0) return;
 
-    const vx = this.state.velocity.x;
-    const vy = this.state.velocity.y;
-    const vz = this.state.velocity.z;
-    const vLen = Math.sqrt(vx * vx + vy * vy + vz * vz);
+    const vLen = this.state.velocity.length();
     if (vLen <= 1e-6) return;
-    const invVLen = 1 / vLen;
-    this._velocityDir.set(vx * invVLen, vy * invVLen, vz * invVLen);
 
     const forwardVelocity = this.state.velocity.dot(surfaceForward);
     const isReversing = forwardVelocity < 0;
-
-    // Slip angle: angle between velocity direction and heading direction
-    const targetDot = isReversing
-      ? -(surfaceForward.x * this._velocityDir.x + surfaceForward.y * this._velocityDir.y + surfaceForward.z * this._velocityDir.z)
-      :  (surfaceForward.x * this._velocityDir.x + surfaceForward.y * this._velocityDir.y + surfaceForward.z * this._velocityDir.z);
-    this.state.slipAngle = Math.acos(Math.max(-1, Math.min(1, targetDot)));
-
-    // Lateral velocity across the terrain tangent plane.
-    this._right.copyFrom(surfaceRight);
-    const lateralSpeed = this.state.velocity.dot(this._right);
+    const lateralSpeed = this.state.velocity.dot(surfaceRight);
     const normalVelocity = this.state.velocity.dot(surfaceNormal);
 
-    // Two-regime grip curve:
-    //   Grip zone  (slip ≤ driftThresh): strong correction → normal cornering.
-    //   Drift zone (slip > driftThresh): exponential drop-off → loose drift.
-    //
-    // driftGrip caps the traction used in the drift zone so that no truck —
-    // regardless of grip upgrades — can self-correct fast enough to prevent sliding.
-    // The grip zone taper ends at the same driftGrip value so the boundary is seamless.
-    const maxDriftGrip = this.state.maxDriftGrip ?? MAX_DRIFT_GRIP;
-    const gripZoneCorrection = this.state.gripZoneCorrection ?? GRIP_ZONE_CORRECTION;
-    const minSlipFactor = this.state.minSlipFactor ?? MIN_SLIP_FACTOR;
-    const slipDropoffRate = this.state.slipDropoffRate ?? SLIP_DROPOFF_RATE;
-    const driftGrip = Math.min(effectiveGrip, maxDriftGrip);
-    // Power oversteer drops the slip threshold so the rear breaks into the drift
-    // zone at a smaller angle when throttle is overwhelming grip at low speed.
-    const driftThresh = (this.state.driftThreshold || 0.3) * (1 - throttleBreak * THROTTLE_BREAK_THRESHOLD_DROP);
-    const excessSlip = Math.max(0, this.state.slipAngle - driftThresh);
+    // Slip angle: angle between velocity and heading (flipped when reversing so a
+    // reversing truck reads slip relative to its actual travel direction).
+    const headingDot = forwardVelocity / vLen;
+    const targetDot = isReversing ? -headingDot : headingDot;
+    this.state.slipAngle = Math.acos(Math.max(-1, Math.min(1, targetDot)));
 
-    let gripFactor;
-    if (this.state.slipAngle <= driftThresh) {
-      // Grip zone: linear taper from gripZoneCorrection → driftGrip
-      const t = this.state.slipAngle / driftThresh; // 0 at straight-ahead, 1 at threshold
-      gripFactor = gripZoneCorrection * (1 - t) + driftGrip * t;
-    } else {
-      // Drift zone: exponential drop-off — lateral momentum carries.
-      // rearTractionFactor already encodes both throttle looseness (mild) and
-      // brake rear-unloading (significant), so no separate THROTTLE_LOOSE_FACTOR needed.
-      gripFactor = Math.max(minSlipFactor, Math.exp(-excessSlip * slipDropoffRate))
-                 * driftGrip;
-    }
+    // driftGrip caps drift-zone traction so any truck can break loose; power
+    // oversteer drops the slip threshold so the rear lets go at a smaller angle.
+    const driftGrip = Math.min(effectiveGrip, this.state.maxDriftGrip);
+    const driftThresh = this.state.driftThreshold * (1 - throttleBreak * THROTTLE_BREAK_THRESHOLD_DROP);
+    const gripFactor = this._gripFactorForSlip(this.state.slipAngle, driftThresh, driftGrip);
 
     const reverseGripBoost = isReversing ? REVERSE_GRIP_BOOST : 1;
-    // lateralRetention (from the Lateral Bias knob) scales how hard the sideways
-    // component is scrubbed: <1 keeps more lateral momentum (slidey), >1 grips harder.
+    // lateralRetention (Lateral Bias knob): <1 keeps more lateral momentum (slidey),
+    // >1 grips harder. throttleBreak bleeds the correction so the rear steps out.
     const lateralRetention = this.state.lateralRetention ?? 1;
-    // Power oversteer: throttle breaking traction also bleeds off the lateral grip
-    // correction, so the rear actually steps out rather than snapping back.
     const gripMultiplier = gripFactor * reverseGripBoost * rearTractionFactor * lateralRetention * (1 - throttleBreak);
 
-    // Apply grip as lateral-only damping.
-    // Only the sideways component decays; the longitudinal (heading-aligned) speed
-    // is left untouched. When grip is low (drifting) the lateral speed bleeds off
-    // slowly, giving a loose, momentum-driven feel rather than a sharp snap-back.
-    //
-    // gripMultiplier is calibrated as the fraction removed per 1/60 s step, so we
-    // raise the retained fraction to the (dt·60) power to stay framerate-independent
-    // — otherwise the truck grips harder at high FPS than at low FPS.
+    // Apply grip as lateral-only damping (longitudinal speed untouched). gripMultiplier
+    // is the fraction removed per 1/60 s step, so raise the retained fraction to the
+    // (dt·60) power to stay framerate-independent.
     const perStepGrip = Math.min(1, Math.max(0, gripMultiplier));
     const retained = Math.pow(1 - perStepGrip, deltaTime * 60);
-    const newLateralSpeed = lateralSpeed * retained;
-    this.state.velocity.x =
-      surfaceForward.x * forwardVelocity +
-      this._right.x * newLateralSpeed +
-      surfaceNormal.x * normalVelocity;
-    this.state.velocity.y =
-      surfaceForward.y * forwardVelocity +
-      this._right.y * newLateralSpeed +
-      surfaceNormal.y * normalVelocity;
-    this.state.velocity.z =
-      surfaceForward.z * forwardVelocity +
-      this._right.z * newLateralSpeed +
-      surfaceNormal.z * normalVelocity;
+    this._setSurfaceVelocity(surfaceForward, forwardVelocity, surfaceRight, lateralSpeed * retained, surfaceNormal, normalVelocity);
 
     this.state.isSpinningOut = this.state.slipAngle > SPINOUT_SLIP_THRESHOLD && gripMultiplier < SPINOUT_GRIP_THRESHOLD;
     this.state.isDrifting = this.state.slipAngle > driftThresh;
+  }
+
+  /** Minimum speed gate for drift, by input state. Already-drifting uses lower hold
+   *  thresholds so a slide bleeds out through grip instead of snapping off; power
+   *  oversteer (throttleBreak) drops the gate further so a low-speed throttle-and-
+   *  steer can initiate a slide. */
+  _resolveMinDriftSpeed(rearTractionFactor, throttleBreak) {
+    const isBraking    = rearTractionFactor < 0.85;
+    const isThrottling = rearTractionFactor < 1.0 && !isBraking;
+    let minSpeed;
+    if (this.state.isDrifting) {
+      if (isBraking)         minSpeed = this.state.minDriftSpeedHoldBrake;
+      else if (isThrottling) minSpeed = this.state.minDriftSpeedHoldThrottle;
+      else                   minSpeed = this.state.minDriftSpeedHoldCoast;
+    } else {
+      minSpeed = this.state.minDriftSpeed;
+    }
+    return minSpeed * (1 - throttleBreak);
+  }
+
+  /** Two-regime grip curve. Grip zone (slip ≤ thresh): linear taper from
+   *  gripZoneCorrection → driftGrip for tight, responsive cornering. Drift zone
+   *  (slip > thresh): exponential drop-off so lateral momentum carries. The taper
+   *  ends at driftGrip so the boundary is seamless. */
+  _gripFactorForSlip(slipAngle, driftThresh, driftGrip) {
+    if (slipAngle <= driftThresh) {
+      const t = slipAngle / driftThresh; // 0 straight-ahead, 1 at threshold
+      return this.state.gripZoneCorrection * (1 - t) + driftGrip * t;
+    }
+    const excessSlip = slipAngle - driftThresh;
+    return Math.max(this.state.minSlipFactor, Math.exp(-excessSlip * this.state.slipDropoffRate)) * driftGrip;
+  }
+
+  /** Recompose velocity from its tangent-plane components (forward · normal · right). */
+  _setSurfaceVelocity(fwd, fScalar, right, rScalar, normal, nScalar) {
+    this.state.velocity.set(
+      fwd.x * fScalar + right.x * rScalar + normal.x * nScalar,
+      fwd.y * fScalar + right.y * rScalar + normal.y * nScalar,
+      fwd.z * fScalar + right.z * rScalar + normal.z * nScalar
+    );
   }
 
   applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness = 1) {
@@ -335,50 +219,47 @@ export class DriftPhysics {
   }
 
   updateRoll(mesh, speed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime) {
-    // Calculate target roll based on turning
-    let lateralSpeed = 0;
-    let turnRate = 0;
-    let rollFromLateral = 0;
-    let rollFromTurning = 0;
+    const leaning = groundedness > GROUNDEDNESS.VISUAL_LEAN && speed > 1;
 
-    if (groundedness > 0.2 && speed > 1) {
+    // Body-height scale (taller bodies lean/pitch more); shared by roll and pitch.
+    const bodyHeightY = Math.max(0.05, this.state.bodyHeightY ?? MAX_ROLL_BODY_Y_BASE);
+    const bodyScaleRaw = bodyHeightY / MAX_ROLL_BODY_Y_BASE;
+
+    // Target roll from cornering: lateral slide + turn rate, clamped to maxRoll.
+    if (leaning) {
       this._rollRight.set(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
-      lateralSpeed = this.state.velocity.dot(this._rollRight);
+      const lateralSpeed = this.state.velocity.dot(this._rollRight);
+      let turnRate = 0;
+      if (input.left)  turnRate = -effectiveTurnSpeed * speedRatio;
+      if (input.right) turnRate =  effectiveTurnSpeed * speedRatio;
 
-      if (input.left) turnRate = -effectiveTurnSpeed * speedRatio;
-      if (input.right) turnRate = effectiveTurnSpeed * speedRatio;
-
-      rollFromLateral = lateralSpeed * ROLL_FROM_LATERAL;
-      rollFromTurning = turnRate * speed * ROLL_FROM_TURNING;
-      this.state.targetRoll = rollFromLateral + rollFromTurning;
-      const bodyHeightY = Math.max(0.05, this.state.bodyHeightY ?? MAX_ROLL_BODY_Y_BASE);
-      const rollScaleRaw = bodyHeightY / MAX_ROLL_BODY_Y_BASE;
-      const rollScale = Math.max(MAX_ROLL_SCALE_MIN, Math.min(MAX_ROLL_SCALE_MAX, rollScaleRaw));
+      const rollScale = Math.max(MAX_ROLL_SCALE_MIN, Math.min(MAX_ROLL_SCALE_MAX, bodyScaleRaw));
       const maxRoll = MAX_ROLL * rollScale;
-      this.state.targetRoll = Math.max(-maxRoll, Math.min(maxRoll, this.state.targetRoll));
+      const targetRoll = lateralSpeed * ROLL_FROM_LATERAL + turnRate * speed * ROLL_FROM_TURNING;
+      this.state.targetRoll = Math.max(-maxRoll, Math.min(maxRoll, targetRoll));
     } else {
       this.state.targetRoll = 0;
     }
 
-    const rollSpeed = groundedness > 0.2 ? ROLL_SPEED_GROUNDED : ROLL_SPEED_AIRBORNE;
+    const rollSpeed = groundedness > GROUNDEDNESS.VISUAL_LEAN ? ROLL_SPEED_GROUNDED : ROLL_SPEED_AIRBORNE;
     this.state.currentRoll += (this.state.targetRoll - this.state.currentRoll) * rollSpeed * deltaTime;
 
-    // Apply combined roll (terrain + turn-based)
-    const combinedRoll = (this.state.terrainRoll || 0) + this.state.currentRoll;
-    mesh.rotation.z = combinedRoll;
-
-    // Add a small front/rear pitch offset based on weight transfer from throttle/brake.
-    // Smooth it so the visual pitch transitions naturally.
+    // Target pitch offset from throttle/brake weight transfer (nose dive / squat).
     let targetPitchOffset = 0;
-    if (groundedness > 0.2 && speed > 1) {
+    if (leaning) {
       const wt = this.state.weightTransfer ?? 1.0;
-      const bodyHeightY = Math.max(0.05, this.state.bodyHeightY ?? MAX_ROLL_BODY_Y_BASE);
-      const pitchScaleRaw = bodyHeightY / MAX_ROLL_BODY_Y_BASE;
-      const pitchScale = Math.max(PITCH_SCALE_MIN, Math.min(PITCH_SCALE_MAX, pitchScaleRaw));
+      const pitchScale = Math.max(PITCH_SCALE_MIN, Math.min(PITCH_SCALE_MAX, bodyScaleRaw));
       if (input.forward) targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.throttle * speedRatio * wt * pitchScale;
       if (input.back)    targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.brake    * speedRatio * wt * pitchScale;
     }
     this._currentPitchOffset += (targetPitchOffset - this._currentPitchOffset) * Math.min(1, PITCH_WEIGHT_TRANSFER_SPEED * deltaTime);
-    mesh.rotation.x += this._currentPitchOffset;
+
+    // Single orientation-apply: this is the only writer of the truck's visual pitch
+    // and roll. TerrainPhysics computes the contributions — state.flightPitch
+    // (velocity/slope pitch) and state.terrainRoll — and here we add the
+    // weight-transfer pitch and cornering roll, then compose. (Heading/rotation.y
+    // is applied separately by Truck.)
+    mesh.rotation.x = -(this.state.flightPitch ?? 0) + this._currentPitchOffset;
+    mesh.rotation.z = (this.state.terrainRoll || 0) + this.state.currentRoll;
   }
 }

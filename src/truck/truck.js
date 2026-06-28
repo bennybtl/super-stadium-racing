@@ -204,6 +204,7 @@ export class Truck {
       targetRoll: 0,
       currentRoll: 0,
       terrainRoll: 0,
+      flightPitch: 0,
       isDrifting: false,
       isSpinningOut: false,
       slipAngle: 0,
