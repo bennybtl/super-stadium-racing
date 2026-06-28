@@ -68,6 +68,7 @@
       />
     </template>
 
+      <!-- Terrain Type -->
     <TerrainTypeSelect
       :model-value="editor.hill.terrainType"
       @update:modelValue="editor.setHillTerrainType"
