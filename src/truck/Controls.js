@@ -26,6 +26,13 @@ const LOW_SPEED_BREAK_RATIO = 0.7;
 const MAX_THROTTLE_BREAK = 0.85;
 
 /**
+ * Exponential bleed-off rate (s⁻¹) for yaw momentum once airborne. The truck
+ * keeps the yaw rate it had at takeoff and eases it toward zero instead of
+ * snapping to a dead stop — at ~2/s the spin fades to ~10% over roughly a second.
+ */
+const YAW_AIRBORNE_DECAY = 2.0;
+
+/**
  * Handles input processing and acceleration/braking
  */
 export class Controls {
@@ -35,6 +42,7 @@ export class Controls {
     this.lastBackInput = false;  // Track back button state
     this._forward = new Vector3();
     this._surfaceFwd = new Vector3();
+    this._yawRate = 0; // last applied heading change rate (rad/s), carried when airborne
   }
 
   updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
@@ -50,8 +58,18 @@ export class Controls {
       const stationarySpinRate = this.state.stationarySpinRate ?? 0.35;
       const spinFactor = stationarySpinRate + (1.0 - stationarySpinRate) * speedRatio;
 
-      if (input.left)  this.state.heading -= steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
-      if (input.right) this.state.heading += steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
+      let delta = 0;
+      if (input.left)  delta -= steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
+      if (input.right) delta += steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
+      this.state.heading += delta;
+
+      // Remember the rate so it can carry over the moment the wheels leave the ground.
+      this._yawRate = deltaTime > 0 ? delta / deltaTime : 0;
+    } else {
+      // Airborne: no steering authority, but let the yaw momentum from takeoff
+      // continue and bleed off so a turn-in-progress eases out instead of stopping dead.
+      this.state.heading += this._yawRate * deltaTime;
+      this._yawRate *= Math.exp(-YAW_AIRBORNE_DECAY * deltaTime);
     }
   }
 

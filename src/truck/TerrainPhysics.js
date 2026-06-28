@@ -111,6 +111,7 @@ export class TerrainPhysics {
     this._forward = new Vector3();
     this._right = new Vector3();
     this._travelDirection = new Vector3();
+    this._fallLine = new Vector3();
 
     // 0 = sample terrain normal every frame. >0 = sample at fixed cadence.
     this._normalSampleInterval = Math.max(0, options?.normalSampleInterval ?? 0);
@@ -325,6 +326,45 @@ export class TerrainPhysics {
 
     this._travelDirection.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     return this._travelDirection;
+  }
+
+  /**
+   * Steepest-descent (fall-line) direction of the terrain at the truck's XZ,
+   * derived from a small height gradient. Returns null on (near-)flat ground.
+   *
+   * The downhill follow/boost passes use this instead of the travel direction so
+   * they detect the descending slope regardless of which way the truck points.
+   * Sampling only along velocity meant a cross-slope heading mid-turn hid the
+   * drop, the truck briefly read as airborne, and steering authority (scaled by
+   * groundedness) cut out — the intermittent "stops turning downhill" feel.
+   */
+  _fallLineDirection(mesh, track, heightHere, fromY) {
+    const EPS = 0.75; // gradient probe distance (m)
+    const hX = this._sampleFloorYAt(mesh.position.x + EPS, mesh.position.z, fromY, track, heightHere);
+    const hZ = this._sampleFloorYAt(mesh.position.x, mesh.position.z + EPS, fromY, track, heightHere);
+    // Downhill is the negative gradient direction.
+    const dx = -(hX - heightHere);
+    const dz = -(hZ - heightHere);
+    const len = Math.hypot(dx, dz);
+    if (len < 1e-4) return null;
+    this._fallLine.set(dx / len, 0, dz / len);
+    return this._fallLine;
+  }
+
+  /**
+   * True when the terrain a `lookAhead` step down `fallLine` sits at least
+   * `heightDrop` below `heightHere` — the shared descent test for both downhill
+   * passes (they differ only in look-ahead distance, threshold, and effect).
+   */
+  _fallLineDrops(mesh, track, fallLine, heightHere, fromY, lookAhead, heightDrop) {
+    const heightAhead = this._sampleFloorYAt(
+      mesh.position.x + fallLine.x * lookAhead,
+      mesh.position.z + fallLine.z * lookAhead,
+      fromY,
+      track,
+      heightHere
+    );
+    return heightAhead < heightHere - heightDrop;
   }
 
   /**
@@ -612,7 +652,6 @@ export class TerrainPhysics {
    */
   _updateSuspension(mesh, track, penetration, forward, speed, lowDetail = false, centerFloorY = null) {
     const hasSurfaceSampling = !!this._terrainQuery || !!track;
-    const travelDirection = this._travelDirectionVector();
     // Base compression from current overlap depth.
     let baseCompression = Math.max(0, Math.min(1, penetration / SPRING.compressionNorm));
 
@@ -630,43 +669,40 @@ export class TerrainPhysics {
       return Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
     }
 
+    const fromY = mesh.position.y + RAY_OFFSET;
+
     // Reuse the centre floor already resolved this frame (update() passes it in)
     // so the downhill passes don't re-query the truck's XZ.
     let sampledHeightHere = Number.isFinite(centerFloorY) ? centerFloorY : null;
     const sampleHeightHere = () => {
       if (sampledHeightHere !== null) return sampledHeightHere;
-      sampledHeightHere = this._sampleFloorYAt(
-        mesh.position.x,
-        mesh.position.z,
-        mesh.position.y + RAY_OFFSET,
-        track,
-        0
-      );
+      sampledHeightHere = this._sampleFloorYAt(mesh.position.x, mesh.position.z, fromY, track, 0);
       return sampledHeightHere;
     };
 
+    // The fall line (terrain gradient at the truck's XZ) is identical for both
+    // downhill passes — sample it at most once per frame.
+    let sampledFallLine; // undefined = not yet computed; then a Vector3 or null
+    const fallLineDir = () => {
+      if (sampledFallLine === undefined) {
+        sampledFallLine = this._fallLineDirection(mesh, track, sampleHeightHere(), fromY);
+      }
+      return sampledFallLine;
+    };
+
     // Pass 1: slightly above terrain but moving downhill — inject fake compression
-    // so the truck stays "grounded" through the descent.
+    // so the truck stays "grounded" through the descent. Look down the terrain's
+    // fall line (not travel direction) so it still fires while turning.
     if (
       hasSurfaceSampling &&
       penetration < 0 &&
       penetration > -DOWNHILL_FOLLOW.maxGap &&
-      speed > DOWNHILL_FOLLOW.minSpeed
+      speed > DOWNHILL_FOLLOW.minSpeed &&
+      this.state.velocity.y < DOWNHILL_FOLLOW.vertVelMin &&
+      fallLineDir() &&
+      this._fallLineDrops(mesh, track, fallLineDir(), sampleHeightHere(), fromY, DOWNHILL_FOLLOW.lookAhead, DOWNHILL_FOLLOW.heightDrop)
     ) {
-      const heightHere  = sampleHeightHere();
-      const heightAhead = this._sampleFloorYAt(
-        mesh.position.x + travelDirection.x * DOWNHILL_FOLLOW.lookAhead,
-        mesh.position.z + travelDirection.z * DOWNHILL_FOLLOW.lookAhead,
-        mesh.position.y + RAY_OFFSET,
-        track,
-        heightHere
-      );
-      if (
-        heightAhead < heightHere - DOWNHILL_FOLLOW.heightDrop &&
-        this.state.velocity.y < DOWNHILL_FOLLOW.vertVelMin
-      ) {
-        baseCompression = DOWNHILL_FOLLOW.fakeCompression;
-      }
+      baseCompression = DOWNHILL_FOLLOW.fakeCompression;
     }
 
     const targetCompression = baseCompression > 0
@@ -681,25 +717,18 @@ export class TerrainPhysics {
 
     let groundedness = Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
 
-    // Pass 2: boost groundedness when clearly tracking a descending slope.
+    // Pass 2: boost groundedness when clearly tracking a descending slope. Uses
+    // the fall line too, so cornering across a downhill doesn't drop grounding.
     if (
       groundedness < DOWNHILL_BOOST.groundedness &&
       penetration > -DOWNHILL_BOOST.maxGap &&
       this.state.velocity.y < DOWNHILL_BOOST.vertVelMin &&
       hasSurfaceSampling &&
-      speed > DOWNHILL_BOOST.minSpeed
+      speed > DOWNHILL_BOOST.minSpeed &&
+      fallLineDir() &&
+      this._fallLineDrops(mesh, track, fallLineDir(), sampleHeightHere(), fromY, DOWNHILL_BOOST.lookAhead, DOWNHILL_BOOST.heightDrop)
     ) {
-      const heightHere  = sampleHeightHere();
-      const heightAhead = this._sampleFloorYAt(
-        mesh.position.x + travelDirection.x * DOWNHILL_BOOST.lookAhead,
-        mesh.position.z + travelDirection.z * DOWNHILL_BOOST.lookAhead,
-        mesh.position.y + RAY_OFFSET,
-        track,
-        heightHere
-      );
-      if (heightAhead < heightHere - (DOWNHILL_BOOST.heightDrop)) {
-        groundedness = Math.max(groundedness, DOWNHILL_BOOST.groundedness);
-      }
+      groundedness = Math.max(groundedness, DOWNHILL_BOOST.groundedness);
     }
 
     return groundedness;
