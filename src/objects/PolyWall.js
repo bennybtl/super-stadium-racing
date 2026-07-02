@@ -166,7 +166,39 @@ export class PolyWall {
       raw.push(this._sampleHeight(track, p.x, p.z));
       s.push(arc);
     }
-    return { xs, zs, raw, s, step: total / N, closed };
+    return { xs, zs, raw, s, step: total / N, total, closed };
+  }
+
+  /**
+   * Per-centerline-sample smoothing blend (0..1), interpolated from the original
+   * nodes' `smoothing` values along arc-length fraction. 1 = fully smoothed (the
+   * flat-topped default); 0 = follow raw terrain exactly. Nodes without a value
+   * default to 1 so existing walls are unchanged.
+   */
+  _perSampleSmoothing(s, total, closed) {
+    const nodes = this._feature.points ?? [];
+    const n = s.length;
+    if (nodes.length < 2 || total < 1e-6) return new Array(n).fill(1);
+
+    // Original-node smoothing values and their cumulative arc-length fractions.
+    const loop = closed ? [...nodes, nodes[0]] : nodes;
+    const cum = [0];
+    for (let i = 1; i < loop.length; i++) {
+      cum.push(cum[i - 1] + Math.hypot(loop[i].x - loop[i - 1].x, loop[i].z - loop[i - 1].z));
+    }
+    const tot = cum[cum.length - 1] || 1;
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    const sm = loop.map((p) => clamp01(p.smoothing ?? 1));
+
+    return s.map((arc) => {
+      const target = (arc / total) * tot; // same fraction along the original polyline
+      let i = 1;
+      while (i < cum.length && cum[i] < target) i++;
+      if (i >= cum.length) return sm[sm.length - 1];
+      const seg = cum[i] - cum[i - 1];
+      const t = seg > 1e-6 ? (target - cum[i - 1]) / seg : 0;
+      return sm[i - 1] + (sm[i] - sm[i - 1]) * t;
+    });
   }
 
   /** Moving-average low-pass over the raw height profile. */
@@ -204,11 +236,15 @@ export class PolyWall {
   _buildRibbon(points, closed, track, scene, shadows, { visualHeight, thickness, style }) {
     const cl = this._resampleCenterline(points, closed, track);
     if (!cl) return null;
-    const { xs, zs, raw, s, step } = cl;
+    const { xs, zs, raw, s, step, total } = cl;
     const n = xs.length;
     if (n < 2) return null;
 
-    const smooth = this._smoothHeights(raw, step, closed);
+    // Fully-smoothed profile, then blend each sample back toward raw terrain by
+    // its per-node smoothing (1 = flat top as before, 0 = follow terrain exactly).
+    const smoothFull = this._smoothHeights(raw, step, closed);
+    const blend = this._perSampleSmoothing(s, total, closed);
+    const smooth = smoothFull.map((h, i) => raw[i] + (h - raw[i]) * blend[i]);
     const halfThick = thickness / 2;
 
     // Per-sample unit normal (left side) from a central-difference tangent.

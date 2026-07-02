@@ -3,6 +3,7 @@
   "id": "huevos_grande",
   "packId": "offroad_pack_1",
   "hidden": false,
+  "dirtChunks": true,
   "name": "Huevos Grande",
   "image": "huevos_grande.png",
   "width": 160,
@@ -293,14 +294,15 @@
     },
     {
       "type": "hill",
-      "centerX": 5,
+      "centerX": 3.5,
       "centerZ": 71.5,
-      "height": -3,
+      "height": -2.5,
       "terrainType": "water",
       "radiusX": 12.5,
       "radiusZ": 6.5,
       "angle": 0,
-      "blendWidth": 2
+      "blendWidth": 2,
+      "waterLevelOffset": 2
     },
     {
       "type": "squareHill",
@@ -408,17 +410,19 @@
       "terrainType": "mud",
       "radiusX": 7,
       "radiusZ": 7,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 1.5
     },
     {
       "type": "terrain",
       "centerX": 9,
-      "centerZ": 57.72478689483742,
+      "centerZ": 57.22478689483742,
       "terrainType": "mud",
       "shape": "circle",
       "width": 16,
       "depth": 16,
-      "rotation": 0
+      "rotation": 0,
+      "blendWidth": 2.5
     },
     {
       "type": "squareHill",
@@ -842,24 +846,24 @@
       "type": "hill",
       "centerX": -14.830082803936731,
       "centerZ": 56.398750953932065,
-      "height": -6,
+      "height": -2.5,
       "terrainType": "water",
       "radiusX": 9,
       "radiusZ": 9,
       "angle": 0,
-      "waterLevelOffset": 3.5,
+      "waterLevelOffset": 1.3,
       "blendWidth": 2
     },
     {
       "type": "hill",
       "centerX": 25.169917196063267,
       "centerZ": 53.398750953932065,
-      "height": -6,
+      "height": -2,
       "terrainType": "water",
       "radiusX": 10.5,
       "radiusZ": 9,
       "angle": 0,
-      "waterLevelOffset": 3.4,
+      "waterLevelOffset": 1.3,
       "blendWidth": 2
     },
     {
@@ -868,10 +872,11 @@
       "centerZ": -5.500369954967926,
       "width": 13.5,
       "depth": 17,
-      "height": -5,
+      "height": -3.5,
       "transition": 4,
       "terrainType": "water",
-      "blendWidth": 2
+      "blendWidth": 2,
+      "waterLevelOffset": 1.5
     },
     {
       "type": "actionZone",

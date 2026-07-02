@@ -158,16 +158,19 @@ export class EditorMode extends BaseMode {
       _rebuildNormalMapTimer = setTimeout(_rebuildNormalMapNow, 300);
     };
 
-    // Rebuild hill water meshes so water level/position changes are visible immediately.
-    window.rebuildHillWater = async () => {
+    // Rebuild hill water meshes so water level/position changes are visible
+    // immediately. Pass a feature to rebuild only that one's water (much cheaper
+    // on tracks with many water features); omit it to rebuild all of them.
+    window.rebuildHillWater = async (targetFeature = null) => {
       for (const mesh of scene.meshes.slice()) {
-        if (mesh?.name?.startsWith('water_')) mesh.dispose();
+        if (!mesh?.name?.startsWith('water_')) continue;
+        if (targetFeature === null || mesh._sourceFeature === targetFeature) mesh.dispose();
       }
       const { createHill } = await import('../objects/Hill.js');
       for (const feature of currentTrack.features) {
-        if (feature.type === 'hill' || feature.type === 'squareHill' || feature.type === 'polyHill') {
-          createHill(feature, currentTrack, scene);
-        }
+        if (feature.type !== 'hill' && feature.type !== 'squareHill' && feature.type !== 'polyHill') continue;
+        if (targetFeature !== null && feature !== targetFeature) continue;
+        createHill(feature, currentTrack, scene);
       }
     };
 

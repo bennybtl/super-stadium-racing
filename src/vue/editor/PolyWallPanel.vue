@@ -23,6 +23,20 @@
       First and last points cannot be rounded (unless closed loop is enabled)
     </div>
 
+    <!-- Terrain Smoothing: how closely the wall top follows the terrain at this node.
+         Most (1) = flat, slowly-changing top; Least (0) = follows terrain exactly. -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Terrain Smoothing</span>
+      <span>{{ smoothingDisplay }}</span>
+    </div>
+    <input
+      type="range" min="0" max="1" step="0.05"
+      :value="editor.polyWall.smoothing"
+      :disabled="!editor.polyWall.hasSelection"
+      @input="editor.setPolyWallSmoothing(+$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <div class="text-[10px] text-slate-400 mb-3">WASD to move selected point</div>
 
     <div class="flex gap-2 mb-3">
@@ -137,5 +151,10 @@ const editor = useEditorStore();
 const radiusDisplay = computed(() => {
   if (!editor.polyWall.hasSelection) return '—';
   return editor.polyWall.radius.toFixed(1);
+});
+
+const smoothingDisplay = computed(() => {
+  if (!editor.polyWall.hasSelection) return '—';
+  return `${Math.round(editor.polyWall.smoothing * 100)}%`;
 });
 </script>

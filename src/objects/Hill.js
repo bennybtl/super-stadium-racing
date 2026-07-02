@@ -457,6 +457,18 @@ function createPolyHillWater(feature, scene, baseCy, centroid, currentTrack) {
  * @returns {BABYLON.Mesh|null}
  */
 export function createHill(feature, currentTrack, scene) {
+  const mesh = buildHillWaterMesh(feature, currentTrack, scene);
+  if (mesh) {
+    // Tag the surface + its foam ribbon with the source feature so the editor
+    // can dispose/rebuild just this feature's water instead of all of it.
+    mesh._sourceFeature = feature;
+    const foam = scene.getMeshByName(`${mesh.name}_foam`);
+    if (foam) foam._sourceFeature = feature;
+  }
+  return mesh;
+}
+
+function buildHillWaterMesh(feature, currentTrack, scene) {
   if (feature.type === 'polyHill') {
     if (!feature.closed || !feature.filled) return null;
     if (!((feature.height ?? 0) < 0)) return null;

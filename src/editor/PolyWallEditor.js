@@ -386,6 +386,8 @@ export class PolyWallEditor {
     );
     store.polyWall.canHaveRadius = canHaveRadius;
     store.polyWall.radius = selectedIdx !== null ? (feature.points[selectedIdx].radius ?? 0) : 0;
+    // Smoothing is per-node and applies to any point (incl. endpoints).
+    store.polyWall.smoothing = selectedIdx !== null ? (feature.points[selectedIdx].smoothing ?? 1) : 1;
     // Compute the effective max radius for this point (mirrors expandPolyline's 0.49 clamp)
     if (canHaveRadius && selectedIdx !== null) {
       const pts = feature.points;
@@ -412,6 +414,14 @@ export class PolyWallEditor {
     this.ec.saveSnapshot(true);
     this.selectedPoint.wg.feature.points[this.selectedPoint.idx].radius = val;
     this._updatePointPositions(this.selectedPoint.wg);
+    this._rebuildWall(this.selectedPoint.wg.feature);
+  }
+
+  changePolyWallSmoothing(val) {
+    if (!this.selectedPoint) return;
+    this.ec.saveSnapshot(true);
+    this.selectedPoint.wg.feature.points[this.selectedPoint.idx].smoothing = val;
+    // Smoothing only affects the ribbon's top profile — no gizmo move needed.
     this._rebuildWall(this.selectedPoint.wg.feature);
   }
 

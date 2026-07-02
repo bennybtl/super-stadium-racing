@@ -3,6 +3,7 @@
   "id": "0-slate-debug",
   "packId": null,
   "hidden": true,
+  "dirtChunks": true,
   "name": "0 Slate Debug",
   "width": 160,
   "depth": 160,
@@ -71,56 +72,6 @@
         0
       ],
       "thickness": 1.2,
-      "transitionEnabled": false,
-      "transitionDepth": 8,
-      "transitionYOffset": 0,
-      "materialType": "packed_dirt",
-      "level": 1
-    },
-    {
-      "type": "bridgeMesh",
-      "centerX": -20,
-      "centerZ": 50,
-      "width": 42,
-      "depth": 20,
-      "cols": 4,
-      "rows": 2,
-      "heights": [
-        -0.5,
-        4.6000000000000005,
-        4.333333333333333,
-        0,
-        -0.5,
-        4.1,
-        4,
-        0
-      ],
-      "thickness": 1,
-      "transitionEnabled": false,
-      "transitionDepth": 8,
-      "transitionYOffset": 0,
-      "materialType": "packed_dirt",
-      "level": 1
-    },
-    {
-      "type": "bridgeMesh",
-      "centerX": 39.5,
-      "centerZ": 49,
-      "width": 44,
-      "depth": 20,
-      "cols": 4,
-      "rows": 2,
-      "heights": [
-        -0.5,
-        6.5,
-        6.5,
-        0,
-        -0.5,
-        6.5,
-        6.5,
-        0
-      ],
-      "thickness": 2,
       "transitionEnabled": false,
       "transitionDepth": 8,
       "transitionYOffset": 0,
@@ -363,76 +314,6 @@
       "branches": []
     },
     {
-      "type": "obstacle",
-      "obstacleType": "barrel",
-      "x": 38.063585339574,
-      "z": 57.96106778221722,
-      "angle": 0,
-      "scale": 1,
-      "weight": 22,
-      "color": "yellow"
-    },
-    {
-      "type": "obstacle",
-      "obstacleType": "barrel",
-      "x": 41.34055925666239,
-      "z": 58.24714087629678,
-      "angle": 0,
-      "scale": 1,
-      "weight": 22,
-      "color": "yellow"
-    },
-    {
-      "type": "obstacle",
-      "obstacleType": "barrel",
-      "x": 44.01399844963312,
-      "z": 57.90482641472138,
-      "angle": 0,
-      "scale": 1,
-      "weight": 22,
-      "color": "yellow"
-    },
-    {
-      "type": "obstacle",
-      "obstacleType": "barrel",
-      "x": 34.931669422675355,
-      "z": 58.04769083976708,
-      "angle": 0,
-      "scale": 1,
-      "weight": 22,
-      "color": "yellow"
-    },
-    {
-      "type": "polyWall",
-      "points": [
-        {
-          "x": 16.37416862091266,
-          "z": 40.009325851678945,
-          "radius": 0
-        },
-        {
-          "x": 34.16830453151965,
-          "z": 39.68219533744292,
-          "radius": 0
-        },
-        {
-          "x": 45.252205917159685,
-          "z": 39.47620289070299,
-          "radius": 0
-        },
-        {
-          "x": 67.5652420861094,
-          "z": 39.653730675847044,
-          "radius": 0
-        }
-      ],
-      "height": 2,
-      "collisionHeight": 2,
-      "thickness": 0.5,
-      "friction": 0.05,
-      "closed": false
-    },
-    {
       "type": "polyWall",
       "points": [
         {
@@ -508,6 +389,37 @@
       "depth": 10,
       "rotation": 0,
       "blendWidth": 3
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 23,
+          "z": 51.99992291782077,
+          "radius": 10
+        },
+        {
+          "x": 43,
+          "z": 51.99992291782077,
+          "radius": 10
+        },
+        {
+          "x": 43,
+          "z": 71.99992291782077,
+          "radius": 10
+        },
+        {
+          "x": 23,
+          "z": 71.99992291782077,
+          "radius": 10
+        }
+      ],
+      "height": -2.2,
+      "width": 5,
+      "terrainType": "water",
+      "closed": true,
+      "filled": true,
+      "waterLevelOffset": 0.9
     }
   ]
 }

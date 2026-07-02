@@ -3,6 +3,7 @@
   "id": "pig_bog",
   "packId": "offroad_pack_2",
   "hidden": false,
+  "dirtChunks": true,
   "name": "Pig Bog",
   "image": "pig_bog.jpg",
   "width": 160,
@@ -13,17 +14,79 @@
     "enabled": true,
     "source": "aiPath",
     "alphaBreakup": 0.28,
-    "width": 4,
+    "width": 4.5,
     "intensity": 0.8,
     "laneSpacing": 2,
     "pathWander": 0.7,
     "edgeSoftness": 1,
     "secondaryPathCount": 60,
     "secondaryPathStrength": 0.8,
-    "secondaryPathSpacing": 0.04,
+    "secondaryPathSpacing": 0.07,
     "seed": 1337
   },
   "features": [
+    {
+      "type": "meshGrid",
+      "regional": false,
+      "centerX": 0,
+      "centerZ": 0,
+      "angle": 0,
+      "width": 160,
+      "depth": 160,
+      "cols": 7,
+      "rows": 7,
+      "heights": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1.5,
+        1.5,
+        0,
+        1.5,
+        2.5,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0.5,
+        1.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        2,
+        0,
+        0,
+        1.5,
+        1,
+        0,
+        2,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
     {
       "type": "polyWall",
       "points": [
@@ -88,8 +151,8 @@
           "radius": 4.5
         },
         {
-          "x": 52,
-          "z": -45,
+          "x": 52.15266497312267,
+          "z": -44.94601443862866,
           "radius": 3.5
         },
         {
@@ -124,8 +187,8 @@
           "radius": 3.5
         },
         {
-          "x": 53,
-          "z": 31,
+          "x": 53.59081052108638,
+          "z": 30.766406415134,
           "radius": 5.5
         }
       ],
@@ -171,8 +234,8 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -44,
-          "z": -46,
+          "x": -44.18934990438702,
+          "z": -45.726142299568686,
           "radius": 5.5
         },
         {
@@ -200,8 +263,8 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 48,
-      "centerZ": 58,
+      "centerX": 47.5,
+      "centerZ": 59,
       "heading": -1.5707963267948966,
       "width": 16,
       "checkpointNumber": 1
@@ -225,7 +288,7 @@
     {
       "type": "checkpoint",
       "centerX": -36,
-      "centerZ": -69,
+      "centerZ": -68.5,
       "heading": -1.5707963267948966,
       "width": 16,
       "checkpointNumber": 4
@@ -307,7 +370,7 @@
         {
           "x": 6.977243077615272,
           "z": 63.556261462630424,
-          "radius": 0
+          "radius": 8
         }
       ],
       "height": -1.3,
@@ -321,8 +384,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 21.01086806994092,
-          "z": 9.065620889756314,
+          "x": 28.125411364370063,
+          "z": 8.606706579593332,
           "radius": 10
         },
         {
@@ -346,8 +409,8 @@
           "radius": 10
         },
         {
-          "x": 22.179274078611424,
-          "z": 17.289964617665397,
+          "x": 28.290375199096957,
+          "z": 17.131997243615647,
           "radius": 0
         }
       ],
@@ -356,7 +419,7 @@
       "terrainType": "water",
       "closed": true,
       "filled": true,
-      "waterLevelOffset": 1.8
+      "waterLevelOffset": 0.7
     },
     {
       "type": "polyHill",
@@ -367,13 +430,13 @@
           "radius": 10
         },
         {
-          "x": 74.44508296020962,
-          "z": -11.18561331185213,
+          "x": 75.94508296020962,
+          "z": -17.18561331185213,
           "radius": 8
         },
         {
           "x": 53.111797567470695,
-          "z": -5.456362302652842,
+          "z": -8.956362302652842,
           "radius": 6
         },
         {
@@ -408,6 +471,342 @@
       "closed": true,
       "filled": true,
       "waterLevelOffset": 0.5
+    },
+    {
+      "type": "aiPath",
+      "points": [
+        {
+          "x": -45.39,
+          "z": -66.67
+        },
+        {
+          "x": -53.56,
+          "z": -60.27
+        },
+        {
+          "x": -54.3,
+          "z": -45.61
+        },
+        {
+          "x": 5.48,
+          "z": -12.24
+        },
+        {
+          "x": 55.589753524927424,
+          "z": 20.260058228818185
+        },
+        {
+          "x": 65.5839240593722,
+          "z": 37.68891894089068
+        },
+        {
+          "x": 59.03461662648213,
+          "z": 56.59989455376196
+        },
+        {
+          "x": 34.63,
+          "z": 57.63
+        },
+        {
+          "x": 25.154879527762983,
+          "z": 22.438660013709743
+        },
+        {
+          "x": 57.5,
+          "z": -27.3
+        },
+        {
+          "x": 63.87,
+          "z": -56
+        },
+        {
+          "x": 55.33532348430743,
+          "z": -68.67186137115435
+        },
+        {
+          "x": 32.46388928937182,
+          "z": -69.37516603569564
+        },
+        {
+          "x": 7.25,
+          "z": -43.87
+        },
+        {
+          "x": -15.52,
+          "z": 40.02
+        },
+        {
+          "x": -29.92,
+          "z": 58.77
+        },
+        {
+          "x": -55.51240460646397,
+          "z": 51.79460445462159
+        },
+        {
+          "x": -59.806029889099335,
+          "z": 20.533756046547236
+        },
+        {
+          "x": -7.3023530041106515,
+          "z": -49.09182184858197
+        },
+        {
+          "x": -17.79495598688561,
+          "z": -66.31260474580603
+        }
+      ],
+      "branches": [
+        {
+          "id": "branch_1",
+          "fromMainIndex": 2,
+          "toMainIndex": 4,
+          "weight": 1,
+          "points": [
+            {
+              "x": -54.3,
+              "z": -45.61
+            },
+            {
+              "x": -35.12513835903761,
+              "z": -7.580100577435658
+            },
+            {
+              "x": 55.589753524927424,
+              "z": 20.260058228818185
+            }
+          ]
+        },
+        {
+          "id": "branch_2",
+          "fromMainIndex": 12,
+          "toMainIndex": 14,
+          "weight": 1,
+          "points": [
+            {
+              "x": 32.46388928937182,
+              "z": -69.37516603569564
+            },
+            {
+              "x": 7.135069656130533,
+              "z": -60.51460763050932
+            },
+            {
+              "x": 19.3,
+              "z": -20.2
+            },
+            {
+              "x": -15.52,
+              "z": 40.02
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -34.937190832824726,
+      "centerZ": -54.281432082898256,
+      "terrainType": "mud",
+      "width": 52.5,
+      "depth": 33.5,
+      "rotation": 0,
+      "blendWidth": 6
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 42.61069712388896,
+      "centerZ": 32.928459841849296,
+      "terrainType": "mud",
+      "width": 52.5,
+      "depth": 33.5,
+      "rotation": 0,
+      "blendWidth": 5
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -39.517995078011715,
+      "centerZ": 37.529453478269424,
+      "terrainType": "mud",
+      "width": 52.5,
+      "depth": 33.5,
+      "rotation": 0,
+      "blendWidth": 7.5
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": -69.17512087422256,
+          "z": -23.754742082208097,
+          "radius": 10
+        },
+        {
+          "x": -55.94594331500082,
+          "z": -14.847341888516226,
+          "radius": 10
+        },
+        {
+          "x": -33.497810636129635,
+          "z": -14.489515020544168,
+          "radius": 10
+        },
+        {
+          "x": -36.633087359328265,
+          "z": -10.53395376539801,
+          "radius": 10
+        },
+        {
+          "x": -50.05556902779118,
+          "z": -7.930986387769497,
+          "radius": 10
+        },
+        {
+          "x": -69.69262933225254,
+          "z": 2.5133996382208963,
+          "radius": 10
+        }
+      ],
+      "height": -2.9,
+      "width": 5,
+      "terrainType": "water",
+      "closed": true,
+      "filled": true,
+      "waterLevelOffset": 1.2,
+      "blendWidth": 3
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": -42.127320301800246,
+          "z": -42.0733726801515,
+          "radius": 10
+        },
+        {
+          "x": -27.149920667273207,
+          "z": -44.80272199847367,
+          "radius": 10
+        },
+        {
+          "x": -10.020088787831185,
+          "z": -39.12917974418395,
+          "radius": 10
+        },
+        {
+          "x": -32.5258646469963,
+          "z": -36.78512655475329,
+          "radius": 10
+        },
+        {
+          "x": -44.3700922773402,
+          "z": -33.38797217654392,
+          "radius": 10
+        }
+      ],
+      "height": -2.5,
+      "width": 5,
+      "terrainType": "water",
+      "closed": true,
+      "filled": true,
+      "blendWidth": 1.5,
+      "waterLevelOffset": 1
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": -25.127320301800246,
+          "z": -17.5733726801515,
+          "radius": 10
+        },
+        {
+          "x": -11.649920667273207,
+          "z": -29.30272199847367,
+          "radius": 10
+        },
+        {
+          "x": 7.344287776906979,
+          "z": -13.917629371028767,
+          "radius": 10
+        },
+        {
+          "x": -12.025864646996297,
+          "z": -15.78512655475329,
+          "radius": 10
+        },
+        {
+          "x": -23.769534374427955,
+          "z": -14.320770670844176,
+          "radius": 10
+        }
+      ],
+      "height": -2.5,
+      "width": 5,
+      "terrainType": "water",
+      "closed": true,
+      "filled": true,
+      "blendWidth": 1.5,
+      "waterLevelOffset": 1
+    },
+    {
+      "type": "trackSign",
+      "x": -36.59831481703133,
+      "z": -53.02540693262305,
+      "name": "Pig Bog",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.5,
+      "heightOffset": 3.9,
+      "width": 8.5
+    },
+    {
+      "type": "trackSign",
+      "x": 44.209853230719744,
+      "z": -52.3376199517535,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "power-lube.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.45,
+      "heightOffset": 3.8,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 46.381712884889545,
+      "z": 39.743401744125606,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "rally-master.png",
+      "background": "white",
+      "primaryColor": "yellow",
+      "scale": 1.45,
+      "heightOffset": 3.8,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -39.238497372408354,
+      "z": 40.08023298395105,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "background": "white",
+      "primaryColor": "yellow",
+      "scale": 1.45,
+      "heightOffset": 3.8,
+      "width": 10
     }
   ]
 }

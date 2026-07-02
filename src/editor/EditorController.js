@@ -130,7 +130,12 @@ export class EditorController {
     this._mouseDrag = null;
     this._dragHoldTimer = null;
     this._dragHoldTarget = null;
+    this._dragHoldStart = null;
     this._dragHoldDelayMs = 180;
+    // Begin a gizmo drag once the pointer moves this many px from the press
+    // point, so a quick click-and-drag engages without waiting out the hold
+    // delay. Squared to compare against squared pixel distance.
+    this._dragStartThresholdSq = 16;
     
     // Track being edited
     this.currentTrack = null;
@@ -899,6 +904,7 @@ export class EditorController {
 
       if (pickResult?.pickedMesh && this._hasDraggableSelection() && this._isSelectedGizmoTarget(pickResult.pickedMesh)) {
         this._dragHoldTarget = clickedMesh;
+        this._dragHoldStart = { x: this.scene.pointerX, y: this.scene.pointerY };
         this._dragHoldTimer = setTimeout(() => {
           if (!this.isActive || this._dragHoldTarget !== clickedMesh) return;
           if (!this._beginSelectedGizmoDrag()) {
@@ -912,6 +918,16 @@ export class EditorController {
     }
 
     if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+      // A drag hold is pending but not yet active: engage it as soon as the
+      // pointer moves past the threshold, so click-and-drag works without
+      // holding still for the full delay.
+      if (!this._mouseDrag && this._dragHoldTarget && this._dragHoldStart) {
+        const mdx = this.scene.pointerX - this._dragHoldStart.x;
+        const mdy = this.scene.pointerY - this._dragHoldStart.y;
+        if (mdx * mdx + mdy * mdy >= this._dragStartThresholdSq && this._beginSelectedGizmoDrag()) {
+          this._clearDragHoldTimer();
+        }
+      }
       if (!this._mouseDrag || !this._hasDraggableSelection()) return;
       const world = this._pointerWorldXZ();
       if (!world) return;
@@ -980,6 +996,7 @@ export class EditorController {
       this._dragHoldTimer = null;
     }
     this._dragHoldTarget = null;
+    this._dragHoldStart = null;
   }
 
   _beginSelectedGizmoDrag() {
@@ -1536,6 +1553,7 @@ export class EditorController {
 
   // ── Poly Wall Vue bridge methods ──
   changePolyWallRadius(val)          { this.polyWallEditor.changePolyWallRadius(val); }
+  changePolyWallSmoothing(val)       { this.polyWallEditor.changePolyWallSmoothing(val); }
   changePolyWallHeight(val)          { this.polyWallEditor.changePolyWallHeight(val); }
   changePolyWallCollisionHeight(val) { this.polyWallEditor.changePolyWallCollisionHeight(val); }
   changePolyWallThickness(val)       { this.polyWallEditor.changePolyWallThickness(val); }

@@ -57,6 +57,7 @@ export class PolyHillEditor {
 
   deactivate() {
     clearTimeout(this._rebuildTimer);
+    clearTimeout(this._waterRebuildTimer);
     this._destroyAllGizmos();
     this.deselectPoint();
     this._activeHill = null;
@@ -216,6 +217,20 @@ export class PolyHillEditor {
     }, delayMs);
   }
 
+  /**
+   * Debounced water-only rebuild for changes that move just the water surface
+   * (e.g. the level slider) and leave the terrain geometry untouched — so a
+   * continuous drag doesn't retrace the waterline every input event.
+   */
+  _rebuildWaterDeferred(feature, delayMs = 120) {
+    clearTimeout(this._waterRebuildTimer);
+    this._waterRebuildTimer = setTimeout(() => {
+      if (!this.scene) return; // tool was deactivated
+      if (!this.track?.features?.includes(feature)) return; // feature was deleted
+      window.rebuildHillWater?.(feature);
+    }, delayMs);
+  }
+
   _setActiveHill(hg) {
     // Dim the previously active hill
     if (this._activeHill && this._activeHill !== hg) {
@@ -361,7 +376,7 @@ export class PolyHillEditor {
     this.ec.saveSnapshot(true);
     const { hg, idx } = this.selectedPoint;
     hg.feature.points[idx].radius = radius;
-    this._rebuildHill(hg.feature);
+    this._rebuildDeferred(hg);
   }
 
   setHeight(height) {
@@ -370,7 +385,7 @@ export class PolyHillEditor {
     this._activeHill.feature.height = height;
     this._updatePointPositions(this._activeHill, { rebuildLines: true });
     this._syncStoreToFeature(this._activeHill.feature, this.selectedPoint?.idx ?? null);
-    this._rebuildHill(this._activeHill.feature);
+    this._rebuildDeferred(this._activeHill);
   }
 
   setWaterLevelOffset(offset) {
@@ -380,21 +395,21 @@ export class PolyHillEditor {
     const maxOffset = Math.max(0, -(f.height ?? 0)); // can't sit above the rim
     f.waterLevelOffset = Math.max(0, Math.min(offset, maxOffset));
     if (this.ec._editorStore) this.ec._editorStore.polyHill.waterLevelOffset = f.waterLevelOffset;
-    window.rebuildHillWater?.();
+    this._rebuildWaterDeferred(f);
   }
 
   setWidth(width) {
     if (!this._activeHill) return;
     this.ec.saveSnapshot(true);
     this._activeHill.feature.width = width;
-    this._rebuildHill(this._activeHill.feature);
+    this._rebuildDeferred(this._activeHill);
   }
 
   setBlendWidth(val) {
     if (!this._activeHill) return;
     this.ec.saveSnapshot(true);
     this._activeHill.feature.blendWidth = Math.max(0, val);
-    this._rebuildHill(this._activeHill.feature);
+    this._rebuildDeferred(this._activeHill);
   }
 
   setTerrainType(name) {
@@ -488,7 +503,7 @@ export class PolyHillEditor {
     window.rebuildTerrainGrid?.();
     window.rebuildTerrainTexture?.();
     window.rebuildNormalMap?.();
-    window.rebuildHillWater?.();
+    window.rebuildHillWater?.(feature);
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

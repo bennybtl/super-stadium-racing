@@ -266,7 +266,7 @@ export class HillEditor {
     if (this.selected) this.updateVisual(this.selected);
     window.rebuildTerrain?.();
     window.rebuildTerrainGrid?.();
-    window.rebuildHillWater?.();
+    window.rebuildHillWater?.(this.selected?.feature);
     window.rebuildTerrainTexture?.();
   }
 
