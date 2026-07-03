@@ -1,5 +1,6 @@
 import { Mesh, VertexData, StandardMaterial, Color3, PhysicsAggregate, PhysicsShapeType, Texture } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
+import { _lerp, _clamp } from "../terrain-utils.js";
 
 const _bridgeTextureModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
 const _bridgeNormalModules = import.meta.glob('../assets/normals/*', { eager: true, query: '?url', import: 'default' });
@@ -23,14 +24,6 @@ for (const [path, url] of Object.entries(_bridgeNormalModules)) {
 function _resolveBridgeAssetUrl(pathOrName, map) {
   if (!pathOrName || typeof pathOrName !== 'string') return null;
   return map[pathOrName] ?? map[pathOrName.split('/').at(-1)] ?? null;
-}
-
-function _clamp01(value) {
-  return Math.max(0, Math.min(1, value));
-}
-
-function _lerp(a, b, t) {
-  return a + (b - a) * t;
 }
 
 function _lerpColor(colorA, colorB, t) {
@@ -174,7 +167,7 @@ export class BridgeMesh {
         // StandardMaterial multiplies texture by diffuseColor. Approximate
         // texture-opacity blending by tinting toward white as texture influence
         // increases, without darkening the whole surface.
-        const textureInfluence = _clamp01(terrainType.diffuseTextureOpacity ?? 1);
+        const textureInfluence = _clamp(terrainType.diffuseTextureOpacity ?? 1, 0, 1);
         this._material.diffuseColor = _lerpColor(terrainColor, Color3.White(), textureInfluence);
       }
     }

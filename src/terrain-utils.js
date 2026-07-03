@@ -23,15 +23,15 @@ export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
   seed: 1337,
 });
 
-function _clamp(value, min, max) {
+export function _clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function _lerp(a, b, t) {
+export function _lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
-function _smoothstep(edge0, edge1, x) {
+export function _smoothstep(edge0, edge1, x) {
   const t = _clamp((x - edge0) / Math.max(1e-6, edge1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
 }
@@ -158,7 +158,7 @@ function _wrapSampleDistance(index, start, total) {
   return wrapped;
 }
 
-function _getTerrainSlopeDegAt(track, x, z, sampleDistance) {
+export function _getTerrainSlopeDegAt(track, x, z, sampleDistance) {
   if (!track) return 0;
   const d = Math.max(0.25, sampleDistance);
   const dx = track.getHeightAt(x + d, z) - track.getHeightAt(x - d, z);

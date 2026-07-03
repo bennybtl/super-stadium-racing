@@ -8,6 +8,7 @@
 
 import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
+import { _smoothstep, _getTerrainSlopeDegAt as _getTerrainSlopeDeg } from "../terrain-utils.js";
 import { traceAiPathWearStamps, forEachStampPixel } from "../terrain-utils.js";
 
 const _terrainTypeList = Object.values(TERRAIN_TYPES);
@@ -91,25 +92,11 @@ async function _loadTextureMap(filename) {
   return img;
 }
 
-function _smoothstep(edge0, edge1, x) {
-  const t = Math.max(0, Math.min(1, (x - edge0) / Math.max(1e-6, edge1 - edge0)));
-  return t * t * (3 - 2 * t);
-}
-
 function _getCellWorldCenter(terrainManager, col, row, worldWidth, worldDepth = worldWidth) {
   const n = terrainManager.cellsPerSide;
   const x = ((col + 0.5) / n) * worldWidth - worldWidth / 2;
   const z = ((row + 0.5) / n) * worldDepth - worldDepth / 2;
   return { x, z };
-}
-
-function _getTerrainSlopeDeg(track, x, z, sampleDistance) {
-  if (!track) return 0;
-  const d = Math.max(0.25, sampleDistance);
-  const dx = track.getHeightAt(x + d, z) - track.getHeightAt(x - d, z);
-  const dz = track.getHeightAt(x, z + d) - track.getHeightAt(x, z - d);
-  const rise = Math.sqrt(dx * dx + dz * dz) / (2 * d);
-  return Math.atan(rise) * 180 / Math.PI;
 }
 
 async function _paintSteepTerrainOverlay(
