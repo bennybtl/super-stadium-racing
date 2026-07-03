@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'bannerString'"
     title="Banner String"
-    @close="editor.closeBannerString()"
+    @close="editor.featureAction('deselectBannerString')"
   >
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -15,7 +15,7 @@
       max="50"
       step="1"
       :value="editor.bannerString.width"
-      @input="editor.setBannerStringWidth(+$event.target.value)"
+      @input="editor.setFeatureProp('bannerString', 'width', +$event.target.value)"
     />
 
     <!-- Pole Height -->
@@ -29,7 +29,7 @@
       max="24"
       step="1"
       :value="editor.bannerString.poleHeight"
-      @input="editor.setBannerStringPoleHeight(+$event.target.value)"
+      @input="editor.setFeatureProp('bannerString', 'poleHeight', +$event.target.value)"
     />
 
     <!-- Heading -->
@@ -43,14 +43,14 @@
       max="180"
       step="1"
       :value="editor.bannerString.heading"
-      @input="editor.setBannerStringHeading(+$event.target.value)"
+      @input="editor.setFeatureProp('bannerString', 'heading', +$event.target.value)"
     />
 
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateBannerString()">Duplicate</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteBannerString()">Delete</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.featureAction('duplicateBannerString')">Duplicate</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.featureAction('deleteBannerString')">Delete</button>
   </EditorPanel>
 </template>
 

@@ -10,7 +10,8 @@
     "build:optimize": "node scripts/optimizeDistAssets.js",
     "preview": "vite preview",
     "check:surfaces": "node scripts/checkDriveSurfaceQueries.js",
-    "check:terrain": "node scripts/check-terrain.mjs"
+    "check:terrain": "node scripts/check-terrain.mjs",
+    "check:panels": "node scripts/check-panel-bindings.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",

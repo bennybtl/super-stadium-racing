@@ -16,14 +16,14 @@
       <button 
         class="color-btn red" 
         :class="{ active: editor.flag.color === 'red' }"
-        @click="editor.setFlagColor('red')"
+        @click="editor.setFeatureProp('flag', 'color', 'red')"
       >
         Red
       </button>
       <button 
         class="color-btn blue" 
         :class="{ active: editor.flag.color === 'blue' }"
-        @click="editor.setFlagColor('blue')"
+        @click="editor.setFeatureProp('flag', 'color', 'blue')"
       >
         Blue
       </button>
@@ -35,13 +35,13 @@
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteFlag()"
+        @click="editor.featureAction('deleteFlag')"
       >
         Delete
       </button>
       <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateFlag()"
+        @click="editor.featureAction('duplicateFlag')"
       >
         Duplicate
       </button>

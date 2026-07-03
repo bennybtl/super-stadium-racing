@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'obstacle'"
     title="Obstacle"
-    @close="editor.closeObstacle()"
+    @close="editor.featureAction('closeObstacle')"
   >
     <div class="text-[10px] text-slate-400 mb-3">Right-click terrain to place copy of. Q/E rotates the selected obstacle.</div>
 
@@ -19,7 +19,7 @@
     <select
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.obstacle.color"
-      @change="editor.setObstacleColor($event.target.value)"
+      @change="editor.setFeatureProp('obstacle', 'color', $event.target.value)"
     >
       <option v-for="opt in editor.obstacle.colorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
     </select>
@@ -31,7 +31,7 @@
     <input
       type="range" min="0.5" max="5" step="0.1"
       :value="editor.obstacle.scale"
-      @input="editor.setObstacleScale(+$event.target.value)"
+      @input="editor.setFeatureProp('obstacle', 'scale', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -43,7 +43,7 @@
       <input
         type="range" min="0" max="180" step="1"
         :value="editor.obstacle.rotation"
-        @input="editor.setObstacleRotation(+$event.target.value)"
+        @input="editor.setFeatureProp('obstacle', 'rotation', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
@@ -54,7 +54,7 @@
     <input
       type="range" min="5" max="120" step="1"
       :value="editor.obstacle.weight"
-      @input="editor.setObstacleWeight(+$event.target.value)"
+      @input="editor.setFeatureProp('obstacle', 'weight', +$event.target.value)"
       class="w-full accent-[var(--accent)] cursor-pointer"
     />
 
@@ -64,13 +64,13 @@
     <div class="flex gap-2">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteSelectedObstacle()"
+        @click="editor.featureAction('deleteSelectedObstacle')"
       >
         Delete
       </button>
       <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.resetObstacleDefaults()"
+        @click="editor.featureAction('resetObstacleDefaults')"
       >
         Reset Defaults
       </button>

@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'squareHill'"
     title="Square Hill"
-    @close="editor.closeSquareHill()"
+    @close="editor.featureAction('deselectSquareHill')"
   >
     <!-- Hint -->
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
@@ -22,7 +22,7 @@
     <input
       type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.width"
-      @input="editor.setSquareHillWidth(+$event.target.value)"
+      @input="editor.setFeatureProp('squareHill', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -34,7 +34,7 @@
     <input
       type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.depth"
-      @input="editor.setSquareHillDepth(+$event.target.value)"
+      @input="editor.setFeatureProp('squareHill', 'depth', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -46,7 +46,7 @@
     <input
       type="range" min="0.5" max="15" step="0.5"
       :value="editor.squareHill.transition"
-      @input="editor.setSquareHillTransition(+$event.target.value)"
+      @input="editor.setFeatureProp('squareHill', 'transition', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -58,7 +58,7 @@
     <input
       type="range" min="0" max="180" step="1"
       :value="editor.squareHill.angle"
-      @input="editor.setSquareHillAngle(+$event.target.value)"
+      @input="editor.setFeatureProp('squareHill', 'angle', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -71,7 +71,7 @@
       <input
         type="range" min="-15" max="20" step="0.5"
         :value="editor.squareHill.height"
-        @input="editor.setSquareHillHeight(+$event.target.value)"
+        @input="editor.setFeatureProp('squareHill', 'height', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
@@ -107,14 +107,14 @@
       <input
         type="range" min="0" max="15" step="0.5"
         :value="editor.squareHill.waterLevelOffset"
-        @input="editor.setSquareHillWaterLevelOffset(+$event.target.value)"
+        @input="editor.setFeatureProp('squareHill', 'waterLevelOffset', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
 
     <TerrainTypeSelect
       :model-value="editor.squareHill.terrainType"
-      @update:modelValue="editor.setSquareHillTerrainType"
+      @update:modelValue="v => editor.setFeatureProp('squareHill', 'terrainType', v)"
     />
 
     <!-- Edge Blend: dithers the terrain-type boundary into surrounding terrain -->
@@ -126,7 +126,7 @@
       <input
         type="range" min="0" max="20" step="0.5"
         :value="editor.squareHill.blendWidth"
-        @input="editor.setSquareHillBlendWidth(+$event.target.value)"
+        @input="editor.setFeatureProp('squareHill', 'blendWidth', +$event.target.value)"
         class="w-full accent-[var(--accent)] cursor-pointer"
       />
     </template>
@@ -137,12 +137,12 @@
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteSquareHill()"
+        @click="editor.featureAction('deleteSelectedSquareHill')"
       >Delete</button>
 
       <button 
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateSquareHill()"
+        @click="editor.featureAction('duplicateSelectedSquareHill')"
       >Duplicate</button>
     </div>
   </EditorPanel>

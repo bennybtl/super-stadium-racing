@@ -2,14 +2,14 @@
   <EditorPanel
     v-if="editor.selectedType === 'decoration'"
     title="Decoration"
-    @close="editor.closeDecoration()"
+    @close="editor.featureAction('deselectDecoration')"
   >
     <div class="mb-4">
       <label class="block text-[12px] uppercase tracking-[0.14em] text-slate-300 mb-2">Type</label>
       <select
         class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
         :value="editor.decoration.type"
-        @change="editor.setDecorationType($event.target.value)"
+        @change="editor.setFeatureProp('decoration', 'type', $event.target.value)"
       >
         <option value="flag">Flag</option>
         <option value="bannerString">Banner String</option>
@@ -82,10 +82,10 @@
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteDecoration()">Delete</button>
+        @click="editor.featureAction('deleteSelectedDecoration')">Delete</button>
       <button 
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateDecoration()">Duplicate</button>
+        @click="editor.featureAction('duplicateSelectedDecoration')">Duplicate</button>
     </div>
   </EditorPanel>
 </template>

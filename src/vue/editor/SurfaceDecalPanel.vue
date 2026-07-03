@@ -2,14 +2,14 @@
   <EditorPanel
     v-if="editor.selectedType === 'surfaceDecal'"
     title="Surface Decals"
-    @close="editor.closeSurfaceDecalStamp()"
+    @close="editor.featureAction('closeSurfaceDecalStamp')"
   >
     <div class="mb-3 rounded-xl border border-slate-700 bg-slate-950/50 p-3">
       <div class="text-slate-400 text-[11px] mb-2 uppercase tracking-widest">Decal Type</div>
       <select
         class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
         :value="editor.surfaceDecal.decalType"
-        @change="editor.setSurfaceDecalType($event.target.value)"
+        @change="editor.featureAction('setSurfaceDecalType', $event.target.value)"
       >
         <option v-for="type in editor.surfaceDecal.decalTypes" :key="type" :value="type">
           {{ formatLabel(type) }}
@@ -26,7 +26,7 @@
         <input
           type="checkbox"
           :checked="editor.surfaceDecal.randomRotation"
-          @change="editor.setSurfaceDecalRandomRotation($event.target.checked)"
+          @change="editor.featureAction('setSurfaceDecalRandomRotation', $event.target.checked)"
         />
       </label>
 
@@ -38,7 +38,7 @@
         type="range" min="0" max="360" step="1"
         :value="editor.surfaceDecal.angle"
         :disabled="editor.surfaceDecal.randomRotation"
-        @input="editor.setSurfaceDecalAngle(+$event.target.value)"
+        @input="editor.featureAction('setSurfaceDecalAngle', +$event.target.value)"
         class="w-full accent-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
       />
     </div>
@@ -51,7 +51,7 @@
       </div>
       <input type="range" min="0.5" max="20" step="0.5"
         :value="editor.surfaceDecal.width"
-        @input="editor.setSurfaceDecalWidth(+$event.target.value)"
+        @input="editor.featureAction('setSurfaceDecalWidth', +$event.target.value)"
         class="w-full accent-sky-500"
       />
       <div class="flex justify-between items-center mb-1 mt-2">
@@ -60,7 +60,7 @@
       </div>
       <input type="range" min="0.5" max="20" step="0.5"
         :value="editor.surfaceDecal.depth"
-        @input="editor.setSurfaceDecalDepth(+$event.target.value)"
+        @input="editor.featureAction('setSurfaceDecalDepth', +$event.target.value)"
         class="w-full accent-sky-500"
       />
     </div>
@@ -73,7 +73,7 @@
       </div>
       <input type="range" min="0.1" max="1" step="0.05"
         :value="editor.surfaceDecal.opacity"
-        @input="editor.setSurfaceDecalOpacity(+$event.target.value)"
+        @input="editor.featureAction('setSurfaceDecalOpacity', +$event.target.value)"
         class="w-full accent-sky-500"
       />
     </div>

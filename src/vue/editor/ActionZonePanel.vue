@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'actionZone'"
     title="Action Zone"
-    @close="editor.closeActionZone()"
+    @close="editor.featureAction('deselectActionZone')"
   >
     <!-- Zone type -->
     <div class="text-[12px] mb-1">Zone Type</div>
@@ -28,7 +28,7 @@
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
         min="1.1" max="2.5" step="0.05"
         :value="editor.actionZone.boostStrength"
-        @input="editor.setActionZoneBoostStrength(+$event.target.value)"
+        @input="editor.setFeatureProp('actionZone', 'boostStrength', +$event.target.value)"
       />
       <div class="flex justify-between mb-1 text-[12px]">
         <span>Boost Duration</span>
@@ -39,7 +39,7 @@
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
         min="0.2" max="4" step="0.1"
         :value="editor.actionZone.boostDuration"
-        @input="editor.setActionZoneBoostDuration(+$event.target.value)"
+        @input="editor.setFeatureProp('actionZone', 'boostDuration', +$event.target.value)"
       />
       <div class="text-[10px] text-slate-400 mb-3">Multiplies top speed &amp; acceleration. Duration is how long the boost lingers after leaving the zone.</div>
     </template>
@@ -49,7 +49,7 @@
     <select
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.actionZone.shape"
-      @change="editor.setActionZoneShape($event.target.value)"
+      @change="editor.setFeatureProp('actionZone', 'shape', $event.target.value)"
     >
       <option value="circle">Circle</option>
       <option value="polygon">Polygon</option>
@@ -66,7 +66,7 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       min="4" max="60" step="0.5"
       :value="editor.actionZone.radius"
-      @input="editor.setActionZoneRadius(+$event.target.value)"
+      @input="editor.setFeatureProp('actionZone', 'radius', +$event.target.value)"
     />
 
     <!-- Polygon controls -->
@@ -82,11 +82,11 @@
       <div class="flex gap-2 mb-3">
         <button 
           class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-          @click="editor.deleteActionZonePoint()"
+          @click="editor.featureAction('deleteActionZonePoint')"
         >Delete Point</button>
         <button 
           class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-          @click="editor.insertActionZonePoint()"
+          @click="editor.featureAction('insertActionZonePoint')"
         >Insert Point</button>
       </div>
     </template>
@@ -98,10 +98,10 @@
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900" 
-        @click="editor.deleteActionZone()">Delete</button>
+        @click="editor.featureAction('deleteActionZone')">Delete</button>
       <button 
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateActionZone()">Duplicate</button>
+        @click="editor.featureAction('duplicateActionZone')">Duplicate</button>
     </div>
   </EditorPanel>
 </template>

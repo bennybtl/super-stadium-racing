@@ -498,22 +498,10 @@ export const useEditorStore = defineStore('editor', () => {
   });
   const aiPathBranches = ref([]);
 
-  function setAiPathWearEnabled(val)      { aiPathWear.enabled = val;      _bridge.value?.changeAiPathWearEnabled?.(val); }
-  function setAiPathWearWidth(val)        { aiPathWear.width = val;        _bridge.value?.changeAiPathWearWidth?.(val); }
-  function setAiPathWearIntensity(val)    { aiPathWear.intensity = val;    _bridge.value?.changeAiPathWearIntensity?.(val); }
-  function setAiPathWearLaneSpacing(val)  { aiPathWear.laneSpacing = val;  _bridge.value?.changeAiPathWearLaneSpacing?.(val); }
-  function setAiPathWearPathWander(val)    { aiPathWear.pathWander = val;   _bridge.value?.changeAiPathWearPathWander?.(val); }
-  function setAiPathWearEdgeSoftness(val) { aiPathWear.edgeSoftness = val; _bridge.value?.changeAiPathWearEdgeSoftness?.(val); }
-  function setAiPathWearSecondaryPathCount(val) { aiPathWear.secondaryPathCount = val; _bridge.value?.changeAiPathWearSecondaryPathCount?.(val); }
-  function setAiPathWearSecondaryPathStrength(val) { aiPathWear.secondaryPathStrength = val; _bridge.value?.changeAiPathWearSecondaryPathStrength?.(val); }
-  function setAiPathWearSecondaryPathSpacing(val) { aiPathWear.secondaryPathSpacing = val; _bridge.value?.changeAiPathWearSecondaryPathSpacing?.(val); }
   function editMainAiPath()                 { aiPathBranch.editingMainPath = true; aiPathBranch.activeBranchId = null; _bridge.value?.editMainAiPath?.(); }
-  function createAiPathBranchFromSelected() { _bridge.value?.createAiPathBranchFromSelected?.(); }
   function selectAiPathBranch(id)           { aiPathBranch.editingMainPath = !id; aiPathBranch.activeBranchId = id ?? null; _bridge.value?.selectAiPathBranch?.(id ?? null); }
   function setActiveAiPathBranchWeight(val) { aiPathBranch.activeBranchWeight = val; _bridge.value?.setActiveAiPathBranchWeight?.(val); }
   function setActiveAiPathBranchRejoinIndex(val) { aiPathBranch.activeBranchToMainIndex = val; _bridge.value?.setActiveAiPathBranchRejoinIndex?.(val); }
-  function deleteActiveAiPathBranch()       { _bridge.value?.deleteActiveAiPathBranch?.(); }
-  function clearAiPathBranches()            { _bridge.value?.clearAiPathBranches?.(); }
 
   // ── Terrain path panel ──
   const terrainPath = reactive({
@@ -524,19 +512,6 @@ export const useEditorStore = defineStore('editor', () => {
     terrainType: 'mud',
   });
 
-  function openTerrainPath()                  { _bridge.value?.openTerrainPath?.(); }
-  function closeTerrainPath()                 { _bridge.value?.closeTerrainPath?.(); }
-  function setTerrainPathWidth(val)           { terrainPath.width = val;         _bridge.value?.changeTerrainPathWidth?.(val); }
-  function setTerrainPathBlendWidth(val)      { terrainPath.blendWidth = val;    _bridge.value?.changeTerrainPathBlendWidth?.(val); }
-  function setTerrainPathCornerRadius(val)    { terrainPath.cornerRadius = val;  _bridge.value?.changeTerrainPathCornerRadius?.(val); }
-  function setTerrainPathClosed(val)          { terrainPath.closed = val;        _bridge.value?.changeTerrainPathClosed?.(val); }
-  function setTerrainPathTerrainType(val)     { terrainPath.terrainType = val;   _bridge.value?.changeTerrainPathTerrainType?.(val); }
-  function deleteTerrainPathWaypoint()        { _bridge.value?.deleteTerrainPathWaypoint?.(); }
-  function insertTerrainPathWaypoint()        { _bridge.value?.insertTerrainPathWaypoint?.(); }
-  function duplicateTerrainPath()             { _bridge.value?.duplicateTerrainPath?.(); }
-  function deleteTerrainPath()                { _bridge.value?.deleteTerrainPath?.(); }
-  function clearTerrainPath()                 { _bridge.value?.clearTerrainPath?.(); }
-  function addTerrainPath()                   { _bridge.value?.addTerrainPathEntity?.(); }
 
   // ── Vue panel bridge (set to EditorController instance on activate) ──
   const _bridge = shallowRef(null);
@@ -592,179 +567,48 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ── Checkpoint actions ──
-  function setCheckpointWidth(val)      { checkpoint.width = val;      _bridge.value?.changeCheckpointWidth(val); }
-  function setCheckpointHeading(val)    { checkpoint.heading = val;    _bridge.value?.changeCheckpointHeading(val); }
-  function shiftCheckpointOrder(dir)    { _bridge.value?.shiftCheckpointOrder(dir); }
-  function duplicateCheckpoint()        { _bridge.value?.duplicateSelectedCheckpoint(); }
-  function deleteCheckpoint()           { _bridge.value?.deleteSelectedCheckpoint(); }
-  function closeCheckpoint()            { _bridge.value?.deselectCheckpoint(); }
 
   // ── Hill actions ──
   function setHillRadius(val)           { hill.radiusX = val; hill.radiusZ = val; _bridge.value?.changeHillRadius(val); }
-  function setHillRadiusX(val)          { hill.radiusX = val; _bridge.value?.changeHillRadiusX(val); }
-  function setHillRadiusZ(val)          { hill.radiusZ = val; _bridge.value?.changeHillRadiusZ(val); }
-  function setHillRotation(val)         { hill.rotation = val; _bridge.value?.changeHillRotation(val); }
-  function setHillHeight(val)           { hill.height = val;       _bridge.value?.changeHillHeight(val); }
-  function setHillWaterLevelOffset(val) { hill.waterLevelOffset = val; _bridge.value?.changeHillWaterLevelOffset(val); }
-  function setHillTerrainType(name)     { hill.terrainType = name; _bridge.value?.changeHillTerrainType(name); }
-  function setHillBlendWidth(val)       { hill.blendWidth = val;   _bridge.value?.changeHillBlendWidth(val); }
-  function duplicateHill()              { _bridge.value?.duplicateSelectedHill(); }
-  function deleteHill()                 { _bridge.value?.deleteSelectedHill(); }
-  function closeHill()                  { _bridge.value?.deselectHill(); }
 
   // ── Square Hill actions ──
-  function setSquareHillWidth(val)      { squareHill.width = val;       _bridge.value?.changeSquareHillWidth(val); }
-  function setSquareHillDepth(val)      { squareHill.depth = val;       _bridge.value?.changeSquareHillDepth(val); }
-  function setSquareHillTransition(val) { squareHill.transition = val;  _bridge.value?.changeSquareHillTransition(val); }
-  function setSquareHillAngle(val)      { squareHill.angle = val;       _bridge.value?.changeSquareHillAngle(val); }
-  function setSquareHillHeight(val)     { squareHill.height = val;      _bridge.value?.changeSquareHillHeight(val); }
-  function setSquareHillWaterLevelOffset(val) { squareHill.waterLevelOffset = val; _bridge.value?.changeSquareHillWaterLevelOffset(val); }
   function setSquareHillHeightMin(val)  { squareHill.heightAtMin = val; _bridge.value?.changeSquareHillHeightMin(val); }
   function setSquareHillHeightMax(val)  { squareHill.heightAtMax = val; _bridge.value?.changeSquareHillHeightMax(val); }
   function setSquareHillMode(sloped)    { squareHill.slopeMode = sloped; _bridge.value?.changeSquareHillMode(sloped); }
-  function setSquareHillTerrainType(n)  { squareHill.terrainType = n;   _bridge.value?.changeSquareHillTerrainType(n); }
-  function setSquareHillBlendWidth(val) { squareHill.blendWidth = val;  _bridge.value?.changeSquareHillBlendWidth(val); }
-  function duplicateSquareHill()        { _bridge.value?.duplicateSelectedSquareHill(); }
-  function deleteSquareHill()           { _bridge.value?.deleteSelectedSquareHill(); }
-  function closeSquareHill()            { _bridge.value?.deselectSquareHill(); }
 
   // ── Terrain Shape actions ──
-  function setTerrainShapeShape(val)      { terrainShape.shape = val;       _bridge.value?.changeTerrainShapeShape(val); }
-  function setTerrainShapeWidth(val)      { terrainShape.width = val;       _bridge.value?.changeTerrainShapeWidth(val); }
-  function setTerrainShapeDepth(val)      { terrainShape.depth = val;       _bridge.value?.changeTerrainShapeDepth(val); }
-  function setTerrainShapeRotation(val)   { terrainShape.rotation = val;    _bridge.value?.changeTerrainShapeRotation(val); }
-  function setTerrainShapeBlendWidth(val) { terrainShape.blendWidth = val;  _bridge.value?.changeTerrainShapeBlendWidth(val); }
-  function setTerrainShapeTerrainType(n)  { terrainShape.terrainType = n;   _bridge.value?.changeTerrainShapeTerrainType(n); }
-  function duplicateTerrainShape()        { _bridge.value?.duplicateSelectedTerrainShape(); }
-  function deleteTerrainShape()           { _bridge.value?.deleteSelectedTerrainShape(); }
-  function closeTerrainShape()            { _bridge.value?.deselectTerrainShape(); }
 
   // ── Normal Map Decal actions ──
-  function setNormalMapDecalWidth(val)     { normalMapDecal.width = val;     _bridge.value?.changeNormalMapDecalWidth(val); }
-  function setNormalMapDecalDepth(val)     { normalMapDecal.depth = val;     _bridge.value?.changeNormalMapDecalDepth(val); }
-  function setNormalMapDecalAngle(val)     { normalMapDecal.angle = val;     _bridge.value?.changeNormalMapDecalAngle(val); }
-  function setNormalMapDecalNormalMap(val) { normalMapDecal.normalMap = val; _bridge.value?.changeNormalMapDecalNormalMap(val); }
-  function setNormalMapDecalRepeatU(val)   { normalMapDecal.repeatU = val;   _bridge.value?.changeNormalMapDecalRepeatU(val); }
-  function setNormalMapDecalRepeatV(val)   { normalMapDecal.repeatV = val;   _bridge.value?.changeNormalMapDecalRepeatV(val); }
-  function setNormalMapDecalIntensity(val) { normalMapDecal.intensity = val; _bridge.value?.changeNormalMapDecalIntensity(val); }
-  function duplicateNormalMapDecal()       { _bridge.value?.duplicateSelectedNormalMapDecal(); }
-  function deleteNormalMapDecal()          { _bridge.value?.deleteSelectedNormalMapDecal(); }
-  function closeNormalMapDecal()           { _bridge.value?.deselectNormalMapDecal(); }
 
   // ── Poly Wall actions ──
-  function setPolyWallRadius(val)       { polyWall.radius = val;     _bridge.value?.changePolyWallRadius(val); }
-  function setPolyWallSmoothing(val)    { polyWall.smoothing = val;  _bridge.value?.changePolyWallSmoothing(val); }
-  function setPolyWallHeight(val)          { polyWall.height = val;          _bridge.value?.changePolyWallHeight(val); }
-  function setPolyWallCollisionHeight(val) { polyWall.collisionHeight = val; _bridge.value?.changePolyWallCollisionHeight(val); }
-  function setPolyWallThickness(val)       { polyWall.thickness = val;       _bridge.value?.changePolyWallThickness(val); }
-  function setPolyWallClosed(val)          { polyWall.closed = val;          _bridge.value?.changePolyWallClosed(val); }
-  function setPolyWallStyle(val)           { polyWall.style = val;           _bridge.value?.changePolyWallStyle(val); }
-  function insertPolyWallPoint()        { _bridge.value?.insertPolyWallPoint(); }
-  function deletePolyWallPoint()        { _bridge.value?.deletePolyWallPoint(); }
-  function deletePolyWall()             { _bridge.value?.deletePolyWall(); }
-  function duplicatePolyWall()          { _bridge.value?.duplicatePolyWall(); }
-  function closePolyWall()              { _bridge.value?.deselectPolyWall(); }
 
   // ── Poly Hill actions ──
-  function setPolyHillRadius(val)       { polyHill.radius = val;  _bridge.value?.changePolyHillRadius(val); }
-  function setPolyHillHeight(val)       { polyHill.height = val;  _bridge.value?.changePolyHillHeight(val); }
-  function setPolyHillWidth(val)        { polyHill.width = val;   _bridge.value?.changePolyHillWidth(val); }
-  function setPolyHillTerrainType(name) { polyHill.terrainType = name; _bridge.value?.changePolyHillTerrainType(name); }
-  function setPolyHillBlendWidth(val)   { polyHill.blendWidth = val; _bridge.value?.changePolyHillBlendWidth(val); }
-  function setPolyHillClosed(val)       { polyHill.closed = val;  _bridge.value?.changePolyHillClosed(val); }
-  function setPolyHillFilled(val)       { polyHill.filled = val;  _bridge.value?.changePolyHillFilled(val); }
-  function setPolyHillWaterLevelOffset(val) { polyHill.waterLevelOffset = val; _bridge.value?.changePolyHillWaterLevelOffset(val); }
-  function insertPolyHillPoint()        { _bridge.value?.insertPolyHillPoint(); }
-  function deletePolyHillPoint()        { _bridge.value?.deletePolyHillPoint(); }
-  function deletePolyHill()             { _bridge.value?.deletePolyHill(); }
-  function duplicatePolyHill()          { _bridge.value?.duplicatePolyHill(); }
-  function closePolyHill()              { _bridge.value?.deselectPolyHill(); }
 
   // ── Flag actions ──
-  function setFlagColor(val)            { flag.color = val; _bridge.value?.changeFlagColor(val); }
-  function deleteFlag()                 { _bridge.value?.deleteFlag(); }
-  function duplicateFlag()              { _bridge.value?.duplicateFlag(); }
 
-  function setDecorationType(val)        { decoration.type = val; _bridge.value?.changeDecorationType(val); }
   function setDecorationColor(val)       { decoration.color = val; _bridge.value?.changeFlagColor(val); }
   function setDecorationWidth(val)       { decoration.width = val; _bridge.value?.changeBannerStringWidth(val); }
   function setDecorationPoleHeight(val)  { decoration.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
   function setDecorationHeading(val)     { decoration.heading = val; _bridge.value?.changeBannerStringHeading(val); }
-  function deleteDecoration()            { _bridge.value?.deleteSelectedDecoration(); }
-  function duplicateDecoration()         { _bridge.value?.duplicateSelectedDecoration(); }
-  function closeDecoration()             { _bridge.value?.deselectDecoration(); }
-  function addDecoration()               { _bridge.value?.addDecorationEntity(); }
 
   // ── Track Sign actions ──
-  function setTrackSignName(val)        { trackSign.name = val;     _bridge.value?.changeTrackSignName(val); }
-  function setTrackSignRotation(val)    { trackSign.rotation = val; _bridge.value?.changeTrackSignRotation(val); }
-  function setTrackSignContentType(val) { trackSign.contentType = val; _bridge.value?.changeTrackSignContentType(val); }
-  function setTrackSignBrandImage(val)  { trackSign.brandImage = val; _bridge.value?.changeTrackSignBrandImage(val); }
-  function setTrackSignBackground(val)  { trackSign.background = val; _bridge.value?.changeTrackSignBackground(val); }
-  function setTrackSignPrimaryColor(val){ trackSign.primaryColor = val; _bridge.value?.changeTrackSignPrimaryColor(val); }
-  function setTrackSignScale(val)       { trackSign.scale = val; _bridge.value?.changeTrackSignScale(val); }
-  function setTrackSignHeightOffset(val){ trackSign.heightOffset = val; _bridge.value?.changeTrackSignHeightOffset(val); }
-  function setTrackSignWidth(val)       { trackSign.width = val; _bridge.value?.changeTrackSignWidth(val); }
-  function deleteTrackSign()            { _bridge.value?.deleteTrackSign(); }
-  function duplicateTrackSign()         { _bridge.value?.duplicateTrackSign(); }
-  function closeTrackSign()             { _bridge.value?.deselectTrackSign(); }
 
   // ── Banner String actions ──
-  function setBannerStringWidth(val)      { bannerString.width = val;      _bridge.value?.changeBannerStringWidth(val); }
-  function setBannerStringPoleHeight(val) { bannerString.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
-  function setBannerStringHeading(val)    { bannerString.heading = val;   _bridge.value?.changeBannerStringHeading(val); }
-  function deleteBannerString()           { _bridge.value?.deleteBannerString(); }
-  function duplicateBannerString()        { _bridge.value?.duplicateBannerString(); }
-  function closeBannerString()            { _bridge.value?.deselectBannerString(); }
 
   // ── Action Zone actions ──
-  function setActionZoneRadius(val)   { actionZone.radius   = val; _bridge.value?.changeActionZoneRadius(val); }
   function setActionZoneType(val)     { actionZone.zoneType = val; _bridge.value?.changeActionZoneType(val); }
-  function setActionZoneShape(val)    { actionZone.shape    = val; _bridge.value?.changeActionZoneShape(val); }
-  function setActionZoneBoostStrength(val) { actionZone.boostStrength = val; _bridge.value?.changeActionZoneBoostStrength(val); }
-  function setActionZoneBoostDuration(val) { actionZone.boostDuration = val; _bridge.value?.changeActionZoneBoostDuration(val); }
-  function insertActionZonePoint()    { _bridge.value?.insertActionZonePoint(); }
-  function deleteActionZonePoint()    { _bridge.value?.deleteActionZonePoint(); }
-  function deleteActionZone()         { _bridge.value?.deleteActionZone(); }
-  function duplicateActionZone()      { _bridge.value?.duplicateActionZone(); }
-  function closeActionZone()          { _bridge.value?.deselectActionZone(); }
 
   // ── Poly Curb actions ──
-  function setPolyCurbRadius(val)  { polyCurb.radius = val;  _bridge.value?.changePolyCurbRadius(val); }
-  function setPolyCurbHeight(val)  { polyCurb.height = val;  _bridge.value?.changePolyCurbHeight(val); }
-  function setPolyCurbWidth(val)   { polyCurb.width  = val;  _bridge.value?.changePolyCurbWidth(val); }
-  function setPolyCurbClosed(val)  { polyCurb.closed = val;  _bridge.value?.changePolyCurbClosed(val); }
-  function setPolyCurbStyle(val)   { polyCurb.style = val;   _bridge.value?.changePolyCurbStyle(val); }
-  function insertPolyCurbPoint()   { _bridge.value?.insertPolyCurbPoint(); }
-  function deletePolyCurbPoint()   { _bridge.value?.deletePolyCurbPoint(); }
-  function deletePolyCurb()        { _bridge.value?.deletePolyCurb(); }
-  function duplicatePolyCurb()     { _bridge.value?.duplicatePolyCurb(); }
-  function closePolyCurb()         { _bridge.value?.deselectPolyCurb(); }
 
   // ── Mesh grid actions ──
-  function setMeshGridSmoothing(v)   { meshGrid.smoothing = v;  _bridge.value?.changeMeshGridSmoothing(v); }
-  function setMeshGridStepSize(v)    { meshGrid.stepSize = v;   _bridge.value?.changeMeshGridStepSize(v); }
   function setMeshGridPointHeight(v) { meshGrid.pointHeight = v; _bridge.value?.setMeshGridPointHeight(v); }
   function setMeshGridDensity(v)     { meshGrid.cols = v; meshGrid.rows = v; }
   function setMeshGridWidth(v)       { meshGrid.width = v; }
   function setMeshGridDepth(v)       { meshGrid.depth = v; }
-  function setMeshGridAngle(v)       { meshGrid.angle = v;   _bridge.value?.changeMeshGridAngle(v); }
-  function setMeshGridFalloff(v)     { meshGrid.falloff = v; _bridge.value?.changeMeshGridFalloff(v); }
-  function meshGridAdjustUp()        { _bridge.value?.meshGridAdjustUp(); }
-  function meshGridAdjustDown()      { _bridge.value?.meshGridAdjustDown(); }
   function applyMeshGridSettings()   { _bridge.value?.applyMeshGridChanges(meshGrid.cols, meshGrid.rows, meshGrid.width, meshGrid.depth); }
-  function flattenMeshGrid()         { _bridge.value?.flattenMeshGrid(); }
-  function deleteMeshGrid()          { _bridge.value?.deleteMeshGrid(); }
-  function duplicateMeshGrid()       { _bridge.value?.duplicateMeshGrid(); }
-  function closeMeshGrid()           { _bridge.value?.closeMeshGrid(); }
 
   // ── Bridge Mesh actions ──
   function setBridgeMeshPointHeight(v) { bridgeMesh.pointHeight = v; _bridge.value?.setBridgeMeshPointHeight(v); }
-  function setBridgeMeshStepSize(v)    { bridgeMesh.stepSize = v;   _bridge.value?.changeBridgeMeshStepSize(v); }
-  function setBridgeMeshRotation(v) {
-    bridgeMesh.rotation = v;
-    _bridge.value?.changeBridgeMeshRotation(v);
-  }
   function setBridgeMeshThickness(v) {
     const next = Math.max(0.1, v);
     bridgeMesh.thickness = next;
@@ -775,13 +619,7 @@ export const useEditorStore = defineStore('editor', () => {
     bridgeMesh.layerId = next;
     _bridge.value?.changeBridgeMeshLayerId(next);
   }
-  function bridgeMeshAdjustUp()        { _bridge.value?.bridgeMeshAdjustUp(); }
-  function bridgeMeshAdjustDown()      { _bridge.value?.bridgeMeshAdjustDown(); }
   function applyBridgeMeshSettings()   { _bridge.value?.applyBridgeMeshChanges(bridgeMesh.cols, bridgeMesh.rows, bridgeMesh.width, bridgeMesh.depth); }
-  function flattenBridgeMesh()         { _bridge.value?.flattenBridgeMesh(); }
-  function deleteBridgeMesh()          { _bridge.value?.deleteBridgeMesh(); }
-  function duplicateBridgeMesh()       { _bridge.value?.duplicateBridgeMesh(); }
-  function closeBridgeMesh()           { _bridge.value?.closeBridgeMesh(); }
 
   function setTrackDefaultTerrain(name) { trackDefaultTerrain.value = name; _bridge.value?.changeTrackDefaultTerrain(name); }
   function setTrackBorderTerrain(name) { trackBorderTerrain.value = name; _bridge.value?.changeTrackBorderTerrain(name); }
@@ -795,51 +633,38 @@ export const useEditorStore = defineStore('editor', () => {
   function toggleAddMenu()     { addMenuOpen.value = !addMenuOpen.value; }
 
   // ── Add entity actions ──
-  function addCheckpoint()     { _bridge.value?.addCheckpoint(); }
-  function addHill()           { _bridge.value?.addHillEntity(); }
-  function addSquareHill()     { _bridge.value?.addSquareHillEntity(); }
-  function addTerrain()        { _bridge.value?.addTerrainEntity(); }
-  function addNormalMapDecal() { _bridge.value?.addNormalMapDecalEntity(); }
-  function addObstacle()       { _bridge.value?.addObstacleEntity(); }
   function setObstacleType(val) {
     obstacle.type = val;
     obstacle.weight = getObstacleSpec(val).mass;
     _bridge.value?.changeObstacleType?.(val);
   }
-  function setObstacleScale(val) { obstacle.scale = val; _bridge.value?.changeObstacleScale?.(val); }
-  function setObstacleRotation(val) { obstacle.rotation = val; _bridge.value?.changeObstacleRotation?.(val); }
-  function setObstacleWeight(val) { obstacle.weight = val; _bridge.value?.changeObstacleWeight?.(val); }
-  function setObstacleColor(val) { obstacle.color = val; _bridge.value?.changeObstacleColor?.(val); }
-  function resetObstacleDefaults() { _bridge.value?.resetObstacleDefaults?.(); }
-  function deleteSelectedObstacle() { _bridge.value?.deleteSelectedObstacle?.(); }
-  function closeObstacle()     { _bridge.value?.closeObstacle?.(); }
-  function addFlag()           { _bridge.value?.addFlagEntity(); }
-  function addMeshGrid()       { _bridge.value?.addMeshGridEntity(); }
-  function addBridgeMesh()     { _bridge.value?.addBridgeMeshEntity(); }
-  function addPolyWall()       { _bridge.value?.addPolyWallEntity(); }
-  function addPolyHill()       { _bridge.value?.addPolyHillEntity(); }
-  function addTrackSign()      { _bridge.value?.addTrackSignEntity(); }
-  function addBannerString()   { _bridge.value?.addBannerStringEntity(); }
-  function addActionZone()     { _bridge.value?.addActionZoneEntity(); }
-  function addPolyCurb()       { _bridge.value?.addPolyCurbEntity(); }
-  function addAiWaypoint()     { _bridge.value?.addAiWaypointEntity(); }
-  function insertAiWaypoint()  { _bridge.value?.insertAiWaypointEntity(); }
-  function deleteAiWaypoint()  { _bridge.value?.deleteAiWaypoint(); }
-  function clearAiPath()       { _bridge.value?.clearAiPath(); }
 
   // ── Surface decal stamp ──
   const surfaceDecal = reactive({ decalType: 'gouge', decalTypes: ['gouge', 'holes', 'rough'], imageName: '', angle: 0, randomRotation: true, width: 4, depth: 4, opacity: 0.8 });
-  function openSurfaceDecalStamp()   { _bridge.value?.openSurfaceDecalStamp(); }
-  function closeSurfaceDecalStamp()  { _bridge.value?.closeSurfaceDecalStamp(); }
-  function setSurfaceDecalType(v)    { _bridge.value?.setSurfaceDecalType(v); }
-  function setSurfaceDecalRandomRotation(v) { _bridge.value?.setSurfaceDecalRandomRotation(v); }
-  function setSurfaceDecalAngle(v)   { _bridge.value?.setSurfaceDecalAngle(v); }
-  function setSurfaceDecalOpacity(v) { _bridge.value?.setSurfaceDecalOpacity(v); }
-  function setSurfaceDecalWidth(v)   { _bridge.value?.setSurfaceDecalWidth(v); }
-  function setSurfaceDecalDepth(v)   { _bridge.value?.setSurfaceDecalDepth(v); }
 
+  // ── Generic panel plumbing ──────────────────────────────────────────────
+  // Regular property setters and feature actions route through these two
+  // generics instead of one named store action per property:
+  //   setFeatureProp('hill', 'radiusX', v) mirrors v into the panel state
+  //     object and forwards to EditorController.setFeatureProp, which
+  //     dispatches to changeHillRadiusX by naming convention.
+  //   featureAction('deleteSelectedHill') forwards a named controller call.
+  // Only irregular setters (composite, normalizing, or convention-breaking
+  // names) keep explicit actions above. New panels need zero store edits.
+  const _panels = {
+    checkpoint, hill, squareHill, terrainShape, normalMapDecal, obstacle,
+    meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign,
+    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal,
+  };
+  function setFeatureProp(panelKey, prop, val) {
+    const panel = _panels[panelKey];
+    if (panel && prop in panel) panel[prop] = val;
+    _bridge.value?.setFeatureProp?.(panelKey, prop, val);
+  }
+  function featureAction(method, ...args) { _bridge.value?.[method]?.(...args); }
 
   return {
+    setFeatureProp, featureAction,
     selectedType,
     activeTool,
     addMenuOpen,
@@ -858,42 +683,13 @@ export const useEditorStore = defineStore('editor', () => {
     flag,
     testModeActive, testModeReturnKey,
     setBridge,
-    setCheckpointWidth, setCheckpointHeading, shiftCheckpointOrder, duplicateCheckpoint, deleteCheckpoint, closeCheckpoint,
-    setHillRadius, setHillRadiusX, setHillRadiusZ, setHillRotation,
-    setHillHeight, setHillWaterLevelOffset, setHillTerrainType, setHillBlendWidth, duplicateHill, deleteHill, closeHill,
-    setSquareHillWidth, setSquareHillDepth, setSquareHillTransition, setSquareHillAngle,
-    setSquareHillHeight, setSquareHillWaterLevelOffset, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
-    setSquareHillTerrainType, setSquareHillBlendWidth, duplicateSquareHill, deleteSquareHill, closeSquareHill,
-    setTerrainShapeShape, setTerrainShapeWidth, setTerrainShapeDepth, setTerrainShapeRotation, setTerrainShapeBlendWidth,
-    setTerrainShapeTerrainType, duplicateTerrainShape, deleteTerrainShape, closeTerrainShape,
-    setNormalMapDecalWidth, setNormalMapDecalDepth, setNormalMapDecalAngle,
-    setNormalMapDecalNormalMap, setNormalMapDecalRepeatU, setNormalMapDecalRepeatV,
-    setNormalMapDecalIntensity, duplicateNormalMapDecal, deleteNormalMapDecal, closeNormalMapDecal,
-    setPolyWallRadius, setPolyWallSmoothing, setPolyWallHeight, setPolyWallCollisionHeight, setPolyWallThickness, setPolyWallClosed, setPolyWallStyle,
-    insertPolyWallPoint, deletePolyWallPoint, deletePolyWall, duplicatePolyWall, closePolyWall,
-    setPolyHillRadius, setPolyHillHeight, setPolyHillWidth, setPolyHillTerrainType, setPolyHillBlendWidth, setPolyHillClosed, setPolyHillFilled,
-    setPolyHillWaterLevelOffset,
-    insertPolyHillPoint, deletePolyHillPoint, deletePolyHill, duplicatePolyHill, closePolyHill,
-    setFlagColor, deleteFlag, duplicateFlag,
+    setHillRadius, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     decoration,
-    setDecorationType, setDecorationColor, setDecorationWidth,
-    setDecorationPoleHeight, setDecorationHeading, deleteDecoration,
-    duplicateDecoration, closeDecoration, addDecoration,
-    trackSign,
-    setTrackSignName, setTrackSignRotation,
-    setTrackSignContentType, setTrackSignBrandImage, setTrackSignBackground, setTrackSignPrimaryColor,
-    setTrackSignScale, setTrackSignHeightOffset, setTrackSignWidth,
-    deleteTrackSign, duplicateTrackSign, closeTrackSign,
+    setDecorationColor, setDecorationWidth,
+    setDecorationPoleHeight, setDecorationHeading, trackSign,
     bannerString,
-    setBannerStringWidth, setBannerStringPoleHeight, setBannerStringHeading, deleteBannerString, duplicateBannerString, closeBannerString,
     actionZone,
-    setActionZoneRadius, setActionZoneType, setActionZoneShape,
-    setActionZoneBoostStrength, setActionZoneBoostDuration,
-    insertActionZonePoint, deleteActionZonePoint,
-    deleteActionZone, duplicateActionZone, closeActionZone,
-    polyCurb,
-    setPolyCurbRadius, setPolyCurbHeight, setPolyCurbWidth, setPolyCurbClosed, setPolyCurbStyle,
-    insertPolyCurbPoint, deletePolyCurbPoint, deletePolyCurb, duplicatePolyCurb, closePolyCurb,
+    setActionZoneType, polyCurb,
     trackSettingsOpen, trackSettings,
     openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
@@ -903,36 +699,13 @@ export const useEditorStore = defineStore('editor', () => {
     toggleSnap, cycleSnapSize, quickTestTrack,
     rebuildScene,
     openAddMenu, closeAddMenu, toggleAddMenu,
-    addCheckpoint, addHill, addSquareHill, addTerrain,
-    addNormalMapDecal, addObstacle,
-    setObstacleType, setObstacleScale, setObstacleRotation, setObstacleWeight, setObstacleColor,
-    resetObstacleDefaults, deleteSelectedObstacle, closeObstacle,
-    addFlag,
-    addMeshGrid, addBridgeMesh, addPolyWall, addPolyHill, addTrackSign, addBannerString,
-    addActionZone, addPolyCurb, addAiWaypoint, insertAiWaypoint, deleteAiWaypoint, clearAiPath,
-    openAiPath, closeAiPath,
+    setObstacleType, openAiPath, closeAiPath,
     aiPathWear,
     aiPathBranch, aiPathBranches,
-    setAiPathWearEnabled, setAiPathWearWidth, setAiPathWearIntensity,
-    setAiPathWearLaneSpacing, setAiPathWearPathWander, setAiPathWearEdgeSoftness,
-    setAiPathWearSecondaryPathCount, setAiPathWearSecondaryPathStrength, setAiPathWearSecondaryPathSpacing,
-    editMainAiPath, createAiPathBranchFromSelected, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, deleteActiveAiPathBranch, clearAiPathBranches,
-    terrainPath,
-    openTerrainPath, closeTerrainPath,
-    setTerrainPathWidth, setTerrainPathBlendWidth, setTerrainPathCornerRadius, setTerrainPathClosed, setTerrainPathTerrainType,
-    deleteTerrainPathWaypoint, insertTerrainPathWaypoint, duplicateTerrainPath, deleteTerrainPath, clearTerrainPath, addTerrainPath,
+    editMainAiPath, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, terrainPath,
     surfaceDecal,
-    openSurfaceDecalStamp, closeSurfaceDecalStamp,
-    setSurfaceDecalType, setSurfaceDecalRandomRotation, setSurfaceDecalAngle,
-    setSurfaceDecalOpacity, setSurfaceDecalWidth, setSurfaceDecalDepth,
-    setMeshGridSmoothing, setMeshGridStepSize, setMeshGridPointHeight,
+    setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
-    setMeshGridAngle, setMeshGridFalloff,
-    meshGridAdjustUp, meshGridAdjustDown,
-    applyMeshGridSettings, flattenMeshGrid, deleteMeshGrid, duplicateMeshGrid, closeMeshGrid,
-    setBridgeMeshPointHeight, setBridgeMeshStepSize, setBridgeMeshRotation,
-    setBridgeMeshThickness, setBridgeMeshLayerId,
-    bridgeMeshAdjustUp, bridgeMeshAdjustDown,
-    applyBridgeMeshSettings, flattenBridgeMesh, deleteBridgeMesh, duplicateBridgeMesh, closeBridgeMesh,
-  };
+    applyMeshGridSettings, setBridgeMeshPointHeight, setBridgeMeshThickness, setBridgeMeshLayerId,
+    applyBridgeMeshSettings, };
 });

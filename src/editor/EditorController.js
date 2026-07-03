@@ -1201,6 +1201,18 @@ export class EditorController {
 
   // ─── Vue Bridge — change methods called by Pinia store actions ──────────────────
 
+  /**
+   * Generic panel-property route: (panelKey, prop) dispatches to the matching
+   * change<Panel><Prop> method — e.g. ('hill', 'radiusX') → changeHillRadiusX.
+   * The store's setFeatureProp calls this after mirroring the value into panel
+   * state; scripts/check-panel-bindings.mjs statically verifies every panel
+   * binding resolves to a real method.
+   */
+  setFeatureProp(panelKey, prop, val) {
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    this[`change${cap(panelKey)}${cap(prop)}`]?.(val);
+  }
+
   changeCheckpointWidth(val) { this.checkpointEditor.changeWidth(val); }
   changeCheckpointHeading(degrees) { this.checkpointEditor.changeHeading(degrees); }
 

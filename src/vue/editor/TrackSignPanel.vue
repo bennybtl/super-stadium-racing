@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'trackSign'"
     title="Track Sign"
-    @close="editor.closeTrackSign()"
+    @close="editor.featureAction('deselectTrackSign')"
   >
     <!-- Hint -->
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
@@ -12,7 +12,7 @@
     <select
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.trackSign.contentType"
-      @change="editor.setTrackSignContentType($event.target.value)"
+      @change="editor.setFeatureProp('trackSign', 'contentType', $event.target.value)"
     >
       <option value="text">Custom Text</option>
       <option value="brand">Brand Logo</option>
@@ -27,7 +27,7 @@
       class="sign-name-input"
       type="text"
       :value="editor.trackSign.name"
-      @input="editor.setTrackSignName($event.target.value)"
+      @input="editor.setFeatureProp('trackSign', 'name', $event.target.value)"
       placeholder="Track Name"
     />
 
@@ -37,7 +37,7 @@
       v-if="editor.trackSign.contentType === 'brand'"
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.trackSign.brandImage"
-      @change="editor.setTrackSignBrandImage($event.target.value)"
+      @change="editor.setFeatureProp('trackSign', 'brandImage', $event.target.value)"
     >
       <option v-for="brand in TRACK_SIGN_BRANDS" :key="brand.value" :value="brand.value">{{ brand.label }}</option>
     </select>
@@ -47,7 +47,7 @@
     <select
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.trackSign.background"
-      @change="editor.setTrackSignBackground($event.target.value)"
+      @change="editor.setFeatureProp('trackSign', 'background', $event.target.value)"
     >
       <option value="black">Black</option>
       <option value="gray">Gray</option>
@@ -62,7 +62,7 @@
     <select
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.trackSign.primaryColor"
-      @change="editor.setTrackSignPrimaryColor($event.target.value)"
+      @change="editor.setFeatureProp('trackSign', 'primaryColor', $event.target.value)"
     >
       <option value="black">Black</option>
       <option value="gray">Gray</option>
@@ -80,7 +80,7 @@
     <input
       type="range" min="4" max="30" step="0.5"
       :value="editor.trackSign.width"
-      @input="editor.setTrackSignWidth(+$event.target.value)"
+      @input="editor.setFeatureProp('trackSign', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -92,7 +92,7 @@
     <input
       type="range" min="0.4" max="2.5" step="0.05"
       :value="editor.trackSign.scale"
-      @input="editor.setTrackSignScale(+$event.target.value)"
+      @input="editor.setFeatureProp('trackSign', 'scale', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -104,7 +104,7 @@
     <input
       type="range" min="0" max="10" step="0.1"
       :value="editor.trackSign.heightOffset"
-      @input="editor.setTrackSignHeightOffset(+$event.target.value)"
+      @input="editor.setFeatureProp('trackSign', 'heightOffset', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -116,7 +116,7 @@
     <input
       type="range" min="-180" max="180" step="1"
       :value="editor.trackSign.rotation"
-      @input="editor.setTrackSignRotation(+$event.target.value)"
+      @input="editor.setFeatureProp('trackSign', 'rotation', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -126,11 +126,11 @@
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteTrackSign()"
+        @click="editor.featureAction('deleteTrackSign')"
       >Delete</button>
       <button 
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateTrackSign()"
+        @click="editor.featureAction('duplicateTrackSign')"
       >Duplicate</button>
     </div>
   </EditorPanel>

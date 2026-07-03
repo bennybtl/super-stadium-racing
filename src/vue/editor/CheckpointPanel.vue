@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'checkpoint'"
     title="Checkpoint"
-    @close="editor.closeCheckpoint()"
+    @close="editor.featureAction('deselectCheckpoint')"
   >
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -12,7 +12,7 @@
     <input
       type="range" min="4" max="30" step="0.5"
       :value="editor.checkpoint.width"
-      @input="editor.setCheckpointWidth(+$event.target.value)"
+      @input="editor.setFeatureProp('checkpoint', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -24,7 +24,7 @@
     <input
       type="range" min="-180" max="180" step="5"
       :value="editor.checkpoint.heading"
-      @input="editor.setCheckpointHeading(+$event.target.value)"
+      @input="editor.setFeatureProp('checkpoint', 'heading', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -34,8 +34,8 @@
       <span class="text-slate-300" style="font-weight: bold">#{{ editor.checkpoint.orderNum }}</span>
     </div>
     <div class="flex gap-2 mb-3">
-      <button class="order-btn" @click="editor.shiftCheckpointOrder(-1)">← Earlier</button>
-      <button class="order-btn" @click="editor.shiftCheckpointOrder(1)">Later →</button>
+      <button class="order-btn" @click="editor.featureAction('shiftCheckpointOrder', -1)">← Earlier</button>
+      <button class="order-btn" @click="editor.featureAction('shiftCheckpointOrder', 1)">Later →</button>
     </div>
 
     <!-- Hint -->
@@ -45,13 +45,13 @@
     <div class="flex gap-2">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteCheckpoint()"
+        @click="editor.featureAction('deleteSelectedCheckpoint')"
       >
         Delete
       </button>
       <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateCheckpoint()"
+        @click="editor.featureAction('duplicateSelectedCheckpoint')"
       >
         Duplicate
       </button>

@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'polyCurb'"
     title="Poly Curb"
-    @close="editor.closePolyCurb()"
+    @close="editor.featureAction('deselectPolyCurb')"
   >
     <!-- Selected Point Section -->
     <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Selected Point</div>
@@ -16,7 +16,7 @@
       type="range" min="0" max="30" step="0.5"
       :value="editor.polyCurb.radius"
       :disabled="!editor.polyCurb.canHaveRadius"
-      @input="editor.setPolyCurbRadius(+$event.target.value)"
+      @input="editor.setFeatureProp('polyCurb', 'radius', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
     <div v-if="!editor.polyCurb.canHaveRadius && editor.polyCurb.hasSelection" class="text-[10px] text-slate-400 mb-3" style="color: #ff9800;">
@@ -28,11 +28,11 @@
     <div class="flex gap-2 mb-3">
       <button 
           class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deletePolyCurbPoint()"
+        @click="editor.featureAction('deletePolyCurbPoint')"
       >Delete Point</button>
       <button 
           class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.insertPolyCurbPoint()"
+        @click="editor.featureAction('insertPolyCurbPoint')"
       >Insert After</button>
     </div>
     <hr class="border-t border-slate-700 my-4" />
@@ -48,7 +48,7 @@
     <input
       type="range" min="0.08" max="0.5" step="0.02"
       :value="editor.polyCurb.height"
-      @input="editor.setPolyCurbHeight(+$event.target.value)"
+      @input="editor.setFeatureProp('polyCurb', 'height', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -60,7 +60,7 @@
     <input
       type="range" min="0.25" max="5.0" step="0.25"
       :value="editor.polyCurb.width"
-      @input="editor.setPolyCurbWidth(+$event.target.value)"
+      @input="editor.setFeatureProp('polyCurb', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -70,7 +70,7 @@
       <input
         type="checkbox"
         :checked="editor.polyCurb.closed"
-        @change="editor.setPolyCurbClosed($event.target.checked)"
+        @change="editor.setFeatureProp('polyCurb', 'closed', $event.target.checked)"
         class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
       />
     </div>
@@ -80,7 +80,7 @@
       <span>Style</span>
       <select
         :value="editor.polyCurb.style"
-        @change="editor.setPolyCurbStyle($event.target.value)"
+        @change="editor.setFeatureProp('polyCurb', 'style', $event.target.value)"
         class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
       >
         <option value="red_white">Red &amp; White</option>
@@ -95,11 +95,11 @@
     <div class="flex gap-2">
     <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-      @click="editor.deletePolyCurb()"
+      @click="editor.featureAction('deletePolyCurb')"
     >Delete</button>
     <button 
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-      @click="editor.duplicatePolyCurb()"
+      @click="editor.featureAction('duplicatePolyCurb')"
     >Duplicate</button>
 
   </div>

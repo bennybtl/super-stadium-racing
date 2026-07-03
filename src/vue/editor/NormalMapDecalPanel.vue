@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'normalMapDecal'"
     title="Normal Map Decal"
-    @close="editor.closeNormalMapDecal()"
+    @close="editor.featureAction('deselectNormalMapDecal')"
   >
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -12,7 +12,7 @@
     <input
       type="range" min="1" max="80" step="0.5"
       :value="editor.normalMapDecal.width"
-      @input="editor.setNormalMapDecalWidth(+$event.target.value)"
+      @input="editor.setFeatureProp('normalMapDecal', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -24,7 +24,7 @@
     <input
       type="range" min="1" max="80" step="0.5"
       :value="editor.normalMapDecal.depth"
-      @input="editor.setNormalMapDecalDepth(+$event.target.value)"
+      @input="editor.setFeatureProp('normalMapDecal', 'depth', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -36,7 +36,7 @@
     <input
       type="range" min="0" max="360" step="1"
       :value="editor.normalMapDecal.angle"
-      @input="editor.setNormalMapDecalAngle(+$event.target.value)"
+      @input="editor.setFeatureProp('normalMapDecal', 'angle', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -45,7 +45,7 @@
     <select
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
       :value="editor.normalMapDecal.normalMap"
-      @change="editor.setNormalMapDecalNormalMap($event.target.value)"
+      @change="editor.setFeatureProp('normalMapDecal', 'normalMap', $event.target.value)"
     >
       <option value="normals/6481-normal.jpg">6481 (Fine Gravel)</option>
       <option value="normals/7632-normal.jpg">7632 (Rough)</option>
@@ -60,7 +60,7 @@
     <input
       type="range" min="0.1" max="20" step="0.1"
       :value="editor.normalMapDecal.repeatU"
-      @input="editor.setNormalMapDecalRepeatU(+$event.target.value)"
+      @input="editor.setFeatureProp('normalMapDecal', 'repeatU', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -72,7 +72,7 @@
     <input
       type="range" min="0.1" max="20" step="0.1"
       :value="editor.normalMapDecal.repeatV"
-      @input="editor.setNormalMapDecalRepeatV(+$event.target.value)"
+      @input="editor.setFeatureProp('normalMapDecal', 'repeatV', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -84,7 +84,7 @@
     <input
       type="range" min="0" max="2" step="0.05"
       :value="editor.normalMapDecal.intensity"
-      @input="editor.setNormalMapDecalIntensity(+$event.target.value)"
+      @input="editor.setFeatureProp('normalMapDecal', 'intensity', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -92,8 +92,8 @@
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
 
     <!-- Actions -->
-    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.duplicateNormalMapDecal()">Duplicate Normal Map</button>
-    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.deleteNormalMapDecal()">Delete Normal Map</button>
+    <button class="w-full rounded-md bg-sky-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-sky-500" @click="editor.featureAction('duplicateSelectedNormalMapDecal')">Duplicate Normal Map</button>
+    <button class="w-full rounded-md bg-rose-600 text-white py-2 text-[13px] font-sans mb-2 hover:bg-rose-500" @click="editor.featureAction('deleteSelectedNormalMapDecal')">Delete Normal Map</button>
   </EditorPanel>
 </template>
 

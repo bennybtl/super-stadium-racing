@@ -4,7 +4,7 @@
     title="Mesh Grid"
     default-right="20px"
     default-top="80px"
-    @close="editor.closeMeshGrid()"
+    @close="editor.featureAction('closeMeshGrid')"
   >
     <!-- Point Height -->
     <div class="text-[12px] mb-1">Point Height</div>
@@ -19,8 +19,8 @@
       :disabled="!editor.meshGrid.hasSelection"
       @change="editor.setMeshGridPointHeight(+$event.target.value)"
       @keydown.enter.prevent="editor.setMeshGridPointHeight(+$event.target.value)"
-      @keydown.up.prevent="editor.meshGridAdjustUp()"
-      @keydown.down.prevent="editor.meshGridAdjustDown()"
+      @keydown.up.prevent="editor.featureAction('meshGridAdjustUp')"
+      @keydown.down.prevent="editor.featureAction('meshGridAdjustDown')"
       @mousedown.stop
     />
 
@@ -32,7 +32,7 @@
     <input
       type="range" min="0.1" max="5" step="0.1"
       :value="editor.meshGrid.stepSize"
-      @input="editor.setMeshGridStepSize(+$event.target.value)"
+      @input="editor.setFeatureProp('meshGrid', 'stepSize', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -86,7 +86,7 @@
     <input
       type="range" min="0" max="360" step="1"
       :value="editor.meshGrid.angle"
-      @input="editor.setMeshGridAngle(+$event.target.value)"
+      @input="editor.setFeatureProp('meshGrid', 'angle', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -99,7 +99,7 @@
       <input
         type="range" min="0" max="60" step="1"
         :value="editor.meshGrid.falloff"
-        @input="editor.setMeshGridFalloff(+$event.target.value)"
+        @input="editor.setFeatureProp('meshGrid', 'falloff', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
       <div class="text-[10px] text-slate-400 mb-3">Width of the band where this region blends into surrounding terrain. 0 = hard edge.</div>
@@ -113,14 +113,14 @@
     <input
       type="range" min="0" max="1" step="0.05"
       :value="editor.meshGrid.smoothing"
-      @input="editor.setMeshGridSmoothing(+$event.target.value)"
+      @input="editor.setFeatureProp('meshGrid', 'smoothing', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-8 cursor-pointer"
     />
 
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.flattenMeshGrid()"
+        @click="editor.featureAction('flattenMeshGrid')"
       >
         Flatten
       </button>
@@ -140,11 +140,11 @@
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteMeshGrid()"
+        @click="editor.featureAction('deleteMeshGrid')"
       >Delete</button>
       <button 
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateMeshGrid()"
+        @click="editor.featureAction('duplicateMeshGrid')"
       >Duplicate</button>
     </div>
 </EditorPanel>

@@ -28,13 +28,13 @@
       <div class="flex gap-2 mb-3">
         <button
           class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-          @click="editor.deleteAiWaypoint()"
+          @click="editor.featureAction('deleteAiWaypoint')"
         >
           Delete Point
         </button>
         <button
           class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-          @click="editor.insertAiWaypoint()"
+          @click="editor.featureAction('insertAiWaypointEntity')"
         >
           Insert After
         </button>
@@ -94,13 +94,13 @@
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
           :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'"
           :disabled="!editor.aiPathBranch.activeBranchId"
-          @click="editor.deleteActiveAiPathBranch()"
+          @click="editor.featureAction('deleteActiveAiPathBranch')"
         >
           Delete Active Branch
         </button>
         <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-          @click="editor.createAiPathBranchFromSelected()"
+          @click="editor.featureAction('createAiPathBranchFromSelected')"
         >
           Create Branch
         </button>
@@ -110,7 +110,7 @@
       <div class="flex gap-2 mb-3">
         <button
           class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-          @click="editor.clearAiPath()"
+          @click="editor.featureAction('clearAiPath')"
         >
           Clear AI path
         </button>
@@ -125,7 +125,7 @@
           type="checkbox"
           class="h-4 w-4 accent-[var(--accent)]"
           :checked="editor.aiPathWear.enabled"
-          @change="editor.setAiPathWearEnabled($event.target.checked)"
+          @change="editor.setFeatureProp('aiPathWear', 'enabled', $event.target.checked)"
         />
       </label>
 
@@ -136,7 +136,7 @@
       <input
         type="range" min="2" max="8" step="0.5"
         :value="editor.aiPathWear.width"
-        @input="editor.setAiPathWearWidth(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'width', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
@@ -147,7 +147,7 @@
       <input
         type="range" min="0.1" max="1.0" step="0.1"
         :value="editor.aiPathWear.intensity"
-        @input="editor.setAiPathWearIntensity(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'intensity', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
@@ -158,7 +158,7 @@
       <input
         type="range" min="0.5" max="4" step="0.1"
         :value="editor.aiPathWear.laneSpacing"
-        @input="editor.setAiPathWearLaneSpacing(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'laneSpacing', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
@@ -169,7 +169,7 @@
       <input
         type="range" min="0" max="1.5" step="0.1"
         :value="editor.aiPathWear.pathWander"
-        @input="editor.setAiPathWearPathWander(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'pathWander', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
@@ -180,7 +180,7 @@
       <input
         type="range" min="0.0" max="1.5" step="0.1"
         :value="editor.aiPathWear.edgeSoftness"
-        @input="editor.setAiPathWearEdgeSoftness(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'edgeSoftness', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
@@ -191,7 +191,7 @@
       <input
         type="range" min="20" max="80" step="5"
         :value="editor.aiPathWear.secondaryPathCount"
-        @input="editor.setAiPathWearSecondaryPathCount(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'secondaryPathCount', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
@@ -202,7 +202,7 @@
       <input
         type="range" min="0" max="1.0" step="0.1"
         :value="editor.aiPathWear.secondaryPathStrength"
-        @input="editor.setAiPathWearSecondaryPathStrength(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'secondaryPathStrength', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
 
@@ -213,7 +213,7 @@
       <input
         type="range" min="0" max="0.10" step="0.01"
         :value="editor.aiPathWear.secondaryPathSpacing"
-        @input="editor.setAiPathWearSecondaryPathSpacing(+$event.target.value)"
+        @input="editor.setFeatureProp('aiPathWear', 'secondaryPathSpacing', +$event.target.value)"
         class="w-full accent-[var(--accent)] cursor-pointer"
       />
     </div>

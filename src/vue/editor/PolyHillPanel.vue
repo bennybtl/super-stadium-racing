@@ -2,7 +2,7 @@
   <EditorPanel
     v-if="editor.selectedType === 'polyHill'"
     title="Poly Hill"
-    @close="editor.closePolyHill()"
+    @close="editor.featureAction('deselectPolyHill')"
   >
     <!-- Selected Point Section -->
     <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Selected Point</div>
@@ -16,7 +16,7 @@
       type="range" min="0" max="30" step="0.5"
       :value="editor.polyHill.radius"
       :disabled="!editor.polyHill.canHaveRadius"
-      @input="editor.setPolyHillRadius(+$event.target.value)"
+      @input="editor.setFeatureProp('polyHill', 'radius', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
     <div v-if="!editor.polyHill.canHaveRadius && editor.polyHill.hasSelection" class="text-[10px] text-slate-400 mb-3" style="color: #ff9800;">
@@ -30,7 +30,7 @@
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         :class="{ 'cursor-not-allowed opacity-50': !editor.polyHill.canDeletePoint }"
         :disabled="!editor.polyHill.canDeletePoint"
-        @click="editor.deletePolyHillPoint()"
+        @click="editor.featureAction('deletePolyHillPoint')"
       >
         Delete Point
       </button>
@@ -39,7 +39,7 @@
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
         :class="{ 'cursor-not-allowed opacity-50': !editor.polyHill.hasSelection }"
         :disabled="!editor.polyHill.hasSelection"
-        @click="editor.insertPolyHillPoint()"
+        @click="editor.featureAction('insertPolyHillPoint')"
       >
         Insert Point
       </button>
@@ -58,7 +58,7 @@
     <input
       type="range" min="-16" max="16" step="0.1"
       :value="editor.polyHill.height"
-      @input="editor.setPolyHillHeight(+$event.target.value)"
+      @input="editor.setFeatureProp('polyHill', 'height', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -70,7 +70,7 @@
     <input
       type="range" min="2" max="50" step="0.5"
       :value="editor.polyHill.width"
-      @input="editor.setPolyHillWidth(+$event.target.value)"
+      @input="editor.setFeatureProp('polyHill', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -80,7 +80,7 @@
       <input
         type="checkbox"
         :checked="editor.polyHill.closed"
-        @change="editor.setPolyHillClosed($event.target.checked)"
+        @change="editor.setFeatureProp('polyHill', 'closed', $event.target.checked)"
         class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
       />
     </div>
@@ -93,7 +93,7 @@
           type="checkbox"
           :checked="editor.polyHill.filled"
           :disabled="!editor.polyHill.closed"
-          @change="editor.setPolyHillFilled($event.target.checked)"
+          @change="editor.setFeatureProp('polyHill', 'filled', $event.target.checked)"
           class="w-4 h-4 accent-[var(--accent)] cursor-pointer disabled:opacity-50"
         />
       </div>
@@ -108,7 +108,7 @@
       <input
         type="range" min="0" max="15" step="0.1"
         :value="editor.polyHill.waterLevelOffset"
-        @input="editor.setPolyHillWaterLevelOffset(+$event.target.value)"
+        @input="editor.setFeatureProp('polyHill', 'waterLevelOffset', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
@@ -116,7 +116,7 @@
     <!-- Terrain Type -->
     <TerrainTypeSelect
       :model-value="editor.polyHill.terrainType"
-      @update:modelValue="editor.setPolyHillTerrainType"
+      @update:modelValue="v => editor.setFeatureProp('polyHill', 'terrainType', v)"
     />
 
     <!-- Edge Blend: dithers the terrain-type boundary into surrounding terrain -->
@@ -128,7 +128,7 @@
       <input
         type="range" min="0" max="20" step="0.5"
         :value="editor.polyHill.blendWidth"
-        @input="editor.setPolyHillBlendWidth(+$event.target.value)"
+        @input="editor.setFeatureProp('polyHill', 'blendWidth', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
@@ -139,11 +139,11 @@
     <div class="flex gap-2">
       <button 
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deletePolyHill()"
+        @click="editor.featureAction('deletePolyHill')"
       >Delete</button>
       <button 
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicatePolyHill()"
+        @click="editor.featureAction('duplicatePolyHill')"
       >Duplicate</button>
     </div>
 </EditorPanel>

@@ -5,7 +5,7 @@
     title="Bridge Mesh"
     default-right="20px"
     default-top="80px"
-    @close="editor.closeBridgeMesh()"
+    @close="editor.featureAction('closeBridgeMesh')"
   >
     <!-- Point Height -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -32,7 +32,7 @@
     <input
       type="range" min="0.1" max="2" step="0.1"
       :value="editor.bridgeMesh.stepSize"
-      @input="editor.setBridgeMeshStepSize(+$event.target.value)"
+      @input="editor.setFeatureProp('bridgeMesh', 'stepSize', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -98,7 +98,7 @@
     <input
       type="range" min="-180" max="180" step="1"
       :value="editor.bridgeMesh.rotation"
-      @input="editor.setBridgeMeshRotation(+$event.target.value)"
+      @input="editor.setFeatureProp('bridgeMesh', 'rotation', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -140,7 +140,7 @@
     <div class="flex gap-2">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.flattenBridgeMesh()"
+        @click="editor.featureAction('flattenBridgeMesh')"
       >
         Flatten
       </button>
@@ -149,11 +149,11 @@
     <div class="flex gap-2">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.deleteBridgeMesh()"
+        @click="editor.featureAction('deleteBridgeMesh')"
       >Delete</button>
       <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.duplicateBridgeMesh()"
+        @click="editor.featureAction('duplicateBridgeMesh')"
       >Duplicate</button>
     </div>
   </EditorPanel>
