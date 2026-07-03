@@ -765,6 +765,59 @@ export class Track {
     return entry;
   }
 
+  // World-space AABB of a feature's height contribution, matching the
+  // getHeightAt early-out bounds. Returns { minX, maxX, minZ, maxZ }, or null
+  // when the feature's reach can't be bounded (legacy full-track meshGrids,
+  // non-height feature types) — callers must treat null as "everywhere".
+  getFeatureHeightBounds(feature) {
+    switch (feature?.type) {
+      case "hill": {
+        const { radiusX, radiusZ } = getHillEllipseParams(feature);
+        const r = Math.max(radiusX, radiusZ);
+        return {
+          minX: feature.centerX - r, maxX: feature.centerX + r,
+          minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
+        };
+      }
+      case "squareHill": {
+        const hw = feature.width / 2;
+        const hd = (feature.depth ?? feature.width) / 2;
+        const transition = feature.transition ?? 4;
+        // Rotation-invariant circumscribed circle of the rect + transition band.
+        const r = Math.sqrt((hw + transition) ** 2 + (hd + transition) ** 2);
+        return {
+          minX: feature.centerX - r, maxX: feature.centerX + r,
+          minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
+        };
+      }
+      case "meshGrid": {
+        if (!feature.regional) return null; // legacy meshes spread everywhere
+        const halfW = feature.width / 2;
+        const halfD = feature.depth / 2;
+        const falloff = feature.falloff ?? 0;
+        const r = Math.sqrt((halfW + falloff) ** 2 + (halfD + falloff) ** 2);
+        return {
+          minX: feature.centerX - r, maxX: feature.centerX + r,
+          minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
+        };
+      }
+      case "polyHill": {
+        const { points, closed = false } = feature;
+        if (!points || points.length < 2) {
+          return { minX: 0, maxX: 0, minZ: 0, maxZ: 0 }; // contributes nothing
+        }
+        const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
+        const exp = this._getExpandedPolyline(feature, points, closed);
+        return {
+          minX: exp.minX - halfWidth, maxX: exp.maxX + halfWidth,
+          minZ: exp.minZ - halfWidth, maxZ: exp.maxZ + halfWidth,
+        };
+      }
+      default:
+        return null;
+    }
+  }
+
   // Serialize track to JSON string
   toJSON() {
     // Deep clone features, convert terrainType objects to names, and emit

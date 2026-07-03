@@ -292,7 +292,7 @@ export class SquareHillEditor {
 
   rebuildTerrain() {
     if (this.selected) this.updateVisual(this.selected);
-    window.rebuildTerrain?.();
+    window.rebuildTerrain?.(this.selected?.feature);
     window.rebuildTerrainGrid?.();
     window.rebuildHillWater?.(this.selected?.feature);
     window.rebuildTerrainTexture?.();

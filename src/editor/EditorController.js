@@ -1644,7 +1644,7 @@ export class EditorController {
   changeMeshGridSmoothing(v) {
     if (this.meshGridEditor?.activeFeature) {
       this.meshGridEditor.activeFeature.smoothing = v;
-      window.rebuildTerrain?.();
+      window.rebuildTerrain?.(this.meshGridEditor.activeFeature);
     }
   }
   changeMeshGridAngle(v)        { this.meshGridEditor?.setAngle(v); }

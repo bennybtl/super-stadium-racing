@@ -114,11 +114,34 @@ export class EditorMode extends BaseMode {
       }, 300);
     };
 
-    window.rebuildTerrain = () => {
+    // Dirty-region terrain updates: when the caller names the one feature that
+    // changed, only vertices inside the union of its bounds at the previous
+    // rebuild and now are re-queried (a slider drag touches a local patch, not
+    // all ~4k vertices). The first rebuild for a feature is always full — we
+    // have no record of where it reached before the mutation — which also
+    // makes stale recorded bounds after undo/paste/load harmless.
+    const _lastPatchBounds = new WeakMap();
+    window.rebuildTerrain = (dirtyFeature = null) => {
+      let region = null;
+      if (dirtyFeature) {
+        const bounds = currentTrack.getFeatureHeightBounds(dirtyFeature);
+        const prev = _lastPatchBounds.get(dirtyFeature);
+        if (bounds) _lastPatchBounds.set(dirtyFeature, bounds);
+        if (bounds && prev) {
+          region = {
+            minX: Math.min(prev.minX, bounds.minX),
+            maxX: Math.max(prev.maxX, bounds.maxX),
+            minZ: Math.min(prev.minZ, bounds.minZ),
+            maxZ: Math.max(prev.maxZ, bounds.maxZ),
+          };
+        }
+      }
       const positions = ground.getVerticesData(VertexBuffer.PositionKind);
       for (let i = 0; i < positions.length; i += 3) {
         const x = positions[i];
         const z = positions[i + 2];
+        if (region && (x < region.minX || x > region.maxX ||
+                       z < region.minZ || z > region.maxZ)) continue;
         positions[i + 1] = currentTrack.getHeightAt(x, z);
       }
       ground.setVerticesData(VertexBuffer.PositionKind, positions);
@@ -231,10 +254,10 @@ export class EditorMode extends BaseMode {
     };
 
     // Rebuild a specific polyHill (or all polyHills if feature is null)
-    window.rebuildPolyHill = (_targetFeature) => {
+    window.rebuildPolyHill = (targetFeature = null) => {
       // PolyHill preview ribbon is disabled in editor mode.
       // Rebuild terrain mesh after height modifications
-      window.rebuildTerrain?.();
+      window.rebuildTerrain?.(targetFeature);
     };
 
     // Hide racing HUD while in editor (it starts hidden; only UIManager.showRaceStatusPanel shows it)

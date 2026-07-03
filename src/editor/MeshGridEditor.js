@@ -169,7 +169,7 @@ export class MeshGridEditor {
     this.ec.saveSnapshot();
     this.activeFeature.heights.fill(0);
     this._updateGizmoPositions();
-    window.rebuildTerrain?.();
+    window.rebuildTerrain?.(this.activeFeature);
   }
 
   /**
@@ -385,7 +385,7 @@ export class MeshGridEditor {
     feature.heights[r * feature.cols + c] += delta;
     this._updateGizmoPositions();
     this._syncPointToStore();
-    window.rebuildTerrain?.();
+    window.rebuildTerrain?.(feature);
   }
 
   _onWheel(event) {
@@ -520,7 +520,7 @@ export class MeshGridEditor {
     this._updateGizmoPositions();
     const s = this.ec._editorStore;
     if (s) s.meshGrid.pointHeight = v;
-    window.rebuildTerrain?.();
+    window.rebuildTerrain?.(feature);
   }
 
   /** Set the active mesh's rotation (degrees). Repositions gizmos live. */
@@ -529,7 +529,7 @@ export class MeshGridEditor {
     this.ec.saveSnapshot(true);
     this.activeFeature.angle = v;
     this._updateGizmoPositions();
-    window.rebuildTerrain?.();
+    window.rebuildTerrain?.(this.activeFeature);
   }
 
   /** Set the active region's edge-blend band width. */
@@ -537,6 +537,6 @@ export class MeshGridEditor {
     if (!this.activeFeature) return;
     this.ec.saveSnapshot(true);
     this.activeFeature.falloff = v;
-    window.rebuildTerrain?.();
+    window.rebuildTerrain?.(this.activeFeature);
   }
 }
