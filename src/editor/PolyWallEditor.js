@@ -225,6 +225,9 @@ export class PolyWallEditor {
     this._syncStoreToFeature(wg.feature, idx);
   }
 
+  /** Uniform sub-editor interface (EditorController.deselectAll). */
+  deselect() { this.deselectPoint(); }
+
   deselectPoint() {
     if (this.selectedPoint) {
       const { wg, idx, mesh } = this.selectedPoint;

@@ -367,6 +367,9 @@ export class MeshGridEditor {
     if (isCorner) this._syncToStore(pointData.feature);
   }
 
+  /** Uniform sub-editor interface (EditorController.deselectAll). */
+  deselect() { this.deselectPoint(); }
+
   deselectPoint() {
     if (this.selectedPoint) {
       this.selectedPoint.mesh.material = this.normalMat;

@@ -192,6 +192,9 @@ export class PolyCurbEditor {
     this._syncStore(cg.feature, idx);
   }
 
+  /** Uniform sub-editor interface (EditorController.deselectAll). */
+  deselect() { this.deselectPoint(); }
+
   deselectPoint() {
     if (this.selectedPoint) {
       const { cg, mesh } = this.selectedPoint;

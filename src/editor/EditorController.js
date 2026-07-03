@@ -65,54 +65,47 @@ export class EditorController {
     this.checkpointEditor = new CheckpointEditor(this);
     this.checkpointManager = null;
     this.menuManager = null;
-    
-    // Hill editing (delegated to HillEditor)
+
+    // Feature sub-editors. Each is also listed in subEditors below, which
+    // drives the shared lifecycle (activate / deselect / dispose-or-deactivate)
+    // — adding a new editor means constructing it here and appending it there.
     this.hillEditor = new HillEditor(this);
-
-    // Square hill editing (delegated to SquareHillEditor)
     this.squareHillEditor = new SquareHillEditor(this);
-
-    // Terrain shape editing (rect + circle, delegated to TerrainShapeEditor)
-    this.terrainShapeEditor = new TerrainShapeEditor(this);
-
-    // Normal map decal editing (delegated to NormalMapDecalEditor)
+    this.terrainShapeEditor = new TerrainShapeEditor(this);      // terrain rect + circle
     this.normalMapDecalEditor = new NormalMapDecalEditor(this);
-
-    // Tire stack editing (delegated to ObstacleEditor)
-    this.obstacleEditor = new ObstacleEditor(this);
-
-    // Decorations editing (flags + banner strings)
-    this.decorationsEditor = new DecorationsEditor(this);
-
-    // Track sign editing (delegated to TrackSignEditor)
+    this.obstacleEditor = new ObstacleEditor(this);              // tire stacks
+    this.decorationsEditor = new DecorationsEditor(this);        // flags + banner strings
     this.trackSignEditor = new TrackSignEditor(this);
-
-    // Action zone editing (delegated to ActionZoneEditor)
     this.actionZoneEditor = new ActionZoneEditor(this);
-
-        // Mesh grid terrain editor
     this.meshGridEditor = new MeshGridEditor(this);
-
-    // Poly wall editing editor
     this.polyWallEditor = new PolyWallEditor(this);
-
-    // Poly hill editing editor
     this.polyHillEditor = new PolyHillEditor(this);
-
-    // Poly curb editing editor
     this.polyCurbEditor = new PolyCurbEditor(this);
-
-    // Bridge mesh editor (arbitrary elevated mesh grid)
-    this.bridgeMeshEditor = new BridgeMeshEditor(this);
-
-    // AI path waypoint editor
+    this.bridgeMeshEditor = new BridgeMeshEditor(this);          // elevated mesh grid
     this.aiPathEditor = new AiPathEditor(this);
-
-    // Terrain path editor (terrain-painted polygon paths)
-    this.terrainPathEditor = new TerrainPathEditor(this);
-
-    // Surface decal stamp editor
+    this.terrainPathEditor = new TerrainPathEditor(this);        // terrain-painted paths
     this.surfaceDecalEditor = new SurfaceDecalEditor(this);
+
+    // Uniform-lifecycle list (activation order). checkpointEditor stays
+    // outside: its gizmos belong to CheckpointManager, so it has no activate.
+    this.subEditors = [
+      this.hillEditor,
+      this.squareHillEditor,
+      this.terrainShapeEditor,
+      this.normalMapDecalEditor,
+      this.obstacleEditor,
+      this.decorationsEditor,
+      this.trackSignEditor,
+      this.actionZoneEditor,
+      this.meshGridEditor,
+      this.polyWallEditor,
+      this.polyHillEditor,
+      this.polyCurbEditor,
+      this.bridgeMeshEditor,
+      this.aiPathEditor,
+      this.terrainPathEditor,
+      this.surfaceDecalEditor,
+    ];
 
     this._rawDragPos = null;
     this._aiPathMouseDownSelectedWaypoint = null;
@@ -163,41 +156,10 @@ export class EditorController {
     window.addEventListener('keyup', this.boundKeyUp);
     this.scene.onPointerObservable.add(this.boundPointerEvent);
     
-    // Activate all gizmo editors (creates materials + initial visuals)
-    this.hillEditor.activate(this.scene, track);
-    this.squareHillEditor.activate(this.scene, track);
-    this.terrainShapeEditor.activate(this.scene, track);
-    this.normalMapDecalEditor.activate(this.scene, track);
-    this.obstacleEditor.activate(this.scene, track);
-
-    // Activate all object editors
-    this.decorationsEditor.activate(this.scene, track);
-    this.trackSignEditor.activate(this.scene, track);
-    this.actionZoneEditor.activate(this.scene, track);
-
-    // Mesh grid terrain editing editor
-    this.meshGridEditor.activate(this.scene, track);
-
-    // Poly wall editing editor
-    this.polyWallEditor.activate(this.scene, track);
-
-    // Poly hill editing editor
-    this.polyHillEditor.activate(this.scene, track);
-
-    // Poly curb editing editor
-    this.polyCurbEditor.activate(this.scene, track);
-
-    // Bridge mesh editing editor
-    this.bridgeMeshEditor.activate(this.scene, track);
-
-    // AI path waypoint editor
-    this.aiPathEditor.activate(this.scene, track);
-
-    // Terrain path editor
-    this.terrainPathEditor.activate(this.scene, track);
-
-    // Surface decal stamp editor
-    this.surfaceDecalEditor.activate(this.scene, track);
+    // Activate every sub-editor (creates materials + initial gizmo visuals)
+    for (const editor of this.subEditors) {
+      editor.activate(this.scene, track);
+    }
 
     // Wire Vue editor panels
     this._editorStore.setBridge(this);
@@ -229,20 +191,15 @@ export class EditorController {
       state.nextRepeatAt = 0;
     });
 
-    // Dispose hill editor
-    this.hillEditor.dispose();
-
-    // Dispose all square hill editor visuals
-    this.squareHillEditor.dispose();
-
-    // Dispose all terrain shape editor visuals
-    this.terrainShapeEditor.dispose();
-
-    // Dispose all normal map decal editor visuals
-    this.normalMapDecalEditor.dispose();
-
-    // Dispose all tire stack editor visuals
-    this.obstacleEditor.dispose();
+    // Tear down every sub-editor. Some expose dispose() (destroys materials),
+    // the rest deactivate() (releases scene refs); both fully release visuals.
+    // References intentionally stay set — the controller itself is discarded
+    // right after deactivation (EditorMode.teardown), so nulling them only
+    // hid the uniform lifecycle behind optional-chaining noise.
+    for (const editor of this.subEditors) {
+      if (editor.dispose) editor.dispose();
+      else editor.deactivate();
+    }
 
     // Hide all editor panels via Vue store
     if (this._editorStore) {
@@ -251,54 +208,6 @@ export class EditorController {
       this._editorStore.trackSettingsOpen = false;
       this._editorStore.setBridge(null);
     }
-
-    // Mesh grid editor
-    if (this.meshGridEditor) {
-      this.meshGridEditor.deactivate();
-      this.meshGridEditor = null;
-    }
-
-    // Poly wall editor
-    if (this.polyWallEditor) {
-      this.polyWallEditor.deactivate();
-      this.polyWallEditor = null;
-    }
-
-    // Poly hill editor
-    if (this.polyHillEditor) {
-      this.polyHillEditor.deactivate();
-      this.polyHillEditor = null;
-    }
-
-    // Poly curb editor
-    if (this.polyCurbEditor) {
-      this.polyCurbEditor.deactivate();
-      this.polyCurbEditor = null;
-    }
-
-    // Decorations editor
-    this.decorationsEditor.dispose();
-
-    // Track sign editor
-    this.trackSignEditor.dispose();
-
-    // Action zone editor
-    this.actionZoneEditor.dispose();
-
-    // Bridge mesh editor
-    if (this.bridgeMeshEditor) {
-      this.bridgeMeshEditor.deactivate();
-      this.bridgeMeshEditor = null;
-    }
-
-    // AI path waypoint editor
-    this.aiPathEditor.dispose();
-
-    // Terrain path editor
-    this.terrainPathEditor.dispose();
-
-    // Surface decal stamp editor
-    this.surfaceDecalEditor.dispose();
   }
 
   // ─── Undo / Redo ──────────────────────────────────────────────────────────
@@ -562,30 +471,13 @@ export class EditorController {
   }
 
   _applySnapshot(snap) {
-    // Deselect everything
-    this.deselectCheckpoint();
-    this.hillEditor.deselect();
-    this.squareHillEditor.deselect();
-    this.terrainShapeEditor.deselect();
-    this.normalMapDecalEditor.deselect();
-    this.obstacleEditor.deselect();
-    this.decorationsEditor.deselect();
-    this.trackSignEditor.deselect();
-    this.actionZoneEditor.deselect();
-    this.aiPathEditor.deselect();
-    this.terrainPathEditor.deselect();
-
-    // Clear all gizmo meshes (keeps materials alive for re-use)
-    this.hillEditor.clearMeshes();
-    this.squareHillEditor.clearMeshes();
-    this.terrainShapeEditor.clearMeshes();
-    this.normalMapDecalEditor.clearMeshes();
-    this.obstacleEditor.clearMeshes();
-
-    // Clear object editor meshes
-    this.decorationsEditor.clearMeshes();
-    this.trackSignEditor.clearMeshes();
-    this.actionZoneEditor.clearMeshes();
+    // Deselect everything, then clear gizmo meshes (materials stay alive for
+    // re-use). Editors without clearMeshes rebuild via onSnapshotRestored
+    // below; aiPath/terrainPath have both and clear again there — harmless.
+    this.deselectAll();
+    for (const editor of this.subEditors) {
+      editor.clearMeshes?.();
+    }
 
     // Restore editable track state
     const parsed = JSON.parse(snap);
@@ -1540,21 +1432,11 @@ export class EditorController {
   deselectAll() {
     this._clearDragHoldTimer();
     this.checkpointEditor.deselect();
-    this.hillEditor.deselect();
-    this.squareHillEditor.deselect();
-    this.terrainShapeEditor.deselect();
-    this.normalMapDecalEditor.deselect();
-    this.obstacleEditor.deselect();
-    this.decorationsEditor.deselect();
-    this.trackSignEditor.deselect();
-    this.actionZoneEditor.deselect();
-    this.aiPathEditor?.deselect();
-    this.terrainPathEditor?.deselect();
-    this.meshGridEditor?.deselectPoint();
-    this.bridgeMeshEditor?.deselect?.();
-    this.polyWallEditor?.deselectPoint();
-    this.polyHillEditor?.deselectPoint();
-    this.polyCurbEditor?.deselectPolyCurb();
+    // surfaceDecalEditor has no deselect — its stamp panel is closed
+    // explicitly (Esc / closeSurfaceDecalStamp), not by clicking away.
+    for (const editor of this.subEditors) {
+      editor.deselect?.();
+    }
   }
 
   // ── Poly Wall Vue bridge methods ──

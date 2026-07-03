@@ -253,6 +253,9 @@ export class PolyHillEditor {
     this._syncStoreToFeature(hg.feature, idx);
   }
 
+  /** Uniform sub-editor interface (EditorController.deselectAll). */
+  deselect() { this.deselectPoint(); }
+
   deselectPoint() {
     if (this.selectedPoint) {
       const { hg, mesh } = this.selectedPoint;
