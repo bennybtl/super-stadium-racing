@@ -164,18 +164,31 @@ export class EditorMode extends BaseMode {
       applySteepGrassTerrainRemap(terrainManager, currentTrack);
     };
 
-    // Rebuild terrain texture buffers from terrainManager.grid (call on deselect)
+    // Rebuild terrain texture buffers from terrainManager.grid (call on deselect).
+    // Callers that know their edit can't affect a pass may opt out of it via
+    // `opts` — e.g. terrain-type edits skip the (expensive, type-independent)
+    // wear bake, and aiPath/wear edits skip the grid/overlay resync. Flags from
+    // calls that land in the same debounce window are unioned, so a broader
+    // request is never dropped by a narrower one.
+    const _pendingTexFlags = { grid: false, wear: false, overlays: false, normals: false };
     const _rebuildTerrainTextureNow = () => {
-      console.debug('[EditorMode] rebuildTerrainTexture: syncing grid...');
-      window.rebuildTerrainGrid();
-      console.debug('[EditorMode] rebuildTerrainTexture: updating id texture and re-baking...');
-      updateTerrainIdTexture(terrainIdTex, terrainManager);
-      rebakeTerrainTexture();
-      window.rebuildNormalMap?.(true);
+      const flags = { ..._pendingTexFlags };
+      _pendingTexFlags.grid = _pendingTexFlags.wear = _pendingTexFlags.overlays = _pendingTexFlags.normals = false;
+      console.debug('[EditorMode] rebuildTerrainTexture: re-baking...', flags);
+      if (flags.grid) {
+        window.rebuildTerrainGrid();
+        updateTerrainIdTexture(terrainIdTex, terrainManager);
+      }
+      rebakeTerrainTexture({ wear: flags.wear, overlays: flags.overlays });
+      if (flags.normals) window.rebuildNormalMap?.(true);
       console.debug('[EditorMode] rebuildTerrainTexture: done');
     };
     let _rebuildTerrainTimer = null;
-    window.rebuildTerrainTexture = (immediate = false) => {
+    window.rebuildTerrainTexture = (immediate = false, opts = null) => {
+      _pendingTexFlags.grid ||= opts?.grid ?? true;
+      _pendingTexFlags.wear ||= opts?.wear ?? true;
+      _pendingTexFlags.overlays ||= opts?.overlays ?? true;
+      _pendingTexFlags.normals ||= opts?.normals ?? true;
       if (immediate) { clearTimeout(_rebuildTerrainTimer); _rebuildTerrainTimer = null; _rebuildTerrainTextureNow(); return; }
       clearTimeout(_rebuildTerrainTimer);
       _rebuildTerrainTimer = setTimeout(_rebuildTerrainTextureNow, 300);

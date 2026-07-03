@@ -318,11 +318,18 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
   const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, currentTrack, texSize, groundWidth, groundDepth);
   const waterDepthOverlayTex = await createWaterDepthOverlayTexture(scene, terrainManager, texSize, groundWidth, groundDepth);
-  const rebakeTerrainTexture = () => {
-    const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, groundWidth, groundDepth);
-    terrainWearOverlayTex.update(wearOverlayData.data);
-    updateTerrainDiffuseOverlayTexture(terrainDiffuseOverlayTex, terrainManager, groundWidth, groundDepth);
-    updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, groundWidth, groundDepth);
+  // `wear: false` skips the AI-path wear bake (independent of terrain types);
+  // `overlays: false` skips the grid-driven diffuse/water overlays (independent
+  // of the aiPath). Default rebakes everything.
+  const rebakeTerrainTexture = (opts = null) => {
+    if (opts?.wear ?? true) {
+      const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, groundWidth, groundDepth);
+      terrainWearOverlayTex.update(wearOverlayData.data);
+    }
+    if (opts?.overlays ?? true) {
+      updateTerrainDiffuseOverlayTexture(terrainDiffuseOverlayTex, terrainManager, groundWidth, groundDepth);
+      updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, groundWidth, groundDepth);
+    }
   };
 
   // Build StandardMaterial + TerrainBlendPlugin.

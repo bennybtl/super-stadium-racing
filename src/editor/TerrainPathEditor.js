@@ -30,7 +30,7 @@ const FALLBACK_COLOR = new Color3(0.5, 0.5, 0.5);
 export class TerrainPathEditor {
     _debouncedTerrainRebuild = debounce(() => {
       window.rebuildTerrainGrid?.();
-      window.rebuildTerrainTexture?.();
+      window.rebuildTerrainTexture?.(false, { wear: false });
     }, 300);
   constructor(editor) {
     this.editor = editor;

@@ -549,6 +549,6 @@ export class AiPathEditor {
   }
 
   _scheduleTerrainRebuild() {
-    window.rebuildTerrainTexture?.();
+    window.rebuildTerrainTexture?.(false, { grid: false, overlays: false });
   }
 }

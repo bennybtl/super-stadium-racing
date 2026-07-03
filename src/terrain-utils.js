@@ -91,12 +91,25 @@ function _sampleClosedPath(points, spacing) {
   return samples;
 }
 
+// Scratch buffers reused across wear bakes. At the default 2000² texture each
+// is 16MB; allocating them fresh per editor rebake caused visible GC hitches.
+// Every consumer fully overwrites the pixels it reads back, so no zeroing is
+// needed here (the stamp accumulator in buildTerrainWearOverlayPixelData is
+// the exception and fill(0)s itself).
+let _blurTmpBuffer = null;
+let _blurOutBuffer = null;
+let _wearAccumBuffer = null;
+
+function _getScratchBuffer(current, length) {
+  return current && current.length === length ? current : new Uint8ClampedArray(length);
+}
+
 function _blurAlpha(data, width, height, radius) {
   const r = Math.max(0, Math.round(radius));
   if (r <= 0) return data;
 
-  const tmp = new Uint8ClampedArray(data.length);
-  const out = new Uint8ClampedArray(data.length);
+  const tmp = _blurTmpBuffer = _getScratchBuffer(_blurTmpBuffer, data.length);
+  const out = _blurOutBuffer = _getScratchBuffer(_blurOutBuffer, data.length);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -509,7 +522,10 @@ export function forEachStampPixel(stamp, width, height, edgeSoftness, cb) {
  */
 export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const { width, height, edgeSoftness, stamps } = traceAiPathWearStamps(track, textureSize, worldWidth, worldDepth);
-  const data = new Uint8ClampedArray(width * height * 4); // R: lighten, G: darken (B/A unused)
+  // R: lighten, G: darken (B/A unused). Stamps accumulate, so the reused
+  // scratch buffer must start from zero.
+  const data = _wearAccumBuffer = _getScratchBuffer(_wearAccumBuffer, width * height * 4);
+  data.fill(0);
 
   for (const stamp of stamps) {
     forEachStampPixel(stamp, width, height, edgeSoftness, (x, y, weight) => {

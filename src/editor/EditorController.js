@@ -395,7 +395,7 @@ export class EditorController {
     this.saveSnapshot(debounce);
     Object.assign(this._getWearConfig(), updates);
     this._syncAiPathPanel();
-    window.rebuildTerrainTexture?.();
+    window.rebuildTerrainTexture?.(false, { grid: false, overlays: false });
   }
 
   _setRepeatingKeyPressed(key) {
@@ -1327,7 +1327,7 @@ export class EditorController {
     this.saveSnapshot();
     this.currentTrack.defaultTerrainType = TERRAIN_TYPES[key];
     window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
     window.rebuildNormalMap?.();
     this._syncTrackSettingsPanel();
   }
@@ -1338,7 +1338,7 @@ export class EditorController {
     this.saveSnapshot();
     this.currentTrack.borderTerrainType = TERRAIN_TYPES[key];
     window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
     window.rebuildNormalMap?.();
     this._syncTrackSettingsPanel();
   }

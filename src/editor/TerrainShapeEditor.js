@@ -184,7 +184,7 @@ export class TerrainShapeEditor {
 
     this.updateVisual(this.selected);
     this._scheduleTerrainGridRebuild();
-    window.rebuildTerrainTexture?.();
+    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
     window.rebuildNormalMap?.();
 
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
@@ -206,7 +206,7 @@ export class TerrainShapeEditor {
     this.editor._rawDragPos = null;
     this.hideProperties();
     window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
     window.rebuildNormalMap?.();
   }
 
@@ -314,7 +314,7 @@ export class TerrainShapeEditor {
   rebuildTerrain() {
     const flushed = this._flushTerrainGridRebuild();
     if (!flushed) window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
     window.rebuildNormalMap?.();
     if (this.selected) this.updateVisual(this.selected);
   }
