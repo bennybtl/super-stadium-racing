@@ -881,7 +881,13 @@ export class EditorController {
         selection.rotateRight(this.keys.fast);
       }
 
-      delta = selection.move(movement);
+      // Only forward real movement to the tool: move(0,0,0) is not a no-op —
+      // point editors re-snap gizmos and reset their debounced rebuild timer on
+      // every call, so invoking it each frame starves the deferred rebuild
+      // (slider changes never rebuilt terrain while a point was selected).
+      delta = (movement.x !== 0 || movement.y !== 0 || movement.z !== 0)
+        ? selection.move(movement)
+        : movement;
     } else {
       // Move camera and target together
       delta = movement;
