@@ -1,7 +1,7 @@
 {
   "name": "offroad",
   "version": "0.1.0",
-  "description": "A modern 3D top-down off-road racing game built with PlayCanvas",
+  "description": "A modern 3D top-down off-road racing game built with Babylon.js and Havok Physics",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,6 @@
     "build:raw": "vite build",
     "build:optimize": "node scripts/optimizeDistAssets.js",
     "preview": "vite preview",
-    "check:surfaces": "node scripts/checkDriveSurfaceQueries.js",
     "check:terrain": "node scripts/check-terrain.mjs",
     "check:panels": "node scripts/check-panel-bindings.mjs"
   },

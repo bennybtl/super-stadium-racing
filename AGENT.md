@@ -4,7 +4,7 @@
 An isometric offroad racing game built with Babylon.js and Havok Physics. Features arcade-style truck physics, terrain effects, AI drivers, checkpoints, lap tracking, a track editor, and a full Vue-based menu/HUD. Inspired by classic Super Off-Road.
 
 ## Technology Stack
-- **Babylon.js 7** — 3D rendering engine
+- **Babylon.js 8** — 3D rendering engine
 - **Havok Physics 1.3** — WASM-based physics (MESH for terrain/bridges, BOX for trucks/walls)
 - **Vue 3 + Pinia** — Reactive UI layer (menus, editor panels, HUD, store)
 - **Vite 6** — Build tool and dev server
@@ -38,7 +38,6 @@ offroad/
     │   ├── EditorMaterials.js       # Shared material definitions for editor visualization
     │   ├── ActionZoneEditor.js
     │   ├── AiPathEditor.js
-    │   ├── BezierWallEditor.js
     │   ├── BridgeMeshEditor.js
     │   ├── CheckpointEditor.js
     │   ├── DecorationsEditor.js
@@ -98,7 +97,6 @@ offroad/
     │   └── TestMode.js
     ├── objects/                     # Visual + physics track entities
     │   ├── BannerString.js          # Decorative rope/banner between poles
-    │   ├── BezierWall.js            # Curved wall with Bezier interpolation
     │   ├── BridgeMesh.js            # Multi-level drivable bridge/overpass mesh
     │   ├── Checkpoint.js            # Race gate with terrain-aware barrel heights
     │   ├── Flag.js                  # Decorative flag with spring-damper bend physics
@@ -130,7 +128,6 @@ offroad/
         ├── TruckSetup.vue           # Upgrade/setup screen
         └── editor/                  # Editor UI panels
             ├── AddEntityMenu.vue
-            ├── BezierWallPanel.vue
             ├── BridgeMeshPanel.vue
             ├── CheckpointPanel.vue
             ├── EditorPanel.vue      # Draggable panel base component
@@ -166,7 +163,6 @@ Defines terrain layouts using a composable `features[]` array. Tracks are loaded
 - `terrainRect` / `terrainCircle` — areas with specific terrain types (mud, water, etc.)
 - `checkpoint` — racing gate with optional sequential numbering
 - `polyWall` — wall defined by an array of `{x, z}` points
-- `bezierWall` — curved wall using Bezier interpolation
 - `polyCurb` — low polyline curb
 - `obstacle` — tire stack, cone, or barrel
 - `pickup` — item collectible (boost, repair)
