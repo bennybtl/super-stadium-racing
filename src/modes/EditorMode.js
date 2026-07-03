@@ -21,6 +21,7 @@ export class EditorMode extends BaseMode {
     this.editorController = null;
     this.debugManager = null;
     this._onEditorDebugKeyDown = null;
+    this._clearSlopeColliderTimer = null;
   }
 
   async setup({ trackKey }) {
@@ -99,6 +100,20 @@ export class EditorMode extends BaseMode {
     window.currentEditorTrack = currentTrack;
     window.currentEditorScene = scene;
 
+    // Steep-slope colliders are consumed only by physics/collision, which does
+    // not run in the editor. Rebuilding them (thousands of getHeightAt samples +
+    // mesh churn) on every slider tick is wasted work, so debounce them off the
+    // drag; the fresh race/test scene rebuilds its own colliders regardless.
+    let _slopeColliderTimer = null;
+    this._clearSlopeColliderTimer = () => { clearTimeout(_slopeColliderTimer); _slopeColliderTimer = null; };
+    const rebuildSlopeCollidersDebounced = () => {
+      clearTimeout(_slopeColliderTimer);
+      _slopeColliderTimer = setTimeout(() => {
+        _slopeColliderTimer = null;
+        steepSlopeColliderManager.rebuild();
+      }, 300);
+    };
+
     window.rebuildTerrain = () => {
       const positions = ground.getVerticesData(VertexBuffer.PositionKind);
       for (let i = 0; i < positions.length; i += 3) {
@@ -108,7 +123,7 @@ export class EditorMode extends BaseMode {
       }
       ground.setVerticesData(VertexBuffer.PositionKind, positions);
       ground.createNormals(true);
-      steepSlopeColliderManager.rebuild();
+      rebuildSlopeCollidersDebounced();
     };
 
     // Fast: sync terrainManager.grid from track features (no canvas writes)
@@ -272,6 +287,10 @@ export class EditorMode extends BaseMode {
   }
 
   teardown() {
+    // Cancel any pending deferred steep-slope collider rebuild so it can't fire
+    // against the scene being disposed.
+    this._clearSlopeColliderTimer?.();
+    this._clearSlopeColliderTimer = null;
     if (this._onEditorDebugKeyDown) {
       window.removeEventListener('keydown', this._onEditorDebugKeyDown);
       this._onEditorDebugKeyDown = null;

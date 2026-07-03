@@ -50,6 +50,27 @@ function isPointInPolygon(x, z, points) {
   return inside;
 }
 
+// Per-feature cache of expanded (rounded-corner) polylines + their bounding box.
+// getHeightAt/getTerrainTypeAt run this thousands of times per editor drag; the
+// WeakMap key is the feature object, so entries are dropped automatically when a
+// track is discarded and nothing leaks into toJSON (unlike a property on the
+// feature). See _getExpandedPolyline.
+const _polylineExpansionCache = new WeakMap();
+
+// Cheap fingerprint of a control-point list. Changes whenever any coordinate,
+// per-point radius, uniform radius, point count, or closed-ness changes, so the
+// cached expansion self-invalidates the moment an editor drags a point.
+function _polylineFingerprint(points, closed, extra = 0) {
+  let h = points.length * 131.071 + (closed ? 0.5 : 0) + (extra ?? 0) * 7.31;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    h += (p.x ?? 0) * (12.9898 + i * 0.017)
+       + (p.z ?? 0) * (78.233 + i * 0.029)
+       + (p.radius ?? 0) * 3.71;
+  }
+  return h;
+}
+
 /**
  * Track system for defining 3D terrain layouts with different surface types
  * Tracks are composed of features (ridges, hills, valleys, jumps, etc.)
@@ -226,6 +247,11 @@ export class Track {
       switch (feature.type) {
         case "hill": {
           const { radiusX, radiusZ } = getHillEllipseParams(feature);
+          // AABB early-out: the ellipse fits inside a circle of radius max(rX,rZ).
+          const dhx = x - feature.centerX;
+          const dhz = z - feature.centerZ;
+          const rMax = Math.max(radiusX, radiusZ);
+          if (dhx * dhx + dhz * dhz > rMax * rMax) break;
           const { lx, lz } = getHillLocalCoords(feature, x, z);
           const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
           if (t2 < 1) {
@@ -242,6 +268,11 @@ export class Track {
           // Rotate world offset into the box's local space
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
+          // AABB early-out: contribution reaches at most `transition` beyond the
+          // rect; the rotation-invariant circumscribed circle bounds that region.
+          const shBoundX = hw + transition;
+          const shBoundZ = hd + transition;
+          if (wx * wx + wz * wz > shBoundX * shBoundX + shBoundZ * shBoundZ) break;
           const angleRad = (feature.angle ?? 0) * Math.PI / 180;
           const cosA = Math.cos(angleRad);
           const sinA = Math.sin(angleRad);
@@ -273,6 +304,14 @@ export class Track {
           // the grid can carry an arbitrary `angle` (degrees), like squareHill.
           const dwx = x - cx;
           const dwz = z - cz;
+          // AABB early-out for regional meshes only (legacy full-track meshes
+          // clamp-to-edge and spread everywhere, so they cannot be skipped).
+          if (feature.regional) {
+            const falloff = feature.falloff ?? 0;
+            const mgBoundX = halfW + falloff;
+            const mgBoundZ = halfD + falloff;
+            if (dwx * dwx + dwz * dwz > mgBoundX * mgBoundX + mgBoundZ * mgBoundZ) break;
+          }
           const angleRad = (feature.angle ?? 0) * Math.PI / 180;
           const cosA = Math.cos(angleRad);
           const sinA = Math.sin(angleRad);
@@ -355,10 +394,15 @@ export class Track {
         case "polyHill": {
           const { points, height = 3, slope = 5, closed = false, filled = false } = feature;
           if (!points || points.length < 2) break;
-          
-          const expandedPoints = this._expandPolylineForHill(points, closed);
+
           const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
-          
+          const exp = this._getExpandedPolyline(feature, points, closed);
+          const expandedPoints = exp.points;
+          // AABB early-out: contribution stays within halfWidth of the polyline
+          // (filled interiors sit inside the same box).
+          if (x < exp.minX - halfWidth || x > exp.maxX + halfWidth ||
+              z < exp.minZ - halfWidth || z > exp.maxZ + halfWidth) break;
+
           // Filled mode: uniform height inside polygon, falloff at edges
           if (filled && closed) {
             if (isPointInPolygon(x, z, expandedPoints)) {
@@ -463,9 +507,16 @@ export class Track {
       switch (feature.type) {
         case "hill": {
           const { radiusX, radiusZ } = getHillEllipseParams(feature);
+          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
+          // AABB early-out: the dithered band reaches ellipse-scale
+          // (1 + blendWidth/minR); bound its circumscribed circle.
+          const dhx = x - feature.centerX;
+          const dhz = z - feature.centerZ;
+          const rBound = Math.max(radiusX, radiusZ)
+            * (1 + blendWidth / Math.max(1e-6, Math.min(radiusX, radiusZ)));
+          if (dhx * dhx + dhz * dhz > rBound * rBound) break;
           const { lx, lz } = getHillLocalCoords(feature, x, z);
           const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
-          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           if (blendWidth <= 0) {
             if (t2 < 1) return feature.terrainType;
             break;
@@ -486,6 +537,10 @@ export class Track {
             const halfDepth = feature.depth / 2;
             const wx = x - feature.centerX;
             const wz = z - feature.centerZ;
+            // AABB early-out: dithered band reaches blendWidth past the rect.
+            const tBoundX = halfWidth + blendWidth;
+            const tBoundZ = halfDepth + blendWidth;
+            if (wx * wx + wz * wz > tBoundX * tBoundX + tBoundZ * tBoundZ) break;
             const angleRad = (feature.rotation ?? 0) * Math.PI / 180;
             const cosA = Math.cos(angleRad);
             const sinA = Math.sin(angleRad);
@@ -514,6 +569,12 @@ export class Track {
             const hw = (feature.width ?? 10) / 2;
             const hd = (feature.depth ?? 10) / 2;
 
+            // AABB early-out: dithered band reaches ellipse-scale
+            // (1 + blendWidth/min(hw,hd)); bound its circumscribed circle.
+            const rBound = Math.max(hw, hd)
+              * (1 + blendWidth / Math.max(1e-6, Math.min(hw, hd)));
+            if (dx * dx + dz * dz > rBound * rBound) break;
+
             // Standard ellipse formula inside bounds check
             const ellipseDist = Math.sqrt((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd));
             const signedDistToEdge = (1 - ellipseDist) * Math.min(hw, hd);
@@ -528,8 +589,14 @@ export class Track {
           const hw = feature.width / 2;
           const hd = (feature.depth ?? feature.width) / 2;
           const transition = feature.transition ?? 4;
+          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
+          // AABB early-out: dithered band reaches transition + blendWidth past
+          // the rect; bound its rotation-invariant circumscribed circle.
+          const shBoundX = hw + transition + blendWidth;
+          const shBoundZ = hd + transition + blendWidth;
+          if (wx * wx + wz * wz > shBoundX * shBoundX + shBoundZ * shBoundZ) break;
           const angleRad = (feature.angle ?? 0) * Math.PI / 180;
           const cosA = Math.cos(angleRad);
           const sinA = Math.sin(angleRad);
@@ -538,7 +605,6 @@ export class Track {
           const edgeDx = Math.max(0, Math.abs(lx) - hw);
           const edgeDz = Math.max(0, Math.abs(lz) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
-          const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           if (blendWidth <= 0) {
             if (dist < transition) return feature.terrainType;
             break;
@@ -559,9 +625,14 @@ export class Track {
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const cornerRadius = feature.cornerRadius ?? 0;
           const closed = feature.closed ?? false;
-          const expanded = cornerRadius > 0.1
-            ? this._expandPolylineForHill(pts.map(p => ({ ...p, radius: cornerRadius })), closed)
-            : pts;
+          const exp = this._getExpandedPolyline(
+            feature, pts, closed, cornerRadius > 0.1 ? cornerRadius : null
+          );
+          const expanded = exp.points;
+          // AABB early-out: dithered band reaches halfWidth + blendWidth from the path.
+          const reach = halfWidth + blendWidth;
+          if (x < exp.minX - reach || x > exp.maxX + reach ||
+              z < exp.minZ - reach || z > exp.maxZ + reach) break;
           const numSegments = closed ? expanded.length : expanded.length - 1;
           let minDist = Infinity;
           for (let j = 0; j < numSegments; j++) {
@@ -590,9 +661,15 @@ export class Track {
           if (!points || points.length < 2) break;
           const closed = feature.closed ?? false;
           const filled = feature.filled ?? false;
-          const expandedPoints = this._expandPolylineForHill(points, closed);
           const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
+          const exp = this._getExpandedPolyline(feature, points, closed);
+          const expandedPoints = exp.points;
+          // AABB early-out: contribution/dither reaches halfWidth + blendWidth
+          // of the polyline (filled interiors sit inside the same box).
+          const reach = halfWidth + blendWidth;
+          if (x < exp.minX - reach || x > exp.maxX + reach ||
+              z < exp.minZ - reach || z > exp.maxZ + reach) break;
 
           // Distance to the polyline boundary.
           const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
@@ -657,6 +734,35 @@ export class Track {
   // Expand a polyline with optional rounded corners at each point
   _expandPolylineForHill(points, closed = false) {
     return expandPolyline(points, closed);
+  }
+
+  // Cached polyline expansion + bounding box, keyed on the feature. Returns
+  // { points, minX, maxX, minZ, maxZ }. `uniformRadius` (terrainPath) applies a
+  // single corner radius to every point; pass null when points already carry
+  // their own `radius` (polyHill). On a cache hit nothing is expanded or
+  // allocated — only the O(n) fingerprint runs.
+  _getExpandedPolyline(feature, points, closed, uniformRadius = null) {
+    const key = _polylineFingerprint(points, closed, uniformRadius ?? 0);
+    const cached = _polylineExpansionCache.get(feature);
+    if (cached && cached.key === key) return cached;
+
+    const input = uniformRadius == null
+      ? points
+      : points.map(p => ({ ...p, radius: uniformRadius }));
+    const pts = expandPolyline(input, closed);
+
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.z < minZ) minZ = p.z;
+      if (p.z > maxZ) maxZ = p.z;
+    }
+
+    const entry = { key, points: pts, minX, maxX, minZ, maxZ };
+    _polylineExpansionCache.set(feature, entry);
+    return entry;
   }
 
   // Serialize track to JSON string
