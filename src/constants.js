@@ -34,7 +34,7 @@ export const TERRAIN_COLORS = {
   asphalt: new Color3(0.2, 0.2, 0.25),
   loamy_dirt: new Color3(0.39, 0.23, 0.13),
   packed_dirt: new Color3(0.47, 0.26, 0.11),
-  loose_dirt: new Color3(0.61, 0.40, 0.20),
+  loose_dirt: new Color3(0.67, 0.46, 0.31),
   mud: new Color3(0.34, 0.18, 0.08),
   water: new Color3(0.34, 0.18, 0.08),
   rocky: new Color3(0.42, 0.30, 0.22),

@@ -3,6 +3,7 @@
   "id": "cliff_hanger",
   "packId": "offroad_pack_1",
   "hidden": false,
+  "dirtChunks": true,
   "name": "Cliff-Hanger",
   "image": "cliff_hanger.png",
   "width": 160,
@@ -13,11 +14,11 @@
     "enabled": true,
     "source": "aiPath",
     "alphaBreakup": 0.42,
-    "width": 3.5,
+    "width": 4,
     "intensity": 0.8,
     "laneSpacing": 1.9,
-    "pathWander": 1,
-    "edgeSoftness": 0.75,
+    "pathWander": 1.2,
+    "edgeSoftness": 1,
     "secondaryPathCount": 74,
     "secondaryPathStrength": 0.79,
     "secondaryPathSpacing": 0.08,
@@ -455,10 +456,10 @@
     },
     {
       "type": "bannerString",
-      "x": 65.06827281967215,
-      "z": 53.47519417707416,
-      "heading": 0,
-      "width": 25,
+      "x": 59.568272819672146,
+      "z": 63.97519417707416,
+      "heading": 2.2165681500327987,
+      "width": 30,
       "poleHeight": 10
     },
     {
@@ -466,10 +467,11 @@
       "centerX": -67.5,
       "centerZ": -19.210085242065034,
       "height": 5,
-      "terrainType": null,
+      "terrainType": "loose_dirt",
       "radiusX": 12,
       "radiusZ": 12,
-      "angle": 0
+      "angle": 0,
+      "blendWidth": 3.5
     },
     {
       "type": "polyHill",
@@ -488,7 +490,8 @@
       "height": 3,
       "width": 5,
       "closed": false,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "blendWidth": 2
     },
     {
       "type": "hill",
@@ -838,7 +841,7 @@
       "z": 50.8993949197997,
       "heading": 0,
       "width": 24,
-      "poleHeight": 12
+      "poleHeight": 11
     },
     {
       "type": "bannerString",
@@ -851,8 +854,8 @@
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": 57.2185403469683,
-      "centerZ": -66.85343940513582,
+      "centerX": 60.2185403469683,
+      "centerZ": -65.85343940513582,
       "terrainType": "loose_dirt",
       "width": 35,
       "depth": 24.5,
@@ -943,6 +946,22 @@
       "scale": 1,
       "weight": 80,
       "color": "yellow"
-    }
+    },
+    {
+      "type": "bannerString",
+      "x": -61.933924794975766,
+      "z": -41.02987056709989,
+      "heading": 0.17453292519943295,
+      "width": 25,
+      "poleHeight": 10
+    },
+    {
+      "type": "bannerString",
+      "x": 63.56064388823973,
+      "z": -65.89125728496936,
+      "heading": 0.7853981633974483,
+      "width": 22,
+      "poleHeight": 10
+    }  
   ]
 }

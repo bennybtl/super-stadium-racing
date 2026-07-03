@@ -8,7 +8,7 @@ import { MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
 export class AIDebugRenderer {
   constructor(driver, config = {}) {
     this.driver = driver;
-    this.updateEveryFrames = config.updateEveryFrames ?? 10;
+    this.updateEveryFrames = config.updateEveryFrames ?? 60;
     this._debugUpdateTimer = 0;
 
     this.debugLines = [];
@@ -16,7 +16,12 @@ export class AIDebugRenderer {
   }
 
   onFrame() {
-    if (!this.driver.debugEnabled || !this.driver.scene) return;
+    if (!this.driver.debugEnabled || !this.driver.scene) {
+      this.visualization = false;
+      this.debugLines.forEach(mesh => mesh.dispose());
+      this.debugLines = [];
+      return;
+    }
     this._debugUpdateTimer++;
     if (this._debugUpdateTimer >= this.updateEveryFrames) {
       this.updateVisualization();
@@ -25,7 +30,13 @@ export class AIDebugRenderer {
   }
 
   updateTarget(targetWaypoint) {
-    if (!this.driver.debugEnabled || !this.debugTarget) return;
+    if (!this.driver.debugEnabled || !this.debugTarget) {
+      if (this.debugTarget) {
+        this.debugTarget.dispose();
+        this.debugTarget = null;
+      }
+      return;
+    }
     this.debugTarget.position.x = targetWaypoint.x;
     this.debugTarget.position.z = targetWaypoint.z;
     this.debugTarget.position.y = this.driver._terrainQuery.heightAt(targetWaypoint.x, targetWaypoint.z) + 2;
@@ -35,22 +46,25 @@ export class AIDebugRenderer {
     const d = this.driver;
     if (!d.scene || !d.track || !d.debugEnabled) return;
 
-    this.debugLines.forEach(mesh => mesh.dispose());
-    this.debugLines = [];
+    if (!this.visualization) {
+      this.debugLines.forEach(mesh => mesh.dispose());
+      this.debugLines = [];
 
-    for (let i = 0; i < d.path.length; i += 5) {
-      const wp = d.path[i];
-      const sphere = MeshBuilder.CreateSphere(`pathDebug${i}`, { diameter: 0.5 }, d.scene);
-      sphere.position.x = wp.x;
-      sphere.position.y = d._terrainQuery.heightAt(wp.x, wp.z) + 1;
-      sphere.position.z = wp.z;
+      for (let i = 0; i < d.path.length; i += 5) {
+        const wp = d.path[i];
+        const sphere = MeshBuilder.CreateSphere(`pathDebug${i}`, { diameter: 0.5 }, d.scene);
+        sphere.position.x = wp.x;
+        sphere.position.y = d._terrainQuery.heightAt(wp.x, wp.z) + 1;
+        sphere.position.z = wp.z;
 
-      const mat = new StandardMaterial(`pathDebugMat${i}`, d.scene);
-      mat.diffuseColor = new Color3(1, 1, 0);
-      mat.emissiveColor = new Color3(0.5, 0.5, 0);
-      sphere.material = mat;
+        const mat = new StandardMaterial(`pathDebugMat${i}`, d.scene);
+        mat.diffuseColor = new Color3(1, 1, 0);
+        mat.emissiveColor = new Color3(0.5, 0.5, 0);
+        sphere.material = mat;
 
-      this.debugLines.push(sphere);
+        this.debugLines.push(sphere);
+      }
+      this.visualization = true;
     }
 
     if (!this.debugTarget) {
