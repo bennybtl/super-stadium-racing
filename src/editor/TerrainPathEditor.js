@@ -1,3 +1,4 @@
+import rebuild from './editor-rebuild.js';
 // Debounce helper (simple, per-instance)
 function debounce(fn, delay = 100) {
   let timer = null;
@@ -29,8 +30,8 @@ const FALLBACK_COLOR = new Color3(0.5, 0.5, 0.5);
  */
 export class TerrainPathEditor {
     _debouncedTerrainRebuild = debounce(() => {
-      window.rebuildTerrainGrid?.();
-      window.rebuildTerrainTexture?.(false, { wear: false });
+      rebuild.terrainGrid?.();
+      rebuild.terrainTexture?.(false, { wear: false });
     }, 300);
   constructor(editor) {
     this.editor = editor;

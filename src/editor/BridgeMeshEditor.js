@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_MESH_GRID } from './EditorMaterials.js';
 
 /**
@@ -6,8 +7,8 @@ import { EditorMaterials, LINE_COLOR_MESH_GRID } from './EditorMaterials.js';
  * control points, similar to MeshGridEditor.
  *
  * Key difference from MeshGridEditor: heights are **absolute world Y** values,
- * not relative offsets.  The meshes are rebuilt via window.rebuildBridgeMesh
- * rather than window.rebuildTerrain.
+ * not relative offsets.  The meshes are rebuilt via rebuild.bridgeMesh
+ * rather than rebuild.terrain.
  *
  * Multiple bridgeMesh features can exist per track.  The currently active
  * (selected) feature is tracked via `this.activeFeature`.
@@ -104,7 +105,7 @@ export class BridgeMeshEditor {
     track.features.push(feature);
     this._addGizmosForFeature(feature);
     this._selectFeature(feature);
-    window.rebuildBridgeMesh?.(feature);
+    rebuild.bridgeMesh?.(feature);
   }
 
   deleteBridgeMesh(feature = this.activeFeature) {
@@ -119,7 +120,7 @@ export class BridgeMeshEditor {
       const s = this.ec._editorStore;
       if (s) s.selectedType = null;
     }
-    window.rebuildBridgeMesh?.(feature);
+    rebuild.bridgeMesh?.(feature);
   }
 
   duplicateBridgeMesh(feature = this.activeFeature) {
@@ -134,7 +135,7 @@ export class BridgeMeshEditor {
     this.track.features.push(newFeature);
     this._addGizmosForFeature(newFeature);
     this._selectFeature(newFeature);
-    window.rebuildBridgeMesh?.(newFeature);
+    rebuild.bridgeMesh?.(newFeature);
   }
 
   flattenBridgeMesh(elevation = null) {
@@ -152,7 +153,7 @@ export class BridgeMeshEditor {
     }
 
     this._updateGizmoPositions();
-    window.rebuildBridgeMesh?.(this.activeFeature);
+    rebuild.bridgeMesh?.(this.activeFeature);
   }
 
   /**
@@ -190,7 +191,7 @@ export class BridgeMeshEditor {
     this._removeGizmosForFeature(f);
     this._addGizmosForFeature(f);
     this._selectFeature(f);
-    window.rebuildBridgeMesh?.(f);
+    rebuild.bridgeMesh?.(f);
   }
 
   // ─── Gizmos ────────────────────────────────────────────────────────────────
@@ -402,7 +403,7 @@ export class BridgeMeshEditor {
     f.heights[r * f.cols + c] = (f.heights[r * f.cols + c] ?? 0) + delta;
     this._updateGizmoPositions();
     this._syncPointToStore();
-    window.rebuildBridgeMesh?.(f);
+    rebuild.bridgeMesh?.(f);
   }
 
   setPointHeight(value) {
@@ -413,7 +414,7 @@ export class BridgeMeshEditor {
     f.heights[r * f.cols + c] = value;
     this._updateGizmoPositions();
     this._syncPointToStore();
-    window.rebuildBridgeMesh?.(f);
+    rebuild.bridgeMesh?.(f);
   }
 
   _onWheel(event) {
@@ -535,7 +536,7 @@ export class BridgeMeshEditor {
     f.centerZ = this.ec._snap(this.ec._rawDragPos.z, 'z');
 
     this._updateGizmoPositions();
-    window.rebuildBridgeMesh?.(f);
+    rebuild.bridgeMesh?.(f);
     return new Vector3(f.centerX - prevX, 0, f.centerZ - prevZ);
   }
 

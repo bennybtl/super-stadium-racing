@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
 
@@ -227,7 +228,7 @@ export class PolyHillEditor {
     this._waterRebuildTimer = setTimeout(() => {
       if (!this.scene) return; // tool was deactivated
       if (!this.track?.features?.includes(feature)) return; // feature was deleted
-      window.rebuildHillWater?.(feature);
+      rebuild.hillWater?.(feature);
     }, delayMs);
   }
 
@@ -497,16 +498,16 @@ export class PolyHillEditor {
     return idx > 0 && idx < feature.points.length - 1;
   }
 
-  // ─── Rebuild (delegate to window.rebuildPolyHill) ─────────────────────────
+  // ─── Rebuild (delegate to rebuild.polyHill) ─────────────────────────
 
   _rebuildHill(feature) {
-    if (window.rebuildPolyHill) {
-      window.rebuildPolyHill(feature);
+    if (rebuild.polyHill) {
+      rebuild.polyHill(feature);
     }
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
-    window.rebuildNormalMap?.();
-    window.rebuildHillWater?.(feature);
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.();
+    rebuild.normalMap?.();
+    rebuild.hillWater?.(feature);
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

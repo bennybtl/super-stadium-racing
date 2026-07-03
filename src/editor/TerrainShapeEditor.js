@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials, FALLBACK_GREY, Color3 } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
@@ -143,7 +144,7 @@ export class TerrainShapeEditor {
     if (this._terrainGridRebuildTimer) clearTimeout(this._terrainGridRebuildTimer);
     this._terrainGridRebuildTimer = setTimeout(() => {
       this._terrainGridRebuildTimer = null;
-      window.rebuildTerrainGrid?.();
+      rebuild.terrainGrid?.();
     }, 50);
   }
 
@@ -151,7 +152,7 @@ export class TerrainShapeEditor {
     if (!this._terrainGridRebuildTimer) return false;
     clearTimeout(this._terrainGridRebuildTimer);
     this._terrainGridRebuildTimer = null;
-    window.rebuildTerrainGrid?.();
+    rebuild.terrainGrid?.();
     return true;
   }
 
@@ -184,8 +185,8 @@ export class TerrainShapeEditor {
 
     this.updateVisual(this.selected);
     this._scheduleTerrainGridRebuild();
-    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
-    window.rebuildNormalMap?.();
+    rebuild.terrainTexture?.(false, { wear: false, normals: false });
+    rebuild.normalMap?.();
 
     return new Vector3(feature.centerX - prevX, 0, feature.centerZ - prevZ);
   }
@@ -205,9 +206,9 @@ export class TerrainShapeEditor {
     this.selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
-    window.rebuildNormalMap?.();
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.(false, { wear: false, normals: false });
+    rebuild.normalMap?.();
   }
 
   duplicateSelected() {
@@ -313,9 +314,9 @@ export class TerrainShapeEditor {
 
   rebuildTerrain() {
     const flushed = this._flushTerrainGridRebuild();
-    if (!flushed) window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
-    window.rebuildNormalMap?.();
+    if (!flushed) rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.(false, { wear: false, normals: false });
+    rebuild.normalMap?.();
     if (this.selected) this.updateVisual(this.selected);
   }
 

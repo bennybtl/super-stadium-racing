@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
 
@@ -105,8 +106,8 @@ export class HillEditor {
     this.editor.deselectCheckpoint();
     this.select(hillData);
 
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
+    rebuild.terrain?.();
+    rebuild.terrainGrid?.();
 
     this.editor.hideAddMenu();
     console.log('[HillEditor] Added hill at', newX.toFixed(1), newZ.toFixed(1));
@@ -264,10 +265,10 @@ export class HillEditor {
 
   rebuildTerrain() {
     if (this.selected) this.updateVisual(this.selected);
-    window.rebuildTerrain?.(this.selected?.feature);
-    window.rebuildTerrainGrid?.();
-    window.rebuildHillWater?.(this.selected?.feature);
-    window.rebuildTerrainTexture?.();
+    rebuild.terrain?.(this.selected?.feature);
+    rebuild.terrainGrid?.();
+    rebuild.hillWater?.(this.selected?.feature);
+    rebuild.terrainTexture?.();
   }
 
   _maxWaterOffsetForFeature(feature) {

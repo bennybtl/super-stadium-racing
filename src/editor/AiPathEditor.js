@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder, StandardMaterial, Color3, Color4 } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 
 /**
@@ -549,6 +550,6 @@ export class AiPathEditor {
   }
 
   _scheduleTerrainRebuild() {
-    window.rebuildTerrainTexture?.(false, { grid: false, overlays: false });
+    rebuild.terrainTexture?.(false, { grid: false, overlays: false });
   }
 }

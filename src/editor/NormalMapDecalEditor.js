@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 
 /**
@@ -94,7 +95,7 @@ export class NormalMapDecalEditor {
     this.selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
-    window.rebuildNormalMap?.();
+    rebuild.normalMap?.();
   }
 
   // ── Movement ─────────────────────────────────────────────────────────────────
@@ -138,7 +139,7 @@ export class NormalMapDecalEditor {
     this.selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
-    window.rebuildNormalMap?.();
+    rebuild.normalMap?.();
   }
 
   duplicateSelected() {
@@ -234,27 +235,27 @@ export class NormalMapDecalEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot();
     this.selected.feature.normalMap = val;
-    window.rebuildNormalMap?.();
+    rebuild.normalMap?.();
   }
 
   changeRepeatU(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.repeatU = val;
-    window.rebuildNormalMap?.();
+    rebuild.normalMap?.();
   }
 
   changeRepeatV(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.repeatV = val;
-    window.rebuildNormalMap?.();
+    rebuild.normalMap?.();
   }
 
   changeIntensity(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.intensity = val;
-    window.rebuildNormalMap?.();
+    rebuild.normalMap?.();
   }
 }

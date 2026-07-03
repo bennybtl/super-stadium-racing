@@ -3,6 +3,7 @@ import { EditorController } from "../editor/EditorController.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { buildScene } from "./SceneBuilder.js";
 import { BaseMode } from "./BaseMode.js";
+import rebuild, { reset as resetRebuild } from "../editor/editor-rebuild.js";
 import {
   updateTerrainIdTexture,
   applySteepGrassTerrainRemap,
@@ -51,15 +52,6 @@ export class EditorMode extends BaseMode {
       surfaceDecalManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
-    // // --- FAST FLAT COLOR TERRAIN FOR EDITOR ---
-    // // Replace the complex terrain material with a simple StandardMaterial
-    // // for much faster terrain rebuilds in editor mode.
-    // const { StandardMaterial, Color3 } = await import("@babylonjs/core");
-    // const editorGroundMat = new StandardMaterial("editorGroundMat", scene);
-    // editorGroundMat.diffuseColor = new Color3(0.45, 0.45, 0.45); // Neutral gray
-    // editorGroundMat.specularColor = new Color3(0.1, 0.1, 0.1);
-    // ground.material = editorGroundMat;
-
     // Dispose runtime FlagManager flags – the EditorController's FlagTool
     // creates its own editor-mode flag meshes (without shadows/physics).
     // Keeping both sets causes duplicate meshes and breaks click-selection.
@@ -97,8 +89,8 @@ export class EditorMode extends BaseMode {
     this.editorController = editorController;
 
     // -- Editor globals (used by editor tool UI) --
-    window.currentEditorTrack = currentTrack;
-    window.currentEditorScene = scene;
+    rebuild.currentTrack = currentTrack;
+    rebuild.currentScene = scene;
 
     // Steep-slope colliders are consumed only by physics/collision, which does
     // not run in the editor. Rebuilding them (thousands of getHeightAt samples +
@@ -121,7 +113,7 @@ export class EditorMode extends BaseMode {
     // have no record of where it reached before the mutation — which also
     // makes stale recorded bounds after undo/paste/load harmless.
     const _lastPatchBounds = new WeakMap();
-    window.rebuildTerrain = (dirtyFeature = null) => {
+    rebuild.terrain = (dirtyFeature = null) => {
       let region = null;
       if (dirtyFeature) {
         const bounds = currentTrack.getFeatureHeightBounds(dirtyFeature);
@@ -150,7 +142,7 @@ export class EditorMode extends BaseMode {
     };
 
     // Fast: sync terrainManager.grid from track features (no canvas writes)
-    window.rebuildTerrainGrid = () => {
+    rebuild.terrainGrid = () => {
       const worldWidth = terrainManager.worldWidth ?? terrainManager.gridSize;
       const worldDepth = terrainManager.worldDepth ?? terrainManager.gridSize;
       for (let row = 0; row < terrainManager.cellsPerSide; row++) {
@@ -176,15 +168,15 @@ export class EditorMode extends BaseMode {
       _pendingTexFlags.grid = _pendingTexFlags.wear = _pendingTexFlags.overlays = _pendingTexFlags.normals = false;
       console.debug('[EditorMode] rebuildTerrainTexture: re-baking...', flags);
       if (flags.grid) {
-        window.rebuildTerrainGrid();
+        rebuild.terrainGrid();
         updateTerrainIdTexture(terrainIdTex, terrainManager);
       }
       rebakeTerrainTexture({ wear: flags.wear, overlays: flags.overlays });
-      if (flags.normals) window.rebuildNormalMap?.(true);
+      if (flags.normals) rebuild.normalMap?.(true);
       console.debug('[EditorMode] rebuildTerrainTexture: done');
     };
     let _rebuildTerrainTimer = null;
-    window.rebuildTerrainTexture = (immediate = false, opts = null) => {
+    rebuild.terrainTexture = (immediate = false, opts = null) => {
       _pendingTexFlags.grid ||= opts?.grid ?? true;
       _pendingTexFlags.wear ||= opts?.wear ?? true;
       _pendingTexFlags.overlays ||= opts?.overlays ?? true;
@@ -203,7 +195,7 @@ export class EditorMode extends BaseMode {
       await updateCompositeNormalMap(compositeNormalMap, scene, normalMapDecals, terrainManager, currentTrack, worldWidth, worldDepth);
     };
     let _rebuildNormalMapTimer = null;
-    window.rebuildNormalMap = (immediate = false) => {
+    rebuild.normalMap = (immediate = false) => {
       if (immediate) { clearTimeout(_rebuildNormalMapTimer); _rebuildNormalMapTimer = null; _rebuildNormalMapNow(); return; }
       clearTimeout(_rebuildNormalMapTimer);
       _rebuildNormalMapTimer = setTimeout(_rebuildNormalMapNow, 300);
@@ -212,7 +204,7 @@ export class EditorMode extends BaseMode {
     // Rebuild hill water meshes so water level/position changes are visible
     // immediately. Pass a feature to rebuild only that one's water (much cheaper
     // on tracks with many water features); omit it to rebuild all of them.
-    window.rebuildHillWater = async (targetFeature = null) => {
+    rebuild.hillWater = async (targetFeature = null) => {
       for (const mesh of scene.meshes.slice()) {
         if (!mesh?.name?.startsWith('water_')) continue;
         if (targetFeature === null || mesh._sourceFeature === targetFeature) mesh.dispose();
@@ -226,7 +218,7 @@ export class EditorMode extends BaseMode {
     };
 
     // Rebuild a specific polyWall (or all polyWalls if feature is null)
-    window.rebuildPolyWall = (targetFeature) => {
+    rebuild.polyWall = (targetFeature) => {
       wallManager._walls = wallManager._walls.filter(w => {
         if (w._feature && (targetFeature === null || w._feature === targetFeature)) {
           w.dispose?.();
@@ -244,7 +236,7 @@ export class EditorMode extends BaseMode {
     };
 
     // Rebuild a specific polyCurb (or all polyCurbs if feature is null)
-    window.rebuildPolyCurb = (targetFeature) => {
+    rebuild.polyCurb = (targetFeature) => {
       wallManager._curbs = wallManager._curbs.filter(c => {
         if (c._feature && (targetFeature === null || c._feature === targetFeature)) {
           c.dispose?.();
@@ -262,15 +254,15 @@ export class EditorMode extends BaseMode {
     };
 
     // Rebuild a specific bridgeMesh (or all bridgeMesh features if null)
-    window.rebuildBridgeMesh = (targetFeature = null) => {
+    rebuild.bridgeMesh = (targetFeature = null) => {
       bridgeMeshManager.rebuild(currentTrack.features, targetFeature);
     };
 
     // Rebuild a specific polyHill (or all polyHills if feature is null)
-    window.rebuildPolyHill = (targetFeature = null) => {
+    rebuild.polyHill = (targetFeature = null) => {
       // PolyHill preview ribbon is disabled in editor mode.
       // Rebuild terrain mesh after height modifications
-      window.rebuildTerrain?.(targetFeature);
+      rebuild.terrain?.(targetFeature);
     };
 
     // Hide racing HUD while in editor (it starts hidden; only UIManager.showRaceStatusPanel shows it)
@@ -280,11 +272,11 @@ export class EditorMode extends BaseMode {
     menuManager.onEditorResume = () => menuManager.hideMenu();
 
     menuManager.onEditorSave = () => {
-      if (window.currentEditorTrack) {
-        trackLoader.downloadTrack(window.currentEditorTrack);
+      if (rebuild.currentTrack) {
+        trackLoader.downloadTrack(rebuild.currentTrack);
         trackLoader.saveTrackToStorage(
           menuManager.selectedTrack || "custom",
-          window.currentEditorTrack
+          rebuild.currentTrack
         );
       }
       menuManager.hideMenu();
@@ -299,13 +291,13 @@ export class EditorMode extends BaseMode {
 
     // Quick-test: hot-swap live track into loader, then switch to race for 1 lap.
     // RaceMode will return here when the player exits.
-    window.quickTestTrack = () => {
+    rebuild.quickTestTrack = () => {
       const testKey = '__quicktest__';
       trackLoader.tracks.set(testKey, currentTrack);
       this.controller.goToTest({ trackKey: testKey, returnToEditor: trackKey });
     };
 
-    window.rebuildEditorScene = () => {
+    rebuild.editorScene = () => {
       const liveTrackKey = trackKey === 'new' ? '__editor_live__' : trackKey;
       trackLoader.tracks.set(liveTrackKey, currentTrack);
       this.controller.goToEditor({ trackKey: liveTrackKey });
@@ -340,19 +332,7 @@ export class EditorMode extends BaseMode {
       this.editorController = null;
     }
 
-    // Clean up editor globals
-    delete window.currentEditorTrack;
-    delete window.currentEditorScene;
-    delete window.rebuildTerrain;
-    delete window.rebuildTerrainTexture;
-    delete window.rebuildNormalMap;
-    delete window.rebuildHillWater;
-    delete window.rebuildPolyWall;
-    delete window.rebuildPolyHill;
-    delete window.rebuildPolyCurb;
-    delete window.rebuildBridge;
-    delete window.quickTestTrack;
-    delete window.rebuildEditorScene;
+    resetRebuild();
 
     // (race HUD visibility is managed by UIManager / Pinia — nothing to restore here)
 

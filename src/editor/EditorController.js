@@ -1,4 +1,5 @@
 import { Vector3, PointerEventTypes } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { MeshGridEditor } from "./MeshGridEditor.js";
 import { PolyWallEditor } from "./PolyWallEditor.js";
@@ -304,7 +305,7 @@ export class EditorController {
     this.saveSnapshot(debounce);
     Object.assign(this._getWearConfig(), updates);
     this._syncAiPathPanel();
-    window.rebuildTerrainTexture?.(false, { grid: false, overlays: false });
+    rebuild.terrainTexture?.(false, { grid: false, overlays: false });
   }
 
   _setRepeatingKeyPressed(key) {
@@ -506,9 +507,9 @@ export class EditorController {
       this._syncTrackSettingsPanel();
 
       // Rebuild terrain first so terrain-sampled visuals land at correct heights.
-      window.rebuildTerrain?.();
-      window.rebuildTerrainGrid?.();
-      window.rebuildTerrainTexture?.();
+      rebuild.terrain?.();
+      rebuild.terrainGrid?.();
+      rebuild.terrainTexture?.();
 
       // Recreate gizmos + rebuild visuals.
       for (const feature of this.currentTrack.features) {
@@ -531,22 +532,22 @@ export class EditorController {
       this.meshGridEditor?.onSnapshotRestored();
       // Restore bridge mesh gizmos
       this.bridgeMeshEditor?.onSnapshotRestored();
-      window.rebuildBridgeMesh?.(null);
+      rebuild.bridgeMesh?.(null);
       // Restore poly wall gizmos
       this.polyWallEditor?.onSnapshotRestored();
       // Restore poly hill gizmos
       this.polyHillEditor?.onSnapshotRestored();
-      window.rebuildPolyHill?.(null);
+      rebuild.polyHill?.(null);
       // Restore poly curb gizmos
       this.polyCurbEditor?.onSnapshotRestored();
-      window.rebuildPolyCurb?.(null);
+      rebuild.polyCurb?.(null);
       // Checkpoints are managed by CheckpointManager — rebuild from features
       this.checkpointEditor.rebuildFromFeatures();
 
-    window.rebuildTerrain?.();
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
-    window.rebuildPolyWall?.(null);
+    rebuild.terrain?.();
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.();
+    rebuild.polyWall?.(null);
   }
 
   undo() {
@@ -1169,11 +1170,11 @@ export class EditorController {
   // ─── Quick Test ───────────────────────────────────────────────────────────
 
   quickTestTrack() {
-    window.quickTestTrack?.();
+    rebuild.quickTestTrack?.();
   }
 
   rebuildScene() {
-    window.rebuildEditorScene?.();
+    rebuild.editorScene?.();
   }
 
   // ─── Hill Editing (delegated to HillEditor) ──────────────────────────────
@@ -1230,9 +1231,9 @@ export class EditorController {
     if (!key) return;
     this.saveSnapshot();
     this.currentTrack.defaultTerrainType = TERRAIN_TYPES[key];
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
-    window.rebuildNormalMap?.();
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.(false, { wear: false, normals: false });
+    rebuild.normalMap?.();
     this._syncTrackSettingsPanel();
   }
 
@@ -1241,9 +1242,9 @@ export class EditorController {
     if (!key) return;
     this.saveSnapshot();
     this.currentTrack.borderTerrainType = TERRAIN_TYPES[key];
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.(false, { wear: false, normals: false });
-    window.rebuildNormalMap?.();
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.(false, { wear: false, normals: false });
+    rebuild.normalMap?.();
     this._syncTrackSettingsPanel();
   }
 
@@ -1326,8 +1327,8 @@ export class EditorController {
     if (!this.currentTrack) return;
     this.saveSnapshot(true);
     this.currentTrack.width = this._normalizeTrackDimension(val, this.currentTrack.width ?? 160);
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.();
     this._syncTrackSettingsPanel();
   }
 
@@ -1335,8 +1336,8 @@ export class EditorController {
     if (!this.currentTrack) return;
     this.saveSnapshot(true);
     this.currentTrack.depth = this._normalizeTrackDimension(val, this.currentTrack.depth ?? 160);
-    window.rebuildTerrainGrid?.();
-    window.rebuildTerrainTexture?.();
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.();
     this._syncTrackSettingsPanel();
   }
 
@@ -1538,7 +1539,7 @@ export class EditorController {
   changeMeshGridSmoothing(v) {
     if (this.meshGridEditor?.activeFeature) {
       this.meshGridEditor.activeFeature.smoothing = v;
-      window.rebuildTerrain?.(this.meshGridEditor.activeFeature);
+      rebuild.terrain?.(this.meshGridEditor.activeFeature);
     }
   }
   changeMeshGridAngle(v)        { this.meshGridEditor?.setAngle(v); }
@@ -1565,7 +1566,7 @@ export class EditorController {
     this.saveSnapshot();
     this.bridgeMeshEditor.activeFeature.rotation = v;
     this.bridgeMeshEditor._updateGizmoPositions?.();
-    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+    rebuild.bridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
   bridgeMeshAdjustUp()               { if (this.bridgeMeshEditor) this.bridgeMeshEditor.adjustHeight(this.bridgeMeshEditor.stepSize); }
   bridgeMeshAdjustDown()             { if (this.bridgeMeshEditor) this.bridgeMeshEditor.adjustHeight(-this.bridgeMeshEditor.stepSize); }
@@ -1574,7 +1575,7 @@ export class EditorController {
     if (!this.bridgeMeshEditor?.activeFeature) return;
     this.saveSnapshot();
     this.bridgeMeshEditor.activeFeature.thickness = Math.max(0.1, v);
-    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+    rebuild.bridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
   changeBridgeMeshLayerId(v) {
     if (!this.bridgeMeshEditor?.activeFeature) return;
@@ -1583,7 +1584,7 @@ export class EditorController {
     // Keep legacy `level` mirrored for backward-compatible consumers.
     this.bridgeMeshEditor.activeFeature.layerId = nextLayerId;
     this.bridgeMeshEditor.activeFeature.level = nextLayerId;
-    window.rebuildBridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+    rebuild.bridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
   flattenBridgeMesh()                { this.bridgeMeshEditor?.flattenBridgeMesh(); }
   deleteBridgeMesh()                 { this.bridgeMeshEditor?.deleteBridgeMesh(); }

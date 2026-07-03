@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_CURB } from './EditorMaterials.js';
 
 /**
@@ -263,7 +264,7 @@ export class PolyCurbEditor {
   // ─── Curb operations ─────────────────────────────────────────────────────
 
   _rebuild(feature) {
-    window.rebuildPolyCurb?.(feature);
+    rebuild.polyCurb?.(feature);
   }
 
   insertPointAfterSelected() {
@@ -304,7 +305,7 @@ export class PolyCurbEditor {
     this._destroyGizmos(cg);
     this._activeGizmo = null;
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
-    window.rebuildPolyCurb?.(null);
+    rebuild.polyCurb?.(null);
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

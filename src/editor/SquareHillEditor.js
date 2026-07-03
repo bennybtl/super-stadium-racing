@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
 
@@ -292,10 +293,10 @@ export class SquareHillEditor {
 
   rebuildTerrain() {
     if (this.selected) this.updateVisual(this.selected);
-    window.rebuildTerrain?.(this.selected?.feature);
-    window.rebuildTerrainGrid?.();
-    window.rebuildHillWater?.(this.selected?.feature);
-    window.rebuildTerrainTexture?.();
+    rebuild.terrain?.(this.selected?.feature);
+    rebuild.terrainGrid?.();
+    rebuild.hillWater?.(this.selected?.feature);
+    rebuild.terrainTexture?.();
   }
 
   _maxWaterOffsetForFeature(feature) {

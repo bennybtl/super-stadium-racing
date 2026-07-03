@@ -1,4 +1,5 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
+import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
 
 /**
@@ -310,9 +311,9 @@ export class PolyWallEditor {
   // ─── Wall operations ──────────────────────────────────────────────────────
 
   _rebuildWall(feature) {
-    window.rebuildTerrainGrid?.(); // keep terrain type grid in sync
+    rebuild.terrainGrid?.(); // keep terrain type grid in sync
     // Signal WallManager to rebuild this wall — EditorController exposes this
-    window.rebuildPolyWall?.(feature);
+    rebuild.polyWall?.(feature);
   }
 
   insertPointAfterSelected() {
@@ -359,7 +360,7 @@ export class PolyWallEditor {
     this._destroyWallGizmos(wg);
     this._activeWall = null;
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
-    window.rebuildPolyWall?.(null); // signal full rebuild
+    rebuild.polyWall?.(null); // signal full rebuild
   }
 
   // ─── Called after undo / redo ─────────────────────────────────────────────
