@@ -84,17 +84,10 @@ export class DriveMode extends BaseMode {
    */
   getStartFinishInfo(track) {
     const checkpointFeatures = track.features.filter(f => f.type === "checkpoint");
-    const reverseModeEnabled = Boolean(this.controller.checkpointManager?._reverse);
-    const orderedCheckpointFeatures = reverseModeEnabled && checkpointFeatures.length > 0
-      ? [
-          ...checkpointFeatures.slice(0, -1).reverse(),
-          checkpointFeatures[checkpointFeatures.length - 1],
-        ]
-      : checkpointFeatures;
-    const maxCheckpointNumber = orderedCheckpointFeatures.length;
-    const startFinishCp = orderedCheckpointFeatures[maxCheckpointNumber - 1] || null;
+    const maxCheckpointNumber = checkpointFeatures.length;
+    const startFinishCp = checkpointFeatures[maxCheckpointNumber - 1] || null;
 
-    return { checkpointFeatures: orderedCheckpointFeatures, maxCheckpointNumber, startFinishCp };
+    return { checkpointFeatures, maxCheckpointNumber, startFinishCp };
   }
 
   /**

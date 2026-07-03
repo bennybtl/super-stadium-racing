@@ -72,7 +72,6 @@ export class RaceMode extends DriveMode {
 
     // -- Starting grid (based on the last/finish checkpoint) --
     const {
-      checkpointFeatures,
       maxCheckpointNumber,
       startFinishCp,
     } = this.getStartFinishInfo(currentTrack);
@@ -335,9 +334,14 @@ export class RaceMode extends DriveMode {
         return;
       }
       const lastCpNum = truckData.gameState.lastCheckpointPassed;
+      // Resolve gates from the manager, not the raw track features: in reverse
+      // races the manager holds copies with flipped headings and renumbered
+      // sequence, while the originals keep their forward numbering.
       const cpFeature = lastCpNum > 0
-        ? checkpointFeatures.find(f => f.checkpointNumber === lastCpNum)
-        : startFinishCp;
+        ? checkpointManager.checkpointMeshes
+            .map(cp => cp.feature)
+            .find(f => f.checkpointNumber === lastCpNum)
+        : resolveGridAnchorCheckpoint();
       if (cpFeature) {
         const y = currentTrack.getHeightAt(cpFeature.centerX, cpFeature.centerZ) + TRUCK_HALF_HEIGHT;
         this.respawnTruck(
