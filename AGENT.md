@@ -356,9 +356,12 @@ segment per call. Segments are static during a race, so they are rasterized once
 queries — many per AI tick from steering/boost probes — are O(1) lookups.
 `invalidateBlockedGrid()` drops the cache if walls change.
 
-**Remaining levers (not yet implemented):** distance/speed `lowDetail` gating for
-far AI (the `lowDetail` / `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL` plumbing exists in
-`TerrainPhysics.js`) is the main one left. Measure with the `FrameProfiler`
+**AI terrain LOD:** AI trucks farther than `AI_TERRAIN_LOW_DETAIL_DIST` (75m)
+from the player run `TerrainPhysics` in `lowDetail` mode (sparser normal
+samples via `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL`, no depenetration pass, cheap
+suspension). The gate lives in `Truck.update` next to the bridge multi-probe
+logic and is suppressed while multi-probe is forced, so deck/ramp traversal
+always gets the full pass. Measure with the `FrameProfiler`
 (`truck.terrainPhysics` label is already instrumented).
 
 ---

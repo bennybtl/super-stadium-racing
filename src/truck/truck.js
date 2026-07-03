@@ -25,6 +25,12 @@ const AI_BRIDGE_MULTIPROBE_STICKY_S = 1.0; // keep it on this long after leaving
 // AI surface normals (visual roll/pitch + slope grip) tolerate a lower cadence
 // than the every-frame sampling player trucks use.
 const AI_NORMAL_SAMPLE_INTERVAL = 1 / 30; // seconds between full normal samples
+// Beyond this distance from the player, AI trucks run TerrainPhysics in
+// lowDetail mode (sparser normal samples, no depenetration pass, cheap
+// suspension). Matches the far tier of the body-visual LOD below; the isometric
+// camera keeps trucks this far away offscreen. Never applied near bridges,
+// where the full pass protects deck/ramp traversal.
+const AI_TERRAIN_LOW_DETAIL_DIST = 75; // metres
 
 /**
  * Main Truck class that coordinates all truck subsystems
@@ -319,6 +325,13 @@ export class Truck {
       }
 
       forceMultiProbeTerrainSampling = this._aiMultiProbeSticky > 0;
+
+      if (effectsFocusPosition && !forceMultiProbeTerrainSampling) {
+        const dx = this.mesh.position.x - effectsFocusPosition.x;
+        const dz = this.mesh.position.z - effectsFocusPosition.z;
+        terrainLowDetail =
+          dx * dx + dz * dz > AI_TERRAIN_LOW_DETAIL_DIST * AI_TERRAIN_LOW_DETAIL_DIST;
+      }
     }
 
     const { groundedness, penetration } = profile(
