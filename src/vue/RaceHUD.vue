@@ -83,6 +83,17 @@
     </div>
   </div>
 
+  <div v-if="race.hotLapMode && race.hotLapFlashNonce > 0" class="fixed top-24 left-1/2 -translate-x-1/2 z-[1250] pointer-events-none">
+    <div :key="race.hotLapFlashNonce" class="hotlap-flash text-center">
+      <span
+        class="whitespace-nowrap font-mono font-black tracking-[0.12em] tabular-nums drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
+        :class="race.hotLapFlashRecord ? 'text-[34px] text-[#ffd24a]' : 'text-[28px] text-white'"
+      >
+        {{ race.hotLapFlashRecord ? 'New Hot Lap' : 'Lap' }}: {{ formatMs(race.hotLapFlashMs) }}
+      </span>
+    </div>
+  </div>
+
   <div v-if="race.countdownVisible" class="fixed inset-0 flex items-center justify-center pointer-events-none">
     <span class="text-[20vw] font-black text-white drop-shadow-[0_0_80px_rgba(255,200,0,0.7)] leading-none select-none" :style="{ color: race.countdownText === 'GO!' ? '#00ff44' : '#ffffff' }">
       {{ race.countdownText }}
@@ -157,4 +168,17 @@ function truckChipStyle(truck, index) {
   };
 }
 </script>
+
+<style scoped>
+.hotlap-flash {
+  animation: hotlapFlash 2.6s ease-out forwards;
+}
+
+@keyframes hotlapFlash {
+  0%   { opacity: 0; transform: translateY(-10px) scale(0.94); }
+  10%  { opacity: 1; transform: translateY(0) scale(1); }
+  70%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(1); }
+}
+</style>
 

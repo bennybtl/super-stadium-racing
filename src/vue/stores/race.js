@@ -21,6 +21,10 @@ export const useRaceStore = defineStore('race', () => {
   const hotLapMode = ref(false);
   const hotLapBestMs = ref(null);
   const hotLapGhostVisible = ref(false);
+  // Per-lap flash overlay: bumping the nonce replays the fade animation.
+  const hotLapFlashMs = ref(0);
+  const hotLapFlashRecord = ref(false);
+  const hotLapFlashNonce = ref(0);
 
   // Telemetry recording state — driven by RaceMode via the bridge below
   const telemetryRecording = ref(false);
@@ -56,6 +60,7 @@ export const useRaceStore = defineStore('race', () => {
     countdownText, countdownVisible,
     oobCountdownVisible, oobCountdownSeconds,
     hotLapMode, hotLapBestMs, hotLapGhostVisible,
+    hotLapFlashMs, hotLapFlashRecord, hotLapFlashNonce,
     telemetryRecording, telemetryHasData,
     setTelemetryBridge, toggleTelemetry, exportTelemetry,
   };

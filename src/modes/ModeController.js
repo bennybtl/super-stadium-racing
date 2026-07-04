@@ -113,7 +113,6 @@ export class ModeController {
     if (modeName === 'race') return this.goToRace();
     if (modeName === 'practice') return this.goToPractice();
     if (modeName === 'editor') return this.goToEditor();
-    if (modeName === 'hotlap') return this.goToHotLap();
     if (modeName === 'test') return this.goToTest();
     return this.goToMenu();
   }
