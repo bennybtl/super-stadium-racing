@@ -1054,7 +1054,10 @@ export class EditorController {
         }
 
         // Bridge mesh control points
-        if (this.bridgeMeshEditor?.onPointerDown(clickedMesh)) return;
+        if (this.bridgeMeshEditor) {
+          const bmSphere = this.bridgeMeshEditor.pickControlPoint();
+          if (this.bridgeMeshEditor.onPointerDown(bmSphere ?? clickedMesh)) return;
+        }
 
         // Poly wall control points
         if (this.polyWallEditor?.onPointerDown(clickedMesh)) return;

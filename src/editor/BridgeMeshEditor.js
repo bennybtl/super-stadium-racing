@@ -45,6 +45,7 @@ export class BridgeMeshEditor {
     this.highlightMat = m.meshGridHighlight;
 
     document.addEventListener('wheel', this._boundWheel, { passive: false });
+    scene.setRenderingAutoClearDepthStencil(3, true, true, false);
 
     // Build gizmos for any bridgeMesh features that already exist
     for (const f of track.features) {
@@ -200,7 +201,7 @@ export class BridgeMeshEditor {
     const { cols, rows, centerX, centerZ, width, depth, heights } = feature;
     const stepX = cols > 1 ? width / (cols - 1) : 0;
     const stepZ = rows > 1 ? depth / (rows - 1) : 0;
-    const radius = Math.max(0.35, Math.min(1.4, Math.min(stepX || 1, stepZ || 1) * 0.18));
+    const radius = 0.5;
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -214,6 +215,7 @@ export class BridgeMeshEditor {
         mesh.position = new Vector3(wx, wy, wz);
         mesh.material = this.normalMat;
         mesh.isPickable = true;
+        mesh.renderingGroupId = 3;
 
         this.pointMeshes.push({ mesh, r, c, featureRef: feature });
       }
@@ -230,6 +232,7 @@ export class BridgeMeshEditor {
     );
     centerHandle.material = this.normalMat;
     centerHandle.isPickable = true;
+    centerHandle.renderingGroupId = 3;
     this.centerGizmos.push({ mesh: centerHandle, featureRef: feature });
 
     this._buildLineSystemForFeature(feature);
@@ -302,6 +305,7 @@ export class BridgeMeshEditor {
     const lineSystem = MeshBuilder.CreateLineSystem('bmLines', { lines }, this.scene);
     lineSystem.color = LINE_COLOR_MESH_GRID;
     lineSystem.isPickable = false;
+    lineSystem.renderingGroupId = 3;
     this.lineSystems.push({ mesh: lineSystem, featureRef: feature });
   }
 
@@ -429,6 +433,19 @@ export class BridgeMeshEditor {
   }
 
   // ─── Pointer / key delegation ──────────────────────────────────────────────
+
+  pickControlPoint() {
+    if (!this.scene) return null;
+    const pick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (m) => m.isPickable && (
+        this.pointMeshes.some(p => p.mesh === m) ||
+        this.centerGizmos.some(c => c.mesh === m)
+      ),
+    );
+    return pick?.hit ? pick.pickedMesh : null;
+  }
 
   onPointerDown(pickedMesh) {
     for (const c of this.centerGizmos) {
