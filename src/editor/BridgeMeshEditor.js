@@ -325,7 +325,8 @@ export class BridgeMeshEditor {
 
   _updateVisibilityForFeature(feature) {
     const { cols, rows } = feature;
-    const hasSelection = this.selectedPoint?.featureRef === feature;
+    const hasSelection = this.selectedPoint?.featureRef === feature ||
+      this.selectedCenter?.featureRef === feature;
     for (const p of this.pointMeshes) {
       if (p.featureRef !== feature) continue;
       const isCorner = (p.r === 0 || p.r === rows - 1) && (p.c === 0 || p.c === cols - 1);
@@ -385,7 +386,9 @@ export class BridgeMeshEditor {
   _deselectCenter() {
     if (!this.selectedCenter) return;
     this.selectedCenter.mesh.material = this.normalMat;
+    const feature = this.selectedCenter.featureRef;
     this.selectedCenter = null;
+    if (feature) this._updateVisibilityForFeature(feature);
   }
 
   deselect() {

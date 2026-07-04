@@ -158,15 +158,17 @@ export class PolyWall {
     const N = Math.max(2, Math.round(total / SAMPLE_STEP));
     // open → include both endpoints (N+1 samples); closed → N samples, wrap.
     const count = closed ? N : N + 1;
-    const xs = [], zs = [], raw = [], s = [];
+    const xs = [], zs = [], raw = [], s = [], onBridge = [];
     for (let k = 0; k < count; k++) {
       const arc = (k * total) / N;
       const p = pointAt(arc);
       xs.push(p.x); zs.push(p.z);
       raw.push(this._sampleHeight(track, p.x, p.z));
+      onBridge.push(this._useBridgeSurfaceSampling &&
+        this._terrainQuery.getLastResolvedSurface?.()?.surfaceType === 'bridgeMesh');
       s.push(arc);
     }
-    return { xs, zs, raw, s, step: total / N, total, closed };
+    return { xs, zs, raw, s, onBridge, step: total / N, total, closed };
   }
 
   /**
@@ -236,7 +238,7 @@ export class PolyWall {
   _buildRibbon(points, closed, track, scene, shadows, { visualHeight, thickness, style }) {
     const cl = this._resampleCenterline(points, closed, track);
     if (!cl) return null;
-    const { xs, zs, raw, s, step, total } = cl;
+    const { xs, zs, raw, s, onBridge, step, total } = cl;
     const n = xs.length;
     if (n < 2) return null;
 
@@ -264,8 +266,8 @@ export class PolyWall {
     for (let i = 0; i < n; i++) {
       lx[i] = xs[i] + nx[i] * halfThick; lz[i] = zs[i] + nz[i] * halfThick;
       rx[i] = xs[i] - nx[i] * halfThick; rz[i] = zs[i] - nz[i] * halfThick;
-      topY[i] = smooth[i] + visualHeight; // smoothed, near-constant-height top
-      botY[i] = raw[i] - SKIRT_DEPTH;      // buried base → embedded look
+      topY[i] = smooth[i] + visualHeight;
+      botY[i] = raw[i] - (onBridge[i] ? 0.15 : SKIRT_DEPTH);
     }
 
     const positions = [], indices = [], normals = [], colors = [];
