@@ -79,6 +79,7 @@ export const useMenuStore = defineStore('menu', () => {
     upgrades.value = getUpgradeCatalog({ balance: 0, ignoreBalance: true });
   }
   function selectPlayerColor(key)  { if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
+  function startHotLapMode()          { mode.value = 'hotLap'; _bridge.value?.onStartHotLap(); }
   function startSingleRace()        { mode.value = 'singleRace'; _bridge.value?.onStartSingleRace(); }
   function singleRaceExit()        { mode.value = null; singleRaceData.value = null; _bridge.value?.onExit(); }
   function setMode(nextMode)       { mode.value = nextMode; }
@@ -101,7 +102,7 @@ export const useMenuStore = defineStore('menu', () => {
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back,
-    purchaseUpgrade, resetUpgrades, selectPlayerColor, startSingleRace, singleRaceExit,
+    purchaseUpgrade, resetUpgrades, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
     setMode,
     setLoading,
   };

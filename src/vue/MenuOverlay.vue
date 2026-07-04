@@ -33,6 +33,7 @@
         <!-- ── Start ── -->
         <template v-if="store.screen === 'start'">
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('practice')">Practice</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hotLap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('singleRace')">Single Race</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
@@ -106,7 +107,7 @@
               :modelValue="store.selectedTrack"
               @update:modelValue="store.setSelectedTrack($event)"
             />
-            <div v-if="store.pitData.pitMode !== 'practice'">
+            <div v-if="store.pitData.pitMode === 'singleRace'">
               <RaceConfig />
             </div>
           </div>
@@ -130,7 +131,10 @@
             <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
               Start Practice
             </button>
-            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow " v-else @click="store.startSingleRace()">
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-else-if="store.pitData.pitMode === 'hotLap'" @click="store.startHotLapMode()">
+              Start Hot Lap
+            </button>
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-else @click="store.startSingleRace()">
               Start Race
             </button>
           </div>

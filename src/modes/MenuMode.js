@@ -52,6 +52,17 @@ export class MenuMode extends BaseMode {
       });
     };
 
+    menuManager.onStartHotLap = () => {
+      menuManager.gameStarted = true;
+      menuManager._store.pitData = null;
+      menuManager.hideMenu();
+      this.controller.goToHotLap({
+        trackKey:   menuManager.selectedTrack,
+        vehicleKey: menuManager.selectedVehicle,
+        playerColorKey: menuManager.selectedPlayerColor,
+      });
+    };
+
     menuManager.onStartSingleRace = () => {
       menuManager.gameStarted = true;
       menuManager._store.pitData = null;

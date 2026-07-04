@@ -17,6 +17,11 @@ export const useRaceStore = defineStore('race', () => {
   const oobCountdownVisible = ref(false);
   const oobCountdownSeconds = ref(0);
 
+  // Hot Lap mode state
+  const hotLapMode = ref(false);
+  const hotLapBestMs = ref(null);
+  const hotLapGhostVisible = ref(false);
+
   // Telemetry recording state — driven by RaceMode via the bridge below
   const telemetryRecording = ref(false);
   const telemetryHasData   = ref(false);
@@ -50,6 +55,7 @@ export const useRaceStore = defineStore('race', () => {
     timerMs, timerVisible,
     countdownText, countdownVisible,
     oobCountdownVisible, oobCountdownSeconds,
+    hotLapMode, hotLapBestMs, hotLapGhostVisible,
     telemetryRecording, telemetryHasData,
     setTelemetryBridge, toggleTelemetry, exportTelemetry,
   };

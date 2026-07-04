@@ -3,6 +3,7 @@ import { RaceMode } from "./RaceMode.js";
 import { EditorMode } from "./EditorMode.js";
 import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
+import { HotLapMode } from "./HotLapMode.js";
 import { incrementUpgradeLevel, getUpgradeCatalog } from "../managers/UpgradeStorage.js";
 
 /**
@@ -99,6 +100,10 @@ export class ModeController {
     return this.switchTo(EditorMode, config);
   }
 
+  goToHotLap(config) {
+    return this.switchTo(HotLapMode, config);
+  }
+
   goToTest(config) {
     return this.switchTo(TestMode, config);
   }
@@ -108,6 +113,7 @@ export class ModeController {
     if (modeName === 'race') return this.goToRace();
     if (modeName === 'practice') return this.goToPractice();
     if (modeName === 'editor') return this.goToEditor();
+    if (modeName === 'hotlap') return this.goToHotLap();
     if (modeName === 'test') return this.goToTest();
     return this.goToMenu();
   }
