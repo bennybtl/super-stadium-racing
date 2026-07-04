@@ -68,8 +68,6 @@ const props = defineProps({
 defineEmits(['update:selectedVehicle', 'update:selectedColor']);
 
 const selectedVehicleData = computed(() => {
-  console.log('Finding vehicle data for selected key:', props.selectedVehicle);
-  console.log('All vehicles:', props.vehicles);
   return props.vehicles.find((vehicle) => vehicle.key === props.selectedVehicle) ?? null;
 });
 

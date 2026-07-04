@@ -49,14 +49,14 @@ export class TelemetryRecorder {
     this._sampleTimer = 0;
     this._currentCheckpointIndex = firstCheckpointTarget;
     this._openSegment(firstCheckpointTarget);
-    console.log(`[TelemetryRecorder] Recording started for "${this.trackId}"`);
+    console.debug(`[TelemetryRecorder] Recording started for "${this.trackId}"`);
   }
 
   /** Stop recording without saving. */
   stop() {
     this.recording = false;
     this._currentSegment = null;
-    console.log('[TelemetryRecorder] Recording stopped.');
+    console.debug('[TelemetryRecorder] Recording stopped.');
   }
 
   /**
@@ -125,7 +125,7 @@ export class TelemetryRecorder {
     a.click();
     URL.revokeObjectURL(url);
 
-    console.log(`[TelemetryRecorder] Exported ${this._segments.length} segments, ` +
+    console.debug(`[TelemetryRecorder] Exported ${this._segments.length} segments, ` +
       `${this._segments.reduce((n, s) => n + s.samples.length, 0)} total samples.`);
 
     return telemetry;

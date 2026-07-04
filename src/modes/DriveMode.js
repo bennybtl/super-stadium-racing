@@ -50,7 +50,7 @@ export class DriveMode extends BaseMode {
     if (!this.cameraController) return;
     this._photoModeActive = !this._photoModeActive;
     this.cameraController.toggleFreeMode();
-    console.log(
+    console.debug(
       `[DriveMode] Screenshot camera ${this._photoModeActive ? 'enabled' : 'disabled'} - WASD to move, +/- to zoom, P to toggle`
     );
   }
@@ -176,12 +176,13 @@ export class DriveMode extends BaseMode {
       if (!truck?.mesh || !truck?.state) continue;
 
       const pos = truck.mesh.position;
-      const inSlow = slowZones.some(z => this.isPointInActionZone(pos.x, pos.z, z));
+      const zone = slowZones.find(z => this.isPointInActionZone(pos.x, pos.z, z));
 
-      truck.state.slowZoneActive = inSlow;
-      if (!inSlow) continue;
+      truck.state.slowZoneActive = zone;
+      if (!zone) continue;
 
-      const limit = truck.state.slowZoneMaxSpeed;
+      const limit = truck.state.slowZoneMaxSpeed * ((zone.slowStrength ?? 3) / 10);
+
       if (truck.state.velocity.length() > limit) {
         truck.state.velocity.normalize().scaleInPlace(limit);
       }

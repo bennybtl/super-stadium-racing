@@ -41,14 +41,7 @@
 
 <script setup>
 import { useMenuStore } from './store.js';
+import { formatLapTime as formatTime } from './formatTime.js';
 
 const store = useMenuStore();
-
-function formatTime(ms) {
-  if (ms == null) return '—';
-  const m  = Math.floor(ms / 60000);
-  const s  = Math.floor((ms % 60000) / 1000);
-  const cs = Math.floor((ms % 1000) / 10);
-  return `${m}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
-}
 </script>

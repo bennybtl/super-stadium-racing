@@ -554,14 +554,14 @@ export class EditorController {
     if (this._undoStack.length === 0) return;
     this._redoStack.push(this._serializeSnapshot());
     this._applySnapshot(this._undoStack.pop());
-    console.log('[Undo] stack remaining:', this._undoStack.length);
+    console.debug('[Undo] stack remaining:', this._undoStack.length);
   }
 
   redo() {
     if (this._redoStack.length === 0) return;
     this._undoStack.push(this._serializeSnapshot());
     this._applySnapshot(this._redoStack.pop());
-    console.log('[Redo] stack remaining:', this._redoStack.length);
+    console.debug('[Redo] stack remaining:', this._redoStack.length);
   }
 
   handleKeyDown(event) {
@@ -1521,6 +1521,7 @@ export class EditorController {
   changeActionZoneShape(val)      { this.actionZoneEditor.changeShape(val); }
   changeActionZoneBoostStrength(val) { this.actionZoneEditor.changeBoostStrength(val); }
   changeActionZoneBoostDuration(val) { this.actionZoneEditor.changeBoostDuration(val); }
+  changeActionZoneSlowStrength(val) { this.actionZoneEditor.changeSlowStrength(val); }
   insertActionZonePoint()         { this.actionZoneEditor.insertPoint(); }
   deleteActionZonePoint()         { this.actionZoneEditor.deletePoint(); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }

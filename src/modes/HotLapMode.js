@@ -1,64 +1,19 @@
 import { Truck } from "../truck/truck.js";
-import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
-import { GhostRecorder, GHOST_SCHEMA_VERSION } from "../managers/GhostRecorder.js";
-import { GhostPlayer } from "../managers/GhostPlayer.js";
+import { HotLapTracker } from "../managers/HotLapTracker.js";
 import { DriveMode } from "./DriveMode.js";
 import { basicColors } from "../constants.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
-import { useRaceStore } from "../vue/store.js";
-
-const GHOST_STORAGE_PREFIX = "hotlap_ghost_";
-
-// Best laps are per track AND per vehicle — box size and pace both differ by
-// vehicle, so a lap in one truck must not become the "best" shown in another.
-function ghostKey(trackKey, vehicleKey) {
-  return `${GHOST_STORAGE_PREFIX}${trackKey}__${vehicleKey}`;
-}
-
-function loadGhost(trackKey, vehicleKey) {
-  try {
-    const raw = localStorage.getItem(ghostKey(trackKey, vehicleKey));
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (data?.version !== GHOST_SCHEMA_VERSION) return null;
-    if (!Array.isArray(data.frames) || data.frames.length === 0) return null;
-    if (typeof data.frames[0].t !== 'number') return null;
-    return data;
-  } catch { return null; }
-}
-
-function saveGhost(trackKey, vehicleKey, payload) {
-  // Defer the stringify + write off the render frame so a new best lap doesn't
-  // hitch the exact frame the player crosses the finish line.
-  setTimeout(() => {
-    const key = ghostKey(trackKey, vehicleKey);
-    try {
-      localStorage.setItem(key, JSON.stringify(payload));
-    } catch {
-      // Quota exceeded — retry once at half resolution rather than losing the
-      // ghost (and the persisted best time) entirely.
-      try {
-        const decimated = { ...payload, frames: payload.frames.filter((_, i) => i % 2 === 0) };
-        localStorage.setItem(key, JSON.stringify(decimated));
-        console.warn('[HotLap] Ghost too large; saved at reduced resolution.');
-      } catch (e) {
-        console.warn('[HotLap] Failed to persist best-lap ghost:', e?.name ?? e);
-      }
-    }
-  }, 0);
-}
 
 /**
- * HotLapMode – single-player time trial with a best-lap ghost.
- *
- * One truck, no AI, continuous timed laps against a translucent replay of the
- * player's own best lap (persisted per track+vehicle in localStorage).
+ * HotLapMode – single-player time trial. A thin drive mode that spawns one
+ * truck and hands lap timing, the best-lap ghost, the leaderboard and the
+ * hot-lap HUD to a HotLapTracker (which any mode could reuse the same way).
  */
 export class HotLapMode extends DriveMode {
   constructor(controller) {
@@ -66,8 +21,7 @@ export class HotLapMode extends DriveMode {
     this.inputManager = null;
     this.audioManager = null;
     this.truckAudioController = null;
-    this.ghostRecorder = null;
-    this.ghostPlayer = null;
+    this.hotLap = null;
     this.uiManager = null;
   }
 
@@ -93,12 +47,7 @@ export class HotLapMode extends DriveMode {
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
 
-    // Checkpoints are already created by SceneBuilder.buildScene — do not
-    // re-create them here (that would double every gate and break lap counting).
-    const { maxCheckpointNumber, startFinishCp } = this.getStartFinishInfo(currentTrack);
-    if (maxCheckpointNumber === 0) {
-      console.warn('[HotLap] Track has no checkpoints; lap timing and ghost are disabled.');
-    }
+    const { startFinishCp } = this.getStartFinishInfo(currentTrack);
 
     const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     this.truckAudioController = await TruckAudioController.create(audioManager, vehicleDef?.engineAudio);
@@ -116,33 +65,12 @@ export class HotLapMode extends DriveMode {
     playerTruck.state.heading = heading;
     playerTruck.mesh.rotation.y = heading;
 
-    const gameState = new GameState();
-    // Prime lastCheckpointPassed so the truck is ready to cross the start/finish
-    // gate first (it spawns just behind it), matching RaceMode.
-    gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
-    const truckData = { truck: playerTruck, isPlayer: true, hasStarted: false };
-    const trucks = [truckData];
-
+    const trucks = [{ truck: playerTruck, isPlayer: true }];
     this.respawnTruck(playerTruck, spawnPos, heading);
-
-    // -- Ghost --
-    const ghostRecorder = new GhostRecorder();
-    this.ghostRecorder = ghostRecorder;
-
-    const savedGhost = loadGhost(trackKey, vehicleKey);
-    if (savedGhost) {
-      this.ghostPlayer = new GhostPlayer(scene, savedGhost.frames, { dims: savedGhost.dims ?? truckDims, vehicleDef });
-    }
-    let bestLapMs = savedGhost?.lapTimeMs ?? null;
 
     // -- UI --
     const uiManager = new UIManager();
     this.uiManager = uiManager;
-    const raceStore = useRaceStore();
-    uiManager.showRaceStatusPanel();
-    uiManager.showRaceTimer();
-    uiManager.updateLaps(0, null);
-    uiManager.updateTimer(0);
 
     const pushTruckStatus = (lap, boostActive) => uiManager.updateTruckStatus([{
       id: 'player',
@@ -150,40 +78,31 @@ export class HotLapMode extends DriveMode {
       color: playerColor ?? basicColors.red.diffuse,
       lap,
       totalLaps: '--',
-      boosts: gameState.boostCount,
+      boosts: playerTruck.state.boostCount,
       boostActive,
       finished: false,
     }]);
     pushTruckStatus(0, false);
 
-    // Hot-lap HUD state (best-lap readout + ghost toggle). Cleared centrally by
-    // UIManager.hideAll() on teardown.
-    raceStore.hotLapMode = true;
-    raceStore.hotLapBestMs = bestLapMs;
-    raceStore.hotLapGhostVisible = true;
-
-    if (maxCheckpointNumber > 0) {
-      checkpointManager.updatePlayerCheckpointHighlight(gameState.lastCheckpointPassed);
-    }
+    // -- Hot-lap tracking (timing, ghost, leaderboard, HUD) --
+    this.hotLap = new HotLapTracker(scene, {
+      checkpointManager,
+      uiManager,
+      trackKey,
+      vehicleKey,
+      vehicleDef,
+      truckDims,
+      upgrades: playerUpgrades,
+      onLap: ({ lapCount }) => pushTruckStatus(lapCount, playerTruck.state.boostActive),
+    });
 
     const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
     const staticBodyCollisionManager = new StaticBodyCollisionManager(scene);
 
-    // Full reset back to the staging line: fresh lap clock, checkpoint sequence,
-    // and ghost recorder (so a mid-lap reset doesn't bake the teleport into a
-    // saved ghost or keep the old clock running).
+    // Full reset back to the staging line (also re-primes the lap tracker).
     const resetHotLap = () => {
-      truckData.hasStarted = false;
-      gameState.reset();
-      gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
-      ghostRecorder.reset();
-      checkpointManager.resetForTruck('player');
-      if (maxCheckpointNumber > 0) {
-        checkpointManager.updatePlayerCheckpointHighlight(gameState.lastCheckpointPassed);
-      }
-      uiManager.updateTimer(0);
-      uiManager.updateCheckpoints(0);
+      this.hotLap.reset();
       pushTruckStatus(0, false);
       obstacleManager.rebuild();
       this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
@@ -265,90 +184,7 @@ export class HotLapMode extends DriveMode {
       frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
 
-      // -- Lap clock + ghost recording (dt-based, so paused/hidden time is
-      //    excluded and lap time stays in sync with the recorded ghost). --
-      if (ghostRecorder.recording) {
-        ghostRecorder.record(playerTruck.mesh.position, playerTruck.state.heading, dt * 1000);
-        uiManager.updateTimer(ghostRecorder.elapsedMs);
-      }
-
-      // -- Ghost playback (driven by the live lap clock, not its own counter) --
-      if (this.ghostPlayer) {
-        this.ghostPlayer.setVisible(raceStore.hotLapGhostVisible);
-        if (raceStore.hotLapGhostVisible) {
-          const lapMs = ghostRecorder.recording ? ghostRecorder.elapsedMs : 0;
-          frameProfiler.measure('ghost.update', () => this.ghostPlayer.update(lapMs, dt));
-        }
-      }
-
-      // -- Checkpoint / lap tracking --
-      frameProfiler.measure('checkpoints.laps', () => {
-        const checkpointResult = checkpointManager.update(
-          playerTruck.mesh.position,
-          playerTruck.state.velocity,
-          gameState.lastCheckpointPassed,
-          'player',
-        );
-        if (!checkpointResult?.passed) return;
-
-        // Start/finish line crossing — first time starts the lap clock + ghost
-        if (checkpointResult.index === maxCheckpointNumber && !truckData.hasStarted) {
-          truckData.hasStarted = true;
-          gameState.lastCheckpointPassed = 0;
-          gameState.checkpointCount = 0;
-          checkpointManager.resetForTruck('player');
-          checkpointManager.updatePlayerCheckpointHighlight(0);
-          uiManager.updateCheckpoints(0);
-          ghostRecorder.start();
-          return;
-        }
-
-        gameState.incrementCheckpoint(checkpointResult.index);
-        checkpointManager.updatePlayerCheckpointHighlight(gameState.lastCheckpointPassed);
-        uiManager.updateCheckpoints(gameState.checkpointCount);
-
-        // Lap complete
-        if (gameState.checkpointCount === checkpointManager.getTotalCheckpoints()) {
-          const lapTime = Math.round(ghostRecorder.elapsedMs);
-          const lapFrames = ghostRecorder.stop();
-          const lapCount = gameState.completeLap(lapTime);
-          checkpointManager.resetForTruck('player');
-          checkpointManager.updatePlayerCheckpointHighlight(0);
-          uiManager.updateCheckpoints(0);
-
-          console.log(`[HotLap] Lap ${lapCount}: ${(lapTime / 1000).toFixed(2)}s`);
-
-          // Save + swap in the new ghost if this beat the best lap
-          const isRecord = lapFrames != null && (bestLapMs === null || lapTime < bestLapMs);
-          if (isRecord) {
-            bestLapMs = lapTime;
-            saveGhost(trackKey, vehicleKey, {
-              version: GHOST_SCHEMA_VERSION,
-              lapTimeMs: lapTime,
-              dims: truckDims,
-              frames: lapFrames,
-              savedAt: Date.now(),
-            });
-            raceStore.hotLapBestMs = bestLapMs;
-
-            // Reuse the existing puppet (same vehicle) — just swap the lap data.
-            if (this.ghostPlayer) this.ghostPlayer.setFrames(lapFrames);
-            else this.ghostPlayer = new GhostPlayer(scene, lapFrames, { dims: truckDims, vehicleDef });
-            this.ghostPlayer.setVisible(raceStore.hotLapGhostVisible);
-
-            console.log(`[HotLap] New best: ${(lapTime / 1000).toFixed(2)}s`);
-          }
-
-          // Flash the lap result on-screen (fades via the HUD animation)
-          raceStore.hotLapFlashMs = lapTime;
-          raceStore.hotLapFlashRecord = isRecord;
-          raceStore.hotLapFlashNonce++;
-
-          // Begin recording the next lap
-          ghostRecorder.start();
-          pushTruckStatus(lapCount, playerTruck.state.boostActive);
-        }
-      });
+      frameProfiler.measure('hotlap.update', () => this.hotLap.update(playerTruck, dt));
 
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
@@ -359,13 +195,9 @@ export class HotLapMode extends DriveMode {
   }
 
   teardown() {
-    if (this.ghostPlayer) {
-      this.ghostPlayer.dispose();
-      this.ghostPlayer = null;
-    }
-    if (this.ghostRecorder) {
-      this.ghostRecorder.reset();
-      this.ghostRecorder = null;
+    if (this.hotLap) {
+      this.hotLap.dispose();
+      this.hotLap = null;
     }
     if (this.debugManager) {
       this.debugManager.hide();

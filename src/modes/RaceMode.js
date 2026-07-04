@@ -172,7 +172,7 @@ export class RaceMode extends DriveMode {
         .forEach(td => {
           td.gameState.finishRace(null); // mark finished without a time
           finishOrder.push(td);
-          console.log(`[RaceMode] DNF: ${td.name}`);
+          console.debug(`[RaceMode] DNF: ${td.name}`);
         });
       triggerRaceEnd();
     };
@@ -717,9 +717,9 @@ export class RaceMode extends DriveMode {
             else checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
             uiManager.updateLaps(lapCount, totalLaps);
             uiManager.updateCheckpoints(0);
-            console.log(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);
+            console.debug(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);
           } else {
-            console.log(
+            console.debug(
               `[${truckData.name}] Completed lap ${lapCount} in ${(lapTime / 1000).toFixed(2)}s!`
             );
           }
@@ -737,19 +737,19 @@ export class RaceMode extends DriveMode {
             // For 1-lap races the "start final lap" trigger never fires, so start
             // the DNF timer here on first finish instead.
             if (dnfTimer === null && !raceEnded && finishOrder.length < trucks.length) {
-              console.log(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
+              console.debug(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
               setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
             }
 
             if (truckData.isPlayer) {
-              console.log("\n=== RACE FINISHED ===");
-              console.log(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
-              console.log("Lap Times:");
+              console.debug("\n=== RACE FINISHED ===");
+              console.debug(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
+              console.debug("Lap Times:");
               truckData.gameState.lapTimes.forEach((time, i) => {
-                console.log(`  Lap ${i + 1}: ${(time / 1000).toFixed(2)}s`);
+                console.debug(`  Lap ${i + 1}: ${(time / 1000).toFixed(2)}s`);
               });
             } else {
-              console.log(
+              console.debug(
                 `[${truckData.name}] Finished race! Total time: ${(totalTime / 1000).toFixed(2)}s`
               );
             }

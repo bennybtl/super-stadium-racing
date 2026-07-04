@@ -30,7 +30,6 @@ Promise.all([
   trackLoader.loadAllTracks(),
   vehicleLoader.loadAllVehicles(),
 ]).then(() => {
-  console.log("Tracks and vehicles loaded, starting game");
   controller.switchTo(MenuMode);
 }).finally(() => {
   menuManager.hideLoading();

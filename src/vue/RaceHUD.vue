@@ -16,7 +16,7 @@
     </div>
 
     <div class="fixed left-1/2 bottom-4 -translate-x-1/2 z-[1200]">
-      <div class="rounded-[14px] overflow-hidden bg-[#0c0c0c]/60 px-2 py-2 shadow-[0_10px_12px_rgba(0,0,0,0.62)] backdrop-blur-sm">
+      <div class="rounded-[14px] overflow-hidden bg-[#0c0c0c]/60 px-2 py-2 shadow-[0_10px_12px_rgba(0,0,0,0.62)] backdrop-blur-sm flex">
         <div class="grid gap-px" :style="gridStyle">
           <div class="flex h-full items-center justify-end text-right font-mono text-[10px] font-black uppercase tracking-[0.28em] text-[#d2cbc3] leading-none">
           </div>
@@ -25,7 +25,7 @@
             :key="`name-${truck.id ?? index}`"
             class="text-center"
           >
-            <div class="truncate font-mono text-[10px] font-black uppercase tracking-[0.16em] text-white" :style="truckChipStyle(truck, index)">
+            <div class="truncate font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-white" :style="truckChipStyle(truck, index)">
               {{ truckLabel(truck, index) }}
             </div>
           </div>
@@ -38,7 +38,7 @@
             :key="`lap-${truck.id ?? index}`"
             class="text-center"
           >
-            <div class="rounded-md border font-mono text-white tabular-nums" :style="cellStyle(truck, index, truck.finished ? 0.45 : 1)">
+            <div class="rounded-md px-2 py-1 border font-mono text-white tabular-nums" :style="cellStyle(truck, index, truck.finished ? 0.45 : 1)">
               {{ truck.lap }}/{{ truck.totalLaps }}
             </div>
           </div>
@@ -61,25 +61,22 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div v-if="race.hotLapMode && race.visible" class="pointer-events-none">
-    <div class="fixed right-4 top-4 z-[1200] flex flex-col items-end gap-2">
-      <div class="rounded-[10px] bg-[#0c0c0c]/60 px-4 py-2 shadow-[0_6px_12px_rgba(0,0,0,0.5)]">
-        <div class="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#8ab4f8]">Best Lap</div>
-        <div class="font-mono text-[20px] font-black tabular-nums text-white">
-          {{ race.hotLapBestMs != null ? formatMs(race.hotLapBestMs) : '--:--.--' }}
+        <div v-if="race.hotLapMode && race.visible" class="z-[1200] flex flex-col items-end gap-2 pointer-events-none mx-6">
+          <div class="">
+            <div class="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#8ab4f8]">Best Lap</div>
+            <div class="font-mono text-[20px] font-black tabular-nums text-white">
+              {{ race.hotLapBestMs != null ? formatMs(race.hotLapBestMs) : '--:--.--' }}
+            </div>
+          </div>
+          <button
+            class="pointer-events-auto rounded-full w-full border border-slate-700 bg-white/5 hover:text-white text-[12px] font-sans px-3 py-1 whitespace-nowrap transition duration-150 ease-in-out hover:bg-white/10"
+            :class="race.hotLapGhostVisible ? 'text-[#8ab4f8]' : 'text-[#666]'"
+            @click="toggleGhost"
+          >
+            Ghost
+          </button>
         </div>
       </div>
-      <button
-        class="pointer-events-auto rounded-[8px] bg-[#0c0c0c]/60 px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] shadow-[0_4px_8px_rgba(0,0,0,0.4)] transition-colors"
-        :class="race.hotLapGhostVisible ? 'text-[#8ab4f8]' : 'text-[#666]'"
-        @click="toggleGhost"
-      >
-        Ghost {{ race.hotLapGhostVisible ? 'ON' : 'OFF' }}
-      </button>
     </div>
   </div>
 
@@ -111,19 +108,13 @@
 <script setup>
 import { computed } from 'vue';
 import { useRaceStore } from './store.js';
+import { formatLapTime as formatMs } from './formatTime.js';
 
 const race = useRaceStore();
 
 const gridStyle = computed(() => ({
   gridTemplateColumns: `3.75rem repeat(${Math.max(1, race.truckStatus.length)}, minmax(0, 1fr))`,
 }));
-
-function formatMs(ms) {
-  const m  = Math.floor(ms / 60000);
-  const s  = Math.floor((ms % 60000) / 1000);
-  const cs = Math.floor((ms % 1000) / 10);
-  return `${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-}
 
 const formattedTime = computed(() => formatMs(race.timerMs));
 

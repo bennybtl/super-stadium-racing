@@ -197,6 +197,7 @@ export const useEditorStore = defineStore('editor', () => {
     selectedPointIndex: -1,
     boostStrength: 1.5,
     boostDuration: 1.5,
+    slowStrength: 3,
   });
 
   // ── Poly Curb panel ──

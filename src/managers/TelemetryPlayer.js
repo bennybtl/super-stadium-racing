@@ -38,9 +38,6 @@ export class TelemetryPlayer {
       return false;
     }
     this._telemetry = json;
-    console.log(`[TelemetryPlayer] Loaded telemetry for "${this.trackId}": ` +
-      `${json.segments.length} segments, ` +
-      `${json.segments.reduce((n, s) => n + s.samples.length, 0)} samples.`);
     return true;
   }
 
@@ -86,7 +83,6 @@ export class TelemetryPlayer {
       }
     }
 
-    console.log(`[TelemetryPlayer] Built ${waypoints.length} world-space waypoints.`);
     return waypoints.length > 0 ? waypoints : null;
   }
 }

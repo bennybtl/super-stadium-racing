@@ -1,7 +1,3 @@
-// Ghost data schema version. Bump when the frame shape changes so stale
-// localStorage ghosts from an older format are rejected on load.
-export const GHOST_SCHEMA_VERSION = 2;
-
 // Sample the ghost at a fixed rate rather than once per rendered frame. This
 // bounds the stored size and, together with the per-frame timestamp, decouples
 // playback speed from the display refresh rate (a lap recorded at 120fps plays

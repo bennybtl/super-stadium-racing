@@ -87,13 +87,13 @@ export class DebugManager {
     this._recordStart = performance.now();
     this._store.recording  = true;
     this._store.frameCount = 0;
-    console.log('[DebugManager] Recording started.');
+    console.debug('[DebugManager] Recording started.');
   }
 
   stopRecording() {
     this._recording       = false;
     this._store.recording = false;
-    console.log(`[DebugManager] Recording stopped — ${this._store.frameCount} frames captured.`);
+    console.debug(`[DebugManager] Recording stopped — ${this._store.frameCount} frames captured.`);
   }
 
   /**
@@ -127,7 +127,7 @@ export class DebugManager {
     a.download    = `terrain_log_${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    console.log(`[DebugManager] Dumped ${rows.length} frames.`);
+    console.debug(`[DebugManager] Dumped ${rows.length} frames.`);
   }
 
   // ---------------------------------------------------------------------------
@@ -212,7 +212,7 @@ export class DebugManager {
     };
     const text = JSON.stringify(snippet, null, 2);
     navigator.clipboard?.writeText(text).catch(() => {});
-    console.log('[DebugManager] Vehicle handling JSON:\n' + text);
+    console.debug('[DebugManager] Vehicle handling JSON:\n' + text);
   }
 
   // ---------------------------------------------------------------------------

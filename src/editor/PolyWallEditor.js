@@ -221,8 +221,6 @@ export class PolyWallEditor {
     const mesh = wg.pointMeshes[idx];
     this.selectedPoint = { wg, idx, mesh };
     mesh.material = this.highlightMat;
-    console.log(`[PolyWallTool] selectPoint: idx=${idx}, total points=${wg.feature.points.length}`);
-    console.log(`[PolyWallTool] Selected point:`, wg.feature.points[idx]);
     this._syncStoreToFeature(wg.feature, idx);
   }
 

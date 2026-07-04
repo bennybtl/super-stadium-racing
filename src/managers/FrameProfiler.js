@@ -73,9 +73,9 @@ export class FrameProfiler {
     persistFrameProfilerEnabled(next);
     if (next) {
       this._lastReportAt = nowMs();
-      console.log(`[FrameProfiler:${this.name}] enabled`);
+      console.debug(`[FrameProfiler:${this.name}] enabled`);
     } else {
-      console.log(`[FrameProfiler:${this.name}] disabled`);
+      console.debug(`[FrameProfiler:${this.name}] disabled`);
     }
   }
 
