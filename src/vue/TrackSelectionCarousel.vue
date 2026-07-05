@@ -1,7 +1,7 @@
 
 <template>
   <div class="w-full min-w-0 space-y-3">
-    <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white text-center">Track Selection
+    <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white text-center">Track Setup
     </h3>
     <div>
       <div v-if="availablePacks.length > 1" class="flex justify-center gap-2 flex-wrap">

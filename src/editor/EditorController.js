@@ -1837,6 +1837,30 @@ export class EditorController {
         if (h.mesh) h.mesh.isVisible = visible;
       }
       if (this.aiPathEditor.lineMesh) this.aiPathEditor.lineMesh.isVisible = visible;
+      // Alternate/branch path lines (teal) live in a separate list.
+      for (const lm of this.aiPathEditor.lineMeshes || []) lm.isVisible = visible;
+    }
+
+    if (this.bridgeMeshEditor) {
+      if (visible) {
+        // Restore selection-aware visibility (corners + selected points show).
+        for (const l of this.bridgeMeshEditor.lineSystems || []) {
+          if (l.mesh) l.mesh.isVisible = true;
+        }
+        for (const c of this.bridgeMeshEditor.centerGizmos || []) {
+          this.bridgeMeshEditor._updateVisibilityForFeature?.(c.featureRef);
+        }
+      } else {
+        for (const p of this.bridgeMeshEditor.pointMeshes || []) {
+          if (p.mesh) p.mesh.isVisible = false;
+        }
+        for (const c of this.bridgeMeshEditor.centerGizmos || []) {
+          if (c.mesh) c.mesh.isVisible = false;
+        }
+        for (const l of this.bridgeMeshEditor.lineSystems || []) {
+          if (l.mesh) l.mesh.isVisible = false;
+        }
+      }
     }
 
     if (this.terrainPathEditor) {
