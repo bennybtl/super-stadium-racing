@@ -25,7 +25,7 @@ export class HotLapMode extends DriveMode {
     this.uiManager = null;
   }
 
-  async setup({ trackKey, vehicleKey = 'default_truck', playerColorKey = null }) {
+  async setup({ trackKey, vehicleKey = 'default_truck', playerColorKey = null, reverse = false }) {
     const { engine, menuManager } = this.controller;
 
     const {
@@ -47,7 +47,15 @@ export class HotLapMode extends DriveMode {
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
 
-    const { startFinishCp } = this.getStartFinishInfo(currentTrack);
+    // SceneBuilder created checkpoints in forward order; rebuild for reverse so
+    // gate order and headings match the chosen direction.
+    if (reverse) {
+      checkpointManager._reverse = true;
+      checkpointManager.rebuild();
+    }
+    // Resolve the start/finish gate from the (possibly reversed) manager so the
+    // spawn faces the correct way.
+    const startFinishCp = this.getStartFinishCheckpoint(checkpointManager);
 
     const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     this.truckAudioController = await TruckAudioController.create(audioManager, vehicleDef?.engineAudio);
@@ -89,6 +97,7 @@ export class HotLapMode extends DriveMode {
       checkpointManager,
       uiManager,
       trackKey,
+      reverse,
       vehicleKey,
       vehicleDef,
       truckDims,

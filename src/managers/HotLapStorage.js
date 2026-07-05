@@ -6,11 +6,14 @@
 // rebuilt to look like the truck that set it.
 
 const STORAGE_PREFIX = "hotlap_laps_";
+// Reverse laps are a distinct challenge, so they get their own leaderboard.
+// Forward keys stay bare (backward compatible); reverse keys carry this suffix.
+const REVERSE_SUFFIX = "::rev";
 export const HOT_LAP_SCHEMA_VERSION = 3;
 export const MAX_HOT_LAP_RECORDS = 5;
 
-function storageKey(trackKey) {
-  return STORAGE_PREFIX + trackKey;
+function storageKey(trackKey, reverse = false) {
+  return STORAGE_PREFIX + trackKey + (reverse ? REVERSE_SUFFIX : '');
 }
 
 function isValidRecord(r) {
@@ -21,9 +24,9 @@ function isValidRecord(r) {
 }
 
 /** Load a track's records, fastest first. Returns [] if none/invalid. */
-export function loadHotLapRecords(trackKey) {
+export function loadHotLapRecords(trackKey, reverse = false) {
   try {
-    const raw = localStorage.getItem(storageKey(trackKey));
+    const raw = localStorage.getItem(storageKey(trackKey, reverse));
     if (!raw) return [];
     const data = JSON.parse(raw);
     if (data?.version !== HOT_LAP_SCHEMA_VERSION || !Array.isArray(data.records)) return [];
@@ -48,32 +51,35 @@ export function insertHotLapRecord(records, record) {
   return { records: rank === -1 ? records : capped, rank };
 }
 
-/** Every track that has at least one saved record: [{ trackKey, records }]. */
+/** Every leaderboard saved: [{ trackKey, reverse, records }], one per direction. */
 export function listHotLapTracks() {
   const out = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
-    const trackKey = key.slice(STORAGE_PREFIX.length);
-    const records = loadHotLapRecords(trackKey);
-    if (records.length > 0) out.push({ trackKey, records });
+    let rest = key.slice(STORAGE_PREFIX.length);
+    const reverse = rest.endsWith(REVERSE_SUFFIX);
+    if (reverse) rest = rest.slice(0, -REVERSE_SUFFIX.length);
+    const trackKey = rest;
+    const records = loadHotLapRecords(trackKey, reverse);
+    if (records.length > 0) out.push({ trackKey, reverse, records });
   }
   return out;
 }
 
-/** Delete all saved records for a track. */
-export function deleteHotLapRecords(trackKey) {
-  localStorage.removeItem(storageKey(trackKey));
+/** Delete all saved records for a track+direction. */
+export function deleteHotLapRecords(trackKey, reverse = false) {
+  localStorage.removeItem(storageKey(trackKey, reverse));
 }
 
 /**
  * Persist a track's records. Deferred off the caller's frame so the stringify
  * never hitches gameplay; retries once at half frame-resolution on quota error.
  */
-export function saveHotLapRecords(trackKey, records) {
+export function saveHotLapRecords(trackKey, records, reverse = false) {
   const payload = { version: HOT_LAP_SCHEMA_VERSION, records };
   setTimeout(() => {
-    const key = storageKey(trackKey);
+    const key = storageKey(trackKey, reverse);
     try {
       localStorage.setItem(key, JSON.stringify(payload));
     } catch {

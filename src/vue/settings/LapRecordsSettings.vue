@@ -9,10 +9,13 @@
     <div v-else class="w-full flex flex-col gap-3 items-stretch mb-8">
       <div
         v-for="t in tracks"
-        :key="t.trackKey"
+        :key="t.trackKey + (t.reverse ? '::rev' : '')"
         class="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-left"
       >
-        <div class="truncate font-bold uppercase tracking-wide text-white">{{ t.name }}</div>
+        <div class="flex items-center gap-2">
+          <span class="truncate font-bold uppercase tracking-wide text-white">{{ t.name }}</span>
+          <span v-if="t.reverse" class="shrink-0 rounded bg-[#ffe06622] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#ffe066]">Rev</span>
+        </div>
         <div class="mt-1 flex items-center justify-between gap-3">
           <div class="min-w-0 flex-1 truncate font-mono text-sm text-[#8ab4f8] tabular-nums">
             Best {{ formatLapTime(t.records[0].lapTimeMs) }}
@@ -39,7 +42,7 @@
       @cancel="pendingDelete = null"
     >
       This permanently removes all saved laps and the ghost for
-      <b>{{ pendingDelete.name }}</b>.
+      <b>{{ pendingDelete.label }}</b>.
     </ConfirmDialog>
   </div>
 </template>
@@ -59,12 +62,17 @@ function trackName(trackKey) {
 
 function refresh() {
   tracks.value = listHotLapTracks()
-    .map(t => ({ ...t, name: trackName(t.trackKey) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map(t => {
+      const name = trackName(t.trackKey);
+      return { ...t, name, label: name + (t.reverse ? ' (Reverse)' : '') };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 function onConfirmDelete() {
-  if (pendingDelete.value) deleteHotLapRecords(pendingDelete.value.trackKey);
+  if (pendingDelete.value) {
+    deleteHotLapRecords(pendingDelete.value.trackKey, pendingDelete.value.reverse);
+  }
   pendingDelete.value = null;
   refresh();
 }

@@ -60,6 +60,7 @@ export class MenuMode extends BaseMode {
         trackKey:   menuManager.selectedTrack,
         vehicleKey: menuManager.selectedVehicle,
         playerColorKey: menuManager.selectedPlayerColor,
+        reverse:    menuManager.selectedReverse,
       });
     };
 

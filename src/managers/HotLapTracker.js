@@ -31,6 +31,7 @@ export class HotLapTracker {
     checkpointManager,
     uiManager,
     trackKey,
+    reverse = false,
     vehicleKey = 'default_truck',
     vehicleDef = null,
     truckDims = null,
@@ -42,6 +43,7 @@ export class HotLapTracker {
     this.checkpointManager = checkpointManager;
     this.uiManager = uiManager;
     this.trackKey = trackKey;
+    this.reverse = reverse;
     this.vehicleKey = vehicleKey;
     this.vehicleDef = vehicleDef;
     this.truckDims = truckDims;
@@ -61,7 +63,7 @@ export class HotLapTracker {
 
     // Per-track leaderboard (fastest first). The ghost replays the fastest lap,
     // which may have been set in a different truck than the one driving now.
-    this.records = loadHotLapRecords(trackKey);
+    this.records = loadHotLapRecords(trackKey, reverse);
     const best = this.records[0] ?? null;
     this.bestLapMs = best?.lapTimeMs ?? null;
     if (best) {
@@ -169,7 +171,7 @@ export class HotLapTracker {
       });
       if (rank !== -1) {
         this.records = records;
-        saveHotLapRecords(this.trackKey, records);
+        saveHotLapRecords(this.trackKey, records, this.reverse);
       }
       isRecord = rank === 0;
 

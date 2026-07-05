@@ -480,7 +480,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
     maxSlopeDeg: 60,
     wallAbove: 4,
     wallBelow: 1,
-    padding: 0.15,
+    // Negative = inset: thinner slab that hugs the steep band (see manager).
+    padding: -0.5,
   });
   steepSlopeColliderManager.rebuild();
   checkpointManager.createCheckpoints();

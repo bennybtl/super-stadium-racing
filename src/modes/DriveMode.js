@@ -91,6 +91,23 @@ export class DriveMode extends BaseMode {
   }
 
   /**
+   * Resolve the start/finish gate from a (possibly reversed) CheckpointManager.
+   * The gate with the highest checkpointNumber is the finish; its heading already
+   * reflects the traversal direction (reverse rebuilds flip it), so spawning
+   * behind it works for both forward and reverse. Returns null if unnumbered.
+   */
+  getStartFinishCheckpoint(checkpointManager) {
+    const numbered = checkpointManager.checkpointMeshes
+      .map(cp => cp.feature)
+      .filter(f => f.checkpointNumber != null);
+    if (numbered.length === 0) return null;
+    return numbered.reduce(
+      (max, f) => (f.checkpointNumber > max.checkpointNumber ? f : max),
+      numbered[0],
+    );
+  }
+
+  /**
    * Spawn just behind a checkpoint heading by `backOffset` world units.
    */
   getSpawnBehindCheckpoint(track, checkpoint, truckHeight, backOffset = 6) {

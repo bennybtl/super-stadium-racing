@@ -6,8 +6,15 @@ const DEFAULTS = {
   maxSlopeDeg: 60,
   wallAbove: 4,
   wallBelow: 1,
-  padding: 0.15,
+  // Horizontal inset applied per-side to each blocker's footprint. Positive
+  // pads the box outward (fatter than the steep patch); negative insets it so
+  // the collider hugs the slope as a thinner slab. Clamped so a box never
+  // collapses below MIN_FOOTPRINT.
+  padding: -0.5,
 };
+
+// Smallest allowed blocker width/depth after padding is applied.
+const MIN_FOOTPRINT = 0.5;
 
 /**
  * Builds invisible static collider volumes over terrain regions whose local
@@ -122,8 +129,8 @@ export class SteepSlopeColliderManager {
 
     const bottom = minY - this.options.wallBelow;
     const top = maxY + this.options.wallAbove;
-    const width = (maxX - minX) + this.options.padding * 2;
-    const depth = (maxZ - minZ) + this.options.padding * 2;
+    const width = Math.max(MIN_FOOTPRINT, (maxX - minX) + this.options.padding * 2);
+    const depth = Math.max(MIN_FOOTPRINT, (maxZ - minZ) + this.options.padding * 2);
     const height = Math.max(1, top - bottom);
 
     const mesh = MeshBuilder.CreateBox(

@@ -110,6 +110,9 @@
             <div v-if="store.pitData.pitMode === 'singleRace'">
               <RaceConfig />
             </div>
+            <div v-else-if="store.pitData.pitMode === 'hotLap'" class="flex justify-center">
+              <ReverseToggle />
+            </div>
           </div>
 
           <div class="mb-4">
@@ -154,6 +157,7 @@ import SettingsMenu from './SettingsMenu.vue';
 import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
 import TruckSelection from './TruckSelection.vue';
 import RaceConfig from './RaceConfig.vue';
+import ReverseToggle from './ReverseToggle.vue';
 import TruckSetup from './TruckSetup.vue';
 
 const store = useMenuStore();
