@@ -292,6 +292,7 @@ export const useEditorStore = defineStore('editor', () => {
   function toggleGizmosVisible() { gizmosVisible.value = !gizmosVisible.value; _bridge.value?.toggleGizmosVisible(); }
   function quickTestTrack() { _bridge.value?.quickTestTrack(); }
   function rebuildScene() { _bridge.value?.rebuildScene?.(); }
+  function captureScreenshot() { _bridge.value?.captureTrackScreenshot?.(); }
   function openTrackSettings() { trackSettingsOpen.value = true; }
   function closeTrackSettings() { trackSettingsOpen.value = false; }
   function toggleTrackSettings() { trackSettingsOpen.value = !trackSettingsOpen.value; }
@@ -462,7 +463,7 @@ export const useEditorStore = defineStore('editor', () => {
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
     toggleSnap, cycleSnapSize, quickTestTrack,
-    rebuildScene,
+    rebuildScene, captureScreenshot,
     openAddMenu, closeAddMenu, toggleAddMenu,
     setObstacleType, openAiPath, closeAiPath,
     aiPathWear,

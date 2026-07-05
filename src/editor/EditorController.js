@@ -1,4 +1,4 @@
-import { Vector3, PointerEventTypes } from "@babylonjs/core";
+import { Vector3, PointerEventTypes, Tools } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { MeshGridEditor } from "./MeshGridEditor.js";
@@ -1716,6 +1716,42 @@ export class EditorController {
 
   toggleGizmosVisible() {
     this.setGizmosVisible(!this.gizmosVisible);
+  }
+
+  /**
+   * Frame the whole track from an overhead tilt (matching the in-game
+   * "screenshot" camera, scaled to the track's size), hide the editor gizmos,
+   * and download a PNG of the clean track. Restores the camera + gizmos after.
+   */
+  async captureTrackScreenshot() {
+    const engine = this.scene.getEngine();
+    const camera = this.camera;
+
+    const savedPos = camera.position.clone();
+    const savedTarget = camera.getTarget().clone();
+    const savedGizmos = this.gizmosVisible;
+
+    this.setGizmosVisible(false);
+
+    // Overhead tilt sized to the track (same framing ratio as the in-game
+    // screenshot camera: ~0.78× up, ~0.6× back relative to the largest span).
+    const maxDim = Math.max(this.currentTrack?.width ?? 160, this.currentTrack?.depth ?? 160);
+    camera.position.set(0, maxDim * 0.78, -maxDim * 0.80);
+    camera.setTarget(new Vector3(0, 0.5, -13));
+
+    const name = this.currentTrack?.id || this.currentTrack?.name || 'track';
+    try {
+      await Tools.CreateScreenshotUsingRenderTargetAsync(
+        engine, camera, { width: 1920, height: 1200 },
+        'image/png', 4, true, `${name}.png`,
+      );
+    } catch (e) {
+      console.warn('[Editor] Screenshot failed:', e);
+    } finally {
+      camera.position.copyFrom(savedPos);
+      camera.setTarget(savedTarget);
+      this.setGizmosVisible(savedGizmos);
+    }
   }
 
   setGizmosVisible(visible) {

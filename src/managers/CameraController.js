@@ -32,10 +32,8 @@ export class CameraController {
     this.freeCameraMaxDistance = 200;
 
     // Screenshot camera fixed position
-    this.screenshotCameraPosition = new Vector3(7.5, 124, -105);
-    this.screenshotCameraTarget = new Vector3(7.5, 0.5, -17);
-
-    // Smoothed heading for chase cam (avoids jarring snaps)
+    this.screenshotCameraPosition = new Vector3(0, 124, -110);
+    this.screenshotCameraTarget = new Vector3(0, 0.5, -13);
   }
 
   toggleMode() {
