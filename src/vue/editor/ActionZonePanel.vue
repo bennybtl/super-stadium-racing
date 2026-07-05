@@ -44,6 +44,19 @@
       <div class="text-[10px] text-slate-400 mb-3">Multiplies top speed &amp; acceleration. Duration is how long the boost lingers after leaving the zone.</div>
     </template>
 
+    <template v-if="editor.actionZone.zoneType === 'slowZone'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Slow Strength</span>
+        <span>{{ editor.actionZone.slowStrength * 10 }}%</span>
+      </div>
+      <input
+        type="range"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        min="1" max="9.5" step="0.5"
+        :value="editor.actionZone.slowStrength"
+        @input="editor.setFeatureProp('actionZone', 'slowStrength', +$event.target.value)"
+      />
+    </template>
     <!-- Zone shape -->
     <div class="text-[12px] mb-1">Shape</div>
     <select

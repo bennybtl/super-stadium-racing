@@ -172,6 +172,10 @@ export class ActionZoneEditor {
       feature.boostDuration = feature.boostDuration ?? 1.5;
     }
 
+    if (feature.zoneType === 'slowZone') {
+      feature.slowStrength = feature.slowStrength ?? 3;
+    }
+
     if (feature.shape === 'polygon') {
       if (!Array.isArray(feature.points) || feature.points.length < POLY_POINT_MIN) {
         const cx = feature.x ?? 0;
@@ -460,7 +464,7 @@ export class ActionZoneEditor {
     e.deselectAll();
     this.select(zoneData);
     e.hideAddMenu();
-    console.log('[ActionZoneEditor] Added action zone at', newX.toFixed(1), newZ.toFixed(1));
+    console.debug('[ActionZoneEditor] Added action zone at', newX.toFixed(1), newZ.toFixed(1));
   }
 
   deleteSelected() {
@@ -564,6 +568,7 @@ export class ActionZoneEditor {
     s.actionZone.selectedPointIndex = zoneData.feature.shape === 'polygon' ? this._selectedPointIndex : -1;
     s.actionZone.boostStrength = zoneData.feature.boostStrength ?? 1.5;
     s.actionZone.boostDuration = zoneData.feature.boostDuration ?? 1.5;
+    s.actionZone.slowStrength = zoneData.feature.slowStrength ?? 3;
     s.selectedType = 'actionZone';
   }
 
@@ -600,6 +605,13 @@ export class ActionZoneEditor {
   changeBoostDuration(val) {
     if (!this._selected) return;
     this._selected.feature.boostDuration = val;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
+  }
+
+  changeSlowStrength(val) {
+    if (!this._selected) return;
+    this._selected.feature.slowStrength = val;
     this._showProperties(this._selected);
     this.editor.saveSnapshot(true);
   }

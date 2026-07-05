@@ -3,6 +3,7 @@ import { RaceMode } from "./RaceMode.js";
 import { EditorMode } from "./EditorMode.js";
 import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
+import { HotLapMode } from "./HotLapMode.js";
 import { incrementUpgradeLevel, getUpgradeCatalog } from "../managers/UpgradeStorage.js";
 
 /**
@@ -97,6 +98,10 @@ export class ModeController {
 
   goToEditor(config) {
     return this.switchTo(EditorMode, config);
+  }
+
+  goToHotLap(config) {
+    return this.switchTo(HotLapMode, config);
   }
 
   goToTest(config) {

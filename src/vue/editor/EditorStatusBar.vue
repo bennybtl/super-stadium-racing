@@ -37,6 +37,13 @@
         >
           {{ editor.gizmosVisible ? 'GIZMOS ON' : 'GIZMOS OFF' }}
         </button>
+        <button
+          class="rounded-full border border-slate-700 bg-white/5 text-slate-400 hover:text-white text-[12px] font-sans px-3 py-1 whitespace-nowrap transition duration-150 ease-in-out hover:bg-white/10"
+          @click="editor.captureScreenshot()"
+          title="Save a top-down PNG of the track (gizmos hidden)"
+        >
+          <i class="bi bi-camera mr-1"></i>Screenshot
+        </button>
       </div>
 
     </div>

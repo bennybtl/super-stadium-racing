@@ -4,7 +4,10 @@
     title="Obstacle"
     @close="editor.featureAction('closeObstacle')"
   >
-    <div class="text-[10px] text-slate-400 mb-3">Right-click terrain to place copy of. Q/E rotates the selected obstacle.</div>
+    <div class="text-[10px] text-slate-400 mb-3">
+      Right-click terrain to place copy of selected obstacle.
+      <br>WASD to move · QE to rotate · Del to delete
+    </div>
 
     <div class="text-[12px] mb-1">Obstacle Type</div>
     <select
@@ -72,7 +75,7 @@
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
         @click="editor.featureAction('resetObstacleDefaults')"
       >
-        Reset Defaults
+        Reset
       </button>
     </div>
 

@@ -33,6 +33,7 @@
         <!-- ── Start ── -->
         <template v-if="store.screen === 'start'">
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('practice')">Practice</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hotLap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('singleRace')">Single Race</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
@@ -98,19 +99,25 @@
     <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70"></div>
 
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
-        <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
+      <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
 
-          <div class="grid gap-3 text-left text-sm text-slate-300 mb-4">
-            <TrackSelectionCarousel
-              :tracks="store.trackList"
-              :modelValue="store.selectedTrack"
-              @update:modelValue="store.setSelectedTrack($event)"
-            />
-            <div v-if="store.pitData.pitMode !== 'practice'">
-              <RaceConfig />
-            </div>
+        <div class="grid gap-3 text-left text-sm text-slate-300 mb-1" v-if="setupStep == 'selectTrack'">
+          <TrackSelectionCarousel
+            :tracks="store.trackList"
+            :modelValue="store.selectedTrack"
+            @update:modelValue="store.setSelectedTrack($event)"
+          />
+          <div class="flex justify-center">
+            <TrackLapRecords :trackKey="store.selectedTrack" />
           </div>
-
+          <div v-if="store.pitData.pitMode === 'singleRace'">
+            <RaceConfig />
+          </div>
+          <div v-else-if="store.pitData.pitMode === 'hotLap'" class="flex justify-center">
+            <ReverseToggle />
+          </div>
+        </div>
+        <template v-if="setupStep == 'selectTruck'">
           <div class="mb-4">
             <TruckSelection
               :vehicles="store.vehicleList"
@@ -124,23 +131,34 @@
           <div class="mb-4">
             <TruckSetup />
           </div>
+        </template>
+        
+        <div class="flex flex-row gap-auto" v-if="setupStep === 'selectTruck'">
+          <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
 
-          <div class="flex flex-row gap-auto">
-            <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
-            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
-              Start Practice
-            </button>
-            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow " v-else @click="store.startSingleRace()">
-              Start Race
-            </button>
-          </div>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" @click="setupStep = 'selectTrack'">
+            Select Track
+          </button>
+        </div>
+        <div class="flex flex-row gap-auto" v-if="setupStep === 'selectTrack'">
+          <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="setupStep = 'selectTruck'">Back</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
+            Start Practice
+          </button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-else-if="store.pitData.pitMode === 'hotLap'" @click="store.startHotLapMode()">
+            Start Hot Lap
+          </button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-else @click="store.startSingleRace()">
+            Start Race
+          </button>
         </div>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useMenuStore } from './store.js';
 import { basicColors } from '../constants.js';
 import { loadControlsSettings } from '../settingsStorage.js';
@@ -150,10 +168,14 @@ import SettingsMenu from './SettingsMenu.vue';
 import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
 import TruckSelection from './TruckSelection.vue';
 import RaceConfig from './RaceConfig.vue';
+import ReverseToggle from './ReverseToggle.vue';
+import TrackLapRecords from './TrackLapRecords.vue';
 import TruckSetup from './TruckSetup.vue';
 
 const store = useMenuStore();
 const showSafariWarning = isSafari();
+const setupStep = ref('selectTruck');
+
 const colorOptions = Object.entries(basicColors).map(([key, value]) => ({ key, value }));
 function handleKeyDown(event) {
   if (event.code === 'Escape' && store.pitData) {

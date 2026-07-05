@@ -30,6 +30,11 @@ export class TruckBody {
     this.scene   = scene;
     this.shadows = shadows;
     this._disableDynamicShadows = options?.disableDynamicShadows === true;
+    // Ghost mode: render the whole puppet as a translucent, unlit blue replay
+    // truck (used by HotLapMode). Implies no dynamic shadows and no contact blob.
+    this._ghost = options?.ghost === true;
+    this._ghostAlpha = options?.ghostAlpha ?? 0.6;
+    if (this._ghost) this._disableDynamicShadows = true;
     this.vehicleDef = vehicleDef;
     this._parentHalfHeight = parent.getBoundingInfo()?.boundingBox?.extendSize?.y ?? 0.4;
 
@@ -129,7 +134,8 @@ export class TruckBody {
     this._sampledWheelBaseY = this._wheels.map(w => w.baseLocalY - this._wheelMaxDrop);
 
     // Add a simple blob shadow so the truck always reads as grounded.
-    this._createContactShadow();
+    // (Ghost replays skip it — a dark blob under a translucent truck looks off.)
+    if (!this._ghost) this._createContactShadow();
   }
 
   _createContactShadow() {
@@ -450,8 +456,17 @@ export class TruckBody {
     mat.diffuseColor  = color;
     mat.specularColor = options.specularColor ?? new Color3(0.9, 0.9, 0.9);
     mat.specularPower = options.specularPower ?? 32;
+    if (this._ghost) {
+      // Uniform translucent blue, unlit so it reads clearly as a ghost.
+      mat.diffuseColor  = new Color3(0.45, 0.8, 1);
+      mat.emissiveColor = new Color3(0.12, 0.28, 0.45);
+      mat.specularColor = new Color3(0, 0, 0);
+      mat.alpha = this._ghostAlpha;
+      mat.disableLighting = true;
+    }
     mesh.material     = mat;
-    mesh.receiveShadows = !this._disableDynamicShadows;
+    mesh.receiveShadows = !this._disableDynamicShadows && !this._ghost;
+    if (this._ghost) mesh.isPickable = false;
     if (!this._disableDynamicShadows) {
       this.shadows?.addShadowCaster(mesh);
     }

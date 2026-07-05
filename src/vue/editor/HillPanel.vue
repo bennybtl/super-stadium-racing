@@ -9,7 +9,7 @@
 
   <!-- Width Radius -->
     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Width Radius</span>
+      <span>Width</span>
       <span>{{ editor.hill.radiusX.toFixed(1) }}</span>
     </div>
     <input
@@ -21,7 +21,7 @@
 
     <!-- Depth Radius -->
     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Depth Radius</span>
+      <span>Depth</span>
       <span>{{ editor.hill.radiusZ.toFixed(1) }}</span>
     </div>
     <input
@@ -54,20 +54,6 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <!-- Water Level -->
-     <template v-if="editor.hill.terrainType == 'water'">
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Water Level</span>
-        <span>{{ editor.hill.waterLevelOffset.toFixed(1) }}</span>
-      </div>
-      <input
-        type="range" min="0" max="15" step="0.1"
-        :value="editor.hill.waterLevelOffset"
-        @input="editor.setFeatureProp('hill', 'waterLevelOffset', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
-    </template>
-
       <!-- Terrain Type -->
     <TerrainTypeSelect
       :model-value="editor.hill.terrainType"
@@ -85,6 +71,20 @@
         :value="editor.hill.blendWidth"
         @input="editor.setFeatureProp('hill', 'blendWidth', +$event.target.value)"
         class="w-full accent-[var(--accent)] cursor-pointer"
+      />
+    </template>
+
+    <!-- Water Level -->
+     <template v-if="editor.hill.terrainType == 'water'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Water Level</span>
+        <span>{{ editor.hill.waterLevelOffset.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="15" step="0.1"
+        :value="editor.hill.waterLevelOffset"
+        @input="editor.setFeatureProp('hill', 'waterLevelOffset', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
 

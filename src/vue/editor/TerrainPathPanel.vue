@@ -43,18 +43,6 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <!-- Edge blend -->
-     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Edge Blend</span>
-      <span>{{ editor.terrainPath.blendWidth.toFixed(1) }}</span>
-    </div>
-    <input
-      type="range" min="0" max="20" step="0.5"
-      :value="editor.terrainPath.blendWidth"
-      @input="editor.setFeatureProp('terrainPath', 'blendWidth', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-
     <!-- Corner radius -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Corner Radius</span>
@@ -82,6 +70,20 @@
         class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
       />
     </div>
+
+    <!-- Edge blend -->
+    <template v-if="editor.terrainPath.terrainType !== 'none'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Edge Blend</span>
+        <span>{{ editor.terrainPath.blendWidth.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="20" step="0.5"
+        :value="editor.terrainPath.blendWidth"
+        @input="editor.setFeatureProp('terrainPath', 'blendWidth', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
 
     <hr class="border-t border-slate-700 my-4" />
 

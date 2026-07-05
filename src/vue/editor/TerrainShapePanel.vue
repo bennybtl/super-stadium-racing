@@ -19,7 +19,6 @@
     </select>
 
     <!-- Geometry controls -->
-    <template v-if="true">
       <div class="flex justify-between mb-1 text-[12px]">
         <span>Width</span>
         <span>{{ editor.terrainShape.width.toFixed(1) }}</span>
@@ -52,8 +51,13 @@
         @input="editor.setFeatureProp('terrainShape', 'rotation', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
+    <TerrainTypeSelect
+      :model-value="editor.terrainShape.terrainType"
+      @update:modelValue="v => editor.setFeatureProp('terrainShape', 'terrainType', v)"
+    />
 
-      <div class="flex justify-between mb-1 text-[12px]">
+    <template v-if="editor.terrainShape.terrainType != 'none'">
+      <div class="flex justify-between mb-3 text-[12px]">
         <span>Edge Blend</span>
         <span>{{ editor.terrainShape.blendWidth.toFixed(1) }}</span>
       </div>
@@ -64,11 +68,6 @@
         class="w-full accent-[var(--accent)] cursor-pointer"
       />
     </template>
-
-    <TerrainTypeSelect
-      :model-value="editor.terrainShape.terrainType"
-      @update:modelValue="v => editor.setFeatureProp('terrainShape', 'terrainType', v)"
-    />
 
     <hr class="border-t border-slate-700 mb-3" />
 

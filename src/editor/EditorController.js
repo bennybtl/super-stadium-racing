@@ -1,4 +1,4 @@
-import { Vector3, PointerEventTypes } from "@babylonjs/core";
+import { Vector3, PointerEventTypes, Tools } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { MeshGridEditor } from "./MeshGridEditor.js";
@@ -554,14 +554,14 @@ export class EditorController {
     if (this._undoStack.length === 0) return;
     this._redoStack.push(this._serializeSnapshot());
     this._applySnapshot(this._undoStack.pop());
-    console.log('[Undo] stack remaining:', this._undoStack.length);
+    console.debug('[Undo] stack remaining:', this._undoStack.length);
   }
 
   redo() {
     if (this._redoStack.length === 0) return;
     this._undoStack.push(this._serializeSnapshot());
     this._applySnapshot(this._redoStack.pop());
-    console.log('[Redo] stack remaining:', this._redoStack.length);
+    console.debug('[Redo] stack remaining:', this._redoStack.length);
   }
 
   handleKeyDown(event) {
@@ -1521,6 +1521,7 @@ export class EditorController {
   changeActionZoneShape(val)      { this.actionZoneEditor.changeShape(val); }
   changeActionZoneBoostStrength(val) { this.actionZoneEditor.changeBoostStrength(val); }
   changeActionZoneBoostDuration(val) { this.actionZoneEditor.changeBoostDuration(val); }
+  changeActionZoneSlowStrength(val) { this.actionZoneEditor.changeSlowStrength(val); }
   insertActionZonePoint()         { this.actionZoneEditor.insertPoint(); }
   deleteActionZonePoint()         { this.actionZoneEditor.deletePoint(); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }
@@ -1717,6 +1718,42 @@ export class EditorController {
     this.setGizmosVisible(!this.gizmosVisible);
   }
 
+  /**
+   * Frame the whole track from an overhead tilt (matching the in-game
+   * "screenshot" camera, scaled to the track's size), hide the editor gizmos,
+   * and download a PNG of the clean track. Restores the camera + gizmos after.
+   */
+  async captureTrackScreenshot() {
+    const engine = this.scene.getEngine();
+    const camera = this.camera;
+
+    const savedPos = camera.position.clone();
+    const savedTarget = camera.getTarget().clone();
+    const savedGizmos = this.gizmosVisible;
+
+    this.setGizmosVisible(false);
+
+    // Overhead tilt sized to the track (same framing ratio as the in-game
+    // screenshot camera: ~0.78× up, ~0.6× back relative to the largest span).
+    const maxDim = Math.max(this.currentTrack?.width ?? 160, this.currentTrack?.depth ?? 160);
+    camera.position.set(0, maxDim * 0.78, -maxDim * 0.80);
+    camera.setTarget(new Vector3(0, 0.5, -13));
+
+    const name = this.currentTrack?.id || this.currentTrack?.name || 'track';
+    try {
+      await Tools.CreateScreenshotUsingRenderTargetAsync(
+        engine, camera, { width: 1920, height: 1200 },
+        'image/png', 4, true, `${name}.png`,
+      );
+    } catch (e) {
+      console.warn('[Editor] Screenshot failed:', e);
+    } finally {
+      camera.position.copyFrom(savedPos);
+      camera.setTarget(savedTarget);
+      this.setGizmosVisible(savedGizmos);
+    }
+  }
+
   setGizmosVisible(visible) {
     this.gizmosVisible = visible;
     if (this._editorStore) this._editorStore.gizmosVisible = visible;
@@ -1800,6 +1837,30 @@ export class EditorController {
         if (h.mesh) h.mesh.isVisible = visible;
       }
       if (this.aiPathEditor.lineMesh) this.aiPathEditor.lineMesh.isVisible = visible;
+      // Alternate/branch path lines (teal) live in a separate list.
+      for (const lm of this.aiPathEditor.lineMeshes || []) lm.isVisible = visible;
+    }
+
+    if (this.bridgeMeshEditor) {
+      if (visible) {
+        // Restore selection-aware visibility (corners + selected points show).
+        for (const l of this.bridgeMeshEditor.lineSystems || []) {
+          if (l.mesh) l.mesh.isVisible = true;
+        }
+        for (const c of this.bridgeMeshEditor.centerGizmos || []) {
+          this.bridgeMeshEditor._updateVisibilityForFeature?.(c.featureRef);
+        }
+      } else {
+        for (const p of this.bridgeMeshEditor.pointMeshes || []) {
+          if (p.mesh) p.mesh.isVisible = false;
+        }
+        for (const c of this.bridgeMeshEditor.centerGizmos || []) {
+          if (c.mesh) c.mesh.isVisible = false;
+        }
+        for (const l of this.bridgeMeshEditor.lineSystems || []) {
+          if (l.mesh) l.mesh.isVisible = false;
+        }
+      }
     }
 
     if (this.terrainPathEditor) {

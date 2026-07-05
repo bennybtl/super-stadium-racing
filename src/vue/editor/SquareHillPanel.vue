@@ -38,21 +38,9 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <!-- Transition -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Transition</span>
-      <span>{{ editor.squareHill.transition.toFixed(1) }}</span>
-    </div>
-    <input
-      type="range" min="0.5" max="15" step="0.5"
-      :value="editor.squareHill.transition"
-      @input="editor.setFeatureProp('squareHill', 'transition', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-
     <!-- Angle -->
     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Angle</span>
+      <span>Rotation</span>
       <span>{{ editor.squareHill.angle.toFixed(0) }}°</span>
     </div>
     <input
@@ -99,18 +87,18 @@
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
-    <template v-if="editor.squareHill.terrainType == 'water'" >
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Water Level</span>
-        <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
-      </div>
-      <input
-        type="range" min="0" max="15" step="0.5"
-        :value="editor.squareHill.waterLevelOffset"
-        @input="editor.setFeatureProp('squareHill', 'waterLevelOffset', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
-    </template>
+
+    <!-- Smoothing -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Smoothing</span>
+      <span>{{ editor.squareHill.transition.toFixed(1) }}</span>
+    </div>
+    <input
+      type="range" min="0.5" max="15" step="0.5"
+      :value="editor.squareHill.transition"
+      @input="editor.setFeatureProp('squareHill', 'transition', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
 
     <TerrainTypeSelect
       :model-value="editor.squareHill.terrainType"
@@ -131,6 +119,18 @@
       />
     </template>
 
+    <template v-if="editor.squareHill.terrainType == 'water'" >
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Water Level</span>
+        <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="15" step="0.5"
+        :value="editor.squareHill.waterLevelOffset"
+        @input="editor.setFeatureProp('squareHill', 'waterLevelOffset', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->

@@ -1,19 +1,24 @@
 <template>
   <EditorPanel
     v-if="editor.selectedType === 'meshGrid'"
-    title="Mesh Grid"
+    title="Terrain Mesh"
     default-right="20px"
     default-top="80px"
     @close="editor.featureAction('closeMeshGrid')"
   >
-    <!-- Point Height -->
+
+  <div class="text-[10px] text-slate-400 mb-3">
+    Click a sphere to select it · scroll wheel · ↑ / ↓ · [ / ] to nudge
+  </div>
+
+  <!-- Point Height -->
     <div class="text-[12px] mb-1">Point Height</div>
     <input
       class="mg-height-input"
       type="number"
       min="-30"
       max="30"
-      step="0.2"
+      :step="editor.meshGrid.stepSize"
       :value="editor.meshGrid.hasSelection ? editor.meshGrid.pointHeight.toFixed(2) : ''"
       :placeholder="editor.meshGrid.hasSelection ? '' : '— select a point —'"
       :disabled="!editor.meshGrid.hasSelection"
@@ -36,24 +41,9 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <div class="text-[10px] text-slate-400 mb-3">
-      Click a sphere to select it · scroll wheel · ↑ / ↓ · [ / ] to nudge
-    </div>
-
     <hr class="border-t border-slate-700 my-4" />
     <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Grid Settings</div>
 
-    <!-- Density -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Density (cols × rows)</span>
-      <span>{{ editor.meshGrid.cols }} × {{ editor.meshGrid.rows }}</span>
-    </div>
-    <input
-      type="range" min="3" max="25" step="2"
-      :value="editor.meshGrid.cols"
-      @input="editor.setMeshGridDensity(+$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
 
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -78,6 +68,7 @@
       @input="editor.setMeshGridDepth(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
+
     <!-- Rotation (live) -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Rotation</span>
@@ -87,6 +78,18 @@
       type="range" min="0" max="360" step="1"
       :value="editor.meshGrid.angle"
       @input="editor.setFeatureProp('meshGrid', 'angle', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
+    <!-- Density -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Density (cols × rows)</span>
+      <span>{{ editor.meshGrid.cols }} × {{ editor.meshGrid.rows }}</span>
+    </div>
+    <input
+      type="range" min="3" max="25" step="2"
+      :value="editor.meshGrid.cols"
+      @input="editor.setMeshGridDensity(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
@@ -105,21 +108,9 @@
       <div class="text-[10px] text-slate-400 mb-3">Width of the band where this region blends into surrounding terrain. 0 = hard edge.</div>
     </template>
 
-    <!-- Smoothing (live) -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Smoothing</span>
-      <span>{{ editor.meshGrid.smoothing.toFixed(2) }}</span>
-    </div>
-    <input
-      type="range" min="0" max="1" step="0.05"
-      :value="editor.meshGrid.smoothing"
-      @input="editor.setFeatureProp('meshGrid', 'smoothing', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-8 cursor-pointer"
-    />
-
-    <div class="flex gap-2">
+    <div class="flex gap-2 mb-6">
       <button 
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="flex-2 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.featureAction('flattenMeshGrid')"
       >
         Flatten
@@ -134,6 +125,19 @@
       </button>
     </div>
 
+
+    <!-- Smoothing (live) -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Smoothing</span>
+      <span>{{ editor.meshGrid.smoothing.toFixed(2) }}</span>
+    </div>
+    <input
+      type="range" min="0" max="1" step="0.05"
+      :value="editor.meshGrid.smoothing"
+      @input="editor.setFeatureProp('meshGrid', 'smoothing', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-1 cursor-pointer"
+    />
+  
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->

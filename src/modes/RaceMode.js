@@ -14,6 +14,7 @@ import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
+import { RacePositionLabels } from "../managers/RacePositionLabels.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -33,6 +34,7 @@ export class RaceMode extends DriveMode {
     this.audioManager = null;
     this.truckAudioController = null;
     this.telemetryRecorder = null;
+    this.positionLabels = null;
   }
 
   async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false }) {
@@ -172,7 +174,7 @@ export class RaceMode extends DriveMode {
         .forEach(td => {
           td.gameState.finishRace(null); // mark finished without a time
           finishOrder.push(td);
-          console.log(`[RaceMode] DNF: ${td.name}`);
+          console.debug(`[RaceMode] DNF: ${td.name}`);
         });
       triggerRaceEnd();
     };
@@ -296,6 +298,11 @@ export class RaceMode extends DriveMode {
 
     const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
+
+    // -- Floating 1st/2nd/3rd badges above the leading trucks --
+    const positionLabels = new RacePositionLabels(scene);
+    this.positionLabels = positionLabels;
+    trucks.forEach(td => positionLabels.attach(td));
 
     // -- Truck collision --
     const truckCollisionManager = new TruckCollisionManager();
@@ -717,9 +724,9 @@ export class RaceMode extends DriveMode {
             else checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
             uiManager.updateLaps(lapCount, totalLaps);
             uiManager.updateCheckpoints(0);
-            console.log(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);
+            console.debug(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);
           } else {
-            console.log(
+            console.debug(
               `[${truckData.name}] Completed lap ${lapCount} in ${(lapTime / 1000).toFixed(2)}s!`
             );
           }
@@ -737,19 +744,19 @@ export class RaceMode extends DriveMode {
             // For 1-lap races the "start final lap" trigger never fires, so start
             // the DNF timer here on first finish instead.
             if (dnfTimer === null && !raceEnded && finishOrder.length < trucks.length) {
-              console.log(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
+              console.debug(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
               setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
             }
 
             if (truckData.isPlayer) {
-              console.log("\n=== RACE FINISHED ===");
-              console.log(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
-              console.log("Lap Times:");
+              console.debug("\n=== RACE FINISHED ===");
+              console.debug(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
+              console.debug("Lap Times:");
               truckData.gameState.lapTimes.forEach((time, i) => {
-                console.log(`  Lap ${i + 1}: ${(time / 1000).toFixed(2)}s`);
+                console.debug(`  Lap ${i + 1}: ${(time / 1000).toFixed(2)}s`);
               });
             } else {
-              console.log(
+              console.debug(
                 `[${truckData.name}] Finished race! Total time: ${(totalTime / 1000).toFixed(2)}s`
               );
             }
@@ -761,6 +768,11 @@ export class RaceMode extends DriveMode {
           }
         }
       }));
+
+      frameProfiler.measure('positions', () => {
+        if (raceStarted && !raceEnded) positionLabels.update(trucks, checkpointManager);
+        else positionLabels.hideAll();
+      });
 
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt));
       frameRenderStartMs = performance.now();
@@ -777,6 +789,10 @@ export class RaceMode extends DriveMode {
     this._countdownTimeouts.forEach(clearTimeout);
     this._countdownTimeouts = [];
     if (this._dnfTimer) { clearTimeout(this._dnfTimer); this._dnfTimer = null; }
+    if (this.positionLabels) {
+      this.positionLabels.dispose();
+      this.positionLabels = null;
+    }
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;

@@ -211,6 +211,7 @@ export class MenuManager {
 
   onPurchaseUpgrade(_id) {}
   onStartSingleRace()    {}
+  onStartHotLap()        {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────
 

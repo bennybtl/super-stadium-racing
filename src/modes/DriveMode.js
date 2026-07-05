@@ -50,7 +50,7 @@ export class DriveMode extends BaseMode {
     if (!this.cameraController) return;
     this._photoModeActive = !this._photoModeActive;
     this.cameraController.toggleFreeMode();
-    console.log(
+    console.debug(
       `[DriveMode] Screenshot camera ${this._photoModeActive ? 'enabled' : 'disabled'} - WASD to move, +/- to zoom, P to toggle`
     );
   }
@@ -88,6 +88,23 @@ export class DriveMode extends BaseMode {
     const startFinishCp = checkpointFeatures[maxCheckpointNumber - 1] || null;
 
     return { checkpointFeatures, maxCheckpointNumber, startFinishCp };
+  }
+
+  /**
+   * Resolve the start/finish gate from a (possibly reversed) CheckpointManager.
+   * The gate with the highest checkpointNumber is the finish; its heading already
+   * reflects the traversal direction (reverse rebuilds flip it), so spawning
+   * behind it works for both forward and reverse. Returns null if unnumbered.
+   */
+  getStartFinishCheckpoint(checkpointManager) {
+    const numbered = checkpointManager.checkpointMeshes
+      .map(cp => cp.feature)
+      .filter(f => f.checkpointNumber != null);
+    if (numbered.length === 0) return null;
+    return numbered.reduce(
+      (max, f) => (f.checkpointNumber > max.checkpointNumber ? f : max),
+      numbered[0],
+    );
   }
 
   /**
@@ -176,12 +193,13 @@ export class DriveMode extends BaseMode {
       if (!truck?.mesh || !truck?.state) continue;
 
       const pos = truck.mesh.position;
-      const inSlow = slowZones.some(z => this.isPointInActionZone(pos.x, pos.z, z));
+      const zone = slowZones.find(z => this.isPointInActionZone(pos.x, pos.z, z));
 
-      truck.state.slowZoneActive = inSlow;
-      if (!inSlow) continue;
+      truck.state.slowZoneActive = zone;
+      if (!zone) continue;
 
-      const limit = truck.state.slowZoneMaxSpeed;
+      const limit = truck.state.slowZoneMaxSpeed * ((zone.slowStrength ?? 3) / 10);
+
       if (truck.state.velocity.length() > limit) {
         truck.state.velocity.normalize().scaleInPlace(limit);
       }

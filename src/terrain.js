@@ -24,7 +24,7 @@ export const TERRAIN_TYPES = {
     diffuseTexture: 'textures/packed_dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.5,
-    dragMultiplier: 0.8,
+    dragMultiplier: 0.5,
     roughness: 0.1,          // Very slight — compacted surface
     normalMap: 'normals/cloud_h-normal.png',
     normalMapIntensity: 0.8, // Moderate dirt texture
@@ -32,12 +32,12 @@ export const TERRAIN_TYPES = {
   },
   LOAMY_DIRT: {
     name: "loamy_dirt",
-    gripMultiplier: 0.5,    // Slides more
+    gripMultiplier: 0.75,    // Slides much more
     color: TERRAIN_COLORS.loamy_dirt,
     diffuseTexture: 'textures/loamy-soil.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.7,
-    dragMultiplier: 1.2,
+    dragMultiplier: 1.1,
     roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: 'normals/6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
@@ -50,7 +50,7 @@ export const TERRAIN_TYPES = {
     diffuseTexture: 'textures/dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 30,
     diffuseTextureOpacity: 0.6,
-    dragMultiplier: 0.9,
+    dragMultiplier: 0.7,
     roughness: 0.15,         // Noticeable ruts and loos6e clumps
     normalMap: 'normals/6481-normal.jpg',
     normalMapIntensity: 1.0, // Full intensity — rough loose surface
@@ -92,7 +92,7 @@ export const TERRAIN_TYPES = {
     name: "rocky",
     gripMultiplier: 1.0,     // Unpredictable rocky surface
     color: TERRAIN_COLORS.rocky, // Dark reddish-brown rock
-    dragMultiplier: 2.5,     // Slowing — holes catch and drag the truck
+    dragMultiplier: 0.8,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
     normalMap: 'normals/rocky.normal.jpg',
     normalMapIntensity: 1.5, // Strong rocky surface detail

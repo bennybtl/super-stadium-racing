@@ -17,7 +17,7 @@
 @layer components {
   .menu-panel {
     width: min(90vw, 980px);
-    max-height: 80vh;
+    max-height: 90vh;
     border-radius: 16px;
     overflow-y: auto;
     overflow-x: hidden;

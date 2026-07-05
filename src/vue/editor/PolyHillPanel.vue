@@ -9,7 +9,7 @@
 
     <!-- Radius -->
     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Radius</span>
+      <span>Corner Radius</span>
       <span>{{ radiusDisplay }}</span>
     </div>
     <input
@@ -41,7 +41,7 @@
         :disabled="!editor.polyHill.hasSelection"
         @click="editor.featureAction('insertPolyHillPoint')"
       >
-        Insert Point
+        Insert After
       </button>
     </div>
 
@@ -75,7 +75,7 @@
     />
 
     <!-- Closed toggle -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="flex justify-between mb-3 text-[12px]">
       <span>Closed Loop</span>
       <input
         type="checkbox"
@@ -87,7 +87,7 @@
 
     <!-- Filled toggle -->
      <template v-if="editor.polyHill.closed">
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="flex justify-between mb-3 text-[12px]">
         <span>Filled</span>
         <input
           type="checkbox"

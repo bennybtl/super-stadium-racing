@@ -63,6 +63,10 @@ export class UIManager {
     this._race.telemetryRecording = false;
     this._race.telemetryHasData   = false;
     this._race.truckStatus = [];
+    this._race.hotLapMode = false;
+    this._race.hotLapBestMs = null;
+    this._race.hotLapGhostVisible = false;
+    this._race.hotLapFlashNonce = 0;
     this._race.setTelemetryBridge(null);
   }
 }

@@ -5,6 +5,7 @@
   "hidden": false,
   "dirtChunks": false,
   "name": "RC Pro 4",
+  "image": "rc_pro_4.png",
   "width": 160,
   "depth": 180,
   "defaultTerrainType": "grass",

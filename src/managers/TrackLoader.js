@@ -82,12 +82,12 @@ export class TrackLoader {
     // First check if there's a saved version in localStorage
     const savedTrack = this.loadTrackFromStorage(key);
     if (savedTrack) {
-      console.log(`[TrackLoader] Loaded track ${key} from localStorage with ${savedTrack.features.length} features`);
+      console.debug(`[TrackLoader] Loaded track ${key} from localStorage with ${savedTrack.features.length} features`);
       return savedTrack;
     }
     
     // Otherwise return the default track
-    console.log(`[TrackLoader] No localStorage version found for ${key}, using default`);
+    console.debug(`[TrackLoader] No localStorage version found for ${key}, using default`);
     return this.tracks.get(key);
   }
 

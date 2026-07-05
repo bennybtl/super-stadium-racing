@@ -210,7 +210,7 @@ export class AIBoostController {
     }
 
     const name = this.selfTruckData?.name || this.driver?.name || 'AI';
-    console.log(`[AIBoostController:${name}] ${message}`);
+    console.debug(`[AIBoostController:${name}] ${message}`);
   }
 
   _estimateBehindFactor() {

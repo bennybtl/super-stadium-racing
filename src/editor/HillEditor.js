@@ -110,7 +110,7 @@ export class HillEditor {
     rebuild.terrainGrid?.();
 
     this.editor.hideAddMenu();
-    console.log('[HillEditor] Added hill at', newX.toFixed(1), newZ.toFixed(1));
+    console.debug('[HillEditor] Added hill at', newX.toFixed(1), newZ.toFixed(1));
   }
 
   /** Build an editor gizmo for a hill feature. */
@@ -174,8 +174,6 @@ export class HillEditor {
     hillData.sphere.isVisible = true;
     hillData.sphere.isPickable = true;
     this.showProperties(hillData);
-    console.log('[HillEditor] Selected hill at',
-      hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
   }
 
   deselect() {
@@ -183,7 +181,6 @@ export class HillEditor {
       this.selected.sphere.isVisible = true;
       this.selected.sphere.isPickable = true;
       this.hideProperties();
-      console.log('[HillEditor] Deselected hill');
       this.selected = null;
       this.editor._rawDragPos = null;
       this.rebuildTerrain();
@@ -227,7 +224,6 @@ export class HillEditor {
     this.selected = null;
 
     this.rebuildTerrain();
-    console.log('[HillEditor] Deleted hill');
   }
 
   duplicateSelected() {
