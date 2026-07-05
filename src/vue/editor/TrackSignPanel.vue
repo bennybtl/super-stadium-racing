@@ -8,69 +8,83 @@
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
 
     <!-- Content type -->
-    <div class="text-[12px] mb-1">Content</div>
-    <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.trackSign.contentType"
-      @change="editor.setFeatureProp('trackSign', 'contentType', $event.target.value)"
-    >
-      <option value="text">Custom Text</option>
-      <option value="brand">Brand Logo</option>
-    </select>
+    <div class="flex justify-between items-center mb-3 text-[12px]">
+      <span>Type</span>
+      <select
+        :value="editor.trackSign.contentType"
+        @change="editor.setFeatureProp('trackSign', 'contentType', $event.target.value)"
+        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+      >
+        <option value="text">Custom Text</option>
+        <option value="brand">Logo</option>
+      </select>
+    </div>
 
     <!-- Name -->
-    <div v-if="editor.trackSign.contentType === 'text'" class="flex justify-between mb-1 text-[12px]">
-      <span>Sign Text</span>
-    </div>
-    <input
-      v-if="editor.trackSign.contentType === 'text'"
-      class="sign-name-input"
-      type="text"
-      :value="editor.trackSign.name"
-      @input="editor.setFeatureProp('trackSign', 'name', $event.target.value)"
-      placeholder="Track Name"
-    />
+    <template v-if="editor.trackSign.contentType === 'text'">
 
-    <!-- Brand image -->
-    <div v-if="editor.trackSign.contentType === 'brand'" class="text-[12px] mb-1">Brand Logo</div>
-    <select
-      v-if="editor.trackSign.contentType === 'brand'"
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.trackSign.brandImage"
-      @change="editor.setFeatureProp('trackSign', 'brandImage', $event.target.value)"
-    >
-      <option v-for="brand in TRACK_SIGN_BRANDS" :key="brand.value" :value="brand.value">{{ brand.label }}</option>
-    </select>
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Sign Text</span>
+      </div>
+      <input
+        class="sign-name-input"
+        type="text"
+        :value="editor.trackSign.name"
+        @input="editor.setFeatureProp('trackSign', 'name', $event.target.value)"
+        placeholder="Track Name"
+      />
+    </template>
+
+    <!-- Logo -->
+     <template v-if="editor.trackSign.contentType === 'brand'">
+      <div class="flex justify-between items-center mb-3 text-[12px]">
+        <span>Logo</span>
+        <select
+          class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+          :value="editor.trackSign.brandImage"
+          @change="editor.setFeatureProp('trackSign', 'brandImage', $event.target.value)"
+        >
+          <option v-for="brand in TRACK_SIGN_BRANDS" :key="brand.value" :value="brand.value">{{ brand.label }}</option>
+        </select>
+      </div>
+    </template>
 
     <!-- Background -->
-    <div class="text-[12px] mb-1">Background</div>
-    <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.trackSign.background"
-      @change="editor.setFeatureProp('trackSign', 'background', $event.target.value)"
-    >
-      <option value="black">Black</option>
-      <option value="gray">Gray</option>
-      <option value="white">White</option>
-      <option value="red">Red</option>
-      <option value="blue">Blue</option>
-      <option value="yellow">Yellow</option>
-    </select>
+    <div class="flex justify-between items-center mb-3 text-[12px]">
+      <span>Background</span>
+      <select
+        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        :value="editor.trackSign.background"
+        @change="editor.setFeatureProp('trackSign', 'background', $event.target.value)"
+      >
+        <option value="black">Black</option>
+        <option value="gray">Gray</option>
+        <option value="white">White</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+        <option value="yellow">Yellow</option>
+      </select>
+    </div>
 
     <!-- Primary color (text + border) -->
-    <div class="text-[12px] mb-1">Primary Color</div>
-    <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.trackSign.primaryColor"
-      @change="editor.setFeatureProp('trackSign', 'primaryColor', $event.target.value)"
-    >
-      <option value="black">Black</option>
-      <option value="gray">Gray</option>
-      <option value="white">White</option>
-      <option value="red">Red</option>
-      <option value="blue">Blue</option>
-      <option value="yellow">Yellow</option>
-    </select>
+    <div class="flex justify-between items-center mb-3 text-[12px]">
+      <span>Primary Color</span>
+
+      <select
+        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        :value="editor.trackSign.primaryColor"
+        @change="editor.setFeatureProp('trackSign', 'primaryColor', $event.target.value)"
+      >
+        <option value="black">Black</option>
+        <option value="gray">Gray</option>
+        <option value="white">White</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+        <option value="yellow">Yellow</option>
+      </select>
+    </div>
+
+    <hr class="border-t border-slate-700 my-4" />
 
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
@@ -84,21 +98,9 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
-    <!-- Scale -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Scale</span>
-      <span>{{ editor.trackSign.scale.toFixed(2) }}x</span>
-    </div>
-    <input
-      type="range" min="0.4" max="2.5" step="0.05"
-      :value="editor.trackSign.scale"
-      @input="editor.setFeatureProp('trackSign', 'scale', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-
     <!-- Height -->
     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Height Offset</span>
+      <span>Height</span>
       <span>{{ editor.trackSign.heightOffset.toFixed(1) }} m</span>
     </div>
     <input
@@ -118,6 +120,18 @@
       :value="editor.trackSign.rotation"
       @input="editor.setFeatureProp('trackSign', 'rotation', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
+    <!-- Scale -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Scale</span>
+      <span>{{ editor.trackSign.scale.toFixed(2) }}x</span>
+    </div>
+    <input
+      type="range" min="0.4" max="2.5" step="0.05"
+      :value="editor.trackSign.scale"
+      @input="editor.setFeatureProp('trackSign', 'scale', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-1 cursor-pointer"
     />
 
     <hr class="border-t border-slate-700 my-4" />

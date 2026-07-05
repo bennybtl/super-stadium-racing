@@ -9,7 +9,7 @@
 
     <!-- Radius -->
     <div class="flex justify-between mb-1 text-[12px]">
-      <span>Radius</span>
+      <span>Corner Radius</span>
       <span :style="editor.polyWall.radius > editor.polyWall.maxRadius ? { color: '#ff4444' } : {}">{{ radiusDisplay }}</span>
     </div>
     <input
@@ -71,6 +71,18 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Thickness -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Width</span>
+      <span>{{ editor.polyWall.thickness.toFixed(1) }}</span>
+    </div>
+    <input
+      type="range" min="0.2" max="3" step="0.1"
+      :value="editor.polyWall.thickness"
+      @input="editor.setFeatureProp('polyWall', 'thickness', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <!-- Collision Barrier Height -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Collision Height</span>
@@ -83,18 +95,6 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
     <div class="text-[10px] text-slate-400 mb-3">Collision height defaults to the visual height unless adjusted separately.</div>
-
-    <!-- Thickness -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Thickness</span>
-      <span>{{ editor.polyWall.thickness.toFixed(1) }}</span>
-    </div>
-    <input
-      type="range" min="0.2" max="3" step="0.1"
-      :value="editor.polyWall.thickness"
-      @input="editor.setFeatureProp('polyWall', 'thickness', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
 
     <!-- Closed toggle -->
     <div class="flex justify-between mb-3 text-[12px]">

@@ -26,7 +26,7 @@
       autocomplete="off"
       autocorrect="off"
     />
-    <div class="mt-2 text-[10px] text-slate-400">Used for exported filenames. Auto-derived from the track name (lowercased, spaces become underscores); edit to override.</div>
+    <div class="mt-2 text-[10px] text-slate-400">Used for exported filenames.</div>
 
     <div class="mt-4 text-[12px] mb-1">Pack ID</div>
     <input
@@ -51,7 +51,7 @@
       />
       <span class="text-[13px] text-white">Hidden</span>
     </label>
-    <div class="mt-2 text-[10px] text-slate-400">Hidden tracks are excluded from the race/practice selection until ready. They still appear in the editor's track list.</div>
+    <div class="mt-2 text-[10px] text-slate-400">Hidden tracks are excluded from the race/practice selection until ready. <br>They still appear in the editor's track list.</div>
 
     <label class="mt-4 flex items-center gap-2 cursor-pointer select-none">
       <input
@@ -62,7 +62,7 @@
       />
       <span class="text-[13px] text-white">Dirt Chunks</span>
     </label>
-    <div class="mt-2 text-[10px] text-slate-400">Scatters procedural dirt debris along walls and off the racing line. Turn off for on-road / paved tracks.</div>
+    <div class="mt-2 text-[10px] text-slate-400">Scatters procedural dirt debris along walls and off the racing line.</div>
 
     <div class="mt-4 grid grid-cols-2 gap-2">
       <div>
@@ -93,7 +93,7 @@
     <div class="mt-2 text-[10px] text-slate-400">Track size range: 80 to 320 meters.</div>
 
     <button
-      class="mt-3 w-full rounded-md border border-slate-600 bg-slate-800/70 px-3 py-2 text-[12px] font-semibold text-slate-100 transition hover:border-slate-400 hover:bg-slate-700/70"
+      class="mt-3 mb-6 w-full rounded-md border border-slate-600 bg-slate-800/70 px-3 py-2 text-[12px] font-semibold text-slate-100 transition hover:border-slate-400 hover:bg-slate-700/70"
       type="button"
       @click="editor.rebuildScene"
     >

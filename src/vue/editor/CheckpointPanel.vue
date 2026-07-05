@@ -4,6 +4,10 @@
     title="Checkpoint"
     @close="editor.featureAction('deselectCheckpoint')"
   >
+    <!-- Hint -->
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+
+
     <!-- Width -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Width (barrel spacing)</span>
@@ -34,12 +38,11 @@
       <span class="text-slate-300" style="font-weight: bold">#{{ editor.checkpoint.orderNum }}</span>
     </div>
     <div class="flex gap-2 mb-3">
-      <button class="order-btn" @click="editor.featureAction('shiftCheckpointOrder', -1)">← Earlier</button>
-      <button class="order-btn" @click="editor.featureAction('shiftCheckpointOrder', 1)">Later →</button>
+      <button class="order-btn" @click="editor.featureAction('shiftCheckpointOrder', -1)"><i class="bi bi-arrow-left"></i> Earlier</button>
+      <button class="order-btn" @click="editor.featureAction('shiftCheckpointOrder', 1)">Later <i class="bi bi-arrow-right"></i></button>
     </div>
 
-    <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+    <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->
     <div class="flex gap-2">

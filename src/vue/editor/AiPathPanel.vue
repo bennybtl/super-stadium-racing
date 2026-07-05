@@ -22,7 +22,6 @@
     </div>
 
       <template v-if="activeTab === 'path'">
-      <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">AI Path</div>
       <div class="text-[10px] text-slate-400 mb-3">Right-Click terrain to add waypoints. Select a node to edit it. WASD to move selected point</div>
 
       <div class="flex gap-2 mb-3">
@@ -107,7 +106,7 @@
       </div>
 
       <hr class="border-t border-slate-700 my-4" />
-      <div class="flex gap-2 mb-3">
+      <div class="flex gap-2">
         <button
           class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
           @click="editor.featureAction('clearAiPath')"
@@ -118,105 +117,105 @@
     </template>
 
     <template v-else>
-    <div class="mb-3 rounded-xl border border-slate-700 bg-slate-950/50 p-3">
-      <label class="flex items-center justify-between gap-3 text-[12px] text-slate-200 mb-3">
-        <span>Wear Overlay</span>
+      <div class="rounded-xl border border-slate-700 bg-slate-950/50 p-3">
+        <label class="flex items-center justify-between gap-3 text-[12px] text-slate-200 mb-3">
+          <span>Wear Overlay</span>
+          <input
+            type="checkbox"
+            class="h-4 w-4 accent-[var(--accent)]"
+            :checked="editor.aiPathWear.enabled"
+            @change="editor.setFeatureProp('aiPathWear', 'enabled', $event.target.checked)"
+          />
+        </label>
+
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Wear Width</span>
+          <span>{{ editor.aiPathWear.width.toFixed(1) }}</span>
+        </div>
         <input
-          type="checkbox"
-          class="h-4 w-4 accent-[var(--accent)]"
-          :checked="editor.aiPathWear.enabled"
-          @change="editor.setFeatureProp('aiPathWear', 'enabled', $event.target.checked)"
+          type="range" min="2" max="8" step="0.5"
+          :value="editor.aiPathWear.width"
+          @input="editor.setFeatureProp('aiPathWear', 'width', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
         />
-      </label>
 
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Wear Width</span>
-        <span>{{ editor.aiPathWear.width.toFixed(1) }}</span>
-      </div>
-      <input
-        type="range" min="2" max="8" step="0.5"
-        :value="editor.aiPathWear.width"
-        @input="editor.setFeatureProp('aiPathWear', 'width', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Intensity</span>
+          <span>{{ editor.aiPathWear.intensity.toFixed(2) }}</span>
+        </div>
+        <input
+          type="range" min="0.1" max="1.0" step="0.1"
+          :value="editor.aiPathWear.intensity"
+          @input="editor.setFeatureProp('aiPathWear', 'intensity', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
 
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Intensity</span>
-        <span>{{ editor.aiPathWear.intensity.toFixed(2) }}</span>
-      </div>
-      <input
-        type="range" min="0.1" max="1.0" step="0.1"
-        :value="editor.aiPathWear.intensity"
-        @input="editor.setFeatureProp('aiPathWear', 'intensity', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Lane Spacing</span>
+          <span>{{ editor.aiPathWear.laneSpacing.toFixed(1) }}</span>
+        </div>
+        <input
+          type="range" min="0.5" max="4" step="0.1"
+          :value="editor.aiPathWear.laneSpacing"
+          @input="editor.setFeatureProp('aiPathWear', 'laneSpacing', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
 
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Lane Spacing</span>
-        <span>{{ editor.aiPathWear.laneSpacing.toFixed(1) }}</span>
-      </div>
-      <input
-        type="range" min="0.5" max="4" step="0.1"
-        :value="editor.aiPathWear.laneSpacing"
-        @input="editor.setFeatureProp('aiPathWear', 'laneSpacing', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Path Wander</span>
+          <span>{{ editor.aiPathWear.pathWander.toFixed(2) }}</span>
+        </div>
+        <input
+          type="range" min="0" max="1.5" step="0.1"
+          :value="editor.aiPathWear.pathWander"
+          @input="editor.setFeatureProp('aiPathWear', 'pathWander', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
 
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Path Wander</span>
-        <span>{{ editor.aiPathWear.pathWander.toFixed(2) }}</span>
-      </div>
-      <input
-        type="range" min="0" max="1.5" step="0.1"
-        :value="editor.aiPathWear.pathWander"
-        @input="editor.setFeatureProp('aiPathWear', 'pathWander', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Edge Softness</span>
+          <span>{{ editor.aiPathWear.edgeSoftness.toFixed(2) }}</span>
+        </div>
+        <input
+          type="range" min="0.0" max="1.5" step="0.1"
+          :value="editor.aiPathWear.edgeSoftness"
+          @input="editor.setFeatureProp('aiPathWear', 'edgeSoftness', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
 
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Edge Softness</span>
-        <span>{{ editor.aiPathWear.edgeSoftness.toFixed(2) }}</span>
-      </div>
-      <input
-        type="range" min="0.0" max="1.5" step="0.1"
-        :value="editor.aiPathWear.edgeSoftness"
-        @input="editor.setFeatureProp('aiPathWear', 'edgeSoftness', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Secondary Paths</span>
+          <span>{{ editor.aiPathWear.secondaryPathCount.toFixed(0) }}</span>
+        </div>
+        <input
+          type="range" min="20" max="80" step="5"
+          :value="editor.aiPathWear.secondaryPathCount"
+          @input="editor.setFeatureProp('aiPathWear', 'secondaryPathCount', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
 
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Secondary Paths</span>
-        <span>{{ editor.aiPathWear.secondaryPathCount.toFixed(0) }}</span>
-      </div>
-      <input
-        type="range" min="20" max="80" step="5"
-        :value="editor.aiPathWear.secondaryPathCount"
-        @input="editor.setFeatureProp('aiPathWear', 'secondaryPathCount', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Secondary Intensity</span>
+          <span>{{ editor.aiPathWear.secondaryPathStrength.toFixed(2) }}</span>
+        </div>
+        <input
+          type="range" min="0" max="1.0" step="0.1"
+          :value="editor.aiPathWear.secondaryPathStrength"
+          @input="editor.setFeatureProp('aiPathWear', 'secondaryPathStrength', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
 
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Secondary Intensity</span>
-        <span>{{ editor.aiPathWear.secondaryPathStrength.toFixed(2) }}</span>
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Secondary Spacing</span>
+          <span>{{ editor.aiPathWear.secondaryPathSpacing.toFixed(2) }}</span>
+        </div>
+        <input
+          type="range" min="0" max="0.10" step="0.01"
+          :value="editor.aiPathWear.secondaryPathSpacing"
+          @input="editor.setFeatureProp('aiPathWear', 'secondaryPathSpacing', +$event.target.value)"
+          class="w-full accent-[var(--accent)] cursor-pointer"
+        />
       </div>
-      <input
-        type="range" min="0" max="1.0" step="0.1"
-        :value="editor.aiPathWear.secondaryPathStrength"
-        @input="editor.setFeatureProp('aiPathWear', 'secondaryPathStrength', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
-
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Secondary Spacing</span>
-        <span>{{ editor.aiPathWear.secondaryPathSpacing.toFixed(2) }}</span>
-      </div>
-      <input
-        type="range" min="0" max="0.10" step="0.01"
-        :value="editor.aiPathWear.secondaryPathSpacing"
-        @input="editor.setFeatureProp('aiPathWear', 'secondaryPathSpacing', +$event.target.value)"
-        class="w-full accent-[var(--accent)] cursor-pointer"
-      />
-    </div>
     </template>
   </EditorPanel>
 </template>
