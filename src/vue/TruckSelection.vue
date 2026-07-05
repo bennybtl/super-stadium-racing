@@ -3,7 +3,7 @@
   <section class="flex flex-row gap-4">
       <div class="min-w-0 flex-1 basis-0">
         <select
-          class="w-full rounded-[10px] flex-grow border-2 border-[#444] bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
+          class="w-full rounded-[10px] flex-grow border-2 border-[#444] bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
           :value="selectedVehicle"
           @change="$emit('update:selectedVehicle', $event.target.value)"
         >

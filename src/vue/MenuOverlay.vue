@@ -101,12 +101,15 @@
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
         <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
 
-          <div class="grid gap-3 text-left text-sm text-slate-300 mb-4">
+          <div class="grid gap-3 text-left text-sm text-slate-300 mb-1">
             <TrackSelectionCarousel
               :tracks="store.trackList"
               :modelValue="store.selectedTrack"
               @update:modelValue="store.setSelectedTrack($event)"
             />
+            <div class="flex justify-center">
+              <TrackLapRecords :trackKey="store.selectedTrack" />
+            </div>
             <div v-if="store.pitData.pitMode === 'singleRace'">
               <RaceConfig />
             </div>
@@ -158,6 +161,7 @@ import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
 import TruckSelection from './TruckSelection.vue';
 import RaceConfig from './RaceConfig.vue';
 import ReverseToggle from './ReverseToggle.vue';
+import TrackLapRecords from './TrackLapRecords.vue';
 import TruckSetup from './TruckSetup.vue';
 
 const store = useMenuStore();

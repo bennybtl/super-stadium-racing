@@ -20,12 +20,12 @@
     <div class="relative overflow-hidden flex ">
       <button
         type="button"
-        class="rounded-3xl border-2 border-[#444] bg-[#101010] px-2 py-2.5 text-[48px] text-base font-bold text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:border-white hover:text-[#ffe066]"
+        class="rounded-3xl border-2 border-[#444] bg-[#101010] px-2 py-2.5 text-[48px] text-base font-bold text-white transition duration-200 hover:border-white hover:text-[#ffe066]"
         @click="selectAdjacent(-1)"
         :disabled="!canSelectLeft"
         aria-label="Select previous track"
       >
-        ‹
+        <i class="bi bi-arrow-left"></i>
       </button>
 
       <div
@@ -56,12 +56,12 @@
       </div>
       <button
         type="button"
-        class="rounded-3xl border-2 border-[#444] bg-[#101010] px-2 py-2.5 text-[48px] text-base font-bold text-white transition duration-200 [-webkit-text-stroke:1px_#000] hover:border-white hover:text-[#ffe066]"
+        class="rounded-3xl border-2 border-[#444] bg-[#101010] px-2 py-2.5 text-[48px] text-base font-bold text-white transition duration-200 hover:border-white hover:text-[#ffe066]"
         @click="selectAdjacent(1)"
         :disabled="!canSelectRight"
         aria-label="Select next track"
       >
-        ›
+        <i class="bi bi-arrow-right"></i>
       </button>
     </div>
   </div>
