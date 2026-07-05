@@ -14,6 +14,7 @@ import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
+import { RacePositionLabels } from "../managers/RacePositionLabels.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -33,6 +34,7 @@ export class RaceMode extends DriveMode {
     this.audioManager = null;
     this.truckAudioController = null;
     this.telemetryRecorder = null;
+    this.positionLabels = null;
   }
 
   async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false }) {
@@ -296,6 +298,11 @@ export class RaceMode extends DriveMode {
 
     const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
+
+    // -- Floating 1st/2nd/3rd badges above the leading trucks --
+    const positionLabels = new RacePositionLabels(scene);
+    this.positionLabels = positionLabels;
+    trucks.forEach(td => positionLabels.attach(td));
 
     // -- Truck collision --
     const truckCollisionManager = new TruckCollisionManager();
@@ -762,6 +769,11 @@ export class RaceMode extends DriveMode {
         }
       }));
 
+      frameProfiler.measure('positions', () => {
+        if (raceStarted && !raceEnded) positionLabels.update(trucks, checkpointManager);
+        else positionLabels.hideAll();
+      });
+
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt));
       frameRenderStartMs = performance.now();
     });
@@ -777,6 +789,10 @@ export class RaceMode extends DriveMode {
     this._countdownTimeouts.forEach(clearTimeout);
     this._countdownTimeouts = [];
     if (this._dnfTimer) { clearTimeout(this._dnfTimer); this._dnfTimer = null; }
+    if (this.positionLabels) {
+      this.positionLabels.dispose();
+      this.positionLabels = null;
+    }
     if (this.uiManager) {
       this.uiManager.hideAll();
       this.uiManager = null;
