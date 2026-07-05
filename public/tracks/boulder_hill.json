@@ -308,9 +308,10 @@
       "angle": 88,
       "waterLevelOffset": 0,
       "transition": 5,
-      "terrainType": null,
+      "terrainType": "rocky",
       "heightAtMin": 4,
-      "heightAtMax": 0
+      "heightAtMax": 0,
+      "blendWidth": 4.5
     },
     {
       "type": "squareHill",
@@ -373,7 +374,8 @@
       "angle": 0,
       "height": 15.5,
       "waterLevelOffset": 0,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 3
     },
     {
       "type": "hill",
@@ -384,7 +386,8 @@
       "angle": 0,
       "height": 15.5,
       "waterLevelOffset": 0,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 1
     },
     {
       "type": "hill",
@@ -392,15 +395,15 @@
       "centerZ": -27.70306296706804,
       "radiusX": 6,
       "radiusZ": 7.5,
-      "angle": 0,
+      "angle": 9,
       "height": 15.5,
       "waterLevelOffset": 0,
       "terrainType": "rocky"
     },
     {
       "type": "hill",
-      "centerX": -55.785574488975655,
-      "centerZ": -10.228737470955323,
+      "centerX": -56.285574488975655,
+      "centerZ": -9.728737470955323,
       "radiusX": 6,
       "radiusZ": 7.5,
       "angle": 0,
@@ -421,14 +424,15 @@
     },
     {
       "type": "hill",
-      "centerX": -24.434064195207057,
+      "centerX": -23.934064195207057,
       "centerZ": 8.429682245839814,
       "radiusX": 6,
       "radiusZ": 7.5,
       "angle": 0,
       "height": 15.5,
       "waterLevelOffset": 0,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 3
     },
     {
       "type": "hill",
@@ -439,7 +443,8 @@
       "angle": 0,
       "height": 15.5,
       "waterLevelOffset": 0,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 2.5
     },
     {
       "type": "hill",
@@ -454,8 +459,8 @@
     },
     {
       "type": "hill",
-      "centerX": 38.34686324110502,
-      "centerZ": 13.222429815854717,
+      "centerX": 37.84686324110502,
+      "centerZ": 12.722429815854717,
       "radiusX": 6,
       "radiusZ": 7.5,
       "angle": 0,
@@ -483,7 +488,8 @@
       "angle": 0,
       "height": 4.5,
       "waterLevelOffset": 0,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "blendWidth": 2
     },
     {
       "type": "hill",
@@ -581,7 +587,7 @@
       "centerZ": -19.940178377338547,
       "radiusX": 10,
       "radiusZ": 10,
-      "angle": 0,
+      "angle": 32,
       "height": 7,
       "waterLevelOffset": 0,
       "terrainType": null
@@ -702,16 +708,20 @@
           "z": -57.159994282324575
         },
         {
-          "x": -67.84,
-          "z": -23.87
+          "x": -69.3191863128937,
+          "z": -20.445363663064892
         },
         {
           "x": -65.3,
           "z": 10.67
         },
         {
-          "x": -34.05,
-          "z": 31.33
+          "x": -31.913846355247443,
+          "z": 31.021179708711628
+        },
+        {
+          "x": -13.35323317353979,
+          "z": 46.3584655669358
         },
         {
           "x": 7.53,
@@ -722,12 +732,12 @@
           "z": 56.34
         },
         {
-          "x": 60.76,
-          "z": 41.7
+          "x": 53.452614205971884,
+          "z": 43.15441766049811
         },
         {
-          "x": 50.3,
-          "z": 6.51
+          "x": 51.1710432973848,
+          "z": 4.116040606118824
         },
         {
           "x": 25.26,
@@ -800,6 +810,38 @@
             {
               "x": 7.53,
               "z": 55.93
+            }
+          ]
+        },
+        {
+          "id": "branch_3",
+          "fromMainIndex": 7,
+          "toMainIndex": 9,
+          "weight": 1,
+          "points": [
+            {
+              "x": 53.452614205971884,
+              "z": 43.15441766049811
+            },
+            {
+              "x": 70.32849180563305,
+              "z": 27.041576223765226
+            },
+            {
+              "x": 73.61185806442856,
+              "z": 15.180152762183976
+            },
+            {
+              "x": 70.34076874383956,
+              "z": 3.0742076499529434
+            },
+            {
+              "x": 48.98,
+              "z": -9.1
+            },
+            {
+              "x": 25.26,
+              "z": -14.28
             }
           ]
         }

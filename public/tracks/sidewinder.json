@@ -3,6 +3,7 @@
   "id": "sidewinder",
   "packId": "offroad_pack_1",
   "hidden": false,
+  "dirtChunks": true,
   "name": "Sidewinder",
   "image": "sidewinder.png",
   "width": 160,
@@ -198,12 +199,14 @@
         {
           "x": -12,
           "z": -13.565127863097544,
-          "radius": 3.5
+          "radius": 3.5,
+          "smoothing": 0
         },
         {
           "x": -12,
           "z": 1.9348721369024557,
-          "radius": 4.5
+          "radius": 4.5,
+          "smoothing": 0
         },
         {
           "x": 64,
@@ -221,7 +224,7 @@
           "radius": 9.5
         }
       ],
-      "height": 3,
+      "height": 4,
       "thickness": 0.5,
       "friction": 0.1,
       "closed": true,
@@ -233,17 +236,26 @@
         {
           "x": 39,
           "z": 29.934872136902456,
-          "radius": 3
+          "radius": 3,
+          "smoothing": 0
         },
         {
-          "x": -47,
-          "z": 32.934872136902456,
-          "radius": 9
+          "x": -26.1967260949977,
+          "z": 30.403695171602386,
+          "radius": 9,
+          "smoothing": 1
+        },
+        {
+          "x": -46.367287208315986,
+          "z": 33.87452225909169,
+          "radius": 11.5,
+          "smoothing": 1
         },
         {
           "x": -46,
           "z": -38,
-          "radius": 8
+          "radius": 8,
+          "smoothing": 1
         },
         {
           "x": 46.5,
@@ -253,17 +265,20 @@
         {
           "x": 46.5,
           "z": -48.565127863097544,
-          "radius": 3
+          "radius": 3,
+          "smoothing": 0
         },
         {
           "x": -49.5,
           "z": -48,
-          "radius": 5
+          "radius": 5,
+          "smoothing": 1
         },
         {
           "x": -50,
           "z": 38.934872136902456,
-          "radius": 5
+          "radius": 5,
+          "smoothing": 0.15
         },
         {
           "x": 40,

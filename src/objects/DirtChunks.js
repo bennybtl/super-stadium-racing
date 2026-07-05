@@ -7,6 +7,7 @@ import {
   Color3,
   VertexBuffer,
 } from "@babylonjs/core";
+import { TERRAIN_COLORS } from "../constants";
 
 /**
  * Procedural "dirt chunk" scatter.
@@ -184,13 +185,17 @@ export function scatterDirtChunks(scene, track, options = {}) {
     if (minDistToPolylines(x, z, aiPath) < cfg.driveClearance) return; // keep racing line clear
 
     // Don't scatter dirt over grass/asphalt regions (null = default dirt ground).
-    if (excluded.has(track.getTerrainTypeAt(x, z)?.name)) return;
+    const terrain = track.getTerrainTypeAt(x, z);
+    if (excluded.has(terrain?.name)) return;
+
+    const baseColor = terrain?.color ?? TERRAIN_COLORS.packed_dirt;
 
     placements.push({
       x,
       z,
       y: track.getHeightAt(x, z),
-      wallDistNorm, // Store it for scaling later
+      wallDistNorm,
+      color: baseColor,
     });
   };
 
@@ -254,13 +259,13 @@ export function scatterDirtChunks(scene, track, options = {}) {
   if (placements.length === 0) return null;
 
   // Build the base meshes (one per variant) and bucket placements into them.
+  // Diffuse is white so the per-instance color buffer controls the tint.
   const baseMeshes = [];
   const buckets = [];
   for (let v = 0; v < cfg.variants; v++) {
     const mat = new StandardMaterial(`dirtChunkMat_${v}`, scene);
-    const shade = 0.32 + v * 0.05;
-    mat.diffuseColor = new Color3(shade, shade * 0.74, shade * 0.5);
-    mat.emissiveColor = new Color3(shade * 0.18, shade * 0.13, shade * 0.09); // lift the shadowed faces off black
+    mat.diffuseColor = new Color3(1, 1, 1);
+    mat.emissiveColor = new Color3(0.06, 0.04, 0.03);
     mat.specularColor = new Color3(0.05, 0.05, 0.05);
 
     const polyType = CHUNK_POLY_TYPES[v % CHUNK_POLY_TYPES.length];
@@ -275,16 +280,14 @@ export function scatterDirtChunks(scene, track, options = {}) {
   const _pos = new Vector3();
   const _rot = new Quaternion();
 
+  const colorBuckets = Array.from({ length: cfg.variants }, () => []);
+
   for (const p of placements) {
     const v = (rng() * cfg.variants) | 0;
 
-    // NEW: Calculate dynamic scale based on distance
-    // Rocks right next to the wall (wallDistNorm = 0) will range between 1.0 and 1.45.
-    // Rocks far away (wallDistNorm = 1) will range between 0.4 and 0.6.
-    const maxPossibleScale = 1.0 + rng() * 0.45; // 1.0 to 1.45
-    const minPossibleScale = 0.4 + rng() * 0.2; // 0.4 to 0.6
-
-    // Linear interpolation between the max and min scales based on proximity
+    // Dynamic scale based on wall proximity.
+    const maxPossibleScale = 1.0 + rng() * 0.45;
+    const minPossibleScale = 0.4 + rng() * 0.2;
     const sc =
       maxPossibleScale + (minPossibleScale - maxPossibleScale) * p.wallDistNorm;
 
@@ -301,6 +304,10 @@ export function scatterDirtChunks(scene, track, options = {}) {
     const arr = new Float32Array(16);
     m.copyToArray(arr);
     buckets[v].push(arr);
+
+    // Per-instance color: terrain tint with random shade variation.
+    const shade = 0.75 + rng() * 0.5;
+    colorBuckets[v].push(p.color.r * shade, p.color.g * shade, p.color.b * shade, 1.0);
   }
 
   for (let v = 0; v < cfg.variants; v++) {
@@ -313,6 +320,7 @@ export function scatterDirtChunks(scene, track, options = {}) {
     const data = new Float32Array(list.length * 16);
     list.forEach((arr, i) => data.set(arr, i * 16));
     baseMeshes[v].thinInstanceSetBuffer("matrix", data, 16, true);
+    baseMeshes[v].thinInstanceSetBuffer("color", new Float32Array(colorBuckets[v]), 4, false);
   }
 
   return baseMeshes.filter(Boolean);
