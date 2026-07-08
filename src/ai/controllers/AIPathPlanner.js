@@ -52,8 +52,15 @@ export class AIPathPlanner {
 
     const STEP = 3;
     const BASE_SPEED = 28 * d.maxSpeed;
-    const MIN_SPEED = 14 * d.maxSpeed;
+    const MIN_SPEED = 12 * d.maxSpeed;
     const MAX_DECEL = 22;
+    // Corner-speed curvature sampling: measure the path's deflection over a
+    // window this many world units to each side, so a sharp turn traced by
+    // several authored nodes still reads as sharp (a single-node measurement
+    // underestimates it). A deflection at/above TURN_FULL_ANGLE drops the target
+    // all the way to MIN_SPEED.
+    const CURVE_WINDOW_UNITS = 9;
+    const TURN_FULL_ANGLE = Math.PI / 2;
 
     const buildAuthoredNodesWithBranches = () => {
       const mainNodes = authorNodes.map(p => ({ x: p.x, z: p.z }));
@@ -163,45 +170,39 @@ export class AIPathPlanner {
       return pts;
     };
 
-    const turnAngleAt = (i) => {
-      if (i <= 0 || i >= nodes.length - 1) return 0;
-      const prev = nodes[i - 1];
-      const curr = nodes[i];
-      const next = nodes[i + 1];
-      const ax = curr.x - prev.x, az = curr.z - prev.z;
-      const bx = next.x - curr.x, bz = next.z - curr.z;
+    // Build the path geometry first (uniform ~STEP spacing), recording where
+    // each segment starts for checkpoint progression.
+    for (let seg = 0; seg < nodes.length - 1; seg++) {
+      d.checkpointPathIndices.push(d.path.length);
+      d.path.push(...interpolateSegment(nodes[seg], nodes[seg + 1]));
+    }
+    d.path.push({ x: nodes[0].x, z: nodes[0].z });
+
+    // Corner target speed from local curvature, measured over a fixed-distance
+    // window on the evenly-spaced path. This is independent of how densely the
+    // turn was authored, so a hard turn traced by several nodes still registers
+    // as sharp and gets a low target speed.
+    const P = d.path.length;
+    const win = Math.max(2, Math.round(CURVE_WINDOW_UNITS / STEP));
+    for (let i = 0; i < P; i++) {
+      const a = d.path[Math.max(0, i - win)];
+      const curr = d.path[i];
+      const b = d.path[Math.min(P - 1, i + win)];
+      const ax = curr.x - a.x, az = curr.z - a.z;
+      const bx = b.x - curr.x, bz = b.z - curr.z;
       const lenA = Math.sqrt(ax * ax + az * az);
       const lenB = Math.sqrt(bx * bx + bz * bz);
-      if (lenA < 0.001 || lenB < 0.001) return 0;
-      const dot = (ax * bx + az * bz) / (lenA * lenB);
-      return Math.acos(Math.max(-1, Math.min(1, dot)));
-    };
-
-    const cpSpeeds = nodes.map((_, i) => {
-      const angle = turnAngleAt(i);
-      const t = Math.min(angle / Math.PI, 1);
-      return BASE_SPEED * (1 - t) + MIN_SPEED * t;
-    });
-
-    for (let seg = 0; seg < nodes.length - 1; seg++) {
-      const a = nodes[seg];
-      const b = nodes[seg + 1];
-      const speedA = cpSpeeds[seg];
-      const speedB = cpSpeeds[seg + 1];
-
-      d.checkpointPathIndices.push(d.path.length);
-
-      const pts = interpolateSegment(a, b);
-      const n = pts.length;
-      for (let k = 0; k < n; k++) {
-        const t = n > 1 ? k / (n - 1) : 0;
-        pts[k].speed = speedA + (speedB - speedA) * t;
+      let t = 0;
+      if (lenA > 0.001 && lenB > 0.001) {
+        const dot = (ax * bx + az * bz) / (lenA * lenB);
+        const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+        t = Math.min(angle / TURN_FULL_ANGLE, 1);
       }
-      d.path.push(...pts);
+      curr.speed = BASE_SPEED * (1 - t) + MIN_SPEED * t;
     }
-    d.path.push({ ...nodes[0], speed: cpSpeeds[0] });
 
-    for (let i = d.path.length - 2; i >= 0; i--) {
+    // Backward pass: cap each point's speed so it can brake to the next one.
+    for (let i = P - 2; i >= 0; i--) {
       const curr = d.path[i];
       const next = d.path[i + 1];
       const dx = next.x - curr.x;
