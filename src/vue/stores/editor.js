@@ -264,7 +264,15 @@ export const useEditorStore = defineStore('editor', () => {
   const aiPathBranches = ref([]);
 
   function editMainAiPath()                 { aiPathBranch.editingMainPath = true; aiPathBranch.activeBranchId = null; _bridge.value?.editMainAiPath?.(); }
-  function selectAiPathBranch(id)           { aiPathBranch.editingMainPath = !id; aiPathBranch.activeBranchId = id ?? null; _bridge.value?.selectAiPathBranch?.(id ?? null); }
+  function selectAiPathBranch(id) {
+    // "Main Path" (null) rebuilds the main handles via editMainAiPath — the
+    // branch selector can't match a null id, so it would no-op and leave the
+    // previous branch's gizmos showing.
+    if (!id) { editMainAiPath(); return; }
+    aiPathBranch.editingMainPath = false;
+    aiPathBranch.activeBranchId = id;
+    _bridge.value?.selectAiPathBranch?.(id);
+  }
   function setActiveAiPathBranchWeight(val) { aiPathBranch.activeBranchWeight = val; _bridge.value?.setActiveAiPathBranchWeight?.(val); }
   function setActiveAiPathBranchRejoinIndex(val) { aiPathBranch.activeBranchToMainIndex = val; _bridge.value?.setActiveAiPathBranchRejoinIndex?.(val); }
 
