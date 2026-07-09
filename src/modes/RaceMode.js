@@ -343,12 +343,24 @@ export class RaceMode extends DriveMode {
       const lastCpNum = truckData.gameState.lastCheckpointPassed;
       // Resolve gates from the manager, not the raw track features: in reverse
       // races the manager holds copies with flipped headings and renumbered
-      // sequence, while the originals keep their forward numbering.
-      const cpFeature = lastCpNum > 0
-        ? checkpointManager.checkpointMeshes
-            .map(cp => cp.feature)
-            .find(f => f.checkpointNumber === lastCpNum)
-        : resolveGridAnchorCheckpoint();
+      // sequence, while the originals keep their forward numbering. When the step
+      // has alternatives, respawn at the gate nearest the truck (the branch it took).
+      let cpFeature;
+      if (lastCpNum > 0) {
+        const gates = checkpointManager.checkpointMeshes
+          .map(cp => cp.feature)
+          .filter(f => f.checkpointNumber === lastCpNum);
+        const px = truckData.truck.mesh.position.x;
+        const pz = truckData.truck.mesh.position.z;
+        cpFeature = gates.reduce((best, g) => {
+          if (!best) return g;
+          const bd = (best.centerX - px) ** 2 + (best.centerZ - pz) ** 2;
+          const gd = (g.centerX - px) ** 2 + (g.centerZ - pz) ** 2;
+          return gd < bd ? g : best;
+        }, null);
+      } else {
+        cpFeature = resolveGridAnchorCheckpoint();
+      }
       if (cpFeature) {
         const y = currentTrack.getHeightAt(cpFeature.centerX, cpFeature.centerZ) + TRUCK_HALF_HEIGHT;
         this.respawnTruck(

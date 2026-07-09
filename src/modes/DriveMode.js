@@ -84,8 +84,12 @@ export class DriveMode extends BaseMode {
    */
   getStartFinishInfo(track) {
     const checkpointFeatures = track.features.filter(f => f.type === "checkpoint");
-    const maxCheckpointNumber = checkpointFeatures.length;
-    const startFinishCp = checkpointFeatures[maxCheckpointNumber - 1] || null;
+    // Steps, not gate count: consecutive `alternative` gates share a step.
+    let maxCheckpointNumber = 0;
+    checkpointFeatures.forEach((f, i) => {
+      if (i === 0 || !f.alternative) maxCheckpointNumber += 1;
+    });
+    const startFinishCp = checkpointFeatures[checkpointFeatures.length - 1] || null;
 
     return { checkpointFeatures, maxCheckpointNumber, startFinishCp };
   }

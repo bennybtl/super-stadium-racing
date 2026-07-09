@@ -18,44 +18,55 @@ export class CheckpointManager {
   }
 
   createCheckpoints(reverse = false) {
-    // Collect checkpoints in track order; sequence now comes from array order.
+    // Collect checkpoints in track order and group them into sequential steps.
+    // Consecutive checkpoints flagged `alternative` share the previous step —
+    // passing any gate of a step advances the lap ("one or the other").
     const cpFeatures = this.track.features.filter(f => f.type === "checkpoint");
+    const groups = CheckpointManager.groupIntoSteps(cpFeatures);
 
-    // Build the feature list used for this run (possibly reversed)
-    let orderedFeatures;
-    if (reverse && cpFeatures.length > 0) {
-      // Reverse traversal direction and flip each gate's heading by π.
-      // Keep the original finish gate as the finish line by ordering as:
-      // (last-1 ... first, last).
-      const finishFeature = cpFeatures[cpFeatures.length - 1];
-      const reverseTraversal = [
-        ...cpFeatures.slice(0, -1).reverse(),
-        finishFeature,
-      ];
-      orderedFeatures = reverseTraversal.map(f => ({
-        ...f,
-        heading: f.heading + Math.PI,
-        passedBy: new Set(),
-      }));
+    // Build the step order for this run. Reverse keeps each group intact and
+    // keeps the finish group last: (last-1 … first, last).
+    let orderedGroups;
+    if (reverse && groups.length > 0) {
+      orderedGroups = [...groups.slice(0, -1).reverse(), groups[groups.length - 1]];
     } else {
-      orderedFeatures = cpFeatures;
+      orderedGroups = groups;
     }
 
-    orderedFeatures.forEach((feature, index) => {
-      feature.checkpointNumber = index + 1;
-    });
-
-    const maxCheckpointNumber = orderedFeatures.length > 0
-      ? orderedFeatures.length
-      : 0;
+    const maxCheckpointNumber = orderedGroups.length;
     this._maxCheckpointNumber = maxCheckpointNumber;
 
-    for (const feature of orderedFeatures) {
-      const isFinish = maxCheckpointNumber > 0 && feature.checkpointNumber === maxCheckpointNumber;
-      this.createSingleCheckpoint(feature, isFinish);
-    }
+    orderedGroups.forEach((group, gi) => {
+      const step = gi + 1;
+      const isFinish = step === maxCheckpointNumber;
+      group.forEach((f, ai) => {
+        // Reverse runs on clones so the source features keep their forward
+        // heading; forward runs number the features in place.
+        const feature = reverse
+          ? { ...f, heading: f.heading + Math.PI, passedBy: new Set() }
+          : f;
+        feature.checkpointNumber = step;
+        feature._altIndex = ai;         // position within the step (0 => 'a')
+        feature._altCount = group.length; // >1 means alternatives share this step
+        this.createSingleCheckpoint(feature, isFinish);
+      });
+    });
 
     this._applyActiveCheckpointHighlight();
+  }
+
+  /**
+   * Group ordered checkpoint features into steps. Each checkpoint starts a new
+   * step unless it is flagged `alternative` (then it joins the previous step).
+   * The first checkpoint always starts step 1. Returns an array of feature groups.
+   */
+  static groupIntoSteps(orderedCheckpointFeatures) {
+    const groups = [];
+    orderedCheckpointFeatures.forEach((f, i) => {
+      if (i === 0 || !f.alternative || groups.length === 0) groups.push([f]);
+      else groups[groups.length - 1].push(f);
+    });
+    return groups;
   }
 
   /**
@@ -138,8 +149,9 @@ export class CheckpointManager {
     }
   }
 
+  /** Number of sequential steps to complete a lap (alternatives share a step). */
   getTotalCheckpoints() {
-    return this.checkpointMeshes.length;
+    return this._maxCheckpointNumber;
   }
 
   updatePlayerCheckpointHighlight(lastCheckpointPassed) {
@@ -169,7 +181,7 @@ export class CheckpointManager {
   }
   
   /**
-   * Renumber all checkpoints sequentially
+   * Renumber all checkpoints into steps (alternatives share the previous step).
    */
   renumberCheckpoints() {
     const checkpointFeatures = this.track.features.filter(f => f.type === 'checkpoint');
@@ -177,11 +189,16 @@ export class CheckpointManager {
       this.checkpointMeshes.map(checkpoint => [checkpoint.feature, checkpoint])
     );
 
-    checkpointFeatures.forEach((feature, index) => {
-      feature.checkpointNumber = index + 1;
+    const groups = CheckpointManager.groupIntoSteps(checkpointFeatures);
+    groups.forEach((group, gi) => {
+      group.forEach((f, ai) => {
+        f.checkpointNumber = gi + 1;
+        f._altIndex = ai;
+        f._altCount = group.length;
+      });
     });
 
-    const maxNum = checkpointFeatures.length;
+    const maxNum = groups.length;
     this.checkpointMeshes = checkpointFeatures
       .map(feature => checkpointByFeature.get(feature))
       .filter(Boolean);

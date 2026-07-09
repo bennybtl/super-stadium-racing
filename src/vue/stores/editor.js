@@ -21,6 +21,8 @@ export const useEditorStore = defineStore('editor', () => {
     width: 10,
     orderNum: 1,
     heading: 0,
+    alternative: false,     // shares a step with the previous checkpoint
+    canBeAlternative: false, // false for the first checkpoint (nothing before it)
   });
 
   // ── Hill panel ──

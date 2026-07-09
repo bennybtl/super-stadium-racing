@@ -37,7 +37,15 @@ export class AIPathPlanner {
     }
 
     checkpoints.sort((a, b) => a.index - b.index);
-    return checkpoints;
+
+    // Collapse alternative gates to one representative per step so the rest of
+    // the AI (which indexes this list by step number) stays valid. Branch-aware
+    // choices (e.g. respawn) query the CheckpointManager for the step's gates.
+    const byStep = new Map();
+    for (const cp of checkpoints) {
+      if (!byStep.has(cp.index)) byStep.set(cp.index, cp);
+    }
+    return [...byStep.values()];
   }
 
   calculateFullPath(startPosition = null) {

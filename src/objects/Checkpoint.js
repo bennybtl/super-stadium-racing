@@ -243,7 +243,7 @@ export class Checkpoint {
     if (isFinish) {
       this._drawFinishDecal(ctx, feature.checkpointNumber, texW, texH);
     } else {
-      this._drawNumberedDecal(ctx, feature.checkpointNumber, texW, texH);
+      this._drawNumberedDecal(ctx, feature.checkpointNumber, this._decalLabel(feature), texW, texH);
     }
     decalTexture.update();
 
@@ -335,7 +335,19 @@ export class Checkpoint {
     this._applyWearEffect(ctx, checkpointNumber, texW, false);
   }
 
-  _drawNumberedDecal(ctx, checkpointNumber, texW, texH) {
+  /**
+   * Decal text for a gate: the step number, plus an a/b/c… suffix when the step
+   * has alternatives (e.g. "2a" / "2b" for two gates sharing step 2).
+   */
+  _decalLabel(feature) {
+    const n = feature.checkpointNumber;
+    if (feature._altCount > 1 && feature._altIndex != null) {
+      return `${n}${String.fromCharCode(97 + feature._altIndex)}`;
+    }
+    return `${n}`;
+  }
+
+  _drawNumberedDecal(ctx, checkpointNumber, label, texW, texH) {
     this._drawArrowDecal(ctx, texW)
 
     // Square border — fixed pixel dimensions, always centered horizontally
@@ -356,12 +368,13 @@ export class Checkpoint {
     ctx.fillRect(linePad,           lineY, sqLeft  - linePad * 2,          lineThick);
     ctx.fillRect(sqRight + linePad, lineY, texW - sqRight - linePad * 2,   lineThick);
 
-    // Checkpoint number
+    // Checkpoint label (number, plus a/b suffix for alternatives). Shrink the
+    // font for multi-character labels so "2a" still fits the box.
     ctx.fillStyle    = "white";
-    ctx.font         = "bold 210px Arial";
+    ctx.font         = `bold ${label.length > 1 ? 150 : 210}px Arial`;
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(checkpointNumber.toString(), texW / 2, (sqTop + sqBottom + 20) / 2);
+    ctx.fillText(label, texW / 2, (sqTop + sqBottom + 20) / 2);
 
     this._applyWearEffect(ctx, checkpointNumber, texW, true, texH);
   }

@@ -247,9 +247,13 @@ export class CheckpointEditor {
   showProperties(checkpointData) {
     const s = this.editor._editorStore;
     if (!s) return;
+    const cpFeatures = this.editor.currentTrack.features.filter(f => f.type === 'checkpoint');
+    const featureIndex = cpFeatures.indexOf(checkpointData.feature);
     s.checkpoint.width    = checkpointData.feature.width;
     s.checkpoint.orderNum = checkpointData.feature.checkpointNumber ?? 1;
     s.checkpoint.heading  = +(checkpointData.feature.heading * 180 / Math.PI).toFixed(1);
+    s.checkpoint.alternative = !!checkpointData.feature.alternative;
+    s.checkpoint.canBeAlternative = featureIndex > 0; // first checkpoint has no predecessor
     s.selectedType        = 'checkpoint';
   }
 
@@ -338,5 +342,27 @@ export class CheckpointEditor {
     checkpoint.container.rotation.y = rad;
     // Rebuild the world-space decal with the new heading
     checkpoint.updateDecal(checkpoint.feature.checkpointNumber, checkpoint.isFinish);
+  }
+
+  /**
+   * Toggle whether this checkpoint shares a step with the previous one (an
+   * "alternative" gate — pass either to advance the lap). Renumbering collapses
+   * both onto the same step number and refreshes every gate's decal.
+   */
+  changeAlternative(val) {
+    if (!this.selected) return;
+    const cpFeatures = this.editor.currentTrack.features.filter(f => f.type === 'checkpoint');
+    // The first checkpoint has no predecessor to be an alternative of.
+    if (cpFeatures.indexOf(this.selected.feature) <= 0) return;
+
+    this.editor.saveSnapshot();
+    this.selected.feature.alternative = !!val;
+    this.editor.checkpointManager?.renumberCheckpoints();
+
+    const s = this.editor._editorStore;
+    if (s) {
+      s.checkpoint.alternative = !!this.selected.feature.alternative;
+      s.checkpoint.orderNum = this.selected.feature.checkpointNumber;
+    }
   }
 }

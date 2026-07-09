@@ -39,13 +39,36 @@ export class AISpawnRecoveryController {
     this.driver.currentPathIndex = (bestIdx + this.pathAdvance) % this.driver.path.length;
   }
 
+  /**
+   * The gate the driver last passed, as {x, z}. When the last step has
+   * alternatives, pick the gate nearest the driver so it respawns on the branch
+   * it actually took rather than the other route.
+   */
+  _lastPassedGate() {
+    const d = this.driver;
+    const step = d.lastCheckpointPassed;
+    if (!(step > 0)) return null;
+
+    const gates = (d.checkpointManager?.checkpointMeshes ?? [])
+      .map(cp => cp.feature)
+      .filter(f => f?.checkpointNumber === step);
+    if (gates.length === 0) return null;
+
+    const px = d.truckMesh.position.x;
+    const pz = d.truckMesh.position.z;
+    const nearest = gates.reduce((best, g) => {
+      const bd = (best.centerX - px) ** 2 + (best.centerZ - pz) ** 2;
+      const gd = (g.centerX - px) ** 2 + (g.centerZ - pz) ** 2;
+      return gd < bd ? g : best;
+    });
+    return { x: nearest.centerX, z: nearest.centerZ };
+  }
+
   respawnFacingTarget(targetWaypoint) {
     const d = this.driver;
     if (!d.truck || !d.truckMesh || !targetWaypoint) return;
 
-    const lastCp = (d.lastCheckpointPassed > 0 && d.lastCheckpointPassed <= d.checkpoints.length)
-      ? d.checkpoints[d.lastCheckpointPassed - 1]
-      : null;
+    const lastCp = this._lastPassedGate();
     const basePos = lastCp
       ? { x: lastCp.x, z: lastCp.z }
       : { x: d.truckMesh.position.x, z: d.truckMesh.position.z };

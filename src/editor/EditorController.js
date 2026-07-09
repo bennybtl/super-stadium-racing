@@ -1219,6 +1219,7 @@ export class EditorController {
 
   changeCheckpointWidth(val) { this.checkpointEditor.changeWidth(val); }
   changeCheckpointHeading(degrees) { this.checkpointEditor.changeHeading(degrees); }
+  changeCheckpointAlternative(val) { this.checkpointEditor.changeAlternative(val); }
 
   changeHillRadius(val) { this.hillEditor.changeRadius(val); }
   changeHillRadiusX(val) { this.hillEditor.changeRadiusX(val); }
