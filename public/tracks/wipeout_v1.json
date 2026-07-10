@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "wipeout",
   "packId": "offroad_pack_1",
-  "hidden": false,
+  "hidden": true,
   "dirtChunks": true,
   "name": "Wipeout",
   "image": "wipeout.png",
