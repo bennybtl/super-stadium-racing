@@ -377,12 +377,11 @@ export class RaceMode extends DriveMode {
 
     this.inputManager.onReset(() => respawnToLastCheckpoint(playerTruckData));
 
-    // -- Pickup collection --
-    pickupManager.spawn(6); // Scatter pickups specifically for the race
-
-    pickupManager.onPickupCollected = (type, truckData, payload = null) => {
+    // -- Pickups -- spawned as trucks complete laps (see the lap-complete block),
+    // not scattered up front. Value scales with the lap, so grant it in full.
+    pickupManager.onPickupCollected = (type, truckData, value = 1) => {
       if (type === 'boost' && truckData.gameState) {
-        truckData.gameState.boostCount++;
+        truckData.gameState.boostCount += value;
         if (truckData.isPlayer) {
           uiManager.updateBoosts(truckData.gameState.boostCount);
         }
@@ -466,7 +465,7 @@ export class RaceMode extends DriveMode {
       checkpointManager.updatePlayerCheckpointHighlight(playerTruckData.gameState.lastCheckpointPassed);
       wallManager.rebuild();
       obstacleManager.rebuild();
-      pickupManager.rebuild();
+      pickupManager.clearAll();
 
       uiManager.updateBoosts(playerTruckData.gameState.boostCount);
       uiManager.updateLaps(0, totalLaps);
@@ -725,6 +724,10 @@ export class RaceMode extends DriveMode {
           truckData.lapStartTime = currentTime;
           const lapCount = truckData.gameState.completeLap(lapTime);
           checkpointManager.resetForTruck(truckData.id);
+
+          // Any truck finishing a lap has a chance to spawn a pickup, more
+          // valuable on later laps (up to 3x nitro).
+          pickupManager.spawnForLap(lapCount);
 
           // Play airhorn when player truck starts last lap
           if (truckData.isPlayer && lapCount === totalLaps - 1) {

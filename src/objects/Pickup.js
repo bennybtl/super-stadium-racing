@@ -47,12 +47,14 @@ export class Pickup {
    * @param {BABYLON.Scene}       scene
    * @param {BABYLON.ShadowGenerator} shadows
    */
-  constructor(x, z, groundY, type, scene, shadows) {
+  constructor(x, z, groundY, type, scene, shadows, value = 1) {
     this.type   = type;
+    this.value  = value; // nitro count granted on collect (1x / 2x / 3x)
     this.scene  = scene;
     this._baseY = groundY + 1.2;
     this._time  = Math.random() * Math.PI * 2; // random phase so pickups don't all bob in sync
     this._aura  = null;
+    this._bottles = null; // loaded-model groups (one per value: 1x/2x/3x nitro)
 
     // Root transform — position drives the bob animation
     this._root = new TransformNode(`pickup_${type}_${x}_${z}`, scene);
@@ -106,7 +108,7 @@ export class Pickup {
     auraMat.alpha = 0.95;
     this._aura.material = auraMat;
 
-    const loadObjModel = (url, { tiltX = 0 } = {}) => {
+    const loadObjModel = (url, { tiltX = 0, count = 1, spacing = 0.8 } = {}) => {
       const lastSlash = url.lastIndexOf("/");
       const rootUrl = url.substring(0, lastSlash + 1);
       const fileName = url.substring(lastSlash + 1);
@@ -118,30 +120,48 @@ export class Pickup {
           // Dispose default primitives and replace with loaded.
           // Babylon will automatically drop disposed meshes from shadow caster lists.
           this._core.dispose();
-          this._ring.dispose();
+          this._ring?.dispose();
 
           this._core = new TransformNode(`pickup_obj_${type}_${x}_${z}`, scene);
           this._core.parent = this._root;
-          this._core.rotation.x = tiltX;
           this._ring = null;
 
+          // First "bottle" groups the imported meshes; higher-value pickups clone
+          // it into a centered row (2x = two bottles, 3x = three).
+          const bottle0 = new TransformNode(`pickup_bottle0_${x}_${z}`, scene);
+          bottle0.parent = this._core;
           for (const m of result.meshes) {
-            m.parent = this._core;
+            m.parent = bottle0;
             shadows.addShadowCaster(m);
-            // Optionally apply the golden material if it didn't come with one.
             if (!m.material || m.material.name === "default material") {
               m.material = coreMat;
             }
           }
+
+          this._bottles = [bottle0];
+          for (let i = 1; i < count; i++) {
+            const clone = bottle0.clone(`pickup_bottle${i}_${x}_${z}`, this._core);
+            if (!clone) continue;
+            this._bottles.push(clone);
+            for (const cm of clone.getChildMeshes()) shadows.addShadowCaster(cm);
+          }
+          // Tilt each bottle here (not on the parent) so update()'s rotation.y
+          // spins it around the world-vertical axis — tilting the parent instead
+          // would tilt the spin axis too.
+          this._bottles.forEach((b, i) => {
+            b.position.x = (i - (count - 1) / 2) * spacing;
+            b.rotation.x = tiltX;
+          });
         })
         .catch(e => {
           console.warn(`Could not load ${fileName}, falling back to primitive geo.`, e);
         });
     };
 
-    // Try loading custom OBJ models per pickup type.
+    // Try loading custom OBJ models per pickup type. Boost pickups render one
+    // nitro bottle per value point (1x/2x/3x).
     if (type === 'boost') {
-      loadObjModel(nitroUrl, { tiltX: -Math.PI / 4 });
+      loadObjModel(nitroUrl, { tiltX: -Math.PI / 4, count: Math.max(1, value) });
     } else if (type === 'coin') {
       loadObjModel(coinUrl, { tiltX: Math.PI / 2 });
     }
@@ -169,7 +189,10 @@ export class Pickup {
     this._root.position.y = this._baseY + Math.sin(this._time * 2.5) * 0.18;
     
     // Animate rotation based on whether we use the default geometry or the custom .obj
-    if (this._core) {
+    if (this._bottles) {
+      // Each nitro bottle spins in place so a 2x/3x row stays readable as a row.
+      for (const b of this._bottles) b.rotation.y = this._time * 2.2;
+    } else if (this._core) {
       if (this._ring) {
         // Spin default core on two axes for a jewel-tumble effect
         this._core.rotation.y = this._time * 2.2;

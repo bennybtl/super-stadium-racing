@@ -49,8 +49,8 @@
         0,
         0,
         0,
-        0,
-        0,
+        -1,
+        -1,
         0,
         3,
         1.5,
@@ -67,7 +67,7 @@
         0,
         0,
         0,
-        1.5,
+        0,
         0,
         0,
         -0.5,
@@ -75,35 +75,35 @@
         -1.5,
         -2,
         -1.5,
-        -1,
-        1,
-        0,
-        0,
+        2,
+        3,
+        2,
+        2,
         0,
         0,
         0.5,
         0,
         0,
         0,
-        1,
+        3,
+        3,
+        2,
         0,
         0,
         0,
         0,
         0,
-        0,
-        0,
-        -2,
-        1.5,
-        0,
-        0,
+        2,
+        3,
+        3,
+        2,
         0,
         0,
         0,
         0,
         -1,
-        -1.5,
-        1.5,
+        2,
+        3,
         0,
         0,
         0,
@@ -125,8 +125,8 @@
           "z": -63.76354758076501
         },
         {
-          "x": 52.59550013540064,
-          "z": -60.55359163395695
+          "x": 53.09550013540064,
+          "z": -61.55359163395695
         },
         {
           "x": 59.26,
@@ -186,9 +186,10 @@
         }
       ],
       "width": 16.5,
-      "blendWidth": 2,
+      "blendWidth": 2.5,
       "cornerRadius": 8.5,
-      "terrainType": "loose_dirt"
+      "terrainType": "loose_dirt",
+      "closed": true
     },
     {
       "type": "terrainPath",
@@ -217,22 +218,22 @@
           "radius": 17.5
         },
         {
-          "x": 57.23905704309249,
-          "z": 33.01112955225996,
+          "x": 57.73905704309249,
+          "z": 32.51112955225996,
           "radius": 15
         },
         {
           "x": 49.695479836028895,
-          "z": -2.779086717776593,
+          "z": -2.279086717776593,
           "radius": 13
         },
         {
-          "x": 67.79280754433691,
+          "x": 68.29280754433691,
           "z": -18.42142229006548,
           "radius": 14
         }
       ],
-      "height": -2.9,
+      "height": -3.5,
       "width": 5,
       "terrainType": "mud",
       "closed": true,
@@ -597,26 +598,32 @@
     {
       "type": "checkpoint",
       "centerX": 9.2002516835608,
-      "centerZ": -3.740226222045493,
+      "centerZ": -3.240226222045493,
       "heading": 0.08726646259971647,
       "width": 19.5,
-      "checkpointNumber": 1
+      "checkpointNumber": 1,
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
-      "centerX": -13.7997483164392,
-      "centerZ": 65.2597737779545,
+      "centerX": -27.2997483164392,
+      "centerZ": 27.759773777954507,
+      "heading": -1.4835298641951802,
+      "width": 24,
+      "checkpointNumber": 2,
+      "_altIndex": 0,
+      "_altCount": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 15.749655781936443,
+      "centerZ": 63.5101757470391,
       "heading": 1.5707963267948966,
-      "width": 21,
-      "checkpointNumber": 2
-    },
-    {
-      "type": "checkpoint",
-      "centerX": 10.5,
-      "centerZ": -64.5,
-      "heading": -1.5707963267948966,
-      "width": 21.5,
-      "checkpointNumber": 3
+      "width": 27.5,
+      "checkpointNumber": 3,
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "aiPath",
@@ -853,8 +860,8 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "circle",
-      "x": 46,
-      "z": 57,
+      "x": 44.750583767164194,
+      "z": 55.39188151289139,
       "width": 30,
       "depth": 30,
       "rotation": 0,
@@ -864,8 +871,8 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "circle",
-      "x": 12,
-      "z": 29,
+      "x": 7.784394899498588,
+      "z": 25.117306529879485,
       "width": 30,
       "depth": 30,
       "rotation": 0,
@@ -1148,6 +1155,16 @@
       "closed": true,
       "filled": true,
       "waterLevelOffset": 0.2
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 10.5,
+      "centerZ": -64.5,
+      "heading": -1.5707963267948966,
+      "width": 21.5,
+      "checkpointNumber": 4,
+      "_altIndex": 0,
+      "_altCount": 1
     }
   ]
 }

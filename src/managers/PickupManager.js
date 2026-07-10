@@ -8,101 +8,68 @@ import { TerrainQuery } from "./TerrainQuery.js";
 /** Horizontal distance (m) at which a truck collects a pickup. */
 const COLLECT_RADIUS = PICKUP_MAX_TORUS_DIAMETER * 1.5;
 
-/** Milliseconds before a collected pickup reappears. */
-const RESPAWN_DELAY_MS = 10_000;
-
-/** Default number of pickups to scatter across the track. */
-const DEFAULT_COUNT = 6;
-
-/** Half-extent of the random spawn area in world units.
- *  The full track ground is 160×160, so 75 keeps pickups inside the visible surface. */
+/** Half-extent of the random spawn area in world units (no-zone fallback only).
+ *  The full track ground is 160×160, so 65 keeps pickups inside the visible surface. */
 const SPAWN_HALF_EXTENT = 65;
 
-/** Minimum distance (m) between any two pickup spawn points. */
+/** Minimum distance (m) between any two randomly-placed pickup spawn points. */
 const MIN_PICKUP_DIST = 10;
-// const COIN_VALUES = [100, 200, 300, 400, 500];
-// const COIN_SPAWN_CHANCE = 0.35;
+
+/** Chance that an empty spawn zone spawns a pickup when a truck completes a lap. */
+const LAP_SPAWN_CHANCE = 0.5;
+/** Per-tier chance to bump a lap pickup's value up (capped by the lap number). */
+const VALUE_UPGRADE_CHANCE = 0.5;
+/** Highest nitro multiplier a pickup can award. */
+const MAX_PICKUP_VALUE = 3;
+/** Cap on pickups active on the track at once (keeps late-race laps from flooding it). */
+const MAX_ACTIVE_PICKUPS = 6;
 
 
 // =============================================================================
 
 /**
- * PickupManager — randomly scatters collectable items across the track and
- * handles per-frame collision detection, collection callbacks and respawning.
+ * PickupManager — spawns collectable nitro as trucks complete laps and handles
+ * per-frame collection detection + callbacks.
+ *
+ * Pickups appear at the track's "pickupSpawn" action zones (each empty zone
+ * rolls independently per completed lap); their value scales with the lap
+ * (1x/2x/3x). Collecting a pickup removes it, freeing its zone to refill later.
  *
  * Usage:
  *   const pm = new PickupManager(scene, track, shadows);
- *   pm.onPickupCollected = (type, truckData, payload) => { ... };
- *   // each frame:
- *   pm.update(trucks, dt);
- *   // on race reset:
- *   pm.rebuild();
+ *   pm.onPickupCollected = (type, truckData, value) => { ... };
+ *   pm.update(trucks, dt);    // each frame
+ *   pm.spawnForLap(lapCount);  // when any truck completes a lap
+ *   pm.clearAll();             // on race reset
  */
 export class PickupManager {
-  constructor(scene, track, shadows, count = DEFAULT_COUNT, audioManager = null) {
+  constructor(scene, track, shadows, audioManager = null) {
     this.scene   = scene;
     this.track   = track;
     this.shadows = shadows;
-    this._count  = count;
     this._terrainQuery = new TerrainQuery(scene);
 
     /** @type {Pickup[]} */
     this._pickups = [];
-    /** @type {ReturnType<typeof setTimeout>[]} */
-    this._respawnTimers = [];
 
     /**
-     * Assigned by the owning mode.
-     * Called with (type: string, truckData: object) whenever a truck
-     * drives through a pickup.
-     * @type {((type: string, truckData: object) => void) | null}
+     * Assigned by the owning mode. Called with (type, truckData, value)
+     * whenever a truck drives through a pickup.
+     * @type {((type: string, truckData: object, value: number) => void) | null}
      */
     this.onPickupCollected = null;
 
     /** @type {import('./AudioManager.js').AudioManager|null} */
     this.audioManager = audioManager;
-
-    this._spawnAll();
   }
 
   setAudioManager(audioManager) {
     this.audioManager = audioManager;
   }
 
-  // ── Creation ──────────────────────────────────────────────────────────────
+  // ── Spawn-position helpers ──────────────────────────────────────────────────
 
-  _spawnAll() {
-    for (const { x, z } of this._generatePositions(this._count)) {
-      const groundY = this._terrainQuery.heightAt(x, z);
-      this._pickups.push(new Pickup(x, z, groundY, this._pickType(), this.scene, this.shadows));
-    }
-  }
-
-  _pickType() {
-    // Coins were the (removed) season economy; only boosts spawn now.
-    // return Math.random() < COIN_SPAWN_CHANCE ? 'coin' : 'boost';
-    return 'boost';
-  }
-
-  /**
-   * Returns up to `count` positions spaced at least MIN_PICKUP_DIST apart.
-   * If the track has one or more "pickupSpawn" action zones, exactly one
-   * pickup position is generated per zone feature; otherwise the full track
-   * surface is used with the requested count.
-   */
-  _generatePositions(count) {
-    if (count <= 0) return [];
-
-    const spawnZones = (this.track?.features ?? []).filter(
-      f => f.type === 'actionZone' && f.zoneType === 'pickupSpawn'
-    );
-
-    return spawnZones.length > 0
-      ? this._generateOnePositionPerZone(spawnZones)
-      : this._generatePositionsRandom(count);
-  }
-
-  /** Scatter positions randomly across the whole track surface (legacy fallback). */
+  /** Scatter `count` positions randomly across the track (no-zone fallback). */
   _generatePositionsRandom(count) {
     const positions  = [];
     let attempts     = 0;
@@ -118,47 +85,6 @@ export class PickupManager {
         return Math.sqrt(dx * dx + dz * dz) < MIN_PICKUP_DIST;
       });
       if (!tooClose) positions.push({ x, z });
-    }
-    return positions;
-  }
-
-  /**
-   * Generate one spawn position per action-zone feature.
-   * This ensures polygon zones do not create extra pickups based on point count.
-   */
-  _generateOnePositionPerZone(zones) {
-    const positions = [];
-    for (const zone of zones) {
-      let chosen = null;
-
-      // Try a few candidate points to keep zone pickups reasonably separated.
-      for (let i = 0; i < 24; i++) {
-        const candidate = this._randomPointInZone(zone);
-        if (!Number.isFinite(candidate.x) || !Number.isFinite(candidate.z)) continue;
-
-        const tooClose = positions.some(p => {
-          const dx = p.x - candidate.x;
-          const dz = p.z - candidate.z;
-          return Math.sqrt(dx * dx + dz * dz) < MIN_PICKUP_DIST;
-        });
-        if (!tooClose) {
-          chosen = candidate;
-          break;
-        }
-      }
-
-      // Fallback to any valid sample so each zone still contributes one pickup.
-      if (!chosen) {
-        for (let i = 0; i < 12; i++) {
-          const candidate = this._randomPointInZone(zone);
-          if (Number.isFinite(candidate.x) && Number.isFinite(candidate.z)) {
-            chosen = candidate;
-            break;
-          }
-        }
-      }
-
-      if (chosen) positions.push(chosen);
     }
     return positions;
   }
@@ -226,9 +152,11 @@ export class PickupManager {
    * @param {number}   dt      - frame delta time (seconds)
    */
   update(trucks, dt) {
+    let anyCollected = false;
+
     for (const pickup of this._pickups) {
       pickup.update(dt);
-      if (!pickup.isVisible) continue;
+      if (!pickup.isVisible || pickup._collected) continue;
 
       for (const truckData of trucks) {
         const truck = truckData.truck ?? truckData;
@@ -241,51 +169,92 @@ export class PickupManager {
 
         if (Math.sqrt(dx * dx + dz * dz) < COLLECT_RADIUS) {
           pickup.setVisible(false);
+          pickup._collected = true;
+          anyCollected = true;
           if (pickup.type === 'boost' && truckData?.isPlayer) {
             truck.audioController?.playReload?.();
             if (!truck.audioController) {
               this.audioManager?.playSound('reload');
             }
           }
-          // let payload = undefined;
-          // if (pickup.type === 'coin') {
-          //   payload = {
-          //     credits: COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)],
-          //     position: { x: pp.x, y: pp.y, z: pp.z },
-          //   };
-          // }
-          // this.onPickupCollected?.(pickup.type, truckData, payload);
-          this.onPickupCollected?.(pickup.type, truckData);
-
-          const t = setTimeout(() => pickup.setVisible(true), RESPAWN_DELAY_MS);
-          this._respawnTimers.push(t);
+          // Lap-spawned pickups are one-time: collecting removes them (a new one
+          // appears when a truck completes another lap).
+          this.onPickupCollected?.(pickup.type, truckData, pickup.value);
           break; // only one truck can collect per pickup per frame
         }
       }
     }
+
+    if (anyCollected) {
+      for (const p of this._pickups) if (p._collected) p.dispose();
+      this._pickups = this._pickups.filter(p => !p._collected);
+    }
   }
 
-  // ── Reset & Lifecycle ──────────────────────────────────────────────────
+  // ── Lap-triggered spawning ─────────────────────────────────────────────────
 
-  /** Randomly spawn `count` items across the track, replacing any existing items. */
-  spawn(count = this._count) {
-    this.dispose();
-    this._count = count;
-    this._spawnAll();
+  /**
+   * When a truck completes a lap, each empty "pickupSpawn" zone independently
+   * rolls to spawn a pickup (value scaled to the lap, up to MAX_PICKUP_VALUE).
+   * Tracks with no zones fall back to a single track-wide roll.
+   * @param {number} lapCount - the lap the truck just completed
+   * @returns {Pickup[]} the pickups spawned this lap
+   */
+  spawnForLap(lapCount) {
+    const zones = (this.track?.features ?? []).filter(
+      f => f.type === 'actionZone' && f.zoneType === 'pickupSpawn'
+    );
+
+    // No authored zones: fall back to a single track-wide roll at a random spot.
+    if (zones.length === 0) {
+      if (Math.random() < LAP_SPAWN_CHANCE && this._pickups.length < MAX_ACTIVE_PICKUPS) {
+        const [pos] = this._generatePositionsRandom(1);
+        if (pos) return [this._spawnPickup(pos, lapCount)];
+      }
+      return [];
+    }
+
+    const spawned = [];
+    for (const zone of zones) {
+      if (this._pickups.length >= MAX_ACTIVE_PICKUPS) break;
+      if (this._zoneOccupied(zone)) continue;
+      if (Math.random() >= LAP_SPAWN_CHANCE) continue;
+      const pos = this._randomPointInZone(zone);
+      if (!Number.isFinite(pos.x) || !Number.isFinite(pos.z)) continue;
+      spawned.push(this._spawnPickup(pos, lapCount));
+    }
+    if (spawned.length) {
+      console.debug(`[Pickup] lap ${lapCount}: spawned ${spawned.length} (${spawned.map(p => p.value + 'x').join(', ')})`);
+    }
+    return spawned;
   }
 
-  /** Cancel all pending respawn timers and make every pickup visible immediately. */
-  rebuild() {
-    this._respawnTimers.forEach(clearTimeout);
-    this._respawnTimers = [];
-    this._pickups.forEach(p => p.setVisible(true));
+  /** True if an active pickup already sits inside `zone`. */
+  _zoneOccupied(zone) {
+    return this._pickups.some(p => this._pointInZone(p.position.x, p.position.z, zone));
   }
 
-  // ── Disposal ──────────────────────────────────────────────────────────────
+  /** Create a pickup at `pos` with a lap-scaled value and track it. */
+  _spawnPickup(pos, lapCount) {
+    const value = this._rollValue(lapCount);
+    const groundY = this._terrainQuery.heightAt(pos.x, pos.z);
+    const pickup = new Pickup(pos.x, pos.z, groundY, 'boost', this.scene, this.shadows, value);
+    this._pickups.push(pickup);
+    return pickup;
+  }
 
-  dispose() {
-    this._respawnTimers.forEach(clearTimeout);
-    this._respawnTimers = [];
+  /** Value 1..min(lapCount, MAX), each step gated by an upgrade roll. */
+  _rollValue(lapCount) {
+    const cap = Math.max(1, Math.min(lapCount, MAX_PICKUP_VALUE));
+    let value = 1;
+    while (value < cap && Math.random() < VALUE_UPGRADE_CHANCE) value++;
+    return value;
+  }
+
+  // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+  /** Remove every active pickup (used on race reset). */
+  clearAll() {
     this._pickups.forEach(p => p.dispose());
     this._pickups = [];
   }
