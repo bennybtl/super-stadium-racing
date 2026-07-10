@@ -43,7 +43,7 @@ const YAW_AIRBORNE_DECAY = 2.0;
 const BASE_UNDERSTEER = 0.10;
 // /** Baseline understeer at low speed */
 // This ends up making the cars too twitchy
-// const BASE_OVERSTEER = 0.10;
+const BASE_OVERSTEER = 0.10;
 /** Added understeer under throttle (weight shifts rearward, front lightens). */
 const THROTTLE_UNDERSTEER_GAIN = 0.10;
 /** Oversteer under braking (weight shifts forward, rear lightens). */
@@ -283,10 +283,10 @@ export class Controls {
     const wt = this.state.weightTransfer ?? 1.0;
     const baseUndersteer     = speedRatio * BASE_UNDERSTEER;
     const throttleUndersteer = isAccelerating ? speedRatio * THROTTLE_UNDERSTEER_GAIN * wt : 0;
-    // const baseOversteer      = Math.max(0.2, (1 - speedRatio) * BASE_OVERSTEER);
+    const baseOversteer      = Math.max(0.2, (1 - speedRatio) * BASE_OVERSTEER);
     const brakeOversteer     = isDecelerating ? speedRatio * BRAKE_OVERSTEER_GAIN * wt : 0;
 
-    const steerFactor     = Math.max(MIN_STEER_FACTOR, 1 - baseUndersteer - throttleUndersteer + brakeOversteer);
+    const steerFactor     = Math.max(MIN_STEER_FACTOR, 1 - baseUndersteer - throttleUndersteer + brakeOversteer + baseOversteer);
     const effectiveTurnSpeed = this.state.turnSpeed * steerFactor;
 
     const lateralGripFactor = Math.max(MIN_LATERAL_GRIP_FACTOR, 1 - speedRatio * LATERAL_GRIP_SPEED_TAPER);

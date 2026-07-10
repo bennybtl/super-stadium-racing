@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "id": "tutorial",
+  "packId": null,
+  "hidden": false,
+  "dirtChunks": true,
+  "name": "Tutorial",
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "packed_dirt",
+  "borderTerrainType": "loose_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "alphaBreakup": 0.28,
+    "width": 4,
+    "intensity": 0.8,
+    "laneSpacing": 2,
+    "pathWander": 0.7,
+    "edgeSoftness": 1,
+    "secondaryPathCount": 60,
+    "secondaryPathStrength": 0.8,
+    "secondaryPathSpacing": 0.04,
+    "seed": 1337
+  },
+  "features": [
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -68,
+          "z": -78,
+          "radius": 10
+        },
+        {
+          "x": -76,
+          "z": -46,
+          "radius": 11.5
+        },
+        {
+          "x": -70,
+          "z": -16,
+          "radius": 10
+        },
+        {
+          "x": 70,
+          "z": -16,
+          "radius": 10
+        },
+        {
+          "x": 70.78133289548363,
+          "z": -46.74940989777177,
+          "radius": 12
+        },
+        {
+          "x": 62,
+          "z": -78,
+          "radius": 10
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": true
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 36.545483807311044,
+          "z": -48.618758833531345,
+          "radius": 10
+        },
+        {
+          "x": 4.671371092376209,
+          "z": -52.55832236740041,
+          "radius": 10
+        },
+        {
+          "x": -20.879492116347496,
+          "z": -46.7849198021307,
+          "radius": 10
+        },
+        {
+          "x": -42.70815722229194,
+          "z": -49.874028153003295,
+          "radius": 10
+        }
+      ],
+      "height": 4.7,
+      "width": 16.5,
+      "terrainType": null,
+      "closed": false,
+      "filled": false
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 0,
+      "centerZ": -30,
+      "heading": 1.6580627893946132,
+      "width": 17,
+      "checkpointNumber": 1,
+      "_altIndex": 0,
+      "_altCount": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -2,
+      "centerZ": -68,
+      "heading": -1.4835298641951802,
+      "width": 15.5,
+      "checkpointNumber": 2,
+      "_altIndex": 0,
+      "_altCount": 1
+    }
+  ]
+}

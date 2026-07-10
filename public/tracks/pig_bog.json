@@ -163,10 +163,10 @@
       ],
       "height": 2,
       "collisionHeight": 2,
-      "thickness": 3,
+      "thickness": 1.1,
       "friction": 0.05,
       "closed": true,
-      "style": "grey"
+      "style": "red_white"
     },
     {
       "type": "polyWall",
@@ -194,10 +194,10 @@
       ],
       "height": 2,
       "collisionHeight": 2,
-      "thickness": 3,
+      "thickness": 1.1,
       "friction": 0.05,
       "closed": true,
-      "style": "grey"
+      "style": "red_white"
     },
     {
       "type": "polyWall",
@@ -225,10 +225,10 @@
       ],
       "height": 2,
       "collisionHeight": 2,
-      "thickness": 3,
+      "thickness": 1,
       "friction": 0.05,
       "closed": true,
-      "style": "grey"
+      "style": "red_white"
     },
     {
       "type": "polyWall",
@@ -256,10 +256,10 @@
       ],
       "height": 2,
       "collisionHeight": 2,
-      "thickness": 3,
+      "thickness": 1.2,
       "friction": 0.05,
       "closed": true,
-      "style": "grey"
+      "style": "red_white"
     },
     {
       "type": "checkpoint",
@@ -267,7 +267,9 @@
       "centerZ": 59,
       "heading": -1.5707963267948966,
       "width": 16,
-      "checkpointNumber": 1
+      "checkpointNumber": 1,
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -275,7 +277,9 @@
       "centerZ": -69,
       "heading": -1.5707963267948966,
       "width": 16,
-      "checkpointNumber": 2
+      "checkpointNumber": 2,
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -283,7 +287,9 @@
       "centerZ": 59,
       "heading": -1.5707963267948966,
       "width": 16,
-      "checkpointNumber": 3
+      "checkpointNumber": 3,
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -291,7 +297,9 @@
       "centerZ": -68.5,
       "heading": -1.5707963267948966,
       "width": 16,
-      "checkpointNumber": 4
+      "checkpointNumber": 4,
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "polyHill",
@@ -386,8 +394,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 28.125411364370063,
-          "z": 8.606706579593332,
+          "x": 27.3273794683316,
+          "z": 8.690740887747221,
           "radius": 10
         },
         {
@@ -406,13 +414,13 @@
           "radius": 10
         },
         {
-          "x": 42.42936973539915,
-          "z": 13.280017762723471,
+          "x": 39.982924444514055,
+          "z": 14.261441750392319,
           "radius": 10
         },
         {
-          "x": 28.290375199096957,
-          "z": 17.131997243615647,
+          "x": 29.431972599272534,
+          "z": 14.59169513081692,
           "radius": 0
         }
       ],
@@ -632,8 +640,8 @@
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": -39.517995078011715,
-      "centerZ": 37.529453478269424,
+      "centerX": -38.517995078011715,
+      "centerZ": 40.029453478269424,
       "terrainType": "mud",
       "width": 52.5,
       "depth": 33.5,
@@ -758,8 +766,8 @@
     },
     {
       "type": "trackSign",
-      "x": -36.59831481703133,
-      "z": -53.02540693262305,
+      "x": -37.40252122052643,
+      "z": -48.39662268729533,
       "name": "Pig Bog",
       "rotation": 0,
       "contentType": "text",
@@ -773,7 +781,7 @@
     {
       "type": "trackSign",
       "x": 44.209853230719744,
-      "z": -52.3376199517535,
+      "z": -49.3376199517535,
       "name": "Track Name",
       "rotation": 0,
       "contentType": "brand",
@@ -800,8 +808,8 @@
     },
     {
       "type": "trackSign",
-      "x": -39.238497372408354,
-      "z": 40.08023298395105,
+      "x": -39.60006147865556,
+      "z": 44.319203407698396,
       "name": "Track Name",
       "rotation": 0,
       "contentType": "brand",
@@ -1138,6 +1146,48 @@
       "scale": 1,
       "weight": 40,
       "color": "red"
+    },
+    {
+      "type": "trackSign",
+      "x": -39.268875927300336,
+      "z": 41.13381853615673,
+      "name": "3",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "rocket-gasoline.png",
+      "background": "black",
+      "primaryColor": "white",
+      "scale": 1.45,
+      "heightOffset": 0,
+      "width": 7
+    },
+    {
+      "type": "trackSign",
+      "x": 46.731124072699664,
+      "z": 39.63381853615673,
+      "name": "1",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "rocket-gasoline.png",
+      "background": "black",
+      "primaryColor": "white",
+      "scale": 1.45,
+      "heightOffset": 0,
+      "width": 7
+    },
+    {
+      "type": "trackSign",
+      "x": 44.731124072699664,
+      "z": -51.36618146384327,
+      "name": "2",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "rocket-gasoline.png",
+      "background": "black",
+      "primaryColor": "white",
+      "scale": 1.45,
+      "heightOffset": 0,
+      "width": 7
     }
   ]
 }
