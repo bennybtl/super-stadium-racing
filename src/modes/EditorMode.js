@@ -274,10 +274,11 @@ export class EditorMode extends BaseMode {
     menuManager.onEditorSave = () => {
       if (rebuild.currentTrack) {
         trackLoader.downloadTrack(rebuild.currentTrack);
-        trackLoader.saveTrackToStorage(
-          menuManager.selectedTrack || "custom",
-          rebuild.currentTrack
-        );
+        const saveKey = (menuManager.selectedTrack && menuManager.selectedTrack !== 'new')
+          ? menuManager.selectedTrack
+          : rebuild.currentTrack.id || 'custom';
+        trackLoader.saveTrackToStorage(saveKey, rebuild.currentTrack);
+        menuManager.selectedTrack = saveKey;
       }
       menuManager.hideMenu();
     };

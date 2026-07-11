@@ -49,11 +49,34 @@ export class TrackLoader {
     });
 
     await Promise.all(loadPromises);
+    // Surface tracks that only exist in localStorage (created/saved in the
+    // editor after this build) — they aren't in the file manifest.
+    this.loadStorageTracks();
     this.trackList.sort((a, b) => a.localeCompare(b));
     // Warm the browser cache with track preview images so the selection
     // carousel shows them instantly instead of streaming in on first open.
     this.preloadTrackImages();
     return this.tracks;
+  }
+
+  /**
+   * Discover and load every track saved under a `track_<key>` localStorage key.
+   * This picks up user-created tracks that didn't exist at build time (and
+   * refreshes edited copies of built-in tracks). Invalid entries are skipped.
+   */
+  loadStorageTracks() {
+    if (typeof localStorage === 'undefined') return;
+    const prefix = 'track_';
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      if (!storageKey || !storageKey.startsWith(prefix)) continue;
+      const key = storageKey.slice(prefix.length);
+      try {
+        this.loadTrackFromStorage(key);
+      } catch (error) {
+        console.warn(`[TrackLoader] Skipping invalid saved track "${key}":`, error);
+      }
+    }
   }
 
   /**

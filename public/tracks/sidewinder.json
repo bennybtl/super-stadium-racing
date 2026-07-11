@@ -403,7 +403,9 @@
       "heading": 1.5707963267948966,
       "width": 30,
       "checkpointNumber": 1,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -412,7 +414,9 @@
       "heading": -1.3962634015954636,
       "width": 27,
       "checkpointNumber": 2,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -421,7 +425,9 @@
       "heading": 1.6580627893946132,
       "width": 24,
       "checkpointNumber": 3,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -430,7 +436,9 @@
       "heading": -1.4835298641951802,
       "width": 17,
       "checkpointNumber": 4,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "squareHill",
@@ -670,8 +678,12 @@
           "z": 11.850000000000001
         },
         {
-          "x": -65.03999999999999,
-          "z": 50.96000000000001
+          "x": -63.58452090042666,
+          "z": 46.41652606202924
+        },
+        {
+          "x": -48.81300319554785,
+          "z": 57.9517004161103
         },
         {
           "x": -27.53,
