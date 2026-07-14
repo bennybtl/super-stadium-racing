@@ -69,6 +69,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted } from 'vue';
+import { getStoredTrackImage } from '../managers/TrackPackLoader.js';
 
 const props = defineProps({
   tracks: {
@@ -129,7 +130,9 @@ const displayTracks = computed(() => {
   return filteredTracks.value.map(trackData => ({
     key: trackData.key,
     name: trackData.name,
-    image: trackData?.image ? `${import.meta.env.BASE_URL}tracks/${trackData.image}` : null,
+    image: trackData?.image
+      ? (getStoredTrackImage(trackData.image) ?? `${import.meta.env.BASE_URL}tracks/${trackData.image}`)
+      : null,
   }));
 });
 

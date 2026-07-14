@@ -6,7 +6,7 @@ export const DEFAULT_THROTTLE_CONFIG = {
   // it brakes instead of just coasting. Coasting can't shed enough speed for a
   // sharp turn, so braking is what lets the AI actually hit the path's corner
   // speeds.
-  brakeMargin: 3,
+  brakeMargin: 5,
 };
 
 /**

@@ -1,5 +1,13 @@
-const WAYPOINT_LOOK_BACK = 5;
-const WAYPOINT_LOOK_AHEAD = 30;
+export const DEFAULT_PATH_CONFIG = {
+  lookBack: 5,
+  lookAhead: 30,
+  waypointStep: 3,
+  baseSpeedFactor: 28,
+  minSpeedFactor: 15,
+  maxDecel: 22,
+  curveWindowUnits: 9,
+  turnFullAngle: Math.PI / 2,
+};
 
 /**
  * AIPathPlanner
@@ -10,8 +18,14 @@ const WAYPOINT_LOOK_AHEAD = 30;
 export class AIPathPlanner {
   constructor(driver, config = {}) {
     this.driver = driver;
-    this.lookBack = config.lookBack ?? WAYPOINT_LOOK_BACK;
-    this.lookAhead = config.lookAhead ?? WAYPOINT_LOOK_AHEAD;
+    this.lookBack = config.lookBack ?? DEFAULT_PATH_CONFIG.lookBack;
+    this.lookAhead = config.lookAhead ?? DEFAULT_PATH_CONFIG.lookAhead;
+    this.waypointStep = config.waypointStep ?? DEFAULT_PATH_CONFIG.waypointStep;
+    this.baseSpeedFactor = config.baseSpeedFactor ?? DEFAULT_PATH_CONFIG.baseSpeedFactor;
+    this.minSpeedFactor = config.minSpeedFactor ?? DEFAULT_PATH_CONFIG.minSpeedFactor;
+    this.maxDecel = config.maxDecel ?? DEFAULT_PATH_CONFIG.maxDecel;
+    this.curveWindowUnits = config.curveWindowUnits ?? DEFAULT_PATH_CONFIG.curveWindowUnits;
+    this.turnFullAngle = config.turnFullAngle ?? DEFAULT_PATH_CONFIG.turnFullAngle;
   }
 
   getCheckpointPositions() {
@@ -58,17 +72,12 @@ export class AIPathPlanner {
     const aiPathFeature = d.track.features?.find(f => f.type === "aiPath");
     const authorNodes = aiPathFeature?.points?.length >= 2 ? aiPathFeature.points : null;
 
-    const STEP = 3;
-    const BASE_SPEED = 28 * d.maxSpeed;
-    const MIN_SPEED = 12 * d.maxSpeed;
-    const MAX_DECEL = 22;
-    // Corner-speed curvature sampling: measure the path's deflection over a
-    // window this many world units to each side, so a sharp turn traced by
-    // several authored nodes still reads as sharp (a single-node measurement
-    // underestimates it). A deflection at/above TURN_FULL_ANGLE drops the target
-    // all the way to MIN_SPEED.
-    const CURVE_WINDOW_UNITS = 9;
-    const TURN_FULL_ANGLE = Math.PI / 2;
+    const STEP = this.waypointStep;
+    const BASE_SPEED = this.baseSpeedFactor * d.maxSpeed;
+    const MIN_SPEED = this.minSpeedFactor * d.maxSpeed;
+    const MAX_DECEL = this.maxDecel;
+    const CURVE_WINDOW_UNITS = this.curveWindowUnits;
+    const TURN_FULL_ANGLE = this.turnFullAngle;
 
     const buildAuthoredNodesWithBranches = () => {
       const mainNodes = authorNodes.map(p => ({ x: p.x, z: p.z }));

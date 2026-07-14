@@ -72,6 +72,8 @@ export const useMenuStore = defineStore('menu', () => {
     if (target === 'start')            _bridge.value.showStartMenu();
   }
 
+  function refreshTrackList() { _bridge.value?._refreshTrackList(); }
+
   // ── Upgrade / pit actions ────────────────────────────────────────────────
   function purchaseUpgrade(id)     { _bridge.value?.onPurchaseUpgrade(id); }
   function resetUpgrades() {
@@ -101,7 +103,7 @@ export const useMenuStore = defineStore('menu', () => {
     setSelectedReverse,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
-    settings, back,
+    settings, back, refreshTrackList,
     purchaseUpgrade, resetUpgrades, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
     setMode,
     setLoading,

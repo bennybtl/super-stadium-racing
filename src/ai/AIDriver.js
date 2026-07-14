@@ -63,6 +63,7 @@ export class AIDriver {
       collisionAvoidanceMaxPush = DEFAULT_STEERING_CONFIG.collisionAvoidanceMaxPush,
       steeringSmooth = DEFAULT_STEERING_CONFIG.steeringSmooth,
       steeringThreshold = DEFAULT_STEERING_CONFIG.steeringThreshold,
+      steeringHysteresis = DEFAULT_STEERING_CONFIG.steeringHysteresis,
       speedTolerance = DEFAULT_THROTTLE_CONFIG.speedTolerance,
       telemetryLookWaypoints = DEFAULT_THROTTLE_CONFIG.telemetryLookWaypoints,
       pathLookWaypoints = DEFAULT_THROTTLE_CONFIG.pathLookWaypoints,
@@ -157,6 +158,7 @@ export class AIDriver {
       collisionAvoidanceMaxPush,
       steeringSmooth,
       steeringThreshold,
+      steeringHysteresis,
     });
     this._throttleController = new AIThrottleController(this, {
       speedTolerance,
@@ -389,7 +391,7 @@ export class AIDriver {
     const gateTarget = this._checkpointGuidance.getApproachTarget(position);
     const steerTarget = gateTarget ?? targetWaypoint;
 
-    const { forward, rightVec, turnStrength } = this._steeringController.compute({
+    const { forward, rightVec, turnStrength, steerDir } = this._steeringController.compute({
       position,
       heading,
       targetWaypoint: steerTarget,
@@ -399,18 +401,14 @@ export class AIDriver {
     const { shouldMoveForward, shouldReverse } = this._throttleController.compute({
       fwdSpeed,
     });
-    
+
     const isActuallyReversing = fwdSpeed < -0.3;
+    const flipDir = isActuallyReversing ? -steerDir : steerDir;
     const input = {
       forward: shouldMoveForward,
       back: shouldReverse,
-      // When actually moving backward, steering physics is inverted — flip to compensate
-      left: isActuallyReversing
-        ? turnStrength > this._steeringController.steeringThreshold
-        : turnStrength < -this._steeringController.steeringThreshold,
-      right: isActuallyReversing
-        ? turnStrength < -this._steeringController.steeringThreshold
-        : turnStrength > this._steeringController.steeringThreshold
+      left: flipDir < 0,
+      right: flipDir > 0,
     };
 
     this._boostController.update({ position, forward, rightVec, fwdSpeed, input });

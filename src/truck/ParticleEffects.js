@@ -1,7 +1,8 @@
 import { Vector3, ParticleSystem, Texture, Color4 } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 
-const CLOUD_TEXTURE_URL = "https://assets.babylonjs.com/textures/cloud.png";
+import cloudTextureUrl from "../assets/cloud.png";
+const CLOUD_TEXTURE_URL = cloudTextureUrl;
 const CLOUD_TEXTURES = new WeakMap();
 
 function getSharedCloudTexture(scene) {

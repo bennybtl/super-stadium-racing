@@ -299,9 +299,9 @@ export class EditorMode extends BaseMode {
     };
 
     rebuild.editorScene = () => {
-      const liveTrackKey = trackKey === 'new' ? '__editor_live__' : trackKey;
-      trackLoader.tracks.set(liveTrackKey, currentTrack);
-      this.controller.goToEditor({ trackKey: liveTrackKey });
+      const liveKey = '__editor_live__';
+      trackLoader.tracks.set(liveKey, currentTrack);
+      this.controller.goToEditor({ trackKey: liveKey, originalTrackKey: trackKey });
     };
 
     // -- Game loop --

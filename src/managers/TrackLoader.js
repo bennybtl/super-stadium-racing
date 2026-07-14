@@ -1,4 +1,5 @@
 import { Track } from '../track.js';
+import { getStoredTrackImage } from './TrackPackLoader.js';
 // Track filenames are scanned from public/tracks/ at build time (and re-scanned
 // on add/remove during dev) by the track-manifest Vite plugin — see
 // vite.config.js. Dropping a new .json there surfaces it without editing source.
@@ -11,6 +12,7 @@ export class TrackLoader {
   constructor() {
     this.tracks = new Map();
     this.trackList = [];
+    this.builtinKeys = new Set();
   }
 
   /**
@@ -28,7 +30,8 @@ export class TrackLoader {
       // Store with filename (without .json extension) as key
       const key = filename.replace('.json', '');
       this.tracks.set(key, track);
-      
+      this.builtinKeys.add(key);
+
       if (!this.trackList.includes(key)) {
         this.trackList.push(key);
       }
@@ -94,7 +97,7 @@ export class TrackLoader {
       seen.add(image);
       const img = new Image();
       img.decoding = 'async';
-      img.src = `${base}tracks/${image}`;
+      img.src = getStoredTrackImage(image) ?? `${base}tracks/${image}`;
     }
   }
 
@@ -143,6 +146,19 @@ export class TrackLoader {
       return track;
     }
     return null;
+  }
+
+  /**
+   * Remove a localStorage-only track. Built-in tracks cannot be removed.
+   * Returns true if the track was removed.
+   */
+  removeTrack(key) {
+    if (this.builtinKeys.has(key)) return false;
+    localStorage.removeItem(`track_${key}`);
+    this.tracks.delete(key);
+    const idx = this.trackList.indexOf(key);
+    if (idx !== -1) this.trackList.splice(idx, 1);
+    return true;
   }
 
   /**

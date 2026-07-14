@@ -11,6 +11,7 @@ export const DEFAULT_STEERING_CONFIG = {
   collisionAvoidanceMaxPush: 6,
   steeringSmooth: 0.18,
   steeringThreshold: 0.05,
+  steeringHysteresis: 0.12,
 };
 
 /**
@@ -32,8 +33,10 @@ export class AISteeringController {
     this.collisionAvoidanceMaxPush = Math.max(0, config.collisionAvoidanceMaxPush ?? DEFAULT_STEERING_CONFIG.collisionAvoidanceMaxPush);
     this.steeringSmooth = config.steeringSmooth ?? DEFAULT_STEERING_CONFIG.steeringSmooth;
     this.steeringThreshold = config.steeringThreshold ?? DEFAULT_STEERING_CONFIG.steeringThreshold;
+    this.steeringHysteresis = config.steeringHysteresis ?? DEFAULT_STEERING_CONFIG.steeringHysteresis;
 
     this._smoothedTurn = 0;
+    this._lastSteerDir = 0; // -1 left, 0 center, 1 right
 
     this._fwd = new Vector3(0, 0, 1);
     this._right = new Vector3(1, 0, 0);
@@ -42,6 +45,7 @@ export class AISteeringController {
 
   reset() {
     this._smoothedTurn = 0;
+    this._lastSteerDir = 0;
   }
 
   compute({ position, heading, targetWaypoint, dt = 1 / 60 }) {
@@ -108,7 +112,21 @@ export class AISteeringController {
     this._smoothedTurn += (turnStrength - this._smoothedTurn) * smoothAlpha;
     turnStrength = this._smoothedTurn;
 
-    return { forward, rightVec, turnStrength };
+    // Hysteresis: require a larger threshold to reverse steering direction
+    let steerDir = 0;
+    if (this._lastSteerDir === 0) {
+      if (turnStrength < -this.steeringThreshold) steerDir = -1;
+      else if (turnStrength > this.steeringThreshold) steerDir = 1;
+    } else if (this._lastSteerDir < 0) {
+      if (turnStrength > this.steeringHysteresis) steerDir = 1;
+      else if (turnStrength < -this.steeringThreshold) steerDir = -1;
+    } else {
+      if (turnStrength < -this.steeringHysteresis) steerDir = -1;
+      else if (turnStrength > this.steeringThreshold) steerDir = 1;
+    }
+    this._lastSteerDir = steerDir;
+
+    return { forward, rightVec, turnStrength, steerDir };
   }
 
   _computeCollisionAvoidanceOffset(position, forward, rightVec) {
