@@ -1,10 +1,11 @@
 {
   "schemaVersion": 2,
   "id": "toro_bravo",
-  "packId": null,
+  "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
   "name": "Toro Bravo",
+  "image": "toro_bravo.png",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -188,7 +189,7 @@
         },
         {
           "x": 18,
-          "z": 78.53644827332566,
+          "z": 79.53644827332566,
           "radius": 5
         }
       ],
@@ -218,7 +219,7 @@
           "radius": 30
         },
         {
-          "x": -77.78407283591056,
+          "x": -76.28407283591056,
           "z": 3.962125386060407,
           "radius": 10
         }
@@ -463,19 +464,19 @@
     },
     {
       "type": "hill",
-      "centerX": 69.16162826489234,
-      "centerZ": -68.07026238641643,
+      "centerX": 68.23421537218128,
+      "centerZ": -69.64197253547671,
       "radiusX": 10,
       "radiusZ": 10,
       "angle": 0,
-      "height": 4.5,
+      "height": -3,
       "waterLevelOffset": 0,
       "terrainType": "loose_dirt",
       "blendWidth": 4
     },
     {
       "type": "squareHill",
-      "centerX": 29.45109893600786,
+      "centerX": 30.45109893600786,
       "centerZ": 19.812849754670577,
       "width": 0.5,
       "depth": 27.5,
@@ -487,7 +488,7 @@
     },
     {
       "type": "squareHill",
-      "centerX": 42.95109893600786,
+      "centerX": 42.45109893600786,
       "centerZ": 26.812849754670577,
       "width": 0.5,
       "depth": 23.5,
@@ -529,7 +530,7 @@
       "radiusZ": 13.5,
       "angle": 0,
       "height": -1,
-      "waterLevelOffset": 0.9,
+      "waterLevelOffset": 0.6,
       "terrainType": "water",
       "blendWidth": 3
     },
@@ -549,9 +550,9 @@
     {
       "type": "squareHill",
       "centerX": 34.720812460710476,
-      "centerZ": -68.51833874036284,
-      "width": 10,
-      "depth": 10,
+      "centerZ": -67.51833874036284,
+      "width": 11,
+      "depth": 20,
       "angle": 0,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -730,6 +731,122 @@
       "x": 58.61801037870058,
       "z": 58.31907199219293,
       "color": "red"
+    },
+    {
+      "type": "trackSign",
+      "x": -62.968728261359956,
+      "z": 57.14881847284723,
+      "name": "Track Name",
+      "rotation": -0.8726646259971648,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.35,
+      "heightOffset": 2.5,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -49.43566064976,
+      "z": 69.56451569427402,
+      "name": "Track Name",
+      "rotation": -0.6981317007977318,
+      "contentType": "brand",
+      "brandImage": "turbo-king.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.35,
+      "heightOffset": 2.5,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 0.5,
+      "z": -54.50070959639746,
+      "name": "Toro Bravo",
+      "rotation": 0,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.55,
+      "heightOffset": 1.8,
+      "width": 10
+    },
+    {
+      "type": "bannerString",
+      "x": -12.435710110726276,
+      "z": -67.64632371003754,
+      "heading": 1.5707963267948966,
+      "width": 24,
+      "poleHeight": 10
+    },
+    {
+      "type": "bannerString",
+      "x": -20.384586108481294,
+      "z": -67.4225125836942,
+      "heading": 1.5707963267948966,
+      "width": 24,
+      "poleHeight": 10
+    },
+    {
+      "type": "hill",
+      "centerX": 64.70544850367205,
+      "centerZ": -15.736395830077122,
+      "radiusX": 13,
+      "radiusZ": 10,
+      "angle": 0,
+      "height": -4,
+      "waterLevelOffset": 0.5,
+      "terrainType": "loose_dirt",
+      "blendWidth": 5
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 61.73819905235415,
+      "z": -63.506636300823146,
+      "radius": 9
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 9.19487238460465,
+      "z": -32.284203328891145,
+      "radius": 9
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -35.30581741047402,
+      "z": -32.41199299720799,
+      "radius": 13
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 65.0543636335825,
+      "z": 65.993513298193,
+      "radius": 12.5
+    },
+    {
+      "type": "trackSign",
+      "x": -70.24693441499086,
+      "z": 40.39457528706863,
+      "name": "Track Name",
+      "rotation": -1.2740903539558606,
+      "contentType": "brand",
+      "brandImage": "phoenix-auto.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.35,
+      "heightOffset": 2.5,
+      "width": 10
     }
   ]
 }
