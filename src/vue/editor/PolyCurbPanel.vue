@@ -84,6 +84,8 @@
         class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
       >
         <option value="red_white">Red &amp; White</option>
+        <option value="blue_white">Blue &amp; White</option>
+        <option value="red_blue_white">Red, Blue &amp; White</option>
         <option value="black_yellow">Black &amp; Yellow</option>
         <option value="grey">Grey</option>
       </select>
