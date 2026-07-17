@@ -31,6 +31,10 @@ const AI_NORMAL_SAMPLE_INTERVAL = 1 / 30; // seconds between full normal samples
 // camera keeps trucks this far away offscreen. Never applied near bridges,
 // where the full pass protects deck/ramp traversal.
 const AI_TERRAIN_LOW_DETAIL_DIST = 75; // metres
+// Yaw pivot offset (local +Z, metres). Rotating about the front axle instead of
+// the mesh center makes the rear end swing out when the heading changes,
+// reading as a drift. 0 restores center-pivot rotation.
+const YAW_PIVOT_FORWARD = 1.5; // ≈ front axle (TruckBody frontAxle)
 
 /**
  * Main Truck class that coordinates all truck subsystems
@@ -259,6 +263,11 @@ export class Truck {
       speedBoostSpeedMult: 1,
       speedBoostAccelMult: 1,
 
+      // Multiplies the steering ramp rate. AI trucks steer on a slow, cached
+      // left/right cadence, so the player-facing easing would keep them from
+      // ever reaching lock — give them a near-instant ramp instead.
+      steerRampScale: this.driver ? 5 : 1,
+
       // suspend driving
       noDriveUntil: false
     };
@@ -405,9 +414,14 @@ export class Truck {
       this.mesh.position.z += this.state.velocity.z * deltaTime;
     });
 
-    // Update rotation
+    // Update rotation — pivot yaw about the front axle so the rear swings out.
     profile('truck.rotate', () => {
-      this.mesh.rotation.y = this.state.heading;
+      const prevHeading = this.mesh.rotation.y;
+      const newHeading = this.state.heading;
+      // Keep the front-axle point fixed: pos + fwd(prev)*L == newPos + fwd(new)*L
+      this.mesh.position.x += (Math.sin(prevHeading) - Math.sin(newHeading)) * YAW_PIVOT_FORWARD;
+      this.mesh.position.z += (Math.cos(prevHeading) - Math.cos(newHeading)) * YAW_PIVOT_FORWARD;
+      this.mesh.rotation.y = newHeading;
     });
 
     // Update roll before syncing the physics body so visual lean is live this frame.

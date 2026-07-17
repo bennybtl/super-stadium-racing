@@ -15,6 +15,7 @@
       >
         <option value="flag">Flag</option>
         <option value="bannerString">Banner String</option>
+        <option value="tent">Tent</option>
       </select>
     </div>
 
@@ -32,6 +33,50 @@
         <option value="blue">Blue</option>
         <option value="yellow">Yellow</option>
       </select>
+    </template>
+
+    <template v-else-if="editor.decoration.type === 'tent'">
+      <div class="text-[12px] mb-1">Color</div>
+      <select
+        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+        :value="editor.decoration.color"
+        @change="editor.setDecorationColor($event.target.value)"
+      >
+        <option value="black">Black</option>
+        <option value="gray">Gray</option>
+        <option value="white">White</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+        <option value="yellow">Yellow</option>
+      </select>
+
+      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+        <span>Scale</span>
+        <span>{{ editor.decoration.scale }}×</span>
+      </div>
+      <input
+        type="range"
+        min="0.5"
+        max="4"
+        step="0.1"
+        :value="editor.decoration.scale"
+        @input="editor.setDecorationScale(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+
+      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+        <span>Rotation</span>
+        <span>{{ editor.decoration.heading }}°</span>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="360"
+        step="1"
+        :value="editor.decoration.heading"
+        @input="editor.setDecorationHeading(+$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
     </template>
 
     <template v-else>

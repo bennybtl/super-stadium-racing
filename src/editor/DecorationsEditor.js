@@ -1,6 +1,7 @@
 import { Vector3, Color3 } from "@babylonjs/core";
 import { Flag } from "../objects/Flag.js";
 import { BannerString } from "../objects/BannerString.js";
+import { Tent } from "../objects/Tent.js";
 
 const EMISSIVE_BLACK = new Color3(0, 0, 0);
 const EMISSIVE_GREY  = new Color3(0.4, 0.4, 0.4);
@@ -12,6 +13,7 @@ export class DecorationsEditor {
     this.track = null;
     this.flags = [];
     this.banners = [];
+    this.tents = [];
     this._selected = null;
   }
 
@@ -26,8 +28,10 @@ export class DecorationsEditor {
   clearMeshes() {
     for (const flag of this.flags) flag.dispose();
     for (const banner of this.banners) banner.dispose();
+    for (const tent of this.tents) tent.dispose();
     this.flags = [];
     this.banners = [];
+    this.tents = [];
     this._selected = null;
   }
 
@@ -41,12 +45,14 @@ export class DecorationsEditor {
     for (const feature of track.features) {
       if (feature.type === 'flag') this._createFlag(feature);
       else if (feature.type === 'bannerString') this._createBanner(feature);
+      else if (feature.type === 'tent') this._createTent(feature);
     }
   }
 
   createVisual(feature) {
     if (feature.type === 'flag') return this._createFlag(feature);
     if (feature.type === 'bannerString') return this._createBanner(feature);
+    if (feature.type === 'tent') return this._createTent(feature);
     return null;
   }
 
@@ -68,8 +74,36 @@ export class DecorationsEditor {
     return banner;
   }
 
+  _createTent(feature) {
+    const { x, z } = feature;
+    const groundY = this.track.getHeightAt(x, z);
+    // Tents are large solid props, so let them cast shadows in the editor too.
+    const tent = new Tent(feature, groundY, this.scene, this.editor._shadows ?? null);
+    tent.feature = feature;
+    this.tents.push(tent);
+    return tent;
+  }
+
+  /** The visual list that owns decorations of the given feature type. */
+  _listForType(type) {
+    if (type === 'flag') return this.flags;
+    if (type === 'tent') return this.tents;
+    return this.banners;
+  }
+
+  /** Dispose a decoration's meshes and drop it from its owning list. */
+  _removeVisual(decoration) {
+    decoration.dispose();
+    const list = this._listForType(decoration.feature.type);
+    const idx = list.indexOf(decoration);
+    if (idx > -1) list.splice(idx, 1);
+  }
+
   findByMesh(mesh) {
-    return this.flags.find(f => f.containsMesh(mesh)) ?? this.banners.find(b => b.containsMesh(mesh)) ?? null;
+    return this.flags.find(f => f.containsMesh(mesh))
+      ?? this.banners.find(b => b.containsMesh(mesh))
+      ?? this.tents.find(t => t.containsMesh(mesh))
+      ?? null;
   }
 
   select(featureData) {
@@ -89,13 +123,17 @@ export class DecorationsEditor {
       s.decoration.type = 'flag';
       s.decoration.color = featureData.feature.color;
       featureData.flag.material.emissiveColor = EMISSIVE_GREY;
-    } else {
+    } else if (featureData.feature.type === 'bannerString') {
       s.decoration.type = 'bannerString';
       s.decoration.width      = featureData.feature.width;
       s.decoration.poleHeight = featureData.feature.poleHeight ?? 4.2;
       s.decoration.heading    = +((featureData.feature.heading ?? 0) * 180 / Math.PI).toFixed(1);
+    } else if (featureData.feature.type === 'tent') {
+      s.decoration.type = 'tent';
+      s.decoration.color = featureData.feature.color;
+      s.decoration.heading    = +((featureData.feature.heading ?? 0) * 180 / Math.PI).toFixed(1);
+      s.decoration.scale    = +(featureData.feature.scale ?? 1).toFixed(1);
     }
-
     s.selectedType = 'decoration';
   }
 
@@ -136,7 +174,8 @@ export class DecorationsEditor {
   }
 
   rotate(angleDelta) {
-    if (!this._selected || this._selected.feature.type !== 'bannerString') return;
+    // Flags stand straight up; only heading-bearing decorations rotate.
+    if (!this._selected || this._selected.feature.type === 'flag') return;
     this.editor.saveSnapshot(true);
     const newHeading = (this._selected.feature.heading ?? 0) + angleDelta;
     this._selected.setHeading(newHeading);
@@ -145,10 +184,17 @@ export class DecorationsEditor {
   }
 
   changeColor(val) {
-    if (!this._selected || this._selected.feature.type !== 'flag') return;
+    // Flags and tents carry a color; banner strings do not.
+    if (!this._selected || this._selected.feature.type === 'bannerString') return;
     this.editor.saveSnapshot(true);
     this._selected.feature.color = val;
     this._selected.setColor(val);
+  }
+
+  changeScale(val) {
+    if (!this._selected || this._selected.feature.type !== 'tent') return;
+    this.editor.saveSnapshot(true);
+    this._selected.setScale(val);
   }
 
   changeWidth(val) {
@@ -164,7 +210,7 @@ export class DecorationsEditor {
   }
 
   changeHeading(val) {
-    if (!this._selected || this._selected.feature.type !== 'bannerString') return;
+    if (!this._selected || this._selected.feature.type === 'flag') return;
     this.editor.saveSnapshot(true);
     const radians = val * (Math.PI / 180);
     this._selected.setHeading(radians);
@@ -172,50 +218,29 @@ export class DecorationsEditor {
 
   changeType(val) {
     if (!this._selected || this._selected.feature.type === val) return;
-    if (val === 'flag' && this._selected.feature.type === 'bannerString') {
-      this._convertBannerToFlag(this._selected);
-    } else if (val === 'bannerString' && this._selected.feature.type === 'flag') {
-      this._convertFlagToBanner(this._selected);
-    }
-  }
-
-  _convertBannerToFlag(bannerData) {
-    if (!bannerData) return;
-    const feature = bannerData.feature;
+    const feature = this._selected.feature;
     const index = this.track.features.indexOf(feature);
     if (index === -1) return;
 
     this.editor.saveSnapshot();
-    bannerData.dispose();
-    const bannerIndex = this.banners.indexOf(bannerData);
-    if (bannerIndex > -1) this.banners.splice(bannerIndex, 1);
+    this._removeVisual(this._selected);
     this._selected = null;
 
-    const color = this.editor._editorStore?.decoration?.color || 'red';
-    const newFeature = { type: 'flag', x: feature.x, z: feature.z, color };
+    const newFeature = this._defaultDecorationFeature(val, feature);
     this.track.features.splice(index, 1, newFeature);
-    const newFlag = this._createFlag(newFeature);
+    const created = this.createVisual(newFeature);
     this.deselect();
-    if (newFlag) this.select(newFlag);
+    if (created) this.select(created);
   }
 
-  _convertFlagToBanner(flagData) {
-    if (!flagData) return;
-    const feature = flagData.feature;
-    const index = this.track.features.indexOf(feature);
-    if (index === -1) return;
-
-    this.editor.saveSnapshot();
-    flagData.dispose();
-    const flagIndex = this.flags.indexOf(flagData);
-    if (flagIndex > -1) this.flags.splice(flagIndex, 1);
-    this._selected = null;
-
-    const newFeature = { type: 'bannerString', x: feature.x, z: feature.z, heading: 0, width: 8, poleHeight: 4.2 };
-    this.track.features.splice(index, 1, newFeature);
-    const newBanner = this._createBanner(newFeature);
-    this.deselect();
-    if (newBanner) this.select(newBanner);
+  /** Build a feature of `type` at the source's position, carrying over any
+   *  shared props (color/heading) so a type conversion is minimally disruptive. */
+  _defaultDecorationFeature(type, src) {
+    const color = src.color || this.editor._editorStore?.decoration?.color || 'red';
+    const heading = src.heading ?? 0;
+    if (type === 'flag') return { type, x: src.x, z: src.z, color };
+    if (type === 'tent') return { type, x: src.x, z: src.z, heading, scale: src.scale ?? 1, color };
+    return { type: 'bannerString', x: src.x, z: src.z, heading, width: src.width ?? 8, poleHeight: src.poleHeight ?? 4.2 };
   }
 
   deleteSelected() {
@@ -226,15 +251,7 @@ export class DecorationsEditor {
     const index = this.track.features.indexOf(feature);
     if (index > -1) this.track.features.splice(index, 1);
 
-    this._selected.dispose();
-    if (feature.type === 'flag') {
-      const idx = this.flags.indexOf(this._selected);
-      if (idx > -1) this.flags.splice(idx, 1);
-    } else {
-      const idx = this.banners.indexOf(this._selected);
-      if (idx > -1) this.banners.splice(idx, 1);
-    }
-
+    this._removeVisual(this._selected);
     this._selected = null;
     this.hideProperties();
   }
@@ -243,21 +260,13 @@ export class DecorationsEditor {
     if (!this._selected) return;
     this.editor.saveSnapshot();
     const src = this._selected.feature;
-    const newX = src.x + 3;
-    const newZ = src.z + 3;
 
-    let newFeature = { ...src, x: newX, z: newZ };
+    const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
     this.track.features.push(newFeature);
+    const created = this.createVisual(newFeature);
 
-    if (src.type === 'flag') {
-      this._createFlag(newFeature);
-    } else {
-      this._createBanner(newFeature);
-    }
-
-    const newSelected = (src.type === 'flag') ? this.flags[this.flags.length - 1] : this.banners[this.banners.length - 1];
     this.deselect();
-    if (newSelected) this.select(newSelected);
+    if (created) this.select(created);
   }
 
   addEntity() {
@@ -271,6 +280,8 @@ export class DecorationsEditor {
     let created = null;
     if (type === 'bannerString') {
       created = this._addBanner(e._snap(newX), e._snap(newZ));
+    } else if (type === 'tent') {
+      created = this._addTent(e._snap(newX), e._snap(newZ));
     } else {
       created = this._addFlag(e._snap(newX), e._snap(newZ));
     }
@@ -290,5 +301,12 @@ export class DecorationsEditor {
     const feature = { type: 'bannerString', x, z, heading: 0, width: 8, poleHeight: 4.2 };
     this.track.features.push(feature);
     return this._createBanner(feature);
+  }
+
+  _addTent(x, z) {
+    const color = this.editor._editorStore?.decoration?.color || 'white';
+    const feature = { type: 'tent', x, z, heading: 0, scale: 1.5, color };
+    this.track.features.push(feature);
+    return this._createTent(feature);
   }
 }

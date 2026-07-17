@@ -9,9 +9,9 @@ export const DEFAULT_STEERING_CONFIG = {
   collisionProbeStep: 2,
   collisionProbeLateral: 3.5,
   collisionAvoidanceMaxPush: 6,
-  steeringSmooth: 0.18,
+  steeringSmooth: 0.12,
   steeringThreshold: 0.05,
-  steeringHysteresis: 0.12,
+  steeringHysteresis: 0.2,
 };
 
 /**

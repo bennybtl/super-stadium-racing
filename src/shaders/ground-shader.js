@@ -851,7 +851,21 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
  */
 export class TerrainBlendPlugin extends MaterialPluginBase {
   constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth, options = {}) {
-    super(material, "TerrainBlend", 200, {});
+    // Per-track dimensions (cell count, world half-extents) are baked into the
+    // shader SOURCE via getCustomCode(). Babylon's effect cache is keyed by the
+    // defines string, NOT by injected custom-code, so two ground materials with
+    // identical defines can share one compiled shader — and a freshly-built
+    // material for a different-aspect track would silently reuse the previous
+    // track's baked-in dimensions (mesh correct, UV mapping stale). That surfaced
+    // as an intermittent "terrain stretched when loading a different-aspect track"
+    // bug. Registering these values as numeric plugin defines folds them into the
+    // effect cache key (see prepareDefines), so a track with different dimensions
+    // always compiles its own effect. The defines themselves are unused in GLSL.
+    super(material, "TerrainBlend", 200, {
+      TERRAIN_CELLCOUNT_KEY: 0,
+      TERRAIN_HALFWIDTH_KEY: 0,
+      TERRAIN_HALFDEPTH_KEY: 0,
+    });
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
     this._terrainWaterOverlayTex = terrainWaterOverlayTex;
@@ -865,6 +879,16 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       ? Math.max(-1, Math.round(options.forcedTerrainTypeIndex))
       : -1;
     this._enable(true);
+  }
+
+  // Fold the per-track dimensions into the material defines so the effect cache
+  // key differs whenever they do — preventing a stale-shader reuse across tracks
+  // of different size/aspect. Values are unused by the GLSL; only their presence
+  // in the defines string (the effect key) matters.
+  prepareDefines(defines) {
+    defines.TERRAIN_CELLCOUNT_KEY = this._terrainCellCount ?? 0;
+    defines.TERRAIN_HALFWIDTH_KEY = this._terrainWorldHalfWidth ?? 0;
+    defines.TERRAIN_HALFDEPTH_KEY = this._terrainWorldHalfDepth ?? 0;
   }
 
   getSamplers(samplers) {

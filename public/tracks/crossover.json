@@ -95,8 +95,8 @@
       "type": "polyWall",
       "points": [
         {
-          "x": 45.20825784025483,
-          "z": 74.18020284572398,
+          "x": 46.70825784025483,
+          "z": 73.18020284572398,
           "radius": 9
         },
         {
@@ -146,7 +146,7 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 5.5,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false
@@ -236,7 +236,7 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 6,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": true
@@ -329,8 +329,8 @@
     },
     {
       "type": "hill",
-      "centerX": 48.58747010605309,
-      "centerZ": 65.03249328374254,
+      "centerX": 48.08747010605309,
+      "centerZ": 67.53249328374254,
       "radiusX": 10,
       "radiusZ": 10,
       "angle": 0,
@@ -383,16 +383,16 @@
     },
     {
       "type": "squareHill",
-      "centerX": -1.791468836648498,
-      "centerZ": -70.40845298959937,
+      "centerX": 2.3190210566559957,
+      "centerZ": -7.453588627944534,
       "width": 10,
       "depth": 18,
-      "angle": 180,
+      "angle": 61,
       "waterLevelOffset": 0,
-      "transition": 2,
+      "transition": 3,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 4.5
+      "heightAtMax": 3
     },
     {
       "type": "checkpoint",
@@ -463,16 +463,20 @@
       "type": "aiPath",
       "points": [
         {
-          "x": 46.02385289150672,
-          "z": -76.06873020123436
+          "x": 51.187987064720275,
+          "z": -71.3532952855211
         },
         {
-          "x": -16.68,
-          "z": -69.91
+          "x": 12.07841459192508,
+          "z": -76.35714124258917
         },
         {
-          "x": -28.295005957505865,
-          "z": -53.39967889802442
+          "x": -16.848387325233602,
+          "z": -68.66808097098378
+        },
+        {
+          "x": -22.663461241408918,
+          "z": -50.267476589510366
         },
         {
           "x": -14.07,
@@ -688,6 +692,148 @@
           "z": 68.05555941499091
         }
       ]
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "outOfBounds",
+      "shape": "polygon",
+      "x": -26.650307346207473,
+      "z": 17.819933095218758,
+      "radius": 15,
+      "points": [
+        {
+          "x": -48.67306979737891,
+          "z": 14.861365380034155
+        },
+        {
+          "x": -16.815675180419817,
+          "z": -0.13681815302604156
+        },
+        {
+          "x": -5.400418910708741,
+          "z": 17.656396331418748
+        },
+        {
+          "x": -35.71206549632244,
+          "z": 38.89878882244816
+        }
+      ]
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "outOfBounds",
+      "shape": "polygon",
+      "x": 8.22834584293656,
+      "z": -51.70887150372775,
+      "radius": 15,
+      "points": [
+        {
+          "x": -5.952427566086222,
+          "z": -42.98653310416617
+        },
+        {
+          "x": -12.766402092221016,
+          "z": -54.681543073427946
+        },
+        {
+          "x": -10.584027628395303,
+          "z": -59.38889830846986
+        },
+        {
+          "x": 38.91918220013415,
+          "z": -59.58184824180408
+        },
+        {
+          "x": 40.654636118380004,
+          "z": -54.231793626739105
+        },
+        {
+          "x": -0.9008859741922528,
+          "z": -39.38261266775936
+        }
+      ]
+    },
+    {
+      "type": "trackSign",
+      "x": -30.647322519693805,
+      "z": 12.110320857432935,
+      "name": "Track Name",
+      "rotation": 0.5061454830783556,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -23.6280138892826,
+      "z": 21.946325121003976,
+      "name": "Track Name",
+      "rotation": 0.5061454830783556,
+      "contentType": "brand",
+      "brandImage": "phoenix-auto.png",
+      "background": "white",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 38.69002540210431,
+      "z": -20.57049532007709,
+      "name": "Track Name",
+      "rotation": 0.5061454830783556,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 2.5,
+      "heightOffset": 0,
+      "width": 10
+    },
+    {
+      "type": "tent",
+      "x": -58.75369184891375,
+      "z": -19.264063355400875,
+      "heading": 0.47123889803846897,
+      "scale": 1.5,
+      "color": "gray"
+    },
+    {
+      "type": "tent",
+      "x": -50.953945017329985,
+      "z": -23.461856091774443,
+      "heading": 0.47123889803846897,
+      "scale": 1.5,
+      "color": "gray"
+    },
+    {
+      "type": "tent",
+      "x": 4.956222745714925,
+      "z": 52.88865451099025,
+      "heading": 0.6632251157578453,
+      "scale": 1.5,
+      "color": "red"
+    },
+    {
+      "type": "tent",
+      "x": -1.6085790775566533,
+      "z": 58.25095020933046,
+      "heading": 0.6632251157578453,
+      "scale": 1.5,
+      "color": "blue"
+    },
+    {
+      "type": "tent",
+      "x": -8.279138911971346,
+      "z": 63.567334382631266,
+      "heading": 0.6632251157578453,
+      "scale": 1.5,
+      "color": "gray"
     }
   ]
 }

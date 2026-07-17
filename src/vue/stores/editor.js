@@ -168,6 +168,7 @@ export const useEditorStore = defineStore('editor', () => {
     width: 8,
     poleHeight: 4.2,
     heading: 0,
+    scale: 1,
   });
 
   // ── Track Sign panel ──
@@ -366,6 +367,7 @@ export const useEditorStore = defineStore('editor', () => {
   function setDecorationWidth(val)       { decoration.width = val; _bridge.value?.changeBannerStringWidth(val); }
   function setDecorationPoleHeight(val)  { decoration.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
   function setDecorationHeading(val)     { decoration.heading = val; _bridge.value?.changeBannerStringHeading(val); }
+  function setDecorationScale(val)        { decoration.scale = val; _bridge.value?.changeDecorationScale(val); }
 
   // ── Track Sign actions ──
 
@@ -462,7 +464,7 @@ export const useEditorStore = defineStore('editor', () => {
     setHillRadius, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     decoration,
     setDecorationColor, setDecorationWidth,
-    setDecorationPoleHeight, setDecorationHeading, trackSign,
+    setDecorationPoleHeight, setDecorationHeading, setDecorationScale, trackSign,
     bannerString,
     actionZone,
     setActionZoneType, polyCurb,

@@ -34,6 +34,15 @@ const MAX_THROTTLE_BREAK = 0.85;
  */
 const YAW_AIRBORNE_DECAY = 2.0;
 
+// ─── Steering easing ─────────────────────────────────────────────────────────
+/** How fast steering ramps toward full lock when a key is pressed (per second).
+ *  4 ≈ 0 → full lock in 0.25s. Small taps only apply partial steering, which
+ *  removes the twitchiness of instant full-rate turn-in. */
+const STEER_RAMP_UP = 4;
+/** How fast steering returns to center on release (per second). Faster than
+ *  ramp-up so letting go straightens out promptly. */
+const STEER_RAMP_DOWN = 7;
+
 // ─── Weight-transfer steering / grip feel ────────────────────────────────────
 // Gains in calculateSpeedFactors(). All scale with speedRatio; the throttle/brake
 // ones also scale with the vehicle's `weightTransfer` stat. These are the primary
@@ -74,6 +83,7 @@ export class Controls {
     this._forward = new Vector3();
     this._surfaceFwd = new Vector3();
     this._yawRate = 0; // last applied heading change rate (rad/s), carried when airborne
+    this._steerAmount = 0; // eased steering position, -1 (left) .. 1 (right)
   }
 
   updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
@@ -89,9 +99,15 @@ export class Controls {
       const stationarySpinRate = this.state.stationarySpinRate ?? 0.35;
       const spinFactor = stationarySpinRate + (1.0 - stationarySpinRate) * speedRatio;
 
-      let delta = 0;
-      if (input.left)  delta -= steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
-      if (input.right) delta += steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime;
+      // Ease the steer amount toward the input target so turn-in ramps up
+      // instead of snapping to full rate; taps produce small corrections.
+      const steerTarget = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      const rampRate = steerTarget === 0 ? STEER_RAMP_DOWN : STEER_RAMP_UP;
+      const maxStep = rampRate * (this.state.steerRampScale ?? 1) * deltaTime;
+      const diff = steerTarget - this._steerAmount;
+      this._steerAmount += Math.max(-maxStep, Math.min(maxStep, diff));
+
+      const delta = steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime * this._steerAmount;
       this.state.heading += delta;
 
       // Remember the rate so it can carry over the moment the wheels leave the ground.

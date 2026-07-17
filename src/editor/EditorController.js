@@ -31,6 +31,9 @@ export class EditorController {
     this.camera = camera;
     this.scene = scene;
     this.isActive = false;
+    // Shadow generator from the built scene; set via setShadows so sub-editors
+    // (e.g. tents) can register their meshes as shadow casters in the editor.
+    this._shadows = null;
     // Shared raycast-based terrain height service used by all sub-editors.
     this.terrainQuery = new TerrainQuery(scene);
     
@@ -518,7 +521,7 @@ export class EditorController {
         else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
         else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
         else if (feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
-        else if (feature.type === 'flag' || feature.type === 'bannerString') this.decorationsEditor.createVisual(feature);
+        else if (feature.type === 'flag' || feature.type === 'bannerString' || feature.type === 'tent') this.decorationsEditor.createVisual(feature);
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
       }
@@ -1445,6 +1448,7 @@ export class EditorController {
   changeDecorationWidth(val)       { this.decorationsEditor.changeWidth(val); }
   changeDecorationPoleHeight(val)  { this.decorationsEditor.changePoleHeight(val); }
   changeDecorationHeading(val)     { this.decorationsEditor.changeHeading(val); }
+  changeDecorationScale(val)       { this.decorationsEditor.changeScale(val); }
 
   deselectAll() {
     this._clearDragHoldTimer();
@@ -1602,6 +1606,11 @@ export class EditorController {
   // ── Surface Decal helper methods ──────────────────────────────────────────
   setSurfaceDecalManager(manager) {
     this.surfaceDecalEditor.setDecalManager(manager);
+  }
+
+  /** Provide the scene's shadow generator so editor decorations can cast shadows. */
+  setShadows(shadows) {
+    this._shadows = shadows ?? null;
   }
 
   openSurfaceDecalStamp() {

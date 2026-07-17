@@ -20,7 +20,7 @@ export const DEFAULT_HANDLING = {
   driftEnter: 0.5,
   driftMaintain: 0.5,
   lateralBias: 0.0,
-  driftExit: 0.5,
+  driftExit: 0.3,
 };
 
 /**

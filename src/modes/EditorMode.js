@@ -47,6 +47,7 @@ export class EditorMode extends BaseMode {
       obstacleManager,
       trackSignManager,
       bannerStringManager,
+      tentManager,
       bridgeMeshManager,
       steepSlopeColliderManager,
       surfaceDecalManager,
@@ -70,6 +71,9 @@ export class EditorMode extends BaseMode {
     // Dispose runtime BannerStringManager banners — BannerStringEditor creates its own.
     bannerStringManager.dispose();
 
+    // Dispose runtime TentManager tents — DecorationsEditor creates its own.
+    tentManager.dispose();
+
     this.scene = scene;
 
     // -- Debug manager (collision geometry + panel in editor mode) --
@@ -84,6 +88,7 @@ export class EditorMode extends BaseMode {
 
     // -- Editor controller --
     const editorController = new EditorController(camera, scene);
+    editorController.setShadows(shadows);
     editorController.activate(currentTrack, checkpointManager, menuManager);
     editorController.setSurfaceDecalManager(surfaceDecalManager);
     this.editorController = editorController;

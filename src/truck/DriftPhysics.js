@@ -21,6 +21,12 @@ const REVERSE_GRIP_BOOST = 15;
  *  instead of just letting an existing slide decay slower. */
 const THROTTLE_BREAK_THRESHOLD_DROP = 0.6;
 
+/** How fast lateral velocity bleeds out (s⁻¹) once speed falls below the drift
+ *  gate. A finite rate instead of an instant strip-to-zero — the old hard snap
+ *  made the truck "catch" and jitter at the end of a slide as the drift state
+ *  flip-flopped across the speed gate. ~5 ≈ gone in a third of a second. */
+const LOW_SPEED_LATERAL_DAMP = 5;
+
 /** Slip angle (radians) above which the truck is considered spinning out. */
 const SPINOUT_SLIP_THRESHOLD = 0.6;
 
@@ -107,10 +113,14 @@ export class DriftPhysics {
     const minSpeed = this._resolveMinDriftSpeed(rearTractionFactor, throttleBreak);
 
     if (speed <= minSpeed) {
-      // Below threshold: strip lateral velocity and clear drift state so effects don't linger.
+      // Below threshold: bleed lateral velocity out quickly (but smoothly) and
+      // clear drift state so effects don't linger. An instant strip-to-zero here
+      // caused a visible "catch" + jitter at the end of a slide.
       const forwardVelocity = this.state.velocity.dot(surfaceForward);
+      const lateralSpeed = this.state.velocity.dot(surfaceRight);
       const normalVelocity = this.state.velocity.dot(surfaceNormal);
-      this._setSurfaceVelocity(surfaceForward, forwardVelocity, surfaceRight, 0, surfaceNormal, normalVelocity);
+      const retainedLat = Math.exp(-LOW_SPEED_LATERAL_DAMP * deltaTime);
+      this._setSurfaceVelocity(surfaceForward, forwardVelocity, surfaceRight, lateralSpeed * retainedLat, surfaceNormal, normalVelocity);
       this.state.slipAngle = 0;
       this.state.isDrifting = false;
       this.state.isSpinningOut = false;

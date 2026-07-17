@@ -26,6 +26,7 @@ import { ObstacleManager } from "../managers/ObstacleManager.js";
 import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { BannerStringManager } from "../managers/BannerStringManager.js";
+import { TentManager } from "../managers/TentManager.js";
 import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
@@ -453,6 +454,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const flagManager     = new FlagManager(scene, currentTrack, shadows);
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
   const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
+  const tentManager = new TentManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows); // Pickups spawn lap-by-lap in RaceMode
   const bridgeMeshManager = new BridgeMeshManager(
     scene,
@@ -509,6 +511,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (feature.type === "bannerString") {
       bannerStringManager.createBanner(feature);
+    } else if (feature.type === "tent") {
+      tentManager.createTent(feature);
     } else if (feature.type === "surfaceDecal") {
       surfaceDecalManager.createDecal(feature);
     } else if (feature.type === 'hill' || feature.type === 'squareHill' || feature.type === 'polyHill') {
@@ -544,6 +548,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     flagManager,
     trackSignManager,
     bannerStringManager,
+    tentManager,
     pickupManager,
     bridgeMeshManager,
     steepSlopeColliderManager,
