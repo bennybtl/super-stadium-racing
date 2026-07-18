@@ -600,12 +600,19 @@ export class EditorController {
         event.stopPropagation();
         return;
       }
-      if (this.hillEditor.selected) {
-        this.hillEditor.deselect();
-      } else if (this.squareHillEditor.selected) {
-        this.squareHillEditor.deselect();
-      } else if (this.checkpointEditor.selected) {
-        this.checkpointEditor.deselect();
+      // Any actually-selected feature (of any type) → deselect it; only open
+      // the pause menu when nothing is selected. Previously only hills, square
+      // hills, and checkpoints were handled here, so pressing Esc with e.g. a
+      // poly-wall point, obstacle, or decoration selected left it selected — and
+      // its gizmo could then no longer be re-clicked, since handlePointerDown
+      // treats an already-selected gizmo target as a no-op.
+      //
+      // NB: test live selections only (_getActiveSelectionInteraction +
+      // meshGrid.selectedPoint), NOT _getSelectedFeatureActions — that counts
+      // the sticky meshGrid/bridgeMesh `activeFeature`, which is set on load and
+      // never cleared, so it would swallow Esc on any track containing one.
+      if (this._getActiveSelectionInteraction() || this.meshGridEditor?.selectedPoint) {
+        this.deselectAll();
       } else if (this.menuManager) {
         this.menuManager.togglePause();
       }
@@ -973,6 +980,52 @@ export class EditorController {
     this._getActiveSelectionInteraction()?.moveByPointerDelta?.(dx, dz);
   }
 
+  /**
+   * Diagnostic snapshot of everything that could stop a gizmo click from
+   * selecting: which editors still hold a selection, the active panel mode,
+   * and leftover pointer-drag state. Used by _logGizmoDiag.
+   */
+  _selectionStateSnapshot() {
+    const held = [];
+    const note = (label, val) => { if (val) held.push(label); };
+    note('checkpoint',   this.checkpointEditor?.selected);
+    note('hill',         this.hillEditor?.selected);
+    note('squareHill',   this.squareHillEditor?.selected);
+    note('terrainShape', this.terrainShapeEditor?.selected);
+    note('normalMapDecal', this.normalMapDecalEditor?.selected);
+    note('obstacle',     this.obstacleEditor?.selected);
+    note('decoration',   this.decorationsEditor?._selected);
+    note('trackSign',    this.trackSignEditor?.selected);
+    note('actionZone',   this.actionZoneEditor?._selected);
+    note('aiPath',       this.aiPathEditor?.selected);
+    note('terrainPath',  this.terrainPathEditor?.selected);
+    note('meshGridPoint',   this.meshGridEditor?.selectedPoint);
+    note('meshGridActive',  this.meshGridEditor?.activeFeature);
+    note('bridgeMeshActive', this.bridgeMeshEditor?.activeFeature);
+    note('polyWallPoint',   this.polyWallEditor?.selectedPoint);
+    note('polyHillPoint',   this.polyHillEditor?.selectedPoint);
+    note('polyCurbPoint',   this.polyCurbEditor?.selectedPoint);
+    return {
+      selectedType:  this._editorStore?.selectedType ?? null,
+      heldSelections: held,
+      mouseDragActive: !!this._mouseDrag,
+      dragHoldTarget: this._dragHoldTarget?.name ?? null,
+    };
+  }
+
+  /**
+   * Log why a pointer-down did not (re)select a gizmo. Filter the browser
+   * console for "[gizmo-diag]" to see these. Set `window.__gizmoDiag = false`
+   * to silence.
+   */
+  _logGizmoDiag(reason, pickedMesh) {
+    if (typeof window !== 'undefined' && window.__gizmoDiag === false) return;
+    console.log('[gizmo-diag]', reason, {
+      picked: pickedMesh?.name ?? null,
+      ...this._selectionStateSnapshot(),
+    });
+  }
+
   _handleMeshSelection(clickedMesh, editor, selectFn = null) {
     const featureData = editor.findByMesh(clickedMesh);
     if (!featureData) return false;
@@ -1019,6 +1072,10 @@ export class EditorController {
       const wasSelectedTarget = this._isSelectedGizmoTarget(pickResult?.pickedMesh ?? null);
 
       if (wasSelectedTarget) {
+        // Click landed on the already-selected gizmo → kept for dragging. If
+        // this fires when you believe nothing is selected, an editor is holding
+        // a stale selection (see heldSelections in the log).
+        this._logGizmoDiag('click on already-selected gizmo → kept selection (no-op)', pickResult?.pickedMesh);
         return;
       }
 
@@ -1033,6 +1090,10 @@ export class EditorController {
       // AI path panel open: right-click terrain to add waypoints, click waypoint to select.
       if (this._editorStore?.selectedType === 'aiPath') {
         if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.aiPathEditor, 'aiPath', 2, pointerInfo.event.button)) return;
+        // Stuck in aiPath mode: no other feature gizmo is selectable until this
+        // mode is closed (Esc / panel X). If the AI-path panel is not visible,
+        // selectedType leaked out of sync.
+        this._logGizmoDiag('click blocked by aiPath mode', pickResult?.pickedMesh);
         this.deselectAll();
         return;
       }
@@ -1040,6 +1101,9 @@ export class EditorController {
       // Terrain path panel open: right-click terrain to add waypoints, click waypoint to select.
       if (this._editorStore?.selectedType === 'terrainPath') {
         if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.terrainPathEditor, 'terrainPath', 2, pointerInfo.event.button)) return;
+        // Stuck in terrainPath mode: no other feature gizmo is selectable until
+        // this mode is closed (Esc / panel X).
+        this._logGizmoDiag('click blocked by terrainPath mode', pickResult?.pickedMesh);
         this.deselectAll();
         return;
       }
@@ -1105,7 +1169,10 @@ export class EditorController {
           }
           return;
         }
-        // Clicked on something else (terrain, etc.) — deselect all
+        // Clicked on something else (terrain, etc.) — deselect all. If you
+        // clicked a gizmo and expected it to select, the picked mesh below is
+        // what the ray actually hit (e.g. "ground" occluding a buried gizmo).
+        this._logGizmoDiag('click hit a mesh but no editor claimed it → deselectAll', clickedMesh);
         this.deselectAll();
       } else {
         this.deselectAll();

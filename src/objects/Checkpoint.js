@@ -107,26 +107,38 @@ export class Checkpoint {
   /** Reposition barrels and rebuild the decal after the gate width changes. */
   updateWidth(newWidth) {
     this.feature.width = newWidth;
-    const halfWidth = newWidth / 2;
-    const containerTerrainY = this._track.getHeightAt(this.feature.centerX, this.feature.centerZ);
-    const cos = Math.cos(this.feature.heading);
-    const sin = Math.sin(this.feature.heading);
+    this.reseatBarrels();
+    if (this.decal) this.updateDecal(this.feature.checkpointNumber, this.isFinish);
+  }
+
+  /**
+   * Re-drop both barrels onto the terrain for the gate's current
+   * center / heading / width. Each barrel sits at ±halfWidth along the local X
+   * axis; its local Y offset is the terrain height at its own world position
+   * relative to the container's center height, so barrels follow slopes.
+   *
+   * Must be called whenever the gate's position or heading changes on non-flat
+   * terrain — otherwise barrels keep the offset baked in at creation time and
+   * float or sink (the container Y alone only tracks the center).
+   */
+  reseatBarrels() {
+    const f = this.feature;
+    const halfWidth = f.width / 2;
+    const containerTerrainY = this._track.getHeightAt(f.centerX, f.centerZ);
+    const cos = Math.cos(f.heading);
+    const sin = Math.sin(f.heading);
 
     // Barrel 1 (+halfWidth)
-    const w1x = this.feature.centerX + halfWidth * cos;
-    const w1z = this.feature.centerZ - halfWidth * sin;
-    const offset1 = this._track.getHeightAt(w1x, w1z) - containerTerrainY;
-    this.barrel1.position.x =  halfWidth;
-    this.barrel1.position.y =  offset1;
+    const w1x = f.centerX + halfWidth * cos;
+    const w1z = f.centerZ - halfWidth * sin;
+    this.barrel1.position.x = halfWidth;
+    this.barrel1.position.y = this._track.getHeightAt(w1x, w1z) - containerTerrainY;
 
     // Barrel 2 (-halfWidth)
-    const w2x = this.feature.centerX - halfWidth * cos;
-    const w2z = this.feature.centerZ + halfWidth * sin;
-    const offset2 = this._track.getHeightAt(w2x, w2z) - containerTerrainY;
+    const w2x = f.centerX - halfWidth * cos;
+    const w2z = f.centerZ + halfWidth * sin;
     this.barrel2.position.x = -halfWidth;
-    this.barrel2.position.y =  offset2;
-
-    if (this.decal) this.updateDecal(this.feature.checkpointNumber, this.isFinish);
+    this.barrel2.position.y = this._track.getHeightAt(w2x, w2z) - containerTerrainY;
   }
 
   dispose() {

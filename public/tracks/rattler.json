@@ -42,18 +42,18 @@
         0,
         0,
         0,
+        -6,
         0,
-        0,
-        0,
+        2,
         3,
         -1,
         0,
         0,
         0,
         0,
+        -4,
         0,
-        0,
-        0,
+        2,
         1.5,
         0,
         0,
@@ -988,6 +988,116 @@
       "heading": 1.5707963267948966,
       "width": 24,
       "poleHeight": 9
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -1.3720963653123226,
+      "centerZ": 82.42568486544855,
+      "terrainType": "mud",
+      "width": 19,
+      "depth": 30.5,
+      "rotation": 0,
+      "blendWidth": 2.5
+    },
+    {
+      "type": "trackSign",
+      "x": -14.5,
+      "z": 63.499696487563355,
+      "name": "Track Name",
+      "rotation": -0.08726646259971647,
+      "contentType": "brand",
+      "brandImage": "roll-fast.png",
+      "background": "white",
+      "primaryColor": "yellow",
+      "scale": 1.8,
+      "heightOffset": 1.9,
+      "width": 23
+    },
+    {
+      "type": "trackSign",
+      "x": 18,
+      "z": 22.499696487563355,
+      "name": "Track Name",
+      "rotation": -0.13962634015954636,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "background": "white",
+      "primaryColor": "yellow",
+      "scale": 1.8,
+      "heightOffset": 1.7,
+      "width": 16.5
+    },
+    {
+      "type": "trackSign",
+      "x": 23.5,
+      "z": -11.500303512436645,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "rally-master.png",
+      "background": "white",
+      "primaryColor": "yellow",
+      "scale": 1.8,
+      "heightOffset": 1.7,
+      "width": 16.5
+    },
+    {
+      "type": "flag",
+      "x": 46.72079258475274,
+      "z": -10.42648035833739,
+      "color": "yellow"
+    },
+    {
+      "type": "flag",
+      "x": -3.8320869649302765,
+      "z": 24.244323272002386,
+      "color": "yellow"
+    },
+    {
+      "type": "flag",
+      "x": 43.56247627861083,
+      "z": 58.735159907548876,
+      "color": "yellow"
+    },
+    {
+      "type": "flag",
+      "x": -0.7876271022621033,
+      "z": -41.81885704404098,
+      "color": "yellow"
+    },
+    {
+      "type": "flag",
+      "x": 54.3469439432962,
+      "z": -74.00714859851443,
+      "color": "yellow"
+    },
+    {
+      "type": "tent",
+      "x": 20.286019054068795,
+      "z": -74.30013922099643,
+      "heading": 0.05235987755982989,
+      "scale": 1.5,
+      "color": "yellow"
+    },
+    {
+      "type": "tent",
+      "x": 29.513726907193725,
+      "z": -74.44308776208452,
+      "heading": 0,
+      "scale": 1.5,
+      "color": "white"
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 39.943724620791954,
+      "centerZ": -89.33866711195667,
+      "terrainType": "mud",
+      "width": 13,
+      "depth": 23,
+      "rotation": 0,
+      "blendWidth": 2
     }
   ]
 }

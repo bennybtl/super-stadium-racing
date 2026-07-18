@@ -88,9 +88,13 @@ export class SquareHillEditor {
     node.scaling  = new Vector3(feature.width + transition * 2, absH, (feature.depth ?? feature.width) + transition * 2);
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
 
-    // Grey sphere: the always-visible click target
+    // Grey sphere: the always-visible click target. Float it above the whole
+    // feature (terrainH + absH, matching HillEditor) rather than flush on the
+    // surface — on a sloped square hill the high edge otherwise rises in front
+    // of the sphere and the isometric pick ray hits that ground first, so the
+    // gizmo becomes unclickable from some camera angles.
     const sphere = MeshBuilder.CreateSphere('squareHillSphere', { diameter: 1.5, segments: 8 }, scene);
-    sphere.position = new Vector3(feature.centerX, terrainH > 0 ? terrainH + 0.1 : 0, feature.centerZ);
+    sphere.position = new Vector3(feature.centerX, terrainH + absH, feature.centerZ);
     sphere.material = this.sphereMaterial;
     sphere.isVisible = true;
     sphere.isPickable = true;
@@ -123,7 +127,9 @@ export class SquareHillEditor {
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
     if (sphere) {
       sphere.position.x = feature.centerX;
-      sphere.position.y = terrainH > 0 ? terrainH + 0.1 : 0;
+      // Float above the whole feature (see createVisual) so a sloped edge can't
+      // occlude the pick ray and make the gizmo unclickable.
+      sphere.position.y = terrainH + absH;
       sphere.position.z = feature.centerZ;
     }
   }

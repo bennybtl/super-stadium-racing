@@ -161,13 +161,13 @@ export class Truck {
         // Suspension upgrades both spring strength and damping
         state.springStrength += 20 * level;
         state.damping        += 1.5 * level;
-        state.turnSpeed       += 0.3 * level;
+        state.turnSpeed       += 0.1 * level;
         state.weightTransfer    -= 0.05 * level;
       } else if (upgrade.id === 'grip') {
         // Grip upgrades add a flat multiplier to the grip stat rather than scaling it,
         // so that it remains effective even with terrain modifiers and at high speeds.
         state.grip += upgrade.statDelta * level;
-        state.turnSpeed       += 0.15 * level;
+        state.turnSpeed       += 0.1 * level;
         state.driftThreshold  -= 0.01 * level;
       } else if (upgrade.statKey) {
         state[upgrade.statKey] += upgrade.statDelta * level;

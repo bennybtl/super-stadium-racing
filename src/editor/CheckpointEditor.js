@@ -122,8 +122,10 @@ export class CheckpointEditor {
     checkpoint.container.position.z = feature.centerZ;
     checkpoint.container.position.y = terrainHeight;
 
-    // Rebuild the world-space decal at the new position (only when snapped coords changed)
+    // Re-drop the barrels onto the terrain at the new center, and rebuild the
+    // world-space decal (only when snapped coords actually changed)
     if (feature.centerX !== prevX || feature.centerZ !== prevZ) {
+      checkpoint.reseatBarrels();
       checkpoint.updateDecal(feature.checkpointNumber, checkpoint.isFinish);
     }
 
@@ -143,6 +145,9 @@ export class CheckpointEditor {
 
     // Simply rotate the container – all children rotate automatically
     checkpoint.container.rotation.y = feature.heading;
+
+    // Rotation moves each barrel over different terrain — re-drop them
+    checkpoint.reseatBarrels();
 
     // Rebuild the world-space decal with the new heading
     checkpoint.updateDecal(feature.checkpointNumber, checkpoint.isFinish);
@@ -265,13 +270,11 @@ export class CheckpointEditor {
   // ── Barrel repositioning ──────────────────────────────────────────────────
 
   /**
-   * Move barrel1 and barrel2 to match the current feature.width.
-   * The barrels sit at ±halfWidth along local X (perpendicular to heading).
+   * Move barrel1 and barrel2 to match the current feature.width, re-dropping
+   * them onto the terrain (X offset + slope-following Y offset).
    */
   repositionBarrels(checkpointData) {
-    const halfWidth = checkpointData.feature.width / 2;
-    checkpointData.barrel1.position.x =  halfWidth;
-    checkpointData.barrel2.position.x = -halfWidth;
+    checkpointData.reseatBarrels();
   }
 
   // ── Checkpoint reordering ─────────────────────────────────────────────────
@@ -340,6 +343,8 @@ export class CheckpointEditor {
     const checkpoint = this.selected;
     checkpoint.feature.heading = rad;
     checkpoint.container.rotation.y = rad;
+    // Rotation moves each barrel over different terrain — re-drop them
+    checkpoint.reseatBarrels();
     // Rebuild the world-space decal with the new heading
     checkpoint.updateDecal(checkpoint.feature.checkpointNumber, checkpoint.isFinish);
   }

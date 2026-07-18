@@ -5,6 +5,7 @@
   "hidden": false,
   "dirtChunks": true,
   "name": "Cross-Over",
+  "image": "crossover.png",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -318,7 +319,7 @@
     {
       "type": "hill",
       "centerX": 65.5,
-      "centerZ": -11.500361649659514,
+      "centerZ": -13.500361649659514,
       "radiusX": 17,
       "radiusZ": 10,
       "angle": 35,
@@ -423,8 +424,8 @@
       "radiusX": 7.5,
       "radiusZ": 7.5,
       "angle": 0,
-      "height": 5,
-      "waterLevelOffset": 2,
+      "height": 3.5,
+      "waterLevelOffset": 0,
       "terrainType": "loose_dirt",
       "blendWidth": 4
     },
@@ -797,19 +798,19 @@
     },
     {
       "type": "tent",
-      "x": -58.75369184891375,
-      "z": -19.264063355400875,
-      "heading": 0.47123889803846897,
+      "x": -57.25369184891375,
+      "z": -21.264063355400875,
+      "heading": 0.6108652381980153,
       "scale": 1.5,
-      "color": "gray"
+      "color": "blue"
     },
     {
       "type": "tent",
-      "x": -50.953945017329985,
-      "z": -23.461856091774443,
+      "x": -48.953945017329985,
+      "z": -24.961856091774443,
       "heading": 0.47123889803846897,
       "scale": 1.5,
-      "color": "gray"
+      "color": "red"
     },
     {
       "type": "tent",
@@ -832,6 +833,38 @@
       "x": -8.279138911971346,
       "z": 63.567334382631266,
       "heading": 0.6632251157578453,
+      "scale": 1.5,
+      "color": "gray"
+    },
+    {
+      "type": "hill",
+      "centerX": 61.292082515450026,
+      "centerZ": -67.41424182593146,
+      "radiusX": 9.5,
+      "radiusZ": 9.5,
+      "angle": 0,
+      "height": -3.5,
+      "waterLevelOffset": 0,
+      "terrainType": null,
+      "blendWidth": 4
+    },
+    {
+      "type": "squareHill",
+      "centerX": -65,
+      "centerZ": -2.0006523340835827,
+      "width": 10,
+      "depth": 10,
+      "angle": 0,
+      "height": -2,
+      "waterLevelOffset": 1,
+      "transition": 9.5,
+      "terrainType": null
+    },
+    {
+      "type": "tent",
+      "x": -65.25369184891375,
+      "z": -17.264063355400875,
+      "heading": 0.4363323129985824,
       "scale": 1.5,
       "color": "gray"
     }

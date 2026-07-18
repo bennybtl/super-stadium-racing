@@ -1,10 +1,11 @@
 {
   "schemaVersion": 2,
   "id": "surfs_up",
-  "packId": null,
+  "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
   "name": "Surfs' Up",
+  "image": "surfs_up.png",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "loose_dirt",
@@ -582,10 +583,10 @@
       "type": "actionZone",
       "zoneType": "slowZone",
       "shape": "polygon",
-      "x": -16.24129061891606,
-      "z": -37.30986809172818,
+      "x": -17.745582580800754,
+      "z": -39.18264587472974,
       "radius": 15,
-      "slowStrength": 4.5,
+      "slowStrength": 2,
       "points": [
         {
           "x": -52.35034300677922,
@@ -600,12 +601,12 @@
           "z": -58.68833981675357
         },
         {
-          "x": 35.0336617520302,
-          "z": -39.28858922955753
+          "x": 30.247616967037086,
+          "z": -44.93855427659816
         },
         {
-          "x": -43.61406206064118,
-          "z": -6.921378178883657
+          "x": -46.34947708507156,
+          "z": -10.635302046850825
         }
       ]
     },
@@ -652,7 +653,8 @@
       "width": 17,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -662,7 +664,8 @@
       "width": 19,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "obstacle",
@@ -682,7 +685,8 @@
       "width": 18,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -692,7 +696,8 @@
       "width": 17,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -702,7 +707,8 @@
       "width": 15.5,
       "checkpointNumber": 5,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -712,7 +718,8 @@
       "width": 16,
       "checkpointNumber": 6,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "trackSign",
@@ -1007,6 +1014,46 @@
       "waterLevelOffset": 0,
       "terrainType": "packed_dirt",
       "blendWidth": 3.5
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -59.78974258976192,
+      "z": -61.84740117646794,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -57.340955151941316,
+      "z": 4.729543437600491,
+      "radius": 11
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 37.47021772536167,
+      "z": 44.16168092959389,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -54.00077039423357,
+      "z": 55.51049405759495,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 36.407393843701584,
+      "z": -78.3857839817986,
+      "radius": 11
     }
   ]
 }
