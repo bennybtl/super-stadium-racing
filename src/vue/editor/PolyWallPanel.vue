@@ -2,8 +2,12 @@
   <EditorPanel
     v-if="editor.selectedType === 'polyWall'"
     title="Poly Wall"
-    @close="editor.featureAction('deselectPolyWall')"
+    @close="editor.featureAction('closePolyWall')"
   >
+    <div class="text-[10px] text-slate-400 mb-3">
+      Right-click terrain to add points. Select a point to edit it. Press <kbd>Esc</kbd> to close the panel.
+    </div>
+
     <!-- Selected Point Section -->
     <div
       class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2"

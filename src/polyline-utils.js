@@ -69,6 +69,17 @@ export function expandPolyline(points, closed = false) {
         while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
         while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
 
+        // Collinear corner: the three points lie (nearly) on a straight line, so
+        // there is no bend to round. The arc math below divides by
+        // sin(angleDiff/2), which → ∞ as angleDiff → 0, producing NaN arc points
+        // that wipe out the entire ribbon mesh (wall/curb vanishes). Just keep
+        // the middle point and move on. Easy to hit via "Insert After", which
+        // drops a radius'd point exactly between two existing ones.
+        if (Math.abs(angleDiff) < 1e-3) {
+          out.push({ x: p2.x, z: p2.z });
+          continue;
+        }
+
         // For a circular arc, calculate the center point
         const halfAngle = angleDiff / 2;
         const centerDist = clampedRadius / Math.sin(Math.abs(halfAngle));

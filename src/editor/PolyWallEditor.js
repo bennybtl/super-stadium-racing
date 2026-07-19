@@ -68,20 +68,16 @@ export class PolyWallEditor {
 
   // ─── Adding a new poly wall ───────────────────────────────────────────────
 
+  /**
+   * Create an empty poly wall and enter placement mode. The user then
+   * right-clicks the terrain to drop control points one at a time (mirrors the
+   * AI Path / Terrain Path flow). Opening the panel (selectedType = 'polyWall')
+   * is what activates the right-click-to-add branch in EditorController.
+   */
   addPolyWallFeature() {
-    const cam = this.ec.camera;
-    const target = cam.getTarget();
-    const cx  = target.x;
-    const cz  = target.z;
-
     const feature = {
       type:      'polyWall',
-      points:    [
-        { x: cx - 10, z: cz - 5, radius: 0 },
-        { x: cx,      z: cz + 5, radius: 0 },
-        { x: cx + 10, z: cz - 5, radius: 0 },
-        { x: cx + 20, z: cz + 5, radius: 0 },
-      ],
+      points:    [],
       height:          2,
       collisionHeight: 2,
       thickness:       0.5,
@@ -95,6 +91,24 @@ export class PolyWallEditor {
     this._setActiveWall(wg);
     this._syncStoreToFeature(feature);
     this._rebuildWall(feature);
+  }
+
+  /**
+   * Append a control point at (x, z) to the active wall and select it.
+   * Called from EditorController while in poly-wall placement mode.
+   */
+  addPoint(x, z) {
+    if (!this._activeWall) return;
+    this.ec.saveSnapshot();
+    const wg = this._activeWall;
+    wg.feature.points.push({
+      x: parseFloat(x.toFixed(2)),
+      z: parseFloat(z.toFixed(2)),
+      radius: 0,
+    });
+    this._refreshWallGizmos(wg);
+    this.selectPoint(wg, wg.feature.points.length - 1);
+    this._rebuildWall(wg.feature);
   }
 
   // ─── Gizmo management ─────────────────────────────────────────────────────
@@ -238,7 +252,10 @@ export class PolyWallEditor {
       this.selectedPoint = null;
     }
     this._rawDrag = null;  // clear stale drag origin so next selection starts fresh
-    if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
+    // NB: intentionally does NOT clear selectedType — placement mode stays active
+    // (panel open) after deselecting a point, so the user can keep right-clicking
+    // to add more points. The mode is exited explicitly via closePolyWall
+    // (panel X / Esc) or deleteActiveWall.
   }
 
   // ─── Point movement (called from EditorController.update) ─────────────────
@@ -362,6 +379,21 @@ export class PolyWallEditor {
     this._activeWall = null;
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
     rebuild.polyWall?.(null); // signal full rebuild
+  }
+
+  /**
+   * Remove the active wall if it has no points — called on close so opening the
+   * tool then exiting without placing anything doesn't leave litter in the
+   * track. No snapshot: creation already pushed one capturing the pre-create
+   * state, so undo stays consistent.
+   */
+  discardActiveIfEmpty() {
+    const wg = this._activeWall;
+    if (!wg || wg.feature.points.length > 0) return false;
+    const fi = this.track.features.indexOf(wg.feature);
+    if (fi > -1) this.track.features.splice(fi, 1);
+    this._destroyWallGizmos(wg); // clears _activeWall; empty gizmo arrays dispose cleanly
+    return true;
   }
 
   // ─── Called after undo / redo ─────────────────────────────────────────────

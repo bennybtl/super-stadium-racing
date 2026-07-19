@@ -4,6 +4,10 @@ import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
 
 const TRACK_SCHEMA_VERSION = 2;
 
+// Point-list feature types that are meaningless with zero points. Loaded tracks
+// strip any of these that carry an empty `points` array (see Track.fromJSON).
+const EMPTY_STRIP_TYPES = new Set(['terrainPath', 'polyWall', 'polyCurb', 'polyHill', 'aiPath']);
+
 function getFeatureSerializationPriority(feature) {
   if (!feature || typeof feature !== 'object') return 10;
   if (feature.type === 'meshGrid') return 0;
@@ -919,7 +923,17 @@ export class Track {
       }
       return loaded;
     });
-    
+
+    // Drop degenerate point-list features left behind with zero points — e.g.
+    // picking a placement tool (Terrain Path / Poly Wall / Poly Curb) from the
+    // Add menu then pressing Esc before dropping any point. They build and
+    // render nothing (every builder guards on points.length), so they are pure
+    // litter in the saved JSON. Stripping on load heals existing tracks; the
+    // cleaned set is persisted on the next save.
+    track.features = track.features.filter(f =>
+      !(EMPTY_STRIP_TYPES.has(f.type) && Array.isArray(f.points) && f.points.length === 0)
+    );
+
     return track;
   }
 

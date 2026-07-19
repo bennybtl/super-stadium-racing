@@ -412,6 +412,22 @@ export class TerrainPathEditor {
     this._scheduleTerrainRebuild();
   }
 
+  /**
+   * Remove the active feature if it has no points — called on close so opening
+   * the tool then exiting without placing anything doesn't leave litter in the
+   * track. No snapshot: creation already pushed one capturing the pre-create
+   * state, so undo stays consistent.
+   */
+  discardActiveIfEmpty() {
+    const f = this.activeFeature;
+    if (!f || (f.points?.length ?? 0) > 0) return false;
+    const track = this.editor.currentTrack;
+    const idx = track.features.indexOf(f);
+    if (idx > -1) track.features.splice(idx, 1);
+    this.activeFeature = null;
+    return true;
+  }
+
   /** Called after an undo/redo snapshot restore. */
   onSnapshotRestored(track) {
     this.clearMeshes();

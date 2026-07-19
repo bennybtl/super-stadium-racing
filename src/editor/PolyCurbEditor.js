@@ -61,20 +61,16 @@ export class PolyCurbEditor {
 
   // ─── Adding a new curb ───────────────────────────────────────────────────
 
+  /**
+   * Create an empty poly curb and enter placement mode. The user then
+   * right-clicks the terrain to drop control points one at a time (mirrors the
+   * AI Path / Terrain Path flow). Opening the panel (selectedType = 'polyCurb')
+   * is what activates the right-click-to-add branch in EditorController.
+   */
   addPolyCurbFeature() {
-    const cam = this.ec.camera;
-    const target = cam.getTarget();
-    const cx  = target.x;
-    const cz  = target.z;
-
     const feature = {
       type:   'polyCurb',
-      points: [
-        { x: cx - 10, z: cz - 5, radius: 0 },
-        { x: cx,      z: cz + 5, radius: 0 },
-        { x: cx + 10, z: cz - 5, radius: 0 },
-        { x: cx + 20, z: cz + 5, radius: 0 },
-      ],
+      points: [],
       height: 0.22,
       width:  0.9,
       closed: false,
@@ -86,6 +82,24 @@ export class PolyCurbEditor {
     this._setActive(cg);
     this._syncStore(feature);
     this._rebuild(feature);
+  }
+
+  /**
+   * Append a control point at (x, z) to the active curb and select it.
+   * Called from EditorController while in poly-curb placement mode.
+   */
+  addPoint(x, z) {
+    if (!this._activeGizmo) return;
+    this.ec.saveSnapshot();
+    const cg = this._activeGizmo;
+    cg.feature.points.push({
+      x: parseFloat(x.toFixed(2)),
+      z: parseFloat(z.toFixed(2)),
+      radius: 0,
+    });
+    this._refreshGizmos(cg);
+    this.selectPoint(cg, cg.feature.points.length - 1);
+    this._rebuild(cg.feature);
   }
 
   // ─── Gizmo management ─────────────────────────────────────────────────────
@@ -203,7 +217,10 @@ export class PolyCurbEditor {
       this.selectedPoint = null;
     }
     this._rawDrag = null;
-    if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
+    // NB: intentionally does NOT clear selectedType — placement mode stays active
+    // (panel open) after deselecting a point, so the user can keep right-clicking
+    // to add more points. The mode is exited explicitly via closePolyCurb
+    // (panel X / Esc) or deleteActiveCurb.
   }
 
   // ─── Point movement ───────────────────────────────────────────────────────
@@ -306,6 +323,21 @@ export class PolyCurbEditor {
     this._activeGizmo = null;
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
     rebuild.polyCurb?.(null);
+  }
+
+  /**
+   * Remove the active curb if it has no points — called on close so opening the
+   * tool then exiting without placing anything doesn't leave litter in the
+   * track. No snapshot: creation already pushed one capturing the pre-create
+   * state, so undo stays consistent.
+   */
+  discardActiveIfEmpty() {
+    const cg = this._activeGizmo;
+    if (!cg || cg.feature.points.length > 0) return false;
+    const fi = this.track.features.indexOf(cg.feature);
+    if (fi > -1) this.track.features.splice(fi, 1);
+    this._destroyGizmos(cg); // clears _activeGizmo; empty gizmo arrays dispose cleanly
+    return true;
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

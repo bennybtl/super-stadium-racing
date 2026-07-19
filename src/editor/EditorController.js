@@ -605,6 +605,18 @@ export class EditorController {
         event.stopPropagation();
         return;
       }
+      if (this._editorStore?.selectedType === 'polyWall') {
+        this.closePolyWall();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (this._editorStore?.selectedType === 'polyCurb') {
+        this.closePolyCurb();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (this._editorStore?.selectedType === 'obstacle') {
         this.closeObstacle();
         event.preventDefault();
@@ -1175,6 +1187,24 @@ export class EditorController {
     return false;
   }
 
+  /**
+   * Poly wall / poly curb placement-mode click handling. Right-click drops a new
+   * control point at the terrain location; left-click selects an existing point.
+   * Returns true if the click was consumed. Mirrors _handleWaypointSelection but
+   * uses the poly editors' point-selection interface (onPointerDown / addPoint).
+   */
+  _handlePolyPlacement(pickResult, button, editor) {
+    if (button === 2) {
+      const p = pickResult.pickedPoint ?? this._pointerWorldXZ();
+      if (p) {
+        editor.addPoint(p.x, p.z);
+        return true;
+      }
+      return false;
+    }
+    return editor.onPointerDown(pickResult.pickedMesh ?? null);
+  }
+
   handlePointerDown(pointerInfo) {
     if (!this.isActive) return;
     
@@ -1216,6 +1246,20 @@ export class EditorController {
         // this mode is closed (Esc / panel X).
         this._logGizmoDiag('click blocked by terrainPath mode', pickResult?.pickedMesh);
         this.deselectAll();
+        return;
+      }
+
+      // Poly wall panel open: right-click terrain to add points, click a point to select.
+      if (this._editorStore?.selectedType === 'polyWall') {
+        if (this._handlePolyPlacement(pickResult, pointerInfo.event.button, this.polyWallEditor)) return;
+        this.polyWallEditor.deselectPoint();
+        return;
+      }
+
+      // Poly curb panel open: right-click terrain to add points, click a point to select.
+      if (this._editorStore?.selectedType === 'polyCurb') {
+        if (this._handlePolyPlacement(pickResult, pointerInfo.event.button, this.polyCurbEditor)) return;
+        this.polyCurbEditor.deselectPoint();
         return;
       }
 
@@ -1631,6 +1675,11 @@ export class EditorController {
   deletePolyWall()              { this.polyWallEditor.deletePolyWall(); }
   duplicatePolyWall()           { this.polyWallEditor.duplicatePolyWall(); }
   deselectPolyWall()            { this.polyWallEditor.deselectPoint(); }
+  closePolyWall() {
+    this.polyWallEditor.deselectPoint();
+    this.polyWallEditor.discardActiveIfEmpty();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
 
   // ── Poly Hill Vue bridge methods ──
   changePolyHillRadius(val)     { this.polyHillEditor.setPointRadius(val); }
@@ -1701,6 +1750,11 @@ export class EditorController {
   deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
   duplicatePolyCurb()        { this.polyCurbEditor?.duplicatePolyCurb(); }
   deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
+  closePolyCurb() {
+    this.polyCurbEditor?.deselectPoint();
+    this.polyCurbEditor?.discardActiveIfEmpty();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
 
   // ── Mesh grid bridge ─────────────────────────────────────────────────────
   changeMeshGridSmoothing(v) {
@@ -1851,6 +1905,7 @@ export class EditorController {
 
   closeTerrainPath() {
     this.terrainPathEditor.deselect();
+    this.terrainPathEditor.discardActiveIfEmpty();
     if (this._editorStore) this._editorStore.selectedType = null;
   }
 
