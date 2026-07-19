@@ -7,6 +7,32 @@ import { basicColors } from "../constants";
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+/**
+ * Sprung-mass body dynamics — one coherent model for all visual body motion.
+ *
+ * The cab is a mass on soft suspension sitting on the wheels. Its three visual
+ * degrees of freedom are each an underdamped spring whose *target* is set by the
+ * chassis's acceleration in truck-local space — the same weight transfer a real
+ * occupant feels:
+ *   - heave (vertical bob) ← vertical accel   (landings, bumps)
+ *   - pitch (dive / squat)  ← longitudinal accel (brake / throttle)
+ *   - roll  (body lean)     ← lateral accel     (cornering)
+ * The spring gives each its inertia, overshoot and settle. All three share one
+ * frequency/damping family, so dive, lean and bob move together — which reads as
+ * real suspension rather than a set of independent scripted tilts.
+ *
+ * Per DOF: freq = bounce speed (Hz); damping < 1 = underdamped (overshoot);
+ *          gain = target deflection per m/s² of accel; max = clamp on deflection.
+ */
+const BODY_DYN = {
+  heave: { freq: 2.2, damping: 0.35, gain: 0.0100, max: 0.25 }, // units
+  pitch: { freq: 2.4, damping: 0.45, gain: 0.0150, max: 0.28 }, // radians
+  roll:  { freq: 2.6, damping: 0.45, gain: 0.0210, max: 0.40 }, // radians
+  maxDt: 1 / 30, // clamp per-substep dt so a frame spike can't destabilise a spring
+};
+
 /**
  * TruckBody — builds a purely visual puppet parented to the physics box mesh.
  *
@@ -69,11 +95,18 @@ export class TruckBody {
     ];
 
 
-    // Visual root for the body (chassis, cabin). Follows the physics box
-    // closely but gets a partial terrain correction — allows suspension
-    // bounce while never sinking fully underground.
+    // Sprung-mass node: carries the body's heave/pitch/roll relative to the
+    // chassis (driven by BODY_DYN). Sits between the physics box and the static
+    // body transform so cab dynamics never touch collision or the model's own
+    // orientation.
+    this._bodyDynNode = new TransformNode("truckBodyDyn", scene);
+    this._bodyDynNode.parent = parent;
+
+    // Visual root for the body (chassis, cabin). Holds the static body transform
+    // (ride height, model orientation, scale); parented to the dynamics node so
+    // it inherits the sprung motion.
     this._visualRoot = new TransformNode("truckBodyRoot", scene);
-    this._visualRoot.parent = parent;
+    this._visualRoot.parent = this._bodyDynNode;
 
     // Wheel root gets the FULL terrain correction so wheels always
     // stay above the ground surface.
@@ -102,6 +135,14 @@ export class TruckBody {
 
     this._steerAngle = 0;  // current front-wheel steer angle (radians)
     this._wheelSpin  = 0;  // accumulated wheel-roll angle (radians)
+    // Sprung-mass body dynamics state. See BODY_DYN / _updateBodyDynamics.
+    this._dyn = {
+      heave: { x: 0, v: 0 },  // vertical offset (units) + velocity
+      pitch: { x: 0, v: 0 },  // nose dive/squat (rad) + velocity
+      roll:  { x: 0, v: 0 },  // body lean (rad) + velocity
+    };
+    this._lastVx = 0; this._lastVy = 0; this._lastVz = 0; // prev chassis velocity
+    this._dynInit = false;   // seed velocity on first frame before deriving accel
     this._contactShadow = null;
     this._contactShadowMat = null;
     this._contactShadowTex = null;
@@ -303,10 +344,9 @@ export class TruckBody {
    * @param {number}  dt      - delta time (s)
    */
   update(state, input, speed, dt, terrainY = null, groundedness = 0, sampleSurfaceY = null) {
-    // When the physics box dips below the terrain surface, push the
-    // wheel root fully above ground, and the body root partially —
-    // this lets the body bounce with the physics while the wheels
-    // stay planted on the surface.
+    // When the physics box dips below the terrain surface, push the wheel root
+    // fully above ground so the wheels stay planted. The body's own vertical
+    // motion is handled by the sprung-mass dynamics below, not this correction.
     if (terrainY !== null) {
       const physY = this.parent.position.y;
       const minY = terrainY + 0.4; // 0.4 = TRUCK_HALF_HEIGHT
@@ -314,12 +354,6 @@ export class TruckBody {
 
       // Wheels: full correction — always above terrain
       this._wheelRoot.position.y = deficit > 0 ? deficit : 0;
-
-      // Body: allow up to 0.25 units of dip below ground for suspension feel,
-      // but never more than that
-      const bodyAllowance = this._bodyYOffset / 3;
-      const bodyDeficit = deficit - bodyAllowance;
-      this._visualRoot.position.y = (bodyDeficit > 0 ? bodyDeficit : 0) + this._bodyYOffset;
 
       // Keep a dark, stable contact shadow under the truck.
       if (this._contactShadow) {
@@ -337,13 +371,10 @@ export class TruckBody {
       this._contactShadow.isVisible = false;
     }
 
-    // Cancel only the drift lean (currentRoll) on the wheel root, not the terrain roll.
-    // parent.rotation.z = terrainRoll + currentRoll (set by DriftPhysics).
-    // Wheels should tilt with the terrain but stay upright relative to it,
-    // so we counter-rotate by currentRoll only.
-    if (groundedness > 0.1) {
-      this._wheelRoot.rotation.z = -(state.currentRoll ?? 0);
-    }
+    // Body sprung-mass dynamics — heave/pitch/roll relative to the chassis.
+    // (Wheels stay on _wheelRoot, which only follows the terrain, so the body
+    // leans and bobs over planted wheels like real suspension.)
+    this._updateBodyDynamics(state, groundedness, dt);
 
     let sampledWheelBaseY = this._hasWheelSamples ? this._sampledWheelBaseY : null;
     if (sampleSurfaceY && groundedness >= this._wheelFollowMinGroundedness) {
@@ -379,6 +410,78 @@ export class TruckBody {
     }
 
     this._animateWheels(state, speed, dt, input, sampledWheelBaseY);
+  }
+
+  /**
+   * Underdamped spring toward targetY. The body lags then overshoots the rest
+   * position and settles with a rebound, giving offroad "bounce". Purely visual
+   * — only the body's local Y moves; wheels and collision are untouched.
+   * @returns {number} the sprung Y to apply to the visual root
+   */
+  /**
+   * Drive the body's heave/pitch/roll springs from the chassis's acceleration.
+   * Acceleration is derived from the change in chassis velocity, decomposed into
+   * truck-local forward/right/up, and faded by groundedness (weight transfer
+   * only acts through the contact patch — no dive/lean/bob while airborne).
+   */
+  _updateBodyDynamics(state, groundedness, dt) {
+    const v = state.velocity;
+    if (!v || !(dt > 0)) return;
+
+    // Seed velocity on the first frame so the first derived accel isn't a spike.
+    if (!this._dynInit) {
+      this._lastVx = v.x; this._lastVy = v.y; this._lastVz = v.z;
+      this._dynInit = true;
+      return;
+    }
+
+    // Chassis acceleration since the last body update (world space).
+    const ax = (v.x - this._lastVx) / dt;
+    const ay = (v.y - this._lastVy) / dt;
+    const az = (v.z - this._lastVz) / dt;
+    this._lastVx = v.x; this._lastVy = v.y; this._lastVz = v.z;
+
+    // Decompose into truck-local forward/right (heading yaw). Forward = (sinH,
+    // cosH); right = (cosH, -sinH) — matches the conventions used elsewhere.
+    const h = state.heading ?? 0;
+    const sinH = Math.sin(h), cosH = Math.cos(h);
+    const fwdAccel   = ax * sinH + az * cosH;
+    const rightAccel = ax * cosH - az * sinH;
+
+    const g = clamp(groundedness, 0, 1);
+    const H = BODY_DYN.heave, P = BODY_DYN.pitch, R = BODY_DYN.roll;
+    // Sign: chassis thrown up (landing) → body squats down; braking (fwd accel
+    // negative) → nose dives (+x); cornering → body leans out of the turn
+    // (roll follows +rightAccel; the others follow -accel).
+    const heaveTarget = g * clamp(-H.gain * ay,        -H.max, H.max);
+    const pitchTarget = g * clamp(-P.gain * fwdAccel,  -P.max, P.max);
+    const rollTarget  = g * clamp(R.gain * rightAccel, -R.max, R.max);
+
+    this._integrateDof(this._dyn.heave, heaveTarget, H, dt);
+    this._integrateDof(this._dyn.pitch, pitchTarget, P, dt);
+    this._integrateDof(this._dyn.roll,  rollTarget,  R, dt);
+
+    this._bodyDynNode.position.y = this._dyn.heave.x;
+    this._bodyDynNode.rotation.x = this._dyn.pitch.x;
+    this._bodyDynNode.rotation.z = this._dyn.roll.x;
+  }
+
+  /**
+   * Advance one underdamped spring DOF toward `target`. Substeps so a large dt
+   * spike (LOD throttling, tab refocus) can't blow up the integrator.
+   */
+  _integrateDof(s, target, cfg, dt) {
+    const omega = 2 * Math.PI * cfg.freq;
+    const k = omega * omega;                 // stiffness
+    const c = 2 * cfg.damping * omega;        // damping
+    let remaining = dt;
+    while (remaining > 0) {
+      const step = Math.min(remaining, BODY_DYN.maxDt);
+      const a = k * (target - s.x) - c * s.v;
+      s.v += a * step;
+      s.x += s.v * step;
+      remaining -= step;
+    }
   }
 
   _animateWheels(state, speed, dt, input, sampledWheelBaseY = null) {
@@ -480,6 +583,7 @@ export class TruckBody {
     this._contactShadowMat?.dispose();
     this._contactShadowTex?.dispose();
     this._visualRoot.dispose();
+    this._bodyDynNode.dispose();
     this._wheelRoot.dispose();
     this._parts  = [];
     this._wheels = [];

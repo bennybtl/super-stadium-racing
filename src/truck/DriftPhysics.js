@@ -1,6 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
 import { tangentBasis } from "./surface-math.js";
-import { GROUNDEDNESS } from "../constants.js";
 
 // ─── Grip / drift ────────────────────────────────────────────────────────────
 //
@@ -50,43 +49,6 @@ const DRAG_BRAKING = 0.8;
 /** Drag coefficient while airborne (minimal air resistance). */
 const DRAG_AIRBORNE = 0.02;
 
-// ─── Body roll ────────────────────────────────────────────────────────────────
-
-/** Lateral speed → roll angle scale factor. */
-const ROLL_FROM_LATERAL = 0.04;
-
-/** Turn rate → roll angle scale factor (multiplied by speed). */
-const ROLL_FROM_TURNING = 0.02;
-
-/** Maximum body roll angle in radians (~15°). */
-const MAX_ROLL = 0.20;
-
-/** Body height baseline used for MAX_ROLL scaling (default truck ride height). */
-const MAX_ROLL_BODY_Y_BASE = 0.66;
-
-/** Prevent extreme roll changes for very low/high body offsets. */
-const MAX_ROLL_SCALE_MIN = 0.5;
-const MAX_ROLL_SCALE_MAX = 1.6;
-
-/** Prevent extreme pitch changes for very low/high body offsets. */
-const PITCH_SCALE_MIN = 0.5;
-const PITCH_SCALE_MAX = 1.6;
-
-/** Roll interpolation speed when grounded. */
-const ROLL_SPEED_GROUNDED = 6;
-
-/** Roll interpolation speed when airborne (slower recovery). */
-const ROLL_SPEED_AIRBORNE = 2;
-
-/** Pitch offset smoothing speed from weight transfer. */
-const PITCH_WEIGHT_TRANSFER_SPEED = 5;
-
-/** Pitch from throttle/brake weight transfer. */
-const PITCH_FROM_WEIGHT_TRANSFER = {
-  throttle: -0.1,  // rear squat / nose up
-  brake:    0.1,   // nose dive
-};
-
 /**
  * Handles drift physics, grip, drag, and velocity management
  */
@@ -96,8 +58,6 @@ export class DriftPhysics {
     this._surfaceForward = new Vector3();
     this._surfaceNormal = new Vector3(0, 1, 0);
     this._surfaceRight = new Vector3(1, 0, 0);
-    this._rollRight = new Vector3();
-    this._currentPitchOffset = 0;
   }
 
   applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0, deltaTime = 1 / 60, throttleBreak = 0) {
@@ -228,48 +188,16 @@ export class DriftPhysics {
     }
   }
 
-  updateRoll(mesh, speed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime) {
-    const leaning = groundedness > GROUNDEDNESS.VISUAL_LEAN && speed > 1;
-
-    // Body-height scale (taller bodies lean/pitch more); shared by roll and pitch.
-    const bodyHeightY = Math.max(0.05, this.state.bodyHeightY ?? MAX_ROLL_BODY_Y_BASE);
-    const bodyScaleRaw = bodyHeightY / MAX_ROLL_BODY_Y_BASE;
-
-    // Target roll from cornering: lateral slide + turn rate, clamped to maxRoll.
-    if (leaning) {
-      this._rollRight.set(Math.cos(this.state.heading), 0, -Math.sin(this.state.heading));
-      const lateralSpeed = this.state.velocity.dot(this._rollRight);
-      let turnRate = 0;
-      if (input.left)  turnRate = -effectiveTurnSpeed * speedRatio;
-      if (input.right) turnRate =  effectiveTurnSpeed * speedRatio;
-
-      const rollScale = Math.max(MAX_ROLL_SCALE_MIN, Math.min(MAX_ROLL_SCALE_MAX, bodyScaleRaw));
-      const maxRoll = MAX_ROLL * rollScale;
-      const targetRoll = lateralSpeed * ROLL_FROM_LATERAL + turnRate * speed * ROLL_FROM_TURNING;
-      this.state.targetRoll = Math.max(-maxRoll, Math.min(maxRoll, targetRoll));
-    } else {
-      this.state.targetRoll = 0;
-    }
-
-    const rollSpeed = groundedness > GROUNDEDNESS.VISUAL_LEAN ? ROLL_SPEED_GROUNDED : ROLL_SPEED_AIRBORNE;
-    this.state.currentRoll += (this.state.targetRoll - this.state.currentRoll) * rollSpeed * deltaTime;
-
-    // Target pitch offset from throttle/brake weight transfer (nose dive / squat).
-    let targetPitchOffset = 0;
-    if (leaning) {
-      const wt = this.state.weightTransfer ?? 1.0;
-      const pitchScale = Math.max(PITCH_SCALE_MIN, Math.min(PITCH_SCALE_MAX, bodyScaleRaw));
-      if (input.forward) targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.throttle * speedRatio * wt * pitchScale;
-      if (input.back)    targetPitchOffset += PITCH_FROM_WEIGHT_TRANSFER.brake    * speedRatio * wt * pitchScale;
-    }
-    this._currentPitchOffset += (targetPitchOffset - this._currentPitchOffset) * Math.min(1, PITCH_WEIGHT_TRANSFER_SPEED * deltaTime);
-
-    // Single orientation-apply: this is the only writer of the truck's visual pitch
-    // and roll. TerrainPhysics computes the contributions — state.flightPitch
-    // (velocity/slope pitch) and state.terrainRoll — and here we add the
-    // weight-transfer pitch and cornering roll, then compose. (Heading/rotation.y
-    // is applied separately by Truck.)
-    mesh.rotation.x = -(this.state.flightPitch ?? 0) + this._currentPitchOffset;
-    mesh.rotation.z = (this.state.terrainRoll || 0) + this.state.currentRoll;
+  /**
+   * Apply the chassis's terrain-following orientation to the physics box.
+   * TerrainPhysics computes the contributions — state.flightPitch (velocity /
+   * slope pitch, including the airborne launch angle) and state.terrainRoll
+   * (slope roll). Body-relative lean and dive/squat are handled separately by
+   * TruckBody's acceleration-driven sprung-mass model, so they are NOT added
+   * here. (Heading/rotation.y is applied separately by Truck.)
+   */
+  updateRoll(mesh) {
+    mesh.rotation.x = -(this.state.flightPitch ?? 0);
+    mesh.rotation.z = (this.state.terrainRoll || 0);
   }
 }

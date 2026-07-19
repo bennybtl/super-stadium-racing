@@ -424,9 +424,11 @@ export class Truck {
       this.mesh.rotation.y = newHeading;
     });
 
-    // Update roll before syncing the physics body so visual lean is live this frame.
+    // Apply chassis terrain orientation before syncing the physics body so the
+    // slope pitch/roll is live this frame. (Body lean/dive/bob is applied later
+    // by the visual puppet's sprung-mass model in body.update.)
     profile('truck.roll', () =>
-      this.driftPhysics.updateRoll(this.mesh, hSpeed, groundedness, input, effectiveTurnSpeed, speedRatio, deltaTime)
+      this.driftPhysics.updateRoll(this.mesh)
     );
 
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.

@@ -74,18 +74,17 @@ const ORIENTATION = {
  */
 const PITCH = {
   smoothingRate:         8,     // exp smoothing rate when grounded (s⁻¹)
-  airborneSmoothingRate: 1.5,   // much slower rate when airborne — holds launch angle through the arc
+  airborneSmoothingRate: 0.9,   // much slower rate when airborne — holds launch angle through the arc
   maxAngle:              1.10,  // clamp to ±63° — above the steepest climbable slope (speedBleedMaxDeg=60°)
   minPitchSpeed:         2,     // below this hSpeed (m/s), pitch effect fades to zero
   pitchSpeedRamp:        6,     // hSpeed at which pitch reaches full effect
 };
 
-/** Vertical/visual jitter impulses over rough terrain. */
+/** Vertical jitter impulses over rough terrain. */
 const ROUGHNESS = {
   minGroundedness:  GROUNDEDNESS.TERRAIN,   // minimum groundedness to apply bumps
   bumpInterval:     0.25,  // base time between bumps (s); divided by roughness
   vertImpulseScale: 3.6,   // max vertical velocity impulse per bump (m/s)
-  rollJitter:       0.20,  // max roll jitter per bump (radians × roughness)
 };
 
 // Far AI trucks use a lower cadence for full normal sampling to reduce raycast load.
@@ -178,7 +177,7 @@ export class TerrainPhysics {
       }
     }
 
-    this._updatePitch(deltaTime, groundedness, forward, hSpeed);
+    this._updatePitch(deltaTime, groundedness, forward, hSpeed, penetration);
 
     return { groundedness, penetration };
   }
@@ -299,8 +298,11 @@ export class TerrainPhysics {
     if (this._bumpAccumulator < interval) return;
 
     this._bumpAccumulator -= interval;
-    this.state.velocity.y      += roughness * ROUGHNESS.vertImpulseScale * (0.5 + Math.random() * 0.5);
-    this.state.terrainRoll      += (Math.random() - 0.5) * roughness * ROUGHNESS.rollJitter;
+    // Vertical impulse only — the body's heave spring reads this as acceleration
+    // and turns bumps into coherent bounce. (Roll jitter used to be injected into
+    // terrainRoll here, but that shook the chassis/wheels incoherently and fought
+    // the sprung-mass roll; removed in favour of the acceleration-driven model.)
+    this.state.velocity.y += roughness * ROUGHNESS.vertImpulseScale * (0.5 + Math.random() * 0.5);
   }
 
   // ---------------------------------------------------------------------------
@@ -605,10 +607,18 @@ export class TerrainPhysics {
    * Nose-up on launch, nose-down on descent, level on flat ground.
    * Flipped when reversing so it reads correctly relative to direction of travel.
    */
-  _updatePitch(deltaTime, groundedness, forward, hSpeed) {
+  _updatePitch(deltaTime, groundedness, forward, hSpeed, penetration) {
     let targetPitch;
 
-    if (groundedness > ORIENTATION.groundednessThreshold) {
+    // Airborne detection uses the actual ground gap, not the smoothed
+    // groundedness. groundedness lags ~5 frames behind liftoff (suspension
+    // compression decays slowly), and during that lag the grounded branch below
+    // would snap the nose to the flat terrain normal at the fast rate — killing
+    // the ramp launch angle before the airborne branch ever runs. A real gap
+    // under the truck (penetration past the spring's proximity) means no contact.
+    const airborne = penetration < -SPRING.proximityThreshold;
+
+    if (!airborne) {
       // Grounded: derive pitch from the terrain normal's forward component.
       // This mirrors how roll is derived, and correctly reads the hill slope
       // even when verticalVelocity is near-zero due to spring clamping.
@@ -637,9 +647,9 @@ export class TerrainPhysics {
     // Grounded: snap pitch quickly so it tracks the slope.
     // Airborne: slow rate holds the launch angle through the arc rather than
     // immediately pitching down as gravity flips verticalVelocity negative.
-    const rate = groundedness > ORIENTATION.groundednessThreshold
-      ? PITCH.smoothingRate
-      : PITCH.airborneSmoothingRate;
+    const rate = airborne
+      ? PITCH.airborneSmoothingRate
+      : PITCH.smoothingRate;
     const pitchFactor = 1 - Math.exp(-rate * deltaTime);
     this._smoothedPitch += (targetPitch - this._smoothedPitch) * pitchFactor;
     // Compute-only: the smoothed pitch is published to state and composed into the
