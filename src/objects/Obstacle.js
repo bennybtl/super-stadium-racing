@@ -131,6 +131,7 @@ export class Obstacle {
   ) {
     this.scene = scene;
     this._loadedMeshes = [];
+    this._disposed = false;
     this.obstacleType = normalizeObstacleType(obstacleType);
     this.color = normalizeObstacleColor(color);
     const spec = getObstacleSpec(this.obstacleType);
@@ -183,6 +184,11 @@ export class Obstacle {
     // Load once, clone per instance
     Obstacle._getSourceMeshes(scene, this.obstacleType)
       .then(sourceMeshes => {
+        // If the obstacle was disposed while the OBJ was still loading (e.g. the
+        // editor disposes the runtime ObstacleManager right after buildScene),
+        // its _pivot is gone. Cloning onto a disposed parent leaves an orphan
+        // mesh stranded at the world origin — bail instead.
+        if (this._disposed) return;
         for (const src of sourceMeshes) {
           const m = src.clone(`tireStackMesh_${x}_${z}`, this._pivot);
           m.isVisible  = true;
@@ -201,6 +207,7 @@ export class Obstacle {
   }
 
   dispose() {
+    this._disposed = true;
     this.aggregate.dispose();
     for (const m of this._loadedMeshes) m.dispose();
     this._paintMat?.dispose();

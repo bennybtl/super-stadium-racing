@@ -43,7 +43,47 @@ export class DriveMode extends BaseMode {
    */
   async buildDriveScene(trackKey) {
     const { engine, trackLoader } = this.controller;
-    return buildScene(engine, trackLoader, trackKey);
+    const built = await buildScene(engine, trackLoader, trackKey);
+    this._setupBorderWallFade(built.scene);
+    return built;
+  }
+
+  /**
+   * Fade a perimeter border wall out when the camera passes to its outside.
+   * The chase camera can clip through the track edge on tight turns, and the
+   * tall grey border wall then fills the screen instead of the truck. Physics
+   * is untouched (the truck can't reach the outside) — only the visual
+   * crossfades to transparent while the camera is beyond the wall, then back
+   * once it returns. Applies to every drive mode; the editor builds its scene
+   * via buildScene() directly, so its overhead camera is unaffected.
+   */
+  _setupBorderWallFade(scene) {
+    const walls = ['borderNorth', 'borderSouth', 'borderEast', 'borderWest']
+      .map(n => scene.getMeshByName(n))
+      .filter(Boolean)
+      .map(mesh => {
+        // Outward normal: from track center toward the wall along its dominant
+        // (thin, axis-aligned) axis. Camera is "outside" when it lies past the
+        // wall along this normal.
+        const { x: cx, z: cz } = mesh.position;
+        const nx = Math.abs(cx) >= Math.abs(cz) ? Math.sign(cx) : 0;
+        const nz = Math.abs(cz) >  Math.abs(cx) ? Math.sign(cz) : 0;
+        return { mesh, cx, cz, nx, nz };
+      });
+    if (walls.length === 0) return;
+
+    const FADE_RATE = 12; // per-second crossfade speed
+    scene.onBeforeRenderObservable.add(() => {
+      const cam = scene.activeCamera;
+      if (!cam) return;
+      const dt = Math.min(0.05, scene.getEngine().getDeltaTime() / 1000);
+      const p = cam.position;
+      for (const w of walls) {
+        const outside = (p.x - w.cx) * w.nx + (p.z - w.cz) * w.nz > 0;
+        const target = outside ? 0 : 1;
+        w.mesh.visibility += (target - w.mesh.visibility) * Math.min(1, dt * FADE_RATE);
+      }
+    });
   }
 
   togglePhotoMode() {

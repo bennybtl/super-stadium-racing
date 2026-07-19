@@ -107,6 +107,10 @@ export class ObstacleEditor {
     const { feature, node } = stackData;
     Obstacle._getSourceMeshes(this.scene, type)
       .then(sourceMeshes => {
+        // A rebuild (type/scale/color change) may have disposed this node while
+        // the OBJ was still loading. Cloning onto a disposed parent strands an
+        // orphan mesh at the world origin — bail if the node is gone.
+        if (node.isDisposed()) return;
         for (const src of sourceMeshes) {
           const m = src.clone('obstacleEditorMesh', node);
           m.isVisible = true;
