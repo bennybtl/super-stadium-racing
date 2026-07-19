@@ -268,8 +268,10 @@ export class Truck {
       // ever reaching lock — give them a near-instant ramp instead.
       steerRampScale: this.driver ? 5 : 1,
 
-      // suspend driving
-      noDriveUntil: false
+      // suspend driving / steering (set on head-on collisions so the truck
+      // bounces straight back without drive force or steering overriding it)
+      noDriveUntil: false,
+      noSteerUntil: false
     };
 
     // Overlay any params supplied by the vehicle definition

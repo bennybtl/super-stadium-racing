@@ -483,6 +483,22 @@ export class EditorController {
     return featureActions.find(action => action.selected()) ?? null;
   }
 
+  /**
+   * Replace each feature's `terrainType` (a plain object after JSON round-trip,
+   * or a legacy name string) with the canonical TERRAIN_TYPES reference by name,
+   * so identity-keyed lookups (e.g. TERRAIN_TYPE_INDEX in the terrain bake) match.
+   */
+  _canonicalizeFeatureTerrainTypes(features) {
+    if (!Array.isArray(features)) return;
+    for (const f of features) {
+      const tt = f?.terrainType;
+      if (!tt) continue;
+      const name = typeof tt === 'string' ? tt : tt.name;
+      const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === name);
+      if (key) f.terrainType = TERRAIN_TYPES[key];
+    }
+  }
+
   _applySnapshot(snap) {
     // Deselect everything, then clear gizmo meshes (materials stay alive for
     // re-use). Editors without clearMeshes rebuild via onSnapshotRestored
@@ -518,6 +534,12 @@ export class EditorController {
         ...(parsed.wear ?? {}),
       };
     }
+      // JSON.parse gives each feature a fresh terrainType object copy. The terrain
+      // bake keys TERRAIN_TYPE_INDEX by object identity, so a copy misses the map
+      // and falls back to index 0 (asphalt/grey) — features paint grey until a
+      // reload re-canonicalizes them. Re-map each back to the shared TERRAIN_TYPES
+      // reference by name, mirroring Track.fromJSON.
+      this._canonicalizeFeatureTerrainTypes(this.currentTrack.features);
       this._syncTrackSettingsPanel();
 
       // Rebuild terrain first so terrain-sampled visuals land at correct heights.

@@ -99,13 +99,20 @@ export class Controls {
       const stationarySpinRate = this.state.stationarySpinRate ?? 0.35;
       const spinFactor = stationarySpinRate + (1.0 - stationarySpinRate) * speedRatio;
 
+      // After a head-on collision the truck bounces straight back; ignore steering
+      // during that window so held input can't curve the rebound off-line.
+      const steerSuppressed = !!this.state.noSteerUntil && Date.now() < this.state.noSteerUntil;
+
       // Ease the steer amount toward the input target so turn-in ramps up
       // instead of snapping to full rate; taps produce small corrections.
-      const steerTarget = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      const steerTarget = steerSuppressed ? 0 : (input.right ? 1 : 0) - (input.left ? 1 : 0);
       const rampRate = steerTarget === 0 ? STEER_RAMP_DOWN : STEER_RAMP_UP;
       const maxStep = rampRate * (this.state.steerRampScale ?? 1) * deltaTime;
       const diff = steerTarget - this._steerAmount;
       this._steerAmount += Math.max(-maxStep, Math.min(maxStep, diff));
+
+      // Snap steering dead-center while suppressed so heading holds through the bounce.
+      if (steerSuppressed) this._steerAmount = 0;
 
       const delta = steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime * this._steerAmount;
       this.state.heading += delta;

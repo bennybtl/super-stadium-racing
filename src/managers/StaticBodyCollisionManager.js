@@ -268,10 +268,12 @@ export class StaticBodyCollisionManager {
       vel.y -= worldNormal.y * velDot * bounceCoeff;
       vel.z -= worldNormal.z * velDot * bounceCoeff;
 
-      // If head-on, suppress forward drive force for 500ms so it doesn't override the bounce
+      // If head-on, suppress forward drive force AND steering for 500ms so neither
+      // overrides the bounce — the truck rebounds straight back along the normal.
       if (isHeadOn && truck.state) {
-        // Set a cooldown timestamp; your drive logic should check this and skip applying drive force if active
+        // Set cooldown timestamps; drive + steering logic check these and skip while active.
         truck.state.noDriveUntil = Date.now() + 500;
+        truck.state.noSteerUntil = Date.now() + 500;
       }
 
       const applyFriction = mesh.metadata?.truckColliderApplyFriction !== false;
