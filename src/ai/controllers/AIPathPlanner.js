@@ -239,6 +239,25 @@ export class AIPathPlanner {
     d.path[d.path.length - 1].segLen = 0;
     d.path[d.path.length - 1].heading = d.path[d.path.length - 2]?.heading ?? 0;
 
+    // Map each checkpoint to its nearest point on the racing line. Look-ahead
+    // targeting uses this to cap the aim point at the next required gate so the
+    // truck can't steer straight across a tight loop and skip the checkpoint
+    // inside it.
+    d.checkpointNearestPathIndex = d.checkpoints.map(cp => {
+      let bestIndex = 0;
+      let bestDistSq = Infinity;
+      for (let i = 0; i < d.path.length; i++) {
+        const dx = d.path[i].x - cp.x;
+        const dz = d.path[i].z - cp.z;
+        const distSq = dx * dx + dz * dz;
+        if (distSq < bestDistSq) {
+          bestDistSq = distSq;
+          bestIndex = i;
+        }
+      }
+      return bestIndex;
+    });
+
     d.currentCheckpointTarget = 0;
     d.currentPathIndex = 0;
 
@@ -304,11 +323,25 @@ export class AIPathPlanner {
     if (d.path.length === 0) return null;
 
     const n = d.path.length;
+
+    // The next required checkpoint's spot on the racing line acts as a hard cap
+    // while it lies ahead of us this lap: neither the closest-point search nor
+    // the look-ahead target may advance past it. This keeps the truck pulled
+    // toward the gate instead of cutting across a tight loop to a later part of
+    // the path (which skipped the checkpoint inside the loop). The cap releases
+    // as soon as the checkpoint is physically passed (currentCheckpointTarget
+    // advances) or when it is behind us in path order (a lap-wrap gate).
+    const gateIndex = d.checkpointNearestPathIndex?.[d.currentCheckpointTarget];
+    const gateCap = Number.isInteger(gateIndex) && gateIndex >= d.currentPathIndex
+      ? gateIndex
+      : null;
+
     let closestIndex = d.currentPathIndex;
     let closestDist = Infinity;
 
     const start = Math.max(0, d.currentPathIndex - this.lookBack);
-    const end = Math.min(n - 1, d.currentPathIndex + this.lookAhead);
+    let end = Math.min(n - 1, d.currentPathIndex + this.lookAhead);
+    if (gateCap !== null) end = Math.min(end, gateCap);
 
     for (let i = start; i <= end; i++) {
       const waypoint = d.path[i];
@@ -337,8 +370,11 @@ export class AIPathPlanner {
       }
     }
 
+    const endIndex = gateCap !== null ? gateCap : n - 1;
+    const clampedToGate = gateCap !== null;
+
     let accumulatedDist = 0;
-    for (let i = closestIndex; i < d.path.length - 1; i++) {
+    for (let i = closestIndex; i < endIndex; i++) {
       const p1 = d.path[i];
       const p2 = d.path[i + 1];
       const segmentDist = p1.segLen ?? Math.sqrt((p2.x - p1.x) ** 2 + (p2.z - p1.z) ** 2);
@@ -353,6 +389,10 @@ export class AIPathPlanner {
 
       accumulatedDist += segmentDist;
     }
+
+    // Reached the gate cap before covering the full look-ahead distance — aim
+    // at the gate point so the truck heads into the loop, not past it.
+    if (clampedToGate) return d.path[endIndex];
 
     if (d.currentPathIndex >= d.path.length - 10) {
       d.currentPathIndex = 0;

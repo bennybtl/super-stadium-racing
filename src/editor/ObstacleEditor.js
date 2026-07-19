@@ -311,7 +311,6 @@ export class ObstacleEditor {
     e.deselectHill();
     e.squareHillEditor.deselect();
     e.terrainShapeEditor.deselect();
-    e.normalMapDecalEditor.deselect();
     this.select(stackData);
     return stackData;
   }

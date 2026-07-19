@@ -1,31 +1,35 @@
-import { MeshBuilder, StandardMaterial, Texture, Color3, Vector3, Engine } from "@babylonjs/core";
+import { Vector3 } from "@babylonjs/core";
+import { DECAL_SHAPES, createDecalTexture } from "./decalShapes.js";
+import { projectGroundDecal, makeDecalMaterial } from "./groundDecal.js";
 
-// Vite glob import — all PNGs in src/assets/decals/ keyed by relative path
-const _decalModules = import.meta.glob('../assets/decals/*.png', { eager: true, query: '?url', import: 'default' });
-const _decalUrls = {};
-for (const [path, url] of Object.entries(_decalModules)) {
-  const filename = path.split('/').at(-1);
-  _decalUrls[filename] = url;
-}
+// World-units the decal mesh is raised off the terrain so it wins pointer picks
+// over the ground. Kept tiny so the marking still reads as flush with the surface.
+const PICK_LIFT = 0.15;
 
 /**
- * SurfaceDecalManager — places static wear-and-tear decals (tire marks, gouges,
- * rough patches, holes) onto the ground mesh using Babylon's CreateDecal.
+ * SurfaceDecalManager — places static ground markings (arrows, etc.) onto the
+ * ground mesh using Babylon's CreateDecal.
  *
- * Decals are PNGs with alpha from src/assets/decals/. The material uses
- * Engine.ALPHA_COMBINE so texture alpha masks transparency while dark pixels
- * tint the terrain colour beneath.
+ * Decals are drawn programmatically as canvas-backed DynamicTextures (see
+ * decalShapes.js) rather than loaded from image files, then projected and
+ * materialised via the shared helpers in groundDecal.js.
+ *
+ * The manager keeps a { feature, mesh } entry per decal so the editor can map a
+ * picked mesh back to its feature for selection/editing. CreateDecal bakes its
+ * geometry from the projection, so moving/rotating/scaling a decal means
+ * rebuilding its mesh (see rebuild()).
  *
  * Feature format (stored in track JSON):
  * {
  *   type:    "surfaceDecal",
  *   centerX: number,       // world X
  *   centerZ: number,       // world Z
- *   image:   string,       // filename, e.g. "tire_straight_long.png"
+ *   shape:   string,       // e.g. "arrow"
+ *   color:   string,       // CSS color, default "white"
  *   width:   number,       // world units
  *   depth:   number,       // world units
  *   angle:   number,       // degrees, rotation around Y (up) axis
- *   opacity: number,       // 0–1, default 0.8
+ *   opacity: number,       // 0–1, default 1
  * }
  */
 export class SurfaceDecalManager {
@@ -33,43 +37,16 @@ export class SurfaceDecalManager {
     this._scene  = scene;
     this._track  = track;
     this._ground = ground;
-    this._decals = [];
-    // Shared materials keyed by "filename:opacity" to avoid redundant GPU objects
+    this._entries = [];   // { feature, mesh }[]
+    // Shared materials keyed by "shape:color:opacity" to avoid redundant GPU objects
     this._matCache = new Map();
   }
 
   createDecal(feature) {
-    const {
-      centerX, centerZ,
-      image,
-      width  = 4,
-      depth  = 4,
-      angle  = 0,
-      opacity = 0.5,
-    } = feature;
-
-    const url = _decalUrls[image];
-    if (!url) {
-      console.warn(`[SurfaceDecalManager] unknown decal image: "${image}". Available: ${Object.keys(_decalUrls).join(', ')}`);
-      return null;
-    }
-
-    const terrainY = this._track.getHeightAt(centerX, centerZ);
-    const position = new Vector3(centerX, terrainY, centerZ);
-
-    const decal = MeshBuilder.CreateDecal(`surfaceDecal_${centerX}_${centerZ}`, this._ground, {
-      position,
-      normal:  Vector3.Up(),
-      // size.x = width, size.y = depth on ground plane, size.z = projection depth along normal
-      size:  new Vector3(width, depth, 10),
-      angle: (angle * Math.PI) / 180,
-    });
-
-    decal.material = this._getMaterial(url, image, opacity);
-    decal.isPickable = false;
-
-    this._decals.push(decal);
-    return decal;
+    const mesh = this._buildMesh(feature);
+    if (!mesh) return null;
+    this._entries.push({ feature, mesh });
+    return mesh;
   }
 
   createDecalsForTrack() {
@@ -78,29 +55,84 @@ export class SurfaceDecalManager {
     }
   }
 
-  _getMaterial(url, filename, opacity) {
-    const key = `${filename}:${opacity}`;
+  /** Map a picked mesh back to its { feature, mesh } entry (or null). */
+  findByMesh(mesh) {
+    return this._entries.find(e => e.mesh === mesh) || null;
+  }
+
+  /**
+   * Rebuild an entry's decal mesh from its (possibly-mutated) feature. Returns
+   * the new mesh. CreateDecal geometry is baked, so this is how position /
+   * rotation / scale edits take effect.
+   */
+  rebuild(entry) {
+    entry.mesh?.dispose();
+    entry.mesh = this._buildMesh(entry.feature);
+    return entry.mesh;
+  }
+
+  removeByFeature(feature) {
+    const idx = this._entries.findIndex(e => e.feature === feature);
+    if (idx === -1) return;
+    this._entries[idx].mesh?.dispose();
+    this._entries.splice(idx, 1);
+  }
+
+  /** Dispose all decal meshes and forget them (used on snapshot restore). Materials stay cached. */
+  clearAll() {
+    for (const e of this._entries) e.mesh?.dispose();
+    this._entries = [];
+  }
+
+  _buildMesh(feature) {
+    const {
+      centerX, centerZ,
+      shape = 'arrow',
+      color = 'white',
+      width  = 4,
+      depth  = 4,
+      angle  = 0,
+      opacity = 1,
+    } = feature;
+
+    if (!DECAL_SHAPES.includes(shape)) {
+      console.warn(`[SurfaceDecalManager] unknown decal shape: "${shape}". Available: ${DECAL_SHAPES.join(', ')}`);
+      return null;
+    }
+
+    const terrainY = this._track.getHeightAt(centerX, centerZ);
+
+    const decal = projectGroundDecal(this._ground, `surfaceDecal_${centerX}_${centerZ}`, {
+      position: new Vector3(centerX, terrainY, centerZ),
+      width,
+      depth,
+      angle: -(angle * Math.PI) / 180,
+    });
+
+    decal.material = this._getMaterial(shape, color, opacity);
+    decal.isPickable = true;
+    decal.metadata = { ...(decal.metadata ?? {}), surfaceDecal: true };
+    // Lift the baked mesh a hair off the terrain so pointer picks hit the decal
+    // instead of the ground beneath it. Small enough to be visually flush; the
+    // material's zOffset already handles render-order z-fighting.
+    decal.position.y += PICK_LIFT;
+
+    return decal;
+  }
+
+  _getMaterial(shape, color, opacity) {
+    const key = `${shape}:${color}:${opacity}`;
     if (this._matCache.has(key)) return this._matCache.get(key);
 
-    const tex = new Texture(url, this._scene);
-    tex.hasAlpha = true;
-
-    const mat = new StandardMaterial(`surfaceDecalMat_${key}`, this._scene);
-    mat.diffuseTexture = tex;
-    mat.useAlphaFromDiffuseTexture = true;
-    mat.disableLighting = true;
-    mat.alphaMode = Engine.ALPHA_COMBINE;
-    mat.alpha           = opacity;
-    mat.backFaceCulling = false;
-    mat.zOffset         = -2;
+    const tex = createDecalTexture(this._scene, shape, color);
+    const mat = makeDecalMaterial(this._scene, `surfaceDecalMat_${key}`, tex, opacity);
 
     this._matCache.set(key, mat);
     return mat;
   }
 
   dispose() {
-    for (const d of this._decals) d.dispose();
-    this._decals = [];
+    this.clearAll();
     for (const mat of this._matCache.values()) {
       mat.diffuseTexture?.dispose();
       mat.dispose();

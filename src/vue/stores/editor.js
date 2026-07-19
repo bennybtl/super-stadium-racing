@@ -4,7 +4,7 @@ import { getObstacleSpec } from '../../objects/Obstacle.js';
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
 export const useEditorStore = defineStore('editor', () => {
-  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainShape' | 'normalMapDecal' | 'meshGrid' | 'polyWall' | 'flag' | 'obstacle')
+  // Which entity type is currently selected (null | 'checkpoint' | 'hill' | 'squareHill' | 'terrainShape' | 'meshGrid' | 'polyWall' | 'flag' | 'obstacle')
   const selectedType = ref(null);
   const activeTool = ref(null);
 
@@ -59,17 +59,6 @@ export const useEditorStore = defineStore('editor', () => {
     rotation: 0,
     blendWidth: 0,
     terrainType: 'mud',
-  });
-
-  // ── Normal Map Decal panel ──
-  const normalMapDecal = reactive({
-    width: 10,
-    depth: 10,
-    angle: 0,
-    normalMap: 'normals/6481-normal.jpg',
-    repeatU: 1,
-    repeatV: 1,
-    intensity: 0.5,
   });
 
   // ── Obstacle panel ──
@@ -418,7 +407,10 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ── Surface decal stamp ──
-  const surfaceDecal = reactive({ decalType: 'gouge', decalTypes: ['gouge', 'holes', 'rough'], imageName: '', angle: 0, randomRotation: true, width: 4, depth: 4, opacity: 0.8 });
+  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], angle: 0, width: 4, depth: 4, opacity: 1 });
+
+  // ── Surface decal edit (a placed decal selected by click) ──
+  const surfaceDecalEdit = reactive({ angle: 0, width: 4, depth: 4, opacity: 1 });
 
   // ── Generic panel plumbing ──────────────────────────────────────────────
   // Regular property setters and feature actions route through these two
@@ -430,9 +422,9 @@ export const useEditorStore = defineStore('editor', () => {
   // Only irregular setters (composite, normalizing, or convention-breaking
   // names) keep explicit actions above. New panels need zero store edits.
   const _panels = {
-    checkpoint, hill, squareHill, terrainShape, normalMapDecal, obstacle,
+    checkpoint, hill, squareHill, terrainShape, obstacle,
     meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign,
-    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal,
+    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal, surfaceDecalEdit,
   };
   function setFeatureProp(panelKey, prop, val) {
     const panel = _panels[panelKey];
@@ -452,7 +444,6 @@ export const useEditorStore = defineStore('editor', () => {
     hill,
     squareHill,
     terrainShape,
-    normalMapDecal,
     obstacle,
     meshGrid,
     bridgeMesh,
@@ -481,7 +472,7 @@ export const useEditorStore = defineStore('editor', () => {
     aiPathWear,
     aiPathBranch, aiPathBranches,
     editMainAiPath, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, terrainPath,
-    surfaceDecal,
+    surfaceDecal, surfaceDecalEdit,
     setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     applyMeshGridSettings, setBridgeMeshPointHeight, setBridgeMeshThickness, setBridgeMeshLayerId,

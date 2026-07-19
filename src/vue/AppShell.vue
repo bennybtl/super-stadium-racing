@@ -17,7 +17,6 @@
     <HillPanel />
     <SquareHillPanel />
     <TerrainShapePanel />
-    <NormalMapDecalPanel />
     <ObstaclePanel />
     <PolyWallPanel />
     <PolyHillPanel />
@@ -31,6 +30,7 @@
     <AiPathPanel />
     <TerrainPathPanel />
     <SurfaceDecalPanel />
+    <SurfaceDecalEditPanel />
     <AddEntityMenu />
     <EditorStatusBar />
   </div>
@@ -48,7 +48,6 @@ import CheckpointPanel    from './editor/CheckpointPanel.vue';
 import HillPanel          from './editor/HillPanel.vue';
 import SquareHillPanel    from './editor/SquareHillPanel.vue';
 import TerrainShapePanel  from './editor/TerrainShapePanel.vue';
-import NormalMapDecalPanel from './editor/NormalMapDecalPanel.vue';
 import ObstaclePanel      from './editor/ObstaclePanel.vue';
 import PolyWallPanel      from './editor/PolyWallPanel.vue';
 import PolyHillPanel      from './editor/PolyHillPanel.vue';
@@ -62,6 +61,7 @@ import BridgeMeshPanel    from './editor/BridgeMeshPanel.vue';
 import AiPathPanel        from './editor/AiPathPanel.vue';
 import TerrainPathPanel   from './editor/TerrainPathPanel.vue';
 import SurfaceDecalPanel  from './editor/SurfaceDecalPanel.vue';
+import SurfaceDecalEditPanel from './editor/SurfaceDecalEditPanel.vue';
 import AddEntityMenu      from './editor/AddEntityMenu.vue';
 import EditorStatusBar    from './editor/EditorStatusBar.vue';
 

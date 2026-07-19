@@ -935,6 +935,50 @@
       "friction": 0.05,
       "closed": true,
       "style": "grey"
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 38.97070951312113,
+      "centerZ": 30.68863878169726,
+      "shape": "arrow",
+      "color": "white",
+      "width": 4,
+      "depth": 4,
+      "angle": 98,
+      "opacity": 1
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 24.973246441394284,
+      "centerZ": 40.66274497432062,
+      "shape": "arrow",
+      "color": "white",
+      "width": 4,
+      "depth": 4,
+      "angle": 181,
+      "opacity": 1
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 3.9285350107912853,
+      "centerZ": -49.029379485851024,
+      "shape": "arrow",
+      "color": "white",
+      "width": 4,
+      "depth": 4,
+      "angle": 228,
+      "opacity": 1
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 27.81266737849558,
+      "centerZ": -49.4788181009412,
+      "shape": "arrow",
+      "color": "white",
+      "width": 4,
+      "depth": 4,
+      "angle": 319,
+      "opacity": 1
     }
   ]
 }

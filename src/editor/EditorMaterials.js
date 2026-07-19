@@ -207,24 +207,6 @@ export class EditorMaterials {
     }));
   }
 
-  // ── Normal Map Decal ──────────────────────────────────────────────────────
-
-  /** Translucent purple disc. */
-  get normalMapDecal() {
-    return this._get('normalMapDecal', s => makeMat('edNormalMapDecal', s, {
-      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
-      alpha: 0.30, backFaceCulling: false,
-    }));
-  }
-
-  /** Translucent magenta disc (selected). */
-  get normalMapDecalHighlight() {
-    return this._get('normalMapDecalHL', s => makeMat('edNormalMapDecalHL', s, {
-      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
-      alpha: 0.40, backFaceCulling: false,
-    }));
-  }
-
   // ── Poly Curb ─────────────────────────────────────────────────────────────
 
   /** Teal node sphere (inactive wall). */

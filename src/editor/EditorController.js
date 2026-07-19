@@ -8,7 +8,6 @@ import { HillEditor } from "./HillEditor.js";
 import { CheckpointEditor } from "./CheckpointEditor.js";
 import { SquareHillEditor } from "./SquareHillEditor.js";
 import { TerrainShapeEditor } from "./TerrainShapeEditor.js";
-import { NormalMapDecalEditor } from "./NormalMapDecalEditor.js";
 import { ObstacleEditor } from "./ObstacleEditor.js";
 import { DecorationsEditor } from "./DecorationsEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
@@ -76,7 +75,6 @@ export class EditorController {
     this.hillEditor = new HillEditor(this);
     this.squareHillEditor = new SquareHillEditor(this);
     this.terrainShapeEditor = new TerrainShapeEditor(this);      // terrain rect + circle
-    this.normalMapDecalEditor = new NormalMapDecalEditor(this);
     this.obstacleEditor = new ObstacleEditor(this);              // tire stacks
     this.decorationsEditor = new DecorationsEditor(this);        // flags + banner strings
     this.trackSignEditor = new TrackSignEditor(this);
@@ -96,7 +94,6 @@ export class EditorController {
       this.hillEditor,
       this.squareHillEditor,
       this.terrainShapeEditor,
-      this.normalMapDecalEditor,
       this.obstacleEditor,
       this.decorationsEditor,
       this.trackSignEditor,
@@ -133,7 +130,19 @@ export class EditorController {
     // point, so a quick click-and-drag engages without waiting out the hold
     // delay. Squared to compare against squared pixel distance.
     this._dragStartThresholdSq = 16;
-    
+
+    // Empty-terrain click defers its deselect to pointer-up so a click-drag can
+    // pan the camera without dropping the current selection. Set by
+    // handlePointerDown when a click hits nothing selectable; also the signal
+    // that a drag from here should pan (never over a gizmo).
+    this._pendingEmptyDeselect = false;
+    // Mouse-drag camera pan (empty terrain) + wheel zoom.
+    this._panState = null;        // { anchor:{x,z}, startX, startY, active }
+    this._panPlaneY = 0;          // ground plane the grab point is projected onto
+    this._wheelZoomStep = 0.12;   // fraction of view distance per wheel notch
+    this._minCamHeight = 8;
+    this._maxCamHeight = 400;
+
     // Track being edited
     this.currentTrack = null;
     this.gizmosVisible = true;
@@ -404,10 +413,6 @@ export class EditorController {
       return this._createVectorSelectionInteraction(this.terrainShapeEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
-    if (this.normalMapDecalEditor.selected) {
-      return this._createVectorSelectionInteraction(this.normalMapDecalEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
-    }
-
     if (this.obstacleEditor.selected) {
       return this._createVectorSelectionInteraction(this.obstacleEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
@@ -418,6 +423,10 @@ export class EditorController {
 
     if (this.trackSignEditor.selected) {
       return this._createVectorSelectionInteraction(this.trackSignEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
+    if (this.surfaceDecalEditor.selected) {
+      return this._createVectorSelectionInteraction(this.surfaceDecalEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
     if (this.actionZoneEditor.selected) {
@@ -457,10 +466,10 @@ export class EditorController {
       { selected: () => this.hillEditor.selected, duplicate: () => this.hillEditor.duplicateSelected(), delete: () => this.hillEditor.deleteSelected() },
       { selected: () => this.squareHillEditor.selected, duplicate: () => this.squareHillEditor.duplicateSelected(), delete: () => this.squareHillEditor.deleteSelected() },
       { selected: () => this.terrainShapeEditor.selected, duplicate: () => this.terrainShapeEditor.duplicateSelected(), delete: () => this.terrainShapeEditor.deleteSelected() },
-      { selected: () => this.normalMapDecalEditor.selected, duplicate: () => this.normalMapDecalEditor.duplicateSelected(), delete: () => this.normalMapDecalEditor.deleteSelected() },
       { selected: () => this.obstacleEditor.selected, duplicate: () => this.obstacleEditor.duplicateSelected(), delete: () => this.obstacleEditor.deleteSelected() },
       { selected: () => this.decorationsEditor.selected, duplicate: () => this.decorationsEditor.duplicateSelected(), delete: () => this.decorationsEditor.deleteSelected() },
       { selected: () => this.trackSignEditor.selected, duplicate: () => this.trackSignEditor.duplicateSelected(), delete: () => this.trackSignEditor.deleteSelected() },
+      { selected: () => this.surfaceDecalEditor.selected, delete: () => this.surfaceDecalEditor.deleteSelected() },
       { selected: () => this.actionZoneEditor.selected, duplicate: () => this.actionZoneEditor.duplicateSelected(), delete: () => this.actionZoneEditor.deleteSelected() },
       { selected: () => this.aiPathEditor?.selected, delete: () => this.aiPathEditor?.deleteSelected?.() },
       { selected: () => this.terrainPathEditor?.selected, delete: () => this.terrainPathEditor?.deleteSelected?.() },
@@ -482,6 +491,8 @@ export class EditorController {
     for (const editor of this.subEditors) {
       editor.clearMeshes?.();
     }
+    // Surface decal meshes are owned by the manager, not a sub-editor.
+    this.surfaceDecalManager?.clearAll();
 
     // Restore editable track state
     const parsed = JSON.parse(snap);
@@ -519,11 +530,11 @@ export class EditorController {
         if (feature.type === 'hill') this.hillEditor.createVisual(feature);
         else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
         else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
-        else if (feature.type === 'normalMapDecal') this.normalMapDecalEditor.createVisual(feature);
         else if (feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
         else if (feature.type === 'flag' || feature.type === 'bannerString' || feature.type === 'tent') this.decorationsEditor.createVisual(feature);
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
+        else if (feature.type === 'surfaceDecal') this.surfaceDecalManager?.createDecal(feature);
       }
       // Restore AI path waypoint gizmos
       this.aiPathEditor.onSnapshotRestored(this.currentTrack);
@@ -809,6 +820,8 @@ export class EditorController {
       const wasSelectedTarget = this._isSelectedGizmoTarget(clickedMesh);
 
       this._clearDragHoldTimer();
+      this._pendingEmptyDeselect = false;
+      this._panState = null;
       this.handlePointerDown(pointerInfo);
 
       if (pickResult?.pickedMesh && this._hasDraggableSelection() && this._isSelectedGizmoTarget(pickResult.pickedMesh)) {
@@ -823,10 +836,40 @@ export class EditorController {
           this._clearDragHoldTimer();
         }, this._dragHoldDelayMs);
       }
+
+      // Empty terrain + left button → arm a camera-pan candidate.
+      // _pendingEmptyDeselect (set by handlePointerDown) means the click hit
+      // nothing selectable, so gizmo presses never start a pan.
+      if (this._pendingEmptyDeselect && pointerInfo.event.button === 0) {
+        const anchor = this._groundXZUnderPointer();
+        if (anchor) {
+          this._panState = { anchor, startX: this.scene.pointerX, startY: this.scene.pointerY, active: false };
+        }
+      }
+      return;
+    }
+
+    if (pointerInfo.type === PointerEventTypes.POINTERWHEEL) {
+      this._handleWheelZoom(pointerInfo.event);
       return;
     }
 
     if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+      // Camera pan: dragging empty terrain scrolls the view, keeping the grabbed
+      // ground point locked under the cursor. Suppressed while a gizmo drag is
+      // active so the two never fight.
+      if (this._panState && !this._mouseDrag) {
+        if (!this._panState.active) {
+          const pdx = this.scene.pointerX - this._panState.startX;
+          const pdy = this.scene.pointerY - this._panState.startY;
+          if (pdx * pdx + pdy * pdy >= this._dragStartThresholdSq) this._panState.active = true;
+        }
+        if (this._panState.active) {
+          this._lockGroundPointUnderCursor(this._panState.anchor);
+          return;
+        }
+      }
+
       // A drag hold is pending but not yet active: engage it as soon as the
       // pointer moves past the threshold, so click-and-drag works without
       // holding still for the full delay.
@@ -856,6 +899,16 @@ export class EditorController {
 
     if (pointerInfo.type === PointerEventTypes.POINTERUP) {
       this._clearDragHoldTimer();
+
+      // Resolve a pan gesture / deferred empty-terrain deselect. A pan keeps the
+      // selection; a plain click on empty terrain deselects (now on up).
+      const panned = !!this._panState?.active;
+      this._panState = null;
+      if (this._pendingEmptyDeselect) {
+        this._pendingEmptyDeselect = false;
+        if (!panned) this.deselectAll();
+      }
+
       if (this._aiPathMouseDownSelectedWaypoint && !this._aiPathMouseDownMoved) {
         if (this._aiPathMouseDownType === 'terrainPath') {
           this.closeTerrainPath();
@@ -897,6 +950,64 @@ export class EditorController {
 
   _hasDraggableSelection() {
     return !!this._getActiveSelectionInteraction();
+  }
+
+  /** Ground point under the cursor, projected onto the y=planeY plane. */
+  _groundXZUnderPointer(planeY = this._panPlaneY) {
+    const ray = this.scene.createPickingRay(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      undefined,
+      this.camera
+    );
+    const dirY = ray.direction.y;
+    if (Math.abs(dirY) < 1e-6) return null;
+    const t = (planeY - ray.origin.y) / dirY;
+    if (t < 0) return null;
+    return {
+      x: ray.origin.x + ray.direction.x * t,
+      z: ray.origin.z + ray.direction.z * t,
+    };
+  }
+
+  /**
+   * Shift the camera (position + target together, XZ only) so the given world
+   * point sits back under the cursor. Shared by drag-pan and wheel-zoom so both
+   * feel like grabbing/zooming toward the point under the mouse.
+   */
+  _lockGroundPointUnderCursor(anchor) {
+    const current = this._groundXZUnderPointer();
+    if (!current) return;
+    const dx = anchor.x - current.x;
+    const dz = anchor.z - current.z;
+    if (dx === 0 && dz === 0) return;
+    const shift = new Vector3(dx, 0, dz);
+    const target = this.camera.getTarget();
+    this.camera.position.addInPlace(shift);
+    this.camera.setTarget(target.add(shift));
+  }
+
+  /** Mouse-wheel zoom: dolly along the view axis toward the cursor's ground point. */
+  _handleWheelZoom(event) {
+    const delta = event?.deltaY ?? 0;
+    if (!delta) return;
+    event.preventDefault?.();
+
+    const anchor = this._groundXZUnderPointer();
+    const target = this.camera.getTarget();
+    const toTarget = target.subtract(this.camera.position);
+    const dist = toTarget.length();
+    if (dist < 1e-3) return;
+    const forward = toTarget.scaleInPlace(1 / dist);
+
+    // deltaY < 0 = wheel up = zoom in (move toward target).
+    const step = -Math.sign(delta) * this._wheelZoomStep * dist;
+    const newPos = this.camera.position.add(forward.scale(step));
+    if (newPos.y >= this._minCamHeight && newPos.y <= this._maxCamHeight) {
+      this.camera.position.copyFrom(newPos);
+    }
+    // Re-lock the grabbed point so zoom homes in on the cursor, not screen center.
+    if (anchor) this._lockGroundPointUnderCursor(anchor);
   }
 
   _clearDragHoldTimer() {
@@ -945,9 +1056,9 @@ export class EditorController {
       [this.hillEditor, 'selected'],
       [this.squareHillEditor, 'selected'],
       [this.terrainShapeEditor, 'selected'],
-      [this.normalMapDecalEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
+      [this.surfaceDecalEditor, 'selected'],
       [this.decorationsEditor, '_selected'],
       [this.aiPathEditor, 'selected'],
       [this.terrainPathEditor, 'selected'],
@@ -992,8 +1103,8 @@ export class EditorController {
     note('hill',         this.hillEditor?.selected);
     note('squareHill',   this.squareHillEditor?.selected);
     note('terrainShape', this.terrainShapeEditor?.selected);
-    note('normalMapDecal', this.normalMapDecalEditor?.selected);
     note('obstacle',     this.obstacleEditor?.selected);
+    note('surfaceDecal', this.surfaceDecalEditor?.selected);
     note('decoration',   this.decorationsEditor?._selected);
     note('trackSign',    this.trackSignEditor?.selected);
     note('actionZone',   this.actionZoneEditor?._selected);
@@ -1020,7 +1131,7 @@ export class EditorController {
    */
   _logGizmoDiag(reason, pickedMesh) {
     if (typeof window !== 'undefined' && window.__gizmoDiag === false) return;
-    console.log('[gizmo-diag]', reason, {
+    console.debug('[gizmo-diag]', reason, {
       picked: pickedMesh?.name ?? null,
       ...this._selectionStateSnapshot(),
     });
@@ -1147,10 +1258,10 @@ export class EditorController {
           { editor: this.hillEditor },
           { editor: this.squareHillEditor },
           { editor: this.terrainShapeEditor },
-          { editor: this.normalMapDecalEditor },
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
+          { editor: this.surfaceDecalEditor },
         ];
 
         for (const handler of clickHandlers) {
@@ -1169,13 +1280,15 @@ export class EditorController {
           }
           return;
         }
-        // Clicked on something else (terrain, etc.) — deselect all. If you
-        // clicked a gizmo and expected it to select, the picked mesh below is
-        // what the ray actually hit (e.g. "ground" occluding a buried gizmo).
+        // Clicked on something else (terrain, etc.) — deselect all. Deferred to
+        // pointer-up (see _pendingEmptyDeselect) so a click-drag pans instead of
+        // dropping the selection. If you clicked a gizmo and expected it to
+        // select, the picked mesh below is what the ray actually hit (e.g.
+        // "ground" occluding a buried gizmo).
         this._logGizmoDiag('click hit a mesh but no editor claimed it → deselectAll', clickedMesh);
-        this.deselectAll();
+        this._pendingEmptyDeselect = true;
       } else {
-        this.deselectAll();
+        this._pendingEmptyDeselect = true;
       }
 
     }
@@ -1434,28 +1547,6 @@ export class EditorController {
   changeTerrainShapeBlendWidth(val) { this.terrainShapeEditor.changeBlendWidth(val); }
   changeTerrainShapeTerrainType(n) { this.terrainShapeEditor.changeTerrainType(n); }
 
-  // ─── Normal Map Decal Editing (delegated to NormalMapDecalEditor) ──────────
-
-  addNormalMapDecalEntity()          { this.normalMapDecalEditor.addEntity(); }
-  createNormalMapDecalVisual(f)      { return this.normalMapDecalEditor.createVisual(f); }
-  updateNormalMapDecalVisual(d)      { this.normalMapDecalEditor.updateVisual(d); }
-  selectNormalMapDecal(d)            { this.normalMapDecalEditor.select(d); }
-  deselectNormalMapDecal()           { this.normalMapDecalEditor.deselect(); }
-  deleteSelectedNormalMapDecal()     { this.normalMapDecalEditor.deleteSelected(); }
-  duplicateSelectedNormalMapDecal()  { this.normalMapDecalEditor.duplicateSelected(); }
-  showNormalMapDecalProperties(d)    { this.normalMapDecalEditor.showProperties(d); }
-  hideNormalMapDecalProperties()     { this.normalMapDecalEditor.hideProperties(); }
-
-  get selectedNormalMapDecal()       { return this.normalMapDecalEditor.selected; }
-
-  changeNormalMapDecalWidth(val)     { this.normalMapDecalEditor.changeWidth(val); }
-  changeNormalMapDecalDepth(val)     { this.normalMapDecalEditor.changeDepth(val); }
-  changeNormalMapDecalAngle(val)     { this.normalMapDecalEditor.changeAngle(val); }
-  changeNormalMapDecalNormalMap(val) { this.normalMapDecalEditor.changeNormalMap(val); }
-  changeNormalMapDecalRepeatU(val)   { this.normalMapDecalEditor.changeRepeatU(val); }
-  changeNormalMapDecalRepeatV(val)   { this.normalMapDecalEditor.changeRepeatV(val); }
-  changeNormalMapDecalIntensity(val) { this.normalMapDecalEditor.changeIntensity(val); }
-
   // ─── Obstacle Editing (delegated to ObstacleEditor) ─────────────────────
 
   addObstacleEntity() {
@@ -1520,8 +1611,8 @@ export class EditorController {
   deselectAll() {
     this._clearDragHoldTimer();
     this.checkpointEditor.deselect();
-    // surfaceDecalEditor has no deselect — its stamp panel is closed
-    // explicitly (Esc / closeSurfaceDecalStamp), not by clicking away.
+    // surfaceDecalEditor.deselect() only clears a selected placed decal; its
+    // stamp mode is a separate state closed explicitly (Esc / X), not here.
     for (const editor of this.subEditors) {
       editor.deselect?.();
     }
@@ -1672,6 +1763,7 @@ export class EditorController {
 
   // ── Surface Decal helper methods ──────────────────────────────────────────
   setSurfaceDecalManager(manager) {
+    this.surfaceDecalManager = manager;
     this.surfaceDecalEditor.setDecalManager(manager);
   }
 
@@ -1688,12 +1780,19 @@ export class EditorController {
     this.surfaceDecalEditor.close();
   }
 
-  setSurfaceDecalType(val) { this.surfaceDecalEditor.setType(val); }
-  setSurfaceDecalRandomRotation(val) { this.surfaceDecalEditor.setRandomRotation(val); }
+  setSurfaceDecalShape(val) { this.surfaceDecalEditor.setShape(val); }
   setSurfaceDecalAngle(val) { this.surfaceDecalEditor.setAngle(val); }
   setSurfaceDecalOpacity(val) { this.surfaceDecalEditor.setOpacity(val); }
   setSurfaceDecalWidth(val) { this.surfaceDecalEditor.setWidth(val); }
   setSurfaceDecalDepth(val) { this.surfaceDecalEditor.setDepth(val); }
+
+  // Editing a placed decal (selected via click). Panel key: 'surfaceDecalEdit'.
+  deselectSurfaceDecalEdit()       { this.surfaceDecalEditor.deselect(); }
+  deleteSelectedSurfaceDecal()     { this.surfaceDecalEditor.deleteSelected(); }
+  changeSurfaceDecalEditWidth(v)   { this.surfaceDecalEditor.changeWidth(v); }
+  changeSurfaceDecalEditDepth(v)   { this.surfaceDecalEditor.changeDepth(v); }
+  changeSurfaceDecalEditAngle(v)   { this.surfaceDecalEditor.changeAngle(v); }
+  changeSurfaceDecalEditOpacity(v) { this.surfaceDecalEditor.changeOpacity(v); }
 
   // ── AI Path helper methods ───────────────────────────────────────────────
   openAiPath() {
@@ -1851,7 +1950,6 @@ export class EditorController {
     setListVisibility(this.hillEditor?.meshes, ['node', 'sphere']);
     setListVisibility(this.squareHillEditor?.meshes, ['node', 'sphere']);
     setListVisibility(this.terrainShapeEditor?.meshes, ['node', 'mesh']);
-    setListVisibility(this.normalMapDecalEditor?.meshes, ['node', 'mesh']);
     setListVisibility(this.obstacleEditor?.meshes, ['node', 'mesh']);
 
     if (this.checkpointManager) {

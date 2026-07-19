@@ -10,6 +10,7 @@ import {
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import barrelUrl from "../assets/models/barrel.obj?url";
 import { basicColors } from "../constants";
+import { projectGroundDecal, makeDecalMaterial } from "../managers/groundDecal.js";
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
@@ -268,27 +269,15 @@ export class Checkpoint {
 
     // World position on the terrain surface at the checkpoint center
     const terrainY = this._track.getHeightAt(feature.centerX, feature.centerZ);
-    const worldPos = new Vector3(feature.centerX, terrainY, feature.centerZ);
 
-    // Project the decal onto the ground mesh.
-    // - position: world coords on the surface
-    // - normal: surface normal (Up for ground)
-    // - size: x = width, y = depth on ground plane, z = projection depth along normal
-    // - angle: rotation around the normal (heading)
-    const decal = MeshBuilder.CreateDecal("cpDecal", ground, {
-      position: worldPos,
-      normal: Vector3.Up(),
-      size: new Vector3(decalW, decalH, 10),
+    // Project the decal onto the ground mesh, rotated to face the gate heading.
+    const decal = projectGroundDecal(ground, "cpDecal", {
+      position: new Vector3(feature.centerX, terrainY, feature.centerZ),
+      width: decalW,
+      depth: decalH,
       angle: -feature.heading - Math.PI / 2,
     });
-
-    const mat = new StandardMaterial("cpDecalMat", scene);
-    mat.diffuseTexture  = decalTexture;
-    mat.emissiveTexture = decalTexture;
-    mat.opacityTexture  = decalTexture;
-    mat.backFaceCulling = false;
-    mat.zOffset         = -2;          // push slightly toward camera to avoid z-fighting
-    decal.material = mat;
+    decal.material = makeDecalMaterial(scene, "cpDecalMat", decalTexture);
 
     return decal;
   }
@@ -300,12 +289,7 @@ export class Checkpoint {
     decal.position   = new Vector3(0, 0.06, 0);
     decal.parent     = this.container;
 
-    const mat = new StandardMaterial("cpDecalMat", scene);
-    mat.diffuseTexture  = decalTexture;
-    mat.emissiveTexture = decalTexture;
-    mat.opacityTexture  = decalTexture;
-    mat.backFaceCulling = false;
-    decal.material = mat;
+    decal.material = makeDecalMaterial(scene, "cpDecalMat", decalTexture);
     return decal;
   }
 
