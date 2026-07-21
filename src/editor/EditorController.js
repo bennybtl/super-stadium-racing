@@ -21,6 +21,7 @@ import { scatterDirtChunks } from '../objects/DirtChunks.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 import { DEFAULT_TERRAIN_WEAR_CONFIG } from '../terrain-utils.js';
+import { loadControlsSettings } from '../settingsStorage.js';
 
 /**
  * EditorController - Handles track editing mode
@@ -142,6 +143,12 @@ export class EditorController {
     this._wheelZoomStep = 0.12;   // fraction of view distance per wheel notch
     this._minCamHeight = 8;
     this._maxCamHeight = 400;
+    // Wheel-zoom direction preference (Settings > Controls > Editor). Cached from
+    // storage and kept fresh via the controls-settings-changed event.
+    this._invertZoomScroll = false;
+    this.boundControlsChanged = (e) => {
+      this._invertZoomScroll = !!e.detail?.editorOptions?.invertZoomScroll;
+    };
 
     // Track being edited
     this.currentTrack = null;
@@ -167,6 +174,8 @@ export class EditorController {
     // Add event listeners
     window.addEventListener('keydown', this.boundKeyDown, true); // Use capture phase
     window.addEventListener('keyup', this.boundKeyUp);
+    window.addEventListener('offroad:controls-settings-changed', this.boundControlsChanged);
+    this._invertZoomScroll = !!loadControlsSettings().editorOptions?.invertZoomScroll;
     this.scene.onPointerObservable.add(this.boundPointerEvent);
     
     // Activate every sub-editor (creates materials + initial gizmo visuals)
@@ -192,6 +201,7 @@ export class EditorController {
     // Remove event listeners
     window.removeEventListener('keydown', this.boundKeyDown, true);
     window.removeEventListener('keyup', this.boundKeyUp);
+    window.removeEventListener('offroad:controls-settings-changed', this.boundControlsChanged);
     this.scene.onPointerObservable.removeCallback(this.boundPointerEvent);
     this._clearDragHoldTimer();
     this._mouseDrag = null;
@@ -553,7 +563,7 @@ export class EditorController {
         else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
         else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
         else if (feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
-        else if (feature.type === 'flag' || feature.type === 'bannerString' || feature.type === 'tent') this.decorationsEditor.createVisual(feature);
+        else if (feature.type === 'flag' || feature.type === 'bannerString' || this.decorationsEditor.isModelFeature(feature)) this.decorationsEditor.createVisual(feature);
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
         else if (feature.type === 'surfaceDecal') this.surfaceDecalManager?.createDecal(feature);
@@ -1034,8 +1044,10 @@ export class EditorController {
     if (dist < 1e-3) return;
     const forward = toTarget.scaleInPlace(1 / dist);
 
-    // deltaY < 0 = wheel up = zoom in (move toward target).
-    const step = -Math.sign(delta) * this._wheelZoomStep * dist;
+    // deltaY < 0 = wheel up = zoom in (move toward target). The invert-scroll
+    // preference flips that direction.
+    const invert = this._invertZoomScroll ? -1 : 1;
+    const step = -Math.sign(delta) * invert * this._wheelZoomStep * dist;
     const newPos = this.camera.position.add(forward.scale(step));
     if (newPos.y >= this._minCamHeight && newPos.y <= this._maxCamHeight) {
       this.camera.position.copyFrom(newPos);
@@ -1667,7 +1679,7 @@ export class EditorController {
   duplicateSelectedDecoration()    { return this.decorationsEditor.duplicateSelected(); }
   deleteSelectedDecoration()       { return this.decorationsEditor.deleteSelected(); }
   deselectDecoration()             { this.decorationsEditor.deselect(); }
-  changeDecorationType(val)        { if (this._editorStore) this._editorStore.decoration.type = val; this.decorationsEditor.changeType(val); }
+  changeDecorationType(val)        { this.decorationsEditor.changeType(val); }
   changeDecorationColor(val)       { this.decorationsEditor.changeColor(val); }
   changeDecorationWidth(val)       { this.decorationsEditor.changeWidth(val); }
   changeDecorationPoleHeight(val)  { this.decorationsEditor.changePoleHeight(val); }

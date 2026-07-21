@@ -1,7 +1,8 @@
 import { Vector3, Color3 } from "@babylonjs/core";
 import { Flag } from "../objects/Flag.js";
 import { BannerString } from "../objects/BannerString.js";
-import { Tent } from "../objects/Tent.js";
+import { ModelDecoration } from "../objects/ModelDecoration.js";
+import { modelIdForFeature, defForFeature, getDecorationLoader } from "../decorations-registry.js";
 
 const EMISSIVE_BLACK = new Color3(0, 0, 0);
 const EMISSIVE_GREY  = new Color3(0.4, 0.4, 0.4);
@@ -13,11 +14,16 @@ export class DecorationsEditor {
     this.track = null;
     this.flags = [];
     this.banners = [];
-    this.tents = [];
+    this.models = [];
     this._selected = null;
   }
 
   get selected() { return this._selected; }
+
+  /** True when a feature is a model decoration (tent/tree/etc, incl. legacy). */
+  isModelFeature(feature) {
+    return modelIdForFeature(feature) !== null;
+  }
 
   activate(scene, track) {
     this.scene = scene;
@@ -28,10 +34,10 @@ export class DecorationsEditor {
   clearMeshes() {
     for (const flag of this.flags) flag.dispose();
     for (const banner of this.banners) banner.dispose();
-    for (const tent of this.tents) tent.dispose();
+    for (const model of this.models) model.dispose();
     this.flags = [];
     this.banners = [];
-    this.tents = [];
+    this.models = [];
     this._selected = null;
   }
 
@@ -45,14 +51,14 @@ export class DecorationsEditor {
     for (const feature of track.features) {
       if (feature.type === 'flag') this._createFlag(feature);
       else if (feature.type === 'bannerString') this._createBanner(feature);
-      else if (feature.type === 'tent') this._createTent(feature);
+      else if (this.isModelFeature(feature)) this._createModel(feature);
     }
   }
 
   createVisual(feature) {
     if (feature.type === 'flag') return this._createFlag(feature);
     if (feature.type === 'bannerString') return this._createBanner(feature);
-    if (feature.type === 'tent') return this._createTent(feature);
+    if (this.isModelFeature(feature)) return this._createModel(feature);
     return null;
   }
 
@@ -74,27 +80,29 @@ export class DecorationsEditor {
     return banner;
   }
 
-  _createTent(feature) {
+  _createModel(feature) {
+    const def = defForFeature(feature);
+    if (!def) return null;
     const { x, z } = feature;
     const groundY = this.track.getHeightAt(x, z);
-    // Tents are large solid props, so let them cast shadows in the editor too.
-    const tent = new Tent(feature, groundY, this.scene, this.editor._shadows ?? null);
-    tent.feature = feature;
-    this.tents.push(tent);
-    return tent;
+    // Model decorations are solid props, so let them cast shadows in the editor too.
+    const model = new ModelDecoration(feature, def, groundY, this.scene, this.editor._shadows ?? null);
+    model.feature = feature;
+    this.models.push(model);
+    return model;
   }
 
-  /** The visual list that owns decorations of the given feature type. */
-  _listForType(type) {
-    if (type === 'flag') return this.flags;
-    if (type === 'tent') return this.tents;
-    return this.banners;
+  /** The visual list that owns decorations of the given feature. */
+  _listFor(feature) {
+    if (feature.type === 'flag') return this.flags;
+    if (feature.type === 'bannerString') return this.banners;
+    return this.models;
   }
 
   /** Dispose a decoration's meshes and drop it from its owning list. */
   _removeVisual(decoration) {
     decoration.dispose();
-    const list = this._listForType(decoration.feature.type);
+    const list = this._listFor(decoration.feature);
     const idx = list.indexOf(decoration);
     if (idx > -1) list.splice(idx, 1);
   }
@@ -102,7 +110,7 @@ export class DecorationsEditor {
   findByMesh(mesh) {
     return this.flags.find(f => f.containsMesh(mesh))
       ?? this.banners.find(b => b.containsMesh(mesh))
-      ?? this.tents.find(t => t.containsMesh(mesh))
+      ?? this.models.find(m => m.containsMesh(mesh))
       ?? null;
   }
 
@@ -119,20 +127,26 @@ export class DecorationsEditor {
     const s = this.editor._editorStore;
     if (!s) return;
 
-    if (featureData.feature.type === 'flag') {
+    const feature = featureData.feature;
+    if (feature.type === 'flag') {
       s.decoration.type = 'flag';
-      s.decoration.color = featureData.feature.color;
+      s.decoration.model = null;
+      s.decoration.color = feature.color;
       featureData.flag.material.emissiveColor = EMISSIVE_GREY;
-    } else if (featureData.feature.type === 'bannerString') {
+    } else if (feature.type === 'bannerString') {
       s.decoration.type = 'bannerString';
-      s.decoration.width      = featureData.feature.width;
-      s.decoration.poleHeight = featureData.feature.poleHeight ?? 4.2;
-      s.decoration.heading    = +((featureData.feature.heading ?? 0) * 180 / Math.PI).toFixed(1);
-    } else if (featureData.feature.type === 'tent') {
-      s.decoration.type = 'tent';
-      s.decoration.color = featureData.feature.color;
-      s.decoration.heading    = +((featureData.feature.heading ?? 0) * 180 / Math.PI).toFixed(1);
-      s.decoration.scale    = +(featureData.feature.scale ?? 1).toFixed(1);
+      s.decoration.model = null;
+      s.decoration.width      = feature.width;
+      s.decoration.poleHeight = feature.poleHeight ?? 4.2;
+      s.decoration.heading    = +((feature.heading ?? 0) * 180 / Math.PI).toFixed(1);
+    } else {
+      // Model decoration (tent, tree, …).
+      const def = defForFeature(feature);
+      s.decoration.type    = 'model';
+      s.decoration.model   = modelIdForFeature(feature);
+      s.decoration.color   = feature.color ?? def?.defaultColor ?? 'white';
+      s.decoration.heading = +((feature.heading ?? 0) * 180 / Math.PI).toFixed(1);
+      s.decoration.scale   = +(feature.scale ?? def?.defaultScale ?? 1).toFixed(1);
     }
     s.selectedType = 'decoration';
   }
@@ -184,7 +198,7 @@ export class DecorationsEditor {
   }
 
   changeColor(val) {
-    // Flags and tents carry a color; banner strings do not.
+    // Flags and model decorations carry a color; banner strings do not.
     if (!this._selected || this._selected.feature.type === 'bannerString') return;
     this.editor.saveSnapshot(true);
     this._selected.feature.color = val;
@@ -192,7 +206,7 @@ export class DecorationsEditor {
   }
 
   changeScale(val) {
-    if (!this._selected || this._selected.feature.type !== 'tent') return;
+    if (!this._selected || this._selected.feature.type !== 'model') return;
     this.editor.saveSnapshot(true);
     this._selected.setScale(val);
   }
@@ -216,9 +230,18 @@ export class DecorationsEditor {
     this._selected.setHeading(radians);
   }
 
+  /**
+   * Change the selected decoration's kind. `val` is 'flag', 'bannerString', or
+   * 'model:<id>' (from the panel's Type dropdown).
+   */
   changeType(val) {
-    if (!this._selected || this._selected.feature.type === val) return;
+    if (!this._selected) return;
+    const { type, model } = parseTypeSelection(val);
     const feature = this._selected.feature;
+    // No-op if it's already this exact kind.
+    if (type === 'model' && feature.type === 'model' && feature.model === model) return;
+    if (type !== 'model' && feature.type === type) return;
+
     const index = this.track.features.indexOf(feature);
     if (index === -1) return;
 
@@ -226,20 +249,27 @@ export class DecorationsEditor {
     this._removeVisual(this._selected);
     this._selected = null;
 
-    const newFeature = this._defaultDecorationFeature(val, feature);
+    const newFeature = this._defaultDecorationFeature(type, model, feature);
     this.track.features.splice(index, 1, newFeature);
     const created = this.createVisual(newFeature);
     this.deselect();
     if (created) this.select(created);
   }
 
-  /** Build a feature of `type` at the source's position, carrying over any
-   *  shared props (color/heading) so a type conversion is minimally disruptive. */
-  _defaultDecorationFeature(type, src) {
+  /** Build a feature of the given kind at the source's position, carrying over
+   *  any shared props (color/heading) so a type conversion is minimally disruptive. */
+  _defaultDecorationFeature(type, model, src) {
     const color = src.color || this.editor._editorStore?.decoration?.color || 'red';
     const heading = src.heading ?? 0;
     if (type === 'flag') return { type, x: src.x, z: src.z, color };
-    if (type === 'tent') return { type, x: src.x, z: src.z, heading, scale: src.scale ?? 1, color };
+    if (type === 'model') {
+      const def = getDecorationLoader()?.getDecoration(model);
+      return {
+        type: 'model', model, x: src.x, z: src.z, heading,
+        scale: src.scale ?? def?.defaultScale ?? 1,
+        color: src.color ?? def?.defaultColor ?? color,
+      };
+    }
     return { type: 'bannerString', x: src.x, z: src.z, heading, width: src.width ?? 8, poleHeight: src.poleHeight ?? 4.2 };
   }
 
@@ -272,18 +302,19 @@ export class DecorationsEditor {
   addEntity() {
     const e = this.editor;
     const camTarget = e.camera.getTarget();
-    const newX = camTarget.x;
-    const newZ = camTarget.z;
-    const type = this.editor._editorStore?.decoration?.type || 'flag';
+    const newX = e._snap(camTarget.x);
+    const newZ = e._snap(camTarget.z);
+    const s = this.editor._editorStore?.decoration;
+    const type = s?.type || 'flag';
 
     e.saveSnapshot();
     let created = null;
     if (type === 'bannerString') {
-      created = this._addBanner(e._snap(newX), e._snap(newZ));
-    } else if (type === 'tent') {
-      created = this._addTent(e._snap(newX), e._snap(newZ));
+      created = this._addBanner(newX, newZ);
+    } else if (type === 'model') {
+      created = this._addModel(newX, newZ, s?.model);
     } else {
-      created = this._addFlag(e._snap(newX), e._snap(newZ));
+      created = this._addFlag(newX, newZ);
     }
     e.deselectAll();
     if (created) this.select(created);
@@ -303,10 +334,26 @@ export class DecorationsEditor {
     return this._createBanner(feature);
   }
 
-  _addTent(x, z) {
-    const color = this.editor._editorStore?.decoration?.color || 'white';
-    const feature = { type: 'tent', x, z, heading: 0, scale: 1.5, color };
+  _addModel(x, z, model) {
+    const loader = getDecorationLoader();
+    // Fall back to the first available decoration if none is selected yet.
+    const id = model ?? loader?.decorationList?.[0];
+    const def = id ? loader?.getDecoration(id) : null;
+    if (!def) return this._addFlag(x, z);
+    const feature = {
+      type: 'model', model: id, x, z, heading: 0,
+      scale: def.defaultScale ?? 1,
+      color: def.defaultColor ?? 'white',
+    };
     this.track.features.push(feature);
-    return this._createTent(feature);
+    return this._createModel(feature);
   }
+}
+
+/** Parse a Type-dropdown value into { type, model }. */
+function parseTypeSelection(val) {
+  if (typeof val === 'string' && val.startsWith('model:')) {
+    return { type: 'model', model: val.slice('model:'.length) };
+  }
+  return { type: val, model: null };
 }

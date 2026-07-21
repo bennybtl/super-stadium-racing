@@ -47,7 +47,7 @@ export class EditorMode extends BaseMode {
       obstacleManager,
       trackSignManager,
       bannerStringManager,
-      tentManager,
+      decorationManager,
       bridgeMeshManager,
       steepSlopeColliderManager,
       surfaceDecalManager,
@@ -71,8 +71,8 @@ export class EditorMode extends BaseMode {
     // Dispose runtime BannerStringManager banners — BannerStringEditor creates its own.
     bannerStringManager.dispose();
 
-    // Dispose runtime TentManager tents — DecorationsEditor creates its own.
-    tentManager.dispose();
+    // Dispose runtime DecorationManager props — DecorationsEditor creates its own.
+    decorationManager.dispose();
 
     this.scene = scene;
 

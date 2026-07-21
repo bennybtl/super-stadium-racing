@@ -152,7 +152,8 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Decoration panel (flags + banner strings)
   const decoration = reactive({
-    type: 'flag',
+    type: 'flag',      // 'flag' | 'bannerString' | 'model'
+    model: null,       // decoration id when type === 'model' (e.g. 'tent', 'tree')
     color: 'red',
     width: 8,
     poleHeight: 4.2,
@@ -352,6 +353,19 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Flag actions ──
 
+  // Type dropdown value is 'flag', 'bannerString', or 'model:<id>'. Mirror the
+  // chosen kind into panel state, then let the bridge rebuild the decoration
+  // (which re-selects and repopulates the rest of the panel fields).
+  function setDecorationType(raw) {
+    if (typeof raw === 'string' && raw.startsWith('model:')) {
+      decoration.type = 'model';
+      decoration.model = raw.slice('model:'.length);
+    } else {
+      decoration.type = raw;
+      decoration.model = null;
+    }
+    _bridge.value?.changeDecorationType(raw);
+  }
   function setDecorationColor(val)       { decoration.color = val; _bridge.value?.changeFlagColor(val); }
   function setDecorationWidth(val)       { decoration.width = val; _bridge.value?.changeBannerStringWidth(val); }
   function setDecorationPoleHeight(val)  { decoration.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
@@ -454,7 +468,7 @@ export const useEditorStore = defineStore('editor', () => {
     setBridge,
     setHillRadius, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     decoration,
-    setDecorationColor, setDecorationWidth,
+    setDecorationType, setDecorationColor, setDecorationWidth,
     setDecorationPoleHeight, setDecorationHeading, setDecorationScale, trackSign,
     bannerString,
     actionZone,

@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
   title:        { type: String,  required: true },
@@ -37,6 +37,31 @@ defineEmits(['close']);
 const dragged   = ref(false);
 const pos       = ref({ x: 0, y: 0 });
 let   dragStart = null;
+
+// ── Position persistence (per panel, for this browser session) ───────────────
+const STORAGE_KEY = `editorPanelPos:${props.title}`;
+
+// Keep the top-left on screen so a panel can't strand off-viewport (e.g. after
+// a window resize). Leave a margin so the drag handle stays reachable.
+function clampToViewport(x, y) {
+  const maxX = Math.max(0, window.innerWidth  - 60);
+  const maxY = Math.max(0, window.innerHeight - 40);
+  return { x: Math.min(Math.max(x, 0), maxX), y: Math.min(Math.max(y, 0), maxY) };
+}
+
+function savePosition() {
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(pos.value)); } catch {}
+}
+
+onMounted(() => {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+    if (typeof saved?.x === 'number' && typeof saved?.y === 'number') {
+      pos.value     = clampToViewport(saved.x, saved.y);
+      dragged.value = true; // switch to left/top positioning at the saved spot
+    }
+  } catch {}
+});
 
 function startDrag(e) {
   const panel = e.currentTarget.closest('.editor-panel') || e.currentTarget.parentElement;
@@ -63,6 +88,7 @@ function stopDrag() {
   dragStart = null;
   window.removeEventListener('mousemove', onDrag);
   window.removeEventListener('mouseup',   stopDrag);
+  savePosition();
 }
 
 onUnmounted(() => {

@@ -10,12 +10,12 @@
       <div class="text-[12px] mb-1">Type</div>
       <select
         class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-        :value="editor.decoration.type"
-        @change="editor.setFeatureProp('decoration', 'type', $event.target.value)"
+        :value="typeKey"
+        @change="editor.setDecorationType($event.target.value)"
       >
         <option value="flag">Flag</option>
         <option value="bannerString">Banner String</option>
-        <option value="tent">Tent</option>
+        <option v-for="m in models" :key="m.id" :value="'model:' + m.id">{{ m.name }}</option>
       </select>
     </div>
 
@@ -26,57 +26,53 @@
         :value="editor.decoration.color"
         @change="editor.setDecorationColor($event.target.value)"
       >
-        <option value="black">Black</option>
-        <option value="gray">Gray</option>
-        <option value="white">White</option>
-        <option value="red">Red</option>
-        <option value="blue">Blue</option>
-        <option value="yellow">Yellow</option>
+        <option v-for="c in COLORS" :key="c.value" :value="c.value">{{ c.label }}</option>
       </select>
     </template>
 
-    <template v-else-if="editor.decoration.type === 'tent'">
-      <div class="text-[12px] mb-1">Color</div>
-      <select
-        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-        :value="editor.decoration.color"
-        @change="editor.setDecorationColor($event.target.value)"
-      >
-        <option value="black">Black</option>
-        <option value="gray">Gray</option>
-        <option value="white">White</option>
-        <option value="red">Red</option>
-        <option value="blue">Blue</option>
-        <option value="yellow">Yellow</option>
-      </select>
+    <template v-else-if="editor.decoration.type === 'model'">
+      <template v-if="editable.color">
+        <div class="text-[12px] mb-1">Color</div>
+        <select
+          class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+          :value="editor.decoration.color"
+          @change="editor.setDecorationColor($event.target.value)"
+        >
+          <option v-for="c in COLORS" :key="c.value" :value="c.value">{{ c.label }}</option>
+        </select>
+      </template>
 
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
-        <span>Scale</span>
-        <span>{{ editor.decoration.scale }}×</span>
-      </div>
-      <input
-        type="range"
-        min="0.5"
-        max="4"
-        step="0.1"
-        :value="editor.decoration.scale"
-        @input="editor.setDecorationScale(+$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+      <template v-if="editable.scale">
+        <div class="flex justify-between mb-1 mt-3 text-[12px]">
+          <span>Scale</span>
+          <span>{{ editor.decoration.scale }}×</span>
+        </div>
+        <input
+          type="range"
+          min="0.5"
+          max="4"
+          step="0.1"
+          :value="editor.decoration.scale"
+          @input="editor.setDecorationScale(+$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
+      </template>
 
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
-        <span>Rotation</span>
-        <span>{{ editor.decoration.heading }}°</span>
-      </div>
-      <input
-        type="range"
-        min="0"
-        max="360"
-        step="1"
-        :value="editor.decoration.heading"
-        @input="editor.setDecorationHeading(+$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
+      <template v-if="editable.heading">
+        <div class="flex justify-between mb-1 mt-3 text-[12px]">
+          <span>Rotation</span>
+          <span>{{ editor.decoration.heading }}°</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="360"
+          step="1"
+          :value="editor.decoration.heading"
+          @input="editor.setDecorationHeading(+$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        />
+      </template>
     </template>
 
     <template v-else>
@@ -127,10 +123,10 @@
     <hr class="border-t border-slate-700 my-4" />
     <!-- Actions -->
     <div class="flex gap-2">
-      <button 
+      <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
         @click="editor.featureAction('deleteSelectedDecoration')">Delete</button>
-      <button 
+      <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
         @click="editor.featureAction('duplicateSelectedDecoration')">Duplicate</button>
     </div>
@@ -138,49 +134,39 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
 
 const editor = useEditorStore();
+
+const COLORS = [
+  { value: 'black',  label: 'Black' },
+  { value: 'gray',   label: 'Gray' },
+  { value: 'white',  label: 'White' },
+  { value: 'brown',  label: 'Brown' },
+  { value: 'red',    label: 'Red' },
+  { value: 'orange', label: 'Orange' },
+  { value: 'yellow', label: 'Yellow' },
+  { value: 'green',  label: 'Green' },
+  { value: 'blue',   label: 'Blue' },
+  { value: 'purple', label: 'Purple' },
+];
+
+// Model decorations discovered from /decorations/*.json (see DecorationLoader).
+const models = computed(() => window.decorationLoader?.getDecorationList() ?? []);
+
+// The Type dropdown value: 'flag' | 'bannerString' | 'model:<id>'.
+const typeKey = computed(() =>
+  editor.decoration.type === 'model'
+    ? `model:${editor.decoration.model}`
+    : editor.decoration.type
+);
+
+// Which controls the selected model exposes (all on by default).
+const editable = computed(() => {
+  if (editor.decoration.type !== 'model') return {};
+  const def = window.decorationLoader?.getDecoration(editor.decoration.model);
+  return def?.editable ?? { color: true, scale: true, heading: true };
+});
 </script>
-
-<style scoped>
-.color-btn {
-  flex: 1;
-  padding: 8px;
-  border: 2px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: Arial, Helvetica, sans-serif;
-  font-weight: bold;
-  color: white;
-  transition: all 0.15s;
-}
-
-.color-btn.red {
-  background: #e74c3c;
-}
-
-.color-btn.red:hover {
-  background: #c0392b;
-}
-
-.color-btn.red.active {
-  border-color: #fff;
-  box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
-}
-
-.color-btn.blue {
-  background: #3498db;
-}
-
-.color-btn.blue:hover {
-  background: #2980b9;
-}
-
-.color-btn.blue.active {
-  border-color: #fff;
-  box-shadow: 0 0 10px rgba(52, 152, 219, 0.8);
-}
-</style>

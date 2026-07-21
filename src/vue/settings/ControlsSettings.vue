@@ -28,6 +28,20 @@
           </button>
         </div>
       </div>
+
+      <!-- Editor-only preferences (not keybindings) -->
+      <div v-if="activeMode === 'editor'" class="flex items-center justify-center mb-5">
+        <div class="w-1/2 pr-4 text-right font-bold text-white uppercase italic tracking-wider">Invert Zoom Scroll</div>
+        <div class="w-1/2 flex items-center">
+          <button
+            class="text-lg py-2 px-6 rounded-md text-white cursor-pointer border-0"
+            :class="keyBindings.editorOptions.invertZoomScroll ? 'bg-sky-600' : 'bg-[#222]'"
+            @click="toggleInvertZoom()"
+          >
+            {{ keyBindings.editorOptions.invertZoomScroll ? 'On' : 'Off' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <hr class="my-3 opacity-60">
@@ -94,6 +108,11 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onRemapKeyDown, true);
 });
+
+function toggleInvertZoom() {
+  keyBindings.value.editorOptions.invertZoomScroll = !keyBindings.value.editorOptions.invertZoomScroll;
+  persistBindings();
+}
 
 function resetToDefaults() {
   keyBindings.value = cloneDefaults();

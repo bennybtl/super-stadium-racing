@@ -27,9 +27,9 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
  *          gain = target deflection per m/s² of accel; max = clamp on deflection.
  */
 const BODY_DYN = {
-  heave: { freq: 2.2, damping: 0.35, gain: 0.0100, max: 0.25 }, // units
-  pitch: { freq: 2.4, damping: 0.45, gain: 0.0150, max: 0.28 }, // radians
-  roll:  { freq: 2.6, damping: 0.45, gain: 0.0210, max: 0.40 }, // radians
+  heave: { freq: 2.2, damping: 0.35, gain: 0.0080, max: 0.25 }, // units
+  pitch: { freq: 2.4, damping: 0.45, gain: 0.0130, max: 0.28 }, // radians
+  roll:  { freq: 2.6, damping: 0.45, gain: 0.0190, max: 0.34 }, // radians
   maxDt: 1 / 30, // clamp per-substep dt so a frame spike can't destabilise a spring
 };
 

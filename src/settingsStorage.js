@@ -36,6 +36,10 @@ export const DEFAULT_CONTROLS_SETTINGS = {
     'Toggle Snap': 'G',
     'Snap Size': 'Shift + G',
   },
+  // Non-keybinding editor preferences.
+  editorOptions: {
+    invertZoomScroll: false,
+  },
 };
 
 export const DEFAULT_AUDIO_SETTINGS = {
@@ -80,6 +84,14 @@ function normalizeControlsSettings(candidate) {
       ...DEFAULT_CONTROLS_SETTINGS.editor,
       ...(candidate?.editor || {}),
     },
+    editorOptions: {
+      ...DEFAULT_CONTROLS_SETTINGS.editorOptions,
+      ...(candidate?.editorOptions || {}),
+      invertZoomScroll: Boolean(
+        candidate?.editorOptions?.invertZoomScroll
+        ?? DEFAULT_CONTROLS_SETTINGS.editorOptions.invertZoomScroll
+      ),
+    },
   };
 }
 
@@ -112,7 +124,13 @@ export function loadControlsSettings() {
 }
 
 export function saveControlsSettings(value) {
-  writeStorageObject(STORAGE_KEYS.controls, normalizeControlsSettings(value));
+  const normalized = normalizeControlsSettings(value);
+  writeStorageObject(STORAGE_KEYS.controls, normalized);
+
+  // Broadcast so live systems (e.g. the editor camera) can react immediately.
+  window.dispatchEvent(new CustomEvent('offroad:controls-settings-changed', {
+    detail: normalized,
+  }));
 }
 
 export function loadAudioSettings() {

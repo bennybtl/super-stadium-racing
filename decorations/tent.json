@@ -1,0 +1,18 @@
+{
+  "id": "tent",
+  "name": "Tent",
+  "modelFile": "tent.obj",
+  "rotationX": -90,
+  "baseScale": 1,
+  "offsetY": 0,
+  "defaultColor": "white",
+  "defaultScale": 1.5,
+  "meshColors": {
+    "leg1": [0.55, 0.55, 0.58],
+    "leg2": [0.55, 0.55, 0.58],
+    "leg3": [0.55, 0.55, 0.58],
+    "leg4": [0.55, 0.55, 0.58]
+  },
+  "castsShadows": true,
+  "editable": { "color": true, "scale": true, "heading": true }
+}

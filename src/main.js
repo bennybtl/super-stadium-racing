@@ -2,6 +2,7 @@ import { Engine } from "@babylonjs/core";
 import { MenuManager } from "./managers/MenuManager.js";
 import { TrackLoader } from "./managers/TrackLoader.js";
 import { VehicleLoader } from "./managers/VehicleLoader.js";
+import { DecorationLoader } from "./managers/DecorationLoader.js";
 import { ModeController } from "./modes/ModeController.js";
 import { MenuMode } from "./modes/MenuMode.js";
 import { initializeSettingsStorage } from "./settingsStorage.js";
@@ -21,6 +22,9 @@ window.trackLoader = trackLoader; // MenuManager reads this to list available tr
 const vehicleLoader = new VehicleLoader();
 window.vehicleLoader = vehicleLoader;
 
+const decorationLoader = new DecorationLoader();
+window.decorationLoader = decorationLoader; // editor + managers read this to list/resolve decorations
+
 const controller = new ModeController(engine, menuManager, trackLoader);
 menuManager.controller = controller;
 
@@ -29,6 +33,7 @@ menuManager.showLoading('Loading tracks and vehicles…');
 Promise.all([
   trackLoader.loadAllTracks(),
   vehicleLoader.loadAllVehicles(),
+  decorationLoader.loadAllDecorations(),
 ]).then(() => {
   controller.switchTo(MenuMode);
 }).finally(() => {
