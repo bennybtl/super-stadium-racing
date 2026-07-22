@@ -348,10 +348,11 @@
       "centerX": -26.218928452714575,
       "centerZ": 80.68444549901744,
       "heading": 1.6580627893946132,
-      "width": 26.5,
+      "width": 25,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "squareHill",
@@ -527,7 +528,8 @@
       "width": 18,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -537,17 +539,19 @@
       "width": 18,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
       "centerX": -0.3173989689519612,
-      "centerZ": -88.94468211585334,
+      "centerZ": -89.44468211585334,
       "heading": -1.5707963267948966,
       "width": 19.5,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "aiPath",
@@ -1098,6 +1102,48 @@
       "depth": 23,
       "rotation": 0,
       "blendWidth": 2
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 55.523011664100885,
+      "z": 86.8667748608357,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 52.07674809099628,
+      "z": 88.58624581018819,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 48.82063627980785,
+      "z": 89.7042087202164,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "hill",
+      "centerX": 65.13744141792594,
+      "centerZ": 73.20194817454899,
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0,
+      "height": 5,
+      "waterLevelOffset": 2,
+      "terrainType": "loose_dirt",
+      "blendWidth": 8
     }
   ]
 }
