@@ -1,6 +1,5 @@
 import { StandardMaterial, Color3 } from "@babylonjs/core";
 import { basicColors } from "../constants";
-import { diffusionProfile } from "@babylonjs/core/Shaders/ShadersInclude/diffusionProfile";
 
 export { Color3 };
 
@@ -12,7 +11,6 @@ export const LINE_COLOR_MESH_GRID   = basicColors.teal.diffuse; // teal
 export const LINE_COLOR_POLY_WALL   = basicColors.orange.diffuse;  // orange
 export const LINE_COLOR_POLY_HILL   = basicColors.green.diffuse;  // green
 export const LINE_COLOR_POLY_CURB   = basicColors.red.diffuse;  // red
-export const LINE_COLOR_BEZIER_WALL = basicColors.blue.diffuse;  // blue
 export const EMISSIVE_BLACK         = basicColors.black.emissive; // very dark grey (not pure black, so it shows up in the dark)
 export const EMISSIVE_GREY          = basicColors.gray.emissive;
 export const FALLBACK_GREY          = basicColors.gray.diffuse;
@@ -174,54 +172,6 @@ export class EditorMaterials {
     }));
   }
 
-  // ── Bridge ────────────────────────────────────────────────────────────────
-
-  /** Translucent brown/tan box gizmo. */
-  get bridgeBox() {
-    return this._get('bridgeBox', s => makeMat('edBridgeBox', s, {
-      diffuse: basicColors.brown.diffuse, emissive: basicColors.brown.emissive,
-      alpha: 0.25, backFaceCulling: false,
-    }));
-  }
-
-  /** Solid brown/tan box gizmo (selected). */
-  get bridgeBoxHighlight() {
-    return this._get('bridgeBoxHighlight', s => makeSelectedMat('edBridgeBoxHL', s, {
-      diffuse: basicColors.brown.diffuse, emissive: basicColors.brown.emissive,
-      backFaceCulling: false,
-    }));
-  }
-
-  // ── Bezier Wall ───────────────────────────────────────────────────────────
-
-  /** Blue anchor-point sphere. */
-  get bezierAnchor() {
-    return this._get('bezierAnchor', s => makeMat('edBezierAnchor', s, {
-      diffuse: basicColors.blue.diffuse, emissive: basicColors.blue.emissive, alpha: 0.50,
-    }));
-  }
-
-  /** Bright blue anchor-point sphere (active wall). */
-  get bezierAnchorActive() {
-    return this._get('bezierAnchorActive', s => makeMat('edBezierAnchorActive', s, {
-      diffuse: basicColors.blue.diffuse, emissive: basicColors.blue.emissive, alpha: 0.90,
-    }));
-  }
-
-  /** Orange control-handle sphere. */
-  get bezierHandle() {
-    return this._get('bezierHandle', s => makeMat('edBezierHandle', s, {
-      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive, alpha: 0.50,
-    }));
-  }
-
-  /** Bright orange-yellow control-handle sphere (selected). */
-  get bezierHandleHighlight() {
-    return this._get('bezierHandleHighlight', s => makeMat('edBezierHandleHL', s, {
-      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive, alpha: 0.90,
-    }));
-  }
-
   // ── Mesh Grid ─────────────────────────────────────────────────────────────
 
   /** Teal grid-node sphere. */
@@ -344,131 +294,32 @@ export class EditorMaterials {
     });
   }
 
-  // ── Action Zone — Pickup Spawn ────────────────────────────────────────────
+  // ── Action Zones ──────────────────────────────────────────────────────────
 
-  /** Translucent hot-pink cylinder. */
-  get zoneCyl() {
-    return this._get('zoneCyl', s => makeMat('edZoneCyl', s, {
-      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
-      alpha: 0.28, backFaceCulling: false,
-    }));
-  }
-
-  /** Solid pink cylinder (selected). */
-  get zoneCylHighlight() {
-    return this._get('zoneCylHL', s => makeSelectedMat('edZoneCylHL', s, {
-      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
-      backFaceCulling: false,
-    }));
-  }
-
-  /** Hot-pink handle sphere. */
-  get zoneHandle() {
-    return this._get('zoneHandle', s => makeMat('edZoneHandle', s, {
-      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
-    }));
-  }
-
-  /** Hot-pink handle sphere (selected point). */
-  get zoneHandleHighlight() {
-    return this._get('zoneHandleHL', s => makeSelectedMat('edZoneHandleHL', s, {
-      diffuse: basicColors.magenta.diffuse, emissive: basicColors.magenta.emissive,
-    }));
-  }
-
-  // ── Action Zone — Slow Zone ───────────────────────────────────────────────
-
-  /** Translucent amber cylinder. */
-  get slowZoneCyl() {
-    return this._get('slowZoneCyl', s => makeMat('edSlowZoneCyl', s, {
-      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
-      alpha: 0.28, backFaceCulling: false,
-    }));
-  }
-
-  /** Solid amber cylinder (selected). */
-  get slowZoneCylHighlight() {
-    return this._get('slowZoneCylHL', s => makeSelectedMat('edSlowZoneCylHL', s, {
-      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
-      backFaceCulling: false,
-    }));
-  }
-
-  /** Amber handle sphere. */
-  get slowZoneHandle() {
-    return this._get('slowZoneHandle', s => makeMat('edSlowZoneHandle', s, {
-      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
-    }));
-  }
-
-  /** Amber handle sphere (selected point). */
-  get slowZoneHandleHighlight() {
-    return this._get('slowZoneHandleHL', s => makeSelectedMat('edSlowZoneHandleHL', s, {
-      diffuse: basicColors.orange.diffuse, emissive: basicColors.orange.emissive,
-    }));
-  }
-
-  // ── Action Zone — Out of Bounds ─────────────────────────────────────────
-
-  /** Translucent red cylinder. */
-  get outOfBoundsZoneCyl() {
-    return this._get('outOfBoundsZoneCyl', s => makeMat('edOutOfBoundsZoneCyl', s, {
-      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
-      alpha: 0.28, backFaceCulling: false,
-    }));
-  }
-
-  /** Solid red cylinder (selected). */
-  get outOfBoundsZoneCylHighlight() {
-    return this._get('outOfBoundsZoneCylHL', s => makeSelectedMat('edOutOfBoundsZoneCylHL', s, {
-      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
-      backFaceCulling: false,
-    }));
-  }
-
-  /** Red handle sphere. */
-  get outOfBoundsZoneHandle() {
-    return this._get('outOfBoundsZoneHandle', s => makeMat('edOutOfBoundsZoneHandle', s, {
-      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
-    }));
-  }
-
-  /** Red handle sphere (selected point). */
-  get outOfBoundsZoneHandleHighlight() {
-    return this._get('outOfBoundsZoneHandleHL', s => makeSelectedMat('edOutOfBoundsZoneHandleHL', s, {
-      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
-    }));
-  }
-
-  // ── Action Zone — Speed Boost ───────────────────────────────────────────
-
-  /** Translucent green cylinder. */
-  get speedBoostZoneCyl() {
-    return this._get('speedBoostZoneCyl', s => makeMat('edSpeedBoostZoneCyl', s, {
-      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive,
-      alpha: 0.28, backFaceCulling: false,
-    }));
-  }
-
-  /** Solid green cylinder (selected). */
-  get speedBoostZoneCylHighlight() {
-    return this._get('speedBoostZoneCylHL', s => makeSelectedMat('edSpeedBoostZoneCylHL', s, {
-      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive,
-      backFaceCulling: false,
-    }));
-  }
-
-  /** Green handle sphere. */
-  get speedBoostZoneHandle() {
-    return this._get('speedBoostZoneHandle', s => makeMat('edSpeedBoostZoneHandle', s, {
-      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive,
-    }));
-  }
-
-  /** Green handle sphere (selected point). */
-  get speedBoostZoneHandleHighlight() {
-    return this._get('speedBoostZoneHandleHL', s => makeSelectedMat('edSpeedBoostZoneHandleHL', s, {
-      diffuse: basicColors.green.diffuse, emissive: basicColors.green.emissive,
-    }));
+  /**
+   * Material set for an action zone: `{ cyl, highlight, handle, handleHighlight }`.
+   * All four zone types share the same translucent-cylinder + handle-sphere gizmo
+   * and differ only by hue, so the set is generated from a colour table (cached
+   * per zoneType) instead of four near-identical blocks of getters.
+   */
+  zoneMaterials(zoneType) {
+    return this._get(`zone:${zoneType}`, s => {
+      const c = ZONE_COLORS[zoneType] ?? ZONE_COLORS.pickupSpawn;
+      const hue = { diffuse: c.diffuse, emissive: c.emissive };
+      return {
+        cyl:             makeMat(`edZoneCyl_${zoneType}`, s, { ...hue, alpha: 0.28, backFaceCulling: false }),
+        highlight:       makeSelectedMat(`edZoneCylHL_${zoneType}`, s, { ...hue, backFaceCulling: false }),
+        handle:          makeMat(`edZoneHandle_${zoneType}`, s, hue),
+        handleHighlight: makeSelectedMat(`edZoneHandleHL_${zoneType}`, s, hue),
+      };
+    });
   }
 }
+
+/** Per-zone-type gizmo hue. Line colours are tuned separately in ActionZoneEditor. */
+const ZONE_COLORS = {
+  pickupSpawn: basicColors.magenta,
+  slowZone:    basicColors.orange,
+  outOfBounds: basicColors.red,
+  speedBoost:  basicColors.green,
+};

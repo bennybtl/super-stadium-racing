@@ -1207,7 +1207,7 @@ export class EditorController {
     return true;
   }
 
-  /** Deselect every sub-editor except `keep` (mirrors deselectAll's roster). */
+  /** Deselect every sub-editor except `keep`. `keep === null` clears all — deselectAll delegates here. */
   _deselectOthers(keep) {
     if (this.checkpointEditor !== keep) this.checkpointEditor.deselect();
     for (const editor of this.subEditors) {
@@ -1702,12 +1702,9 @@ export class EditorController {
 
   deselectAll() {
     this._clearDragHoldTimer();
-    this.checkpointEditor.deselect();
     // surfaceDecalEditor.deselect() only clears a selected placed decal; its
     // stamp mode is a separate state closed explicitly (Esc / X), not here.
-    for (const editor of this.subEditors) {
-      editor.deselect?.();
-    }
+    this._deselectOthers(null);
   }
 
   // ── Poly Wall Vue bridge methods ──

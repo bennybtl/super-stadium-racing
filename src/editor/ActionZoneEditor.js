@@ -33,20 +33,6 @@ export class ActionZoneEditor {
     this._selected = null;
     this._selectedPointIndex = -1;
 
-    // Materials — created once, reused (per zone type)
-    this.cylMat          = null; // pickupSpawn
-    this.cylMatHighlight = null;
-    this.handleMat       = null;
-    this.slowCylMat          = null; // slowZone
-    this.slowCylMatHighlight = null;
-    this.slowHandleMat       = null;
-    this.oobCylMat           = null; // outOfBounds
-    this.oobCylMatHighlight  = null;
-    this.oobHandleMat        = null;
-    this.boostCylMat           = null; // speedBoost
-    this.boostCylMatHighlight  = null;
-    this.boostHandleMat        = null;
-
     this._polyLineColor = {
       pickupSpawn: {
         normal: new Color3(1.0, 0.45, 0.75),
@@ -74,43 +60,12 @@ export class ActionZoneEditor {
   activate(scene, track) {
     this.scene = scene;
     this.track = track;
-    this._createMaterials();
     this._createVisualsForTrack(track);
-  }
-
-  _createMaterials() {
-    const m = EditorMaterials.for(this.scene);
-    this.cylMat              = m.zoneCyl;
-    this.cylMatHighlight     = m.zoneCylHighlight;
-    this.handleMat           = m.zoneHandle;
-    this.handleMatHighlight  = m.zoneHandleHighlight;
-    this.slowCylMat          = m.slowZoneCyl;
-    this.slowCylMatHighlight = m.slowZoneCylHighlight;
-    this.slowHandleMat       = m.slowZoneHandle;
-    this.slowHandleMatHighlight = m.slowZoneHandleHighlight;
-    this.oobCylMat           = m.outOfBoundsZoneCyl;
-    this.oobCylMatHighlight  = m.outOfBoundsZoneCylHighlight;
-    this.oobHandleMat        = m.outOfBoundsZoneHandle;
-    this.oobHandleMatHighlight = m.outOfBoundsZoneHandleHighlight;
-    this.boostCylMat           = m.speedBoostZoneCyl;
-    this.boostCylMatHighlight  = m.speedBoostZoneCylHighlight;
-    this.boostHandleMat        = m.speedBoostZoneHandle;
-    this.boostHandleMatHighlight = m.speedBoostZoneHandleHighlight;
   }
 
   /** Returns the { cyl, highlight, handle, handleHighlight } material set for a given zone type. */
   _getMaterialsForZoneType(zoneType) {
-    if (zoneType === 'outOfBounds') {
-      return { cyl: this.oobCylMat, highlight: this.oobCylMatHighlight, handle: this.oobHandleMat, handleHighlight: this.oobHandleMatHighlight };
-    }
-    if (zoneType === 'slowZone') {
-      return { cyl: this.slowCylMat, highlight: this.slowCylMatHighlight, handle: this.slowHandleMat, handleHighlight: this.slowHandleMatHighlight };
-    }
-    if (zoneType === 'speedBoost') {
-      return { cyl: this.boostCylMat, highlight: this.boostCylMatHighlight, handle: this.boostHandleMat, handleHighlight: this.boostHandleMatHighlight };
-    }
-    // Default: pickupSpawn (pink)
-    return { cyl: this.cylMat, highlight: this.cylMatHighlight, handle: this.handleMat, handleHighlight: this.handleMatHighlight };
+    return EditorMaterials.for(this.scene).zoneMaterials(zoneType);
   }
 
   /** Remove all zone meshes without destroying materials (used on snapshot restore). */
