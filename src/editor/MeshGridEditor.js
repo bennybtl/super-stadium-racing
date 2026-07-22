@@ -5,6 +5,18 @@ import { EditorMaterials, LINE_COLOR_MESH_GRID } from './EditorMaterials.js';
 // Defaults for a new *regional* mesh grid (added when a base mesh already exists).
 const REGIONAL_DEFAULT = { width: 60, depth: 60, falloff: 15, angle: 0, cols: 9, rows: 9 };
 
+// Control-point height limits (must match the Point Height input's min/max in
+// MeshGridPanel.vue). Every write to a point height clamps to this range.
+const MIN_POINT_HEIGHT = -30;
+const MAX_POINT_HEIGHT = 30;
+
+/** Clamp a point height to the valid range, or null if it isn't a finite number. */
+function clampPointHeight(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(MAX_POINT_HEIGHT, Math.max(MIN_POINT_HEIGHT, n));
+}
+
 /**
  * MeshGridEditor – terrain mesh deformation via a grid of selectable control points.
  *
@@ -384,9 +396,13 @@ export class MeshGridEditor {
 
   adjustHeight(delta) {
     if (!this.selectedPoint) return;
-    this.ec.saveSnapshot(true);
     const { r, c, feature } = this.selectedPoint;
-    feature.heights[r * feature.cols + c] += delta;
+    const idx = r * feature.cols + c;
+    const next = clampPointHeight(feature.heights[idx] + delta);
+    // Already at the limit (or invalid) → nothing to do.
+    if (next == null || next === feature.heights[idx]) return;
+    this.ec.saveSnapshot(true);
+    feature.heights[idx] = next;
     this._updateGizmoPositions();
     this._syncPointToStore();
     rebuild.terrain?.(feature);
@@ -518,12 +534,17 @@ export class MeshGridEditor {
   /** Called by the bridge when the Vue height input commits a value. */
   setPointHeightFromStore(v) {
     if (!this.selectedPoint) return;
+    const clamped = clampPointHeight(v);
+    // Reject non-numeric input (e.g. a cleared field): revert the panel to the
+    // point's current height rather than writing NaN.
+    if (clamped == null) { this._syncPointToStore(); return; }
     this.ec.saveSnapshot(true);
     const { r, c, feature } = this.selectedPoint;
-    feature.heights[r * feature.cols + c] = v;
+    feature.heights[r * feature.cols + c] = clamped;
     this._updateGizmoPositions();
     const s = this.ec._editorStore;
-    if (s) s.meshGrid.pointHeight = v;
+    // Mirror the clamped value back so an out-of-range entry snaps into range.
+    if (s) s.meshGrid.pointHeight = clamped;
     rebuild.terrain?.(feature);
   }
 

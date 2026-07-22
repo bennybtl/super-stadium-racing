@@ -405,7 +405,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
       truckCollider: true,
       truckColliderFriction: 0.9,
     };
-    
+
     const mat = new StandardMaterial(name + "Mat", scene);
     mat.diffuseColor = new Color3(0.5, 0.5, 0.5);
     mat.specularColor = new Color3(0.1, 0.1, 0.1);
@@ -413,7 +413,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     mat.bumpTexture.level = 0.7;
     mat.invertNormalMapY = true;
     wall.material = mat;
-    
+
     new PhysicsAggregate(wall, PhysicsShapeType.BOX, { mass: 0 }, scene);
 
     // Also add to wallManager so they show up on the track editor grid and can be optionally hidden
@@ -439,7 +439,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
       dispose() {},   // no Babylon meshes — required by WallManager.dispose()
     });
   };
-  
+
   const paddingX = trackWidth / 2 + 10;
   const paddingZ = trackDepth / 2 + 10;
 

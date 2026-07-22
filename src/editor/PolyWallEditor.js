@@ -43,9 +43,9 @@ export class PolyWallEditor {
     this.track = track;
 
     const m = EditorMaterials.for(scene);
-    this.normalMat    = m.polyWallNode;
-    this.activeMat    = m.polyWallNode;
-    this.highlightMat = m.polyWallNodeActive;
+    this.normalMat    = m.polyWallNode;         // inactive wall — faint
+    this.activeMat    = m.polyWallNodeActive;   // active wall — solid
+    this.highlightMat = m.polyWallNodeSelected; // selected node — solid + lit
 
     // Build gizmos for any polyWalls already in the track
     for (const f of track.features) {
@@ -241,8 +241,16 @@ export class PolyWallEditor {
     this._syncStoreToFeature(wg.feature, idx);
   }
 
-  /** Uniform sub-editor interface (EditorController.deselectAll). */
-  deselect() { this.deselectPoint(); }
+  /**
+   * Uniform sub-editor interface (EditorController.deselectAll / switch-away).
+   * Fully deactivates: deselects the point AND reverts the active wall's points
+   * to the dim/normal material, so switching to another feature returns these
+   * gizmos to transparent instead of leaving them stuck solid.
+   */
+  deselect() { this.deselectPoint(); this.deactivate(); }
+
+  /** Revert the active wall's points to the transparent/normal material. */
+  deactivate() { this._setActiveWall(null); }
 
   deselectPoint() {
     if (this.selectedPoint) {
@@ -322,7 +330,8 @@ export class PolyWallEditor {
         }
       }
     }
-    this.deselectPoint();
+    // Missed all control points: keep the current selection. A terrain click no
+    // longer deselects; EditorController treats the miss as a camera-pan candidate.
     return false;
   }
 

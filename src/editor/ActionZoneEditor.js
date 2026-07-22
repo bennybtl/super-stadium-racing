@@ -83,30 +83,34 @@ export class ActionZoneEditor {
     this.cylMat              = m.zoneCyl;
     this.cylMatHighlight     = m.zoneCylHighlight;
     this.handleMat           = m.zoneHandle;
+    this.handleMatHighlight  = m.zoneHandleHighlight;
     this.slowCylMat          = m.slowZoneCyl;
     this.slowCylMatHighlight = m.slowZoneCylHighlight;
     this.slowHandleMat       = m.slowZoneHandle;
+    this.slowHandleMatHighlight = m.slowZoneHandleHighlight;
     this.oobCylMat           = m.outOfBoundsZoneCyl;
     this.oobCylMatHighlight  = m.outOfBoundsZoneCylHighlight;
     this.oobHandleMat        = m.outOfBoundsZoneHandle;
+    this.oobHandleMatHighlight = m.outOfBoundsZoneHandleHighlight;
     this.boostCylMat           = m.speedBoostZoneCyl;
     this.boostCylMatHighlight  = m.speedBoostZoneCylHighlight;
     this.boostHandleMat        = m.speedBoostZoneHandle;
+    this.boostHandleMatHighlight = m.speedBoostZoneHandleHighlight;
   }
 
-  /** Returns the { cyl, highlight, handle } material set for a given zone type. */
+  /** Returns the { cyl, highlight, handle, handleHighlight } material set for a given zone type. */
   _getMaterialsForZoneType(zoneType) {
     if (zoneType === 'outOfBounds') {
-      return { cyl: this.oobCylMat, highlight: this.oobCylMatHighlight, handle: this.oobHandleMat };
+      return { cyl: this.oobCylMat, highlight: this.oobCylMatHighlight, handle: this.oobHandleMat, handleHighlight: this.oobHandleMatHighlight };
     }
     if (zoneType === 'slowZone') {
-      return { cyl: this.slowCylMat, highlight: this.slowCylMatHighlight, handle: this.slowHandleMat };
+      return { cyl: this.slowCylMat, highlight: this.slowCylMatHighlight, handle: this.slowHandleMat, handleHighlight: this.slowHandleMatHighlight };
     }
     if (zoneType === 'speedBoost') {
-      return { cyl: this.boostCylMat, highlight: this.boostCylMatHighlight, handle: this.boostHandleMat };
+      return { cyl: this.boostCylMat, highlight: this.boostCylMatHighlight, handle: this.boostHandleMat, handleHighlight: this.boostHandleMatHighlight };
     }
     // Default: pickupSpawn (pink)
-    return { cyl: this.cylMat, highlight: this.cylMatHighlight, handle: this.handleMat };
+    return { cyl: this.cylMat, highlight: this.cylMatHighlight, handle: this.handleMat, handleHighlight: this.handleMatHighlight };
   }
 
   /** Remove all zone meshes without destroying materials (used on snapshot restore). */
@@ -282,7 +286,7 @@ export class ActionZoneEditor {
     for (let i = 0; i < zoneData.pointHandles.length; i++) {
       const pointMesh = zoneData.pointHandles[i];
       const isActivePoint = selected && i === this._selectedPointIndex;
-      pointMesh.material = isActivePoint ? EditorMaterials.for(this.scene).nodeHighlight : mats.handle;
+      pointMesh.material = isActivePoint ? mats.handleHighlight : mats.handle;
     }
   }
 

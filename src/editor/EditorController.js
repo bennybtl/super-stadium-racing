@@ -132,11 +132,10 @@ export class EditorController {
     // delay. Squared to compare against squared pixel distance.
     this._dragStartThresholdSq = 16;
 
-    // Empty-terrain click defers its deselect to pointer-up so a click-drag can
-    // pan the camera without dropping the current selection. Set by
-    // handlePointerDown when a click hits nothing selectable; also the signal
-    // that a drag from here should pan (never over a gizmo).
-    this._pendingEmptyDeselect = false;
+    // Set by handlePointerDown when a click hits nothing selectable (empty
+    // terrain). Marks that a drag from here should pan the camera (never over a
+    // gizmo). Clicking empty terrain does NOT deselect the active feature.
+    this._emptyTerrainPanCandidate = false;
     // Mouse-drag camera pan (empty terrain) + wheel zoom.
     this._panState = null;        // { anchor:{x,z}, startX, startY, active }
     this._panPlaneY = 0;          // ground plane the grab point is projected onto
@@ -864,7 +863,7 @@ export class EditorController {
       const wasSelectedTarget = this._isSelectedGizmoTarget(clickedMesh);
 
       this._clearDragHoldTimer();
-      this._pendingEmptyDeselect = false;
+      this._emptyTerrainPanCandidate = false;
       this._panState = null;
       this.handlePointerDown(pointerInfo);
 
@@ -882,9 +881,9 @@ export class EditorController {
       }
 
       // Empty terrain + left button → arm a camera-pan candidate.
-      // _pendingEmptyDeselect (set by handlePointerDown) means the click hit
+      // _emptyTerrainPanCandidate (set by handlePointerDown) means the click hit
       // nothing selectable, so gizmo presses never start a pan.
-      if (this._pendingEmptyDeselect && pointerInfo.event.button === 0) {
+      if (this._emptyTerrainPanCandidate && pointerInfo.event.button === 0) {
         const anchor = this._groundXZUnderPointer();
         if (anchor) {
           this._panState = { anchor, startX: this.scene.pointerX, startY: this.scene.pointerY, active: false };
@@ -944,14 +943,11 @@ export class EditorController {
     if (pointerInfo.type === PointerEventTypes.POINTERUP) {
       this._clearDragHoldTimer();
 
-      // Resolve a pan gesture / deferred empty-terrain deselect. A pan keeps the
-      // selection; a plain click on empty terrain deselects (now on up).
-      const panned = !!this._panState?.active;
+      // Resolve a pan gesture. Clicking empty terrain neither pans (unless
+      // dragged) nor deselects — the active feature stays selected so a stray
+      // ground click can't drop it. Deselect is explicit (Esc / another feature).
       this._panState = null;
-      if (this._pendingEmptyDeselect) {
-        this._pendingEmptyDeselect = false;
-        if (!panned) this.deselectAll();
-      }
+      this._emptyTerrainPanCandidate = false;
 
       if (this._aiPathMouseDownSelectedWaypoint && !this._aiPathMouseDownMoved) {
         if (this._aiPathMouseDownType === 'terrainPath') {
@@ -963,10 +959,17 @@ export class EditorController {
       this._aiPathMouseDownSelectedWaypoint = null;
       this._aiPathMouseDownMoved = false;
       this._aiPathMouseDownType = null;
+      // Only flush a point-drag rebuild if a gizmo drag actually happened.
+      // A plain click or a camera pan (which keeps the selection now) must not
+      // trigger endDrag — some point editors re-bake the terrain unconditionally
+      // there, which chugged the pan and rebuilt for no change.
+      const didGizmoDrag = !!this._mouseDrag;
       this._mouseDrag = null;
-      this.polyWallEditor?.endDrag?.();
-      this.polyHillEditor?.endDrag?.();
-      this.polyCurbEditor?.endDrag?.();
+      if (didGizmoDrag) {
+        this.polyWallEditor?.endDrag?.();
+        this.polyHillEditor?.endDrag?.();
+        this.polyCurbEditor?.endDrag?.();
+      }
     }
   }
 
@@ -1183,6 +1186,35 @@ export class EditorController {
     });
   }
 
+  /**
+   * Select through a point-editor's onPointerDown (poly wall/hill/curb, mesh
+   * grid, bridge mesh, action zone). Unlike the mesh editors routed through
+   * _handleMeshSelection — which deselect everything before selecting — these
+   * handlers set their own selection but leave other editors' selections intact,
+   * so switching between features used to leave the previous gizmo highlighted
+   * (heldSelections > 1). When the handler claims the click, clear every other
+   * editor so exactly one feature stays selected.
+   *
+   * onPointerDown has already set the new selectedType, so snapshot and restore
+   * it around the sweep: some editors' deselect() clear selectedType
+   * unconditionally (e.g. PolyHillEditor) and would otherwise clobber it.
+   */
+  _selectViaPointEditor(editor, pickedMesh) {
+    if (!editor?.onPointerDown(pickedMesh)) return false;
+    const newType = this._editorStore?.selectedType ?? null;
+    this._deselectOthers(editor);
+    if (this._editorStore) this._editorStore.selectedType = newType;
+    return true;
+  }
+
+  /** Deselect every sub-editor except `keep` (mirrors deselectAll's roster). */
+  _deselectOthers(keep) {
+    if (this.checkpointEditor !== keep) this.checkpointEditor.deselect();
+    for (const editor of this.subEditors) {
+      if (editor !== keep) editor.deselect?.();
+    }
+  }
+
   _handleMeshSelection(clickedMesh, editor, selectFn = null) {
     const featureData = editor.findByMesh(clickedMesh);
     if (!featureData) return false;
@@ -1262,39 +1294,21 @@ export class EditorController {
         return;
       }
 
-      // AI path panel open: right-click terrain to add waypoints, click waypoint to select.
+      // Panel-open editing modes (aiPath / terrainPath / polyWall / polyCurb).
+      // Each consumes its own gestures: right-click terrain adds a point/waypoint,
+      // clicking one of its own handles (re)selects it. Anything the mode does NOT
+      // claim — another object's gizmo, or empty terrain — falls through to the
+      // generic dispatch below so the click can switch selection (gizmo) or arm a
+      // camera pan while keeping the current selection (terrain). This keeps mode
+      // clicks behaving identically to non-mode clicks instead of getting stuck.
       if (this._editorStore?.selectedType === 'aiPath') {
         if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.aiPathEditor, 'aiPath', 2, pointerInfo.event.button)) return;
-        // Stuck in aiPath mode: no other feature gizmo is selectable until this
-        // mode is closed (Esc / panel X). If the AI-path panel is not visible,
-        // selectedType leaked out of sync.
-        this._logGizmoDiag('click blocked by aiPath mode', pickResult?.pickedMesh);
-        this.deselectAll();
-        return;
-      }
-
-      // Terrain path panel open: right-click terrain to add waypoints, click waypoint to select.
-      if (this._editorStore?.selectedType === 'terrainPath') {
+      } else if (this._editorStore?.selectedType === 'terrainPath') {
         if (this._handleWaypointSelection(pickResult.pickedMesh, pickResult.pickedPoint, this.terrainPathEditor, 'terrainPath', 2, pointerInfo.event.button)) return;
-        // Stuck in terrainPath mode: no other feature gizmo is selectable until
-        // this mode is closed (Esc / panel X).
-        this._logGizmoDiag('click blocked by terrainPath mode', pickResult?.pickedMesh);
-        this.deselectAll();
-        return;
-      }
-
-      // Poly wall panel open: right-click terrain to add points, click a point to select.
-      if (this._editorStore?.selectedType === 'polyWall') {
+      } else if (this._editorStore?.selectedType === 'polyWall') {
         if (this._handlePolyPlacement(pickResult, pointerInfo.event.button, this.polyWallEditor)) return;
-        this.polyWallEditor.deselectPoint();
-        return;
-      }
-
-      // Poly curb panel open: right-click terrain to add points, click a point to select.
-      if (this._editorStore?.selectedType === 'polyCurb') {
+      } else if (this._editorStore?.selectedType === 'polyCurb') {
         if (this._handlePolyPlacement(pickResult, pointerInfo.event.button, this.polyCurbEditor)) return;
-        this.polyCurbEditor.deselectPoint();
-        return;
       }
 
       if (pickResult.hit && pickResult.pickedMesh) {
@@ -1306,30 +1320,30 @@ export class EditorController {
         // clicking away from any sphere).
         if (this.meshGridEditor) {
           const mgSphere = this.meshGridEditor.pickControlPoint();
-          if (this.meshGridEditor.onPointerDown(mgSphere ?? clickedMesh)) return;
+          if (this._selectViaPointEditor(this.meshGridEditor, mgSphere ?? clickedMesh)) return;
         }
 
         // Bridge mesh control points
         if (this.bridgeMeshEditor) {
           const bmSphere = this.bridgeMeshEditor.pickControlPoint();
-          if (this.bridgeMeshEditor.onPointerDown(bmSphere ?? clickedMesh)) return;
+          if (this._selectViaPointEditor(this.bridgeMeshEditor, bmSphere ?? clickedMesh)) return;
         }
 
         // Poly wall control points
-        if (this.polyWallEditor?.onPointerDown(clickedMesh)) return;
+        if (this._selectViaPointEditor(this.polyWallEditor, clickedMesh)) return;
 
         // Poly hill control points. Dedicated pick limited to the hill's own
         // spheres so the pickable ground mesh can't occlude the handles.
         if (this.polyHillEditor) {
           const phSphere = this.polyHillEditor.pickControlPoint();
-          if (this.polyHillEditor.onPointerDown(phSphere ?? clickedMesh)) return;
+          if (this._selectViaPointEditor(this.polyHillEditor, phSphere ?? clickedMesh)) return;
         }
 
         // Poly curb control points
-        if (this.polyCurbEditor?.onPointerDown(clickedMesh)) return;
+        if (this._selectViaPointEditor(this.polyCurbEditor, clickedMesh)) return;
 
         // Action zone center/point handles
-        if (this.actionZoneEditor?.onPointerDown(clickedMesh)) return;
+        if (this._selectViaPointEditor(this.actionZoneEditor, clickedMesh)) return;
 
         const clickHandlers = [
           { editor: this.checkpointEditor },
@@ -1358,15 +1372,15 @@ export class EditorController {
           }
           return;
         }
-        // Clicked on something else (terrain, etc.) — deselect all. Deferred to
-        // pointer-up (see _pendingEmptyDeselect) so a click-drag pans instead of
-        // dropping the selection. If you clicked a gizmo and expected it to
-        // select, the picked mesh below is what the ray actually hit (e.g.
+        // Clicked something no editor claimed (terrain, etc.). This is a
+        // pan candidate (drag pans the camera) but keeps the current selection —
+        // a plain click no longer deselects. If you clicked a gizmo and expected
+        // it to select, the picked mesh below is what the ray actually hit (e.g.
         // "ground" occluding a buried gizmo).
-        this._logGizmoDiag('click hit a mesh but no editor claimed it → deselectAll', clickedMesh);
-        this._pendingEmptyDeselect = true;
+        this._logGizmoDiag('click hit a mesh but no editor claimed it → keep selection (pan candidate)', clickedMesh);
+        this._emptyTerrainPanCandidate = true;
       } else {
-        this._pendingEmptyDeselect = true;
+        this._emptyTerrainPanCandidate = true;
       }
 
     }
@@ -1711,7 +1725,9 @@ export class EditorController {
   deselectPolyWall()            { this.polyWallEditor.deselectPoint(); }
   closePolyWall() {
     this.polyWallEditor.deselectPoint();
-    this.polyWallEditor.discardActiveIfEmpty();
+    // Remove the wall if empty; otherwise revert its (still-visible) points to
+    // the transparent/normal material so closing doesn't leave them stuck solid.
+    if (!this.polyWallEditor.discardActiveIfEmpty()) this.polyWallEditor.deactivate();
     if (this._editorStore) this._editorStore.selectedType = null;
   }
 
@@ -1786,7 +1802,9 @@ export class EditorController {
   deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
   closePolyCurb() {
     this.polyCurbEditor?.deselectPoint();
-    this.polyCurbEditor?.discardActiveIfEmpty();
+    // Remove the curb if empty; otherwise revert its (still-visible) points to
+    // the transparent/normal material so closing doesn't leave them stuck solid.
+    if (this.polyCurbEditor && !this.polyCurbEditor.discardActiveIfEmpty()) this.polyCurbEditor.deactivate();
     if (this._editorStore) this._editorStore.selectedType = null;
   }
 

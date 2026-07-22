@@ -37,9 +37,9 @@ export class PolyCurbEditor {
     this.track = track;
 
     const m = EditorMaterials.for(scene);
-    this.normalMat    = m.polyCurbNode;
-    this.activeMat    = m.polyCurbNodeActive;
-    this.highlightMat = m.nodeHighlight;
+    this.normalMat    = m.polyCurbNode;         // inactive curb — faint
+    this.activeMat    = m.polyCurbNodeActive;   // active curb — solid
+    this.highlightMat = m.polyCurbNodeSelected; // selected node — solid + lit
 
     for (const f of track.features) {
       if (f.type === 'polyCurb') this._createGizmos(f);
@@ -207,8 +207,16 @@ export class PolyCurbEditor {
     this._syncStore(cg.feature, idx);
   }
 
-  /** Uniform sub-editor interface (EditorController.deselectAll). */
-  deselect() { this.deselectPoint(); }
+  /**
+   * Uniform sub-editor interface (EditorController.deselectAll / switch-away).
+   * Fully deactivates: deselects the point AND reverts the active curb's points
+   * to the dim/normal material, so switching to another feature returns these
+   * gizmos to transparent instead of leaving them stuck solid.
+   */
+  deselect() { this.deselectPoint(); this.deactivate(); }
+
+  /** Revert the active curb's points to the transparent/normal material. */
+  deactivate() { this._setActive(null); }
 
   deselectPoint() {
     if (this.selectedPoint) {

@@ -46,9 +46,9 @@ export class PolyHillEditor {
     this.track = track;
 
     const m = EditorMaterials.for(scene);
-    this.normalMat    = m.polyHillNode;
-    this.activeMat    = m.polyHillNodeActive;
-    this.highlightMat = m.nodeHighlight;
+    this.normalMat    = m.polyHillNode;         // inactive hill — faint
+    this.activeMat    = m.polyHillNodeActive;   // active hill — solid
+    this.highlightMat = m.polyHillNodeSelected; // selected node — solid + lit
 
     // Build gizmos for any polyHills already in the track
     for (const f of track.features) {
@@ -258,15 +258,12 @@ export class PolyHillEditor {
   deselect() { this.deselectPoint(); }
 
   deselectPoint() {
-    if (this.selectedPoint) {
-      const { hg, mesh } = this.selectedPoint;
-      mesh.material = this._activeHill === hg ? this.activeMat : this.normalMat;
-      this.selectedPoint = null;
-    }
-    // Deactivate the active hill
-    if (this._activeHill) {
-      this._activeHill = null;
-    }
+    this.selectedPoint = null;
+    // Deactivate the active hill AND revert its points to the dim material.
+    // Points turn solid (activeMat) while the hill is active; _setActiveHill(null)
+    // restores them to the transparent normalMat so deselecting fully reverts the
+    // gizmos instead of leaving them stuck solid.
+    this._setActiveHill(null);
     this._rawDrag = null;
     if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
   }
