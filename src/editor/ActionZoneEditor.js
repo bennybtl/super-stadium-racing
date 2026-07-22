@@ -231,7 +231,7 @@ export class ActionZoneEditor {
     }
 
     if (zoneData.handle) {
-      zoneData.handle.material = mats.handle;
+      zoneData.handle.material = selected ? mats.handleHighlight : mats.handle;
     }
 
     if (zoneData.lineSystem) {

@@ -463,7 +463,10 @@ export class BridgeMeshEditor {
         return true;
       }
     }
-    this.deselect();
+    // Missed all handles: keep the current selection so the bridge's gizmos
+    // stay visible until the feature itself is deselected. A terrain click no
+    // longer deselects; EditorController treats the miss as a camera-pan
+    // candidate.
     return false;
   }
 

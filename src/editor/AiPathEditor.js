@@ -1,4 +1,4 @@
-import { Vector3, MeshBuilder, StandardMaterial, Color3, Color4 } from "@babylonjs/core";
+import { Vector3, MeshBuilder, Color4 } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 
@@ -20,9 +20,10 @@ export class AiPathEditor {
     this.selected = null;   // { feature, pointIndex, mesh }
     this.lineMesh = null;
     this.lineMeshes = [];
-    this.material = null;
-    this.branchMaterial = null;
-    this.highlightMaterial = null;
+    this.material = null;                 // main path — resting
+    this.highlightMaterial = null;        // main path — selected
+    this.branchMaterial = null;           // branch path — resting
+    this.branchHighlightMaterial = null;  // branch path — selected
     this.activeBranchId = null; // null = edit main path
   }
 
@@ -31,34 +32,21 @@ export class AiPathEditor {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   activate(scene, track) {
-    // Materials are created lazily on first use via EditorMaterials
     const m = EditorMaterials.for(scene);
-    if (!m.aiWaypoint) {
-      const mat = new StandardMaterial('aiWaypointMat', scene);
-      mat.diffuseColor  = new Color3(1, 0.85, 0);
-      mat.emissiveColor = new Color3(0.4, 0.3, 0);
-      mat.specularColor = new Color3(0, 0, 0);
-      m.aiWaypoint = mat;
-    }
-    if (!m.aiWaypointHighlight) {
-      const mat = new StandardMaterial('aiWaypointHighlightMat', scene);
-      mat.diffuseColor  = new Color3(1, 0.4, 0);
-      mat.emissiveColor = new Color3(0.5, 0.2, 0);
-      mat.specularColor = new Color3(0, 0, 0);
-      m.aiWaypointHighlight = mat;
-    }
-    if (!m.aiWaypointBranch) {
-      const mat = new StandardMaterial('aiWaypointBranchMat', scene);
-      mat.diffuseColor  = new Color3(0.2, 0.85, 1);
-      mat.emissiveColor = new Color3(0.08, 0.32, 0.4);
-      mat.specularColor = new Color3(0, 0, 0);
-      m.aiWaypointBranch = mat;
-    }
-    this.material          = m.aiWaypoint;
-    this.branchMaterial    = m.aiWaypointBranch;
-    this.highlightMaterial = m.aiWaypointHighlight;
+    this.material                = m.aiWaypoint;
+    this.highlightMaterial       = m.aiWaypointSelected;
+    this.branchMaterial          = m.aiWaypointBranch;
+    this.branchHighlightMaterial = m.aiWaypointBranchSelected;
 
     this._buildFromTrack(track);
+  }
+
+  /** Resting / selected material for a handle, keyed on its path type. */
+  _matFor(handle, selected) {
+    if (handle.pathType === 'branch') {
+      return selected ? this.branchHighlightMaterial : this.branchMaterial;
+    }
+    return selected ? this.highlightMaterial : this.material;
   }
 
   dispose() {
@@ -190,7 +178,7 @@ export class AiPathEditor {
   select(handle) {
     this.deselect();
     this.selected = handle;
-    handle.mesh.material = this.highlightMaterial;
+    handle.mesh.material = this._matFor(handle, true);
     if (handle.pathType === 'branch') {
       this.activeBranchId = handle.branchId;
       this._rebuildLine(handle.feature);
@@ -205,7 +193,7 @@ export class AiPathEditor {
 
   deselect() {
     if (!this.selected) return;
-    this.selected.mesh.material = this.selected.pathType === 'branch' ? this.branchMaterial : this.material;
+    this.selected.mesh.material = this._matFor(this.selected, false);
     this.selected = null;
     this.editor._rawDragPos = null;
     this._notifyPanelChanged();

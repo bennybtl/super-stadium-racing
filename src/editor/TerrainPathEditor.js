@@ -7,8 +7,8 @@ function debounce(fn, delay = 100) {
     timer = setTimeout(() => fn.apply(this, args), delay);
   };
 }
-import { Vector3, MeshBuilder, StandardMaterial, Color3, Color4 } from "@babylonjs/core";
-import { EditorMaterials } from './EditorMaterials.js';
+import { Vector3, MeshBuilder, Color3, Color4 } from "@babylonjs/core";
+import { EditorMaterials, RESTING_ALPHA, SELECTED_ALPHA } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 import { expandPolyline } from '../polyline-utils.js';
 
@@ -43,8 +43,8 @@ export class TerrainPathEditor {
     /** @type {Map<object, BABYLON.Mesh>} feature → line mesh */
     this.lineMeshes = new Map();
 
+    // Clone template for waypoint materials; each handle owns a tinted clone.
     this.material = null;
-    this.highlightMaterial = null;
   }
 
   get scene() { return this.editor.scene; }
@@ -52,25 +52,28 @@ export class TerrainPathEditor {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   activate(scene, track) {
-    const m = EditorMaterials.for(scene);
-    if (!m.terrainPathWaypoint) {
-      const mat = new StandardMaterial('terrainPathWptMat', scene);
-      mat.diffuseColor  = new Color3(0.2, 0.8, 0.4);
-      mat.emissiveColor = new Color3(0.1, 0.3, 0.15);
-      mat.specularColor = new Color3(0, 0, 0);
-      m.terrainPathWaypoint = mat;
-    }
-    if (!m.terrainPathWaypointHighlight) {
-      const mat = new StandardMaterial('terrainPathWptHighlightMat', scene);
-      mat.diffuseColor  = new Color3(0.1, 1.0, 0.5);
-      mat.emissiveColor = new Color3(0.05, 0.5, 0.25);
-      mat.specularColor = new Color3(0, 0, 0);
-      m.terrainPathWaypointHighlight = mat;
-    }
-    this.material          = m.terrainPathWaypoint;
-    this.highlightMaterial = m.terrainPathWaypointHighlight;
-
+    this.material = EditorMaterials.for(scene).terrainPathWaypoint;
     this._buildFromTrack(track);
+  }
+
+  /**
+   * Apply the resting / selected look to a waypoint's own (terrain-tinted)
+   * material. The tint itself never changes — selection is the shared alpha
+   * jump to solid plus a brighter emissive, matching every other gizmo. This
+   * used to brighten diffuseColor instead, which read as a colour change.
+   */
+  _applyHandleState(handle, selected) {
+    const col = this._colorForFeature(handle.feature);
+    const mat = handle.mesh.material;
+    mat.diffuseColor  = col;
+    mat.emissiveColor = selected
+      ? new Color3(
+          Math.min(1, col.r * 0.4 + 0.25),
+          Math.min(1, col.g * 0.4 + 0.25),
+          Math.min(1, col.b * 0.4 + 0.25),
+        )
+      : col.scale(0.4);
+    mat.alpha = selected ? SELECTED_ALPHA : RESTING_ALPHA;
   }
 
   dispose() {
@@ -122,17 +125,14 @@ export class TerrainPathEditor {
     const mesh = MeshBuilder.CreateSphere(`tpWpt_${index}_${Date.now()}`, { diameter: 1.4, segments: 6 }, this.scene);
     mesh.position  = new Vector3(pt.x, y, pt.z);
 
-    // Tint the sphere with the feature's terrain color
+    // Each waypoint owns a clone so it can carry its feature's terrain tint.
     const mat = this.material.clone('tpWptMat_' + Date.now());
-    const col = this._colorForFeature(feature);
-    mat.diffuseColor  = col;
-    mat.emissiveColor = col.scale(0.4);
-    mat.specularColor = new Color3(0, 0, 0);
     mesh.material  = mat;
     mesh.isPickable = true;
     mesh._tpIndex   = index;
 
     const handle = { feature, pointIndex: index, mesh, mat };
+    this._applyHandleState(handle, false);
     this.handles.push(handle);
     return handle;
   }
@@ -205,13 +205,7 @@ export class TerrainPathEditor {
     this.deselect();
     this.selected = handle;
     this.activeFeature = handle.feature;
-    const col = this._colorForFeature(handle.feature);
-    handle.mesh.material.diffuseColor  = new Color3(
-      Math.min(1, col.r * 1.5 + 0.3),
-      Math.min(1, col.g * 1.5 + 0.3),
-      Math.min(1, col.b * 1.5 + 0.3),
-    );
-    handle.mesh.material.emissiveColor = col.scale(0.8);
+    this._applyHandleState(handle, true);
     this.editor._rawDragPos = {
       x: handle.feature.points[handle.pointIndex].x,
       z: handle.feature.points[handle.pointIndex].z,
@@ -221,10 +215,7 @@ export class TerrainPathEditor {
 
   deselect() {
     if (this.selected) {
-      // Restore normal color
-      const col = this._colorForFeature(this.selected.feature);
-      this.selected.mesh.material.diffuseColor  = col;
-      this.selected.mesh.material.emissiveColor = col.scale(0.4);
+      this._applyHandleState(this.selected, false);
       this.selected = null;
       this.editor._rawDragPos = null;
     }

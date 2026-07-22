@@ -3,6 +3,10 @@ import { Flag } from "../objects/Flag.js";
 import { BannerString } from "../objects/BannerString.js";
 import { ModelDecoration } from "../objects/ModelDecoration.js";
 import { modelIdForFeature, defForFeature, getDecorationLoader } from "../decorations-registry.js";
+import { GizmoHandle } from "./GizmoHandle.js";
+
+const HANDLE_POS_Y = 3.0; // fallback height above ground for decorations with no known top
+const HANDLE_GAP_Y = 1.0; // gap above a decoration that reports its own topY
 
 const EMISSIVE_BLACK = new Color3(0, 0, 0);
 const EMISSIVE_GREY  = new Color3(0.4, 0.4, 0.4);
@@ -15,6 +19,7 @@ export class DecorationsEditor {
     this.flags = [];
     this.banners = [];
     this.models = [];
+    this._handles = new Map(); // decoration -> GizmoHandle
     this._selected = null;
   }
 
@@ -35,9 +40,11 @@ export class DecorationsEditor {
     for (const flag of this.flags) flag.dispose();
     for (const banner of this.banners) banner.dispose();
     for (const model of this.models) model.dispose();
+    for (const h of this._handles.values()) h.dispose();
     this.flags = [];
     this.banners = [];
     this.models = [];
+    this._handles.clear();
     this._selected = null;
   }
 
@@ -48,18 +55,35 @@ export class DecorationsEditor {
   }
 
   createVisualsForTrack(track) {
-    for (const feature of track.features) {
-      if (feature.type === 'flag') this._createFlag(feature);
-      else if (feature.type === 'bannerString') this._createBanner(feature);
-      else if (this.isModelFeature(feature)) this._createModel(feature);
-    }
+    for (const feature of track.features) this.createVisual(feature);
   }
 
   createVisual(feature) {
-    if (feature.type === 'flag') return this._createFlag(feature);
-    if (feature.type === 'bannerString') return this._createBanner(feature);
-    if (this.isModelFeature(feature)) return this._createModel(feature);
-    return null;
+    let decoration = null;
+    if (feature.type === 'flag') decoration = this._createFlag(feature);
+    else if (feature.type === 'bannerString') decoration = this._createBanner(feature);
+    else if (this.isModelFeature(feature)) decoration = this._createModel(feature);
+    if (decoration) this._attachHandle(decoration);
+    return decoration;
+  }
+
+  /** Give a decoration its pickable handle sphere. */
+  _attachHandle(decoration) {
+    this._handles.set(decoration, new GizmoHandle(this.scene, 'decoration'));
+    this._positionHandle(decoration);
+  }
+
+  /**
+   * Park the handle above the decoration. Types that know their own height
+   * (banner strings) sit just over the top so the handle clears the rope;
+   * flags and models fall back to a fixed offset above the ground.
+   */
+  _positionHandle(decoration) {
+    const { x, z } = decoration.feature;
+    const y = typeof decoration.topY === 'number'
+      ? decoration.topY + HANDLE_GAP_Y
+      : this.track.getHeightAt(x, z) + HANDLE_POS_Y;
+    this._handles.get(decoration)?.setPosition(x, y, z);
   }
 
   _createFlag(feature) {
@@ -102,12 +126,22 @@ export class DecorationsEditor {
   /** Dispose a decoration's meshes and drop it from its owning list. */
   _removeVisual(decoration) {
     decoration.dispose();
+    this._handles.get(decoration)?.dispose();
+    this._handles.delete(decoration);
     const list = this._listFor(decoration.feature);
     const idx = list.indexOf(decoration);
     if (idx > -1) list.splice(idx, 1);
   }
 
+  /** Global gizmo-visibility toggle (EditorController.setGizmosVisible). */
+  setHandlesVisible(visible) {
+    for (const h of this._handles.values()) h.setVisible(visible);
+  }
+
   findByMesh(mesh) {
+    for (const [decoration, handle] of this._handles) {
+      if (handle.mesh === mesh) return decoration;
+    }
     return this.flags.find(f => f.containsMesh(mesh))
       ?? this.banners.find(b => b.containsMesh(mesh))
       ?? this.models.find(m => m.containsMesh(mesh))
@@ -122,6 +156,7 @@ export class DecorationsEditor {
     }
 
     this._selected = featureData;
+    this._handles.get(featureData)?.setSelected(true);
     this.editor._rawDragPos = { x: featureData.feature.x, z: featureData.feature.z };
 
     const s = this.editor._editorStore;
@@ -155,6 +190,7 @@ export class DecorationsEditor {
     if (this._selected?.feature.type === 'flag') {
       this._selected.flag.material.emissiveColor = EMISSIVE_BLACK;
     }
+    if (this._selected) this._handles.get(this._selected)?.setSelected(false);
     this._selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
@@ -183,6 +219,7 @@ export class DecorationsEditor {
     this._selected.feature.z = newZ;
     const groundY = this.track.getHeightAt(newX, newZ);
     this._selected.moveTo(newX, newZ, groundY);
+    this._positionHandle(this._selected);
 
     return new Vector3(newX - prevX, 0, newZ - prevZ);
   }
@@ -221,6 +258,7 @@ export class DecorationsEditor {
     if (!this._selected || this._selected.feature.type !== 'bannerString') return;
     this.editor.saveSnapshot(true);
     this._selected.setPoleHeight(val);
+    this._positionHandle(this._selected);
   }
 
   changeHeading(val) {

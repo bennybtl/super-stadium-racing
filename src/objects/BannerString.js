@@ -186,6 +186,14 @@ export class BannerString {
     this._buildMeshes(this.feature.width, newHeight);
   }
 
+  /**
+   * World-space Y of the top of the string — the pole tops (the rope sags below
+   * them). The editor parks its gizmo handle just above this.
+   */
+  get topY() {
+    return this.container.position.y + (this.feature.poleHeight ?? DEFAULT_POLE_HEIGHT);
+  }
+
   dispose() {
     for (const m of this._meshes) {
       m.material?.dispose();

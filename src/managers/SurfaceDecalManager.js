@@ -42,6 +42,9 @@ export class SurfaceDecalManager {
     this._matCache = new Map();
   }
 
+  /** Live { feature, mesh } entries — read-only view for the editor's gizmo handles. */
+  get entries() { return this._entries; }
+
   createDecal(feature) {
     const mesh = this._buildMesh(feature);
     if (!mesh) return null;

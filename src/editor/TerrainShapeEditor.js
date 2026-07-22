@@ -1,9 +1,9 @@
-import { Vector3, MeshBuilder, TransformNode } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core';
 import rebuild from './editor-rebuild.js';
-import { EditorMaterials, FALLBACK_GREY, Color3 } from './EditorMaterials.js';
+import { GizmoHandle } from './GizmoHandle.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 
-const NODE_POS_Y = 0.15; // height above terrain to place the node (prevents z-fighting)
+const HANDLE_POS_Y = 2.0; // handle sphere floats this far above the terrain
 /**
  * TerrainShapeEditor — handles terrain shape features (type: 'terrain').
  * Each feature carries a `shape` property ('rect' | 'circle') that controls
@@ -14,45 +14,27 @@ export class TerrainShapeEditor {
   constructor(editor) {
     this.editor = editor;
 
-    this.meshes   = [];   // { feature, node, mesh, mat }[]
+    this.meshes   = [];   // { feature, handle }[]
     this.selected = null; // the currently-selected entry
     this._terrainGridRebuildTimer = null;
-
-    this.material          = null;
-    this.highlightMaterial = null;
 
     // Cache for terrain heights
     this._terrainHeightCache = new Map();
   }
 
-  // ── Materials ───────────────────────────────────────────────────────────────
-
-  createMaterials() {
-    const m = EditorMaterials.for(this.editor.scene);
-    this.material          = m.terrainShape;
-    this.highlightMaterial = m.terrainShapeHighlight;
-  }
-
-  /** Called when editor mode activates — creates materials and initial visuals. */
+  /** Called when editor mode activates — creates the gizmo handles. */
   activate(scene, track) {
-    this.createMaterials();
     this.createVisualsForTrack(track);
   }
 
   /** Dispose all gizmo meshes and reset state, keeping materials alive (used on snapshot restore). */
   clearMeshes() {
-    for (const d of this.meshes) { d.mesh.dispose(); d.node.dispose(); }
+    for (const d of this.meshes) d.handle?.dispose();
     this.meshes   = [];
     this.selected = null;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-
-  _terrainColorForType(terrainType) {
-    if (!terrainType) return FALLBACK_GREY;
-    const c = terrainType.color;
-    return (c && typeof c.r === 'number') ? new Color3(c.r, c.g, c.b) : FALLBACK_GREY;
-  }
 
   // ── Visual creation ─────────────────────────────────────────────────────────
 
@@ -62,38 +44,19 @@ export class TerrainShapeEditor {
     }
   }
 
-  /** Create a gizmo mesh for a terrain feature (dispatches on feature.shape). */
+  /**
+   * Create the gizmo for a terrain feature. The patch itself is visible in the
+   * baked terrain texture, so the editor only adds a handle sphere — there is
+   * no overlay mesh outlining the shape.
+   */
   createVisual(feature) {
-    const { scene, currentTrack } = this.editor;
+    const { scene } = this.editor;
     const terrainH = this._getCachedTerrainHeight(feature.centerX, feature.centerZ);
 
-    const node = new TransformNode('terrainShapeNode', scene);
-    node.position = new Vector3(feature.centerX, terrainH + NODE_POS_Y, feature.centerZ);
+    const handle = new GizmoHandle(scene, 'terrain');
+    handle.setPosition(feature.centerX, terrainH + HANDLE_POS_Y, feature.centerZ);
 
-    let mesh;
-    if (feature.shape === 'rect') {
-      mesh = MeshBuilder.CreateBox('terrainShapeMesh', { size: 1 }, scene);
-    } else {
-      mesh = MeshBuilder.CreateDisc('terrainShapeMesh',
-        { radius: 0.5, tessellation: 48 }, scene);
-      mesh.rotation.x = Math.PI / 2;
-    }
-
-    node.scaling = new Vector3(feature.width, feature.shape === 'rect' ? 0.1 : 1, feature.depth);
-    node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
-
-    mesh.parent = node;
-
-    const mat = this.material.clone('tsMat_' + Date.now());
-    const col = this._terrainColorForType(feature.terrainType);
-    mat.diffuseColor  = col;
-    mat.emissiveColor = col.scale(0.5); // Increase emissive intensity
-    mat.specularColor = new Color3(0.1, 0.1, 0.1); // Reduce specular highlights
-    mat.disableLighting = false; // Ensure lighting is enabled
-    mesh.material  = mat;
-    mesh.isPickable = true;
-
-    const data = { feature, node, mesh, mat };
+    const data = { feature, handle };
     this.meshes.push(data);
     return data;
   }
@@ -101,40 +64,33 @@ export class TerrainShapeEditor {
   // ── Visual update ────────────────────────────────────────────────────────────
 
   updateVisual(data) {
-    const { feature, node, mat } = data;
+    const { feature, handle } = data;
     const terrainH = this._getCachedTerrainHeight(feature.centerX, feature.centerZ);
-
-    node.position.x = feature.centerX;
-    node.position.z = feature.centerZ;
-    node.position.y = terrainH + NODE_POS_Y;
-
-    node.scaling.x  = feature.width;
-    node.scaling.y  = feature.shape === 'rect' ? 0.1 : 1;
-    node.scaling.z  = feature.depth;
-    node.rotation.y = -(feature.rotation ?? 0) * Math.PI / 180;
-
-    const col = this._terrainColorForType(feature.terrainType);
-    mat.diffuseColor  = col;
-    mat.emissiveColor = col.scale(0.3);
+    handle?.setPosition(feature.centerX, terrainH + HANDLE_POS_Y, feature.centerZ);
   }
 
   // ── Selection ────────────────────────────────────────────────────────────────
 
+  /** Global gizmo-visibility toggle (EditorController.setGizmosVisible). */
+  setHandlesVisible(visible) {
+    for (const d of this.meshes) d.handle?.setVisible(visible);
+  }
+
   findByMesh(mesh) {
-    return this.meshes.find(d => d.mesh === mesh) || null;
+    return this.meshes.find(d => d.handle?.mesh === mesh) || null;
   }
 
   select(data) {
     this.deselect();
     this.selected = data;
     this.editor._rawDragPos = { x: data.feature.centerX, z: data.feature.centerZ };
-    data.mesh.material = this.highlightMaterial;
+    data.handle?.setSelected(true);
     this.showProperties(data);
   }
 
   deselect() {
     if (!this.selected) return;
-    this.selected.mesh.material = this.selected.mat;
+    this.selected.handle?.setSelected(false);
     this.selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
@@ -199,8 +155,7 @@ export class TerrainShapeEditor {
     const data = this.selected;
     const idx  = this.editor.currentTrack.features.indexOf(data.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
-    data.mesh.dispose();
-    data.node.dispose();
+    data.handle?.dispose();
     const meshIdx = this.meshes.indexOf(data);
     if (meshIdx > -1) this.meshes.splice(meshIdx, 1);
     this.selected = null;
@@ -249,9 +204,9 @@ export class TerrainShapeEditor {
   // ── Shape conversion ─────────────────────────────────────────────────────────
 
   /**
-   * Convert the currently-selected entity between rect ↔ circle.
-   * The feature data is mutated in-place; the old mesh is disposed and a new
-   * one created so the visual matches the new shape immediately.
+   * Convert the currently-selected entity between rect ↔ circle. Only the baked
+   * terrain reflects the shape now (the gizmo is a handle sphere either way), so
+   * this just mutates the feature and rebuilds — no visual teardown needed.
    */
   changeShape(newShape) {
     if (!this.selected) return;
@@ -259,21 +214,8 @@ export class TerrainShapeEditor {
     if (feature.shape === newShape) return;
 
     this.editor.saveSnapshot();
-
-    // Remove old visual without going through deselect() (that would hide the panel).
-    const idx = this.meshes.indexOf(this.selected);
-    if (idx > -1) this.meshes.splice(idx, 1);
-    this.selected.mesh.dispose();
-    this.selected.node.dispose();
-    this.selected = null;
-    this.editor._rawDragPos = null;
-
-    // Mutate shape in-place (type stays 'terrain')
-    feature.shape = newShape;
-
-    // Recreate visual and re-select (updates properties panel automatically)
-    const newData = this.createVisual(feature);
-    this.select(newData);
+    feature.shape = newShape; // type stays 'terrain'
+    this.showProperties(this.selected);
     this.rebuildTerrain();
   }
 
@@ -305,7 +247,7 @@ export class TerrainShapeEditor {
       clearTimeout(this._terrainGridRebuildTimer);
       this._terrainGridRebuildTimer = null;
     }
-    for (const d of this.meshes) { d.mesh.dispose(); d.node.dispose(); }
+    for (const d of this.meshes) d.handle?.dispose();
     this.meshes   = [];
     this.selected = null;
   }

@@ -22,7 +22,8 @@ export class CheckpointEditor {
   /** Create (or recreate) shared materials for the current scene. */
   createMaterials() {
     const m = EditorMaterials.for(this.editor.scene);
-    this.highlightMaterial = m.checkpointHighlight;
+    // Same grey click-target handle as the hill gizmos — shares their selected material.
+    this.highlightMaterial = m.handleSphereHighlight;
   }
 
   /** Dispose all gizmo spheres and reset state. */

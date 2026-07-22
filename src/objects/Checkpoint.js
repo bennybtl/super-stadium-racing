@@ -205,7 +205,10 @@ export class Checkpoint {
     const handleMat = new StandardMaterial('checkpointHandleMat', scene);
     handleMat.diffuseColor = basicColors.gray.diffuse.clone();
     handleMat.specularColor = new Color3(0.12, 0.12, 0.12);
-    handleMat.emissiveColor = new Color3(0.1, 0.1, 0.1);
+    handleMat.emissiveColor = basicColors.gray.emissive.clone();
+    // Faint at rest so selecting it reads as an alpha jump to solid, matching
+    // the hill/zone handle gizmos (EditorMaterials.handleSphere).
+    handleMat.alpha = 0.50;
 
     const handle = MeshBuilder.CreateSphere('checkpointHandle', {
       diameter: HANDLE_DIAMETER,

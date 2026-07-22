@@ -18,10 +18,10 @@ export class SquareHillEditor {
     this.meshes = [];   // { feature, node, sphere }
     this.selected = null;
 
-    // Materials (created lazily in createMaterials)
-    this.material = null;
-    this.highlightMaterial = null;
+    // Materials (created lazily in createMaterials). The handle sphere is the
+    // only gizmo — `node` is a bare TransformNode with no mesh/material.
     this.sphereMaterial = null;
+    this.sphereHighlightMaterial = null;
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -29,9 +29,8 @@ export class SquareHillEditor {
   /** Create (or recreate) shared materials for the current scene. */
   createMaterials() {
     const m = EditorMaterials.for(this.editor.scene);
-    this.material          = m.squareHillBox;
-    this.highlightMaterial = m.squareHillBoxHighlight;
-    this.sphereMaterial    = m.handleSphere;
+    this.sphereMaterial          = m.handleSphere;
+    this.sphereHighlightMaterial = m.handleSphereHighlight;
   }
 
   /** Called when editor mode activates — creates materials and initial visuals. */
@@ -190,6 +189,7 @@ export class SquareHillEditor {
     this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
     hillData.sphere.isVisible = true;
     hillData.sphere.isPickable = true;
+    hillData.sphere.material = this.sphereHighlightMaterial;
     this.showProperties(hillData);
     console.debug('[SquareHillEditor] Selected square hill at',
       hillData.feature.centerX.toFixed(1), hillData.feature.centerZ.toFixed(1));
@@ -199,6 +199,7 @@ export class SquareHillEditor {
     if (this.selected) {
       this.selected.sphere.isVisible = true;
       this.selected.sphere.isPickable = true;
+      this.selected.sphere.material = this.sphereMaterial;
       this.hideProperties();
       console.debug('[SquareHillEditor] Deselected square hill');
       this.selected = null;

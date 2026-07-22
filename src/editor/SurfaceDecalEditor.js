@@ -7,6 +7,9 @@ import {
   HighlightLayer,
 } from "@babylonjs/core";
 import { DECAL_SHAPES, createDecalTexture } from "../managers/decalShapes.js";
+import { GizmoHandle } from "./GizmoHandle.js";
+
+const HANDLE_POS_Y = 2.0; // handle sphere floats this far above the ground-hugging decal
 
 const HIGHLIGHT_COLOR = new Color3(1, 0.85, 0.2); // amber selection outline
 
@@ -50,6 +53,7 @@ export class SurfaceDecalEditor {
     // Selection/edit state — a { feature, mesh } entry owned by the manager.
     this.selected = null;
     this._highlight = null;   // HighlightLayer (lazy)
+    this._handles = new Map(); // manager entry -> GizmoHandle
 
     this._boundPointerMove = this._onPointerMove.bind(this);
     this._boundWheel       = this._onWheel.bind(this);
@@ -60,11 +64,42 @@ export class SurfaceDecalEditor {
   activate(scene, track) {
     this._scene = scene;
     this._track = track;
+    this._syncHandles();
   }
 
   /** Called by EditorMode after SceneBuilder creates SurfaceDecalManager. */
   setDecalManager(manager) {
     this._decalManager = manager;
+    this._syncHandles();
+  }
+
+  /**
+   * Reconcile one handle sphere per manager entry. The manager owns the decal
+   * meshes and recreates its entries wholesale on snapshot restore, so handles
+   * are reconciled (create missing / drop orphaned / reposition) rather than
+   * created once alongside a visual.
+   */
+  _syncHandles() {
+    const entries = this._decalManager?.entries;
+    if (!entries || !this._scene || !this._track) return;
+
+    for (const [entry, handle] of this._handles) {
+      if (!entries.includes(entry)) {
+        handle.dispose();
+        this._handles.delete(entry);
+      }
+    }
+
+    for (const entry of entries) {
+      let handle = this._handles.get(entry);
+      if (!handle) {
+        handle = new GizmoHandle(this._scene, 'decal');
+        this._handles.set(entry, handle);
+      }
+      const { centerX, centerZ } = entry.feature;
+      handle.setPosition(centerX, this._track.getHeightAt(centerX, centerZ) + HANDLE_POS_Y, centerZ);
+      handle.setSelected(entry === this.selected);
+    }
   }
 
   /** Open the stamp panel — called from EditorController.openSurfaceDecalStamp(). */
@@ -93,6 +128,8 @@ export class SurfaceDecalEditor {
   dispose() {
     this.close();
     this.deselect();
+    for (const h of this._handles.values()) h.dispose();
+    this._handles.clear();
     for (const tex of this._ghostTexCache.values()) tex.dispose();
     this._ghostTexCache.clear();
     this._ghostMat?.dispose();
@@ -108,13 +145,24 @@ export class SurfaceDecalEditor {
   // mesh (CreateDecal geometry can't just be transformed).
 
   /** Map a picked mesh to its manager entry — used by EditorController's selection loop. */
+  /** Global gizmo-visibility toggle (EditorController.setGizmosVisible). */
+  setHandlesVisible(visible) {
+    for (const h of this._handles.values()) h.setVisible(visible);
+  }
+
   findByMesh(mesh) {
+    // Self-heal if the manager rebuilt its entries behind our back.
+    if (this._handles.size !== (this._decalManager?.entries?.length ?? 0)) this._syncHandles();
+    for (const [entry, handle] of this._handles) {
+      if (handle.mesh === mesh) return entry;
+    }
     return this._decalManager?.findByMesh(mesh) ?? null;
   }
 
   /** Clear selection state on snapshot restore (the manager rebuilds the meshes). */
   clearMeshes() {
     this.deselect();
+    this._syncHandles();
   }
 
   select(entry) {
@@ -122,6 +170,7 @@ export class SurfaceDecalEditor {
     this.deselect();
     this.selected = entry;
     this.editor._rawDragPos = { x: entry.feature.centerX, z: entry.feature.centerZ };
+    this._handles.get(entry)?.setSelected(true);
     this._applyHighlight();
     this._showProperties();
   }
@@ -129,6 +178,7 @@ export class SurfaceDecalEditor {
   deselect() {
     if (!this.selected) return;
     this._clearHighlight();
+    this._handles.get(this.selected)?.setSelected(false);
     this.selected = null;
     this.editor._rawDragPos = null;
     this._hideProperties();
@@ -154,6 +204,7 @@ export class SurfaceDecalEditor {
     if (!this.selected) return;
     this._clearHighlight();
     this._decalManager.rebuild(this.selected);
+    this._syncHandles();
     this._applyHighlight();
   }
 
@@ -193,6 +244,7 @@ export class SurfaceDecalEditor {
     this._clearHighlight();
     this._decalManager.removeByFeature(feature);
     this.selected = null;
+    this._syncHandles();
     this.editor._rawDragPos = null;
     this._hideProperties();
   }
@@ -322,6 +374,7 @@ export class SurfaceDecalEditor {
     this.editor.saveSnapshot();
     this._track.features.push(feature);
     this._decalManager.createDecal(feature);
+    this._syncHandles();
   }
 
   // ── Keyboard ───────────────────────────────────────────────────────────────

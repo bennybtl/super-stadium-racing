@@ -1,11 +1,15 @@
 import { Vector3 } from "@babylonjs/core";
 import { TrackSign } from "../objects/TrackSign.js";
+import { GizmoHandle } from "./GizmoHandle.js";
 import { TRACK_SIGN_BRANDS } from "../constants.js";
+
+const HANDLE_GAP_Y = 1.0; // handle sphere floats this far above the top of the sign
 
 export class TrackSignEditor {
   constructor(editor) {
     this.editor    = editor;
     this._signs    = [];
+    this._handles  = new Map(); // TrackSign -> GizmoHandle
     this._selected = null;
     this._scene    = null;
     this._track    = null;
@@ -24,6 +28,8 @@ export class TrackSignEditor {
   /** Dispose all meshes but keep the editor alive — used by _applySnapshot. */
   clearMeshes() {
     for (const s of this._signs) s.dispose();
+    for (const h of this._handles.values()) h.dispose();
+    this._handles.clear();
     this._signs    = [];
     this._selected = null;
   }
@@ -47,19 +53,35 @@ export class TrackSignEditor {
     const groundY = this._track.getHeightAt(feature.x, feature.z);
     const sign = new TrackSign(feature, groundY, this._scene);
     this._signs.push(sign);
+
+    const handle = new GizmoHandle(this._scene, 'sign');
+    this._handles.set(sign, handle);
+    this._positionHandle(sign);
     return sign;
+  }
+
+  /** Park the handle just above the sign's top, tracking scale / height offset. */
+  _positionHandle(sign) {
+    const { x, z } = sign.feature;
+    this._handles.get(sign)?.setPosition(x, sign.topY + HANDLE_GAP_Y, z);
   }
 
   // ── Lookup ─────────────────────────────────────────────────────────────────
 
+  /** Global gizmo-visibility toggle (EditorController.setGizmosVisible). */
+  setHandlesVisible(visible) {
+    for (const h of this._handles.values()) h.setVisible(visible);
+  }
+
   findByMesh(mesh) {
-    return this._signs.find(s => s.containsMesh(mesh)) ?? null;
+    return this._signs.find(s => s.containsMesh(mesh) || this._handles.get(s)?.mesh === mesh) ?? null;
   }
 
   // ── Selection ──────────────────────────────────────────────────────────────
 
   select(signObj) {
     this._selected = signObj;
+    this._handles.get(signObj)?.setSelected(true);
     this.editor._rawDragPos = { x: signObj.feature.x, z: signObj.feature.z };
     const s = this.editor._editorStore;
     if (!s) return;
@@ -76,6 +98,7 @@ export class TrackSignEditor {
   }
 
   deselect() {
+    if (this._selected) this._handles.get(this._selected)?.setSelected(false);
     this._selected = null;
     this.editor._rawDragPos = null;
     this.hideProperties();
@@ -101,6 +124,7 @@ export class TrackSignEditor {
     const newZ    = e._snap(e._rawDragPos.z);
     const groundY = this._track.getHeightAt(newX, newZ);
     this._selected.moveTo(newX, newZ, groundY);
+    this._positionHandle(this._selected);
     return new Vector3(newX - prevX, 0, newZ - prevZ);
   }
 
@@ -139,6 +163,8 @@ export class TrackSignEditor {
     const idx = this.editor.currentTrack.features.indexOf(this._selected.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
     this._selected.dispose();
+    this._handles.get(this._selected)?.dispose();
+    this._handles.delete(this._selected);
     const si = this._signs.indexOf(this._selected);
     if (si > -1) this._signs.splice(si, 1);
     this._selected = null;
@@ -197,6 +223,7 @@ export class TrackSignEditor {
   changeScale(val) {
     if (!this._selected) return;
     this._selected.setScale(val);
+    this._positionHandle(this._selected);
     this.editor._editorStore.trackSign.scale = val;
     this.editor.saveSnapshot(true);
   }
@@ -205,6 +232,7 @@ export class TrackSignEditor {
     if (!this._selected) return;
     const g = this.editor.terrainQuery.heightAt(this._selected.feature.x, this._selected.feature.z);
     this._selected.setHeightOffset(val, g);
+    this._positionHandle(this._selected);
     this.editor._editorStore.trackSign.heightOffset = val;
     this.editor.saveSnapshot(true);
   }

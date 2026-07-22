@@ -451,8 +451,10 @@ export class MeshGridEditor {
         return true;
       }
     }
-    // Clicked elsewhere – deselect any selected point but don't consume
-    this.deselectPoint();
+    // Missed all control points: keep the current selection so the grid's
+    // gizmos stay visible until the feature itself is deselected. A terrain
+    // click no longer deselects; EditorController treats the miss as a
+    // camera-pan candidate.
     return false;
   }
 

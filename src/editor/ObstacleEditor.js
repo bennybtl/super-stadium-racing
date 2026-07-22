@@ -17,8 +17,9 @@ export class ObstacleEditor {
 
   createMaterials() {
     const m = EditorMaterials.for(this.scene);
-    this.material          = m.obstacleHandle;
-    this.highlightMaterial = m.obstacleHandleHighlight;
+    // Same grey click-target handle as the checkpoint / hill gizmos.
+    this.material          = m.handleSphere;
+    this.highlightMaterial = m.handleSphereHighlight;
   }
 
   /** Called when editor mode activates — creates materials and initial visuals. */

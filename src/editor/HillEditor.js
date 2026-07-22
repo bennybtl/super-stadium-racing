@@ -17,10 +17,10 @@ export class HillEditor {
     this.meshes = [];          // { feature, node, sphere }
     this.selected = null;
 
-    // Materials (created lazily in createMaterials)
-    this.material = null;
-    this.highlightMaterial = null;
+    // Materials (created lazily in createMaterials). The handle sphere is the
+    // only gizmo — `node` is a bare TransformNode with no mesh/material.
     this.sphereMaterial = null;
+    this.sphereHighlightMaterial = null;
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -28,9 +28,8 @@ export class HillEditor {
   /** Create (or recreate) shared materials for the current scene. */
   createMaterials() {
     const m = EditorMaterials.for(this.editor.scene);
-    this.material          = m.hillCone;
-    this.highlightMaterial = m.hillConeHighlight;
-    this.sphereMaterial    = m.handleSphere;
+    this.sphereMaterial          = m.handleSphere;
+    this.sphereHighlightMaterial = m.handleSphereHighlight;
   }
   /** Called when editor mode activates — creates materials and initial visuals. */
   activate(scene, track) {
@@ -173,6 +172,7 @@ export class HillEditor {
     this.editor._rawDragPos = { x: hillData.feature.centerX, z: hillData.feature.centerZ };
     hillData.sphere.isVisible = true;
     hillData.sphere.isPickable = true;
+    hillData.sphere.material = this.sphereHighlightMaterial;
     this.showProperties(hillData);
   }
 
@@ -180,6 +180,7 @@ export class HillEditor {
     if (this.selected) {
       this.selected.sphere.isVisible = true;
       this.selected.sphere.isPickable = true;
+      this.selected.sphere.material = this.sphereMaterial;
       this.hideProperties();
       this.selected = null;
       this.editor._rawDragPos = null;

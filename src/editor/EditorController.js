@@ -2053,8 +2053,14 @@ export class EditorController {
     // so do not force all of those meshes visible on a global gizmo toggle.
     setListVisibility(this.hillEditor?.meshes, ['node', 'sphere']);
     setListVisibility(this.squareHillEditor?.meshes, ['node', 'sphere']);
-    setListVisibility(this.terrainShapeEditor?.meshes, ['node', 'mesh']);
+    // Terrain shapes have no overlay mesh — only a handle sphere (below).
     setListVisibility(this.obstacleEditor?.meshes, ['node', 'mesh']);
+
+    // Editors whose features carry a GizmoHandle sphere.
+    for (const ed of [this.terrainShapeEditor, this.trackSignEditor,
+                      this.decorationsEditor, this.surfaceDecalEditor]) {
+      ed?.setHandlesVisible?.(visible);
+    }
 
     if (this.checkpointManager) {
       for (const cp of this.checkpointManager.checkpointMeshes || []) {

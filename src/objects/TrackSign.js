@@ -153,6 +153,17 @@ export class TrackSign {
       this.banner.scaling.x = width / BASE_BANNER_W;
       this.bannerBack.scaling.x = width / BASE_BANNER_W;
     }
+  /**
+   * World-space Y of the top of the sign (poles / banner top, whichever is
+   * higher, after scaling). The editor parks its gizmo handle just above this.
+   */
+  get topY() {
+    const h = this.feature.heightOffset ?? 0;
+    // Poles grow with a positive offset; the banner top sits at POLE_H + h.
+    const localTop = POLE_H + Math.max(0, h);
+    return this.container.position.y + localTop * (this.feature.scale ?? 1);
+  }
+
   _applyHeightOffsetVisual() {
     const h = this.feature.heightOffset ?? 0;
     const extraPole = Math.max(0, h);

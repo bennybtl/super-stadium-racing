@@ -282,7 +282,8 @@ export class PolyCurbEditor {
         }
       }
     }
-    this.deselectPoint();
+    // Missed all control points: keep the current selection. A terrain click no
+    // longer deselects; EditorController treats the miss as a camera-pan candidate.
     return false;
   }
 
