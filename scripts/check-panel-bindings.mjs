@@ -38,7 +38,11 @@ for (const file of vueFiles(join(root, 'src', 'vue'))) {
     const method = `change${cap(m[1])}${cap(m[2])}`;
     if (!hasMethod(method)) problems.push(`${rel}: setFeatureProp('${m[1]}', '${m[2]}') → no EditorController.${method}`);
   }
-  for (const m of text.matchAll(/featureAction\(\s*'(\w+)'/g)) {
+  // A trailing `+` means the method name is built dynamically (e.g.
+  // featureAction('setSurfaceDecal' + cap(prop))). The literal prefix isn't a
+  // real method, so skip it — dynamic names can't be verified statically.
+  for (const m of text.matchAll(/featureAction\(\s*'(\w+)'(\s*\+)?/g)) {
+    if (m[2]) continue;
     checked++;
     if (!hasMethod(m[1])) problems.push(`${rel}: featureAction('${m[1]}') → no EditorController.${m[1]}`);
   }

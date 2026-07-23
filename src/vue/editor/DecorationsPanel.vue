@@ -73,6 +73,20 @@
           class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
         />
       </template>
+
+      <div class="text-[12px] mb-1 mt-3">Mirror</div>
+      <div class="flex gap-2 mb-3">
+        <button
+          class="flex-1 rounded border px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider transition duration-150"
+          :class="editor.decoration.mirrorX ? 'border-sky-500 bg-sky-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'"
+          @click="editor.setDecorationMirrorX(!editor.decoration.mirrorX)"
+        >Flip X</button>
+        <button
+          class="flex-1 rounded border px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider transition duration-150"
+          :class="editor.decoration.mirrorZ ? 'border-sky-500 bg-sky-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'"
+          @click="editor.setDecorationMirrorZ(!editor.decoration.mirrorZ)"
+        >Flip Z</button>
+      </div>
     </template>
 
     <template v-else>

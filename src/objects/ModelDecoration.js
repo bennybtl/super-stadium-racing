@@ -62,10 +62,12 @@ export class ModelDecoration {
     const tag = `${id}_${feature.x.toFixed(1)}_${feature.z.toFixed(1)}`;
 
     // Container holds world placement: position + heading + overall user scale.
+    // A negative axis scale mirrors the model; Babylon flips face winding for the
+    // resulting negative-determinant transform, so it still renders correctly.
     this.container = new TransformNode(`deco_${tag}`, scene);
     this.container.position.copyFromFloats(feature.x, groundY, feature.z);
     this.container.rotation.y = feature.heading ?? 0;
-    this.container.scaling.setAll(Math.max(0.1, Number(feature.scale) || 1));
+    this._applyScaling();
 
     // Pivot corrects the model's authored orientation and applies the base
     // scale/offset, independent of the user-facing heading/scale.
@@ -187,9 +189,28 @@ export class ModelDecoration {
   }
 
   setScale(newScale) {
-    const s = Math.max(0.1, Number(newScale) || 1);
-    this.feature.scale = s;
-    this.container.scaling.setAll(s);
+    this.feature.scale = Math.max(0.1, Number(newScale) || 1);
+    this._applyScaling();
+  }
+
+  setMirrorX(on) {
+    this.feature.mirrorX = !!on;
+    this._applyScaling();
+  }
+
+  setMirrorZ(on) {
+    this.feature.mirrorZ = !!on;
+    this._applyScaling();
+  }
+
+  /** Apply scale + mirror flags to the container's per-axis scaling. */
+  _applyScaling() {
+    const s = Math.max(0.1, Number(this.feature.scale) || 1);
+    this.container.scaling.set(
+      this.feature.mirrorX ? -s : s,
+      s,
+      this.feature.mirrorZ ? -s : s,
+    );
   }
 
   setColor(color) {

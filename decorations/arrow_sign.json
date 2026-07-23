@@ -1,0 +1,15 @@
+{
+  "id": "arrow_sign",
+  "name": "Arrow Sign",
+  "modelFile": "arrow_sign.obj",
+  "rotationX": 180,
+  "baseScale": 0.5,
+  "offsetY": 0,
+  "defaultColor": "yellow",
+  "defaultScale": 1,
+  "meshColors": {
+    "structure_obj_0.002": [0.45, 0.45, 0.45]
+  },
+  "castsShadows": true,
+  "editable": { "color": true, "scale": true, "heading": true }
+}

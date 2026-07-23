@@ -1,7 +1,8 @@
 # Adding a Decoration
 
-Decorations are static props placed on the terrain in the editor (tent, tree, …).
-To add a new one, drop two files into this folder — **no code changes required**:
+Decorations are static props placed on the terrain in the editor (tent, tree,
+arrow sign, …). To add a new one, drop two files into this folder — **no code
+changes required**:
 
 1. `myprop.obj` — the model.
 2. `myprop.json` — its config (see schema below).
@@ -46,15 +47,36 @@ Loading is handled by `src/managers/DecorationLoader.js`; each instance is built
     "trunk_obj_0": { "file": "trunk.png", "scale": 2 }
   },
 
-  "castsShadows": true,
-  "editable": { "color": true, "scale": true, "heading": true }  // panel controls
+  "castsShadows": true,           // default true
+
+  // Which panel sliders/dropdowns to show. Omitted → all true. Mirror (below)
+  // is always available for model decorations regardless of this.
+  "editable": { "color": true, "scale": true, "heading": true }
 }
 ```
 
+## Editor controls
+
+Selecting a placed decoration opens the **Decoration** panel. Available edits:
+
+- **Move** — drag the handle, or WASD.
+- **Rotation** (`editable.heading`) — Q/E, or the Rotation slider.
+- **Scale** (`editable.scale`) — scroll wheel, or the Scale slider.
+- **Color** (`editable.color`) — dropdown; tints every mesh not pinned by
+  `meshColors`/`meshTextures`.
+- **Mirror** — **Flip X** / **Flip Z** buttons. Mirrors the model on that axis
+  (useful for directional props like the arrow sign). Always shown for models.
+
 ## Notes
 
-- Find your model's mesh group names with: `grep '^g ' myprop.obj`.
-- Materials in the OBJ are ignored (`SKIP_MATERIALS`); colour comes from the JSON.
+- Find your model's mesh group names with: `grep '^g ' myprop.obj`. Split a
+  single joined mesh into separate groups in Blender via Edit Mode → **P** →
+  *By Loose Parts*, then rename each object (the names become the `g` groups).
+- Materials in the OBJ are ignored (`SKIP_MATERIALS`); colour/texture come from
+  the JSON.
 - Placed instances are stored in the track as
-  `{ "type": "model", "model": "myprop", "x", "z", "heading", "scale", "color" }`.
-- The bundled `tent` and `tree` are examples of this format.
+  `{ "type": "model", "model": "myprop", "x", "z", "heading", "scale", "color" }`,
+  plus `"mirrorX"` / `"mirrorZ"` booleans when mirrored.
+- Legacy tracks that stored `{ "type": "tent", … }` still load — a feature typed
+  after a decoration id is treated as that model.
+- The bundled `tent`, `tree_1/2/3`, and `arrow_sign` are examples of this format.

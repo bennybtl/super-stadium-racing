@@ -1703,6 +1703,8 @@ export class EditorController {
   changeDecorationPoleHeight(val)  { this.decorationsEditor.changePoleHeight(val); }
   changeDecorationHeading(val)     { this.decorationsEditor.changeHeading(val); }
   changeDecorationScale(val)       { this.decorationsEditor.changeScale(val); }
+  changeDecorationMirrorX(val)     { this.decorationsEditor.changeMirrorX(val); }
+  changeDecorationMirrorZ(val)     { this.decorationsEditor.changeMirrorZ(val); }
 
   deselectAll() {
     this._clearDragHoldTimer();

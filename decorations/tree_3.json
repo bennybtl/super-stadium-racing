@@ -1,0 +1,19 @@
+{
+  "id": "tree_3",
+  "name": "Tree 3",
+  "modelFile": "tree_3.obj",
+  "rotationX": 180,
+  "baseScale": 1,
+  "offsetY": 0,
+  "defaultColor": "green",
+  "defaultScale": 1,
+  "meshColors": {
+    "trunk_obj_0": [0.28, 0.22, 0.16]
+  },
+  "meshTextures": {
+    "leaves_obj_0.001": { "file": "leaves.png", "scale": 5 },
+    "trunk_obj_0": { "file": "trunk.png", "scale": 5 }
+  },
+  "castsShadows": true,
+  "editable": { "color": true, "scale": true, "heading": true }
+}

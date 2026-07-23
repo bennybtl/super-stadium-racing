@@ -1,7 +1,7 @@
 {
-  "id": "tree",
-  "name": "Tree",
-  "modelFile": "tree.obj",
+  "id": "tree_1",
+  "name": "Tree 1",
+  "modelFile": "tree_1.obj",
   "rotationX": 180,
   "baseScale": 1,
   "offsetY": 0,

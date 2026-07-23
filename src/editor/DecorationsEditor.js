@@ -182,6 +182,8 @@ export class DecorationsEditor {
       s.decoration.color   = feature.color ?? def?.defaultColor ?? 'white';
       s.decoration.heading = +((feature.heading ?? 0) * 180 / Math.PI).toFixed(1);
       s.decoration.scale   = +(feature.scale ?? def?.defaultScale ?? 1).toFixed(1);
+      s.decoration.mirrorX = !!feature.mirrorX;
+      s.decoration.mirrorZ = !!feature.mirrorZ;
     }
     s.selectedType = 'decoration';
   }
@@ -273,6 +275,18 @@ export class DecorationsEditor {
     this._selected.setHeading(radians);
   }
 
+  changeMirrorX(val) {
+    if (!this._selected || this._selected.feature.type !== 'model') return;
+    this.editor.saveSnapshot(true);
+    this._selected.setMirrorX(val);
+  }
+
+  changeMirrorZ(val) {
+    if (!this._selected || this._selected.feature.type !== 'model') return;
+    this.editor.saveSnapshot(true);
+    this._selected.setMirrorZ(val);
+  }
+
   /**
    * Change the selected decoration's kind. `val` is 'flag', 'bannerString', or
    * 'model:<id>' (from the panel's Type dropdown).
@@ -311,6 +325,8 @@ export class DecorationsEditor {
         type: 'model', model, x: src.x, z: src.z, heading,
         scale: src.scale ?? def?.defaultScale ?? 1,
         color: src.color ?? def?.defaultColor ?? color,
+        mirrorX: !!src.mirrorX,
+        mirrorZ: !!src.mirrorZ,
       };
     }
     return { type: 'bannerString', x: src.x, z: src.z, heading, width: src.width ?? 8, poleHeight: src.poleHeight ?? 4.2 };

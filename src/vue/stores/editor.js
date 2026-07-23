@@ -160,6 +160,8 @@ export const useEditorStore = defineStore('editor', () => {
     poleHeight: 4.2,
     heading: 0,
     scale: 1,
+    mirrorX: false,    // model decorations: mirror across the X axis
+    mirrorZ: false,    // model decorations: mirror across the Z axis
   });
 
   // ── Track Sign panel ──
@@ -372,6 +374,8 @@ export const useEditorStore = defineStore('editor', () => {
   function setDecorationPoleHeight(val)  { decoration.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
   function setDecorationHeading(val)     { decoration.heading = val; _bridge.value?.changeBannerStringHeading(val); }
   function setDecorationScale(val)        { decoration.scale = val; _bridge.value?.changeDecorationScale(val); }
+  function setDecorationMirrorX(val)      { decoration.mirrorX = val; _bridge.value?.changeDecorationMirrorX(val); }
+  function setDecorationMirrorZ(val)      { decoration.mirrorZ = val; _bridge.value?.changeDecorationMirrorZ(val); }
 
   // ── Track Sign actions ──
 
@@ -468,7 +472,8 @@ export const useEditorStore = defineStore('editor', () => {
     setHillRadius, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     decoration,
     setDecorationType, setDecorationColor, setDecorationWidth,
-    setDecorationPoleHeight, setDecorationHeading, setDecorationScale, trackSign,
+    setDecorationPoleHeight, setDecorationHeading, setDecorationScale,
+    setDecorationMirrorX, setDecorationMirrorZ, trackSign,
     bannerString,
     actionZone,
     setActionZoneType, polyCurb,
