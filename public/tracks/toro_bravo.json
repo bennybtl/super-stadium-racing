@@ -198,7 +198,10 @@
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
-      "style": "red_white"
+      "colors": [
+        "red",
+        "white"
+      ]
     },
     {
       "type": "polyHill",
@@ -311,7 +314,10 @@
       "thickness": 0.5,
       "friction": 0.05,
       "closed": true,
-      "style": "red_white"
+      "colors": [
+        "red",
+        "white"
+      ]
     },
     {
       "type": "checkpoint",

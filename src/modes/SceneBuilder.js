@@ -89,7 +89,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // -- Track --
   let currentTrack;
   if (trackKey === "new") {
-    currentTrack = new Track("New Track");
+    const suffix = Date.now().toString(36);
+    currentTrack = new Track(`New Track ${suffix}`);
   } else {
     currentTrack = trackLoader.getTrack(trackKey);
     if (!currentTrack) {

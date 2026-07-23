@@ -6,7 +6,7 @@ import {
   Color3,
   HighlightLayer,
 } from "@babylonjs/core";
-import { DECAL_SHAPES, createDecalTexture } from "../managers/decalShapes.js";
+import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, DECAL_COLORS, MIN_COUNT, MAX_COUNT, createDecalTexture } from "../managers/decalShapes.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 
 const HANDLE_POS_Y = 2.0; // handle sphere floats this far above the ground-hugging decal
@@ -37,11 +37,13 @@ export class SurfaceDecalEditor {
     // Ghost preview mesh
     this._ghost = null;
     this._ghostMat = null;
-    this._ghostTexCache = new Map(); // shape → DynamicTexture
+    this._ghostTexCache = new Map(); // "shape:count:outline:color" → DynamicTexture
 
     // Current stamp state
     this._shape = DECAL_SHAPES[0];
     this._color = 'white';
+    this._count = 3;
+    this._outline = false;
     this._angle = 0;
     this._width = 4;
     this._depth = 4;
@@ -235,6 +237,17 @@ export class SurfaceDecalEditor {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
+  duplicateSelected() {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+    const src = this.selected.feature;
+    const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
+    this.editor.currentTrack.features.push(newFeature);
+    const mesh = this._decalManager.createDecal(newFeature);
+    if (!mesh) return;
+    this.select(this._decalManager.findByMesh(mesh));
+  }
+
   deleteSelected() {
     if (!this.selected) return;
     this.editor.saveSnapshot();
@@ -255,6 +268,9 @@ export class SurfaceDecalEditor {
   changeDepth(val)   { this._changeProp('depth', val); }
   changeAngle(val)   { this._changeProp('angle', ((val % 360) + 360) % 360); }
   changeOpacity(val) { this._changeProp('opacity', val); }
+  changeCount(val)   { this._changeProp('count', Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(val)))); }
+  changeOutline(val) { this._changeProp('outline', !!val); }
+  changeColor(val)   { if (DECAL_COLORS.includes(val)) this._changeProp('color', val); }
 
   _changeProp(prop, val) {
     if (!this.selected) return;
@@ -278,9 +294,17 @@ export class SurfaceDecalEditor {
   }
 
   _syncEditPanel() {
-    const s = this.editor._editorStore?.surfaceDecalEdit;
+    const s = this.editor._editorStore?.surfaceDecal;
     if (!s || !this.selected) return;
     const f = this.selected.feature;
+    s.shape    = f.shape ?? 'arrow';
+    s.shapes   = DECAL_SHAPES;
+    s.hasCount = COUNTED_SHAPES.includes(s.shape);
+    s.count    = f.count ?? 1;
+    s.outline    = !!f.outline;
+    s.hasOutline = OUTLINE_SHAPES.includes(s.shape);
+    s.color      = f.color ?? 'white';
+    s.colors     = DECAL_COLORS;
     s.angle   = Math.round(f.angle ?? 0);
     s.width   = +(f.width ?? 4).toFixed(1);
     s.depth   = +(f.depth ?? 4).toFixed(1);
@@ -322,10 +346,15 @@ export class SurfaceDecalEditor {
 
   _updateGhostTexture() {
     if (!this._ghostMat) return;
-    if (!this._ghostTexCache.has(this._shape)) {
-      this._ghostTexCache.set(this._shape, createDecalTexture(this._scene, this._shape, this._color));
+    const key = `${this._shape}:${this._count}:${this._outline}:${this._color}`;
+    if (!this._ghostTexCache.has(key)) {
+      this._ghostTexCache.set(key, createDecalTexture(this._scene, this._shape, {
+        color: this._color,
+        count: this._count,
+        outline: this._outline,
+      }));
     }
-    const tex = this._ghostTexCache.get(this._shape);
+    const tex = this._ghostTexCache.get(key);
     this._ghostMat.diffuseTexture  = tex;
     this._ghostMat.emissiveTexture = tex;
   }
@@ -365,6 +394,8 @@ export class SurfaceDecalEditor {
       centerZ: z,
       shape:   this._shape,
       color:   this._color,
+      count:   this._count,
+      outline: this._outline,
       width:   this._width,
       depth:   this._depth,
       angle:   this._angle,
@@ -414,6 +445,29 @@ export class SurfaceDecalEditor {
     this._syncStore();
   }
 
+  setCount(val) {
+    const next = Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(val)));
+    if (next === this._count) return;
+    this._count = next;
+    this._updateGhostTexture();
+    this._syncStore();
+  }
+
+  setColor(val) {
+    if (!DECAL_COLORS.includes(val) || val === this._color) return;
+    this._color = val;
+    this._updateGhostTexture();
+    this._syncStore();
+  }
+
+  setOutline(val) {
+    const next = !!val;
+    if (next === this._outline) return;
+    this._outline = next;
+    this._updateGhostTexture();
+    this._syncStore();
+  }
+
   setAngle(val) {
     this._angle = ((val % 360) + 360) % 360;
     this._updateGhostTransform();
@@ -452,6 +506,12 @@ export class SurfaceDecalEditor {
     if (!s) return;
     s.shape  = this._shape;
     s.shapes = DECAL_SHAPES;
+    s.count = this._count;
+    s.hasCount = COUNTED_SHAPES.includes(this._shape);
+    s.outline = this._outline;
+    s.hasOutline = OUTLINE_SHAPES.includes(this._shape);
+    s.color = this._color;
+    s.colors = DECAL_COLORS;
     s.angle = Math.round(this._angle);
     s.width = +this._width.toFixed(1);
     s.depth = +this._depth.toFixed(1);

@@ -1,8 +1,9 @@
 import { Matrix, Vector3 } from "@babylonjs/core";
-import { TRUCK_HALF_HEIGHT, TRUCK_RADIUS } from "../constants.js";
+import { TRUCK_DEPTH, TRUCK_HALF_HEIGHT, TRUCK_RADIUS, TRUCK_WIDTH } from "../constants.js";
 
 const SKIN = 0.03;
 const DEFAULT_FRICTION = 0.92;
+const FRICTION_REF_FPS = 60; // friction metadata is authored as a per-60fps-frame retain factor
 const BOUNCE_COEFFICIENT = 1.5; // > 1.0 creates bounce on perpendicular collisions
 const BOUNCE_ANGLE_THRESHOLD = Math.cos(30 * Math.PI / 180); // ~0.866 for ±30 degrees
 
@@ -56,7 +57,7 @@ export class StaticBodyCollisionManager {
     return this._colliders;
   }
 
-  update(trucks) {
+  update(trucks, dt = 1 / FRICTION_REF_FPS) {
     const colliders = this._getColliders();
 
     if (colliders.length === 0) {
@@ -72,6 +73,8 @@ export class StaticBodyCollisionManager {
       const prevPos = this._prevPositions.get(id) ?? truck.mesh.position.clone();
       const radius = truck.radius ?? TRUCK_RADIUS;
       const halfHeight = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
+      // Overlapping colliders (adjacent wall segments) must not each scrub speed.
+      const frame = { frictionApplied: false };
 
       for (const collider of colliders) {
         // Broad-phase only: swept AABB against collider world bounds.
@@ -85,7 +88,7 @@ export class StaticBodyCollisionManager {
           );
         }
         if (!intersectsSweep) continue;
-        this._resolveTruckVsMesh(truck, prevPos, collider);
+        this._resolveTruckVsMesh(truck, prevPos, collider, dt, frame);
       }
 
       this._prevPositions.set(id, truck.mesh.position.clone());
@@ -119,7 +122,7 @@ export class StaticBodyCollisionManager {
     );
   }
 
-  _resolveTruckVsMesh(truck, prevPos, mesh) {
+  _resolveTruckVsMesh(truck, prevPos, mesh, dt, frame) {
     const world = mesh.computeWorldMatrix(true);
     world.invertToRef(this._invWorld);
 
@@ -130,20 +133,20 @@ export class StaticBodyCollisionManager {
     const min = bb.minimum;
     const max = bb.maximum;
 
-    const sx = Math.max(1e-6, Math.abs(mesh.scaling.x));
-    const sy = Math.max(1e-6, Math.abs(mesh.scaling.y));
-    const sz = Math.max(1e-6, Math.abs(mesh.scaling.z));
-
-    const radius = truck.radius ?? TRUCK_RADIUS;
     const halfHeight = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
 
-    // Inflate collider in local space by truck extents.
-    const minX = min.x - radius / sx;
-    const maxX = max.x + radius / sx;
-    const minY = min.y - halfHeight / sy;
-    const maxY = max.y + halfHeight / sy;
-    const minZ = min.z - radius / sz;
-    const maxZ = max.z + radius / sz;
+    // Inflate the collider by the truck's oriented half-extents projected onto
+    // each collider axis (Minkowski sum), not by its circumradius. Using the
+    // circumradius made a 1.5×3.0 truck collide as a 3.35×3.35 square, so
+    // driving parallel to a wall "hit" it while still ~0.9 units clear.
+    const { eX, eY, eZ, sx, sy, sz } = this._truckExtentsInColliderSpace(truck, world, halfHeight);
+
+    const minX = min.x - eX / sx;
+    const maxX = max.x + eX / sx;
+    const minY = min.y - eY / sy;
+    const maxY = max.y + eY / sy;
+    const minZ = min.z - eZ / sz;
+    const maxZ = max.z + eZ / sz;
 
     // For bridge drive meshes, top-face support is provided by TerrainPhysics.
     // Ignore static-body resolution while the truck is on/above the top plane.
@@ -277,11 +280,49 @@ export class StaticBodyCollisionManager {
       }
 
       const applyFriction = mesh.metadata?.truckColliderApplyFriction !== false;
-      if (applyFriction && Math.abs(worldNormal.y) < 0.2) {
-        const friction = mesh.metadata?.truckColliderFriction ?? DEFAULT_FRICTION;
-        vel.scaleInPlace(friction);
+      if (applyFriction && !frame.frictionApplied && Math.abs(worldNormal.y) < 0.2) {
+        // Scrub only the along-wall component — the into-wall component was just
+        // resolved above, and scaling the whole vector killed forward speed while
+        // merely grazing. Exponent makes the decay frame-rate independent.
+        const retain = mesh.metadata?.truckColliderFriction ?? DEFAULT_FRICTION;
+        const scale = Math.pow(retain, Math.max(0, dt) * FRICTION_REF_FPS);
+        const vn = vel.x * worldNormal.x + vel.y * worldNormal.y + vel.z * worldNormal.z;
+        vel.x = worldNormal.x * vn + (vel.x - worldNormal.x * vn) * scale;
+        vel.y = worldNormal.y * vn + (vel.y - worldNormal.y * vn) * scale;
+        vel.z = worldNormal.z * vn + (vel.z - worldNormal.z * vn) * scale;
+        frame.frictionApplied = true;
       }
     }
+  }
+
+  /**
+   * Support function for the truck's oriented box against the collider's local
+   * axes: how far the truck reaches along each of the collider's X/Y/Z axes.
+   * Also returns each axis' world scale, taken from the world matrix so parented
+   * colliders are handled as well as `mesh.scaling` ones.
+   */
+  _truckExtentsInColliderSpace(truck, world, halfHeight) {
+    const halfDepth = (truck.depth ?? TRUCK_DEPTH) / 2;   // along truck forward
+    const halfWidth = (truck.width ?? TRUCK_WIDTH) / 2;   // along truck right
+
+    const h = truck.state.heading;
+    const fwdX = Math.sin(h), fwdZ = Math.cos(h);
+    const rightX = Math.cos(h), rightZ = -Math.sin(h);
+
+    const m = world.m;
+    const out = {};
+    const keys = ["X", "Y", "Z"];
+    for (let i = 0; i < 3; i++) {
+      const ax = m[i * 4], ay = m[i * 4 + 1], az = m[i * 4 + 2];
+      const scale = Math.max(1e-6, Math.hypot(ax, ay, az));
+      const nx = ax / scale, ny = ay / scale, nz = az / scale;
+      out["e" + keys[i]] =
+        halfDepth * Math.abs(fwdX * nx + fwdZ * nz) +
+        halfWidth * Math.abs(rightX * nx + rightZ * nz) +
+        halfHeight * Math.abs(ny);
+      out["s" + keys[i].toLowerCase()] = scale;
+    }
+    return out;
   }
 
   _sweptHitAABB(prev, cur, minX, maxX, minY, maxY, minZ, maxZ) {

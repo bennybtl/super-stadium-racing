@@ -2,6 +2,7 @@ import { Mesh, VertexData, StandardMaterial, Color3 } from "@babylonjs/core";
 import { expandPolyline } from "../polyline-utils.js";
 import { WallSegment } from "./WallSegment.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
+import { resolveStripeColors } from "./stripeColors.js";
 
 const SAMPLE_STEP = 0.5;
 const STRIPE_LEN = 2;
@@ -90,7 +91,7 @@ export class PolyCurb {
             heading,
             0,
             this.segments.length,
-            feature.style ?? "red_white",
+            null, // `style` — unused by WallSegment (collider is invisible)
             "curb_poly",
             scene,
             shadows,
@@ -106,7 +107,7 @@ export class PolyCurb {
     this.ribbon = this._buildRibbon(points, closed, track, scene, shadows, {
       height,
       width,
-      style: feature.style ?? "red_white",
+      stripeColors: resolveStripeColors(feature),
     });
   }
 
@@ -185,33 +186,13 @@ export class PolyCurb {
     return { xs, zs, raw, s, step: total / N, total };
   }
 
-  _stripeColors(style) {
-    if (style === "red_blue_white") {
-      return {
-        colorA: [0.85, 0.08, 0.08],
-        colorB: [0.08, 0.4, 0.85],
-        colorC: [1.0, 1.0, 1.0],
-      };
-    }
-    if (style === "blue_white") {
-      return { colorA: [0.08, 0.4, 0.85], colorB: [1.0, 1.0, 1.0] };
-    }
-    if (style === "black_yellow") {
-      return { colorA: [0.08, 0.08, 0.08], colorB: [0.95, 0.8, 0.05] };
-    }
-    if (style === "grey") {
-      return { colorA: [0.55, 0.55, 0.55], colorB: [0.55, 0.55, 0.55] };
-    }
-    return { colorA: [0.85, 0.08, 0.08], colorB: [1.0, 1.0, 1.0] };
-  }
-
   _buildRibbon(
     points,
     closed,
     track,
     scene,
     shadows,
-    { height, width, style },
+    { height, width, stripeColors },
   ) {
     const cl = this._resampleCenterline(points, closed, track);
     if (!cl) return null;
@@ -256,7 +237,8 @@ export class PolyCurb {
       indices = [],
       normals = [],
       colors = [];
-    const { colorA, colorB, colorC } = this._stripeColors(style);
+    // 1–3 stripe colours, cycled along the ribbon (one colour = solid).
+    const stripes = stripeColors;
     const pushQuad = (p0, p1, p2, p3, nrm, col) => {
       const base = positions.length / 3;
       positions.push(...p0, ...p1, ...p2, ...p3);
@@ -272,12 +254,7 @@ export class PolyCurb {
       const j = (i + 1) % n;
       const sMid =
         closed && i === n - 1 ? s[i] + step * 0.5 : (s[i] + s[j]) / 2;
-      const stripeIdx = Math.floor(sMid / STRIPE_LEN) % (colorC ? 3 : 2);
-      const col = colorC
-        ? [colorA, colorB, colorC][stripeIdx]
-        : stripeIdx === 0
-          ? colorA
-          : colorB;
+      const col = stripes[Math.floor(sMid / STRIPE_LEN) % stripes.length];
 
       let anx = nx[i] + nx[j],
         anz = nz[i] + nz[j];
@@ -304,7 +281,7 @@ export class PolyCurb {
 
     // End caps for open polylines
     if (!closed) {
-      const capCol = colorA;
+      const capCol = stripes[0];
       pushQuad(
         [lx[0], botY[0], lz[0]],
         [lx[0], topY[0], lz[0]],

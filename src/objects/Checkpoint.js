@@ -11,22 +11,9 @@ import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import barrelUrl from "../assets/models/barrel.obj?url";
 import { basicColors } from "../constants";
 import { projectGroundDecal, makeDecalMaterial } from "../managers/groundDecal.js";
+import { applyDecalWear } from "../managers/decalShapes.js";
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
-
-/**
- * Simple seeded PRNG (mulberry32) — returns a function that yields [0, 1) floats.
- * Using the checkpoint number as the seed gives each gate a consistent wear pattern.
- */
-function seededRng(seed) {
-  let s = seed * 2654435761 >>> 0;
-  return () => {
-    s += 0x6D2B79F5;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-    return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
-  };
-}
 
 const BARREL_COLOR    = basicColors.yellow.diffuse;
 const BARREL_ACTIVE   = new Color3(0.25, 1.0, 0.25);
@@ -331,7 +318,7 @@ export class Checkpoint {
       }
     }
 
-    this._applyWearEffect(ctx, checkpointNumber, texW, false);
+    applyDecalWear(ctx, texW, texH, checkpointNumber);
   }
 
   /**
@@ -375,33 +362,6 @@ export class Checkpoint {
     ctx.textBaseline = "middle";
     ctx.fillText(label, texW / 2, (sqTop + sqBottom + 20) / 2);
 
-    this._applyWearEffect(ctx, checkpointNumber, texW, true, texH);
-  }
-
-  /** Punch seeded random holes through the white paint for a worn stencil look. */
-  _applyWearEffect(ctx, seed, texW, includeScratches, texH = texW) {
-    const rng = seededRng(seed);
-    ctx.globalCompositeOperation = "destination-out";
-
-    // Fine speckle dropout
-    for (let i = 0; i < 2500; i++) {
-      const r = rng() * 4.5 + 0.5;
-      ctx.beginPath();
-      ctx.arc(rng() * texW, rng() * texH, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Larger worn scratches / patches
-    if (includeScratches) {
-      for (let i = 0; i < 60; i++) {
-        ctx.save();
-        ctx.translate(rng() * texW, rng() * texH);
-        ctx.rotate(rng() * Math.PI);
-        ctx.fillRect(0, 0, rng() * 40 + 8, rng() * 8 + 2);
-        ctx.restore();
-      }
-    }
-
-    ctx.globalCompositeOperation = "source-over";
+    applyDecalWear(ctx, texW, texH, checkpointNumber);
   }
 }

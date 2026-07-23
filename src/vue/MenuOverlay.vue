@@ -77,10 +77,18 @@
         <!-- ── Editor pause ── -->
         <template v-else-if="store.screen === 'editorPause'">
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.editorResume()">Resume Editing</button>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.editorSave()">Save Track</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="tryEditorSave">Save Track</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.editorLoad()">Load Track</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.editorExit()">Exit to Menu</button>
+          <ConfirmDialog
+            v-if="showSaveOverwriteConfirm"
+            title="OVERWRITE TRACK?"
+            @confirm="confirmEditorSave"
+            @cancel="showSaveOverwriteConfirm = false"
+          >
+            A track named <b>{{ saveConflictName }}</b> already exists. Overwrite it?
+          </ConfirmDialog>
         </template>
 
         <!-- ── Settings ── -->
@@ -164,7 +172,9 @@ import { basicColors } from '../constants.js';
 import { loadControlsSettings } from '../settingsStorage.js';
 import { isSafari } from '../browserSupport.js';
 
+import ConfirmDialog from './ConfirmDialog.vue';
 import SettingsMenu from './SettingsMenu.vue';
+import rebuild from '../editor/editor-rebuild.js';
 import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
 import TruckSelection from './TruckSelection.vue';
 import RaceConfig from './RaceConfig.vue';
@@ -175,6 +185,38 @@ import TruckSetup from './TruckSetup.vue';
 const store = useMenuStore();
 const showSafariWarning = isSafari();
 const setupStep = ref('selectTruck');
+const showSaveOverwriteConfirm = ref(false);
+const saveConflictName = ref('');
+
+function getSaveKey() {
+  const selectedTrack = window.menuManager?.selectedTrack;
+  if (selectedTrack && selectedTrack !== 'new' && selectedTrack !== '__editor_live__') {
+    return selectedTrack;
+  }
+  const track = rebuild.currentTrack;
+  return track?.id || 'custom';
+}
+
+function tryEditorSave() {
+  const saveKey = getSaveKey();
+  const selectedTrack = window.menuManager?.selectedTrack;
+  const isRenamingOrNew = !selectedTrack || selectedTrack === 'new' || selectedTrack === '__editor_live__' || saveKey !== selectedTrack;
+  const existsInStorage = localStorage.getItem(`track_${saveKey}`) !== null;
+
+  const existsAlready = existsInStorage || window.trackLoader?.builtinKeys.has(saveKey);
+  if (isRenamingOrNew && existsAlready) {
+    const existing = window.trackLoader?.tracks.get(saveKey);
+    saveConflictName.value = existing?.name ?? saveKey;
+    showSaveOverwriteConfirm.value = true;
+    return;
+  }
+  store.editorSave();
+}
+
+function confirmEditorSave() {
+  showSaveOverwriteConfirm.value = false;
+  store.editorSave();
+}
 
 const colorOptions = Object.entries(basicColors).map(([key, value]) => ({ key, value }));
 function handleKeyDown(event) {

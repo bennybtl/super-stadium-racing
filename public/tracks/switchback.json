@@ -138,7 +138,9 @@
       "thickness": 1,
       "friction": 0.05,
       "closed": false,
-      "style": "grey"
+      "colors": [
+        "grey"
+      ]
     },
     {
       "type": "polyCurb",
@@ -202,7 +204,10 @@
       "height": 0.1,
       "width": 1.5,
       "closed": true,
-      "style": "black_yellow"
+      "colors": [
+        "black",
+        "yellow"
+      ]
     },
     {
       "type": "trackSign",
@@ -245,7 +250,10 @@
       "height": 0.22,
       "width": 0.9,
       "closed": false,
-      "style": "black_yellow"
+      "colors": [
+        "black",
+        "yellow"
+      ]
     },
     {
       "type": "polyWall",
@@ -276,7 +284,9 @@
       "thickness": 1,
       "friction": 0.05,
       "closed": false,
-      "style": "grey"
+      "colors": [
+        "grey"
+      ]
     },
     {
       "type": "checkpoint",

@@ -2,6 +2,7 @@ import { Mesh, VertexData, StandardMaterial, Color3 } from "@babylonjs/core";
 import { WallSegment } from "./WallSegment.js";
 import { expandPolyline } from "../polyline-utils.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
+import { resolveStripeColors } from "./stripeColors.js";
 
 // Poly walls should sit flush on the sampled surface.
 const SKIRT = 2;
@@ -104,7 +105,7 @@ export class PolyWall {
             heading,
             friction,
             this.segments.length,
-            feature.style ?? "red_white",
+            null, // `style` — unused by WallSegment (collider is invisible)
             "wall_poly",
             scene,
             shadows,
@@ -121,7 +122,7 @@ export class PolyWall {
     this.ribbon = this._buildRibbon(points, closed, track, scene, shadows, {
       visualHeight,
       thickness,
-      style: feature.style ?? "red_white",
+      stripeColors: resolveStripeColors(feature),
     });
   }
 
@@ -271,33 +272,13 @@ export class PolyWall {
     return out;
   }
 
-  _stripeColors(style) {
-    if (style === "red_blue_white") {
-      return {
-        colorA: [0.85, 0.08, 0.08],
-        colorB: [0.08, 0.4, 0.85],
-        colorC: [1.0, 1.0, 1.0],
-      };
-    }
-    if (style === "blue_white") {
-      return { colorA: [0.08, 0.4, 0.85], colorB: [1.0, 1.0, 1.0] };
-    }
-    if (style === "black_yellow") {
-      return { colorA: [0.08, 0.08, 0.08], colorB: [0.95, 0.8, 0.05] };
-    }
-    if (style === "grey") {
-      return { colorA: [0.55, 0.55, 0.55], colorB: [0.55, 0.55, 0.55] };
-    }
-    return { colorA: [0.85, 0.08, 0.08], colorB: [1.0, 1.0, 1.0] }; // red_white
-  }
-
   _buildRibbon(
     points,
     closed,
     track,
     scene,
     shadows,
-    { visualHeight, thickness, style },
+    { visualHeight, thickness, stripeColors },
   ) {
     const cl = this._resampleCenterline(points, closed, track);
     if (!cl) return null;
@@ -357,19 +338,15 @@ export class PolyWall {
       indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     };
 
+    // 1–3 stripe colours, cycled along the ribbon (one colour = solid).
+    const stripes = stripeColors;
     const bandCount = closed ? n : n - 1;
-    const { colorA, colorB, colorC } = this._stripeColors(style);
     for (let i = 0; i < bandCount; i++) {
       const j = (i + 1) % n;
       // stripe colour from the band's mid arc-length
       const sMid =
         closed && i === n - 1 ? s[i] + step * 0.5 : (s[i] + s[j]) / 2;
-      const stripeIdx = Math.floor(sMid / STRIPE_LEN) % (colorC ? 3 : 2);
-      const col = colorC
-        ? [colorA, colorB, colorC][stripeIdx]
-        : stripeIdx === 0
-          ? colorA
-          : colorB;
+      const col = stripes[Math.floor(sMid / STRIPE_LEN) % stripes.length];
 
       // averaged outward normal for the side faces of this band
       let anx = nx[i] + nx[j],
@@ -397,7 +374,7 @@ export class PolyWall {
 
     // End caps for an open polyline.
     if (!closed) {
-      const capCol = colorA;
+      const capCol = stripes[0];
       // start cap faces −tangent (use sample 0 normal-perp); winding handled by
       // backFaceCulling=false so direction is cosmetic only.
       pushQuad(

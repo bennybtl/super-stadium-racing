@@ -1,6 +1,7 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
+import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
 
 /**
  * Editor – place and edit polyWall features in the track editor.
@@ -451,7 +452,7 @@ export class PolyWallEditor {
     store.polyWall.collisionHeight = feature.collisionHeight ?? feature.height ?? 2;
     store.polyWall.thickness = feature.thickness ?? 0.5;
     store.polyWall.closed = feature.closed ?? false;
-    store.polyWall.style = feature.style ?? 'red_white';
+    store.polyWall.colors = resolveStripeColorNames(feature);
   }
 
   // Called by EditorController (bridge from Vue store actions)
@@ -505,11 +506,14 @@ export class PolyWallEditor {
     this._rebuildWall(this._activeWall.feature);
   }
 
-  changePolyWallStyle(val) {
+  /** Set the wall's stripe colours (1–3 palette names). */
+  changePolyWallColors(colors) {
     if (!this._activeWall) return;
     this.ec.saveSnapshot(true);
-    this._activeWall.feature.style = val;
-    this._rebuildWall(this._activeWall.feature);
+    const feature = this._activeWall.feature;
+    feature.colors = normalizeStripeColors(colors);
+    this._syncStoreToFeature(feature, this.selectedPoint?.idx ?? null);
+    this._rebuildWall(feature);
   }
 
   insertPolyWallPoint() { this.insertPointAfterSelected(); }

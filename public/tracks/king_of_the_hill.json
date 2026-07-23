@@ -209,7 +209,10 @@
       "thickness": 0.8,
       "friction": 0.05,
       "closed": true,
-      "style": "blue_white"
+      "colors": [
+        "blue",
+        "white"
+      ]
     },
     {
       "type": "polyWall",
@@ -292,7 +295,10 @@
       "thickness": 0.6,
       "friction": 0.05,
       "closed": true,
-      "style": "blue_white"
+      "colors": [
+        "blue",
+        "white"
+      ]
     },
     {
       "type": "checkpoint",
@@ -884,7 +890,10 @@
       "thickness": 1.1,
       "friction": 0.05,
       "closed": true,
-      "style": "blue_white"
+      "colors": [
+        "blue",
+        "white"
+      ]
     },
     {
       "type": "terrain",
@@ -926,7 +935,10 @@
       "thickness": 0.8,
       "friction": 0.05,
       "closed": true,
-      "style": "blue_white"
+      "colors": [
+        "blue",
+        "white"
+      ]
     },
     {
       "type": "surfaceDecal",

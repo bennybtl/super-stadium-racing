@@ -6,6 +6,15 @@ import { projectGroundDecal, makeDecalMaterial } from "./groundDecal.js";
 // over the ground. Kept tiny so the marking still reads as flush with the surface.
 const PICK_LIFT = 0.15;
 
+// Number of distinct wear patterns. Decals pick one from their position so
+// neighbours don't share identical noise, while the material/texture cache
+// stays bounded at a handful of entries per shape+colour+opacity.
+const WEAR_VARIANTS = 8;
+
+function wearSeed(x, z) {
+  return Math.abs(Math.round(x * 7 + z * 13)) % WEAR_VARIANTS;
+}
+
 /**
  * SurfaceDecalManager — places static ground markings (arrows, etc.) onto the
  * ground mesh using Babylon's CreateDecal.
@@ -24,7 +33,9 @@ const PICK_LIFT = 0.15;
  *   type:    "surfaceDecal",
  *   centerX: number,       // world X
  *   centerZ: number,       // world Z
- *   shape:   string,       // e.g. "arrow"
+ *   shape:   string,       // "arrow" | "chevron" | "line" | "oval" | "rect" | "triangle"
+ *   count:   number,       // repeats, 1–10 (chevron only)
+ *   outline: boolean,      // draw as outline instead of solid (oval/rect/triangle)
  *   color:   string,       // CSS color, default "white"
  *   width:   number,       // world units
  *   depth:   number,       // world units
@@ -96,6 +107,8 @@ export class SurfaceDecalManager {
       depth  = 4,
       angle  = 0,
       opacity = 1,
+      count  = 1,
+      outline = false,
     } = feature;
 
     if (!DECAL_SHAPES.includes(shape)) {
@@ -112,7 +125,7 @@ export class SurfaceDecalManager {
       angle: -(angle * Math.PI) / 180,
     });
 
-    decal.material = this._getMaterial(shape, color, opacity);
+    decal.material = this._getMaterial(shape, color, opacity, wearSeed(centerX, centerZ), count, outline);
     decal.isPickable = true;
     decal.metadata = { ...(decal.metadata ?? {}), surfaceDecal: true };
     // Lift the baked mesh a hair off the terrain so pointer picks hit the decal
@@ -123,11 +136,11 @@ export class SurfaceDecalManager {
     return decal;
   }
 
-  _getMaterial(shape, color, opacity) {
-    const key = `${shape}:${color}:${opacity}`;
+  _getMaterial(shape, color, opacity, seed, count, outline) {
+    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}`;
     if (this._matCache.has(key)) return this._matCache.get(key);
 
-    const tex = createDecalTexture(this._scene, shape, color);
+    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline });
     const mat = makeDecalMaterial(this._scene, `surfaceDecalMat_${key}`, tex, opacity);
 
     this._matCache.set(key, mat);

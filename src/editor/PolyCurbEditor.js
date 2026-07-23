@@ -1,6 +1,7 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_CURB } from './EditorMaterials.js';
+import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
 
 /**
  * PolyCurbEditor — place and edit polyCurb features in the track editor.
@@ -390,7 +391,7 @@ export class PolyCurbEditor {
     store.polyCurb.height = feature.height ?? 0.22;
     store.polyCurb.width  = feature.width  ?? 0.9;
     store.polyCurb.closed = feature.closed ?? false;
-    store.polyCurb.style  = feature.style  ?? 'red_white';
+    store.polyCurb.colors = resolveStripeColorNames(feature);
   }
 
   changePolyCurbRadius(val) {
@@ -422,11 +423,14 @@ export class PolyCurbEditor {
     this._rebuild(this._activeGizmo.feature);
   }
 
-  changePolyCurbStyle(val) {
+  /** Set the curb's stripe colours (1–3 palette names). */
+  changePolyCurbColors(colors) {
     if (!this._activeGizmo) return;
     this.ec.saveSnapshot(true);
-    this._activeGizmo.feature.style = val;
-    this._rebuild(this._activeGizmo.feature);
+    const feature = this._activeGizmo.feature;
+    feature.colors = normalizeStripeColors(colors);
+    this._syncStore(feature, this.selectedPoint?.idx ?? null);
+    this._rebuild(feature);
   }
 
   insertPolyCurbPoint() { this.insertPointAfterSelected(); }

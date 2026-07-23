@@ -378,7 +378,10 @@
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
-      "style": "black_yellow"
+      "colors": [
+        "black",
+        "yellow"
+      ]
     },
     {
       "type": "polyWall",
@@ -440,7 +443,10 @@
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
-      "style": "black_yellow"
+      "colors": [
+        "black",
+        "yellow"
+      ]
     },
     {
       "type": "checkpoint",

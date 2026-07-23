@@ -319,7 +319,10 @@
       "thickness": 0.5,
       "friction": 0.05,
       "closed": true,
-      "style": "red_white"
+      "colors": [
+        "red",
+        "white"
+      ]
     },
     {
       "type": "hill",

@@ -478,7 +478,7 @@ export class EditorController {
       { selected: () => this.obstacleEditor.selected, duplicate: () => this.obstacleEditor.duplicateSelected(), delete: () => this.obstacleEditor.deleteSelected() },
       { selected: () => this.decorationsEditor.selected, duplicate: () => this.decorationsEditor.duplicateSelected(), delete: () => this.decorationsEditor.deleteSelected() },
       { selected: () => this.trackSignEditor.selected, duplicate: () => this.trackSignEditor.duplicateSelected(), delete: () => this.trackSignEditor.deleteSelected() },
-      { selected: () => this.surfaceDecalEditor.selected, delete: () => this.surfaceDecalEditor.deleteSelected() },
+      { selected: () => this.surfaceDecalEditor.selected, duplicate: () => this.surfaceDecalEditor.duplicateSelected(), delete: () => this.surfaceDecalEditor.deleteSelected() },
       { selected: () => this.actionZoneEditor.selected, duplicate: () => this.actionZoneEditor.duplicateSelected(), delete: () => this.actionZoneEditor.deleteSelected() },
       { selected: () => this.aiPathEditor?.selected, delete: () => this.aiPathEditor?.deleteSelected?.() },
       { selected: () => this.terrainPathEditor?.selected, delete: () => this.terrainPathEditor?.deleteSelected?.() },
@@ -1195,15 +1195,19 @@ export class EditorController {
    * (heldSelections > 1). When the handler claims the click, clear every other
    * editor so exactly one feature stays selected.
    *
-   * onPointerDown has already set the new selectedType, so snapshot and restore
-   * it around the sweep: some editors' deselect() clear selectedType
-   * unconditionally (e.g. PolyHillEditor) and would otherwise clobber it.
+   * onPointerDown has already established the new selection, so snapshot and
+   * restore the shared state it wrote before sweeping: several editors' deselect()
+   * clear selectedType and _rawDragPos unconditionally (PolyHillEditor,
+   * TrackSignEditor, DecorationsEditor) and would otherwise clobber the selection
+   * we just made. Losing _rawDragPos left the next drag dereferencing null.
    */
   _selectViaPointEditor(editor, pickedMesh) {
     if (!editor?.onPointerDown(pickedMesh)) return false;
     const newType = this._editorStore?.selectedType ?? null;
+    const newDragPos = this._rawDragPos;
     this._deselectOthers(editor);
     if (this._editorStore) this._editorStore.selectedType = newType;
+    this._rawDragPos = newDragPos;
     return true;
   }
 
@@ -1714,7 +1718,7 @@ export class EditorController {
   changePolyWallCollisionHeight(val) { this.polyWallEditor.changePolyWallCollisionHeight(val); }
   changePolyWallThickness(val)       { this.polyWallEditor.changePolyWallThickness(val); }
   changePolyWallClosed(val)          { this.polyWallEditor.changePolyWallClosed(val); }
-  changePolyWallStyle(val)           { this.polyWallEditor.changePolyWallStyle(val); }
+  changePolyWallColors(colors)       { this.polyWallEditor.changePolyWallColors(colors); }
   insertPolyWallPoint()         { this.polyWallEditor.insertPolyWallPoint(); }
   deletePolyWallPoint()         { this.polyWallEditor.deleteSelectedPoint(); }
   deletePolyWall()              { this.polyWallEditor.deletePolyWall(); }
@@ -1791,7 +1795,7 @@ export class EditorController {
   changePolyCurbHeight(val)  { this.polyCurbEditor?.changePolyCurbHeight(val); }
   changePolyCurbWidth(val)   { this.polyCurbEditor?.changePolyCurbWidth(val); }
   changePolyCurbClosed(val)  { this.polyCurbEditor?.changePolyCurbClosed(val); }
-  changePolyCurbStyle(val)   { this.polyCurbEditor?.changePolyCurbStyle(val); }
+  changePolyCurbColors(colors) { this.polyCurbEditor?.changePolyCurbColors(colors); }
   insertPolyCurbPoint()      { this.polyCurbEditor?.insertPolyCurbPoint(); }
   deletePolyCurbPoint()      { this.polyCurbEditor?.deletePolyCurbPoint(); }
   deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
@@ -1884,18 +1888,26 @@ export class EditorController {
   }
 
   setSurfaceDecalShape(val) { this.surfaceDecalEditor.setShape(val); }
+  setSurfaceDecalCount(val) { this.surfaceDecalEditor.setCount(val); }
+  setSurfaceDecalOutline(val) { this.surfaceDecalEditor.setOutline(val); }
+  setSurfaceDecalColor(val) { this.surfaceDecalEditor.setColor(val); }
   setSurfaceDecalAngle(val) { this.surfaceDecalEditor.setAngle(val); }
   setSurfaceDecalOpacity(val) { this.surfaceDecalEditor.setOpacity(val); }
   setSurfaceDecalWidth(val) { this.surfaceDecalEditor.setWidth(val); }
   setSurfaceDecalDepth(val) { this.surfaceDecalEditor.setDepth(val); }
 
-  // Editing a placed decal (selected via click). Panel key: 'surfaceDecalEdit'.
-  deselectSurfaceDecalEdit()       { this.surfaceDecalEditor.deselect(); }
+  // Editing a placed decal (selected via click). Shares the 'surfaceDecal'
+  // panel slice with stamp mode; only selectedType distinguishes them.
+  deselectSurfaceDecal()       { this.surfaceDecalEditor.deselect(); }
   deleteSelectedSurfaceDecal()     { this.surfaceDecalEditor.deleteSelected(); }
-  changeSurfaceDecalEditWidth(v)   { this.surfaceDecalEditor.changeWidth(v); }
-  changeSurfaceDecalEditDepth(v)   { this.surfaceDecalEditor.changeDepth(v); }
-  changeSurfaceDecalEditAngle(v)   { this.surfaceDecalEditor.changeAngle(v); }
-  changeSurfaceDecalEditOpacity(v) { this.surfaceDecalEditor.changeOpacity(v); }
+  duplicateSelectedSurfaceDecal()  { this.surfaceDecalEditor.duplicateSelected(); }
+  changeSurfaceDecalWidth(v)   { this.surfaceDecalEditor.changeWidth(v); }
+  changeSurfaceDecalDepth(v)   { this.surfaceDecalEditor.changeDepth(v); }
+  changeSurfaceDecalAngle(v)   { this.surfaceDecalEditor.changeAngle(v); }
+  changeSurfaceDecalOpacity(v) { this.surfaceDecalEditor.changeOpacity(v); }
+  changeSurfaceDecalCount(v)   { this.surfaceDecalEditor.changeCount(v); }
+  changeSurfaceDecalOutline(v) { this.surfaceDecalEditor.changeOutline(v); }
+  changeSurfaceDecalColor(v)   { this.surfaceDecalEditor.changeColor(v); }
 
   // ── AI Path helper methods ───────────────────────────────────────────────
   openAiPath() {

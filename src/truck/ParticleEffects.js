@@ -75,8 +75,8 @@ export class ParticleEffects {
     const particles = new ParticleSystem("drift", Math.round(300 * this._qualityScale), this.scene);
     particles.particleTexture = getSharedCloudTexture(this.scene);
     particles.emitter = this.mesh;
-    particles.minEmitBox = new Vector3(-0.7, 0, -1);
-    particles.maxEmitBox = new Vector3(0.7, 0, -1);
+    particles.minEmitBox = new Vector3(-0.7, -1, -1);
+    particles.maxEmitBox = new Vector3(0.7, -1, -1);
 
     particles.color1    = new Color4(color.r,        color.g,        color.b,        0.5);
     particles.color2    = new Color4(color.r * 0.75, color.g * 0.75, color.b * 0.75, 0.3);
@@ -203,8 +203,8 @@ export class ParticleEffects {
     particles.particleTexture = getSharedCloudTexture(this.scene);
     particles.emitter = this.mesh;
     const sideCenterX = sideSign * 1.1;
-    particles.minEmitBox = new Vector3(sideCenterX - 0.3, 0.4, -2.8);
-    particles.maxEmitBox = new Vector3(sideCenterX + 0.3, 1.0, -1.0);
+    particles.minEmitBox = new Vector3(sideCenterX - 0.3, -0.6, -2.8);
+    particles.maxEmitBox = new Vector3(sideCenterX + 0.3, 0, -1.0);
     // Render after the translucent water surface so mud spray is visibly on top.
     particles.renderingGroupId = 2;
 

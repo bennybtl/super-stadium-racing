@@ -98,9 +98,14 @@ export class TrackSignEditor {
   }
 
   deselect() {
-    if (this._selected) this._handles.get(this._selected)?.setSelected(false);
-    this._selected = null;
-    this.editor._rawDragPos = null;
+    // Only touch the shared _rawDragPos if this editor actually held the
+    // selection — deselectAll sweeps every editor, and clearing it blindly
+    // wipes the drag origin of whichever feature was just selected.
+    if (this._selected) {
+      this._handles.get(this._selected)?.setSelected(false);
+      this._selected = null;
+      this.editor._rawDragPos = null;
+    }
     this.hideProperties();
   }
 

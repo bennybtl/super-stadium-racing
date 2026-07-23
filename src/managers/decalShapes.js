@@ -12,14 +12,50 @@ import { DynamicTexture } from "@babylonjs/core";
  * decal's rotation angle maps intuitively to a compass-style heading.
  */
 
-export const DECAL_SHAPES = ['arrow'];
+export const DECAL_SHAPES = ['arrow', 'chevron', 'line', 'oval', 'rect', 'triangle'];
+
+/** Shapes whose look depends on the feature's `count` (repeat) property. */
+export const COUNTED_SHAPES = ['chevron'];
+
+/** Shapes that can be drawn solid or as an outline. */
+export const OUTLINE_SHAPES = ['oval', 'rect', 'triangle'];
+
+/** Paint colours available for decals (CSS colours — used directly as fill/stroke). */
+export const DECAL_COLORS = ['white', 'yellow', 'red', 'blue', 'black', 'gray'];
+
+export const MIN_COUNT = 1;
+export const MAX_COUNT = 10;
 
 const TEX_SIZE = 512;
 
+// Outline stroke width as a fraction of texture width.
+const STROKE_RATIO = 0.09;
+
+const clampCount = (n) => Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(n ?? MIN_COUNT)));
+
 /** Draw the named shape onto a 2D canvas context sized w×h. */
-export function drawDecalShape(ctx, shape, w, h, color = 'white') {
+export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false } = {}) {
   ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = w * STROKE_RATIO;
+
   switch (shape) {
+    case 'chevron':
+      drawChevrons(ctx, w, h, color, clampCount(count));
+      break;
+    case 'line':
+      drawLine(ctx, w, h, color);
+      break;
+    case 'oval':
+      drawOval(ctx, w, h, outline);
+      break;
+    case 'rect':
+      drawRect(ctx, w, h, outline);
+      break;
+    case 'triangle':
+      drawTriangle(ctx, w, h, outline);
+      break;
     case 'arrow':
     default:
       drawArrow(ctx, w, h, color);
@@ -51,11 +87,142 @@ function drawArrow(ctx, w, h, color) {
 }
 
 /**
- * Build a DynamicTexture for the given shape. Caller owns disposal.
+ * `count` chevrons pointing toward the top of the texture, stacked evenly down
+ * it. Each gets an equal band so the run always fills the decal regardless of
+ * how many are drawn.
  */
-export function createDecalTexture(scene, shape, color = 'white', size = TEX_SIZE) {
+function drawChevrons(ctx, w, h, color, count) {
+  ctx.fillStyle = color;
+  const cx = w / 2;
+  const halfW = w * 0.34;
+  const bandH = h / count;
+  const thickness = bandH * 0.32;
+  const legDrop = bandH * 0.5;
+
+  for (let i = 0; i < count; i++) {
+    const apexY = i * bandH + bandH * 0.12;
+    const legY  = apexY + legDrop;
+    ctx.beginPath();
+    ctx.moveTo(cx, apexY);
+    ctx.lineTo(cx + halfW, legY);
+    ctx.lineTo(cx + halfW, legY + thickness);
+    ctx.lineTo(cx, apexY + thickness);
+    ctx.lineTo(cx - halfW, legY + thickness);
+    ctx.lineTo(cx - halfW, legY);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/** Straight bar running the length of the texture (rotate the decal to aim it). */
+function drawLine(ctx, w, h, color) {
+  ctx.fillStyle = color;
+  const thickness = w * 0.16;
+  ctx.fillRect((w - thickness) / 2, h * 0.04, thickness, h * 0.92);
+}
+
+// ── Basic shapes (solid or outline) ─────────────────────────────────────────
+// Outlined variants inset by half the stroke width so the stroke stays inside
+// the texture instead of being clipped at the edges.
+
+function drawOval(ctx, w, h, outline) {
+  const inset = outline ? ctx.lineWidth / 2 : 0;
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h / 2, w / 2 - w * 0.05 - inset, h / 2 - h * 0.05 - inset, 0, 0, Math.PI * 2);
+  outline ? ctx.stroke() : ctx.fill();
+}
+
+function drawRect(ctx, w, h, outline) {
+  const inset = outline ? ctx.lineWidth / 2 : 0;
+  const x = w * 0.06 + inset;
+  const y = h * 0.06 + inset;
+  const rw = w - 2 * x;
+  const rh = h - 2 * y;
+  outline ? ctx.strokeRect(x, y, rw, rh) : ctx.fillRect(x, y, rw, rh);
+}
+
+/** Triangle pointing toward the top of the texture. */
+function drawTriangle(ctx, w, h, outline) {
+  const inset = outline ? ctx.lineWidth : 0;
+  const top    = h * 0.06 + inset;
+  const bottom = h * 0.94 - inset * 0.5;
+  const halfW  = w * 0.44 - inset;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(w / 2, top);
+  ctx.lineTo(w / 2 + halfW, bottom);
+  ctx.lineTo(w / 2 - halfW, bottom);
+  ctx.closePath();
+  outline ? ctx.stroke() : ctx.fill();
+}
+
+/**
+ * Simple seeded PRNG (mulberry32) — returns a function yielding [0, 1) floats,
+ * so a given seed always produces the same wear pattern.
+ */
+function seededRng(seed) {
+  let s = seed * 2654435761 >>> 0;
+  return () => {
+    s += 0x6D2B79F5;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
+  };
+}
+
+// Wear density is tuned against this reference area and scaled to the actual
+// texture, so a wide gate decal wears at the same rate as a small arrow.
+const WEAR_REF_AREA = 512 * 512;
+const SPECKLES_PER_REF = 2500;
+const SCRATCHES_PER_REF = 60;
+
+/**
+ * Punch seeded holes through whatever has been drawn, for a worn-stencil look.
+ * Shared by every ground decal (checkpoint gates and surface markings alike).
+ *
+ * Erases via destination-out, which uses only the alpha of fillStyle — so the
+ * fill is forced opaque here; inheriting a caller's transparent fill would
+ * silently erase nothing.
+ */
+export function applyDecalWear(ctx, w, h, seed = 0) {
+  const rng = seededRng(seed);
+  const scale = (w * h) / WEAR_REF_AREA;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = '#000';
+
+  // Fine speckle dropout
+  const speckles = Math.round(SPECKLES_PER_REF * scale);
+  for (let i = 0; i < speckles; i++) {
+    ctx.beginPath();
+    ctx.arc(rng() * w, rng() * h, rng() * 4.5 + 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Larger worn scratches / patches
+  const scratches = Math.round(SCRATCHES_PER_REF * scale);
+  for (let i = 0; i < scratches; i++) {
+    ctx.save();
+    ctx.translate(rng() * w, rng() * h);
+    ctx.rotate(rng() * Math.PI);
+    ctx.fillRect(0, 0, rng() * 40 + 8, rng() * 8 + 2);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Build a DynamicTexture for the given shape, with wear applied. Caller owns
+ * disposal. `seed` selects the wear pattern — vary it to avoid identical
+ * neighbours (it is part of the manager's material cache key).
+ */
+export function createDecalTexture(scene, shape, { color = 'white', seed = 0, count = 1, outline = false, size = TEX_SIZE } = {}) {
   const tex = new DynamicTexture(`decalShape_${shape}`, { width: size, height: size }, scene);
-  drawDecalShape(tex.getContext(), shape, size, size, color);
+  const ctx = tex.getContext();
+  drawDecalShape(ctx, shape, size, size, { color, count, outline });
+  applyDecalWear(ctx, size, size, seed);
   tex.hasAlpha = true;
   tex.update();
   return tex;

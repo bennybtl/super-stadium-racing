@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, reactive, computed, shallowRef } from 'vue';
+import { DEFAULT_STRIPE_COLORS } from '../../objects/stripeColors.js';
 import { getObstacleSpec } from '../../objects/Obstacle.js';
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export const useEditorStore = defineStore('editor', () => {
     collisionHeight: 2,
     thickness: 0.5,
     closed: false,
-    style: 'red_white',
+    colors: [...DEFAULT_STRIPE_COLORS],
   });
 
   // ── Poly hill panel ──
@@ -202,7 +203,7 @@ export const useEditorStore = defineStore('editor', () => {
     height: 0.22,
     width: 0.9,
     closed: false,
-    style: 'red_white',
+    colors: [...DEFAULT_STRIPE_COLORS],
   });
 
   // ── Track defaults ──
@@ -421,10 +422,8 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ── Surface decal stamp ──
-  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], angle: 0, width: 4, depth: 4, opacity: 1 });
+  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], angle: 0, width: 4, depth: 4, opacity: 1 });
 
-  // ── Surface decal edit (a placed decal selected by click) ──
-  const surfaceDecalEdit = reactive({ angle: 0, width: 4, depth: 4, opacity: 1 });
 
   // ── Generic panel plumbing ──────────────────────────────────────────────
   // Regular property setters and feature actions route through these two
@@ -438,7 +437,7 @@ export const useEditorStore = defineStore('editor', () => {
   const _panels = {
     checkpoint, hill, squareHill, terrainShape, obstacle,
     meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign,
-    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal, surfaceDecalEdit,
+    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal,
   };
   function setFeatureProp(panelKey, prop, val) {
     const panel = _panels[panelKey];
@@ -486,7 +485,7 @@ export const useEditorStore = defineStore('editor', () => {
     aiPathWear,
     aiPathBranch, aiPathBranches,
     editMainAiPath, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, terrainPath,
-    surfaceDecal, surfaceDecalEdit,
+    surfaceDecal,
     setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     applyMeshGridSettings, setBridgeMeshPointHeight, setBridgeMeshThickness, setBridgeMeshLayerId,

@@ -79,21 +79,11 @@
       />
     </div>
 
-    <!-- Style -->
-    <div class="flex justify-between items-center mb-3 text-[12px]">
-      <span>Style</span>
-      <select
-        :value="editor.polyCurb.style"
-        @change="editor.setFeatureProp('polyCurb', 'style', $event.target.value)"
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
-      >
-        <option value="red_white">Red &amp; White</option>
-        <option value="blue_white">Blue &amp; White</option>
-        <option value="red_blue_white">Red, Blue &amp; White</option>
-        <option value="black_yellow">Black &amp; Yellow</option>
-        <option value="grey">Grey</option>
-      </select>
-    </div>
+    <!-- Stripe colours (1–3, any combination) -->
+    <StripeColorPicker
+      :model-value="editor.polyCurb.colors"
+      @update:model-value="editor.setFeatureProp('polyCurb', 'colors', $event)"
+    />
 
     <hr class="border-t border-slate-700 my-4" />
 
@@ -116,6 +106,7 @@
 import { computed } from 'vue';
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
+import StripeColorPicker from './StripeColorPicker.vue';
 
 const editor = useEditorStore();
 
