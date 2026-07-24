@@ -1,0 +1,5 @@
+{
+  "id": "bannerString",
+  "name": "Banner String",
+  "featureDefaults": { "heading": 0, "width": 8, "poleHeight": 4.2 }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "scaffold",
+  "name": "Scaffold",
+  "modelFile": "scaffold_box.obj",
+  "offsetY": 0,
+  "defaultColor": "gray",
+  "defaultScale": 1.5,
+  "colliderMeshes": [
+    "scaffold_box_scaffold_box"
+  ],
+  "castsShadows": true,
+  "featureDefaults": {
+    "heading": 0,
+    "width": 6,
+    "height": 4
+  },
+  "editable": {
+    "color": true,
+    "scale": true,
+    "heading": true
+  }
+}

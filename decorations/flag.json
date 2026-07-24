@@ -1,0 +1,6 @@
+{
+  "id": "flag",
+  "name": "Flag",
+  "defaultColor": "red",
+  "featureDefaults": { "color": "red" }
+}

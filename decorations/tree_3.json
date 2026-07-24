@@ -8,12 +8,33 @@
   "defaultColor": "green",
   "defaultScale": 1,
   "meshColors": {
-    "trunk_3_obj_0.004": [0.28, 0.22, 0.16]
+    "trunk_3_obj_0.004": [
+      0.28,
+      0.22,
+      0.16
+    ]
   },
   "meshTextures": {
-    "leaves_3_obj_0.005": { "file": "leaves.png", "scale": 5 },
-    "trunk_3_obj_0.004": { "file": "trunk.png", "scale": 5 }
+    "leaves_3_obj_0.005": {
+      "file": "leaves.png",
+      "scale": 5
+    },
+    "trunk_3_obj_0.004": {
+      "file": "trunk.png",
+      "scale": 5
+    },
+    "trunk_3_base_obj_0.006": {
+      "file": "trunk.png",
+      "scale": 5
+    }
   },
+  "colliderMeshes": [
+    "trunk_3_base_obj_0.006"
+  ],
   "castsShadows": true,
-  "editable": { "color": true, "scale": true, "heading": true }
+  "editable": {
+    "color": true,
+    "scale": true,
+    "heading": true
+  }
 }

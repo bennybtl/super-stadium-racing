@@ -7,7 +7,7 @@ import {
   Mesh,
   VertexData,
 } from "@babylonjs/core";
-import { basicColors } from "../constants.js";
+import { basicColors } from "../../src/constants.js";
 
 const DEFAULT_POLE_HEIGHT = 4.2;
 const POLE_RADIUS     = 0.16;

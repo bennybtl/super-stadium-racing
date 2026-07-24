@@ -23,9 +23,7 @@ import { CameraController } from "../managers/CameraController.js";
 import { CheckpointManager } from "../managers/CheckpointManager.js";
 import { WallManager } from "../managers/WallManager.js";
 import { ObstacleManager } from "../managers/ObstacleManager.js";
-import { FlagManager } from "../managers/FlagManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
-import { BannerStringManager } from "../managers/BannerStringManager.js";
 import { DecorationManager } from "../managers/DecorationManager.js";
 import { isModelFeature } from "../decorations-registry.js";
 import { PickupManager } from "../managers/PickupManager.js";
@@ -453,9 +451,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
   // wallManager already created above
   const obstacleManager = new ObstacleManager(scene, currentTrack, shadows);
-  const flagManager     = new FlagManager(scene, currentTrack, shadows);
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
-  const bannerStringManager = new BannerStringManager(scene, currentTrack, shadows);
   const decorationManager = new DecorationManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows); // Pickups spawn lap-by-lap in RaceMode
   const bridgeMeshManager = new BridgeMeshManager(
@@ -507,12 +503,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       wallManager.createPolyWall(feature);
     } else if (feature.type === "polyCurb") {
       wallManager.createPolyCurb(feature);
-    } else if (feature.type === "flag") {
-      flagManager.createFlag(feature);
     } else if (feature.type === "trackSign") {
       trackSignManager.createSign(feature);
-    } else if (feature.type === "bannerString") {
-      bannerStringManager.createBanner(feature);
     } else if (isModelFeature(feature)) {
       decorationManager.createDecoration(feature);
     } else if (feature.type === "surfaceDecal") {
@@ -547,9 +539,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     checkpointManager,
     wallManager,
     obstacleManager,
-    flagManager,
     trackSignManager,
-    bannerStringManager,
     decorationManager,
     pickupManager,
     bridgeMeshManager,

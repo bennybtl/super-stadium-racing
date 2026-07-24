@@ -36,7 +36,7 @@ export class HotLapMode extends DriveMode {
       terrainManager,
       checkpointManager,
       obstacleManager,
-      flagManager,
+      decorationManager,
       pickupManager,
     } = await this.buildDriveScene(trackKey);
 
@@ -190,7 +190,7 @@ export class HotLapMode extends DriveMode {
 
       frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
-      frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
+      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
 
       frameProfiler.measure('hotlap.update', () => this.hotLap.update(playerTruck, dt));

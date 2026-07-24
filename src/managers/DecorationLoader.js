@@ -13,7 +13,14 @@
  * JSON schema:
  *   id              string   unique key (defaults to filename)
  *   name            string   display name
- *   modelFile       string   OBJ filename in /decorations/
+ *   modelFile       string   OBJ filename in /decorations/. Optional — omit it
+ *                   when a controller builds the geometry procedurally.
+ *   controller      string   behaviour module filename; defaults to <id>.js when
+ *                   that file exists. May export build() for procedural
+ *                   geometry, update() for per-frame behaviour, and
+ *                   edit.controls()/edit.apply() for dynamic editing.
+ *   featureDefaults object   initial props for a newly placed instance
+ *                   (e.g. { "width": 8, "poleHeight": 4.2 })
  *   imageFile       string   optional preview image in /decorations/
  *   rotationX       number   degrees; corrects Z-up authored models (default 0)
  *   baseScale       number   base model scale before the user scale (default 1)
@@ -30,6 +37,10 @@
  *                   image must sit in /decorations/ and the model must have UVs.
  *                   `scale`/`uScale`/`vScale` tile the texture (2 = repeats
  *                   twice = pattern half the size); default 1.
+ *   colliderMeshes  string[] OBJ group names that become truck colliders when
+ *                   the instance's Collider toggle is on (e.g. a tree's trunk
+ *                   but not its leaves). Declaring any enables the toggle.
+ *   colliderFriction number  0..1 surface friction for those colliders (0.9)
  *   castsShadows    boolean  (default true)
  *   editable        { color, scale, heading }  which panel controls to show
  */
@@ -72,6 +83,8 @@ export class DecorationLoader {
     const modules = import.meta.glob('/decorations/*.json', { query: '?raw', import: 'default' });
     const objUrls = import.meta.glob('/decorations/*.obj', { query: '?url', import: 'default', eager: true });
     const imgUrls = import.meta.glob('/decorations/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
+    // Optional behaviour modules: /decorations/<id>.js (or def.controller).
+    const controllers = import.meta.glob('/decorations/*.js', { eager: true });
 
     const loadPromises = Object.entries(modules).map(async ([path, load]) => {
       try {
@@ -97,6 +110,10 @@ export class DecorationLoader {
             else console.warn(`[DecorationLoader] ${key}: texture '${t.file}' for mesh '${mesh}' not found in /decorations/`);
           }
         }
+        // Attach the optional controller module (procedural build / runtime
+        // behaviour / dynamic editing). Convention: /decorations/<id>.js.
+        const controllerFile = def.controller ?? `${key}.js`;
+        def.controller = controllers[`/decorations/${controllerFile}`]?.default ?? null;
         this.decorations.set(key, def);
         if (!this.decorationList.includes(key)) this.decorationList.push(key);
         console.debug(`[DecorationLoader] Loaded decoration: ${def.name} (${key}) modelUrl=${def.modelUrl ?? 'none'}`);

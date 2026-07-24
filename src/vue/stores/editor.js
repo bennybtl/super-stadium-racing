@@ -153,8 +153,8 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Decoration panel (flags + banner strings)
   const decoration = reactive({
-    type: 'flag',      // 'flag' | 'bannerString' | 'model'
-    model: null,       // decoration id when type === 'model' (e.g. 'tent', 'tree')
+    model: null,       // selected decoration id ('flag', 'bannerString', 'tent', …)
+    controls: {},      // control descriptor supplied by the decoration's controller
     color: 'red',
     width: 8,
     poleHeight: 4.2,
@@ -356,26 +356,18 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Flag actions ──
 
-  // Type dropdown value is 'flag', 'bannerString', or 'model:<id>'. Mirror the
-  // chosen kind into panel state, then let the bridge rebuild the decoration
-  // (which re-selects and repopulates the rest of the panel fields).
-  function setDecorationType(raw) {
-    if (typeof raw === 'string' && raw.startsWith('model:')) {
-      decoration.type = 'model';
-      decoration.model = raw.slice('model:'.length);
-    } else {
-      decoration.type = raw;
-      decoration.model = null;
-    }
-    _bridge.value?.changeDecorationType(raw);
+  // The Type dropdown value is a decoration id. Mirror it into panel state, then
+  // let the bridge rebuild the decoration (which re-selects and repopulates the
+  // control descriptor and its values).
+  function setDecorationType(id) {
+    decoration.model = id;
+    _bridge.value?.changeDecorationType(id);
   }
-  function setDecorationColor(val)       { decoration.color = val; _bridge.value?.changeFlagColor(val); }
-  function setDecorationWidth(val)       { decoration.width = val; _bridge.value?.changeBannerStringWidth(val); }
-  function setDecorationPoleHeight(val)  { decoration.poleHeight = val; _bridge.value?.changeBannerStringPoleHeight(val); }
-  function setDecorationHeading(val)     { decoration.heading = val; _bridge.value?.changeBannerStringHeading(val); }
-  function setDecorationScale(val)        { decoration.scale = val; _bridge.value?.changeDecorationScale(val); }
-  function setDecorationMirrorX(val)      { decoration.mirrorX = val; _bridge.value?.changeDecorationMirrorX(val); }
-  function setDecorationMirrorZ(val)      { decoration.mirrorZ = val; _bridge.value?.changeDecorationMirrorZ(val); }
+  // Generic channel for every control the descriptor renders.
+  function setDecorationProp(prop, val) {
+    decoration[prop] = val;
+    _bridge.value?.changeDecorationProp(prop, val);
+  }
 
   // ── Track Sign actions ──
 
@@ -471,9 +463,7 @@ export const useEditorStore = defineStore('editor', () => {
     setBridge,
     setHillRadius, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     decoration,
-    setDecorationType, setDecorationColor, setDecorationWidth,
-    setDecorationPoleHeight, setDecorationHeading, setDecorationScale,
-    setDecorationMirrorX, setDecorationMirrorZ, trackSign,
+    setDecorationType, setDecorationProp, trackSign,
     bannerString,
     actionZone,
     setActionZoneType, polyCurb,

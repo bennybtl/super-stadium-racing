@@ -43,20 +43,13 @@ export class EditorMode extends BaseMode {
       checkpointManager,
       wallManager,
       shadows,
-      flagManager,
       obstacleManager,
       trackSignManager,
-      bannerStringManager,
       decorationManager,
       bridgeMeshManager,
       steepSlopeColliderManager,
       surfaceDecalManager,
     } = await buildScene(engine, trackLoader, trackKey);
-
-    // Dispose runtime FlagManager flags – the EditorController's FlagTool
-    // creates its own editor-mode flag meshes (without shadows/physics).
-    // Keeping both sets causes duplicate meshes and breaks click-selection.
-    flagManager.dispose();
 
     // Dispose runtime ObstacleManager stacks – the ObstacleEditor creates
     // its own pickable gizmo cylinders. The real Obstacle objects have
@@ -67,9 +60,6 @@ export class EditorMode extends BaseMode {
     // Dispose runtime TrackSignManager signs for the same reason — the
     // TrackSignEditor creates its own copies that are tracked for selection.
     trackSignManager.dispose();
-
-    // Dispose runtime BannerStringManager banners — BannerStringEditor creates its own.
-    bannerStringManager.dispose();
 
     // Dispose runtime DecorationManager props — DecorationsEditor creates its own.
     decorationManager.dispose();

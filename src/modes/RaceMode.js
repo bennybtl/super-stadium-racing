@@ -50,7 +50,7 @@ export class RaceMode extends DriveMode {
       checkpointManager,
       wallManager,
       obstacleManager,
-      flagManager,
+      decorationManager,
       pickupManager,
     } = await this.buildDriveScene(trackKey);
 
@@ -589,7 +589,7 @@ export class RaceMode extends DriveMode {
 
       frameProfiler.measure('collision.truck.resolve', () => truckCollisionManager.update(trucks));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
-      frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
+      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
 
       truckStatusUiElapsedMs += dt * 1000;

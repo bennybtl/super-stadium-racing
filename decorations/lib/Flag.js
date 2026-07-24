@@ -6,7 +6,7 @@ import {
   Vector3,
   VertexData,
 } from "@babylonjs/core";
-import { basicColors } from "../constants";
+import { basicColors } from "../../src/constants.js";
 
 export const POLE_HEIGHT = 7.5;
 export const POLE_RADIUS = 0.1;
@@ -131,7 +131,7 @@ export class Flag {
   }
 
   /**
-   * Apply a lateral impulse (world X/Z force, from FlagManager).
+   * Apply a lateral impulse (world X/Z force, from the flag controller).
    * Converts to angular velocity via moment arm at 60% of pole height.
    */
   applyBendImpulse(ix, iz) {

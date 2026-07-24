@@ -29,7 +29,7 @@ export class TestMode extends DriveMode {
       currentTrack,
       terrainManager,
       obstacleManager,
-      flagManager,
+      decorationManager,
     } = await this.buildDriveScene(trackKey);
 
     this.scene = scene;
@@ -104,7 +104,7 @@ export class TestMode extends DriveMode {
 
       frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
-      frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
+      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
       frameProfiler.measure('debug.update', () => this.debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
       frameRenderStartMs = performance.now();

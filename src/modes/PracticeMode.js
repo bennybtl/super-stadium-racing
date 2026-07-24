@@ -34,7 +34,7 @@ export class PracticeMode extends DriveMode {
       currentTrack,
       terrainManager,
       obstacleManager,
-      flagManager,
+      decorationManager,
       pickupManager,
     } = await this.buildDriveScene(trackKey);
     // Note: Pickups are disabled by default via buildScene. We don't spawn them here.
@@ -167,7 +167,7 @@ export class PracticeMode extends DriveMode {
 
       frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
-      frameProfiler.measure('flags.update', () => flagManager.update(trucks, dt));
+      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
       

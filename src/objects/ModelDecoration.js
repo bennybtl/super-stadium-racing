@@ -29,6 +29,30 @@ function parseMeshColor(value) {
 }
 
 /**
+ * Whether a decoration instance should act as a truck collider: the feature's
+ * own toggle, else the def's default, else off.
+ */
+export function colliderEnabledFor(feature, def) {
+  return !!(feature.collider ?? def?.featureDefaults?.collider ?? false);
+}
+
+/**
+ * Flip `truckCollider` metadata on the meshes a def nominated via
+ * `colliderMeshes`. StaticBodyCollisionManager picks these up by scanning the
+ * scene, using each mesh's own bounds — so marking just the trunk of a tree
+ * gives a trunk-sized collider and leaves the canopy pass-through.
+ */
+export function applyColliderMetadata(meshes, enabled, def) {
+  for (const m of meshes) {
+    m.metadata = {
+      ...(m.metadata ?? {}),
+      truckCollider: enabled,
+      truckColliderFriction: def?.colliderFriction ?? 0.9,
+    };
+  }
+}
+
+/**
  * ModelDecoration — a static OBJ prop placed on the terrain, driven entirely by
  * a definition loaded from /decorations/<id>.json (see DecorationLoader).
  *
@@ -88,6 +112,8 @@ export class ModelDecoration {
     this._fixedMaterials = new Map();
     /** @type {Map<string, StandardMaterial>} group name → textured material */
     this._texturedMaterials = new Map();
+    /** Clones of the meshes named in def.colliderMeshes. */
+    this._colliderMeshes = [];
 
     // Load the model once (cached per scene per def), then clone into this instance.
     ModelDecoration._getSourceMeshes(scene, def)
@@ -96,6 +122,7 @@ export class ModelDecoration {
         for (const src of sourceMeshes) {
           // Decide from the SOURCE group name before cloning renames the mesh.
           const material = this._materialForMesh(src.name, scene, tag);
+          const isCollider = !!def.colliderMeshes?.includes(src.name);
           const m = src.clone(`decoMesh_${tag}`, this._pivot);
           m.isVisible  = true;
           m.isPickable = true; // editor selects decorations by clicking their mesh
@@ -104,10 +131,22 @@ export class ModelDecoration {
             this._shadows.addShadowCaster(m);
             m.receiveShadows = true;
           }
+          if (isCollider) this._colliderMeshes.push(m);
           this._meshes.push(m);
         }
+        this._applyCollider();
       })
       .catch(err => console.warn(`[ModelDecoration] Failed to load '${def.id}':`, err));
+  }
+
+  _applyCollider() {
+    applyColliderMetadata(this._colliderMeshes, colliderEnabledFor(this.feature, this.def), this.def);
+  }
+
+  /** Editor toggle: make the def's nominated meshes solid to trucks. */
+  setCollider(on) {
+    this.feature.collider = !!on;
+    this._applyCollider();
   }
 
   /**
@@ -266,6 +305,15 @@ export class ModelDecoration {
       ModelDecoration._sourcePromises.set(key, { scene, promise });
     }
     return ModelDecoration._sourcePromises.get(key).promise;
+  }
+
+  /**
+   * Public entry point for decoration controllers that build their own geometry
+   * from a def's OBJ (e.g. a unit repeated into a larger structure). Resolves to
+   * hidden source meshes to clone; the load is cached per scene per def.
+   */
+  static loadSourceMeshes(scene, def) {
+    return ModelDecoration._getSourceMeshes(scene, def);
   }
 
   /** Call this when unloading a scene so the next scene gets a fresh load. */

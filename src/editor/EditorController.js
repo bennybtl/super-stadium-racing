@@ -562,7 +562,7 @@ export class EditorController {
         else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
         else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
         else if (feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
-        else if (feature.type === 'flag' || feature.type === 'bannerString' || this.decorationsEditor.isModelFeature(feature)) this.decorationsEditor.createVisual(feature);
+        else if (this.decorationsEditor.isModelFeature(feature)) this.decorationsEditor.createVisual(feature);
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
         else if (feature.type === 'surfaceDecal') this.surfaceDecalManager?.createDecal(feature);
@@ -1691,20 +1691,16 @@ export class EditorController {
 
   get selectedObstacle()           { return this.obstacleEditor.selected; }
 
-  // ─── Decorations Editing (flags + banner strings) ────────────────────────
+  // ─── Decorations Editing ─────────────────────────────────────────────────
+  // Every decoration (flag, banner string, tent, tree, …) goes through the same
+  // two channels: pick a kind, then set any control the descriptor exposes.
 
   addDecorationEntity()            { this.decorationsEditor.addEntity(); }
   duplicateSelectedDecoration()    { return this.decorationsEditor.duplicateSelected(); }
   deleteSelectedDecoration()       { return this.decorationsEditor.deleteSelected(); }
   deselectDecoration()             { this.decorationsEditor.deselect(); }
-  changeDecorationType(val)        { this.decorationsEditor.changeType(val); }
-  changeDecorationColor(val)       { this.decorationsEditor.changeColor(val); }
-  changeDecorationWidth(val)       { this.decorationsEditor.changeWidth(val); }
-  changeDecorationPoleHeight(val)  { this.decorationsEditor.changePoleHeight(val); }
-  changeDecorationHeading(val)     { this.decorationsEditor.changeHeading(val); }
-  changeDecorationScale(val)       { this.decorationsEditor.changeScale(val); }
-  changeDecorationMirrorX(val)     { this.decorationsEditor.changeMirrorX(val); }
-  changeDecorationMirrorZ(val)     { this.decorationsEditor.changeMirrorZ(val); }
+  changeDecorationType(id)         { this.decorationsEditor.changeType(id); }
+  changeDecorationProp(prop, val)  { this.decorationsEditor.changeProp(prop, val); }
 
   deselectAll() {
     this._clearDragHoldTimer();
@@ -1749,11 +1745,6 @@ export class EditorController {
   duplicatePolyHill()           { this.polyHillEditor.duplicatePolyHill(); }
   deselectPolyHill()            { this.polyHillEditor.deselectPoint(); }
 
-  // ── Flag Vue bridge methods ──
-  changeFlagColor(val) { this.decorationsEditor.changeColor(val); }
-  deleteFlag()         { this.decorationsEditor.deleteSelected(); }
-  duplicateFlag()      { this.decorationsEditor.duplicateSelected(); }
-
   // ── Track Sign Vue bridge methods ──
   addTrackSignEntity()         { this.trackSignEditor.addEntity(); }
   deselectTrackSign()          { this.trackSignEditor.deselect(); }
@@ -1768,15 +1759,6 @@ export class EditorController {
   changeTrackSignWidth(val) { this.trackSignEditor.changeWidth(val); }
   deleteTrackSign()            { this.trackSignEditor.deleteSelected(); }
   duplicateTrackSign()         { this.trackSignEditor.duplicateSelected(); }
-
-  // ── Banner String Vue bridge methods ──
-  addBannerStringEntity()         { this.decorationsEditor.addEntity(); }
-  deselectBannerString()          { this.decorationsEditor.deselect(); }
-  changeBannerStringWidth(val)    { this.decorationsEditor.changeWidth(val); }
-  changeBannerStringPoleHeight(val) { this.decorationsEditor.changePoleHeight(val); }
-  changeBannerStringHeading(val)  { this.decorationsEditor.changeHeading(val); }
-  deleteBannerString()            { this.decorationsEditor.deleteSelected(); }
-  duplicateBannerString()         { this.decorationsEditor.duplicateSelected(); }
 
   // ── Action Zone Vue bridge methods ──
   addActionZoneEntity()           { this.actionZoneEditor.addEntity(); }

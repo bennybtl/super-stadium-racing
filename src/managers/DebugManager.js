@@ -39,7 +39,7 @@ export class DebugManager {
     this._trackedTruck = null;  // truck whose physics box we toggled visible
     this._truck        = null;  // current player truck (for the vehicle overlay)
     this._colliderDebugMat = null;
-    this._colliderDebugState = new Map(); // mesh.uniqueId -> { mesh, isVisible, visibility, material }
+    this._colliderDebugState = new Map(); // mesh.uniqueId -> { mesh, box }
     this._bridgeDriveDebugEnabled = false;
     this._bridgeDriveDebugMat = null;
     this._bridgeDriveDebugState = new Map(); // mesh.uniqueId -> { mesh, isVisible, visibility, material }
@@ -241,13 +241,10 @@ export class DebugManager {
       this._trackedTruck = null;
     }
 
-    // Restore collision debug meshes to their original state.
+    // Tear down the collider debug boxes (the collider meshes themselves were
+    // never modified, so there's nothing to restore on them).
     for (const saved of this._colliderDebugState.values()) {
-      const mesh = saved.mesh;
-      if (!mesh || mesh.isDisposed()) continue;
-      mesh.isVisible = saved.isVisible;
-      mesh.visibility = saved.visibility;
-      mesh.material = saved.material;
+      saved.box?.dispose();
     }
     this._colliderDebugState.clear();
     this._colliderDebugMat?.dispose();
@@ -271,6 +268,15 @@ export class DebugManager {
     this._colliderDebugMat = mat;
   }
 
+  /**
+   * Draw the box that actually collides, not the collider mesh's silhouette.
+   *
+   * StaticBodyCollisionManager resolves against the mesh's *local* bounding box
+   * transformed by its world matrix (an OBB), so a tapered or irregular mesh
+   * collides as a box larger than it looks. Tinting the mesh hid that; this
+   * builds a box of the local bounds, parented to the mesh so it inherits the
+   * same transform — what you see is exactly what the truck hits.
+   */
   _updateCollisionDebugMeshes() {
     if (!this._scene) return;
     this._ensureColliderDebugMaterial();
@@ -281,34 +287,31 @@ export class DebugManager {
       mesh.isEnabled()
     );
 
-    // Add / refresh currently active colliders.
     for (const mesh of colliders) {
-      if (!this._colliderDebugState.has(mesh.uniqueId)) {
-        this._colliderDebugState.set(mesh.uniqueId, {
-          mesh,
-          isVisible: mesh.isVisible,
-          visibility: mesh.visibility,
-          material: mesh.material,
-        });
-      }
+      if (this._colliderDebugState.has(mesh.uniqueId)) continue;
 
-      mesh.isVisible = true;
-      mesh.visibility = 1;
-      mesh.material = this._colliderDebugMat;
+      const bb = mesh.getBoundingInfo().boundingBox;
+      const min = bb.minimum;
+      const max = bb.maximum;
+      const box = MeshBuilder.CreateBox(`dbgCollider_${mesh.uniqueId}`, {
+        width:  Math.max(1e-4, max.x - min.x),
+        height: Math.max(1e-4, max.y - min.y),
+        depth:  Math.max(1e-4, max.z - min.z),
+      }, this._scene);
+      box.parent = mesh;
+      box.position.set((min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2);
+      box.material = this._colliderDebugMat;
+      box.isPickable = false;
+      box.doNotSerialize = true;
+
+      this._colliderDebugState.set(mesh.uniqueId, { mesh, box });
     }
 
-    // Restore meshes that are no longer truck colliders.
+    // Drop boxes whose mesh is gone or no longer a collider.
     for (const [id, saved] of this._colliderDebugState.entries()) {
-      const mesh = saved.mesh;
-      if (!mesh || mesh.isDisposed()) {
-        this._colliderDebugState.delete(id);
-        continue;
-      }
-      if (mesh.metadata?.truckCollider === true) continue;
-
-      mesh.isVisible = saved.isVisible;
-      mesh.visibility = saved.visibility;
-      mesh.material = saved.material;
+      const { mesh, box } = saved;
+      if (mesh && !mesh.isDisposed() && mesh.metadata?.truckCollider === true) continue;
+      box?.dispose();
       this._colliderDebugState.delete(id);
     }
   }
