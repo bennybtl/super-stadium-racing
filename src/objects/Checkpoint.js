@@ -248,6 +248,13 @@ export class Checkpoint {
     } else {
       this._drawNumberedDecal(ctx, feature.checkpointNumber, this._decalLabel(feature), texW, texH);
     }
+    // Applied here rather than inside the draw helpers so the decal's world
+    // footprint is in scope — wear grain is sized in world units.
+    applyDecalWear(ctx, texW, texH, {
+      seed: feature.checkpointNumber,
+      worldWidth: decalW,
+      worldDepth: decalH,
+    });
     decalTexture.update();
 
     // Find the ground mesh to project the decal onto
@@ -318,7 +325,6 @@ export class Checkpoint {
       }
     }
 
-    applyDecalWear(ctx, texW, texH, checkpointNumber);
   }
 
   /**
@@ -362,6 +368,5 @@ export class Checkpoint {
     ctx.textBaseline = "middle";
     ctx.fillText(label, texW / 2, (sqTop + sqBottom + 20) / 2);
 
-    applyDecalWear(ctx, texW, texH, checkpointNumber);
   }
 }

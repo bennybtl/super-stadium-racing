@@ -170,43 +170,60 @@ function seededRng(seed) {
   };
 }
 
-// Wear density is tuned against this reference area and scaled to the actual
-// texture, so a wide gate decal wears at the same rate as a small arrow.
-const WEAR_REF_AREA = 512 * 512;
-const SPECKLES_PER_REF = 2500;
-const SCRATCHES_PER_REF = 60;
+// Wear is defined in WORLD units, not texture pixels. The texture is stretched
+// over the decal's footprint, so pixel-sized noise would grow with the decal;
+// sizing it in metres keeps the same grain on a 2m arrow and a 20m one.
+// Values below reproduce the original look on a 4×4 decal.
+const SPECKLES_PER_SQ_UNIT = 156;    // ≈2500 over 4×4
+const SCRATCHES_PER_SQ_UNIT = 3.75;  // ≈60 over 4×4
+const SPECKLE_R_MIN = 0.004, SPECKLE_R_RANGE = 0.035;
+const SCRATCH_W_MIN = 0.0625, SCRATCH_W_RANGE = 0.3125;
+const SCRATCH_H_MIN = 0.0156, SCRATCH_H_RANGE = 0.0625;
+// Ceilings so a very large decal can't cost a pathological number of draws.
+const MAX_SPECKLES = 12000, MAX_SCRATCHES = 400;
 
 /**
  * Punch seeded holes through whatever has been drawn, for a worn-stencil look.
  * Shared by every ground decal (checkpoint gates and surface markings alike).
  *
+ * `worldWidth`/`worldDepth` are the decal's footprint in world units; speckle
+ * size and count are derived from them so wear density is scale-independent.
+ * When the two differ, speckles are drawn as ellipses in texture space so they
+ * still land as circles on the ground.
+ *
  * Erases via destination-out, which uses only the alpha of fillStyle — so the
  * fill is forced opaque here; inheriting a caller's transparent fill would
  * silently erase nothing.
  */
-export function applyDecalWear(ctx, w, h, seed = 0) {
+export function applyDecalWear(ctx, texW, texH, { seed = 0, worldWidth = 4, worldDepth = 4 } = {}) {
   const rng = seededRng(seed);
-  const scale = (w * h) / WEAR_REF_AREA;
+  const pxX = texW / worldWidth;   // texture pixels per world unit
+  const pxY = texH / worldDepth;
+  const area = worldWidth * worldDepth;
 
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
   ctx.fillStyle = '#000';
 
   // Fine speckle dropout
-  const speckles = Math.round(SPECKLES_PER_REF * scale);
+  const speckles = Math.min(MAX_SPECKLES, Math.round(SPECKLES_PER_SQ_UNIT * area));
   for (let i = 0; i < speckles; i++) {
+    const r = rng() * SPECKLE_R_RANGE + SPECKLE_R_MIN;
     ctx.beginPath();
-    ctx.arc(rng() * w, rng() * h, rng() * 4.5 + 0.5, 0, Math.PI * 2);
+    ctx.ellipse(rng() * texW, rng() * texH, r * pxX, r * pxY, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
   // Larger worn scratches / patches
-  const scratches = Math.round(SCRATCHES_PER_REF * scale);
+  const scratches = Math.min(MAX_SCRATCHES, Math.round(SCRATCHES_PER_SQ_UNIT * area));
   for (let i = 0; i < scratches; i++) {
     ctx.save();
-    ctx.translate(rng() * w, rng() * h);
+    ctx.translate(rng() * texW, rng() * texH);
+    ctx.scale(pxX, pxY);   // draw in world units from here
     ctx.rotate(rng() * Math.PI);
-    ctx.fillRect(0, 0, rng() * 40 + 8, rng() * 8 + 2);
+    ctx.fillRect(0, 0,
+      rng() * SCRATCH_W_RANGE + SCRATCH_W_MIN,
+      rng() * SCRATCH_H_RANGE + SCRATCH_H_MIN);
     ctx.restore();
   }
 
@@ -218,11 +235,14 @@ export function applyDecalWear(ctx, w, h, seed = 0) {
  * disposal. `seed` selects the wear pattern — vary it to avoid identical
  * neighbours (it is part of the manager's material cache key).
  */
-export function createDecalTexture(scene, shape, { color = 'white', seed = 0, count = 1, outline = false, size = TEX_SIZE } = {}) {
+export function createDecalTexture(scene, shape, {
+  color = 'white', seed = 0, count = 1, outline = false,
+  worldWidth = 4, worldDepth = 4, size = TEX_SIZE,
+} = {}) {
   const tex = new DynamicTexture(`decalShape_${shape}`, { width: size, height: size }, scene);
   const ctx = tex.getContext();
   drawDecalShape(ctx, shape, size, size, { color, count, outline });
-  applyDecalWear(ctx, size, size, seed);
+  applyDecalWear(ctx, size, size, { seed, worldWidth, worldDepth });
   tex.hasAlpha = true;
   tex.update();
   return tex;

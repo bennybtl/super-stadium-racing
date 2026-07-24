@@ -125,7 +125,7 @@ export class SurfaceDecalManager {
       angle: -(angle * Math.PI) / 180,
     });
 
-    decal.material = this._getMaterial(shape, color, opacity, wearSeed(centerX, centerZ), count, outline);
+    decal.material = this._getMaterial(shape, color, opacity, wearSeed(centerX, centerZ), count, outline, width, depth);
     decal.isPickable = true;
     decal.metadata = { ...(decal.metadata ?? {}), surfaceDecal: true };
     // Lift the baked mesh a hair off the terrain so pointer picks hit the decal
@@ -136,11 +136,15 @@ export class SurfaceDecalManager {
     return decal;
   }
 
-  _getMaterial(shape, color, opacity, seed, count, outline) {
-    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}`;
+  _getMaterial(shape, color, opacity, seed, count, outline, width, depth) {
+    // Wear is baked per world size, so the footprint is part of the key. It is
+    // rounded to whole units to keep the cache from growing per slider step.
+    const worldWidth = Math.max(1, Math.round(width));
+    const worldDepth = Math.max(1, Math.round(depth));
+    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}:${worldWidth}x${worldDepth}`;
     if (this._matCache.has(key)) return this._matCache.get(key);
 
-    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline });
+    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline, worldWidth, worldDepth });
     const mat = makeDecalMaterial(this._scene, `surfaceDecalMat_${key}`, tex, opacity);
 
     this._matCache.set(key, mat);

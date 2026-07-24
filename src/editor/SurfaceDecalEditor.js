@@ -37,7 +37,7 @@ export class SurfaceDecalEditor {
     // Ghost preview mesh
     this._ghost = null;
     this._ghostMat = null;
-    this._ghostTexCache = new Map(); // "shape:count:outline:color" → DynamicTexture
+    this._ghostTexCache = new Map(); // "shape:count:outline:color:WxD" → DynamicTexture
 
     // Current stamp state
     this._shape = DECAL_SHAPES[0];
@@ -346,12 +346,18 @@ export class SurfaceDecalEditor {
 
   _updateGhostTexture() {
     if (!this._ghostMat) return;
-    const key = `${this._shape}:${this._count}:${this._outline}:${this._color}`;
+    // Wear is baked per world size, so the footprint is part of the key
+    // (rounded, matching SurfaceDecalManager._getMaterial).
+    const worldWidth = Math.max(1, Math.round(this._width));
+    const worldDepth = Math.max(1, Math.round(this._depth));
+    const key = `${this._shape}:${this._count}:${this._outline}:${this._color}:${worldWidth}x${worldDepth}`;
     if (!this._ghostTexCache.has(key)) {
       this._ghostTexCache.set(key, createDecalTexture(this._scene, this._shape, {
         color: this._color,
         count: this._count,
         outline: this._outline,
+        worldWidth,
+        worldDepth,
       }));
     }
     const tex = this._ghostTexCache.get(key);
@@ -432,6 +438,7 @@ export class SurfaceDecalEditor {
     const delta = event.deltaY > 0 ? -0.5 : 0.5;
     this._width  = Math.max(0.5, this._width  + delta);
     this._depth  = Math.max(0.5, this._depth  + delta);
+    this._updateGhostTexture();
     this._updateGhostTransform();
     this._syncStore();
   }
@@ -482,12 +489,14 @@ export class SurfaceDecalEditor {
 
   setWidth(val) {
     this._width = val;
+    this._updateGhostTexture();
     this._updateGhostTransform();
     this._syncStore();
   }
 
   setDepth(val) {
     this._depth = val;
+    this._updateGhostTexture();
     this._updateGhostTransform();
     this._syncStore();
   }
@@ -495,6 +504,7 @@ export class SurfaceDecalEditor {
   setSize(width, depth) {
     this._width = width;
     this._depth = depth;
+    this._updateGhostTexture();
     this._updateGhostTransform();
     this._syncStore();
   }
