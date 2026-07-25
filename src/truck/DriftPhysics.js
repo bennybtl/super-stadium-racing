@@ -4,8 +4,8 @@ import { tangentBasis } from "./surface-math.js";
 // ─── Grip / drift ────────────────────────────────────────────────────────────
 //
 // The per-vehicle drift-grip values — driftThreshold, gripZoneCorrection,
-// maxDriftGrip, slipDropoffRate, minSlipFactor, minDriftSpeed, and the three
-// minDriftSpeedHold* thresholds — are NOT defined here. They are derived from the
+// maxDriftGrip, slipDropoffRate, minSlipFactor, driftFadeLowSpeed and
+// driftFadeHighSpeed — are NOT defined here. They are derived from the
 // four high-level handling knobs in DriftTuning.js (resolveHandling) and written
 // onto truck state, which is their single source of truth. This file reads them
 // straight off `this.state`. The constants below are the ones DriftTuning does not
@@ -20,11 +20,19 @@ const REVERSE_GRIP_BOOST = 15;
  *  instead of just letting an existing slide decay slower. */
 const THROTTLE_BREAK_THRESHOLD_DROP = 0.6;
 
-/** How fast lateral velocity bleeds out (s⁻¹) once speed falls below the drift
- *  gate. A finite rate instead of an instant strip-to-zero — the old hard snap
- *  made the truck "catch" and jitter at the end of a slide as the drift state
- *  flip-flopped across the speed gate. ~5 ≈ gone in a third of a second. */
+/** How fast lateral velocity bleeds out (s⁻¹) at parking speeds, where the
+ *  slip-angle grip model is faded out entirely (see the drift-speed fade in
+ *  applyGripAndDrift). ~5 ≈ a slide is gone in a third of a second. */
 const LOW_SPEED_LATERAL_DAMP = 5;
+/** The same damp expressed as a per-1/60s-step removed fraction, so it can blend
+ *  directly with the grip curve's per-step scrub. */
+const LOW_SPEED_DAMP_PER_STEP = 1 - Math.exp(-LOW_SPEED_LATERAL_DAMP / 60);
+
+/** Half-width of the grip curve's C¹ blend window around driftThreshold, as a
+ *  fraction of the threshold. Inside the window the (unclamped) grip-zone taper
+ *  and drift-zone decay cross-fade; outside it the curve is exactly the pure
+ *  regimes, so existing tuning is preserved away from the boundary. */
+const GRIP_CURVE_BLEND_WIDTH = 0.5;
 
 /** Slip angle (radians) above which the truck is considered spinning out. */
 const SPINOUT_SLIP_THRESHOLD = 0.6;
@@ -60,7 +68,7 @@ export class DriftPhysics {
     this._surfaceRight = new Vector3(1, 0, 0);
   }
 
-  applyGripAndDrift(speed, forward, effectiveGrip, rearTractionFactor = 1.0, deltaTime = 1 / 60, throttleBreak = 0) {
+  applyGripAndDrift(forward, effectiveGrip, rearTractionFactor = 1.0, deltaTime = 1 / 60, throttleBreak = 0) {
     const surfaceForward = this._surfaceForward;
     const surfaceNormal = this._surfaceNormal;
     const surfaceRight = this._surfaceRight;
@@ -70,45 +78,49 @@ export class DriftPhysics {
     else surfaceNormal.set(0, 1, 0);
     tangentBasis(surfaceNormal, forward, surfaceNormal, surfaceForward, surfaceRight);
 
-    const minSpeed = this._resolveMinDriftSpeed(rearTractionFactor, throttleBreak);
+    const forwardVelocity = this.state.velocity.dot(surfaceForward);
+    const lateralSpeed = this.state.velocity.dot(surfaceRight);
+    const normalVelocity = this.state.velocity.dot(surfaceNormal);
+    // Speed in the surface plane. Both the speed gates and the slip angle use
+    // this, never the horizontal or 3D speed: mixing frames let the off-plane
+    // velocity component fake slip at crests/dips (grip snapped ~5× for a few
+    // frames), and let slopes shift the gates with no change in actual motion.
+    const tangentSpeed = Math.hypot(forwardVelocity, lateralSpeed);
 
-    if (speed <= minSpeed) {
-      // Below threshold: bleed lateral velocity out quickly (but smoothly) and
-      // clear drift state so effects don't linger. An instant strip-to-zero here
-      // caused a visible "catch" + jitter at the end of a slide.
-      const forwardVelocity = this.state.velocity.dot(surfaceForward);
-      const lateralSpeed = this.state.velocity.dot(surfaceRight);
-      const normalVelocity = this.state.velocity.dot(surfaceNormal);
-      const retainedLat = Math.exp(-LOW_SPEED_LATERAL_DAMP * deltaTime);
-      this._setSurfaceVelocity(surfaceForward, forwardVelocity, surfaceRight, lateralSpeed * retainedLat, surfaceNormal, normalVelocity);
+    // No traction correction while airborne — effectiveGrip reaches 0 when groundedness = 0
+    if (effectiveGrip <= 0) return;
+
+    if (tangentSpeed <= 1e-4) {
       this.state.slipAngle = 0;
       this.state.isDrifting = false;
       this.state.isSpinningOut = false;
       return;
     }
 
-    // No traction correction while airborne — effectiveGrip reaches 0 when groundedness = 0
-    if (effectiveGrip <= 0) return;
+    // Drift-speed fade: 0 at/below driftFadeLowSpeed (slip-angle model fully off,
+    // slides die at the fixed low-speed damp), 1 at/above driftFadeHighSpeed
+    // (grip curve fully in charge), smoothstepped in between. This one fade
+    // replaces the old hard min-speed gates, their throttle/brake/coast hold
+    // variants, and the isDrifting hysteresis that fed back into gate selection.
+    // throttleBreak drops the band so power-oversteer can slide from low speed.
+    const bandScale = 1 - throttleBreak;
+    const fadeLow = this.state.driftFadeLowSpeed * bandScale;
+    const fadeHigh = Math.max(this.state.driftFadeHighSpeed * bandScale, fadeLow + 0.1);
+    const bandT = Math.min(1, Math.max(0, (tangentSpeed - fadeLow) / (fadeHigh - fadeLow)));
+    const driftability = bandT * bandT * (3 - 2 * bandT);
 
-    const vLen = this.state.velocity.length();
-    if (vLen <= 1e-6) return;
-
-    const forwardVelocity = this.state.velocity.dot(surfaceForward);
     const isReversing = forwardVelocity < 0;
-    const lateralSpeed = this.state.velocity.dot(surfaceRight);
-    const normalVelocity = this.state.velocity.dot(surfaceNormal);
 
-    // Slip angle: angle between velocity and heading (flipped when reversing so a
-    // reversing truck reads slip relative to its actual travel direction).
-    const headingDot = forwardVelocity / vLen;
-    const targetDot = isReversing ? -headingDot : headingDot;
-    this.state.slipAngle = Math.acos(Math.max(-1, Math.min(1, targetDot)));
+    // Slip angle: angle between the in-plane velocity and heading (flipped when
+    // reversing so a reversing truck reads slip relative to its travel direction).
+    const alongTravel = isReversing ? -forwardVelocity : forwardVelocity;
+    const slipAngle = Math.atan2(Math.abs(lateralSpeed), alongTravel);
 
     // driftGrip caps drift-zone traction so any truck can break loose; power
     // oversteer drops the slip threshold so the rear lets go at a smaller angle.
     const driftGrip = Math.min(effectiveGrip, this.state.maxDriftGrip);
     const driftThresh = this.state.driftThreshold * (1 - throttleBreak * THROTTLE_BREAK_THRESHOLD_DROP);
-    const gripFactor = this._gripFactorForSlip(this.state.slipAngle, driftThresh, driftGrip);
+    const gripFactor = this._gripFactorForSlip(slipAngle, driftThresh, driftGrip);
 
     const reverseGripBoost = isReversing ? REVERSE_GRIP_BOOST : 1;
     // lateralRetention (Lateral Bias knob): <1 keeps more lateral momentum (slidey),
@@ -116,46 +128,51 @@ export class DriftPhysics {
     const lateralRetention = this.state.lateralRetention ?? 1;
     const gripMultiplier = gripFactor * reverseGripBoost * rearTractionFactor * lateralRetention * (1 - throttleBreak);
 
-    // Apply grip as lateral-only damping (longitudinal speed untouched). gripMultiplier
-    // is the fraction removed per 1/60 s step, so raise the retained fraction to the
-    // (dt·60) power to stay framerate-independent.
-    const perStepGrip = Math.min(1, Math.max(0, gripMultiplier));
-    const retained = Math.pow(1 - perStepGrip, deltaTime * 60);
+    // Apply grip as lateral-only damping (longitudinal speed untouched), blending
+    // the slip-angle curve in over the fade band. The per-step fraction is raised
+    // to the (dt·60) power to stay framerate-independent; at driftability 0 this
+    // reproduces the old below-gate exp(-LOW_SPEED_LATERAL_DAMP·dt) exactly.
+    const perStepCurve = Math.min(1, Math.max(0, gripMultiplier));
+    const perStep = LOW_SPEED_DAMP_PER_STEP + (perStepCurve - LOW_SPEED_DAMP_PER_STEP) * driftability;
+    const retained = Math.pow(1 - perStep, deltaTime * 60);
     this._setSurfaceVelocity(surfaceForward, forwardVelocity, surfaceRight, lateralSpeed * retained, surfaceNormal, normalVelocity);
 
-    this.state.isSpinningOut = this.state.slipAngle > SPINOUT_SLIP_THRESHOLD && gripMultiplier < SPINOUT_GRIP_THRESHOLD;
-    this.state.isDrifting = this.state.slipAngle > driftThresh;
+    // Publish slip faded by the band: VFX/audio key off (slipAngle − threshold),
+    // so smoke/sound and the flags all ease off toward low speed instead of the
+    // old hard state flips. The flags are read-only outputs now — nothing in the
+    // physics feeds back on them.
+    const effectiveSlip = slipAngle * driftability;
+    this.state.slipAngle = effectiveSlip;
+    this.state.isDrifting = effectiveSlip > driftThresh;
+    this.state.isSpinningOut = effectiveSlip > SPINOUT_SLIP_THRESHOLD && gripMultiplier < SPINOUT_GRIP_THRESHOLD;
   }
 
-  /** Minimum speed gate for drift, by input state. Already-drifting uses lower hold
-   *  thresholds so a slide bleeds out through grip instead of snapping off; power
-   *  oversteer (throttleBreak) drops the gate further so a low-speed throttle-and-
-   *  steer can initiate a slide. */
-  _resolveMinDriftSpeed(rearTractionFactor, throttleBreak) {
-    const isBraking    = rearTractionFactor < 0.85;
-    const isThrottling = rearTractionFactor < 1.0 && !isBraking;
-    let minSpeed;
-    if (this.state.isDrifting) {
-      if (isBraking)         minSpeed = this.state.minDriftSpeedHoldBrake;
-      else if (isThrottling) minSpeed = this.state.minDriftSpeedHoldThrottle;
-      else                   minSpeed = this.state.minDriftSpeedHoldCoast;
-    } else {
-      minSpeed = this.state.minDriftSpeed;
-    }
-    return minSpeed * (1 - throttleBreak);
-  }
-
-  /** Two-regime grip curve. Grip zone (slip ≤ thresh): linear taper from
-   *  gripZoneCorrection → driftGrip for tight, responsive cornering. Drift zone
-   *  (slip > thresh): exponential drop-off so lateral momentum carries. The taper
-   *  ends at driftGrip so the boundary is seamless. */
+  /** Two-regime grip curve, C¹-continuous. Grip zone (slip ≲ thresh): linear
+   *  taper from gripZoneCorrection → driftGrip for tight, responsive cornering.
+   *  Drift zone (slip ≳ thresh): exponential drop-off so lateral momentum
+   *  carries, floored at minSlipFactor·driftGrip. Both regimes pass through
+   *  driftGrip at the threshold, and are cross-faded (unclamped) over the blend
+   *  window, so the curve keeps its value AND slope smooth through the drift
+   *  boundary — the old piecewise version had a derivative kink exactly there,
+   *  a felt "corner" right where slides begin and end. */
   _gripFactorForSlip(slipAngle, driftThresh, driftGrip) {
-    if (slipAngle <= driftThresh) {
-      const t = slipAngle / driftThresh; // 0 straight-ahead, 1 at threshold
-      return this.state.gripZoneCorrection * (1 - t) + driftGrip * t;
+    const lo = driftThresh * (1 - GRIP_CURVE_BLEND_WIDTH);
+    const hi = driftThresh * (1 + GRIP_CURVE_BLEND_WIDTH);
+
+    let g;
+    if (slipAngle >= hi) {
+      g = driftGrip * Math.exp(-(slipAngle - driftThresh) * this.state.slipDropoffRate);
+    } else {
+      // Grip-zone taper, unclamped (pure below the window, faded out across it).
+      g = this.state.gripZoneCorrection + (driftGrip - this.state.gripZoneCorrection) * (slipAngle / driftThresh);
+      if (slipAngle > lo) {
+        const t = (slipAngle - lo) / (hi - lo);
+        const w = t * t * (3 - 2 * t);
+        const decay = driftGrip * Math.exp(-(slipAngle - driftThresh) * this.state.slipDropoffRate);
+        g += (decay - g) * w;
+      }
     }
-    const excessSlip = slipAngle - driftThresh;
-    return Math.max(this.state.minSlipFactor, Math.exp(-excessSlip * this.state.slipDropoffRate)) * driftGrip;
+    return Math.max(this.state.minSlipFactor * driftGrip, g);
   }
 
   /** Recompose velocity from its tangent-plane components (forward · normal · right). */

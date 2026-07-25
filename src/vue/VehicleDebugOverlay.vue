@@ -18,8 +18,12 @@
     <!-- Direct params -->
     <div class="mb-1 mt-3 text-[9px] uppercase tracking-[0.15em] text-slate-500">Params</div>
     <Slider label="Grip"     :value="debug.vehicle.grip"           :min="0.04" :max="0.3" :step="0.005" :digits="3" @change="v => debug.setVehicleParam('grip', v)" />
-    <Slider label="Turn"     :value="debug.vehicle.turnSpeed"       :min="2.5"  :max="5"   :step="0.1"   :digits="1" @change="v => debug.setVehicleParam('turnSpeed', v)" />
+    <Slider label="Turn"     :value="debug.vehicle.turnSpeed"       :min="3"  :max="8"   :step="0.1"   :digits="1" @change="v => debug.setVehicleParam('turnSpeed', v)" />
     <Slider label="Wt Xfer"  :value="debug.vehicle.weightTransfer"  :min="0.6"  :max="1.8" :step="0.05"  :digits="2" @change="v => debug.setVehicleParam('weightTransfer', v)" />
+    <Slider label="LowSpin"  :value="debug.vehicle.stationarySpinRate" :min="0" :max="0.7" :step="0.05" :digits="2" @change="v => debug.setVehicleParam('stationarySpinRate', v)" />
+    <Slider label="MaxSpd"   :value="debug.vehicle.maxSpeed"       :min="15" :max="50"  :step="1"     :digits="0" @change="v => debug.setVehicleParam('maxSpeed', v)" />
+    <Slider label="Accel"    :value="debug.vehicle.acceleration"   :min="5"  :max="40"  :step="1"     :digits="0" @change="v => debug.setVehicleParam('acceleration', v)" />
+    <Slider label="Brake"    :value="debug.vehicle.braking"        :min="0.5" :max="5"  :step="0.1"   :digits="1" @change="v => debug.setVehicleParam('braking', v)" />
 
     <!-- Resolved low-level readout -->
     <div class="mb-1 mt-3 text-[9px] uppercase tracking-[0.15em] text-slate-500">Resolves to</div>

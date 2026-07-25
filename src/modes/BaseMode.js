@@ -96,11 +96,9 @@ export class BaseMode {
           
           // Reset velocities
           truck.state.velocity.setAll(0);
-          truck.state.velocity.y = 0;
-          
+
           // Reset suspension state
           truck.state.suspensionCompression = 0;
-          truck.state.suspensionVelocity = 0;
         });
       }
     };

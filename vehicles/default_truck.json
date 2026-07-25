@@ -26,28 +26,5 @@
     "frontAxle":  1.5,
     "rearAxle":  -1.2
   },
-  "handling": {
-    "driftEnter": 0.55,
-    "driftMaintain": 0.45,
-    "lateralBias": 0.0,
-    "driftExit": 0.15
-  },
-  "params": {
-    "springStrength": 150,
-    "damping": 7,
-    "maxSpeed": 36,
-    "maxReverseSpeed": -10,
-    "acceleration": 23,
-    "braking": 1.5,
-    "drag": 3,
-    "turnSpeed": 4.2,
-    "grip": 0.12,
-    "weightTransfer": 1.35,
-    "stationarySpinRate": 0.1,
-    "boostCount": 5,
-    "maxBoosts": 9,
-    "boostDuration": 1.6,
-    "boostAccelMult": 2,
-    "boostSpeedMult": 1.5
-  }
+  "params": {}
 }

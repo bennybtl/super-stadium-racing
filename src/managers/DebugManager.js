@@ -4,7 +4,7 @@ import { DEFAULT_HANDLING, resolveHandling } from '../truck/DriftTuning.js';
 
 // Handling knobs and direct params surfaced in the vehicle debug overlay.
 const VEHICLE_KNOB_KEYS  = ['driftEnter', 'driftMaintain', 'lateralBias', 'driftExit'];
-const VEHICLE_PARAM_KEYS = ['grip', 'turnSpeed', 'weightTransfer'];
+const VEHICLE_PARAM_KEYS = ['grip', 'turnSpeed', 'weightTransfer', 'stationarySpinRate', 'maxSpeed', 'acceleration', 'braking'];
 
 // Maximum frames kept in the ring buffer (~20 s at 60 fps).
 const LOG_CAPACITY = 1200;
@@ -208,6 +208,10 @@ export class DebugManager {
         grip: round(v.grip, 3),
         turnSpeed: round(v.turnSpeed, 2),
         weightTransfer: round(v.weightTransfer, 2),
+        stationarySpinRate: round(v.stationarySpinRate, 2),
+        maxSpeed: round(v.maxSpeed, 1),
+        acceleration: round(v.acceleration, 1),
+        braking: round(v.braking, 2),
       },
     };
     const text = JSON.stringify(snippet, null, 2);

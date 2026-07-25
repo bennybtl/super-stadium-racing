@@ -31,7 +31,7 @@ export class GhostPlayer {
     this._root.rotationQuaternion = null;
 
     this._body = new TruckBody(this._root, scene, null, {}, vehicleDef, { ghost: true });
-    this._state = { heading: 0, velocity: new Vector3(), suspensionCompression: 0, currentRoll: 0 };
+    this._state = { heading: 0, velocity: new Vector3(), suspensionCompression: 0 };
     this._noInput = { left: false, right: false, forward: false, back: false };
   }
 

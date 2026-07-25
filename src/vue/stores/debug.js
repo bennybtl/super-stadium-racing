@@ -23,14 +23,18 @@ export const useDebugStore = defineStore('debug', () => {
   const vehicle = reactive({
     name: '-',
     // High-level handling knobs (the live-tunable interface).
-    driftEnter: 0.5,
+    driftEnter: 0.55,
     driftMaintain: 0.5,
     lateralBias: 0.0,
-    driftExit: 0.5,
+    driftExit: 0.3,
     // A few high-value params that round out the vehicle's feel.
-    grip: 0.12,
-    turnSpeed: 3.6,
-    weightTransfer: 1.35,
+    grip: 0.16,
+    turnSpeed: 5,
+    weightTransfer: 1.45,
+    stationarySpinRate: 0.35,
+    maxSpeed: 34,
+    acceleration: 18,
+    braking: 1.5,
     // Read-only: the low-level drift values the knobs currently resolve to.
     resolved: {},
   });

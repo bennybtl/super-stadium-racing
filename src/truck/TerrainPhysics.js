@@ -1,5 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT as _DEFAULT_HALF_HEIGHT, GROUNDEDNESS } from "../constants.js";
+import { normalizeOr } from "./surface-math.js";
 
 const GRAVITY    = -20;           // m/s²
 const DEG_TO_RAD = Math.PI / 180;
@@ -90,6 +91,20 @@ const ROUGHNESS = {
 // Far AI trucks use a lower cadence for full normal sampling to reduce raycast load.
 const LOW_DETAIL_NORMAL_SAMPLE_INTERVAL = 0.25;
 
+// ─── Grip-input smoothing ────────────────────────────────────────────────────
+// Raw surface samples step at slope breaks (and at the AI sample cadence), and
+// the grip model multiplies/reframes by them — so every step was a one-frame
+// traction jump. The published values are low-passed; collision response and
+// visual orientation keep using the raw values.
+
+/** Exp smoothing rate (s⁻¹) for the published state.surfaceNormal. */
+const SURFACE_NORMAL_SMOOTHING_RATE = 15;
+/** Exp smoothing rate (s⁻¹) for the returned groundedness. */
+const GROUNDEDNESS_SMOOTHING_RATE = 12;
+/** Snap-to-target band — keeps exact 0 (airborne) and 1 (grounded) endpoints,
+ *  which downstream checks like applyDrag's `groundedness <= 0` rely on. */
+const GROUNDEDNESS_SNAP_EPS = 0.01;
+
 /**
  * Handles terrain-related physics: gravity, suspension, and slope collision.
  */
@@ -115,6 +130,7 @@ export class TerrainPhysics {
     // 0 = sample terrain normal every frame. >0 = sample at fixed cadence.
     this._normalSampleInterval = Math.max(0, options?.normalSampleInterval ?? 0);
     this._normalSampleTimer = 0;
+    this._smoothedGroundedness = 0;
     this._multiProbeSurfaceSampling = options?.multiProbeSurfaceSampling === true;
     this._multiProbeHalfTrack = Math.max(0, options?.multiProbeHalfTrack ?? 0.45);
     this._multiProbeMaxLift = Math.max(0, options?.multiProbeMaxLift ?? 0.35);
@@ -157,8 +173,16 @@ export class TerrainPhysics {
       this.updateTerrainOrientation(mesh, deltaTime);
     }
 
-    // Keep state.surfaceNormal in sync so other systems (e.g. Controls) can project onto the slope.
-    this.state.surfaceNormal.copyFrom(this._lastFloorNormal);
+    // Publish the surface normal for other systems (Controls drive direction,
+    // DriftPhysics grip frame), low-passed so slope breaks re-aim the grip
+    // model over ~100 ms instead of one frame. The into-surface velocity strip
+    // below keeps using the raw normal so contact response stays exact.
+    const nf = 1 - Math.exp(-SURFACE_NORMAL_SMOOTHING_RATE * deltaTime);
+    const sn = this.state.surfaceNormal;
+    sn.x += (this._lastFloorNormal.x - sn.x) * nf;
+    sn.y += (this._lastFloorNormal.y - sn.y) * nf;
+    sn.z += (this._lastFloorNormal.z - sn.z) * nf;
+    normalizeOr(sn, 0, 1, 0);
 
     const isGrounded = groundedness > ORIENTATION.groundednessThreshold;
 
@@ -177,9 +201,19 @@ export class TerrainPhysics {
       }
     }
 
-    this._updatePitch(deltaTime, groundedness, forward, hSpeed, penetration);
+    this._updatePitch(deltaTime, forward, hSpeed, penetration);
 
-    return { groundedness, penetration };
+    // Low-pass the published groundedness. The compression path is already
+    // smooth, but the downhill-boost pass steps it to 0.8 and back, and grip /
+    // steering authority multiply by it directly. Snap inside the epsilon band
+    // so exact 0/1 endpoints survive for downstream `<= 0` airborne checks.
+    const gf = 1 - Math.exp(-GROUNDEDNESS_SMOOTHING_RATE * deltaTime);
+    this._smoothedGroundedness += (groundedness - this._smoothedGroundedness) * gf;
+    if (Math.abs(groundedness - this._smoothedGroundedness) < GROUNDEDNESS_SNAP_EPS) {
+      this._smoothedGroundedness = groundedness;
+    }
+
+    return { groundedness: this._smoothedGroundedness, penetration };
   }
 
   /**
@@ -607,7 +641,7 @@ export class TerrainPhysics {
    * Nose-up on launch, nose-down on descent, level on flat ground.
    * Flipped when reversing so it reads correctly relative to direction of travel.
    */
-  _updatePitch(deltaTime, groundedness, forward, hSpeed, penetration) {
+  _updatePitch(deltaTime, forward, hSpeed, penetration) {
     let targetPitch;
 
     // Airborne detection uses the actual ground gap, not the smoothed

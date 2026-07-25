@@ -134,7 +134,6 @@ export class Truck {
       surfaceKind: '-',
       surfaceFace: '-',
       surfaceLevel: '-',
-      bodyHeightY: 0,
     };
 
     // Visual puppet — sits on top of the invisible physics box
@@ -200,19 +199,11 @@ export class Truck {
   }
 
   createState() {
-    const bodyTransform = this.vehicleDef?.bodyTransform ?? {};
-    const bodyPosition = bodyTransform.position ?? [0, 0.66, 0.0];
-    const bodyHeightY = bodyPosition[1] ?? 0.66;
-
     const base = {
       heading: 0,
       velocity: Vector3.Zero(),
       surfaceNormal: new Vector3(0, 1, 0),
-      onGround: true,
       suspensionCompression: 0,
-      suspensionVelocity: 0,
-      targetRoll: 0,
-      currentRoll: 0,
       terrainRoll: 0,
       flightPitch: 0,
       isDrifting: false,
@@ -224,27 +215,25 @@ export class Truck {
       // Control parameters that can be tweaked for different handling characteristics
       springStrength: 150,
       damping: 7,
-      maxSpeed: 26,
+      maxSpeed: 34,
       maxReverseSpeed: -10,
       acceleration: 18,
       braking: 1.5,
-      drag: 3,
-      turnSpeed: 3.6,
-      grip: 0.12,
+      turnSpeed: 5,
+      grip: 0.145,
       // Drift-zone grip params (driftThreshold, maxDriftGrip, slipDropoffRate,
-      // minSlipFactor, gripZoneCorrection, minDriftSpeed + hold speeds, and
+      // minSlipFactor, gripZoneCorrection, the driftFade speed band, and
       // lateralRetention) are derived from the high-level `handling` knobs below
       // via resolveHandling() — see DriftTuning.js. They are not set directly.
       dragCoasting: 0.45,
-      bodyHeightY,
       // How dramatically weight shifts under acceleration/braking.
       // Higher = more understeer on throttle, more oversteer on brakes.
       // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.
-      weightTransfer: 1.35,
+      weightTransfer: 1.45,
       // Fraction of turn speed available when stationary (0 = can't spin, 1 = full rate).
       // At 0, turn rate scales with actual speed (constant turn radius, no spinning
       // on the spot); raise toward 1 for an arcade tank-turn feel. Tune per vehicle.
-      stationarySpinRate: 0,
+      stationarySpinRate: 0.35,
 
       // Boost parameters
       boostCount: 5,
@@ -387,7 +376,7 @@ export class Truck {
     const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak } = profile(
       'truck.controls.speedFactors',
       () => this.controls.calculateSpeedFactors(
-        hSpeed, terrainGripMultiplier, groundedness, input
+        hSpeed, terrainGripMultiplier, groundedness, input, deltaTime
       )
     );
     
@@ -407,7 +396,7 @@ export class Truck {
     // Apply grip and drift physics — rearTractionFactor encodes weight transfer:
     // throttle loosens rear (mild), braking unloads rear (significant).
     profile('truck.drift', () =>
-      this.driftPhysics.applyGripAndDrift(hSpeed, this._forward, effectiveGrip, rearTractionFactor, deltaTime, throttleBreak)
+      this.driftPhysics.applyGripAndDrift(this._forward, effectiveGrip, rearTractionFactor, deltaTime, throttleBreak)
     );
     
     // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)
@@ -567,7 +556,6 @@ export class Truck {
     this.mesh.rotation.y = heading;
     this.state.velocity.setAll(0);
     this.state.suspensionCompression = 0;
-    this.state.suspensionVelocity = 0;
     this.state.boostActive = false;
     this.state.boostTimer = 0;
     this.state.speedBoostActive = false;

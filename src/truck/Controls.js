@@ -26,6 +26,9 @@ const THROTTLE_BREAK_STRENGTH = 0.9;
 const LOW_SPEED_BREAK_RATIO = 0.7;
 /** Cap on how much grip the power break may remove (keep some control). */
 const MAX_THROTTLE_BREAK = 0.85;
+/** Exp smoothing rate (s⁻¹) for throttleBreak — pressing/releasing throttle
+ *  ramps the power break in/out (~63% in 125 ms) instead of stepping grip. */
+const THROTTLE_BREAK_SMOOTHING_RATE = 8;
 
 /**
  * Exponential bleed-off rate (s⁻¹) for yaw momentum once airborne. The truck
@@ -50,13 +53,22 @@ const STEER_RAMP_DOWN = 7;
 
 /** Baseline understeer at top speed (finite tire lateral force). */
 const BASE_UNDERSTEER = 0.10;
-// /** Baseline understeer at low speed */
-// This ends up making the cars too twitchy
-const BASE_OVERSTEER = 0.10;
+/** Flat steering-authority bonus. Historically this was an accidental constant
+ *  (a Math.max clamp whose lerp could never win), but it is part of the tuned
+ *  feel: every truck steers at 1.2× nominal turnSpeed before the understeer
+ *  terms subtract from it. Now explicit so it can be tuned deliberately. */
+const STEER_BASE_BONUS = 0.2;
 /** Added understeer under throttle (weight shifts rearward, front lightens). */
 const THROTTLE_UNDERSTEER_GAIN = 0.10;
 /** Oversteer under braking (weight shifts forward, rear lightens). */
 const BRAKE_OVERSTEER_GAIN = 0.15;
+/** Exp rates (s⁻¹) for weight rolling between axles. Onset is fast — a brake
+ *  tap must spike the rear unload almost immediately or the classic tap-to-
+ *  drift entry stops working (a ~100 ms tap reaches ~90% at 22/s). Settling
+ *  back on release is slower: that direction is where grip returning as a
+ *  step used to feel jarring, so it ramps instead. */
+const WEIGHT_SHIFT_ONSET_RATE = 22;
+const WEIGHT_SHIFT_SETTLE_RATE = 6;
 /** Floor on steering factor so turn-in is never fully lost. */
 const MIN_STEER_FACTOR = 0.40;
 /** Lateral-grip taper with speed, and its floor (tire limit at speed). */
@@ -84,6 +96,8 @@ export class Controls {
     this._surfaceFwd = new Vector3();
     this._yawRate = 0; // last applied heading change rate (rad/s), carried when airborne
     this._steerAmount = 0; // eased steering position, -1 (left) .. 1 (right)
+    this._throttleBreak = 0; // smoothed power-oversteer break, 0..MAX_THROTTLE_BREAK
+    this._loadShift = 0; // smoothed weight-transfer direction, -1 (front/brake) .. 1 (rear/throttle)
   }
 
   updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
@@ -288,7 +302,7 @@ export class Controls {
     return base;
   }
 
-  calculateSpeedFactors(speed, terrainGripMultiplier, groundedness, input) {
+  calculateSpeedFactors(speed, terrainGripMultiplier, groundedness, input, deltaTime = 1 / 60) {
     const speedRatio = Math.min(speed / this.state.maxSpeed, 1);
 
     // Detect acceleration state for weight-transfer model.
@@ -297,32 +311,39 @@ export class Controls {
     const isAccelerating = !!(input?.forward) && fwdSpeed >= -0.5;
     const isDecelerating = !!(input?.back)    && fwdSpeed >  0.5;
 
-    // Weight transfer → steering feel:
-    //   Throttle on  → weight shifts to rear  → front loses grip → understeer
-    //   Brake on     → weight shifts to front → rear  loses grip → oversteer
-    //   Coasting     → neutral, just a mild speed-based taper for tire limits
-    // Weight transfer magnitude scales with the vehicle's weightTransfer stat.
-    // Heavier/stiffer trucks shift weight more dramatically under load.
+    // Weight transfer:
+    //   Throttle on  → weight shifts to rear  → front loses grip → understeer,
+    //                  and drive torque can still break the rear loose (mild).
+    //   Brake on     → weight shifts to front → rear unloads → oversteer + big
+    //                  rear traction loss.
+    //   Coasting     → neutral, just the mild speed-based tapers for tire limits.
+    // One signed, smoothed load-shift value (+rear/−front) feeds BOTH the
+    // steering factor and the rear traction factor, so the steering model and
+    // the drift model cannot disagree about where the weight is; the easing
+    // rolls the load over on pedal changes instead of stepping both factors.
+    // Magnitude scales with speed and the vehicle's weightTransfer stat.
     const wt = this.state.weightTransfer ?? 1.0;
-    const baseUndersteer     = speedRatio * BASE_UNDERSTEER;
-    const throttleUndersteer = isAccelerating ? speedRatio * THROTTLE_UNDERSTEER_GAIN * wt : 0;
-    const baseOversteer      = Math.max(0.2, (1 - speedRatio) * BASE_OVERSTEER);
-    const brakeOversteer     = isDecelerating ? speedRatio * BRAKE_OVERSTEER_GAIN * wt : 0;
+    const shiftTarget = isAccelerating ? 1 : isDecelerating ? -1 : 0;
+    // Pedal pressed (or switched) → fast onset; pedals released → slow settle.
+    const shiftRate = shiftTarget === 0 ? WEIGHT_SHIFT_SETTLE_RATE : WEIGHT_SHIFT_ONSET_RATE;
+    const lsf = 1 - Math.exp(-shiftRate * deltaTime);
+    this._loadShift += (shiftTarget - this._loadShift) * lsf;
+    const load = this._loadShift * speedRatio * wt;
+    const rearLoad  = Math.max(0, load);  // rearward shift (throttle)
+    const frontLoad = Math.max(0, -load); // forward shift (braking)
 
-    const steerFactor     = Math.max(MIN_STEER_FACTOR, 1 - baseUndersteer - throttleUndersteer + brakeOversteer + baseOversteer);
+    const steerFactor = Math.max(MIN_STEER_FACTOR,
+      1 + STEER_BASE_BONUS
+        - speedRatio * BASE_UNDERSTEER
+        - rearLoad * THROTTLE_UNDERSTEER_GAIN
+        + frontLoad * BRAKE_OVERSTEER_GAIN);
     const effectiveTurnSpeed = this.state.turnSpeed * steerFactor;
 
     const lateralGripFactor = Math.max(MIN_LATERAL_GRIP_FACTOR, 1 - speedRatio * LATERAL_GRIP_SPEED_TAPER);
     const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness;
 
-    // Rear traction factor — how loaded/unloaded the rear axle is due to weight transfer.
-    // Throttle: power can break rear traction loose (mild reduction).
-    // Braking:  weight shifts forward, rear unloads significantly.
-    // These mirror the same wt/speedRatio variables used for steerFactor above,
-    // so the drift model and the steering model share one consistent weight-transfer source.
-    const throttleRearLoose = isAccelerating ? speedRatio * THROTTLE_REAR_UNLOAD * wt : 0;
-    const brakeRearLoose    = isDecelerating ? speedRatio * BRAKE_REAR_UNLOAD * wt : 0;
-    const rearTractionFactor = Math.max(MIN_REAR_TRACTION, 1.0 - throttleRearLoose - brakeRearLoose);
+    const rearTractionFactor = Math.max(MIN_REAR_TRACTION,
+      1.0 - rearLoad * THROTTLE_REAR_UNLOAD - frontLoad * BRAKE_REAR_UNLOAD);
 
     // Power oversteer / launch break: a high-power engine overwhelms tire grip
     // from low speed — strongest at a standstill and on low-grip surfaces, fading
@@ -334,10 +355,14 @@ export class Controls {
     const lowSpeedFactor = Math.max(0, 1 - speedRatio / LOW_SPEED_BREAK_RATIO);
     const surfaceLoose = Math.max(0, Math.min(1,
       SURFACE_LOOSE_GAIN / Math.max(SURFACE_LOOSE_MIN_GRIP, terrainGripMultiplier) - SURFACE_LOOSE_BIAS));
-    const throttleBreak = isAccelerating
+    const throttleBreakTarget = isAccelerating
       ? Math.min(MAX_THROTTLE_BREAK, lowSpeedFactor * surfaceLoose * THROTTLE_BREAK_STRENGTH * wt * groundedness)
       : 0;
+    // Ease toward the target so key presses/releases ramp the break instead of
+    // stepping the grip multiplier (and the drift-speed gate it also feeds).
+    const tbf = 1 - Math.exp(-THROTTLE_BREAK_SMOOTHING_RATE * deltaTime);
+    this._throttleBreak += (throttleBreakTarget - this._throttleBreak) * tbf;
 
-    return { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak };
+    return { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak: this._throttleBreak };
   }
 }
