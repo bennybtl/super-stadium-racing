@@ -44,7 +44,7 @@
     "turnSpeed": 4.6,
     "grip": 0.085,
     "weightTransfer": 1.12,
-    "stationarySpinRate": 0.65,
+    "stationarySpinRate": 0.2,
     "boostCount": 5,
     "maxBoosts": 9,
     "boostDuration": 1.2,

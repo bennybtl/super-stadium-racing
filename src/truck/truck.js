@@ -242,8 +242,9 @@ export class Truck {
       // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.
       weightTransfer: 1.35,
       // Fraction of turn speed available when stationary (0 = can't spin, 1 = full rate).
-      // Gives an arcade feel when > 0. Tune per vehicle.
-      stationarySpinRate: 0.6,
+      // At 0, turn rate scales with actual speed (constant turn radius, no spinning
+      // on the spot); raise toward 1 for an arcade tank-turn feel. Tune per vehicle.
+      stationarySpinRate: 0,
 
       // Boost parameters
       boostCount: 5,

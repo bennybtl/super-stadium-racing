@@ -42,7 +42,7 @@
     "grip": 0.15,
     "dragCoasting": 0.25,
     "weightTransfer": 1.35,
-    "stationarySpinRate": 0.6,
+    "stationarySpinRate": 0.15,
 
     "boostCount": 5,
     "maxBoosts": 9,
