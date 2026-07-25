@@ -54,6 +54,56 @@ function isPointInPolygon(x, z, points) {
   return inside;
 }
 
+// Inverse of a bilinear map: given a point (px,pz) and the four corners of a
+// (possibly non-rectangular) quad in order a=(u0,v0), b=(u1,v0), c=(u1,v1),
+// d=(u0,v1), return the {u,v} in [0,1]² that the bilinear patch maps to the
+// point, or null if the quad is degenerate. Used to sample warped mesh-grid
+// quads once control points carry per-point x/z offsets — the regular
+// divide-to-invert shortcut only works on an axis-aligned lattice.
+// Ref: Inigo Quilez, "inverse bilinear interpolation".
+function invBilinear(px, pz, ax, az, bx, bz, cx, cz, dx, dz) {
+  const ex = bx - ax, ez = bz - az;   // edge a→b  (u direction at v=0)
+  const fx = dx - ax, fz = dz - az;   // edge a→d  (v direction at u=0)
+  const gx = ax - bx + cx - dx, gz = az - bz + cz - dz; // bilinear twist
+  const hx = px - ax, hz = pz - az;
+  const cross = (ux, uz, vx, vz) => ux * vz - uz * vx;
+  const k2 = cross(gx, gz, fx, fz);
+  const k1 = cross(ex, ez, fx, fz) + cross(hx, hz, gx, gz);
+  const k0 = cross(hx, hz, ex, ez);
+
+  // Given v, recover u from h = u(e + v·g) + v·f, using whichever component has
+  // the larger denominator for numerical stability.
+  const solveU = (vv) => {
+    const denX = ex + gx * vv, denZ = ez + gz * vv;
+    if (Math.abs(denX) >= Math.abs(denZ)) {
+      return Math.abs(denX) < 1e-12 ? null : (hx - fx * vv) / denX;
+    }
+    return Math.abs(denZ) < 1e-12 ? null : (hz - fz * vv) / denZ;
+  };
+
+  let u, v;
+  if (Math.abs(k2) < 1e-9) {
+    // Parallel edges → the twist term vanishes, leaving a linear equation.
+    if (Math.abs(k1) < 1e-12) return null;
+    v = -k0 / k1;
+    u = solveU(v);
+    if (u === null) return null;
+  } else {
+    let disc = k1 * k1 - 4 * k0 * k2;
+    if (disc < 0) return null;
+    disc = Math.sqrt(disc);
+    const ik2 = 0.5 / k2;
+    v = (-k1 - disc) * ik2;
+    u = solveU(v);
+    if (u === null || u < -1e-4 || u > 1 + 1e-4 || v < -1e-4 || v > 1 + 1e-4) {
+      v = (-k1 + disc) * ik2;
+      u = solveU(v);
+      if (u === null) return null;
+    }
+  }
+  return { u, v };
+}
+
 // Per-feature cache of expanded (rounded-corner) polylines + their bounding box.
 // getHeightAt/getTerrainTypeAt run this thousands of times per editor drag; the
 // WeakMap key is the feature object, so entries are dropped automatically when a
@@ -312,8 +362,13 @@ export class Track {
           // clamp-to-edge and spread everywhere, so they cannot be skipped).
           if (feature.regional) {
             const falloff = feature.falloff ?? 0;
-            const mgBoundX = halfW + falloff;
-            const mgBoundZ = halfD + falloff;
+            let mgBoundX = halfW + falloff;
+            let mgBoundZ = halfD + falloff;
+            // Warped meshes can push edge points up to ~half a cell past the rect.
+            if (feature.offsetsX) {
+              mgBoundX += halfW / Math.max(1, cols - 1);
+              mgBoundZ += halfD / Math.max(1, rows - 1);
+            }
             if (dwx * dwx + dwz * dwz > mgBoundX * mgBoundX + mgBoundZ * mgBoundZ) break;
           }
           const angleRad = (feature.angle ?? 0) * Math.PI / 180;
@@ -345,13 +400,64 @@ export class Track {
           // out to the edge before the falloff weight blends them away.
           const sampleLx = Math.max(-halfW, Math.min(halfW, lx));
           const sampleLz = Math.max(-halfD, Math.min(halfD, lz));
-          // Fractional grid coordinate [0, cols-1] and [0, rows-1]
-          const fc = (sampleLx + halfW) * (cols - 1) / Math.max(width, 1e-6);
-          const fr = (sampleLz + halfD) * (rows - 1) / Math.max(depth, 1e-6);
-          const c0 = Math.max(0, Math.min(Math.floor(fc), cols - 2));
-          const r0 = Math.max(0, Math.min(Math.floor(fr), rows - 2));
+
+          // Locate the grid cell (c0,r0) containing the sample and the fractional
+          // position (tc,tr) within it. Heights live on a topological (r,c) grid,
+          // so the blend below is identical regardless of how the cell is found —
+          // only this world→cell inversion differs between regular and warped.
+          const offX = feature.offsetsX, offZ = feature.offsetsZ;
+          let c0, r0, tc, tr;
+          if (!offX || !offZ) {
+            // Regular lattice: invert by division (fast path, exact, unchanged).
+            const fc = (sampleLx + halfW) * (cols - 1) / Math.max(width, 1e-6);
+            const fr = (sampleLz + halfD) * (rows - 1) / Math.max(depth, 1e-6);
+            c0 = Math.max(0, Math.min(Math.floor(fc), cols - 2));
+            r0 = Math.max(0, Math.min(Math.floor(fr), rows - 2));
+            tc = fc - c0;
+            tr = fr - r0;
+          } else {
+            // Warped lattice: control points carry per-point x/z offsets, so the
+            // grid is irregular. Find the (warped) quad containing the sample and
+            // solve inverse-bilinear for (u,v). Offsets are clamped under half a
+            // cell, so the containing quad is within ±1 of the regular guess.
+            const stepX = width / (cols - 1);
+            const stepZ = depth / (rows - 1);
+            const gc = Math.max(0, Math.min(Math.floor((sampleLx + halfW) / stepX), cols - 2));
+            const gr = Math.max(0, Math.min(Math.floor((sampleLz + halfD) / stepZ), rows - 2));
+            const cornerLx = (rr, cc) => -halfW + cc * stepX + (offX[rr * cols + cc] ?? 0);
+            const cornerLz = (rr, cc) => -halfD + rr * stepZ + (offZ[rr * cols + cc] ?? 0);
+            const quadUV = (rr, cc) => invBilinear(
+              sampleLx, sampleLz,
+              cornerLx(rr,     cc),     cornerLz(rr,     cc),      // a (u0,v0)
+              cornerLx(rr,     cc + 1), cornerLz(rr,     cc + 1),  // b (u1,v0)
+              cornerLx(rr + 1, cc + 1), cornerLz(rr + 1, cc + 1),  // c (u1,v1)
+              cornerLx(rr + 1, cc),     cornerLz(rr + 1, cc),      // d (u0,v1)
+            );
+
+            let found = false;
+            for (let rr = gr - 1; rr <= gr + 1 && !found; rr++) {
+              if (rr < 0 || rr > rows - 2) continue;
+              for (let cc = gc - 1; cc <= gc + 1 && !found; cc++) {
+                if (cc < 0 || cc > cols - 2) continue;
+                const uv = quadUV(rr, cc);
+                if (uv && uv.u >= -1e-4 && uv.u <= 1 + 1e-4 &&
+                          uv.v >= -1e-4 && uv.v <= 1 + 1e-4) {
+                  c0 = cc; r0 = rr;
+                  tc = Math.max(0, Math.min(1, uv.u));
+                  tr = Math.max(0, Math.min(1, uv.v));
+                  found = true;
+                }
+              }
+            }
+            if (!found) {
+              // Heavily warped edge: fall back to the regular guess, clamped.
+              const uv = quadUV(gr, gc);
+              c0 = gc; r0 = gr;
+              tc = uv ? Math.max(0, Math.min(1, uv.u)) : 0.5;
+              tr = uv ? Math.max(0, Math.min(1, uv.v)) : 0.5;
+            }
+          }
           const c1 = c0 + 1, r1 = r0 + 1;
-          const tc = fc - c0, tr = fr - r0;
 
           // Clamped grid sample helper
           const H = (r, c) => heights[
@@ -799,7 +905,10 @@ export class Track {
         const halfW = feature.width / 2;
         const halfD = feature.depth / 2;
         const falloff = feature.falloff ?? 0;
-        const r = Math.sqrt((halfW + falloff) ** 2 + (halfD + falloff) ** 2);
+        // Warped meshes can push edge points up to ~half a cell past the rect.
+        const extraX = feature.offsetsX ? halfW / Math.max(1, feature.cols - 1) : 0;
+        const extraZ = feature.offsetsZ ? halfD / Math.max(1, feature.rows - 1) : 0;
+        const r = Math.sqrt((halfW + falloff + extraX) ** 2 + (halfD + falloff + extraZ) ** 2);
         return {
           minX: feature.centerX - r, maxX: feature.centerX + r,
           minZ: feature.centerZ - r, maxZ: feature.centerZ + r,

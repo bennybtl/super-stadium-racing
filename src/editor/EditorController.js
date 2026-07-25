@@ -466,6 +466,10 @@ export class EditorController {
       return this._createPointSelectionInteraction(this.polyCurbEditor, 'moveSelectedPoint');
     }
 
+    if (this.meshGridEditor?.selectedPoint) {
+      return this._createPointSelectionInteraction(this.meshGridEditor, 'moveSelectedPoint');
+    }
+
     return null;
   }
 
@@ -969,6 +973,7 @@ export class EditorController {
         this.polyWallEditor?.endDrag?.();
         this.polyHillEditor?.endDrag?.();
         this.polyCurbEditor?.endDrag?.();
+        this.meshGridEditor?.endDrag?.();
       }
     }
   }

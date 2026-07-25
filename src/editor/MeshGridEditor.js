@@ -169,6 +169,9 @@ export class MeshGridEditor {
       centerX: src.centerX + 10,
       centerZ: src.centerZ + 10,
       heights: [...src.heights],
+      // Break the shared references from the spread so edits don't bleed back.
+      offsetsX: src.offsetsX ? [...src.offsetsX] : undefined,
+      offsetsZ: src.offsetsZ ? [...src.offsetsZ] : undefined,
     };
     this.track.features.push(feature);
     this.activeFeature = feature;
@@ -220,6 +223,9 @@ export class MeshGridEditor {
     f.width  = newWidth;
     f.depth  = newDepth;
     f.heights = newH;
+    // Grid topology changed — per-point x/z offsets no longer map; drop them.
+    delete f.offsetsX;
+    delete f.offsetsZ;
 
     this.rebuildGizmos();
 
@@ -242,8 +248,9 @@ export class MeshGridEditor {
     const halfW = width / 2, halfD = depth / 2;
     const stepX = cols > 1 ? width / (cols - 1) : 0;
     const stepZ = rows > 1 ? depth / (rows - 1) : 0;
-    const lx = -halfW + c * stepX;
-    const lz = -halfD + r * stepZ;
+    const idx = r * cols + c;
+    const lx = -halfW + c * stepX + (feature.offsetsX?.[idx] ?? 0);
+    const lz = -halfD + r * stepZ + (feature.offsetsZ?.[idx] ?? 0);
     const a = (feature.angle ?? 0) * Math.PI / 180;
     const cosA = Math.cos(a), sinA = Math.sin(a);
     return {
@@ -406,6 +413,58 @@ export class MeshGridEditor {
     this._updateGizmoPositions();
     this._syncPointToStore();
     rebuild.terrain?.(feature);
+  }
+
+  // ─── X/Z movement (drag; called from EditorController via moveSelectedPoint) ─
+
+  /** Lazily create the per-point x/z offset arrays for a feature. */
+  _ensureOffsets(feature) {
+    const n = feature.cols * feature.rows;
+    if (!feature.offsetsX) feature.offsetsX = new Array(n).fill(0);
+    if (!feature.offsetsZ) feature.offsetsZ = new Array(n).fill(0);
+  }
+
+  /**
+   * Move the selected control point in the X/Z plane by a world-space delta.
+   * The delta is rotated into the mesh's local frame and stored as a per-point
+   * offset, clamped to under half a cell so warped quads never fold. Returns the
+   * actual applied world delta so the camera can follow, mirroring polyHill.
+   */
+  moveSelectedPoint(dx, dz) {
+    if (!this.selectedPoint) return { x: 0, z: 0 };
+    const { r, c, feature } = this.selectedPoint;
+    this.ec.saveSnapshot(true);
+    this._ensureOffsets(feature);
+
+    // World delta → local (undo the mesh rotation).
+    const a = (feature.angle ?? 0) * Math.PI / 180;
+    const cosA = Math.cos(a), sinA = Math.sin(a);
+    const ldx =  dx * cosA + dz * sinA;
+    const ldz = -dx * sinA + dz * cosA;
+
+    const idx = r * feature.cols + c;
+    const stepX = feature.cols > 1 ? feature.width / (feature.cols - 1) : 0;
+    const stepZ = feature.rows > 1 ? feature.depth / (feature.rows - 1) : 0;
+    const limX = stepX * 0.49, limZ = stepZ * 0.49;
+    const prevX = feature.offsetsX[idx], prevZ = feature.offsetsZ[idx];
+    const newX = Math.max(-limX, Math.min(limX, prevX + ldx));
+    const newZ = Math.max(-limZ, Math.min(limZ, prevZ + ldz));
+    feature.offsetsX[idx] = newX;
+    feature.offsetsZ[idx] = newZ;
+
+    this._updateGizmoPositions();
+    rebuild.terrain?.(feature);
+
+    // Report the applied (clamped) delta back in world space for camera follow.
+    const adx = newX - prevX, adz = newZ - prevZ;
+    return { x: adx * cosA - adz * sinA, z: adx * sinA + adz * cosA };
+  }
+
+  /** Force an immediate terrain + texture rebuild when the x/z drag ends. */
+  endDrag() {
+    if (!this.selectedPoint) return;
+    rebuild.terrain?.(this.selectedPoint.feature);
+    rebuild.terrainTexture?.();
   }
 
   _onWheel(event) {

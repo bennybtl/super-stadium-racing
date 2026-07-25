@@ -28,10 +28,10 @@
     "rearAxle":  -1.6
   },
   "handling": {
-    "driftEnter": 0.3,
-    "driftMaintain": 0.7,
-    "lateralBias": 0.25,
-    "driftExit": 0.1
+    "driftEnter": 0.2,
+    "driftMaintain": 0.6,
+    "lateralBias": -0.4,
+    "driftExit": 0.4
   },
   "params": {
     "springStrength": 130,
