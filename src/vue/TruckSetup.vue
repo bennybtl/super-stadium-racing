@@ -24,9 +24,10 @@
       </button>
     </div>
     <div
+      v-if="store.mode !== 'championship'"
       class="text-xs uppercase italic tracking-[0.14em] text-white">
       &nbsp;
-      <button @click="store.resetUpgrades()" 
+      <button @click="store.resetUpgrades()"
         class="w-full rounded-[10px] flex-grow border-2 border-[#444] bg-[#101010] px-3 py-1 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 hover:scale-[1.02] hover:border-white hover:text-[#ffe066]">
         RESET</button>
     </div>

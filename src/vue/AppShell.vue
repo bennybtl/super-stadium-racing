@@ -9,6 +9,7 @@
     <LoadingOverlay />
     <MenuOverlay />
     <SingleRaceOverlay />
+    <ChampionshipPodium />
     <RaceHUD />
     <DebugPanel />
     <VehicleDebugOverlay />
@@ -40,6 +41,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import MenuOverlay        from './MenuOverlay.vue';
 import LoadingOverlay     from './LoadingOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
+import ChampionshipPodium from './ChampionshipPodium.vue';
 import RaceHUD            from './RaceHUD.vue';
 import DebugPanel         from './DebugPanel.vue';
 import VehicleDebugOverlay from './VehicleDebugOverlay.vue';

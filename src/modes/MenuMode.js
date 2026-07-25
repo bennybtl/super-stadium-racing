@@ -38,7 +38,39 @@ export class MenuMode extends BaseMode {
     };
 
     menuManager.onPurchaseUpgrade = (upgradeId) => {
-      this.controller.purchaseUpgrade(upgradeId);
+      // In a cup, buys draw from the player's per-championship wallet; otherwise
+      // the free global single-race upgrades.
+      if (this.controller.inChampionship) {
+        this.controller.purchaseChampionshipUpgrade(upgradeId);
+      } else {
+        this.controller.purchaseUpgrade(upgradeId);
+      }
+    };
+
+    menuManager.onStartChampionship = () => {
+      const store = menuManager._store;
+      menuManager.gameStarted = true;
+      menuManager.hideMenu();
+      this.controller.startChampionship({
+        initials:       store.champInitials || 'AAA',
+        trackCount:     store.champTrackCount,
+        aiCount:        menuManager.selectedAIDrivers,
+        laps:           menuManager.selectedLaps,
+        aiVehicleKey:   menuManager.selectedAIVehicleType,
+        reverse:        menuManager.selectedReverse,
+        vehicleKey:     menuManager.selectedVehicle,
+        playerColorKey: menuManager.selectedPlayerColor,
+      });
+    };
+
+    menuManager.onContinueChampionship = () => {
+      this.controller.continueChampionship();
+    };
+
+    menuManager.onChampionshipExit = () => {
+      menuManager.gameStarted = false;
+      menuManager.hideMenu();
+      this.controller.exit();
     };
 
     menuManager.onStartPractice = () => {

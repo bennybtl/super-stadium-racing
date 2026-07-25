@@ -152,7 +152,7 @@ export class MenuManager {
   showPit(data) {
     this._refreshVehicleList();
     this.currentMenu = 'pit';
-    this._store.mode = 'singleRace';
+    this._store.mode = data.pitMode ?? 'singleRace';
     this._store.pitData = {
       pitMode:          data.pitMode ?? 'singleRace',
       ...data,
@@ -161,6 +161,23 @@ export class MenuManager {
     };
     this._store.upgrades = data.upgrades ?? getUpgradeCatalog({ balance: 0, ignoreBalance: true });
     this._store.screen = null;
+  }
+
+  showChampionshipSetup() {
+    this.currentMenu = 'championshipSetup';
+    this._refreshTrackList();
+    this._refreshVehicleList();
+    this._store.mode = 'championship';
+    this._store.pitData = null;
+    this._store.championshipData = null;
+    this._store.screen = 'championshipSetup';
+  }
+
+  showChampionshipPodium(data) {
+    this.currentMenu = 'championshipPodium';
+    this._store.pitData = null;
+    this._store.screen = null;
+    this._store.championshipData = data;
   }
 
   hideMenu() {
@@ -212,6 +229,10 @@ export class MenuManager {
   onPurchaseUpgrade(_id) {}
   onStartSingleRace()    {}
   onStartHotLap()        {}
+  onShowChampionshipSetup() { this.showChampionshipSetup(); }
+  onStartChampionship()     {}
+  onContinueChampionship()  {}
+  onChampionshipExit()      {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────
 

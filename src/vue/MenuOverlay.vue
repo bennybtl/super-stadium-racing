@@ -35,6 +35,7 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('practice')">Practice</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hotLap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('singleRace')">Single Race</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showChampionshipSetup()">Championship</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
@@ -96,6 +97,65 @@
           <SettingsMenu @back="store.back('start')" />
         </template>
 
+        <!-- ── Championship setup ── -->
+        <template v-else-if="store.screen === 'championshipSetup'">
+          <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066]">Championship</h2>
+          <div class="flex flex-col items-center gap-1">
+            <label class="text-xs uppercase italic tracking-[0.14em] text-slate-300">Enter Initials</label>
+            <input
+              class="w-40 rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-center text-2xl font-bold uppercase italic tracking-[0.3em] text-white focus:border-white focus:outline-none"
+              :value="store.champInitials"
+              maxlength="5"
+              placeholder="AAA"
+              @input="store.setChampInitials($event.target.value)"
+            />
+          </div>
+          <TruckSelection
+            :vehicles="store.vehicleList"
+            :selectedVehicle="store.selectedVehicle"
+            :colorOptions="colorOptions"
+            :selectedColor="store.selectedPlayerColor"
+            @update:selectedVehicle="store.selectPlayerVehicle($event)"
+            @update:selectedColor="store.selectPlayerColor($event)"
+          />
+          <div class="flex flex-row items-start justify-center gap-4">
+            <div class="flex flex-col items-center gap-1">
+              <label class="text-[10px] uppercase italic tracking-[0.14em] text-slate-400">Races</label>
+              <select
+                class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-base font-bold uppercase italic tracking-[0.1em] text-white transition hover:border-white hover:text-[#ffe066]"
+                :value="store.champTrackCount"
+                @change="store.setChampTrackCount(Number($event.target.value))"
+              >
+                <option v-for="n in [4, 5, 6, 8]" :key="n" :value="n">{{ n }} Races</option>
+              </select>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <label class="text-[10px] uppercase italic tracking-[0.14em] text-slate-400">AI Drivers</label>
+              <select
+                class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-base font-bold uppercase italic tracking-[0.1em] text-white transition hover:border-white hover:text-[#ffe066]"
+                :value="store.selectedAIDrivers"
+                @change="store.setSelectedAIDrivers(Number($event.target.value))"
+              >
+                <option v-for="n in [3, 5, 7, 9]" :key="n" :value="n">{{ n }} AI</option>
+              </select>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <label class="text-[10px] uppercase italic tracking-[0.14em] text-slate-400">Laps</label>
+              <select
+                class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-base font-bold uppercase italic tracking-[0.1em] text-white transition hover:border-white hover:text-[#ffe066]"
+                :value="store.selectedLaps"
+                @change="store.setSelectedLaps(Number($event.target.value))"
+              >
+                <option v-for="n in [1, 3, 5]" :key="n" :value="n">{{ n }} Lap{{ n > 1 ? 's' : '' }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex flex-row gap-2">
+            <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" @click="store.startChampionship()">Start Cup</button>
+          </div>
+        </template>
+
       </div>
     </div>
     </div>
@@ -109,6 +169,63 @@
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
       <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
 
+        <!-- ── Championship pit (between races) ── -->
+        <template v-if="store.pitData.pitMode === 'championship'">
+          <div class="mb-3 flex items-baseline justify-between">
+            <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066]">
+              Race {{ store.pitData.raceNumber }} / {{ store.pitData.totalRaces }}
+            </h2>
+            <div class="text-sm uppercase italic tracking-[0.14em] text-slate-300">
+              Next: <span class="text-white">{{ store.pitData.trackName }}</span>
+            </div>
+          </div>
+
+          <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.4fr]">
+            <!-- Standings -->
+            <div class="rounded-[10px] border-2 border-[#444] bg-[#101010]/80 p-3">
+              <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-slate-400">Standings</h3>
+              <table class="w-full border-collapse text-left text-xs text-slate-200">
+                <thead>
+                  <tr class="text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                    <th class="py-1 pr-2">#</th>
+                    <th class="py-1 pr-2">Driver</th>
+                    <th class="py-1 pr-2 text-right">Pts</th>
+                    <th class="py-1 text-right">Winnings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in store.pitData.standings"
+                    :key="row.id"
+                    :class="{ 'text-[#ffe066]': row.isPlayer }"
+                  >
+                    <td class="py-1 pr-2 font-semibold">{{ row.rank }}</td>
+                    <td class="py-1 pr-2">{{ row.name }}</td>
+                    <td class="py-1 pr-2 text-right">{{ row.points }}</td>
+                    <td class="py-1 text-right">${{ row.winnings.toLocaleString() }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Wallet + upgrades -->
+            <div>
+              <div class="mb-2 flex items-baseline justify-between">
+                <h3 class="text-xs uppercase italic tracking-[0.14em] text-slate-400">Upgrades</h3>
+                <div class="text-lg font-bold uppercase italic tracking-[0.1em] text-[#4ade80]">
+                  ${{ (store.pitData.balance ?? 0).toLocaleString() }}
+                </div>
+              </div>
+              <TruckSetup />
+            </div>
+          </div>
+
+          <button class="menu-button pointer-events-auto w-full px-10 py-4 text-2xl" @click="store.continueChampionship()">
+            Start Race {{ store.pitData.raceNumber }}
+          </button>
+        </template>
+
+        <template v-else>
         <div class="grid gap-3 text-left text-sm text-slate-300 mb-1" v-if="setupStep == 'selectTrack'">
           <TrackSelectionCarousel
             :tracks="store.trackList"
@@ -160,6 +277,7 @@
             Start Race
           </button>
         </div>
+        </template>
       </div>
     </div>
   </div>
@@ -220,7 +338,9 @@ function confirmEditorSave() {
 
 const colorOptions = Object.entries(basicColors).map(([key, value]) => ({ key, value }));
 function handleKeyDown(event) {
-  if (event.code === 'Escape' && store.pitData) {
+  // Don't let ESC bail out of the between-races championship pit — that would
+  // strand the active cup. The cup only exits via the final podium.
+  if (event.code === 'Escape' && store.pitData && store.pitData.pitMode !== 'championship') {
     store.back('start');
   }
 }

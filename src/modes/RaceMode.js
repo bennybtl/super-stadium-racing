@@ -37,7 +37,7 @@ export class RaceMode extends DriveMode {
     this.positionLabels = null;
   }
 
-  async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false }) {
+  async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false, championship = null }) {
     const { engine, menuManager } = this.controller;
     const totalLaps = laps || 3;
 
@@ -164,7 +164,14 @@ export class RaceMode extends DriveMode {
           dnf:             true,
         })),
       ];
-      menuManager.showSingleRaceResults({ trackKey, rows });
+      // In a championship, hand the finish order (ids, winner first) back to the
+      // cup orchestrator, which awards points/purse and drives the standings →
+      // pit → next-race flow in place of the single-race results screen.
+      if (championship?.onRaceComplete) {
+        championship.onRaceComplete(rows.map(r => r.id), { trackKey, rows });
+      } else {
+        menuManager.showSingleRaceResults({ trackKey, rows });
+      }
     };
 
     const handleDNF = () => {
@@ -185,7 +192,9 @@ export class RaceMode extends DriveMode {
     const playerVehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     this.truckAudioController = await TruckAudioController.create(audioManager, playerVehicleDef?.engineAudio);
     const playerColor = playerColorKey ? basicColors[playerColorKey]?.diffuse : null;
-    const playerUpgrades = loadPlayerUpgrades();
+    // In a championship the player drives their per-cup upgrade state (starts at
+    // stock, earned over the series); otherwise the global single-race upgrades.
+    const playerUpgrades = championship?.playerUpgrades ?? loadPlayerUpgrades();
     const playerTruck = new Truck(scene, shadows, playerColor, null, playerVehicleDef, playerUpgrades);
     playerTruck.setAudioController(this.truckAudioController);
     playerTruck.mesh.position.copyFrom(spawn0.pos);
