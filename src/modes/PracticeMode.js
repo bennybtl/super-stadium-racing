@@ -165,7 +165,7 @@ export class PracticeMode extends DriveMode {
       if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
       else uiManager.showOutOfBoundsCountdown(oobRemaining);
 
-      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
+      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));

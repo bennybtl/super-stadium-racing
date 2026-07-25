@@ -563,7 +563,7 @@ export class RaceMode extends DriveMode {
         }
       }));
 
-      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
+      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
 
       frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
       frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));

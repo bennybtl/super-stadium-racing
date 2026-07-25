@@ -30,7 +30,7 @@
     "driftEnter": 0.55,
     "driftMaintain": 0.45,
     "lateralBias": 0.0,
-    "driftExit": 0.45
+    "driftExit": 0.15
   },
   "params": {
     "springStrength": 150,

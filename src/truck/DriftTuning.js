@@ -17,9 +17,9 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const clampBias = (v) => Math.max(-1, Math.min(1, v));
 
 export const DEFAULT_HANDLING = {
-  driftEnter: 0.5,
-  driftMaintain: 0.5,
-  lateralBias: 0.0,
+  driftEnter: 0.4,
+  driftMaintain: 0.4,
+  lateralBias: -0.4,
   driftExit: 0.3,
 };
 

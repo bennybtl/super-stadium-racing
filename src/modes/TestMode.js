@@ -102,7 +102,7 @@ export class TestMode extends DriveMode {
         },
       }));
 
-      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks));
+      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
