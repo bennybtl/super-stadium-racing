@@ -401,12 +401,7 @@ export class RaceMode extends DriveMode {
       // during async scene setup, so trucks are clean when the player sees "3".
       trucks.forEach((truckData, index) => {
         const { pos, heading } = getGridSpawn(index);
-        truckData.truck.mesh.position.copyFrom(pos);
-        truckData.truck.state.heading = heading;
-        truckData.truck.mesh.rotation.y = heading;
-        truckData.truck.state.velocity = Vector3.Zero();
-        truckData.truck.state.velocity.y = 0;
-        truckData.truck.state.suspensionCompression = 0;
+        this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
       });
 
       uiManager.showCountdown('3');
@@ -438,13 +433,12 @@ export class RaceMode extends DriveMode {
 
       trucks.forEach((truckData, index) => {
         const { pos, heading } = getGridSpawn(index);
-        truckData.truck.mesh.position = pos;
-        truckData.truck.state.heading = heading;
-        truckData.truck.mesh.rotation.y = heading;
-        truckData.truck.state.velocity = Vector3.Zero();
-        truckData.truck.state.velocity.y = 0;
-        truckData.truck.state.boostActive = false;
-        truckData.truck.state.boostTimer = 0;
+        // Use the proper respawn path. teleportTo zeroes the physics body and
+        // notifyTeleport flushes the collision manager's stale previous position.
+        // A bare mesh.position assignment leaves prevPos at the truck's pre-reset
+        // spot, so the swept-AABB static-collision test drags the truck straight
+        // back onto the track the moment the game loop resumes.
+        this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
         truckData.gameState.reset();
         truckData.gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
         truckData.hasStarted = false;
