@@ -148,6 +148,19 @@ export class StaticBodyCollisionManager {
     const minZ = min.z - eZ / sz;
     const maxZ = max.z + eZ / sz;
 
+    // Wall segments are long, thin boxes (length ≫ thickness) that overlap along
+    // their length. When the truck slides alongside one, the cheapest penetration
+    // exit is often along the LENGTH axis at a seam/end — which ejects the truck
+    // down the wall and produces a normal pointing along its travel, faking a
+    // "head-on" hit and triggering the bounce/steer-lock. For such elongated
+    // colliders we treat the long horizontal axis as a glancing artifact: never
+    // resolve or bounce along it, so the truck pops out the face and keeps sliding.
+    const halfExtX = (maxX - minX) / 2;
+    const halfExtZ = (maxZ - minZ) / 2;
+    const longHorizAxis = halfExtX >= halfExtZ ? "x" : "z";
+    const isElongated =
+      Math.max(halfExtX, halfExtZ) >= 2 * Math.max(1e-6, Math.min(halfExtX, halfExtZ));
+
     // For bridge drive meshes, top-face support is provided by TerrainPhysics.
     // Ignore static-body resolution while the truck is on/above the top plane.
     if (mesh.metadata?.truckColliderIgnoreTop === true) {
@@ -198,7 +211,7 @@ export class StaticBodyCollisionManager {
       const penToMinZ = curLocal.z - minZ;
       const penToMaxZ = maxZ - curLocal.z;
 
-      const candidates = [
+      let candidates = [
         { axis: "x", side: "min", pen: penToMinX },
         { axis: "x", side: "max", pen: penToMaxX },
         { axis: "y", side: "min", pen: penToMinY },
@@ -206,6 +219,9 @@ export class StaticBodyCollisionManager {
         { axis: "z", side: "min", pen: penToMinZ },
         { axis: "z", side: "max", pen: penToMaxZ },
       ];
+
+      // Don't eject along a wall's length — resolve out the face (or top) instead.
+      if (isElongated) candidates = candidates.filter(c => c.axis !== longHorizAxis);
 
       candidates.sort((a, b) => a.pen - b.pen);
       axis = candidates[0].axis;
@@ -261,9 +277,14 @@ export class StaticBodyCollisionManager {
     const vel = truck.state.velocity;
     const velDot = vel.x * worldNormal.x + vel.y * worldNormal.y + vel.z * worldNormal.z;
     if (velDot < 0) {
+      // A hit resolved along an elongated collider's long horizontal axis is a
+      // seam/end artifact of sliding past a wall, not a real face impact — never
+      // bounce off it, no matter how aligned the velocity looks.
+      const glancingLengthHit = isElongated && axis === longHorizAxis;
+
       // Check if collision is head-on (within ±30 degrees of perpendicular)
       const velMagnitude = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
-      const isHeadOn = velMagnitude > 0 && Math.abs(velDot) / velMagnitude >= BOUNCE_ANGLE_THRESHOLD;
+      const isHeadOn = !glancingLengthHit && velMagnitude > 0 && Math.abs(velDot) / velMagnitude >= BOUNCE_ANGLE_THRESHOLD;
       
       // Apply bounce coefficient only on head-on collisions, otherwise use 1.0 (no bounce)
       const bounceCoeff = isHeadOn ? BOUNCE_COEFFICIENT : 1.0;

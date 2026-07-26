@@ -19,9 +19,9 @@
     "laneSpacing": 2,
     "pathWander": 0.7,
     "edgeSoftness": 1,
-    "secondaryPathCount": 60,
+    "secondaryPathCount": 70,
     "secondaryPathStrength": 0.8,
-    "secondaryPathSpacing": 0.04,
+    "secondaryPathSpacing": 0.05,
     "seed": 1337
   },
   "features": [
@@ -34,9 +34,14 @@
           "radius": 10
         },
         {
-          "x": -49.61648489449368,
-          "z": -51.86635764003226,
+          "x": -47.092579998537886,
+          "z": -54.524524227116416,
           "radius": 16
+        },
+        {
+          "x": -35.1027355419972,
+          "z": -27.9372642137945,
+          "radius": 10
         },
         {
           "x": -7.271034495333343,
@@ -65,8 +70,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -9.40655483411721,
-          "z": -48.40199185306912,
+          "x": -8.541604427507346,
+          "z": -49.17494676911395,
           "radius": 10
         },
         {
@@ -377,23 +382,10 @@
       "radiusX": 14.5,
       "radiusZ": 14.5,
       "angle": 0,
-      "height": 5,
-      "waterLevelOffset": 2,
+      "height": 4,
+      "waterLevelOffset": 0,
       "terrainType": "loose_dirt",
       "blendWidth": 4
-    },
-    {
-      "type": "squareHill",
-      "centerX": 2.3190210566559957,
-      "centerZ": -7.453588627944534,
-      "width": 10,
-      "depth": 18,
-      "angle": 61,
-      "waterLevelOffset": 0,
-      "transition": 3,
-      "terrainType": null,
-      "heightAtMin": 0,
-      "heightAtMax": 3
     },
     {
       "type": "checkpoint",
@@ -403,7 +395,8 @@
       "width": 19.5,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "hill",
@@ -437,7 +430,8 @@
       "width": 26.5,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -447,7 +441,8 @@
       "width": 23,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -472,12 +467,12 @@
           "z": -76.35714124258917
         },
         {
-          "x": -16.848387325233602,
-          "z": -68.66808097098378
+          "x": -15.503494215296861,
+          "z": -66.57923362947255
         },
         {
-          "x": -22.663461241408918,
-          "z": -50.267476589510366
+          "x": -23.159871077876286,
+          "z": -58.31259634898038
         },
         {
           "x": -14.07,
@@ -559,8 +554,8 @@
           "radius": 11.5
         },
         {
-          "x": -29.818459890787995,
-          "z": -26.773517294078772,
+          "x": -35.14373792332044,
+          "z": -25.280116615651867,
           "radius": 0
         }
       ],
@@ -594,9 +589,9 @@
     },
     {
       "type": "bannerString",
-      "x": -0.7749304460771933,
-      "z": -7.245769910454108,
-      "heading": 0.3665191429188092,
+      "x": -1.2749304460771933,
+      "z": -8.245769910454108,
+      "heading": 0.5061454830783556,
       "width": 32,
       "poleHeight": 14
     },
@@ -624,8 +619,8 @@
     },
     {
       "type": "flag",
-      "x": -12.08970427537604,
-      "z": -55.03380348216184,
+      "x": -11.034874365908255,
+      "z": -53.80977025606271,
       "color": "red"
     },
     {
@@ -867,6 +862,61 @@
       "heading": 0.4363323129985824,
       "scale": 1.5,
       "color": "gray"
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 56.346682106370004,
+      "z": -63.08097065964399,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 55.63137278805676,
+      "z": -1.0780094937601348,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 55.37563461172458,
+      "z": 48.03451735583249,
+      "radius": 15
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -57.75011340885895,
+      "z": 2.192916910727817,
+      "radius": 9
+    },
+    {
+      "type": "model",
+      "model": "scaffold",
+      "x": 4.01907527301397,
+      "z": -0.10002676174314828,
+      "color": "red",
+      "scale": 1.5,
+      "heading": 0.5410520681182421,
+      "width": 12,
+      "height": 4,
+      "collider": true
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -32.73309948735447,
+      "centerZ": -56.04835913059244,
+      "terrainType": "mud",
+      "width": 10,
+      "depth": 25,
+      "rotation": 6,
+      "blendWidth": 0
     }
   ]
 }
