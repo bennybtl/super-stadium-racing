@@ -67,6 +67,10 @@ export class MenuMode extends BaseMode {
       this.controller.continueChampionship();
     };
 
+    menuManager.onResumeChampionship = () => {
+      this.controller.resumeChampionship();
+    };
+
     menuManager.onChampionshipExit = () => {
       menuManager.gameStarted = false;
       menuManager.hideMenu();

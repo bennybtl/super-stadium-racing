@@ -1,5 +1,6 @@
 import { useMenuStore } from '../vue/store.js';
 import { getUpgradeCatalog } from './UpgradeStorage.js';
+import { loadActiveChampionship } from './ChampionshipStorage.js';
 
 /**
  * MenuManager – thin bridge between game logic (ModeController / modes) and
@@ -45,6 +46,8 @@ export class MenuManager {
     this.currentMenu = 'start';
     this._store.mode = null;
     this._store.pitData = null;
+    // Surface a Resume option whenever an in-progress cup is saved.
+    this._store.hasActiveChampionship = !!loadActiveChampionship();
     this._store.screen = 'start';
   }
 
@@ -167,6 +170,12 @@ export class MenuManager {
     this.currentMenu = 'championshipSetup';
     this._refreshTrackList();
     this._refreshVehicleList();
+    // Preselect a colour so the player has a visible, persisted identity even if
+    // they don't touch the swatches.
+    if (!this.selectedPlayerColor) {
+      this.selectedPlayerColor = 'red';
+      this._store.selectedPlayerColor = 'red';
+    }
     this._store.mode = 'championship';
     this._store.pitData = null;
     this._store.championshipData = null;
@@ -232,6 +241,7 @@ export class MenuManager {
   onShowChampionshipSetup() { this.showChampionshipSetup(); }
   onStartChampionship()     {}
   onContinueChampionship()  {}
+  onResumeChampionship()    {}
   onChampionshipExit()      {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────

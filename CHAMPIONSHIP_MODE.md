@@ -49,15 +49,23 @@ Active cup, one localStorage key (`championship_active`), versioned:
 ## Points & purse — one pure function
 `awardRace(finishPosition)` → `{ points, purse }`:
 
-| Place | Points | Purse    |
-|-------|--------|----------|
-| 1st   | 10     | $10,000  |
-| 2nd   | 7      | $7,000   |
-| 3rd   | 4      | $4,000   |
-| 4th   | 2      | $2,000   |
-| 5th+  | 1      | $1,000   |
+| Place | Points | Purse   |
+|-------|--------|---------|
+| 1st   | 10     | $2,000  |
+| 2nd   | 7      | $1,000  |
+| 3rd   | 4      | $500    |
+| 4th   | 2      | $250    |
+| 5th+  | 1      | $150    |
 
-Unit-testable with a node script.
+Purse amounts live in `RACE_AWARDS` in `ChampionshipStorage.js` and are tuned
+for balance; points are fixed. Unit-testable with a node script.
+
+**Nitro is a consumable that persists per driver between races.** Each cup driver
+seeds at 5 nitro; leftover `boostCount` is written back to their roster
+`nitroCount` at race end (pickups can stockpile it above the start count), and
+fed into the next race. AI upgrade state (incl. nitro) now threads into their
+trucks via `setupAIDrivers({ getAIUpgrades })`, which also lays the groundwork
+for Phase 4 AI purchasing.
 
 ## Status (updated as built)
 - ✅ **Phase 1** — `applyPurchase(upgrades, money, id)` pure economy core added to
@@ -83,14 +91,24 @@ Unit-testable with a node script.
   Builds clean; logic suites green (11 + 25). Playable end-to-end in one session.
 
 ### Known gaps / next
-- ⬜ **Refresh-resume UI** — cup state already persists (`championship_active`),
-  and `resumeChampionship()` exists, but nothing offers to resume on boot yet.
-  Add a "Resume Championship" start-menu button when `loadActiveChampionship()`
-  is non-null → show the pit for `currentRaceIndex`.
-- ⬜ **Grid order by standings** (currently player always pole).
-- ⬜ **Phase 4** AI economy (per-AI upgrades + auto-buy) — AI already accrue
-  points/money; they just don't spend yet.
-- ⬜ **Phase 5** in-race money pickups.
+- ✅ **Refresh-resume UI** — start menu shows a "Resume Championship" button
+  when `loadActiveChampionship()` is non-null (`hasActiveChampionship`, refreshed
+  in `showStartMenu`). It drops the player into the pit for the current race via
+  `ModeController.resumeChampionship()`, which clears the save if it's stale/complete.
+- ✅ **Grid order by standings** — championship races grid by current standings
+  (leader on pole) via `playerGridSlot` + `aiGridSlots` threaded into RaceMode /
+  `setupAIDrivers`; each truckData carries its `gridSlot` so pre-start respawns
+  are correct too. Camera still follows the player wherever they grid. First race
+  is tied → roster order → player on pole. (Reverse-grid is a one-line flip.)
+- ✅ **Phase 4** AI economy — per-AI upgrades thread into their trucks
+  (`getAIUpgrades`); AI earn purses and auto-buy between races via
+  `_runAIPurchasing` (nitro back to 5 first, then random affordable stat
+  upgrades). Remaining work is tuning aggressiveness, not functionality.
+- ✅ **Phase 5** in-race money pickups — `PickupManager` spawns coin pickups in
+  championship races (`enableMoney`), ~45% of spawns, valued $250/$500/$1000 by
+  the same lap tier that scales nitro (bigger payouts deeper in). Collected cash
+  tallies per driver and is added to their spendable wallet at race end (not
+  winnings). Coin visuals/model already existed in `Pickup.js`.
 
 ## Phases
 1. **Real economy (foundation).** Remove the `balance:0, ignoreBalance:true`

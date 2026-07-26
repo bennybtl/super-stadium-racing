@@ -24,6 +24,11 @@ const MAX_PICKUP_VALUE = 3;
 /** Cap on pickups active on the track at once (keeps late-race laps from flooding it). */
 const MAX_ACTIVE_PICKUPS = 6;
 
+/** Cash awarded by a money (coin) pickup, indexed by value tier (1x/2x/3x). */
+const MONEY_VALUES = [250, 500, 1000];
+/** In championship races, share of spawns that are money instead of nitro. */
+const MONEY_SPAWN_RATIO = 0.35;
+
 
 // =============================================================================
 
@@ -61,6 +66,9 @@ export class PickupManager {
 
     /** @type {import('./AudioManager.js').AudioManager|null} */
     this.audioManager = audioManager;
+
+    /** When true, some spawns are money (coin) pickups — championship only. */
+    this.enableMoney = false;
   }
 
   setAudioManager(audioManager) {
@@ -224,7 +232,7 @@ export class PickupManager {
       spawned.push(this._spawnPickup(pos, lapCount));
     }
     if (spawned.length) {
-      console.debug(`[Pickup] lap ${lapCount}: spawned ${spawned.length} (${spawned.map(p => p.value + 'x').join(', ')})`);
+      console.debug(`[Pickup] lap ${lapCount}: spawned ${spawned.length} (${spawned.map(p => p.type === 'coin' ? '$' + p.value : p.value + 'x').join(', ')})`);
     }
     return spawned;
   }
@@ -234,11 +242,24 @@ export class PickupManager {
     return this._pickups.some(p => this._pointInZone(p.position.x, p.position.z, zone));
   }
 
-  /** Create a pickup at `pos` with a lap-scaled value and track it. */
+  /**
+   * Create a pickup at `pos` with a lap-scaled value and track it. In money-
+   * enabled (championship) races a share of spawns are coins; the same lap tier
+   * that scales nitro (1x/2x/3x) maps to a cash amount ($250/$500/$1000), so
+   * bigger payouts only appear deeper into the race.
+   */
   _spawnPickup(pos, lapCount) {
-    const value = this._rollValue(lapCount);
+    const tier = this._rollValue(lapCount);
     const groundY = this._terrainQuery.heightAt(pos.x, pos.z);
-    const pickup = new Pickup(pos.x, pos.z, groundY, 'boost', this.scene, this.shadows, value);
+
+    let type = 'boost';
+    let value = tier;
+    if (this.enableMoney && Math.random() < MONEY_SPAWN_RATIO) {
+      type = 'coin';
+      value = MONEY_VALUES[tier - 1];
+    }
+
+    const pickup = new Pickup(pos.x, pos.z, groundY, type, this.scene, this.shadows, value);
     this._pickups.push(pickup);
     return pickup;
   }

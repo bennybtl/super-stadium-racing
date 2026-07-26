@@ -1,6 +1,6 @@
 import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
-import { AIDriver } from "../ai/AIDriver.js";
+import { AIDriver, AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
@@ -15,6 +15,7 @@ import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 import { RacePositionLabels } from "../managers/RacePositionLabels.js";
+import { FloatingTextManager } from "../managers/FloatingTextManager.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -35,6 +36,7 @@ export class RaceMode extends DriveMode {
     this.truckAudioController = null;
     this.telemetryRecorder = null;
     this.positionLabels = null;
+    this.floatingText = null;
   }
 
   async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false, championship = null }) {
@@ -64,6 +66,9 @@ export class RaceMode extends DriveMode {
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
+    // Money (coin) pickups only appear in championship races, where the wallet
+    // they feed actually means something.
+    pickupManager.enableMoney = !!championship;
 
     // Rebuild checkpoints with reverse flag (SceneBuilder already called createCheckpoints
     // with the default forward order; rebuild here with the race-specific direction).
@@ -118,6 +123,10 @@ export class RaceMode extends DriveMode {
     let dnfTimer       = null; // started when the first driver begins their last lap
     let raceEnded      = false;
 
+    // Cash collected from money pickups this race, per driver id. Applied to
+    // each driver's championship wallet at race end (see triggerRaceEnd meta).
+    const moneyCollected = {};
+
     // Keep a reference on `this` so teardown() can cancel an in-flight timer
     const setDnfTimer = (t) => { dnfTimer = t; this._dnfTimer = t; };
     const clearDnfTimer = () => { clearTimeout(dnfTimer); dnfTimer = null; this._dnfTimer = null; };
@@ -168,7 +177,11 @@ export class RaceMode extends DriveMode {
       // cup orchestrator, which awards points/purse and drives the standings →
       // pit → next-race flow in place of the single-race results screen.
       if (championship?.onRaceComplete) {
-        championship.onRaceComplete(rows.map(r => r.id), { trackKey, rows });
+        // Leftover nitro per driver so it carries into the next race.
+        const remainingNitro = Object.fromEntries(
+          trucks.map(td => [td.id, td.gameState.boostCount])
+        );
+        championship.onRaceComplete(rows.map(r => r.id), { trackKey, rows, remainingNitro, moneyCollected });
       } else {
         menuManager.showSingleRaceResults({ trackKey, rows });
       }
@@ -187,7 +200,10 @@ export class RaceMode extends DriveMode {
     };
 
     // -- Trucks --
-    const spawn0 = getGridSpawn(0);
+    // In a championship the starting grid is ordered by standings (leader on
+    // pole), so the player can grid anywhere; otherwise they start on pole.
+    const playerGridSlot = championship?.playerGridSlot ?? 0;
+    const spawn0 = getGridSpawn(playerGridSlot);
 
     const playerVehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;
     this.truckAudioController = await TruckAudioController.create(audioManager, playerVehicleDef?.engineAudio);
@@ -206,15 +222,28 @@ export class RaceMode extends DriveMode {
     this.telemetryRecorder = telemetryRecorder;
 
     // ── AI drivers ───────────────────────────────────────────────────────────
-    const getAIName  = (i) => `AI ${i + 1}`;
+    const getAIName  = championship?.aiNames ? (i) => championship.aiNames[i] : (i) => `AI ${i + 1}`;
     const getAIId    = (i) => `ai${i + 1}`;
     const getAISkill = (_i) => ({});
     const getAIDriver = (i) => {
+      // In a championship, each AI keeps the skill preset persisted in its roster
+      // entry; outside a cup, cycle good/ok/bad by grid slot as before.
+      if (championship?.aiSkills) {
+        const preset = AI_SKILL_PRESETS[championship.aiSkills[i]] ?? AI_SKILL_PRESETS.ok;
+        return new AIDriver(currentTrack, checkpointManager, wallManager, scene, preset);
+      }
       const slot = i % 3;
       if (slot === 0) return AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
       if (slot === 1) return AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
       return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
     };
+
+    // In a championship, AI colour/vehicle come from the persisted roster so a
+    // given AI keeps its identity race to race (indexed by ai order).
+    const getAIColorKey   = championship?.aiColorKeys   ? (i) => championship.aiColorKeys[i]   : null;
+    const getAIVehicleKey = championship?.aiVehicleKeys ? (i) => championship.aiVehicleKeys[i] : null;
+    const getAIUpgrades   = championship?.aiUpgrades    ? (i) => championship.aiUpgrades[i]    : null;
+    const getAIGridSlot   = championship?.aiGridSlots   ? (i) => championship.aiGridSlots[i]   : null;
 
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({
       count: aiCount,
@@ -230,6 +259,10 @@ export class RaceMode extends DriveMode {
       getAIId,
       getAISkill,
       getAIDriver,
+      getAIColorKey,
+      getAIVehicleKey,
+      getAIUpgrades,
+      getAIGridSlot,
       trackKey,
       aiVehicleKey,
       telemetryCheckpoints: null, // resolved below
@@ -259,6 +292,7 @@ export class RaceMode extends DriveMode {
         isPlayer: true,
         name: "Player",
         id: "player",
+        gridSlot: playerGridSlot,
         hasStarted: false,
       },
       ...aiTruckDataList,
@@ -313,6 +347,10 @@ export class RaceMode extends DriveMode {
     this.positionLabels = positionLabels;
     trucks.forEach(td => positionLabels.attach(td));
 
+    // Transient world popups ("+$500" on coin pickup).
+    const floatingText = new FloatingTextManager(scene);
+    this.floatingText = floatingText;
+
     // -- Truck collision --
     const truckCollisionManager = new TruckCollisionManager();
     const staticBodyCollisionManager = new StaticBodyCollisionManager(scene);
@@ -345,7 +383,7 @@ export class RaceMode extends DriveMode {
     // Falls back to the player's grid spawn if the race hasn't started yet.
     const respawnToLastCheckpoint = (truckData) => {
       if (!truckData.hasStarted) {
-        const { pos, heading } = getGridSpawn(truckData.isPlayer ? 0 : 1);
+        const { pos, heading } = getGridSpawn(truckData.gridSlot ?? (truckData.isPlayer ? 0 : 1));
         this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
         return;
       }
@@ -379,7 +417,7 @@ export class RaceMode extends DriveMode {
           staticBodyCollisionManager
         );
       } else {
-        const { pos, heading } = getGridSpawn(truckData.isPlayer ? 0 : 1);
+        const { pos, heading } = getGridSpawn(truckData.gridSlot ?? (truckData.isPlayer ? 0 : 1));
         this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
       }
     };
@@ -393,6 +431,16 @@ export class RaceMode extends DriveMode {
         truckData.gameState.boostCount += value;
         if (truckData.isPlayer) {
           uiManager.updateBoosts(truckData.gameState.boostCount);
+          floatingText.spawn(`+${value.toLocaleString()} nitro`, truckData.truck.mesh.position);
+        }
+        return;
+      }
+      if (type === 'coin') {
+        // Bank the cash for this driver; applied to their cup wallet at race end.
+        moneyCollected[truckData.id] = (moneyCollected[truckData.id] ?? 0) + value;
+        if (truckData.isPlayer) {
+          truckData.truck.audioController?.playReload?.();
+          floatingText.spawn(`+$${value.toLocaleString()}`, truckData.truck.mesh.position);
         }
         return;
       }
@@ -594,6 +642,7 @@ export class RaceMode extends DriveMode {
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
+      frameProfiler.measure('floatingText.update', () => floatingText.update(dt));
 
       truckStatusUiElapsedMs += dt * 1000;
       if (truckStatusUiElapsedMs >= truckStatusUiIntervalMs) {
@@ -788,7 +837,7 @@ export class RaceMode extends DriveMode {
       }));
 
       frameProfiler.measure('positions', () => {
-        if (raceStarted && !raceEnded) positionLabels.update(trucks, checkpointManager);
+        if (raceStarted && !raceEnded) positionLabels.update(trucks, checkpointManager, finishOrder);
         else positionLabels.hideAll();
       });
 
@@ -810,6 +859,10 @@ export class RaceMode extends DriveMode {
     if (this.positionLabels) {
       this.positionLabels.dispose();
       this.positionLabels = null;
+    }
+    if (this.floatingText) {
+      this.floatingText.dispose();
+      this.floatingText = null;
     }
     if (this.uiManager) {
       this.uiManager.hideAll();

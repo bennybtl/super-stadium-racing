@@ -5,6 +5,9 @@ import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
 import { HotLapMode } from "./HotLapMode.js";
 import { incrementUpgradeLevel, getUpgradeCatalog, applyPurchase } from "../managers/UpgradeStorage.js";
+import { basicColors } from "../constants.js";
+import { AI_SKILL_PRESETS } from "../ai/AIDriver.js";
+import { generateDriverNames } from "../ai/driverNames.js";
 import {
   createChampionship,
   loadActiveChampionship,
@@ -125,10 +128,7 @@ export class ModeController {
    * (`player`, `ai1..aiN`) so finish-order ids map straight onto cup drivers.
    */
   startChampionship({ initials, trackCount = 5, aiCount, laps, aiVehicleKey, reverse, vehicleKey, playerColorKey }) {
-    const drivers = [{ id: 'player', name: 'Player', isPlayer: true, vehicleKey, colorKey: playerColorKey }];
-    for (let i = 0; i < aiCount; i++) {
-      drivers.push({ id: `ai${i + 1}`, name: `AI ${i + 1}`, isPlayer: false });
-    }
+    const drivers = this._buildRoster({ aiCount, vehicleKey, playerColorKey, aiVehicleKey });
     this.championship = createChampionship({
       initials,
       calendar: this._drawCalendar(trackCount),
@@ -139,16 +139,66 @@ export class ModeController {
     return this._runChampionshipRace();
   }
 
-  /** Restore an in-progress cup after a page refresh, if one exists. */
+  /**
+   * Build the cup roster with a fixed, persisted identity per driver — a
+   * concrete colour and vehicle each. The player's colour defaults to the first
+   * palette entry if none was picked; AI take distinct colours from the rest of
+   * the palette, and a concrete vehicle (a random one per AI when the setting is
+   * 'random', resolved once here so it stays constant across the series).
+   */
+  _buildRoster({ aiCount, vehicleKey, playerColorKey, aiVehicleKey }) {
+    const colorKeys = Object.keys(basicColors);
+    const playerColor = playerColorKey ?? colorKeys[0];
+    const aiPalette = colorKeys.filter(k => k !== playerColor);
+    const vehicleKeys = window.vehicleLoader?.getVehicleList?.().map(v => v.key) ?? [vehicleKey];
+
+    const skillKeys = Object.keys(AI_SKILL_PRESETS);
+    const aiNames = generateDriverNames(aiCount);
+
+    const drivers = [{ id: 'player', name: 'Player', isPlayer: true, vehicleKey, colorKey: playerColor }];
+    for (let i = 0; i < aiCount; i++) {
+      let vk = aiVehicleKey;
+      if (!vk || vk === 'random') {
+        vk = vehicleKeys.length ? vehicleKeys[Math.floor(Math.random() * vehicleKeys.length)] : vehicleKey;
+      }
+      drivers.push({
+        id: `ai${i + 1}`,
+        name: aiNames[i],
+        isPlayer: false,
+        vehicleKey: vk,
+        colorKey: aiPalette[i % aiPalette.length],
+        // Skill preset ('good' | 'ok' | 'bad') pinned for the whole series.
+        skill: skillKeys[Math.floor(Math.random() * skillKeys.length)],
+      });
+    }
+    return drivers;
+  }
+
+  /**
+   * Restore an in-progress cup after a page refresh and drop back into the pit
+   * for the current race. The saved state always represents "at the pit, ready
+   * to run race[currentRaceIndex]", so this is the correct re-entry point.
+   * Returns false (and clears the save) if there's nothing valid to resume.
+   */
   resumeChampionship() {
-    this.championship = loadActiveChampionship();
-    return this.championship;
+    const cup = loadActiveChampionship();
+    if (!cup || isChampionshipComplete(cup)) {
+      clearActiveChampionship();
+      return false;
+    }
+    this.championship = cup;
+    this._showChampionshipPit(null);
+    return true;
   }
 
   /** Launch the current calendar race, wired to report back to the cup. */
   _runChampionshipRace() {
     const champ = this.championship;
     const player = champ.drivers.find(d => d.isPlayer);
+    const aiRoster = champ.drivers.filter(d => !d.isPlayer);
+    // Grid order = current standings (leader on pole). First race everyone is
+    // tied, so standings() keeps roster order and the player starts on pole.
+    const gridSlot = new Map(standings(champ.drivers).map((d, i) => [d.id, i]));
     this.menuManager.gameStarted = true;
     this.menuManager._store.pitData = null;
     this.menuManager.hideMenu();
@@ -162,6 +212,15 @@ export class ModeController {
       reverse:        champ.settings.reverse,
       championship: {
         playerUpgrades: player.upgrades,
+        playerGridSlot: gridSlot.get(player.id),
+        aiGridSlots:    aiRoster.map(d => gridSlot.get(d.id)),
+        // Persisted per-AI identity so colours/vehicles stay constant across the
+        // series and match the stored roster (indexed by ai1..aiN order).
+        aiNames:        aiRoster.map(d => d.name),
+        aiColorKeys:    aiRoster.map(d => d.colorKey),
+        aiVehicleKeys:  aiRoster.map(d => d.vehicleKey),
+        aiSkills:       aiRoster.map(d => d.skill),
+        aiUpgrades:     aiRoster.map(d => d.upgrades),
         onRaceComplete: (finishOrderIds, meta) => this._onChampionshipRaceComplete(finishOrderIds, meta),
       },
     });
@@ -169,12 +228,61 @@ export class ModeController {
 
   /** Award the just-finished race and route to the pit or the final podium. */
   _onChampionshipRaceComplete(finishOrderIds, meta) {
-    this.championship = applyRaceResult(this.championship, finishOrderIds);
-    saveActiveChampionship(this.championship);
+    const state = applyRaceResult(this.championship, finishOrderIds);
+    // Fold in per-driver post-race adjustments:
+    //  • leftover nitro carries into the next race (consumable, not a refill),
+    //  • cash from money pickups is added to the spendable wallet (not winnings,
+    //    which track prize money only).
+    const remaining = meta?.remainingNitro ?? {};
+    const collected = meta?.moneyCollected ?? {};
+    state.drivers = state.drivers.map(d => {
+      const next = { ...d };
+      if (remaining[d.id] != null) next.upgrades = { ...d.upgrades, nitroCount: remaining[d.id] };
+      if (collected[d.id]) next.money = d.money + collected[d.id];
+      return next;
+    });
+    this.championship = state;
     if (isChampionshipComplete(this.championship)) {
+      saveActiveChampionship(this.championship);
       this._finishChampionship(meta);
     } else {
+      // AI shop the pit before the next race (the player shops it interactively).
+      this._runAIPurchasing();
+      saveActiveChampionship(this.championship);
       this._showChampionshipPit(meta);
+    }
+  }
+
+  /**
+   * Between-races AI spending. Rule: top nitro back up to 5 first, then spend
+   * whatever's left on random affordable stat upgrades until nothing else is
+   * affordable — so AI gradually improve as their winnings allow.
+   */
+  _runAIPurchasing() {
+    const NITRO_TARGET = 5;
+    for (const d of this.championship.drivers) {
+      if (d.isPlayer) continue;
+
+      // 1. Refill nitro to the target (never sells down a pickup stockpile > 5).
+      while ((d.upgrades.nitroCount ?? 0) < NITRO_TARGET) {
+        const res = applyPurchase(d.upgrades, d.money, 'nitro');
+        if (!res.ok) break;
+        d.upgrades = res.upgrades;
+        d.money = res.money;
+      }
+
+      // 2. Spend the remainder on random affordable, non-nitro upgrades.
+      let affordable = getUpgradeCatalog({ balance: d.money, upgrades: d.upgrades })
+        .filter(u => u.id !== 'nitro' && u.affordable);
+      while (affordable.length > 0) {
+        const pick = affordable[Math.floor(Math.random() * affordable.length)];
+        const res = applyPurchase(d.upgrades, d.money, pick.id);
+        if (!res.ok) break;
+        d.upgrades = res.upgrades;
+        d.money = res.money;
+        affordable = getUpgradeCatalog({ balance: d.money, upgrades: d.upgrades })
+          .filter(u => u.id !== 'nitro' && u.affordable);
+      }
     }
   }
 

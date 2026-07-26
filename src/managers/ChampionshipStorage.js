@@ -52,7 +52,9 @@ export function createChampionship({ initials, calendar, drivers, settings = {} 
       points: 0,
       money: 0,
       winnings: 0,
-      upgrades: {},
+      // Seed the standard starting nitro pool (5). Nitro is a consumable that
+      // persists between races, so this count depletes/refills over the series.
+      upgrades: { nitroCount: 5 },
     })),
   };
 }

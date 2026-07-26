@@ -27,6 +27,8 @@ export const useMenuStore = defineStore('menu', () => {
   // Championship setup selections
   const champInitials   = ref('');
   const champTrackCount = ref(5);
+  // True when a saved in-progress cup exists (drives the Resume button).
+  const hasActiveChampionship = ref(false);
   const loadingVisible = ref(false);
   const loadingMessage = ref('Loading…');
   // Upgrades state for UI
@@ -98,6 +100,7 @@ export const useMenuStore = defineStore('menu', () => {
   function setChampTrackCount(n)   { champTrackCount.value = Number(n); }
   function startChampionship()     { mode.value = 'championship'; _bridge.value?.onStartChampionship(); }
   function continueChampionship()  { _bridge.value?.onContinueChampionship(); }
+  function resumeChampionship()    { mode.value = 'championship'; _bridge.value?.onResumeChampionship(); }
   function championshipExit()      { championshipData.value = null; mode.value = null; _bridge.value?.onChampionshipExit(); }
 
   function setLoading(visible, message = null) {
@@ -109,7 +112,7 @@ export const useMenuStore = defineStore('menu', () => {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
     selectedReverse,
     pitData, singleRaceData, championshipData, upgrades,
-    champInitials, champTrackCount,
+    champInitials, champTrackCount, hasActiveChampionship,
     loadingVisible, loadingMessage,
     setBridge,
     showEditorTrackSelect,
@@ -120,7 +123,7 @@ export const useMenuStore = defineStore('menu', () => {
     editorResume, editorSave, editorLoad, editorExit,
     settings, back, refreshTrackList,
     purchaseUpgrade, resetUpgrades, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
-    showChampionshipSetup, setChampInitials, setChampTrackCount, startChampionship, continueChampionship, championshipExit,
+    showChampionshipSetup, setChampInitials, setChampTrackCount, startChampionship, continueChampionship, resumeChampionship, championshipExit,
     setMode,
     setLoading,
   };

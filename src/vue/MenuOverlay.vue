@@ -32,6 +32,10 @@
 
         <!-- ── Start ── -->
         <template v-if="store.screen === 'start'">
+          <template v-if="store.hasActiveChampionship">
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl text-[#ffe066]" @click="store.resumeChampionship()">Resume Championship</button>
+            <hr class="my-2 opacity-60">
+          </template>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('practice')">Practice</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hotLap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('singleRace')">Single Race</button>
