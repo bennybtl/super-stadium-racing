@@ -30,7 +30,7 @@ export const UPGRADES = [
     cost: 500,
     maxLevel: 6,
     statKey: 'grip',
-    statDelta: 0.006,
+    statDelta: 0.06,
   },
   {
     id: 'suspension',
@@ -45,7 +45,7 @@ export const UPGRADES = [
     id: 'nitro',
     label: 'Nitro',
     description: 'Add a nitro boost to your stock.',
-    cost: 200,
+    cost: 100,
     statKey: null,
     statDelta: 1,
   },

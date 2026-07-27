@@ -180,7 +180,7 @@
               Race {{ store.pitData.raceNumber }} / {{ store.pitData.totalRaces }}
             </h2>
             <div class="text-sm uppercase italic tracking-[0.14em] text-slate-300">
-              Next: <span class="text-white">{{ store.pitData.trackName }}</span>
+              Next Track: <span class="text-white">{{ store.pitData.trackName }}</span>
             </div>
           </div>
 
@@ -214,13 +214,13 @@
 
             <!-- Wallet + upgrades -->
             <div>
+              <TruckSetup />
               <div class="mb-2 flex items-baseline justify-between">
-                <h3 class="text-xs uppercase italic tracking-[0.14em] text-slate-400">Upgrades</h3>
+                <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#4ade80] flex-1 text-right mr-4">Wallet</h2>
                 <div class="text-lg font-bold uppercase italic tracking-[0.1em] text-[#4ade80]">
                   ${{ (store.pitData.balance ?? 0).toLocaleString() }}
                 </div>
               </div>
-              <TruckSetup />
             </div>
           </div>
 

@@ -431,7 +431,7 @@ export class RaceMode extends DriveMode {
         truckData.gameState.boostCount += value;
         if (truckData.isPlayer) {
           uiManager.updateBoosts(truckData.gameState.boostCount);
-          floatingText.spawn(`+${value.toLocaleString()} nitro`, truckData.truck.mesh.position);
+          floatingText.spawn(`+${value.toLocaleString()} nitro${value > 1 ? 's' : ''}`, truckData.truck.mesh.position);
         }
         return;
       }

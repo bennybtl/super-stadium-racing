@@ -25,7 +25,7 @@
             :key="`name-${truck.id ?? index}`"
             class="text-center"
           >
-            <div class="truncate font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-white" :style="truckChipStyle(truck, index)">
+            <div class="truncate font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-white">
               {{ truckLabel(truck, index) }}
             </div>
           </div>
@@ -123,7 +123,7 @@ function toggleGhost() {
 }
 
 function truckLabel(truck, index) {
-  return truck?.name ?? `Truck ${index + 1}`;
+ return truck?.name ?? `Truck ${index + 1}`;
 }
 
 function toCssColor(color) {
@@ -154,8 +154,7 @@ function cellStyle(truck, index, opacity = 1, nitro = false) {
 function truckChipStyle(truck, index) {
   const color = toCssColor(truck?.color);
   return {
-    color,
-    textShadow: `0 0 10px ${color}44`,
+    color: 'white'
   };
 }
 </script>

@@ -1,5 +1,5 @@
 import { DynamicTexture } from "@babylonjs/core";
-
+import { basicColors } from "../constants";
 /**
  * decalShapes — programmatically drawn surface-decal textures.
  *
@@ -35,17 +35,21 @@ const clampCount = (n) => Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(n ?
 
 /** Draw the named shape onto a 2D canvas context sized w×h. */
 export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false } = {}) {
+  const hexColor = basicColors[color]?.diffuse.toHexString() || '#FFFFFF';
+
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
+  ctx.fillStyle = hexColor;
+  ctx.strokeStyle = hexColor;
   ctx.lineWidth = w * STROKE_RATIO;
+
+  console.log(color, hexColor);
 
   switch (shape) {
     case 'chevron':
-      drawChevrons(ctx, w, h, color, clampCount(count));
+      drawChevrons(ctx, w, h, hexColor, clampCount(count));
       break;
     case 'line':
-      drawLine(ctx, w, h, color);
+      drawLine(ctx, w, h, hexColor);
       break;
     case 'oval':
       drawOval(ctx, w, h, outline);
@@ -58,7 +62,7 @@ export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, o
       break;
     case 'arrow':
     default:
-      drawArrow(ctx, w, h, color);
+      drawArrow(ctx, w, h, hexColor);
       break;
   }
 }

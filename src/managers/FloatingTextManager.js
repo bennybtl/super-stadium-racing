@@ -5,8 +5,8 @@ import { createBillboardTextPlane, drawCenteredText } from "./billboardText.js";
 // disposes. Same billboard + DynamicTexture approach as RacePositionLabels, but
 // short-lived and animated rather than pinned to a truck.
 
-const TEX_W = 256;
-const TEX_H = 128;
+const TEX_W = 512;
+const TEX_H = 256;
 const PLANE_W = 3.0;
 const PLANE_H = 1.5;
 const RISE_SPEED = 0.5;        // world units / sec upward drift
@@ -20,7 +20,7 @@ export class FloatingTextManager {
   }
 
   /** Spawn a rising, fading text popup at (world) `position`. */
-  spawn(text, position, color = '#EFEFEF') {
+  spawn(text, position, color = '#FFFFFF') {
     const { plane, tex, mat } = createBillboardTextPlane(this.scene, {
       name: 'floatText',
       width: PLANE_W,

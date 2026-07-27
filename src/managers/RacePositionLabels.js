@@ -2,7 +2,7 @@ import { createBillboardTextPlane, drawCenteredText } from "./billboardText.js";
 
 const RANK_TEXT = { 1: '1st', 2: '2nd', 3: '3rd' };
 const RANK_COLOR = { 1: '#ffd24a', 2: '#d9d9e0', 3: '#e08a4b' };
-const TEX = 256;        // badge texture resolution
+const TEX = 320;        // badge texture resolution
 const PLANE_SIZE = 2.6; // world units
 const Y_OFFSET = 4.6;   // height above the truck's origin
 
