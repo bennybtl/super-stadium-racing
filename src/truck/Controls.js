@@ -340,7 +340,7 @@ export class Controls {
     const effectiveTurnSpeed = this.state.turnSpeed * steerFactor;
 
     const lateralGripFactor = Math.max(MIN_LATERAL_GRIP_FACTOR, 1 - speedRatio * LATERAL_GRIP_SPEED_TAPER);
-    const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness;
+    const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness * (this.state.plantedness ?? 1);
 
     const rearTractionFactor = Math.max(MIN_REAR_TRACTION,
       1.0 - rearLoad * THROTTLE_REAR_UNLOAD - frontLoad * BRAKE_REAR_UNLOAD);

@@ -206,6 +206,7 @@ export class Truck {
       velocity: Vector3.Zero(),
       surfaceNormal: new Vector3(0, 1, 0),
       suspensionCompression: 0,
+      plantedness: 1,
       terrainRoll: 0,
       flightPitch: 0,
       isDrifting: false,
@@ -452,7 +453,7 @@ export class Truck {
       const bodyDt = this._bodyUpdateAccumulator;
       this._bodyUpdateAccumulator = 0;
       profile('truck.bodyVisual', () =>
-        this.body.update(this.state, input, hSpeed, bodyDt, terrainY, groundedness, this._surfaceSampler)
+        this.body.update(this.state, input, hSpeed, bodyDt, terrainY, groundedness, this._surfaceSampler, penetration)
       );
     }
 

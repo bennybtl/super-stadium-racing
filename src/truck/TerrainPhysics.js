@@ -88,6 +88,21 @@ const ROUGHNESS = {
   vertImpulseScale: 3.6,   // max vertical velocity impulse per bump (m/s)
 };
 
+/**
+ * Traction loss from vertical bounce. The into-surface velocity strip removes
+ * only the downward component, so the chassis spring's rebound (out-of-surface)
+ * velocity survives and rings after a landing or bump — its size and decay set
+ * by the chassis springStrength/damping. Unloaded tires grip less; a stiffer,
+ * better-damped suspension settles the ring faster and regains grip sooner, so
+ * the suspension upgrade is felt directly as composure after jumps and over
+ * rough ground.
+ */
+const PLANT = {
+  vRef:      4.0,   // out-of-surface speed (m/s) at which grip loss saturates
+  minGrip:   0.35,  // grip multiplier floor while fully bouncing
+  smoothing: 12,    // s⁻¹ smoothing so grip fades/returns instead of pulsing at bounce freq
+};
+
 // Far AI trucks use a lower cadence for full normal sampling to reduce raycast load.
 const LOW_DETAIL_NORMAL_SAMPLE_INTERVAL = 0.25;
 
@@ -131,6 +146,7 @@ export class TerrainPhysics {
     this._normalSampleInterval = Math.max(0, options?.normalSampleInterval ?? 0);
     this._normalSampleTimer = 0;
     this._smoothedGroundedness = 0;
+    this._plantedness = 1;
     this._multiProbeSurfaceSampling = options?.multiProbeSurfaceSampling === true;
     this._multiProbeHalfTrack = Math.max(0, options?.multiProbeHalfTrack ?? 0.45);
     this._multiProbeMaxLift = Math.max(0, options?.multiProbeMaxLift ?? 0.35);
@@ -200,6 +216,17 @@ export class TerrainPhysics {
         this.state.velocity.z -= normal.z * vIntoSurface;
       }
     }
+
+    // Plantedness: how loaded the tires are right now. The strip above leaves
+    // the rebound (out-of-surface) velocity, so its component along the normal
+    // measures the bounce; grip fades with it and returns as the spring ring
+    // decays. Only while grounded — airborne grip is already gated by
+    // groundedness, and off-contact bounce shouldn't count.
+    const bounceSpeed = isGrounded ? Math.max(0, this.state.velocity.dot(this._lastFloorNormal)) : 0;
+    const plantTarget = isGrounded ? Math.max(PLANT.minGrip, 1 - bounceSpeed / PLANT.vRef) : 1;
+    const plf = 1 - Math.exp(-PLANT.smoothing * deltaTime);
+    this._plantedness += (plantTarget - this._plantedness) * plf;
+    this.state.plantedness = this._plantedness;
 
     this._updatePitch(deltaTime, forward, hSpeed, penetration);
 
