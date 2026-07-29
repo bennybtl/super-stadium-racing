@@ -242,6 +242,7 @@ export class MenuManager {
   onStartChampionship()     {}
   onContinueChampionship()  {}
   onResumeChampionship()    {}
+  onRetireChampionship()    {}
   onChampionshipExit()      {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────

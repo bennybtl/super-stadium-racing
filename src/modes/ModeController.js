@@ -323,6 +323,12 @@ export class ModeController {
     if (this.championship) return this._runChampionshipRace();
   }
 
+  /** Abandon the active cup and wipe its saved state (no results recorded). */
+  retireChampionship() {
+    clearActiveChampionship();
+    this.championship = null;
+  }
+
   /** Final race done: record the result, clear the cup, show the podium. */
   _finishChampionship(_meta) {
     const champ = this.championship;

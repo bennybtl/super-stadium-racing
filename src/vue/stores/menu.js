@@ -101,6 +101,7 @@ export const useMenuStore = defineStore('menu', () => {
   function startChampionship()     { mode.value = 'championship'; _bridge.value?.onStartChampionship(); }
   function continueChampionship()  { _bridge.value?.onContinueChampionship(); }
   function resumeChampionship()    { mode.value = 'championship'; _bridge.value?.onResumeChampionship(); }
+  function retireChampionship()    { mode.value = null; _bridge.value?.onRetireChampionship(); }
   function championshipExit()      { championshipData.value = null; mode.value = null; _bridge.value?.onChampionshipExit(); }
 
   function setLoading(visible, message = null) {
@@ -123,7 +124,7 @@ export const useMenuStore = defineStore('menu', () => {
     editorResume, editorSave, editorLoad, editorExit,
     settings, back, refreshTrackList,
     purchaseUpgrade, resetUpgrades, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
-    showChampionshipSetup, setChampInitials, setChampTrackCount, startChampionship, continueChampionship, resumeChampionship, championshipExit,
+    showChampionshipSetup, setChampInitials, setChampTrackCount, startChampionship, continueChampionship, resumeChampionship, retireChampionship, championshipExit,
     setMode,
     setLoading,
   };

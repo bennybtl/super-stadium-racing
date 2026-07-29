@@ -75,8 +75,17 @@
           </ul>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.resume()">Resume</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.reset()">Reset</button>
+          <button v-if="store.mode === 'championship'" class="menu-button pointer-events-auto px-10 py-4 text-2xl text-[#ff6b6b]" @click="showRetireConfirm = true">Retire Championship</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.exit()">Exit</button>
+          <ConfirmDialog
+            v-if="showRetireConfirm"
+            title="RETIRE CHAMPIONSHIP?"
+            @confirm="confirmRetire"
+            @cancel="showRetireConfirm = false"
+          >
+            This ends your championship and <b>erases its saved progress</b>. This can't be undone. Retire anyway?
+          </ConfirmDialog>
         </template>
 
         <!-- ── Editor pause ── -->
@@ -309,6 +318,12 @@ const showSafariWarning = isSafari();
 const setupStep = ref('selectTruck');
 const showSaveOverwriteConfirm = ref(false);
 const saveConflictName = ref('');
+const showRetireConfirm = ref(false);
+
+function confirmRetire() {
+  showRetireConfirm.value = false;
+  store.retireChampionship();
+}
 
 function getSaveKey() {
   const selectedTrack = window.menuManager?.selectedTrack;

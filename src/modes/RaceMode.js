@@ -541,6 +541,16 @@ export class RaceMode extends DriveMode {
       this.controller.exit();
     };
 
+    // Retire (pause menu, championship only): wipe the saved cup, then take the
+    // same teardown-to-menu path as Exit.
+    menuManager.onRetireChampionship = () => {
+      this.controller.retireChampionship();
+      resetGame();
+      menuManager.gameStarted = false;
+      menuManager.hideMenu();
+      this.controller.exit();
+    };
+
     // Pre-filter 'slowZone' action zones for per-frame position checks
     const slowZones = this.getSlowZones(currentTrack);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);

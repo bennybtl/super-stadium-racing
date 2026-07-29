@@ -489,6 +489,7 @@ export class TruckBody {
     } else {
       if (this._airborneVy < -LAND.minImpactSpeed) {
         this._dyn.heave.v -= Math.min(LAND.maxKick, -this._airborneVy * LAND.kickPerSpeed);
+        if (!this._ghost) console.log(`[LANDING] t=${performance.now().toFixed(0)}ms impact=${(-this._airborneVy).toFixed(1)}m/s pen=${penetration.toFixed(2)}`);
       }
       this._airborneVy = 0;
     }
