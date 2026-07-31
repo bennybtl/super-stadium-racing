@@ -1,8 +1,8 @@
 {
   "id": "default_truck",
-  "name": "2WD Truck",
+  "name": "Baja",
   "engineAudio": "v8",
-  "modelFile": "truck-assembly-v2.obj",
+  "modelFile": "Baja.obj",
   "defaultColor": [0.8, 0.2, 0.1],
   "meshColors": {
     "Body1": [0,0,0],

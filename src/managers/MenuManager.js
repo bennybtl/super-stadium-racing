@@ -1,5 +1,6 @@
 import { useMenuStore } from '../vue/store.js';
 import { getUpgradeCatalog } from './UpgradeStorage.js';
+import { loadActiveChampionship } from './ChampionshipStorage.js';
 
 /**
  * MenuManager – thin bridge between game logic (ModeController / modes) and
@@ -45,6 +46,8 @@ export class MenuManager {
     this.currentMenu = 'start';
     this._store.mode = null;
     this._store.pitData = null;
+    // Surface a Resume option whenever an in-progress cup is saved.
+    this._store.hasActiveChampionship = !!loadActiveChampionship();
     this._store.screen = 'start';
   }
 
@@ -152,7 +155,7 @@ export class MenuManager {
   showPit(data) {
     this._refreshVehicleList();
     this.currentMenu = 'pit';
-    this._store.mode = 'singleRace';
+    this._store.mode = data.pitMode ?? 'singleRace';
     this._store.pitData = {
       pitMode:          data.pitMode ?? 'singleRace',
       ...data,
@@ -161,6 +164,29 @@ export class MenuManager {
     };
     this._store.upgrades = data.upgrades ?? getUpgradeCatalog({ balance: 0, ignoreBalance: true });
     this._store.screen = null;
+  }
+
+  showChampionshipSetup() {
+    this.currentMenu = 'championshipSetup';
+    this._refreshTrackList();
+    this._refreshVehicleList();
+    // Preselect a colour so the player has a visible, persisted identity even if
+    // they don't touch the swatches.
+    if (!this.selectedPlayerColor) {
+      this.selectedPlayerColor = 'red';
+      this._store.selectedPlayerColor = 'red';
+    }
+    this._store.mode = 'championship';
+    this._store.pitData = null;
+    this._store.championshipData = null;
+    this._store.screen = 'championshipSetup';
+  }
+
+  showChampionshipPodium(data) {
+    this.currentMenu = 'championshipPodium';
+    this._store.pitData = null;
+    this._store.screen = null;
+    this._store.championshipData = data;
   }
 
   hideMenu() {
@@ -212,6 +238,12 @@ export class MenuManager {
   onPurchaseUpgrade(_id) {}
   onStartSingleRace()    {}
   onStartHotLap()        {}
+  onShowChampionshipSetup() { this.showChampionshipSetup(); }
+  onStartChampionship()     {}
+  onContinueChampionship()  {}
+  onResumeChampionship()    {}
+  onRetireChampionship()    {}
+  onChampionshipExit()      {}
 
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────
 

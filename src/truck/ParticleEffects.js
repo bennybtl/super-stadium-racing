@@ -290,7 +290,18 @@ export class ParticleEffects {
     if (speed > 0.5) {
       const driftIntensity = Math.max(0, state.slipAngle - state.driftThreshold);
       const spinoutBoost = state.isSpinningOut ? 2.0 : 1.0;
-      this.driftParticles.emitRate = driftIntensity * 300 * effectiveScale * spinoutBoost;
+      const driftRate = driftIntensity * 300 * effectiveScale * spinoutBoost;
+
+      // Light dust kicked up just from cruising over loose surfaces — a much
+      // gentler version of the drift smoke. Each terrain sets its own
+      // dustIntensity (0 = none, e.g. paved asphalt); water and mud lean on
+      // their dedicated spray systems instead.
+      const dustIntensity = terrain?.dustIntensity ?? 0;
+      const cruiseRate = isGrounded
+        ? Math.min(speed, 12) * 30 * dustIntensity * effectiveScale
+        : 0;
+
+      this.driftParticles.emitRate = Math.max(driftRate, cruiseRate);
     } else {
       this.driftParticles.emitRate = 0;
     }

@@ -160,13 +160,15 @@ export class Truck {
         // Suspension upgrades both spring strength and damping
         state.springStrength += 20 * level;
         state.damping        += 1.5 * level;
-        state.turnSpeed       += 0.1 * level;
+        state.turnSpeed       += 0.2 * level;
+        state.lateralBias     -= 0.025 * level; // reduces sliding
         state.weightTransfer    -= 0.05 * level;
       } else if (upgrade.id === 'grip') {
         // Grip upgrades add a flat multiplier to the grip stat rather than scaling it,
         // so that it remains effective even with terrain modifiers and at high speeds.
         state.grip += upgrade.statDelta * level;
-        state.turnSpeed       += 0.1 * level;
+        state.turnSpeed       += 0.3 * level;
+        state.lateralBias     -= 0.025 * level;  // reduces sliding
         state.driftThreshold  -= 0.01 * level;
       } else if (upgrade.statKey) {
         state[upgrade.statKey] += upgrade.statDelta * level;
@@ -204,6 +206,7 @@ export class Truck {
       velocity: Vector3.Zero(),
       surfaceNormal: new Vector3(0, 1, 0),
       suspensionCompression: 0,
+      plantedness: 1,
       terrainRoll: 0,
       flightPitch: 0,
       isDrifting: false,
@@ -450,7 +453,7 @@ export class Truck {
       const bodyDt = this._bodyUpdateAccumulator;
       this._bodyUpdateAccumulator = 0;
       profile('truck.bodyVisual', () =>
-        this.body.update(this.state, input, hSpeed, bodyDt, terrainY, groundedness, this._surfaceSampler)
+        this.body.update(this.state, input, hSpeed, bodyDt, terrainY, groundedness, this._surfaceSampler, penetration)
       );
     }
 

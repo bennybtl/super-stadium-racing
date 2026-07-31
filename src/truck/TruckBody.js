@@ -27,10 +27,32 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
  *          gain = target deflection per m/s² of accel; max = clamp on deflection.
  */
 const BODY_DYN = {
-  heave: { freq: 1.8, damping: 0.35, gain: 0.0080, max: 0.25 }, // units
-  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.28 }, // radians
-  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.34 }, // radians
+  heave: { freq: 1.8, damping: 0.30, gain: 0.0090, max: 0.24 }, // units
+  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.24 }, // radians
+  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.30 }, // radians
   maxDt: 1 / 30, // clamp per-substep dt so a frame spike can't destabilise a spring
+};
+
+/**
+ * Landing bounce. The accel-driven heaveTarget above can't catch a landing on
+ * its own: the impact is a ~1-frame velocity kill (a one-frame target barely
+ * moves an underdamped spring). So on the airborne→grounded transition we kick
+ * the heave spring's velocity directly by the captured descent speed — the
+ * spring turns that into a squat + rebound.
+ *
+ * The kick fires on the velocity arrest — the frame the fall is killed — not on
+ * a fixed penetration threshold. The chassis is often caught ~0.3 m up (velocity
+ * and downhill groundedness inflate the contact response), then eases in the
+ * last stretch over several frames; waiting for a gap threshold there lags the
+ * bounce ~130 ms behind the visible impact. Groundedness is avoided entirely: it
+ * smooths/collapses too slowly to time a hard landing.
+ */
+const LAND = {
+  contactGap:     0.20,  // gap below terrain (m) beyond which we track the fall speed
+  minImpactSpeed: 1.0,   // min downward speed (m/s) to produce a bounce
+  arrestFraction: 0.5,   // fire once the fall decelerates past this fraction of its peak
+  kickPerSpeed:   1.0,   // heave-velocity kick per m/s of impact speed
+  maxKick:        7.5,   // clamp on the heave-velocity kick
 };
 
 /**
@@ -143,6 +165,7 @@ export class TruckBody {
     };
     this._lastVx = 0; this._lastVy = 0; this._lastVz = 0; // prev chassis velocity
     this._dynInit = false;   // seed velocity on first frame before deriving accel
+    this._airborneVy = 0;    // deepest downward chassis speed seen while airborne (0 = grounded)
     this._contactShadow = null;
     this._contactShadowMat = null;
     this._contactShadowTex = null;
@@ -343,7 +366,7 @@ export class TruckBody {
    * @param {number}  speed   - current speed (units/s)
    * @param {number}  dt      - delta time (s)
    */
-  update(state, input, speed, dt, terrainY = null, groundedness = 0, sampleSurfaceY = null) {
+  update(state, input, speed, dt, terrainY = null, groundedness = 0, sampleSurfaceY = null, penetration = null) {
     // When the physics box dips below the terrain surface, push the wheel root
     // fully above ground so the wheels stay planted. The body's own vertical
     // motion is handled by the sprung-mass dynamics below, not this correction.
@@ -374,7 +397,7 @@ export class TruckBody {
     // Body sprung-mass dynamics — heave/pitch/roll relative to the chassis.
     // (Wheels stay on _wheelRoot, which only follows the terrain, so the body
     // leans and bobs over planted wheels like real suspension.)
-    this._updateBodyDynamics(state, groundedness, dt);
+    this._updateBodyDynamics(state, groundedness, dt, penetration);
 
     let sampledWheelBaseY = this._hasWheelSamples ? this._sampledWheelBaseY : null;
     if (sampleSurfaceY && groundedness >= this._wheelFollowMinGroundedness) {
@@ -424,7 +447,7 @@ export class TruckBody {
    * truck-local forward/right/up, and faded by groundedness (weight transfer
    * only acts through the contact patch — no dive/lean/bob while airborne).
    */
-  _updateBodyDynamics(state, groundedness, dt) {
+  _updateBodyDynamics(state, groundedness, dt, penetration = null) {
     const v = state.velocity;
     if (!v || !(dt > 0)) return;
 
@@ -456,6 +479,23 @@ export class TruckBody {
     const heaveTarget = g * clamp(-H.gain * ay,        -H.max, H.max);
     const pitchTarget = g * clamp(-P.gain * fwdAccel,  -P.max, P.max);
     const rollTarget  = g * clamp(R.gain * rightAccel, -R.max, R.max);
+
+    // Landing bounce: while there's a real gap under the truck, track the
+    // deepest downward speed. Then kick the heave spring the instant that fall
+    // is arrested — the true impact — rather than when penetration later creeps
+    // past a fixed contact threshold. The strip can catch the truck ~0.3 m up
+    // (velocity/downhill groundedness), after which the box eases the last
+    // stretch in over ~8 frames; keying off the arrest skips that visible lag.
+    // Chassis slammed up → body squats down → negative heave velocity.
+    if (penetration !== null) {
+      if (penetration < -LAND.contactGap && v.y < 0 && v.y < this._airborneVy) {
+        this._airborneVy = v.y;
+      }
+      if (this._airborneVy < -LAND.minImpactSpeed && v.y > this._airborneVy * LAND.arrestFraction) {
+        this._dyn.heave.v -= Math.min(LAND.maxKick, -this._airborneVy * LAND.kickPerSpeed);
+        this._airborneVy = 0;
+      }
+    }
 
     this._integrateDof(this._dyn.heave, heaveTarget, H, dt);
     this._integrateDof(this._dyn.pitch, pitchTarget, P, dt);

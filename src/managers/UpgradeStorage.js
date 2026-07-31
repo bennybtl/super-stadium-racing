@@ -30,7 +30,7 @@ export const UPGRADES = [
     cost: 500,
     maxLevel: 6,
     statKey: 'grip',
-    statDelta: 0.006,
+    statDelta: 0.06,
   },
   {
     id: 'suspension',
@@ -45,7 +45,7 @@ export const UPGRADES = [
     id: 'nitro',
     label: 'Nitro',
     description: 'Add a nitro boost to your stock.',
-    cost: 200,
+    cost: 100,
     statKey: null,
     statDelta: 1,
   },
@@ -87,6 +87,34 @@ export function savePlayerUpgrades(upgrades) {
   return normalized;
 }
 
+/**
+ * Pure economy core: attempt to buy one level of `upgradeId` against an
+ * in-memory wallet. Touches no storage — callers own persistence (the global
+ * single-race store, or per-driver championship state).
+ *
+ * @param {object} upgrades  Normalized upgrade state (flat: { topSpeed, …, nitroCount }).
+ * @param {number} money     Available balance.
+ * @param {string} upgradeId Upgrade to purchase.
+ * @returns {{ ok: boolean, reason?: string, upgrades: object, money: number }}
+ *          On failure, `upgrades`/`money` are returned unchanged.
+ */
+export function applyPurchase(upgrades, money, upgradeId) {
+  const state = normalizeUpgradeState(upgrades);
+  const upgrade = UPGRADES.find((u) => u.id === upgradeId);
+  if (!upgrade) return { ok: false, reason: 'Unknown upgrade', upgrades: state, money };
+
+  const isNitro = upgradeId === 'nitro';
+  const key = isNitro ? 'nitroCount' : upgradeId;
+  const maxLevel = isNitro ? 99 : upgrade.maxLevel;
+  const level = state[key] ?? (isNitro ? 5 : 0);
+
+  if (level >= maxLevel) return { ok: false, reason: 'Already maxed', upgrades: state, money };
+  if (money < upgrade.cost) return { ok: false, reason: 'Not enough money', upgrades: state, money };
+
+  const next = normalizeUpgradeState({ ...state, [key]: level + 1 });
+  return { ok: true, upgrades: next, money: money - upgrade.cost };
+}
+
 export function incrementUpgradeLevel(upgradeId) {
   const upgrade = UPGRADES.find((u) => u.id === upgradeId);
   if (!upgrade) return { ok: false, reason: 'Unknown upgrade' };
@@ -114,8 +142,10 @@ export function resetPlayerUpgrades() {
   return loadPlayerUpgrades();
 }
 
-export function getUpgradeCatalog({ balance = 0, ignoreBalance = false } = {}) {
-  const purchased = loadPlayerUpgrades();
+export function getUpgradeCatalog({ balance = 0, ignoreBalance = false, upgrades = null } = {}) {
+  // `upgrades` lets a caller (e.g. a championship driver) supply an explicit
+  // upgrade state; otherwise fall back to the global single-race store.
+  const purchased = upgrades ? normalizeUpgradeState(upgrades) : loadPlayerUpgrades();
   return UPGRADES.map((u) => {
     if (u.id === 'nitro') {
       const count = purchased.nitroCount ?? 5;

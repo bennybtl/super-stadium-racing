@@ -8,6 +8,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 3.8,    // Best grip
     color: TERRAIN_COLORS.asphalt,
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
+    dustIntensity: 0,        // Paved — no cruising dust
     diffuseTexture: 'textures/asphalt_2.texture.png',
     diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.7,
@@ -21,6 +22,7 @@ export const TERRAIN_TYPES = {
     name: "packed_dirt",
     gripMultiplier: 2.0,    // Baseline
     color: TERRAIN_COLORS.packed_dirt,
+    dustIntensity: 0.15,     // Compacted — light haze
     diffuseTexture: 'textures/packed_dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.5,
@@ -34,6 +36,7 @@ export const TERRAIN_TYPES = {
     name: "loamy_dirt",
     gripMultiplier: 0.75,    // Slides much more
     color: TERRAIN_COLORS.loamy_dirt,
+    dustIntensity: 0.3,      // Loose soil — kicks up readily
     diffuseTexture: 'textures/loamy-soil.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.7,
@@ -47,6 +50,7 @@ export const TERRAIN_TYPES = {
     name: "loose_dirt",
     gripMultiplier: 1.5,    // Slides more
     color: TERRAIN_COLORS.loose_dirt,
+    dustIntensity: 0.3,      // Loose — kicks up readily
     diffuseTexture: 'textures/dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 30,
     diffuseTextureOpacity: 0.6,
@@ -60,6 +64,7 @@ export const TERRAIN_TYPES = {
     name: "mud",
     gripMultiplier: 0.15,    // Very slippery
     color: TERRAIN_COLORS.mud,
+    dustIntensity: 0,        // Wet — uses the mud-splash spray instead
     diffuseTexture: 'textures/mud.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.7,
@@ -74,6 +79,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.3,     // Low grip
     color: TERRAIN_COLORS.water,
     smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
+    dustIntensity: 0,        // Uses the water-splash spray instead
     dragMultiplier: 6.0,     // Very high drag
     roughness: 0,            // Smooth surface — drag is the hazard
     // diffuseTexture: 'textures/water.texture.jpg',
@@ -92,6 +98,7 @@ export const TERRAIN_TYPES = {
     name: "rocky",
     gripMultiplier: 1.0,     // Unpredictable rocky surface
     color: TERRAIN_COLORS.rocky, // Dark reddish-brown rock
+    dustIntensity: 0.2,      // Grit and rock powder
     dragMultiplier: 0.8,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
     normalMap: 'normals/rocky.normal.jpg',
@@ -102,6 +109,7 @@ export const TERRAIN_TYPES = {
     name: "grass",
     gripMultiplier: 0.15,     // Slippery, especially when wet
     color: TERRAIN_COLORS.grass, // Green grass
+    dustIntensity: 0.12,     // Light clippings/haze
     diffuseTexture: 'textures/grass.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.7,

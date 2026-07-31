@@ -1,8 +1,8 @@
 {
   "id": "rally_cross",
-  "name": "Rally Cross",
+  "name": "Chile",
   "engineAudio": "v8",
-  "modelFile": "rally_cross.obj",
+  "modelFile": "Chile.obj",
   "defaultColor": [0.8, 0.2, 0.1],
   "meshColors": {
     "cabin_cabin": [0.0, 0.0, 0.0]

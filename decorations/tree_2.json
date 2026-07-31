@@ -22,6 +22,10 @@
     "trunk_2_obj_0.002": {
       "file": "trunk.png",
       "scale": 5
+    },
+    "trunk_2_base_obj_0.007": {
+      "file": "trunk.png",
+      "scale": 5
     }
   },
   "colliderMeshes": [

@@ -58,6 +58,10 @@ export function setupAIDrivers({
   getAIId,
   getAISkill,
   getAIDriver,
+  getAIColorKey = null,
+  getAIVehicleKey = null,
+  getAIUpgrades = null,
+  getAIGridSlot = null,
   trackKey,
   aiVehicleKey = 'random',
   telemetryCheckpoints,
@@ -91,16 +95,29 @@ export function setupAIDrivers({
       skillConfig,
     );
 
-    const color  = availableAIColors[i % availableAIColors.length];
-    const spawn  = getGridSpawn(AI_GRID_OFFSET + i);
+    // A caller (e.g. a championship) may pin each AI's colour/vehicle for a
+    // stable identity; otherwise fall back to the cycling palette / random pick.
+    const overrideColorKey = typeof getAIColorKey === 'function' ? getAIColorKey(i) : null;
+    const color = (overrideColorKey && basicColors[overrideColorKey]?.diffuse)
+      ? basicColors[overrideColorKey].diffuse
+      : availableAIColors[i % availableAIColors.length];
+    // Championship grids order by standings; otherwise AI fill slots behind the
+    // player (grid slot 0 is the player).
+    const gridSlot = typeof getAIGridSlot === 'function' ? getAIGridSlot(i) : (AI_GRID_OFFSET + i);
+    const spawn  = getGridSpawn(gridSlot);
     let aiVehicleDef = selectedAIVehicleDef;
+    const overrideVehicleKey = typeof getAIVehicleKey === 'function' ? getAIVehicleKey(i) : null;
+    if (overrideVehicleKey) {
+      aiVehicleDef = window.vehicleLoader?.getVehicle(overrideVehicleKey) ?? aiVehicleDef;
+    }
     if (!aiVehicleDef && availableAIVehicleKeys.length > 0) {
       const randomVehicleKey = availableAIVehicleKeys[Math.floor(Math.random() * availableAIVehicleKeys.length)];
       aiVehicleDef = window.vehicleLoader?.getVehicle(randomVehicleKey) ?? null;
     }
     if (!aiVehicleDef) aiVehicleDef = vehicleDef;
 
-    const truck  = new Truck(scene, shadows, color, driver, aiVehicleDef);
+    const aiUpgrades = typeof getAIUpgrades === 'function' ? getAIUpgrades(i) : null;
+    const truck  = new Truck(scene, shadows, color, driver, aiVehicleDef, aiUpgrades);
     truck.mesh.position.copyFrom(spawn.pos);
     truck.state.heading   = spawn.heading;
     truck.mesh.rotation.y = spawn.heading;
@@ -108,7 +125,7 @@ export function setupAIDrivers({
     driver.setTruck(truck);
 
     aiDrivers.push(driver);
-    aiTrucks.push({ driver, truck, spawn });
+    aiTrucks.push({ driver, truck, spawn, gridSlot });
   }
 
   // ── Cross-awareness: each driver knows about every other truck ─────────
@@ -139,12 +156,13 @@ export function setupAIDrivers({
   }
 
   // ── Build truckData entries (ready for the `trucks` array) ────────────
-  const aiTruckDataList = aiTrucks.map(({ truck }, i) => ({
+  const aiTruckDataList = aiTrucks.map(({ truck, gridSlot }, i) => ({
     truck,
     gameState: new GameState(truck.state.maxBoosts ?? 5),
     isPlayer: false,
     name: getAIName(i),
     id:   getAIId(i),
+    gridSlot,
     hasStarted: false,
   }));
 

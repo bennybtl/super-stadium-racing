@@ -15,12 +15,20 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedAIVehicleType = ref('random');
   const selectedReverse = ref(false);
   const selectedVehicle = ref('default_truck');
+  const selectedPlayerColor = ref(null);
   // Current gameplay mode: null | 'practice' | 'singleRace'
   const mode = ref(null);
 
   // Overlay data (null when not showing)
   const pitData         = ref(null);
   const singleRaceData  = ref(null);
+  const championshipData = ref(null); // final podium/standings
+
+  // Championship setup selections
+  const champInitials   = ref('');
+  const champTrackCount = ref(5);
+  // True when a saved in-progress cup exists (drives the Resume button).
+  const hasActiveChampionship = ref(false);
   const loadingVisible = ref(false);
   const loadingMessage = ref('Loading…');
   // Upgrades state for UI
@@ -80,11 +88,21 @@ export const useMenuStore = defineStore('menu', () => {
     resetPlayerUpgrades();
     upgrades.value = getUpgradeCatalog({ balance: 0, ignoreBalance: true });
   }
-  function selectPlayerColor(key)  { if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
+  function selectPlayerColor(key)  { selectedPlayerColor.value = key; if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
   function startHotLapMode()          { mode.value = 'hotLap'; _bridge.value?.onStartHotLap(); }
   function startSingleRace()        { mode.value = 'singleRace'; _bridge.value?.onStartSingleRace(); }
   function singleRaceExit()        { mode.value = null; singleRaceData.value = null; _bridge.value?.onExit(); }
   function setMode(nextMode)       { mode.value = nextMode; }
+
+  // ── Championship actions ───────────────────────────────────────────────────
+  function showChampionshipSetup() { _bridge.value?.onShowChampionshipSetup(); }
+  function setChampInitials(v)     { champInitials.value = String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); }
+  function setChampTrackCount(n)   { champTrackCount.value = Number(n); }
+  function startChampionship()     { mode.value = 'championship'; _bridge.value?.onStartChampionship(); }
+  function continueChampionship()  { _bridge.value?.onContinueChampionship(); }
+  function resumeChampionship()    { mode.value = 'championship'; _bridge.value?.onResumeChampionship(); }
+  function retireChampionship()    { mode.value = null; _bridge.value?.onRetireChampionship(); }
+  function championshipExit()      { championshipData.value = null; mode.value = null; _bridge.value?.onChampionshipExit(); }
 
   function setLoading(visible, message = null) {
     loadingVisible.value = !!visible;
@@ -92,9 +110,10 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   return {
-    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, mode,
+    screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
     selectedReverse,
-    pitData, singleRaceData, upgrades,
+    pitData, singleRaceData, championshipData, upgrades,
+    champInitials, champTrackCount, hasActiveChampionship,
     loadingVisible, loadingMessage,
     setBridge,
     showEditorTrackSelect,
@@ -105,6 +124,7 @@ export const useMenuStore = defineStore('menu', () => {
     editorResume, editorSave, editorLoad, editorExit,
     settings, back, refreshTrackList,
     purchaseUpgrade, resetUpgrades, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
+    showChampionshipSetup, setChampInitials, setChampTrackCount, startChampionship, continueChampionship, resumeChampionship, retireChampionship, championshipExit,
     setMode,
     setLoading,
   };

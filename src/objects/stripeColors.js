@@ -1,21 +1,20 @@
+import { basicColors } from "../constants.js";
+
 /**
  * Shared stripe-colour palette for polyWall / polyCurb ribbons.
  *
  * A feature carries `colors: ['red', 'white']` — 1 to 3 palette names repeated
  * as stripes along the ribbon: one colour renders solid, two alternate, three
  * repeat as a triad.
+ *
+ * Colours are the game's standard palette (constants.basicColors); each stripe
+ * uses that colour's `diffuse` as its RGB.
  */
 
-export const STRIPE_PALETTE = {
-  red:    [0.85, 0.08, 0.08],
-  white:  [1.0,  1.0,  1.0],
-  blue:   [0.08, 0.4,  0.85],
-  yellow: [0.95, 0.8,  0.05],
-  orange: [0.95, 0.45, 0.05],
-  green:  [0.1,  0.6,  0.2],
-  black:  [0.08, 0.08, 0.08],
-  grey:   [0.55, 0.55, 0.55],
-};
+/** name → [r, g, b] taken from each basicColors entry's diffuse channel. */
+export const STRIPE_PALETTE = Object.fromEntries(
+  Object.entries(basicColors).map(([name, { diffuse }]) => [name, [diffuse.r, diffuse.g, diffuse.b]]),
+);
 
 /** Selectable colour names, in dropdown order. */
 export const STRIPE_COLOR_NAMES = Object.keys(STRIPE_PALETTE);

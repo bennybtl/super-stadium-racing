@@ -1,8 +1,8 @@
-import { MeshBuilder, DynamicTexture, StandardMaterial, Mesh, Vector3 } from "@babylonjs/core";
+import { createBillboardTextPlane, drawCenteredText } from "./billboardText.js";
 
 const RANK_TEXT = { 1: '1st', 2: '2nd', 3: '3rd' };
 const RANK_COLOR = { 1: '#ffd24a', 2: '#d9d9e0', 3: '#e08a4b' };
-const TEX = 256;        // badge texture resolution
+const TEX = 320;        // badge texture resolution
 const PLANE_SIZE = 2.6; // world units
 const Y_OFFSET = 4.6;   // height above the truck's origin
 
@@ -22,41 +22,35 @@ export class RacePositionLabels {
   }
 
   attach(truckData) {
-    const plane = MeshBuilder.CreatePlane(`posLabel_${truckData.id}`, { size: PLANE_SIZE }, this.scene);
-    plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
-    plane.isPickable = false;
+    const { plane, tex, mat } = createBillboardTextPlane(this.scene, {
+      name: `posLabel_${truckData.id}`,
+      size: PLANE_SIZE,
+      texWidth: TEX,
+      texHeight: TEX,
+    });
     plane.isVisible = false;
-
-    const tex = new DynamicTexture(`posLabelTex_${truckData.id}`, { width: TEX, height: TEX }, this.scene);
-    tex.hasAlpha = true;
-
-    const mat = new StandardMaterial(`posLabelMat_${truckData.id}`, this.scene);
-    mat.diffuseTexture = tex;
-    mat.emissiveTexture = tex;
-    mat.opacityTexture = tex;
-    mat.disableLighting = true;
-    mat.backFaceCulling = false;
-    plane.material = mat;
 
     this.labels.set(truckData.id, { truck: truckData.truck, plane, tex, mat, rank: 0 });
   }
 
   _draw(entry, rank) {
-    const ctx = entry.tex.getContext();
-    const c = TEX / 2;
-    ctx.clearRect(0, 0, TEX, TEX);
-
-    ctx.fillStyle = RANK_COLOR[rank];
-    ctx.font = `bold ${Math.round(TEX * 0.34)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(RANK_TEXT[rank], c, c + TEX * 0.02);
-
-    entry.tex.update();
+    drawCenteredText(entry.tex, RANK_TEXT[rank], {
+      color: RANK_COLOR[rank],
+      font: `bold ${Math.round(TEX * 0.34)}px sans-serif`,
+      yNudge: TEX * 0.02,
+    });
   }
 
-  /** Rank the trucks and show badges above the top three. */
-  update(trucks, checkpointManager) {
+  /**
+   * Rank the trucks and show badges above the top three.
+   *
+   * `finishOrder` (truckData entries in the order they crossed the line) locks a
+   * finished truck's position: finished trucks always rank ahead of still-racing
+   * ones, in their finish order, so a driver who comes home 2nd stays "2nd" as
+   * the rest of the field trickles in — rather than being re-sorted by live
+   * distance to the next gate.
+   */
+  update(trucks, checkpointManager, finishOrder = []) {
     const total = Math.max(1, checkpointManager.getTotalCheckpoints());
 
     // Map checkpoint number -> gate center for the distance tiebreak.
@@ -64,6 +58,9 @@ export class RacePositionLabels {
     for (const cp of checkpointManager.checkpointMeshes || []) {
       if (cp.feature?.checkpointNumber != null) cpByNum.set(cp.feature.checkpointNumber, cp.feature);
     }
+
+    const finishRank = new Map();
+    finishOrder.forEach((td, i) => finishRank.set(td.id, i));
 
     const ranked = this._tmp;
     ranked.length = 0;
@@ -78,10 +75,16 @@ export class RacePositionLabels {
         const dz = td.truck.mesh.position.z - gate.centerZ;
         dist = dx * dx + dz * dz;
       }
-      ranked.push({ id: td.id, progress, dist });
+      // Finished trucks sort first by their finish order; the rest are Infinity
+      // and fall through to the live progress/distance comparison below.
+      const finishIdx = finishRank.has(td.id) ? finishRank.get(td.id) : Infinity;
+      ranked.push({ id: td.id, progress, dist, finishIdx });
     }
-    // Furthest progress first; closer to the next gate breaks ties.
-    ranked.sort((a, b) => (b.progress - a.progress) || (a.dist - b.dist));
+    // Finished (by finish order) first; then still-racing by furthest progress,
+    // closer to the next gate breaking ties.
+    ranked.sort((a, b) =>
+      (a.finishIdx - b.finishIdx) || (b.progress - a.progress) || (a.dist - b.dist)
+    );
 
     for (let i = 0; i < ranked.length; i++) {
       const entry = this.labels.get(ranked[i].id);
