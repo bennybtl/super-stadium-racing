@@ -57,7 +57,7 @@ export class MenuMode extends BaseMode {
         aiCount:        menuManager.selectedAIDrivers,
         laps:           menuManager.selectedLaps,
         aiVehicleKey:   menuManager.selectedAIVehicleType,
-        reverse:        menuManager.selectedReverse,
+        reverse:        false, // cups are forward-only for now (reverse UI hidden)
         vehicleKey:     menuManager.selectedVehicle,
         playerColorKey: menuManager.selectedPlayerColor,
       });

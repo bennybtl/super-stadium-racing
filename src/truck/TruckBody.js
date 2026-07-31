@@ -27,9 +27,9 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
  *          gain = target deflection per m/s² of accel; max = clamp on deflection.
  */
 const BODY_DYN = {
-  heave: { freq: 1.8, damping: 0.30, gain: 0.0090, max: 0.28 }, // units
-  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.28 }, // radians
-  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.34 }, // radians
+  heave: { freq: 1.8, damping: 0.30, gain: 0.0090, max: 0.24 }, // units
+  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.24 }, // radians
+  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.30 }, // radians
   maxDt: 1 / 30, // clamp per-substep dt so a frame spike can't destabilise a spring
 };
 
@@ -40,16 +40,18 @@ const BODY_DYN = {
  * the heave spring's velocity directly by the captured descent speed — the
  * spring turns that into a squat + rebound.
  *
- * Contact is detected from penetration, not groundedness: on a hard landing the
- * chassis spring rebounds the truck back out of the ground within a frame or
- * two, so the smoothed groundedness never climbs past a threshold before the
- * raw value collapses — big jumps would register no landing at all. Penetration
- * is unambiguously positive on the true impact frame.
+ * The kick fires on the velocity arrest — the frame the fall is killed — not on
+ * a fixed penetration threshold. The chassis is often caught ~0.3 m up (velocity
+ * and downhill groundedness inflate the contact response), then eases in the
+ * last stretch over several frames; waiting for a gap threshold there lags the
+ * bounce ~130 ms behind the visible impact. Groundedness is avoided entirely: it
+ * smooths/collapses too slowly to time a hard landing.
  */
 const LAND = {
-  contactGap:     0.20,  // gap below terrain (m) above which the truck is airborne
+  contactGap:     0.20,  // gap below terrain (m) beyond which we track the fall speed
   minImpactSpeed: 1.0,   // min downward speed (m/s) to produce a bounce
-  kickPerSpeed:   1.0,  // heave-velocity kick per m/s of impact speed
+  arrestFraction: 0.5,   // fire once the fall decelerates past this fraction of its peak
+  kickPerSpeed:   1.0,   // heave-velocity kick per m/s of impact speed
   maxKick:        7.5,   // clamp on the heave-velocity kick
 };
 
@@ -478,20 +480,21 @@ export class TruckBody {
     const pitchTarget = g * clamp(-P.gain * fwdAccel,  -P.max, P.max);
     const rollTarget  = g * clamp(R.gain * rightAccel, -R.max, R.max);
 
-    // Landing bounce: while airborne (a real gap under the truck) track the
-    // deepest downward speed — the tangent-plane strip zeroes velocity.y the
-    // instant the truck touches down, so we must capture it from the fall
-    // itself. Once grounded, a still-negative _airborneVy means we just landed:
-    // kick the heave spring by that speed (chassis slammed up → body squats
-    // down → negative heave velocity), then clear it so it fires only once.
-    if (penetration !== null && penetration < -LAND.contactGap) {
-      if (v.y < this._airborneVy) this._airborneVy = v.y;
-    } else {
-      if (this._airborneVy < -LAND.minImpactSpeed) {
-        this._dyn.heave.v -= Math.min(LAND.maxKick, -this._airborneVy * LAND.kickPerSpeed);
-        if (!this._ghost) console.log(`[LANDING] t=${performance.now().toFixed(0)}ms impact=${(-this._airborneVy).toFixed(1)}m/s pen=${penetration.toFixed(2)}`);
+    // Landing bounce: while there's a real gap under the truck, track the
+    // deepest downward speed. Then kick the heave spring the instant that fall
+    // is arrested — the true impact — rather than when penetration later creeps
+    // past a fixed contact threshold. The strip can catch the truck ~0.3 m up
+    // (velocity/downhill groundedness), after which the box eases the last
+    // stretch in over ~8 frames; keying off the arrest skips that visible lag.
+    // Chassis slammed up → body squats down → negative heave velocity.
+    if (penetration !== null) {
+      if (penetration < -LAND.contactGap && v.y < 0 && v.y < this._airborneVy) {
+        this._airborneVy = v.y;
       }
-      this._airborneVy = 0;
+      if (this._airborneVy < -LAND.minImpactSpeed && v.y > this._airborneVy * LAND.arrestFraction) {
+        this._dyn.heave.v -= Math.min(LAND.maxKick, -this._airborneVy * LAND.kickPerSpeed);
+        this._airborneVy = 0;
+      }
     }
 
     this._integrateDof(this._dyn.heave, heaveTarget, H, dt);

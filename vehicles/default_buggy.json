@@ -1,8 +1,8 @@
 {
   "id": "default_buggy",
-  "name": "2WD Buggy",
+  "name": "Hopper",
   "engineAudio": "bac",
-  "modelFile": "offroad-buggy.obj",
+  "modelFile": "Hopper.obj",
   "defaultColor": [0.8, 0.2, 0.5],
   "meshColors": {
     "cockpit_Body6": [0.1, 0.1, 0.1],

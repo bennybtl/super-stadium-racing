@@ -114,14 +114,17 @@
         <template v-else-if="store.screen === 'championshipSetup'">
           <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066]">Championship</h2>
           <div class="flex flex-col items-center gap-1">
-            <label class="text-xs uppercase italic tracking-[0.14em] text-slate-300">Enter Initials</label>
-            <input
-              class="w-40 rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-center text-2xl font-bold uppercase italic tracking-[0.3em] text-white focus:border-white focus:outline-none"
-              :value="store.champInitials"
-              maxlength="5"
-              placeholder="AAA"
-              @input="store.setChampInitials($event.target.value)"
-            />
+            <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white">Driver Registration</h3>
+            <div class="flex flex-row items-center gap-4">
+              <input
+                class="w-40 rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-center text-2xl font-bold uppercase italic tracking-[0.3em] text-white focus:border-white focus:outline-none"
+                :value="store.champInitials"
+                maxlength="5"
+                placeholder="AAA"
+                @input="store.setChampInitials($event.target.value)"
+              />
+              <div class="text-[10px] text-left uppercase italic tracking-[0.14em] text-slate-400 max-w-32">Enter your initials to track progress</div>
+            </div>
           </div>
           <TruckSelection
             :vehicles="store.vehicleList"
@@ -131,38 +134,7 @@
             @update:selectedVehicle="store.selectPlayerVehicle($event)"
             @update:selectedColor="store.selectPlayerColor($event)"
           />
-          <div class="flex flex-row items-start justify-center gap-4">
-            <div class="flex flex-col items-center gap-1">
-              <label class="text-[10px] uppercase italic tracking-[0.14em] text-slate-400">Races</label>
-              <select
-                class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-base font-bold uppercase italic tracking-[0.1em] text-white transition hover:border-white hover:text-[#ffe066]"
-                :value="store.champTrackCount"
-                @change="store.setChampTrackCount(Number($event.target.value))"
-              >
-                <option v-for="n in [4, 5, 6, 8]" :key="n" :value="n">{{ n }} Races</option>
-              </select>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <label class="text-[10px] uppercase italic tracking-[0.14em] text-slate-400">AI Drivers</label>
-              <select
-                class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-base font-bold uppercase italic tracking-[0.1em] text-white transition hover:border-white hover:text-[#ffe066]"
-                :value="store.selectedAIDrivers"
-                @change="store.setSelectedAIDrivers(Number($event.target.value))"
-              >
-                <option v-for="n in [3, 5, 7, 9]" :key="n" :value="n">{{ n }} AI</option>
-              </select>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <label class="text-[10px] uppercase italic tracking-[0.14em] text-slate-400">Laps</label>
-              <select
-                class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2 text-base font-bold uppercase italic tracking-[0.1em] text-white transition hover:border-white hover:text-[#ffe066]"
-                :value="store.selectedLaps"
-                @change="store.setSelectedLaps(Number($event.target.value))"
-              >
-                <option v-for="n in [1, 3, 5]" :key="n" :value="n">{{ n }} Lap{{ n > 1 ? 's' : '' }}</option>
-              </select>
-            </div>
-          </div>
+          <RaceConfig :show-race-count="true" :show-reverse="false" />
           <div class="flex flex-row gap-2">
             <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
             <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" @click="store.startChampionship()">Start Cup</button>
@@ -245,7 +217,7 @@
             :modelValue="store.selectedTrack"
             @update:modelValue="store.setSelectedTrack($event)"
           />
-          <div class="flex justify-center">
+          <div class="flex justify-center mb-6">
             <TrackLapRecords :trackKey="store.selectedTrack" />
           </div>
           <div v-if="store.pitData.pitMode === 'singleRace'">
@@ -256,7 +228,7 @@
           </div>
         </div>
         <template v-if="setupStep == 'selectTruck'">
-          <div class="mb-4">
+          <div class="mb-8">
             <TruckSelection
               :vehicles="store.vehicleList"
               :selectedVehicle="store.selectedVehicle"

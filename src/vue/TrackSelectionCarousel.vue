@@ -1,21 +1,18 @@
 
 <template>
   <div class="w-full min-w-0 space-y-3">
-    <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white text-center">Track Setup
-    </h3>
-    <div>
-      <div v-if="availablePacks.length > 1" class="flex justify-center gap-2 flex-wrap">
-        <button
-          v-for="pack in packOptions"
-          :key="pack.value"
-          type="button"
-          class="px-3 py-1 text-xs rounded-full border transition duration-150"
-          :class="selectedPack === pack.value
-            ? 'border-amber-400 bg-amber-400 text-black font-bold'
-            : 'border-[#555] bg-[#1a1a1a] text-slate-300 hover:border-white hover:text-white'"
-          @click="setPackFilter(pack.value)"
-        >{{ pack.label }}</button>
-      </div>
+    <h3 class="mb-2 text-xs uppercase italic tracking-[0.14em] text-white text-center">Track Selection</h3>
+    <div v-if="availablePacks.length > 1" class="flex justify-center gap-2 flex-wrap">
+      <button
+        v-for="pack in packOptions"
+        :key="pack.value"
+        type="button"
+        class="px-3 text-xs rounded-full border transition duration-150"
+        :class="selectedPack === pack.value
+          ? 'border-amber-400 bg-amber-400 text-black font-bold'
+          : 'border-[#555] bg-[#1a1a1a] text-slate-300 hover:border-white hover:text-white'"
+        @click="setPackFilter(pack.value)"
+      >{{ pack.label }}</button>
     </div>
     <div class="relative overflow-hidden flex ">
       <button
