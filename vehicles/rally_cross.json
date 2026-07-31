@@ -31,5 +31,6 @@
     "braking": 2.5,
     "turnSpeed": 5.5,
     "weightTransfer": 1.10
-  }
+  },
+  "suspensionTravel": 0.6
 }

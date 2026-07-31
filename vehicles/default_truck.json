@@ -26,5 +26,6 @@
     "frontAxle":  1.5,
     "rearAxle":  -1.2
   },
+  "suspensionTravel": 1.4,
   "params": {}
 }

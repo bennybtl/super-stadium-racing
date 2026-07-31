@@ -27,9 +27,9 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
  *          gain = target deflection per m/s² of accel; max = clamp on deflection.
  */
 const BODY_DYN = {
-  heave: { freq: 1.8, damping: 0.30, gain: 0.0090, max: 0.24 }, // units
-  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.24 }, // radians
-  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.30 }, // radians
+  heave: { freq: 1.8, damping: 0.30, gain: 0.0090, max: 0.22 }, // units
+  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.22 }, // radians
+  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.24 }, // radians
   maxDt: 1 / 30, // clamp per-substep dt so a frame spike can't destabilise a spring
 };
 
@@ -109,6 +109,12 @@ export class TruckBody {
     this._bodyYOffset = this._bodyPosition[1] ?? 0;
     this._bodyRotation = bt.rotation ?? [-Math.PI / 2, 0, 0];
     this._bodyScaling  = bt.scaling  ?? [1, 1, 1];
+
+    // Per-vehicle suspension travel: scales the body's max heave/pitch/roll
+    // deflection (BODY_DYN.*.max). <1 = short vehicles with little travel,
+    // >1 = long-travel rigs that lean and bob further. 1 = reference.
+    this._suspensionTravel = vehicleDef?.suspensionTravel ?? 1;
+
     this._wheelDefs = [
       { id: "FL", x:  frontHalfTrack, z: frontAxle, isFront: true,  scale: frontScale },
       { id: "FR", x: -frontHalfTrack, z: frontAxle, isFront: true,  scale: frontScale },
@@ -473,12 +479,14 @@ export class TruckBody {
 
     const g = clamp(groundedness, 0, 1);
     const H = BODY_DYN.heave, P = BODY_DYN.pitch, R = BODY_DYN.roll;
+    // Per-vehicle suspension travel scales how far each DOF can deflect.
+    const s = this._suspensionTravel;
     // Sign: chassis thrown up (landing) → body squats down; braking (fwd accel
     // negative) → nose dives (+x); cornering → body leans out of the turn
     // (roll follows +rightAccel; the others follow -accel).
-    const heaveTarget = g * clamp(-H.gain * ay,        -H.max, H.max);
-    const pitchTarget = g * clamp(-P.gain * fwdAccel,  -P.max, P.max);
-    const rollTarget  = g * clamp(R.gain * rightAccel, -R.max, R.max);
+    const heaveTarget = g * clamp(-H.gain * ay,        -H.max * s, H.max * s);
+    const pitchTarget = g * clamp(-P.gain * fwdAccel,  -P.max * s, P.max * s);
+    const rollTarget  = g * clamp(R.gain * rightAccel, -R.max * s, R.max * s);
 
     // Landing bounce: while there's a real gap under the truck, track the
     // deepest downward speed. Then kick the heave spring the instant that fall
@@ -492,7 +500,8 @@ export class TruckBody {
         this._airborneVy = v.y;
       }
       if (this._airborneVy < -LAND.minImpactSpeed && v.y > this._airborneVy * LAND.arrestFraction) {
-        this._dyn.heave.v -= Math.min(LAND.maxKick, -this._airborneVy * LAND.kickPerSpeed);
+        // Scaled by suspension travel too, so short vehicles bounce less.
+        this._dyn.heave.v -= Math.min(LAND.maxKick, -this._airborneVy * LAND.kickPerSpeed) * s;
         this._airborneVy = 0;
       }
     }

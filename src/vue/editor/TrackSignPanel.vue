@@ -57,12 +57,7 @@
         :value="editor.trackSign.background"
         @change="editor.setFeatureProp('trackSign', 'background', $event.target.value)"
       >
-        <option value="black">Black</option>
-        <option value="gray">Gray</option>
-        <option value="white">White</option>
-        <option value="red">Red</option>
-        <option value="blue">Blue</option>
-        <option value="yellow">Yellow</option>
+        <option v-for="c in COLORS" :key="c.value" :value="c.value">{{ c.label }}</option>
       </select>
     </div>
 
@@ -75,13 +70,8 @@
         :value="editor.trackSign.primaryColor"
         @change="editor.setFeatureProp('trackSign', 'primaryColor', $event.target.value)"
       >
-        <option value="black">Black</option>
-        <option value="gray">Gray</option>
-        <option value="white">White</option>
-        <option value="red">Red</option>
-        <option value="blue">Blue</option>
-        <option value="yellow">Yellow</option>
-      </select>
+        <option v-for="c in COLORS" :key="c.value" :value="c.value">{{ c.label }}</option>
+    </select>
     </div>
 
     <hr class="border-t border-slate-700 my-4" />
@@ -156,6 +146,19 @@ import EditorPanel from './EditorPanel.vue';
 import { TRACK_SIGN_BRANDS } from '../../constants.js';
 
 const editor = useEditorStore();
+
+const COLORS = [
+  { value: 'black',  label: 'Black' },
+  { value: 'gray',   label: 'Gray' },
+  { value: 'white',  label: 'White' },
+  { value: 'brown',  label: 'Brown' },
+  { value: 'red',    label: 'Red' },
+  { value: 'orange', label: 'Orange' },
+  { value: 'yellow', label: 'Yellow' },
+  { value: 'green',  label: 'Green' },
+  { value: 'blue',   label: 'Blue' },
+  { value: 'purple', label: 'Purple' },
+];
 </script>
 
 <style scoped>
