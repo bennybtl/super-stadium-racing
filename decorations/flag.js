@@ -1,4 +1,4 @@
-import { Flag, COLLISION_RADIUS } from "./lib/Flag.js";
+import { Flag, COLLISION_RADIUS, POLE_HEIGHT } from "./lib/Flag.js";
 import { TRUCK_RADIUS } from "../src/constants.js";
 
 /** Lateral speed (m/s) → impulse magnitude applied to the pole. */
@@ -8,8 +8,8 @@ const BEND_IMPULSE_SCALE = 1.2;
  * Flag decoration controller.
  *
  * Procedural (no OBJ): builds its own pole + banner, simulates an inverted
- * pendulum each frame, and gets kicked by passing trucks. Editing is colour
- * only — a flag stands straight up, so it exposes no rotation or scale.
+ * pendulum each frame, and gets kicked by passing trucks. Editable props:
+ * colour, heading (spin about the pole), scale, and pole height.
  */
 export default {
   build(feature, def, { scene, groundY, shadows }) {
@@ -20,6 +20,11 @@ export default {
       groundY,
       scene,
       shadows,
+      {
+        heading: feature.heading ?? 0,
+        scale:   feature.scale ?? def.defaultScale ?? 1,
+        height:  feature.height ?? def.featureDefaults?.height ?? POLE_HEIGHT,
+      },
     );
   },
 
@@ -54,7 +59,10 @@ export default {
 
   edit: {
     controls: () => ({
-      color: { type: 'color', label: 'Color' },
+      color:   { type: 'color', label: 'Color' },
+      heading: { type: 'range', label: 'Rotation', min: 0,   max: 360, step: 1,   unit: '°' },
+      scale:   { type: 'range', label: 'Scale',    min: 0.5, max: 4,   step: 0.1, unit: '×' },
+      height:  { type: 'range', label: 'Height',   min: 2,   max: 15,  step: 0.5, unit: 'm' },
     }),
   },
 };

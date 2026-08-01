@@ -3,7 +3,7 @@ import {
   MeshBuilder,
   StandardMaterial,
   Color3,
-  Vector3,
+  TransformNode,
   VertexData,
 } from "@babylonjs/core";
 import { basicColors } from "../../src/constants.js";
@@ -47,16 +47,25 @@ const MAX_TILT = 1;
  *   I·α = −K·θ − D·ω
  *
  * Two independent axes (world X and Z) share the same spring-damper.
- * The tilt is applied to the pole mesh via rotation with the pivot set
- * at the base, so the top swings freely while the base stays fixed.
+ * The tilt is applied to a root transform node whose origin sits at the base,
+ * so the top swings freely while the base stays planted on the ground.
  */
 export class Flag {
-  constructor(x, z, color, groundY, scene, shadows) {
+  constructor(x, z, color, groundY, scene, shadows, opts = {}) {
     this.scene   = scene;
     this.x       = x;
     this.z       = z;
     this.color   = color;
     this.groundY = groundY;
+
+    // ── Editable transform ────────────────────────────────────────────
+    // Heading spins the whole flag (root.rotation.y, preserved across pendulum
+    // updates which only write root.rotation.x/.z). Scale is a uniform
+    // multiplier on the root. heightM sets the pole length in metres (base
+    // POLE_HEIGHT) — it stretches only the pole, not the banner.
+    this._heading = opts.heading ?? 0;
+    this._scale   = opts.scale   ?? 1;
+    this._heightM = opts.height  ?? POLE_HEIGHT;
 
     // ── Pendulum state ────────────────────────────────────────────────
     this.bendX = 0;  // tilt angle toward +X (rad)
@@ -64,15 +73,21 @@ export class Flag {
     this.velX  = 0;  // angular velocity X component (rad/s)
     this.velZ  = 0;  // angular velocity Z component (rad/s)
 
-    // ── Pole cylinder ────────────────────────────────────────────────
+    // ── Root transform ────────────────────────────────────────────────
+    // Origin sits at the base on the ground, so the pendulum tilt swings from
+    // the base (no pivot offset needed), heading is rotation.y, and the uniform
+    // scale multiplies the whole assembly. Pole and banner are independent
+    // children so the pole's length scale never touches the banner.
+    this.root = new TransformNode(`flag_${x}_${z}`, scene);
+    this.root.position.set(x, groundY, z);
+
+    // ── Pole cylinder — child of root, y-scaled to set pole length only ──
     this.pole = MeshBuilder.CreateCylinder(`pole_${x}_${z}`, {
       height: POLE_HEIGHT,
       diameter: POLE_RADIUS * 2,
       tessellation: 8,
     }, scene);
-    this.pole.position.set(x, groundY + POLE_HEIGHT / 2, z);
-    // Pivot at the base so rotations swing from the ground
-    this.pole.setPivotPoint(new Vector3(0, -POLE_HEIGHT / 2, 0));
+    this.pole.parent = this.root;
     this.pole.isPickable = true;
 
     const poleMat = new StandardMaterial(`poleMat_${x}_${z}`, scene);
@@ -80,15 +95,49 @@ export class Flag {
     poleMat.specularColor = basicColors.white.emissive;
     this.pole.material = poleMat;
 
-    // ── Flag banner parented to pole ─────────────────────────────────
+    // ── Flag banner — child of root (NOT the pole) ────────────────────
     this.flag = this._createBanner(x, z, color, scene);
-    this.flag.parent = this.pole;
+    this.flag.parent = this.root;
 
     if (shadows) {
       shadows.addShadowCaster(this.pole);
       shadows.addShadowCaster(this.flag);
       this.flag.receiveShadows = true;
     }
+
+    this._applyTransform();
+  }
+
+  // ─── Editable transform ─────────────────────────────────────────────────
+
+  /**
+   * Push heading/scale/height onto the transform tree. Uniform scale + heading
+   * live on the root; height stretches only the pole's Y (its base stays at the
+   * root origin) and repositions the banner to the new pole top.
+   */
+  _applyTransform() {
+    this.root.scaling.setAll(this._scale);
+    this.root.rotation.y = this._heading;
+
+    const k = this._heightM / POLE_HEIGHT; // pole length scale (1 = base height)
+    this.pole.scaling.y = k;
+    this.pole.position.y = this._heightM / 2; // centre so the base sits at y=0
+    this.flag.position.y = this._heightM;     // banner hangs from the pole top
+  }
+
+  setHeading(rad) {
+    this._heading = rad;
+    this.root.rotation.y = rad;
+  }
+
+  setScale(scale) {
+    this._scale = scale;
+    this._applyTransform();
+  }
+
+  setHeight(heightM) {
+    this._heightM = heightM;
+    this._applyTransform();
   }
 
   // ─── Per-frame update ─────────────────────────────────────────────────
@@ -125,9 +174,10 @@ export class Flag {
       }
     }
 
-    // Apply to mesh: rotation.z tilts the top toward −X; rotation.x toward +Z
-    this.pole.rotation.z = -this.bendX;
-    this.pole.rotation.x =  this.bendZ;
+    // Apply to root: rotation.z tilts the top toward −X; rotation.x toward +Z.
+    // (.y — heading — is left alone.)
+    this.root.rotation.z = -this.bendX;
+    this.root.rotation.x =  this.bendZ;
   }
 
   /**
@@ -150,7 +200,8 @@ export class Flag {
     this.x = x;
     this.z = z;
     this.groundY = groundY;
-    this.pole.position.set(x, groundY + POLE_HEIGHT / 2, z);
+    // Root origin is the base, so it sits directly on the ground.
+    this.root.position.set(x, groundY, z);
   }
 
   // ─── Banner mesh ──────────────────────────────────────────────────────
@@ -159,11 +210,12 @@ export class Flag {
     const mesh = new Mesh(`flag_${x}_${z}`, scene);
     const vd   = new VertexData();
 
-    // In pole local space the top is at +POLE_HEIGHT/2
-    const topY = POLE_HEIGHT / 2;
-    const p0 = [0,          topY,                  0];
-    const p1 = [FLAG_WIDTH, topY - FLAG_HEIGHT / 2, 0];
-    const p2 = [0,          topY - FLAG_HEIGHT,     0];
+    // Banner-local space: the attach point (pole top) is the origin and the
+    // cloth hangs downward. The mesh is parked at the pole top via position.y,
+    // so its size is independent of the pole's length scale.
+    const p0 = [0,          0,             0];
+    const p1 = [FLAG_WIDTH, -FLAG_HEIGHT / 2, 0];
+    const p2 = [0,          -FLAG_HEIGHT,     0];
 
     vd.positions = [...p0, ...p1, ...p2, ...p0, ...p2, ...p1];
     vd.indices   = [0, 1, 2, 3, 4, 5];
@@ -182,7 +234,7 @@ export class Flag {
   // ─── Accessors ────────────────────────────────────────────────────────
 
   get position() {
-    return this.pole.position.clone();
+    return this.root.position.clone();
   }
 
   setColor(color) {
@@ -194,5 +246,6 @@ export class Flag {
   dispose() {
     this.flag?.dispose();
     this.pole?.dispose();
+    this.root?.dispose();
   }
 }

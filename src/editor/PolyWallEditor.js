@@ -19,6 +19,10 @@ import { resolveStripeColorNames, normalizeStripeColors } from '../objects/strip
  * from a different feature switches focus.
  */
 const POINT_HEIGHT_OFFSET = 0.7
+// How far past the track perimeter poly-wall points may be dragged, matching the
+// dead-space band that surrounds the track (ground mesh = track + 20, i.e. +10 per
+// side; border walls sit ~1 unit beyond that). Lets walls be built in the dead space.
+const DEAD_SPACE_REACH = 10;
 export class PolyWallEditor {
   constructor(editorController) {
     this.ec    = editorController;
@@ -284,8 +288,8 @@ export class PolyWallEditor {
     this._rawDrag.x += dx;
     this._rawDrag.z += dz;
     const prevX = pt.x, prevZ = pt.z;
-    pt.x = this.ec._snap(this._rawDrag.x);
-    pt.z = this.ec._snap(this._rawDrag.z);
+    pt.x = this.ec._snap(this._rawDrag.x, 'x', DEAD_SPACE_REACH);
+    pt.z = this.ec._snap(this._rawDrag.z, 'z', DEAD_SPACE_REACH);
 
     // Update sphere positions only — no line system or physics rebuild every frame.
     this._updatePointPositions(wg, { rebuildLines: false });

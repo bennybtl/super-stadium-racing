@@ -2,5 +2,6 @@
   "id": "flag",
   "name": "Flag",
   "defaultColor": "red",
-  "featureDefaults": { "color": "red" }
+  "defaultScale": 1,
+  "featureDefaults": { "color": "red", "height": 7.5 }
 }

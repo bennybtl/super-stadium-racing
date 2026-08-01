@@ -223,7 +223,7 @@
           <div v-if="store.pitData.pitMode === 'singleRace'">
             <RaceConfig />
           </div>
-          <div v-else-if="store.pitData.pitMode === 'hotLap'" class="flex justify-center">
+          <div v-else-if="store.pitData.pitMode === 'hotLap' || store.pitData.pitMode === 'practice'" class="flex justify-center">
             <ReverseToggle />
           </div>
         </div>

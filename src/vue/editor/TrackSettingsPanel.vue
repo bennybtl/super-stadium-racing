@@ -64,6 +64,17 @@
     </label>
     <div class="mt-2 text-[10px] text-slate-400">Scatters procedural dirt debris along walls and off the racing line.</div>
 
+    <label class="mt-4 flex items-center gap-2 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+        :checked="editor.trackSettings.oobDeadSpace"
+        @change="editor.setTrackOobDeadSpace($event.target.checked)"
+      />
+      <span class="text-[13px] text-white">Reset in Dead Space</span>
+    </label>
+    <div class="mt-2 text-[10px] text-slate-400">Driving off the track perimeter into the surrounding dead space triggers the out-of-bounds respawn, even without an explicit out-of-bounds zone.</div>
+
     <div class="mt-4 grid grid-cols-2 gap-2">
       <div>
         <div class="text-[12px] mb-1">Width</div>

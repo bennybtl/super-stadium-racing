@@ -281,6 +281,13 @@ export class DriveMode extends BaseMode {
     }
   }
 
+  _isPointOutsideTrackBounds(x, z, track) {
+    if (!track) return false;
+    const halfWidth = (track.width ?? 0) / 2;
+    const halfDepth = (track.depth ?? 0) / 2;
+    return Math.abs(x) > halfWidth || Math.abs(z) > halfDepth;
+  }
+
   /**
    * Shared out-of-bounds countdown/respawn logic.
    * Returns remaining seconds (float) while active, or null when inactive.
@@ -289,13 +296,17 @@ export class DriveMode extends BaseMode {
     truckId,
     truck,
     outOfBoundsZones,
+    track,
     dt,
     durationSec = 5,
     graceSecAfterRespawn = 1.5,
     onTimeout,
   }) {
     if (!truck?.mesh) return null;
-    if (!outOfBoundsZones?.length) return null;
+    // Dead-space bounds are an opt-in per-track setting; explicit out-of-bounds
+    // zones always apply. Bail early only when neither source is active.
+    const deadSpaceEnabled = track?.oobDeadSpace === true;
+    if (!outOfBoundsZones?.length && !deadSpaceEnabled) return null;
 
     const nowMs = performance.now();
     let state = this._oobStateByTruckId.get(truckId);
@@ -321,9 +332,11 @@ export class DriveMode extends BaseMode {
     }
 
     const pos = truck.mesh.position;
-    // Out of bounds is driven solely by explicit out-of-bounds action zones;
-    // simply leaving the track perimeter no longer counts.
-    const inZoneNow = outOfBoundsZones?.some(z => this.isPointInActionZone(pos.x, pos.z, z)) ?? false;
+    const inExplicitZone = outOfBoundsZones?.some(z => this.isPointInActionZone(pos.x, pos.z, z)) ?? false;
+    // When enabled for the track, leaving the track perimeter (the dead space)
+    // also counts as out of bounds.
+    const inTrackDeadSpace = deadSpaceEnabled && this._isPointOutsideTrackBounds(pos.x, pos.z, track);
+    const inZoneNow = inExplicitZone || inTrackDeadSpace;
 
     if (nowMs < state.immuneUntilMs) {
       state.inZone = false;

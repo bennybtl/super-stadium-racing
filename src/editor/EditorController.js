@@ -139,6 +139,12 @@ export class EditorController {
     // Mouse-drag camera pan (empty terrain) + wheel zoom.
     this._panState = null;        // { anchor:{x,z}, startX, startY, active }
     this._panPlaneY = 0;          // ground plane the grab point is projected onto
+    // Middle-mouse orbit: hold + drag to rotate the camera about its focus.
+    this._orbitState = null;      // { startX, startY, target, radius, azimuth, polar }
+    this._orbitSensitivity = 0.006; // radians per pixel dragged
+    // Default editor camera framing, reused by activate() and resetCamera().
+    this._defaultCamPos = new Vector3(0, 50, -30);
+    this._defaultCamTarget = new Vector3(0, 0, 0);
     this._wheelZoomStep = 0.12;   // fraction of view distance per wheel notch
     this._minCamHeight = 8;
     this._maxCamHeight = 400;
@@ -167,8 +173,8 @@ export class EditorController {
     this.menuManager = menuManager;
     
     // Position camera for top-down editing view
-    this.camera.position = new Vector3(0, 50, -30);
-    this.camera.setTarget(new Vector3(0, 0, 0));
+    this.camera.position.copyFrom(this._defaultCamPos);
+    this.camera.setTarget(this._defaultCamTarget.clone());
     
     // Add event listeners
     window.addEventListener('keydown', this.boundKeyDown, true); // Use capture phase
@@ -280,6 +286,7 @@ export class EditorController {
     this._editorStore.trackSettings.hidden = this.currentTrack.hidden ?? true;
     this._editorStore.trackSettings.packId = this.currentTrack.packId ?? '';
     this._editorStore.trackSettings.dirtChunks = this.currentTrack.dirtChunks ?? true;
+    this._editorStore.trackSettings.oobDeadSpace = this.currentTrack.oobDeadSpace ?? false;
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
   }
@@ -862,6 +869,14 @@ export class EditorController {
     if (!this.isActive) return;
 
     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+      // Middle-mouse orbit: rotate the camera about its focus. Handled before
+      // any selection/pan logic so it never disturbs the current selection.
+      if (pointerInfo.event.button === 1) {
+        pointerInfo.event.preventDefault?.();
+        this._beginOrbit();
+        return;
+      }
+
       const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
       const clickedMesh = pickResult?.pickedMesh ?? null;
       const wasSelectedTarget = this._isSelectedGizmoTarget(clickedMesh);
@@ -902,6 +917,12 @@ export class EditorController {
     }
 
     if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+      // Middle-mouse orbit takes precedence over every other drag gesture.
+      if (this._orbitState) {
+        this._updateOrbit();
+        return;
+      }
+
       // Camera pan: dragging empty terrain scrolls the view, keeping the grabbed
       // ground point locked under the cursor. Suppressed while a gizmo drag is
       // active so the two never fight.
@@ -945,6 +966,9 @@ export class EditorController {
     }
 
     if (pointerInfo.type === PointerEventTypes.POINTERUP) {
+      // End any in-progress middle-mouse orbit.
+      this._orbitState = null;
+
       this._clearDragHoldTimer();
 
       // Resolve a pan gesture. Clicking empty terrain neither pans (unless
@@ -1037,6 +1061,54 @@ export class EditorController {
     const target = this.camera.getTarget();
     this.camera.position.addInPlace(shift);
     this.camera.setTarget(target.add(shift));
+  }
+
+  /**
+   * Begin a middle-mouse orbit. Captures the camera's current offset from its
+   * focus as spherical coordinates; the drag then rotates that offset in place.
+   */
+  _beginOrbit() {
+    const target = this.camera.getTarget().clone();
+    const offset = this.camera.position.subtract(target);
+    const radius = offset.length();
+    if (radius < 1e-3) return;
+    this._orbitState = {
+      startX: this.scene.pointerX,
+      startY: this.scene.pointerY,
+      target,
+      radius,
+      azimuth: Math.atan2(offset.x, offset.z),
+      polar: Math.acos(Math.max(-1, Math.min(1, offset.y / radius))),
+    };
+  }
+
+  /** Rotate the camera about its focus from the current orbit drag delta. */
+  _updateOrbit() {
+    const s = this._orbitState;
+    const dx = this.scene.pointerX - s.startX;
+    const dy = this.scene.pointerY - s.startY;
+    const azimuth = s.azimuth - dx * this._orbitSensitivity;
+    // Clamp polar (angle from vertical) so the camera stays above the ground
+    // plane and never flips over the top of the focus.
+    const minPolar = 0.05;
+    const maxPolar = Math.PI / 2 - 0.05;
+    const polar = Math.max(minPolar, Math.min(maxPolar, s.polar - dy * this._orbitSensitivity));
+    const sinP = Math.sin(polar);
+    const offset = new Vector3(
+      s.radius * sinP * Math.sin(azimuth),
+      s.radius * Math.cos(polar),
+      s.radius * sinP * Math.cos(azimuth),
+    );
+    this.camera.position.copyFrom(s.target.add(offset));
+    this.camera.setTarget(s.target);
+  }
+
+  /** Restore the default top-down editor camera framing. */
+  resetCamera() {
+    this._orbitState = null;
+    this._panState = null;
+    this.camera.position.copyFrom(this._defaultCamPos);
+    this.camera.setTarget(this._defaultCamTarget.clone());
   }
 
   /** Mouse-wheel zoom: dolly along the view axis toward the cursor's ground point. */
@@ -1438,10 +1510,14 @@ export class EditorController {
 
   // ─── Grid Snapping ────────────────────────────────────────────────────────
 
-  /** Round a world-space coordinate to the current snap grid, if snap is on. */
-  _snap(v, axis = null) {
+  /**
+   * Round a world-space coordinate to the current snap grid, if snap is on.
+   * `padding` widens the clamp beyond the track perimeter — used to let poly
+   * walls reach into the surrounding dead space (see EDITOR_DEAD_SPACE_REACH).
+   */
+  _snap(v, axis = null, padding = 0) {
     const { snapEnabled, snapSize } = this._editorStore;
-    
+
     // Determine dynamic boundaries from current track
     let clampMax = 80;
     if (this.currentTrack) {
@@ -1449,7 +1525,8 @@ export class EditorController {
       else if (axis === 'z') clampMax = (this.currentTrack.depth ?? 160) / 2;
       else clampMax = Math.max(this.currentTrack.width ?? 160, this.currentTrack.depth ?? 160) / 2;
     }
-    
+    clampMax += padding;
+
     const clamped = Math.max(-clampMax, Math.min(clampMax, v));
     return snapEnabled ? Math.round(clamped / snapSize) * snapSize : clamped;
   }
@@ -1578,6 +1655,13 @@ export class EditorController {
     this.currentTrack.dirtChunks = !!enabled;
     this._syncTrackSettingsPanel();
     this._refreshDirtChunks();
+  }
+
+  changeTrackOobDeadSpace(enabled) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.oobDeadSpace = !!enabled;
+    this._syncTrackSettingsPanel();
   }
 
   /** Dispose any existing dirt-chunk meshes/materials and regenerate if enabled.

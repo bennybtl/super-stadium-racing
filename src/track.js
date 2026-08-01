@@ -140,6 +140,10 @@ export class Track {
     // Procedural dirt-chunk scatter (off-road dressing). On by default; turn off
     // for on-road / paved tracks.
     this.dirtChunks = true;
+    // When true, driving off the track perimeter into the surrounding dead space
+    // triggers the out-of-bounds countdown/respawn (in addition to any explicit
+    // out-of-bounds zones). Off by default.
+    this.oobDeadSpace = false;
     this.width = width;
     this.depth = depth;
     this.features = [];
@@ -957,6 +961,7 @@ export class Track {
       packId: this.packId,
       hidden: this.hidden,
       dirtChunks: this.dirtChunks,
+      oobDeadSpace: this.oobDeadSpace,
       name: this.name,
       image: this.image ?? undefined,
       width: this.width,
@@ -980,6 +985,7 @@ export class Track {
     track.packId = data.packId ?? track.packId;
     track.hidden = data.hidden ?? track.hidden;
     track.dirtChunks = data.dirtChunks ?? track.dirtChunks;
+    track.oobDeadSpace = data.oobDeadSpace ?? track.oobDeadSpace;
     if (data.defaultTerrainType) {
       const key = Object.keys(TERRAIN_TYPES).find(
         k => TERRAIN_TYPES[k].name === data.defaultTerrainType

@@ -10,7 +10,7 @@
       </button>
 
       <div class="text-slate-400 text-[11px] font-sans">
-        Add Feature: Space | Pan/Move: W,A,S,D | Rotate: Q,E | Delete: Del | Undo: Ctrl+Z | Zoom: +/- | Move Faster: Shift
+        Add Feature: Space | Pan/Move: W,A,S,D | Orbit: Middle-Drag | Rotate: Q,E | Delete: Del | Undo: Ctrl+Z | Zoom: +/- | Move Faster: Shift
       </div>
 
       <!-- Right: snap controls -->
@@ -36,6 +36,13 @@
           title="Toggle editor gizmos"
         >
           {{ editor.gizmosVisible ? 'GIZMOS ON' : 'GIZMOS OFF' }}
+        </button>
+        <button
+          class="rounded-full border border-slate-700 bg-white/5 text-slate-400 hover:text-white text-[12px] font-sans px-3 py-1 whitespace-nowrap transition duration-150 ease-in-out hover:bg-white/10"
+          @click="editor.resetCamera()"
+          title="Reset camera to the default top-down view"
+        >
+          <i class="bi bi-arrow-counterclockwise mr-1"></i>Reset Camera
         </button>
         <button
           class="rounded-full border border-slate-700 bg-white/5 text-slate-400 hover:text-white text-[12px] font-sans px-3 py-1 whitespace-nowrap transition duration-150 ease-in-out hover:bg-white/10"

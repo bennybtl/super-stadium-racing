@@ -149,6 +149,9 @@ export const useEditorStore = defineStore('editor', () => {
   // ── Flag panel ──
   const flag = reactive({
     color: 'red',
+    heading: 0,
+    scale: 1,
+    poleHeight: 4.2,
   });
 
   // ── Decoration panel (flags + banner strings)
@@ -158,6 +161,7 @@ export const useEditorStore = defineStore('editor', () => {
     color: 'red',
     width: 8,
     poleHeight: 4.2,
+    height: 7.5,       // flag pole height (metres)
     heading: 0,
     scale: 1,
     mirrorX: false,    // model decorations: mirror across the X axis
@@ -218,6 +222,7 @@ export const useEditorStore = defineStore('editor', () => {
     hidden: true,
     packId: '',
     dirtChunks: true,
+    oobDeadSpace: false,
   });
   const trackDefaultTerrain = ref('packed_dirt');
   const trackBorderTerrain = ref('packed_dirt');
@@ -297,6 +302,7 @@ export const useEditorStore = defineStore('editor', () => {
   function quickTestTrack() { _bridge.value?.quickTestTrack(); }
   function rebuildScene() { _bridge.value?.rebuildScene?.(); }
   function captureScreenshot() { _bridge.value?.captureTrackScreenshot?.(); }
+  function resetCamera() { _bridge.value?.resetCamera?.(); }
   function openTrackSettings() { trackSettingsOpen.value = true; }
   function closeTrackSettings() { trackSettingsOpen.value = false; }
   function toggleTrackSettings() { trackSettingsOpen.value = !trackSettingsOpen.value; }
@@ -319,6 +325,10 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackDirtChunks(enabled) {
     trackSettings.dirtChunks = !!enabled;
     _bridge.value?.changeTrackDirtChunks?.(!!enabled);
+  }
+  function setTrackOobDeadSpace(enabled) {
+    trackSettings.oobDeadSpace = !!enabled;
+    _bridge.value?.changeTrackOobDeadSpace?.(!!enabled);
   }
   function _normalizeTrackDimension(val, fallback) {
     const numeric = Number(val);
@@ -468,13 +478,13 @@ export const useEditorStore = defineStore('editor', () => {
     actionZone,
     setActionZoneType, polyCurb,
     trackSettingsOpen, trackSettings,
-    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackWidth, setTrackDepth,
+    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackOobDeadSpace, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
     toggleSnap, cycleSnapSize, quickTestTrack,
-    rebuildScene, captureScreenshot,
+    rebuildScene, captureScreenshot, resetCamera,
     openAddMenu, closeAddMenu, toggleAddMenu,
     setObstacleType, openAiPath, closeAiPath,
     aiPathWear,
