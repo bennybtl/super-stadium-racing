@@ -54,7 +54,7 @@
 - Base handling:
   - `lookAheadDistance`, `maxSpeed`, `steeringPrecision`
 - Steering:
-  - `avoidanceRadius`, `avoidanceMaxPush`, `avoidanceIgnoreBehind`, `steeringSmooth`, `steeringThreshold`
+  - `avoidanceRadius`, `avoidanceMaxPush`, `avoidanceIgnoreBehind`, `steeringSmooth`, `steerGain`, `steeringThreshold`
 - Throttle:
   - `speedTolerance`, `telemetryLookWaypoints`, `pathLookWaypoints`
 - Boost:

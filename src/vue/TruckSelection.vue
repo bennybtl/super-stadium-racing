@@ -22,7 +22,7 @@
             :value="selectedVehicle"
             @change="$emit('update:selectedVehicle', $event.target.value)"
           >
-            <option v-for="vehicle in vehicles" :key="vehicle.key" :value="vehicle.key">{{ vehicle.name }}</option>
+            <option v-for="vehicle in sortedVehicles" :key="vehicle.key" :value="vehicle.key">{{ vehicle.name }}</option>
           </select>
         </div>
         <div class="flex flex-row flex-wrap gap-3">
@@ -67,6 +67,10 @@ const props = defineProps({
 });
 
 defineEmits(['update:selectedVehicle', 'update:selectedColor']);
+
+const sortedVehicles = computed(() =>
+  [...props.vehicles].sort((a, b) => a.name.localeCompare(b.name))
+);
 
 const selectedVehicleData = computed(() => {
   return props.vehicles.find((vehicle) => vehicle.key === props.selectedVehicle) ?? null;

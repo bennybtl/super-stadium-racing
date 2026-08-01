@@ -110,6 +110,8 @@ const COLORS = [
   { value: 'purple', label: 'Purple' },
 ];
 
-// Everything discovered in /decorations/ (see DecorationLoader).
-const decorations = computed(() => window.decorationLoader?.getDecorationList() ?? []);
+// Everything discovered in /decorations/ (see DecorationLoader), sorted by name.
+const decorations = computed(() =>
+  [...(window.decorationLoader?.getDecorationList() ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+);
 </script>

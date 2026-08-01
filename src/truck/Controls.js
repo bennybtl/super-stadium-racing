@@ -119,7 +119,13 @@ export class Controls {
 
       // Ease the steer amount toward the input target so turn-in ramps up
       // instead of snapping to full rate; taps produce small corrections.
-      const steerTarget = steerSuppressed ? 0 : (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      // Analog steer (-1..1) when the input supplies it (AI); otherwise derive
+      // from the left/right keys, so the human keyboard path is unchanged.
+      const steerTarget = steerSuppressed
+        ? 0
+        : (typeof input.steer === 'number'
+            ? Math.max(-1, Math.min(1, input.steer))
+            : (input.right ? 1 : 0) - (input.left ? 1 : 0));
       const rampRate = steerTarget === 0 ? STEER_RAMP_DOWN : STEER_RAMP_UP;
       const maxStep = rampRate * (this.state.steerRampScale ?? 1) * deltaTime;
       const diff = steerTarget - this._steerAmount;

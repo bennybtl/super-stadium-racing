@@ -3,10 +3,17 @@ export const DEFAULT_PATH_CONFIG = {
   lookAhead: 30,
   waypointStep: 3,
   baseSpeedFactor: 28,
-  minSpeedFactor: 15,
+  // Floor is low enough that the grip limit below (not this clamp) sets the
+  // speed for tight corners — hairpins need to drop well under the old 15.
+  minSpeedFactor: 9,
   maxDecel: 22,
   curveWindowUnits: 9,
-  turnFullAngle: Math.PI / 2,
+  // Lateral grip budget (world units/s² per unit of skill maxSpeed). Corner
+  // target speed is v = maxSpeed * sqrt(lateralAccel * radius): the fastest the
+  // truck can hold that radius before sliding wide. Lower = slower, safer
+  // corners. 22 overshot the tightest corners (Zipper's ~68-86° apexes exceed
+  // the truck's real grip); 18 keeps most of the pace but stays under the limit.
+  lateralAccel: 18,
 };
 
 /**
@@ -25,7 +32,7 @@ export class AIPathPlanner {
     this.minSpeedFactor = config.minSpeedFactor ?? DEFAULT_PATH_CONFIG.minSpeedFactor;
     this.maxDecel = config.maxDecel ?? DEFAULT_PATH_CONFIG.maxDecel;
     this.curveWindowUnits = config.curveWindowUnits ?? DEFAULT_PATH_CONFIG.curveWindowUnits;
-    this.turnFullAngle = config.turnFullAngle ?? DEFAULT_PATH_CONFIG.turnFullAngle;
+    this.lateralAccel = config.lateralAccel ?? DEFAULT_PATH_CONFIG.lateralAccel;
   }
 
   getCheckpointPositions() {
@@ -77,7 +84,7 @@ export class AIPathPlanner {
     const MIN_SPEED = this.minSpeedFactor * d.maxSpeed;
     const MAX_DECEL = this.maxDecel;
     const CURVE_WINDOW_UNITS = this.curveWindowUnits;
-    const TURN_FULL_ANGLE = this.turnFullAngle;
+    const LATERAL_ACCEL = this.lateralAccel;
 
     const buildAuthoredNodesWithBranches = () => {
       const mainNodes = authorNodes.map(p => ({ x: p.x, z: p.z }));
@@ -195,10 +202,13 @@ export class AIPathPlanner {
     }
     d.path.push({ x: nodes[0].x, z: nodes[0].z });
 
-    // Corner target speed from local curvature, measured over a fixed-distance
-    // window on the evenly-spaced path. This is independent of how densely the
-    // turn was authored, so a hard turn traced by several nodes still registers
-    // as sharp and gets a low target speed.
+    // Corner target speed from a lateral-grip limit: the fastest the truck can
+    // hold this radius without sliding wide. We measure the path's turn angle
+    // over a fixed-distance window (independent of how densely the corner was
+    // authored) and convert it to a radius, then apply v = maxSpeed * sqrt(
+    // lateralAccel * radius). Tight corners (small radius) drop far more steeply
+    // than the old linear angle-blend did, which is what stops the AI arriving
+    // too hot. The backward braking pass below turns these into early braking.
     const P = d.path.length;
     const win = Math.max(2, Math.round(CURVE_WINDOW_UNITS / STEP));
     for (let i = 0; i < P; i++) {
@@ -209,13 +219,18 @@ export class AIPathPlanner {
       const bx = b.x - curr.x, bz = b.z - curr.z;
       const lenA = Math.sqrt(ax * ax + az * az);
       const lenB = Math.sqrt(bx * bx + bz * bz);
-      let t = 0;
+      let speed = BASE_SPEED;
       if (lenA > 0.001 && lenB > 0.001) {
         const dot = (ax * bx + az * bz) / (lenA * lenB);
         const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-        t = Math.min(angle / TURN_FULL_ANGLE, 1);
+        if (angle > 1e-3) {
+          // Circular-arc estimate: tangent turns by `angle` over the arc length
+          // spanning the window, so radius = arcLength / angle.
+          const radius = (lenA + lenB) / angle;
+          speed = d.maxSpeed * Math.sqrt(LATERAL_ACCEL * radius);
+        }
       }
-      curr.speed = BASE_SPEED * (1 - t) + MIN_SPEED * t;
+      curr.speed = Math.max(MIN_SPEED, Math.min(BASE_SPEED, speed));
     }
 
     // Backward pass: cap each point's speed so it can brake to the next one.

@@ -9,9 +9,19 @@ export const DEFAULT_STEERING_CONFIG = {
   collisionProbeStep: 2,
   collisionProbeLateral: 3.5,
   collisionAvoidanceMaxPush: 6,
-  steeringSmooth: 0.12,
+  // Low-pass on the raw turn signal (0..1, higher = snappier). The AI only
+  // re-decides steering every ~100ms, so a heavy filter here reads as late
+  // turn-in and the truck washes wide through corners. Keep it responsive
+  // enough to commit as soon as the look-ahead target swings.
+  steeringSmooth: 0.3,
+  // Proportional-steer gain: analog steer = clamp(headingError * gain, -1, 1).
+  // Higher reaches full lock at a smaller error (sharper turn-in); lower is
+  // gentler. Sharp corners saturate to full lock; straights stay near zero.
+  steerGain: 2.5,
+  // Deadband on the heading error below which the AI holds dead straight. This
+  // is what stops the full-lock micro-corrections that used to saw the truck
+  // left/right on straights.
   steeringThreshold: 0.05,
-  steeringHysteresis: 0.2,
 };
 
 /**
@@ -32,11 +42,10 @@ export class AISteeringController {
     this.collisionProbeLateral = Math.max(0.5, config.collisionProbeLateral ?? DEFAULT_STEERING_CONFIG.collisionProbeLateral);
     this.collisionAvoidanceMaxPush = Math.max(0, config.collisionAvoidanceMaxPush ?? DEFAULT_STEERING_CONFIG.collisionAvoidanceMaxPush);
     this.steeringSmooth = config.steeringSmooth ?? DEFAULT_STEERING_CONFIG.steeringSmooth;
+    this.steerGain = config.steerGain ?? DEFAULT_STEERING_CONFIG.steerGain;
     this.steeringThreshold = config.steeringThreshold ?? DEFAULT_STEERING_CONFIG.steeringThreshold;
-    this.steeringHysteresis = config.steeringHysteresis ?? DEFAULT_STEERING_CONFIG.steeringHysteresis;
 
     this._smoothedTurn = 0;
-    this._lastSteerDir = 0; // -1 left, 0 center, 1 right
 
     this._fwd = new Vector3(0, 0, 1);
     this._right = new Vector3(1, 0, 0);
@@ -45,7 +54,6 @@ export class AISteeringController {
 
   reset() {
     this._smoothedTurn = 0;
-    this._lastSteerDir = 0;
   }
 
   compute({ position, heading, targetWaypoint, dt = 1 / 60 }) {
@@ -110,23 +118,16 @@ export class AISteeringController {
     const safeDt = Math.max(dt, 1 / 240);
     const smoothAlpha = 1 - Math.pow(1 - this.steeringSmooth, safeDt / (1 / 60));
     this._smoothedTurn += (turnStrength - this._smoothedTurn) * smoothAlpha;
-    turnStrength = this._smoothedTurn;
+    const headingError = this._smoothedTurn;
 
-    // Hysteresis: require a larger threshold to reverse steering direction
-    let steerDir = 0;
-    if (this._lastSteerDir === 0) {
-      if (turnStrength < -this.steeringThreshold) steerDir = -1;
-      else if (turnStrength > this.steeringThreshold) steerDir = 1;
-    } else if (this._lastSteerDir < 0) {
-      if (turnStrength > this.steeringHysteresis) steerDir = 1;
-      else if (turnStrength < -this.steeringThreshold) steerDir = -1;
-    } else {
-      if (turnStrength < -this.steeringHysteresis) steerDir = -1;
-      else if (turnStrength > this.steeringThreshold) steerDir = 1;
-    }
-    this._lastSteerDir = steerDir;
+    // Proportional steer: the command scales with the heading error instead of
+    // snapping to full lock, so small errors get small corrections and the
+    // truck holds the line. Inside the deadband it drives dead straight.
+    const steer = Math.abs(headingError) < this.steeringThreshold
+      ? 0
+      : Math.max(-1, Math.min(1, headingError * this.steerGain));
 
-    return { forward, rightVec, turnStrength, steerDir };
+    return { forward, rightVec, steer };
   }
 
   _computeCollisionAvoidanceOffset(position, forward, rightVec) {

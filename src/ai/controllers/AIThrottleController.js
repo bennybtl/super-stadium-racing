@@ -3,10 +3,10 @@ export const DEFAULT_THROTTLE_CONFIG = {
   telemetryLookWaypoints: 3,
   pathLookWaypoints: 12,
   // How far over the upcoming target speed (world units/s) the AI must be before
-  // it brakes instead of just coasting. Coasting can't shed enough speed for a
-  // sharp turn, so braking is what lets the AI actually hit the path's corner
-  // speeds.
-  brakeMargin: 5,
+  // it brakes instead of just coasting. Coasting sheds almost nothing (only
+  // rolling resistance), so anything in this band is carried into the apex —
+  // keep it tight so the AI doesn't enter corners hot.
+  brakeMargin: 2,
 };
 
 /**

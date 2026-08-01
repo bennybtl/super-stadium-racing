@@ -2,17 +2,20 @@
   <Transition name="add-menu">
     <div
       v-if="editor.addMenuOpen"
-      class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 pointer-events-auto"
+      class="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-auto"
       @mousedown.self="editor.closeAddMenu()"
     >
-      <div class="w-[min(780px,90vw)] max-h-[90vh] overflow-y-auto rounded-[1rem] border-2 border-sky-500 bg-slate-950/95 p-6 shadow-xl shadow-black/40" @mousedown.stop>
+      <div 
+        class="w-[min(780px,90vw)] max-h-[90vh] overflow-y-auto rounded-[1rem] p-4 shadow-xl shadow-black/80" 
+        :style="panelStyle"
+        @mousedown.stop>
         <h2 class="mb-5 text-center text-xl font-bold uppercase tracking-[0.22em] text-white">Add Feature</h2>
 
-        <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
           <button
             v-for="item in features"
             :key="item.label"
-            class="flex flex-col items-center gap-3 rounded-2xl border-2 border-transparent bg-gradient-to-b from-slate-800 to-slate-900 px-2 py-2 text-white shadow-[0_3px_10px_rgba(0,0,0,0.4)] transition-all duration-150 hover:border-sky-500 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(74,158,255,0.25)]"
+            class="max-w-[180px] p-2 rounded-xl transition border-2 border-transparent hover:border-amber-400"
             @click="item.action(); editor.closeAddMenu()"
           >
             <img v-if="item.img" :src="item.img" :alt="item.label" class="h-[75px] w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
@@ -21,7 +24,7 @@
           </button>
         </div>
 
-        <button class="mt-4 w-full rounded-xl bg-slate-800 px-4 py-2 text-sm font-sans text-slate-200 transition hover:bg-slate-700" @click="editor.closeAddMenu()">
+        <button class="menu-button pointer-events-auto px-10 py-4 text-2xl w-full text-center" @click="editor.closeAddMenu()">
           Cancel
         </button>
       </div>
@@ -52,7 +55,7 @@ import imgTerrainPath from '../assets/terrain_path.feature.png';
 const editor = useEditorStore();
 
 const features = [
-  { label: 'Checkpoint',       img: imgCheckpoint,    action: () => editor.featureAction('addCheckpoint')     },
+  { label: 'Checkpoint',       img: imgCheckpoint,    action: () => editor.featureAction('addCheckpoint')           },
   { label: 'Poly Wall',        img: imgPolyWall,      action: () => editor.featureAction('addPolyWallEntity')       },
   { label: 'Poly Curb',        img: imgPolyCurb,      action: () => editor.featureAction('addPolyCurbEntity')       },
   { label: 'Round Hill',       img: imgRoundHill,     action: () => editor.featureAction('addHillEntity')           },
@@ -60,15 +63,23 @@ const features = [
   { label: 'Poly Hill',        img: imgPolyHill,      action: () => editor.featureAction('addPolyHillEntity')       },
   { label: 'Mesh Grid',        img: imgMeshGrid,      action: () => editor.featureAction('addMeshGridEntity')       },
   { label: 'Bridge Mesh',      img: imgBridge,        action: () => editor.featureAction('addBridgeMeshEntity')     },
-  { label: 'Terrain Shape',   img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')        },
-  { label: 'Obstacle',         img: imgObstacle,      action: () => editor.featureAction('addObstacleEntity')      },
+  { label: 'Terrain Shape',   img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')         },
+  { label: 'Obstacle',         img: imgObstacle,      action: () => editor.featureAction('addObstacleEntity')       },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.featureAction('addTrackSignEntity')      },
   { label: 'Decoration',       img: imgFlags,         action: () => editor.featureAction('addDecorationEntity')     },
   { label: 'Action Zone',      img: imgActionZone,    action: () => editor.featureAction('addActionZoneEntity')     },
-  { label: 'AI Path',          img: imgAiPath,        action: () => editor.openAiPath()              },
-  { label: 'Terrain Path',     img: imgTerrainPath,       action: () => editor.featureAction('addTerrainPathEntity')          },
+  { label: 'AI Path',          img: imgAiPath,        action: () => editor.openAiPath()                             },
+  { label: 'Terrain Path',     img: imgTerrainPath,       action: () => editor.featureAction('addTerrainPathEntity')},
   { label: 'Surface Decal',    img: imgDecal,         action: () => editor.featureAction('openSurfaceDecalStamp')   },
 ];
+
+const panelStyle = {
+  backgroundImage: `url(${new URL('../../assets/checker-black.png', import.meta.url).href})`,
+  backgroundRepeat: 'repeat',
+  backgroundSize: '220px 220px',
+  backgroundColor: 'rgba(0,0,0,0.4)'
+};
+
 </script>
 
 <style scoped>

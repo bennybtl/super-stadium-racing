@@ -268,7 +268,6 @@ export class EditorMode extends BaseMode {
 
     menuManager.onEditorSave = () => {
       if (rebuild.currentTrack) {
-        trackLoader.downloadTrack(rebuild.currentTrack);
         const saveKey = (menuManager.selectedTrack && menuManager.selectedTrack !== 'new')
           ? menuManager.selectedTrack
           : rebuild.currentTrack.id || 'custom';

@@ -61,10 +61,13 @@
   const store = useMenuStore();
 
   const aiVehicleOptions = computed(() => ([
+    // Keep "Random" pinned at the top; sort the actual vehicles by name.
     { key: 'random', name: 'Random' },
-    ...store.vehicleList.map(vehicle => ({
-      key: vehicle.key,
-      name: vehicle.name ?? vehicle.key,
-    })),
+    ...store.vehicleList
+      .map(vehicle => ({
+        key: vehicle.key,
+        name: vehicle.name ?? vehicle.key,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
   ]));
 </script>

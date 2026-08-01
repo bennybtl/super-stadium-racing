@@ -162,6 +162,29 @@ export class TrackLoader {
   }
 
   /**
+   * True if a `track_<key>` edit is saved in localStorage. Built-in tracks
+   * pick one up when edited & saved in the editor; pack/editor tracks always
+   * have one (that's how they persist).
+   */
+  hasStoredTrack(key) {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem(`track_${key}`) !== null;
+  }
+
+  /**
+   * Discard the localStorage edits for a built-in track, restoring the shipped
+   * default. Returns true if an override was cleared.
+   */
+  async revertTrack(key) {
+    if (!this.builtinKeys.has(key)) return false;
+    if (!this.hasStoredTrack(key)) return false;
+    localStorage.removeItem(`track_${key}`);
+    // The edit overwrote the in-memory copy, so reload the shipped default.
+    await this.loadTrack(`${key}.json`);
+    return true;
+  }
+
+  /**
    * Download track as JSON file
    */
   downloadTrack(track) {

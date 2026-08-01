@@ -63,7 +63,6 @@ export class AIDriver {
       collisionAvoidanceMaxPush = DEFAULT_STEERING_CONFIG.collisionAvoidanceMaxPush,
       steeringSmooth = DEFAULT_STEERING_CONFIG.steeringSmooth,
       steeringThreshold = DEFAULT_STEERING_CONFIG.steeringThreshold,
-      steeringHysteresis = DEFAULT_STEERING_CONFIG.steeringHysteresis,
       speedTolerance = DEFAULT_THROTTLE_CONFIG.speedTolerance,
       telemetryLookWaypoints = DEFAULT_THROTTLE_CONFIG.telemetryLookWaypoints,
       pathLookWaypoints = DEFAULT_THROTTLE_CONFIG.pathLookWaypoints,
@@ -158,7 +157,6 @@ export class AIDriver {
       collisionAvoidanceMaxPush,
       steeringSmooth,
       steeringThreshold,
-      steeringHysteresis,
     });
     this._throttleController = new AIThrottleController(this, {
       speedTolerance,
@@ -391,7 +389,7 @@ export class AIDriver {
     const gateTarget = this._checkpointGuidance.getApproachTarget(position);
     const steerTarget = gateTarget ?? targetWaypoint;
 
-    const { forward, rightVec, turnStrength, steerDir } = this._steeringController.compute({
+    const { forward, rightVec, steer } = this._steeringController.compute({
       position,
       heading,
       targetWaypoint: steerTarget,
@@ -402,13 +400,17 @@ export class AIDriver {
       fwdSpeed,
     });
 
+    // Flip steer when reversing so the truck curves the natural way. `steer` is
+    // the analog command the truck actually uses; left/right are kept (from its
+    // sign) for consumers that still read booleans (e.g. stuck-recovery logs).
     const isActuallyReversing = fwdSpeed < -0.3;
-    const flipDir = isActuallyReversing ? -steerDir : steerDir;
+    const steerCmd = isActuallyReversing ? -steer : steer;
     const input = {
       forward: shouldMoveForward,
       back: shouldReverse,
-      left: flipDir < 0,
-      right: flipDir > 0,
+      left: steerCmd < 0,
+      right: steerCmd > 0,
+      steer: steerCmd,
     };
 
     this._boostController.update({ position, forward, rightVec, fwdSpeed, input });
