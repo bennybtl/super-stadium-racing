@@ -9,6 +9,12 @@ export const DEFAULT_STEERING_CONFIG = {
   collisionProbeStep: 2,
   collisionProbeLateral: 3.5,
   collisionAvoidanceMaxPush: 6,
+  // How much the AI steers by its trajectory (velocity) vs its nose (heading).
+  // 1 = pure trajectory: over-rotates to drag a drift back onto the line and
+  // scrubs speed, but wags/over-rotates everywhere. 0 = pure nose: plows wide in
+  // a slide (aims the nose at the apex but ignores where it's actually going).
+  // Between: rotate-and-scrub without the over-rotation.
+  trajectorySteer: 0.7,
   // Low-pass on the raw turn signal (0..1, higher = snappier). The AI only
   // re-decides steering every ~100ms, so a heavy filter here reads as late
   // turn-in and the truck washes wide through corners. Keep it responsive
@@ -43,6 +49,7 @@ export class AISteeringController {
     this.collisionAvoidanceMaxPush = Math.max(0, config.collisionAvoidanceMaxPush ?? DEFAULT_STEERING_CONFIG.collisionAvoidanceMaxPush);
     this.steeringSmooth = config.steeringSmooth ?? DEFAULT_STEERING_CONFIG.steeringSmooth;
     this.steerGain = config.steerGain ?? DEFAULT_STEERING_CONFIG.steerGain;
+    this.trajectorySteer = config.trajectorySteer ?? DEFAULT_STEERING_CONFIG.trajectorySteer;
     this.steeringThreshold = config.steeringThreshold ?? DEFAULT_STEERING_CONFIG.steeringThreshold;
 
     this._smoothedTurn = 0;
@@ -50,6 +57,7 @@ export class AISteeringController {
     this._fwd = new Vector3(0, 0, 1);
     this._right = new Vector3(1, 0, 0);
     this._toVirt = new Vector3(0, 0, 1);
+    this._velDir = new Vector3(0, 0, 1);
   }
 
   reset() {
@@ -103,17 +111,28 @@ export class AISteeringController {
     this._toVirt.normalize();
     const toVirtual = this._toVirt;
 
-    let turnStrength = Vector3.Cross(forward, toVirtual).y;
-
-    // Spin recovery damping.
+    // Steer the trajectory, not just the nose: aim a basis blended between the
+    // heading and the truck's *velocity* vector at the target. Leaning on the
+    // velocity makes the AI over-rotate to drag a slide back onto the line and
+    // scrub speed; blending the nose back in (trajectorySteer < 1) damps that so
+    // it rotates and scrubs without wagging. It's also inherently anti-spin (in a
+    // spin the velocity still points roughly at the target), which is why the old
+    // lateral-velocity spin damping is gone. Falls back to the nose only when
+    // nearly stopped, where velocity direction is just noise.
+    let steerBasis = forward;
     if (this.driver.truck) {
-      const fwd = Math.abs(this.driver.truck.state.velocity.dot(forward));
-      const lat = Math.abs(this.driver.truck.state.velocity.dot(rightVec));
-      if (lat > fwd * 1.5 && lat > 5) {
-        const spinFactor = Math.max(0.15, fwd / lat);
-        turnStrength *= spinFactor;
+      const vel = this.driver.truck.state.velocity;
+      const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+      if (speed > 0.5) {
+        const k = this.trajectorySteer;
+        const bx = forward.x * (1 - k) + (vel.x / speed) * k;
+        const bz = forward.z * (1 - k) + (vel.z / speed) * k;
+        const bl = Math.sqrt(bx * bx + bz * bz) || 1;
+        this._velDir.copyFromFloats(bx / bl, 0, bz / bl);
+        steerBasis = this._velDir;
       }
     }
+    let turnStrength = Vector3.Cross(steerBasis, toVirtual).y;
 
     const safeDt = Math.max(dt, 1 / 240);
     const smoothAlpha = 1 - Math.pow(1 - this.steeringSmooth, safeDt / (1 / 60));
