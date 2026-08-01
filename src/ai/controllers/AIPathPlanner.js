@@ -1,6 +1,11 @@
 export const DEFAULT_PATH_CONFIG = {
   lookBack: 5,
   lookAhead: 30,
+  // Look-ahead floor (world units): how close the AI may aim in the tightest
+  // corners. The aim point is shrunk toward the local path radius (see
+  // findLookAheadPoint) so it tracks sweepers instead of ballooning wide; this
+  // stops it getting so short that steering turns twitchy.
+  minLookAhead: 8,
   waypointStep: 3,
   baseSpeedFactor: 28,
   // Floor is low enough that the grip limit below (not this clamp) sets the
@@ -30,6 +35,7 @@ export class AIPathPlanner {
     this.driver = driver;
     this.lookBack = config.lookBack ?? DEFAULT_PATH_CONFIG.lookBack;
     this.lookAhead = config.lookAhead ?? DEFAULT_PATH_CONFIG.lookAhead;
+    this.minLookAhead = config.minLookAhead ?? DEFAULT_PATH_CONFIG.minLookAhead;
     this.waypointStep = config.waypointStep ?? DEFAULT_PATH_CONFIG.waypointStep;
     this.baseSpeedFactor = config.baseSpeedFactor ?? DEFAULT_PATH_CONFIG.baseSpeedFactor;
     this.minSpeedFactor = config.minSpeedFactor ?? DEFAULT_PATH_CONFIG.minSpeedFactor;
@@ -215,11 +221,17 @@ export class AIPathPlanner {
     // over a fixed-distance window (independent of how densely the corner was
     // authored) and convert it to a radius, then apply v = maxSpeed * sqrt(
     // grip * radius). The grip budget itself tapers from LAT_GENTLE (sweepers)
-    // down to LAT_SHARP (hairpins) by the same turn angle, since the truck can't
-    // hold a fast sweeper's lateral g through a tight, sharp apex. The backward
-    // braking pass below turns these into early braking.
+    // down to LAT_SHARP (hairpins) by the turn angle — but by the angle over
+    // BOTH a local window and a wider "sweep" window, taking whichever reads
+    // sharper. A long sweeping corner is locally gentle yet demands sustained
+    // grip and drifts wide at sweeper speed, so the wide window pulls its target
+    // down. The backward braking pass below turns these into early braking.
     const P = d.path.length;
     const win = Math.max(2, Math.round(CURVE_WINDOW_UNITS / STEP));
+    // Wider window (~24u) catches sustained curvature; SWEEP_FULL_ANGLE is the
+    // deflection across it that counts as fully sharp for the grip taper.
+    const sweepWin = Math.max(win + 1, Math.round(24 / STEP));
+    const SWEEP_FULL_ANGLE = (2 * Math.PI) / 4; // 120°
     for (let i = 0; i < P; i++) {
       const a = d.path[Math.max(0, i - win)];
       const curr = d.path[i];
@@ -229,20 +241,37 @@ export class AIPathPlanner {
       const lenA = Math.sqrt(ax * ax + az * az);
       const lenB = Math.sqrt(bx * bx + bz * bz);
       let speed = BASE_SPEED;
+      let radius = Infinity;
       if (lenA > 0.001 && lenB > 0.001) {
         const dot = (ax * bx + az * bz) / (lenA * lenB);
         const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
         if (angle > 1e-3) {
           // Circular-arc estimate: tangent turns by `angle` over the arc length
           // spanning the window, so radius = arcLength / angle.
-          const radius = (lenA + lenB) / angle;
-          // Grip tapers high→low as the corner sharpens.
-          const sharpness = Math.min(angle / GRIP_TAPER_ANGLE, 1);
+          radius = (lenA + lenB) / angle;
+          // Local sharpness (this apex) and sweep sharpness (sustained turn);
+          // grip tapers high→low by whichever reads sharper.
+          const localSharp = Math.min(angle / GRIP_TAPER_ANGLE, 1);
+          const wa = d.path[Math.max(0, i - sweepWin)];
+          const wb = d.path[Math.min(P - 1, i + sweepWin)];
+          const wax = curr.x - wa.x, waz = curr.z - wa.z;
+          const wbx = wb.x - curr.x, wbz = wb.z - curr.z;
+          const wlenA = Math.sqrt(wax * wax + waz * waz);
+          const wlenB = Math.sqrt(wbx * wbx + wbz * wbz);
+          let sweepSharp = 0;
+          if (wlenA > 0.001 && wlenB > 0.001) {
+            const wdot = (wax * wbx + waz * wbz) / (wlenA * wlenB);
+            const wAngle = Math.acos(Math.max(-1, Math.min(1, wdot)));
+            sweepSharp = Math.min(wAngle / SWEEP_FULL_ANGLE, 1);
+          }
+          const sharpness = Math.max(localSharp, sweepSharp);
           const grip = LAT_GENTLE + (LAT_SHARP - LAT_GENTLE) * sharpness;
           speed = d.maxSpeed * Math.sqrt(grip * radius);
         }
       }
       curr.speed = Math.max(MIN_SPEED, Math.min(BASE_SPEED, speed));
+      // Cached for the look-ahead: how tightly the path curls here (see findLookAheadPoint).
+      curr.radius = radius;
     }
 
     // Backward pass: cap each point's speed so it can brake to the next one.
@@ -383,18 +412,20 @@ export class AIPathPlanner {
 
     d.currentPathIndex = closestIndex;
 
+    // Shrink the look-ahead toward the tightest path radius just ahead. A fixed
+    // long look-ahead on a sustained sweeper aims across the arc, so the truck
+    // under-turns and runs wide; matching it to the radius keeps the aim on the
+    // line. Radius is cached on the path by calculateFullPath; telemetry paths
+    // lack it, so we keep the full distance there.
     let adaptiveLookAhead = d.lookAheadDistance;
-    if (closestIndex + 3 < d.path.length) {
-      const angle1 = d.path[closestIndex].heading ?? 0;
-      const angle2 = d.path[closestIndex + 3].heading ?? 0;
-      let angleDiff = Math.abs(angle2 - angle1);
-      if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
-
-      const sharpTurnAngle = Math.PI / 4;
-      if (angleDiff > sharpTurnAngle) {
-        const curveFactor = Math.min(angleDiff / Math.PI, 1.0);
-        adaptiveLookAhead = d.lookAheadDistance * (1.0 - curveFactor * 0.6);
-      }
+    const scan = Math.max(1, Math.round(d.lookAheadDistance / (this.waypointStep || 3)));
+    let minRadius = Infinity;
+    for (let i = closestIndex; i < Math.min(n, closestIndex + scan); i++) {
+      const r = d.path[i].radius;
+      if (typeof r === 'number' && r < minRadius) minRadius = r;
+    }
+    if (Number.isFinite(minRadius)) {
+      adaptiveLookAhead = Math.max(this.minLookAhead, Math.min(d.lookAheadDistance, minRadius));
     }
 
     const endIndex = gateCap !== null ? gateCap : n - 1;
