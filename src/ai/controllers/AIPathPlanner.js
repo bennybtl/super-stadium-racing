@@ -9,11 +9,14 @@ export const DEFAULT_PATH_CONFIG = {
   maxDecel: 22,
   curveWindowUnits: 9,
   // Lateral grip budget (world units/s² per unit of skill maxSpeed). Corner
-  // target speed is v = maxSpeed * sqrt(lateralAccel * radius): the fastest the
-  // truck can hold that radius before sliding wide. Lower = slower, safer
-  // corners. 22 overshot the tightest corners (Zipper's ~68-86° apexes exceed
-  // the truck's real grip); 18 keeps most of the pace but stays under the limit.
-  lateralAccel: 18,
+  // target speed is v = maxSpeed * sqrt(grip * radius): the fastest the truck
+  // can hold that radius before sliding wide. But holdable grip isn't constant —
+  // a sharp corner taken off a straight (turn-in transient, weight transfer)
+  // holds less than a fast sweeper. So the budget tapers from `lateralAccel` on
+  // gentle bends down to `lateralAccelSharp` on hairpins, by turn angle: fast
+  // sweepers keep their pace while sharp corners slow disproportionately more.
+  lateralAccel: 19,       // gentle-bend grip (fast sweepers)
+  lateralAccelSharp: 11,  // hairpin grip (holds Zipper's ~68-90° apexes)
 };
 
 /**
@@ -33,6 +36,7 @@ export class AIPathPlanner {
     this.maxDecel = config.maxDecel ?? DEFAULT_PATH_CONFIG.maxDecel;
     this.curveWindowUnits = config.curveWindowUnits ?? DEFAULT_PATH_CONFIG.curveWindowUnits;
     this.lateralAccel = config.lateralAccel ?? DEFAULT_PATH_CONFIG.lateralAccel;
+    this.lateralAccelSharp = config.lateralAccelSharp ?? DEFAULT_PATH_CONFIG.lateralAccelSharp;
   }
 
   getCheckpointPositions() {
@@ -84,7 +88,11 @@ export class AIPathPlanner {
     const MIN_SPEED = this.minSpeedFactor * d.maxSpeed;
     const MAX_DECEL = this.maxDecel;
     const CURVE_WINDOW_UNITS = this.curveWindowUnits;
-    const LATERAL_ACCEL = this.lateralAccel;
+    const LAT_GENTLE = this.lateralAccel;
+    const LAT_SHARP = this.lateralAccelSharp;
+    // Turn angle (rad) at which the grip budget reaches LAT_SHARP; sharper turns
+    // stay there. ~90° — Zipper's tightest apexes measure just under this.
+    const GRIP_TAPER_ANGLE = Math.PI / 2;
 
     const buildAuthoredNodesWithBranches = () => {
       const mainNodes = authorNodes.map(p => ({ x: p.x, z: p.z }));
@@ -206,9 +214,10 @@ export class AIPathPlanner {
     // hold this radius without sliding wide. We measure the path's turn angle
     // over a fixed-distance window (independent of how densely the corner was
     // authored) and convert it to a radius, then apply v = maxSpeed * sqrt(
-    // lateralAccel * radius). Tight corners (small radius) drop far more steeply
-    // than the old linear angle-blend did, which is what stops the AI arriving
-    // too hot. The backward braking pass below turns these into early braking.
+    // grip * radius). The grip budget itself tapers from LAT_GENTLE (sweepers)
+    // down to LAT_SHARP (hairpins) by the same turn angle, since the truck can't
+    // hold a fast sweeper's lateral g through a tight, sharp apex. The backward
+    // braking pass below turns these into early braking.
     const P = d.path.length;
     const win = Math.max(2, Math.round(CURVE_WINDOW_UNITS / STEP));
     for (let i = 0; i < P; i++) {
@@ -227,7 +236,10 @@ export class AIPathPlanner {
           // Circular-arc estimate: tangent turns by `angle` over the arc length
           // spanning the window, so radius = arcLength / angle.
           const radius = (lenA + lenB) / angle;
-          speed = d.maxSpeed * Math.sqrt(LATERAL_ACCEL * radius);
+          // Grip tapers high→low as the corner sharpens.
+          const sharpness = Math.min(angle / GRIP_TAPER_ANGLE, 1);
+          const grip = LAT_GENTLE + (LAT_SHARP - LAT_GENTLE) * sharpness;
+          speed = d.maxSpeed * Math.sqrt(grip * radius);
         }
       }
       curr.speed = Math.max(MIN_SPEED, Math.min(BASE_SPEED, speed));

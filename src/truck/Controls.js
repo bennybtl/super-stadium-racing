@@ -301,9 +301,11 @@ export class Controls {
     const nitro = this.state.boostActive ? this.state.boostSpeedMult : 1.0;
     const zone  = this.state.speedBoostActive ? this.state.speedBoostSpeedMult : 1.0;
     const base = this.state.maxSpeed * nitro * zone;
-    // Inside a slow zone the truck cannot accelerate past the zone limit
+    // Inside a slow zone the truck cannot accelerate past the zone limit, which
+    // scales with the zone's slow strength (see DriveMode.applySlowZones).
     if (this.state.slowZoneActive) {
-      return Math.min(base, this.state.slowZoneMaxSpeed);
+      const slowFraction = Math.min(1, (this.state.slowZoneActive.slowStrength ?? 3) / 10);
+      return Math.min(base, this.state.maxSpeed * (1 - slowFraction));
     }
     return base;
   }

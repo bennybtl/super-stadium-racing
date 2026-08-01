@@ -52,7 +52,7 @@
       <input
         type="range"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-        min="1" max="9.5" step="0.5"
+        min="0.5" max="9.5" step="0.5"
         :value="editor.actionZone.slowStrength"
         @input="editor.setFeatureProp('actionZone', 'slowStrength', +$event.target.value)"
       />

@@ -245,9 +245,9 @@ export class Truck {
       boostAccelMult: 2,
       boostSpeedMult: 1.5,
 
-      // Slow zone — set each frame by the game loop when inside a 'slowZone' action zone
+      // Slow zone — set each frame by the game loop to the active 'slowZone'
+      // action zone (its slowStrength scales the speed cap), false when outside.
       slowZoneActive: false,
-      slowZoneMaxSpeed: 5,
 
       // Speed-boost zone — armed each frame by the game loop while inside a
       // 'speedBoost' action zone, then lingers for speedBoostTimer seconds.

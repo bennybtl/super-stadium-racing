@@ -242,7 +242,11 @@ export class DriveMode extends BaseMode {
       truck.state.slowZoneActive = zone;
       if (!zone) continue;
 
-      const limit = truck.state.slowZoneMaxSpeed * ((zone.slowStrength ?? 3) / 10);
+      // slowStrength is the slow *amount* on a 0-10 scale (UI shows it ×10 as a
+      // %): higher = slower. Cap the truck that fraction below its own top speed,
+      // so a low strength barely slows and a high one forces a crawl.
+      const slowFraction = Math.min(1, (zone.slowStrength ?? 3) / 10);
+      const limit = truck.state.maxSpeed * (1 - slowFraction);
 
       if (truck.state.velocity.length() > limit) {
         truck.state.velocity.normalize().scaleInPlace(limit);
