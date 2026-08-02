@@ -58,3 +58,70 @@
     color: #999999;
   }
 }
+
+/* ── Menu navigation transitions ──────────────────────────────────────────────
+   Menus read as a vertical stack. Going deeper moves the stack down: the new
+   screen rises in from below the viewport and the old one exits through the
+   top. Backing out plays the same motion in reverse — the `-back` variants
+   below only swap the two directions, timing is shared. Enter and leave
+   overlap, so the outgoing screen is still travelling when the new one lands. */
+.menu-slide-enter-active,
+.menu-slide-back-enter-active {
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.menu-slide-leave-active,
+.menu-slide-back-leave-active {
+  transition: transform 340ms cubic-bezier(0.6, 0, 0.9, 0.2);
+  pointer-events: none; /* the departing screen must not eat clicks */
+}
+.menu-slide-enter-from {
+  transform: translateY(100vh);
+}
+.menu-slide-leave-to {
+  transform: translateY(-100vh);
+}
+.menu-slide-back-enter-from {
+  transform: translateY(-100vh);
+}
+.menu-slide-back-leave-to {
+  transform: translateY(100vh);
+}
+
+/* Same motion at panel scale, for submenus that swap inside a menu panel.
+   Travelling the full viewport would just clip, so these move a short hop and
+   fade instead. */
+.menu-slide-inner-enter-active,
+.menu-slide-inner-back-enter-active {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-out;
+}
+.menu-slide-inner-leave-active,
+.menu-slide-inner-back-leave-active {
+  transition: transform 180ms cubic-bezier(0.6, 0, 0.9, 0.2), opacity 160ms ease-out;
+  pointer-events: none;
+}
+.menu-slide-inner-enter-from {
+  transform: translateY(56px);
+  opacity: 0;
+}
+.menu-slide-inner-leave-to {
+  transform: translateY(-56px);
+  opacity: 0;
+}
+.menu-slide-inner-back-enter-from {
+  transform: translateY(-56px);
+  opacity: 0;
+}
+.menu-slide-inner-back-leave-to {
+  transform: translateY(56px);
+  opacity: 0;
+}
+
+/* Backdrops cross-fade underneath the sliding panels. */
+.menu-fade-enter-active,
+.menu-fade-leave-active {
+  transition: opacity 340ms ease-out;
+}
+.menu-fade-enter-from,
+.menu-fade-leave-to {
+  opacity: 0;
+}

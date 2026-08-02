@@ -24,7 +24,7 @@ export class MenuManager {
     this.selectedAIDrivers = 3;
     this.selectedAIVehicleType = 'random';
     this.selectedReverse = false;
-    this.selectedVehicle = 'default_truck';
+    this.selectedVehicle = 'baja';
     this.selectedPlayerColor = null;
 
     // Connect to Pinia store (Pinia is active because vue/main.js runs first)

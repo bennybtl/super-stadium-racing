@@ -1,6 +1,10 @@
 <template>
-  <div v-if="store.singleRaceData" class="fixed inset-0 bg-black/90 flex items-center justify-center z-[1100] pointer-events-auto">
-    <div class="bg-slate-950/95 border-3 border-red-500 rounded-3xl p-10 min-w-[480px] max-w-[640px] shadow-[0_12px_48px_rgba(0,0,0,0.7)]">
+  <Transition name="menu-fade">
+    <div v-if="store.singleRaceData" class="fixed inset-0 bg-black/90 z-[1100] pointer-events-auto"></div>
+  </Transition>
+  <Transition name="menu-slide">
+  <div v-if="store.singleRaceData" class="fixed inset-0 overflow-hidden flex items-center justify-center z-[1101] pointer-events-none">
+    <div class="bg-slate-950/95 border-3 border-red-500 rounded-3xl p-10 min-w-[480px] max-w-[640px] shadow-[0_12px_48px_rgba(0,0,0,0.7)] pointer-events-auto">
 
       <h2 class="text-red-400 uppercase tracking-[0.28em] text-sm text-center mb-2">Race Results</h2>
       <p class="text-center text-xs text-slate-400 tracking-[0.18em] mb-6">{{ store.singleRaceData.trackKey }}</p>
@@ -37,6 +41,7 @@
       </button>
     </div>
   </div>
+  </Transition>
 </template>
 
 <script setup>

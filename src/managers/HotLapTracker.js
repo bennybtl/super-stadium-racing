@@ -32,7 +32,7 @@ export class HotLapTracker {
     uiManager,
     trackKey,
     reverse = false,
-    vehicleKey = 'default_truck',
+    vehicleKey = 'baja',
     vehicleDef = null,
     truckDims = null,
     upgrades = null,

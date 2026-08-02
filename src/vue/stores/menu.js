@@ -14,10 +14,17 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedAIDrivers = ref(3);
   const selectedAIVehicleType = ref('random');
   const selectedReverse = ref(false);
-  const selectedVehicle = ref('default_truck');
+  const selectedVehicle = ref('baja');
   const selectedPlayerColor = ref(null);
   // Current gameplay mode: null | 'practice' | 'singleRace'
   const mode = ref(null);
+
+  // Direction of the next menu transition: 'forward' descends the menu stack,
+  // 'back' plays the same slide inverted. Every action that ascends the stack
+  // (or dismisses a menu) sets 'back'; MenuOverlay resets it to 'forward' once
+  // the transition finishes, so ordinary navigation needs no bookkeeping.
+  const navDirection = ref('forward');
+  function setNavDirection(dir) { navDirection.value = dir; }
 
   // Overlay data (null when not showing)
   const pitData         = ref(null);
@@ -66,17 +73,18 @@ export const useMenuStore = defineStore('menu', () => {
     _bridge.value?.onStartPractice();
   }
 
-  function resume()       { _bridge.value?.onResume(); }
-  function reset()        { _bridge.value?.onReset(); }
-  function exit()         { _bridge.value?.onExit(); }
-  function editorResume() { _bridge.value?.onEditorResume(); }
+  function resume()       { navDirection.value = 'back'; _bridge.value?.onResume(); }
+  function reset()        { navDirection.value = 'back'; _bridge.value?.onReset(); }
+  function exit()         { navDirection.value = 'back'; _bridge.value?.onExit(); }
+  function editorResume() { navDirection.value = 'back'; _bridge.value?.onEditorResume(); }
   function editorSave()   { _bridge.value?.onEditorSave(); }
   function editorLoad()   { _bridge.value?.onEditorLoad(); }
-  function editorExit()   { _bridge.value?.onEditorExit(); }
+  function editorExit()   { navDirection.value = 'back'; _bridge.value?.onEditorExit(); }
   function settings()     { _bridge.value?.onSettings(); }
 
   function back(target) {
     if (!_bridge.value) return;
+    navDirection.value = 'back';
     if (target === 'start')            _bridge.value.showStartMenu();
   }
 
@@ -91,7 +99,7 @@ export const useMenuStore = defineStore('menu', () => {
   function selectPlayerColor(key)  { selectedPlayerColor.value = key; if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
   function startHotLapMode()          { mode.value = 'hotLap'; _bridge.value?.onStartHotLap(); }
   function startSingleRace()        { mode.value = 'singleRace'; _bridge.value?.onStartSingleRace(); }
-  function singleRaceExit()        { mode.value = null; singleRaceData.value = null; _bridge.value?.onExit(); }
+  function singleRaceExit()        { navDirection.value = 'back'; mode.value = null; singleRaceData.value = null; _bridge.value?.onExit(); }
   function setMode(nextMode)       { mode.value = nextMode; }
 
   // ── Championship actions ───────────────────────────────────────────────────
@@ -101,8 +109,8 @@ export const useMenuStore = defineStore('menu', () => {
   function startChampionship()     { mode.value = 'championship'; _bridge.value?.onStartChampionship(); }
   function continueChampionship()  { _bridge.value?.onContinueChampionship(); }
   function resumeChampionship()    { mode.value = 'championship'; _bridge.value?.onResumeChampionship(); }
-  function retireChampionship()    { mode.value = null; _bridge.value?.onRetireChampionship(); }
-  function championshipExit()      { championshipData.value = null; mode.value = null; _bridge.value?.onChampionshipExit(); }
+  function retireChampionship()    { navDirection.value = 'back'; mode.value = null; _bridge.value?.onRetireChampionship(); }
+  function championshipExit()      { navDirection.value = 'back'; championshipData.value = null; mode.value = null; _bridge.value?.onChampionshipExit(); }
 
   function setLoading(visible, message = null) {
     loadingVisible.value = !!visible;
@@ -111,7 +119,7 @@ export const useMenuStore = defineStore('menu', () => {
 
   return {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
-    selectedReverse,
+    selectedReverse, navDirection, setNavDirection,
     pitData, singleRaceData, championshipData, upgrades,
     champInitials, champTrackCount, hasActiveChampionship,
     loadingVisible, loadingMessage,

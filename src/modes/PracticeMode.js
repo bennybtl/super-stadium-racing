@@ -24,7 +24,7 @@ export class PracticeMode extends DriveMode {
     this.truckAudioController = null;
   }
 
-  async setup({ trackKey, vehicleKey = 'default_truck', playerColorKey = null }) {
+  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null }) {
     const { engine, menuManager } = this.controller;
 
     const {

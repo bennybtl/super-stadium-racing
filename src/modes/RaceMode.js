@@ -39,7 +39,7 @@ export class RaceMode extends DriveMode {
     this.floatingText = null;
   }
 
-  async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'default_truck', aiVehicleKey = 'random', playerColorKey = null, reverse = false, championship = null }) {
+  async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'baja', aiVehicleKey = 'random', playerColorKey = null, reverse = false, championship = null }) {
     const { engine, menuManager } = this.controller;
     const totalLaps = laps || 3;
 

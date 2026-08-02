@@ -1,11 +1,23 @@
 <template>
+  <!-- Backdrop and content are siblings rather than nested so each runs its own
+       transition: the backdrop cross-fades in place while the screen on top of
+       it slides. -->
+  <Transition name="menu-fade">
+    <div
+      v-if="store.screen"
+      class="fixed inset-0 z-[1000] font-sans overflow-hidden bg-black pointer-events-none"
+      :style="titleBackgroundStyle"
+    >
+      <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70"></div>
+    </div>
+  </Transition>
+
+  <Transition :name="slideName" appear @after-enter="clearNavDirection" @after-leave="clearNavDirection">
   <div
     v-if="store.screen"
-    class="fixed inset-0 z-[1000] font-sans overflow-hidden bg-black"
-    :style="titleBackgroundStyle"
+    :key="store.screen"
+    class="fixed inset-0 z-[1001] font-sans overflow-hidden pointer-events-none"
   >
-    <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70"></div>
-
     <template v-if="store.screen === 'title'">
       <div v-if="showSafariWarning" class="absolute inset-x-0 top-0 flex justify-center p-4">
         <div class="pointer-events-auto max-w-xl rounded-lg border-2 border-amber-400 bg-black/85 px-5 py-3 text-center shadow-[0_6px_24px_rgba(0,0,0,0.6)]">
@@ -18,7 +30,7 @@
       </div>
       <div class="absolute inset-x-0 bottom-0 flex justify-center pb-10">
         <button
-          class="menu-button start-button pointer-events-auto px-14 py-5 text-4xl"
+          class="menu-button pointer-events-auto px-14 py-5 text-4xl"
           @click="store.back('start')"
         >
           Start
@@ -145,12 +157,24 @@
     </div>
     </div>
   </div>
-  <div v-if="store.pitData" 
-    class="fixed inset-0 z-[1000] font-sans overflow-hidden bg-black"
-    :style="titleBackgroundStyle"
-  >
-    <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70"></div>
+  </Transition>
 
+  <Transition name="menu-fade">
+    <div
+      v-if="store.pitData"
+      class="fixed inset-0 z-[1000] font-sans overflow-hidden bg-black pointer-events-none"
+      :style="titleBackgroundStyle"
+    >
+      <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70"></div>
+    </div>
+  </Transition>
+
+  <Transition :name="slideName" @after-enter="clearNavDirection" @after-leave="clearNavDirection">
+  <div
+    v-if="store.pitData"
+    :key="pitScreenKey"
+    class="fixed inset-0 z-[1001] font-sans overflow-hidden pointer-events-none"
+  >
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
       <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
 
@@ -251,7 +275,7 @@
           </button>
         </div>
         <div class="flex flex-row gap-auto" v-if="setupStep === 'selectTrack'">
-          <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="setupStep = 'selectTruck'">Back</button>
+          <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.setNavDirection('back'); setupStep = 'selectTruck'">Back</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
             Start Practice
           </button>
@@ -266,6 +290,7 @@
       </div>
     </div>
   </div>
+  </Transition>
 </template>
 
 <script setup>
@@ -288,6 +313,20 @@ import TruckSetup from './TruckSetup.vue';
 const store = useMenuStore();
 const showSafariWarning = isSafari();
 const setupStep = ref('selectTruck');
+// The pit overlay is a single panel with two setup steps; keying the slide on
+// the step makes stepping between them read like any other menu change.
+const pitScreenKey = computed(() =>
+  store.pitData?.pitMode === 'championship' ? 'championshipPit' : setupStep.value
+);
+
+const slideName = computed(() =>
+  store.navDirection === 'back' ? 'menu-slide-back' : 'menu-slide'
+);
+
+// Transition classes are applied to the element imperatively when the enter or
+// leave begins, so resetting the direction here can't disturb a slide that is
+// still in flight — it only affects the next one.
+function clearNavDirection() { store.setNavDirection('forward'); }
 const showSaveOverwriteConfirm = ref(false);
 const saveConflictName = ref('');
 const showRetireConfirm = ref(false);
@@ -372,20 +411,4 @@ const title = computed(() => {
 });
 </script>
 
-<style scoped>
-.start-button {
-  animation: riseIn 360ms ease-out;
-}
-
-@keyframes riseIn {
-  from {
-    transform: translateY(36px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-</style>
 

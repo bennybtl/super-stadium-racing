@@ -25,7 +25,7 @@ export class HotLapMode extends DriveMode {
     this.uiManager = null;
   }
 
-  async setup({ trackKey, vehicleKey = 'default_truck', playerColorKey = null, reverse = false }) {
+  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false }) {
     const { engine, menuManager } = this.controller;
 
     const {
