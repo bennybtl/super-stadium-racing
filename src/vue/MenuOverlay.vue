@@ -6,10 +6,9 @@
     <div
       v-if="store.screen"
       class="fixed inset-0 z-[1000] font-sans overflow-hidden pointer-events-none"
-      :class="store.demoActive ? '' : 'bg-black'"
-      :style="titleBackgroundStyle"
+      :class="store.liveBackdrop ? '' : 'bg-black'"
     >
-      <div class="absolute inset-0" :class="scrimClass"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70"></div>
     </div>
   </Transition>
 
@@ -39,7 +38,7 @@
       <div class="absolute inset-x-0 bottom-0 flex justify-center pb-10">
         <button
           class="menu-button pointer-events-auto px-14 py-5 text-4xl"
-          @click="store.back('start')"
+          @click="store.showStartMenu()"
         >
           Start
         </button>
@@ -171,10 +170,9 @@
     <div
       v-if="store.pitData"
       class="fixed inset-0 z-[1000] font-sans overflow-hidden pointer-events-none"
-      :class="store.demoActive ? '' : 'bg-black'"
-      :style="titleBackgroundStyle"
+      :class="store.liveBackdrop ? '' : 'bg-black'"
     >
-      <div class="absolute inset-0" :class="scrimClass"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70"></div>
     </div>
   </Transition>
 
@@ -393,20 +391,6 @@ onUnmounted(() => {
 });
 
 const logoSrc = new URL('../assets/ssr-logo.png', import.meta.url).href;
-
-// With the attract-mode demo running there's a live scene behind the menus, so
-// the backdrop drops the static title art and only darkens enough to keep menu
-// text legible over bright terrain.
-const titleBackgroundStyle = computed(() => store.demoActive ? {} : {
-  backgroundImage: `url(${new URL('../assets/title.png', import.meta.url).href})`,
-  backgroundPosition: 'center',
-  backgroundRepeat: 'no-repeat',
-  backgroundSize: 'cover',
-});
-
-const scrimClass = computed(() => store.demoActive
-  ? 'bg-gradient-to-b from-black/45 via-black/25 to-black/70'
-  : 'bg-gradient-to-b from-black/30 via-black/20 to-black/70');
 
 const panelStyle = {
   backgroundImage: `url(${new URL('../assets/checker-black.png', import.meta.url).href})`,

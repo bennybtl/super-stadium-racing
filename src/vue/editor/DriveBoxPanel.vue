@@ -176,25 +176,9 @@
 <script setup>
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
+import { SURFACE_COLOR_OPTIONS as colorOptions, surfaceSwatch as swatch } from './surfaceColors.js';
 
 const editor = useEditorStore();
-
-const colorOptions = [
-  { value: 'terrain', label: 'Terrain' },
-  { value: '#9aa0a8', label: 'Grey' },
-  { value: '#4a4f55', label: 'Dark Grey' },
-  { value: '#e8e8e8', label: 'White' },
-  { value: '#1a1a1a', label: 'Black' },
-  { value: '#b3342e', label: 'Red' },
-  { value: '#2e5cb3', label: 'Blue' },
-  { value: '#e0b32e', label: 'Yellow' },
-  { value: '#3f7a3a', label: 'Green' },
-  { value: '#6e4f2f', label: 'Brown' },
-];
-
-function swatch(value) {
-  return value === 'terrain' ? 'transparent' : value;
-}
 
 function modeStyle(isSloped) {
   const active = editor.driveBox.slopeMode === isSloped;

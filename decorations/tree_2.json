@@ -1,6 +1,8 @@
 {
   "id": "tree_2",
   "name": "Tree 2",
+  "packId": "tree",
+  "packName": "Tree",
   "modelFile": "tree_2.obj",
   "rotationX": 180,
   "baseScale": 1,

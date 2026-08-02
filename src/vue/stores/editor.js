@@ -130,6 +130,8 @@ export const useEditorStore = defineStore('editor', () => {
     stepSize: 0.5,
     hasSelection: false,
     pointHeight: 0,
+    color: 'terrain',
+    sideColor: 'terrain',
   });
 
   // ── Poly wall panel ──
@@ -444,7 +446,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ── Surface decal stamp ──
-  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], angle: 0, width: 4, depth: 4, opacity: 1 });
+  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, angle: 0, width: 4, depth: 4, opacity: 1 });
 
 
   // ── Generic panel plumbing ──────────────────────────────────────────────

@@ -517,6 +517,8 @@ export class BridgeMeshEditor {
     s.bridgeMesh.rotation  = feature.rotation ?? 0;
     s.bridgeMesh.thickness = feature.thickness ?? 0.4;
     s.bridgeMesh.layerId = feature.layerId ?? feature.level ?? 1;
+    s.bridgeMesh.color     = feature.color ?? 'terrain';
+    s.bridgeMesh.sideColor = feature.sideColor ?? feature.color ?? 'terrain';
     s.selectedType         = 'bridgeMesh';
   }
 

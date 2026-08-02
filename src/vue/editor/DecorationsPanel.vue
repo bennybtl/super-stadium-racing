@@ -6,15 +6,27 @@
   >
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
 
-    <!-- Kind: every decoration in /decorations/ -->
+    <!-- Kind: packs collapse to one entry; standalone decorations list individually -->
     <div class="text-[12px] mb-1">Type</div>
     <select
       class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.decoration.model"
-      @change="editor.setDecorationType($event.target.value)"
+      :value="currentGroupKey"
+      @change="selectGroup($event.target.value)"
     >
-      <option v-for="d in decorations" :key="d.id" :value="d.id">{{ d.name }}</option>
+      <option v-for="g in groups" :key="g.key" :value="g.key">{{ g.name }}</option>
     </select>
+
+    <!-- Variation: only for the selected pack -->
+    <template v-if="currentGroup && currentGroup.members.length > 1">
+      <div class="text-[12px] mb-1">Variation</div>
+      <select
+        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+        :value="editor.decoration.model"
+        @change="editor.setDecorationType($event.target.value)"
+      >
+        <option v-for="m in currentGroup.members" :key="m.id" :value="m.id">{{ m.name }}</option>
+      </select>
+    </template>
 
     <!-- Controls come from the decoration's controller (or its `editable` flags) -->
     <template v-for="(ctl, prop) in editor.decoration.controls" :key="prop">
@@ -114,4 +126,38 @@ const COLORS = [
 const decorations = computed(() =>
   [...(window.decorationLoader?.getDecorationList() ?? [])].sort((a, b) => a.name.localeCompare(b.name))
 );
+
+// Collapse decorations sharing a packId into one Type entry. The group key is
+// the packId (or the decoration's own id when it isn't in a pack).
+const groups = computed(() => {
+  const byKey = new Map();
+  for (const d of decorations.value) {
+    const key = d.packId ?? d.id;
+    let g = byKey.get(key);
+    if (!g) {
+      g = { key, name: d.packId ? (d.packName ?? d.packId) : d.name, members: [] };
+      byKey.set(key, g);
+    }
+    g.members.push({ id: d.id, name: d.name });
+  }
+  return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// The group the currently-selected decoration belongs to.
+const currentGroupKey = computed(() => {
+  const model = editor.decoration.model;
+  return decorations.value.find(d => d.id === model)?.packId ?? model;
+});
+const currentGroup = computed(() =>
+  groups.value.find(g => g.key === currentGroupKey.value) ?? null
+);
+
+// Switching Type: keep the current variation if it's already in the chosen
+// pack, otherwise jump to the pack's first member.
+function selectGroup(key) {
+  const group = groups.value.find(g => g.key === key);
+  if (!group) return;
+  if (group.members.some(m => m.id === editor.decoration.model)) return;
+  editor.setDecorationType(group.members[0].id);
+}
 </script>

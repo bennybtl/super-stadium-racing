@@ -21,6 +21,17 @@
       </select>
     </template>
 
+    <template v-if="s.hasText">
+      <div class="text-slate-400 text-[11px] mb-2 mt-3 uppercase tracking-widest">Text</div>
+      <input
+        type="text"
+        class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+        :value="s.text"
+        @input="set('text', $event.target.value)"
+        placeholder="Enter text"
+      />
+    </template>
+
     <label v-if="s.hasOutline" class="flex items-center justify-between text-[12px] text-slate-200" :class="{ 'mt-3': !editing }">
       <span>Outline</span>
       <input type="checkbox" :checked="s.outline" @change="set('outline', $event.target.checked)" />

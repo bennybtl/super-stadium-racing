@@ -20,6 +20,11 @@ Loading is handled by `src/managers/DecorationLoader.js`; each instance is built
   "modelFile": "myprop.obj",      // OBJ filename in this folder
   "imageFile": "myprop.png",      // optional preview image (this folder)
 
+  // Optional: decorations sharing a packId collapse to one Type entry with a
+  // variation picker (e.g. tree_1/2/3 → one "Tree"). packName labels the pack.
+  "packId": "tree",
+  "packName": "Tree",
+
   "rotationX": -90,               // degrees; use -90 for Z-up authored models
   "baseScale": 1,                 // base model scale before the user scale
   "offsetY": 0,                   // vertical offset in model space
@@ -151,5 +156,5 @@ Selecting a placed decoration opens the **Decoration** panel. Available edits:
   still load — a feature typed after a decoration id is treated as that decoration.
 - A decoration's `id` is what saved tracks reference, so **renaming it orphans
   existing features**. Keep ids stable once tracks use them.
-- The bundled `tent`, `tree_1/2/3`, and `arrow_sign` are plain JSON-only props;
-  `flag` and `bannerString` show the controller form.
+- The bundled `tent` and `arrow_sign` are plain JSON-only props; `tree_1/2/3`
+  show the `packId` grouping; `flag` and `bannerString` show the controller form.

@@ -134,8 +134,9 @@ export class MenuMode extends DriveMode {
     };
 
     const demoScene = await this._buildDemoScene();
+    // The blank fallback has nothing to show through the menus.
+    this.hasLiveBackdrop = demoScene != null;
     this.scene = demoScene ?? this._buildBlankScene();
-    menuManager.setDemoActive(demoScene != null);
     return this.scene;
   }
 
@@ -370,10 +371,5 @@ export class MenuMode extends DriveMode {
 
       cameraController.update(focusPos, focusTruck().state.heading, dt);
     });
-  }
-
-  teardown() {
-    this.controller.menuManager.setDemoActive(false);
-    super.teardown();
   }
 }

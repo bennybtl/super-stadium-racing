@@ -45,6 +45,7 @@ function _lerpColor(colorA, colorB, t) {
 }
 
 const DRIVE_COLLIDER_OVERLAP = 0.35;
+const SHADOW_CASTER_INSET = 0.15;
 const TERRAIN_SEAM_MIN_LENGTH = 0.75;
 const TERRAIN_SEAM_MAX_LENGTH = 3.0;
 const TERRAIN_SEAM_SLOPE_LENGTH_SCALE = 1.5;
@@ -227,7 +228,44 @@ export class BridgeMesh {
     }
     this._mesh.isPickable = false;
     this._mesh.receiveShadows = true;
-    shadows?.addShadowCaster(this._mesh);
+
+    // ── Shadow caster proxy ──────────────────────────────────────────────────
+    // The deck must not cast into the shadow map at its own height: the shadow
+    // generator is a blurred exponential cube map on the one stadium light that
+    // carries most of the scene's illumination, so a large flat face that both
+    // casts and receives sits in its own blurred shadow and loses that light —
+    // it renders markedly darker than the identically-materialed terrain beside
+    // it. (SceneBuilder solves the same problem for the ground by making it a
+    // receiver only.) Instead the deck receives, and a copy of the top face
+    // inset below it does the casting, so the deck surface sits above its own
+    // shadow-map depth. Raise SHADOW_CASTER_INSET if any self-shadow remains.
+    //
+    // The proxy has to be a real opaque, isVisible mesh — the shadow map skips
+    // invisible meshes, and `visibility = 0` would land it in the transparent
+    // bucket, which is skipped unless transparencyShadow is on. It stays unseen
+    // by being fully enclosed inside the solid slab, hence the inset clamp for
+    // slabs thinner than twice the inset. Top face only: the sides barely change
+    // the silhouette cast onto the ground, and enclosing a full solid copy would
+    // z-fight with the underside.
+    const shadowInset = Math.min(SHADOW_CASTER_INSET, thickness * 0.5);
+    this._shadowCasterMesh = new Mesh(`bridge_mesh_shadow_${centerX}_${centerZ}`, scene);
+    _buildTopFaceVD(
+      centerX,
+      centerZ,
+      cols,
+      rows,
+      // Pulled in a hair so the proxy's rim sits inside the side faces rather
+      // than exactly on them, which would speckle along the silhouette.
+      Math.max(0.01, width - 0.04),
+      Math.max(0.01, depth - 0.04),
+      safeHeights.map(h => h - shadowInset),
+      rotation,
+      0
+    ).applyToMesh(this._shadowCasterMesh);
+    this._shadowCasterMesh.material = this._material;
+    this._shadowCasterMesh.isPickable = false;
+    this._shadowCasterMesh.receiveShadows = false;
+    shadows?.addShadowCaster(this._shadowCasterMesh);
 
     // ── Drive surface mesh (top face only, invisible but pickable) ───────────
     // This is what TerrainQuery raycasts onto. Its vertex heights exactly match
@@ -465,6 +503,10 @@ export class BridgeMesh {
     this._driveMeshPhysics = null;
     this._driveMesh?.dispose();
     this._driveMesh = null;
+    // AbstractMesh.dispose removes the mesh from every shadow generator's
+    // renderList, so the per-edit rebuild churn doesn't leak casters.
+    this._shadowCasterMesh?.dispose();
+    this._shadowCasterMesh = null;
     this._mesh?.dispose();
     this._mesh = null;
     this._multiMaterial?.dispose();

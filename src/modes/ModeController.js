@@ -55,6 +55,9 @@ export class ModeController {
     const modeName = ModeClass?.name ?? 'Mode';
     const loadingLabel = modeName.replace(/Mode$/, '') || 'Scene';
     this.menuManager.showLoading(`Loading ${loadingLabel}…`);
+    // Nothing is rendering while the next scene builds, so menus sit on black
+    // rather than the outgoing mode's stale last frame.
+    this.menuManager.setLiveBackdrop(false);
 
     if (this.currentMode) {
       this.currentMode.teardown();
@@ -71,6 +74,7 @@ export class ModeController {
 
       if (scene) {
         this.engine.runRenderLoop(() => scene.render());
+        this.menuManager.setLiveBackdrop(mode.hasLiveBackdrop);
       }
     } finally {
       this.menuManager.hideLoading();

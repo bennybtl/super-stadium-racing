@@ -1962,6 +1962,25 @@ export class EditorController {
     this.bridgeMeshEditor.activeFeature.level = nextLayerId;
     rebuild.bridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
+  // Top face. 'terrain' clears the color (terrain-blend look); a hex sets flat diffuse.
+  changeBridgeMeshColor(v) {
+    const feature = this.bridgeMeshEditor?.activeFeature;
+    if (!feature) return;
+    this.saveSnapshot();
+    if (v === 'terrain') delete feature.color;
+    else feature.color = v;
+    rebuild.bridgeMesh?.(feature);
+  }
+  // Sides + bottom. Always written explicitly (including 'terrain') so the sides
+  // can keep the terrain look while the top is colored; only a feature that has
+  // never set it falls back to the top material.
+  changeBridgeMeshSideColor(v) {
+    const feature = this.bridgeMeshEditor?.activeFeature;
+    if (!feature) return;
+    this.saveSnapshot();
+    feature.sideColor = v;
+    rebuild.bridgeMesh?.(feature);
+  }
   flattenBridgeMesh()                { this.bridgeMeshEditor?.flattenBridgeMesh(); }
   deleteBridgeMesh()                 { this.bridgeMeshEditor?.deleteBridgeMesh(); }
   duplicateBridgeMesh()              { this.bridgeMeshEditor?.duplicateBridgeMesh(); }
@@ -1993,6 +2012,7 @@ export class EditorController {
   setSurfaceDecalCount(val) { this.surfaceDecalEditor.setCount(val); }
   setSurfaceDecalOutline(val) { this.surfaceDecalEditor.setOutline(val); }
   setSurfaceDecalColor(val) { this.surfaceDecalEditor.setColor(val); }
+  setSurfaceDecalText(val) { this.surfaceDecalEditor.setText(val); }
   setSurfaceDecalAngle(val) { this.surfaceDecalEditor.setAngle(val); }
   setSurfaceDecalOpacity(val) { this.surfaceDecalEditor.setOpacity(val); }
   setSurfaceDecalWidth(val) { this.surfaceDecalEditor.setWidth(val); }
@@ -2010,6 +2030,7 @@ export class EditorController {
   changeSurfaceDecalCount(v)   { this.surfaceDecalEditor.changeCount(v); }
   changeSurfaceDecalOutline(v) { this.surfaceDecalEditor.changeOutline(v); }
   changeSurfaceDecalColor(v)   { this.surfaceDecalEditor.changeColor(v); }
+  changeSurfaceDecalText(v)    { this.surfaceDecalEditor.changeText(v); }
 
   // ── AI Path helper methods ───────────────────────────────────────────────
   openAiPath() {

@@ -190,11 +190,12 @@ export class MenuManager {
   }
 
   /**
-   * True while the attract-mode demo race is rendering behind the menus, which
-   * drops the static title image so the live scene shows through.
+   * Whether the current mode's scene is worth showing behind the menus (the
+   * attract-mode demo, or a paused race/editor). False makes the menu backdrops
+   * solid black instead of a scrim.
    */
-  setDemoActive(active) {
-    this._store.demoActive = !!active;
+  setLiveBackdrop(active) {
+    this._store.liveBackdrop = !!active;
   }
 
   hideMenu() {

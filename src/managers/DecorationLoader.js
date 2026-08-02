@@ -13,6 +13,10 @@
  * JSON schema:
  *   id              string   unique key (defaults to filename)
  *   name            string   display name
+ *   packId          string   optional: decorations sharing a packId collapse to
+ *                   one entry in the editor's Type dropdown, with a variation
+ *                   picker for the members (e.g. tree_1/2/3 → one "Tree").
+ *   packName        string   label for the pack (falls back to packId)
  *   modelFile       string   OBJ filename in /decorations/. Optional — omit it
  *                   when a controller builds the geometry procedurally.
  *   controller      string   behaviour module filename; defaults to <id>.js when
@@ -139,6 +143,10 @@ export class DecorationLoader {
       return {
         id,
         name: def?.name ?? id,
+        // Pack grouping: decorations sharing a packId collapse to one Type entry
+        // (labelled packName), with a variation picker for the members.
+        packId: def?.packId ?? null,
+        packName: def?.packName ?? null,
         imageUrl: def?.imageUrl ?? null,
         defaultColor: def?.defaultColor ?? null,
         editable: def?.editable ?? { color: true, scale: true, heading: true },

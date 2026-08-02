@@ -1,4 +1,4 @@
-import { MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3 } from "@babylonjs/core";
+import { Matrix, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3 } from "@babylonjs/core";
 import { BridgeMesh } from "./BridgeMesh.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
 
@@ -26,8 +26,14 @@ function _resolveHeights(feature) {
 /**
  * Derive a 2×2 bridgeMesh-shaped feature from a driveBox feature. The driveBox
  * stores terrain-relative heights (squareHill feel); the derived grid carries
- * the absolute world-Y heights BridgeMesh expects, resolved against the terrain
- * under the feature center at build time.
+ * the absolute world-Y heights BridgeMesh expects.
+ *
+ * Heights resolve against a plane fitted through the terrain at the four
+ * footprint corners, not a single center sample, so a box sitting on a slope
+ * tilts with the ground instead of staying level (which buried its uphill edge
+ * and floated the downhill one). Averaging the corners is the least-squares fit
+ * for four points on a rectangle, so local bumps don't drag the whole box. The
+ * surface stays planar — a wedge's own rise is added on top of the terrain tilt.
  */
 export function deriveDriveBoxGrid(feature, track) {
   const {
@@ -40,22 +46,39 @@ export function deriveDriveBoxGrid(feature, track) {
   } = feature;
 
   const { hLo, hHi } = _resolveHeights(feature);
-  const terrainY = track?.getHeightAt?.(centerX, centerZ) ?? 0;
-  const yLo = terrainY + hLo;
-  const yHi = terrainY + hHi;
+  const halfW = width / 2;
+  const halfD = depth / 2;
+
+  // Corner order matches the row-major 2×2 grid _gridPoints builds:
+  // r0c0 (−X,−Z), r0c1 (+X,−Z), r1c0 (−X,+Z), r1c1 (+X,+Z).
+  const localCorners = [[-halfW, -halfD], [halfW, -halfD], [-halfW, halfD], [halfW, halfD]];
+  const centerTerrainY = track?.getHeightAt?.(centerX, centerZ) ?? 0;
+  const cornerTerrainY = localCorners.map(([lx, lz]) => {
+    const rotated = _rotateVector(lx, lz, rotation);
+    return track?.getHeightAt?.(centerX + rotated.x, centerZ + rotated.z) ?? centerTerrainY;
+  });
+
+  const baseY = (cornerTerrainY[0] + cornerTerrainY[1] + cornerTerrainY[2] + cornerTerrainY[3]) / 4;
+  const terrainGradX = width > 0
+    ? ((cornerTerrainY[1] + cornerTerrainY[3]) - (cornerTerrainY[0] + cornerTerrainY[2])) / (2 * width)
+    : 0;
+  const terrainGradZ = depth > 0
+    ? ((cornerTerrainY[2] + cornerTerrainY[3]) - (cornerTerrainY[0] + cornerTerrainY[1])) / (2 * depth)
+    : 0;
+
+  const heights = localCorners.map(([lx, lz]) =>
+    baseY + terrainGradX * lx + terrainGradZ * lz + (lx < 0 ? hLo : hHi)
+  );
 
   let resolvedThickness = Math.max(0.1, thickness);
   if (solidBase) {
-    // Deep enough that the flat bottom ends up below the lowest terrain corner,
-    // so the sides visually extend into the ground.
-    const halfW = width / 2;
-    const halfD = depth / 2;
+    // Deep enough that the flat bottom clears the terrain at every corner, so
+    // the sides visually extend into the ground. Now that the top tracks the
+    // terrain plane this stays close to the box's own height instead of growing
+    // with the slope.
     let maxDrop = 0;
-    for (const [lx, lz] of [[-halfW, -halfD], [halfW, -halfD], [-halfW, halfD], [halfW, halfD]]) {
-      const rotated = _rotateVector(lx, lz, rotation);
-      const cornerTerrainY = track?.getHeightAt?.(centerX + rotated.x, centerZ + rotated.z) ?? terrainY;
-      const topY = lx < 0 ? yLo : yHi;
-      maxDrop = Math.max(maxDrop, topY - cornerTerrainY);
+    for (let i = 0; i < heights.length; i++) {
+      maxDrop = Math.max(maxDrop, heights[i] - cornerTerrainY[i]);
     }
     resolvedThickness = Math.max(0.1, maxDrop + SOLID_BASE_MARGIN);
   }
@@ -65,8 +88,7 @@ export function deriveDriveBoxGrid(feature, track) {
     centerX, centerZ,
     width, depth,
     cols: 2, rows: 2,
-    // Row-major 2×2; X varies by column, so column 0 = −X edge, column 1 = +X.
-    heights: [yLo, yHi, yLo, yHi],
+    heights,
     rotation,
     thickness: resolvedThickness,
     layerId,
@@ -91,9 +113,9 @@ export function deriveDriveBoxGrid(feature, track) {
  *     width:       number,   // local X extent (slope runs along X in wedge mode)
  *     depth:       number,   // local Z extent
  *     rotation:    number,   // yaw in degrees (bridgeMesh convention)
- *     height:      number,   // flat mode: top height above terrain at center
+ *     height:      number,   // flat mode: clearance above the terrain plane
  *     heightAtMin: number,   // wedge mode (presence switches, like squareHill)
- *     heightAtMax: number,   //   heights above terrain at the −X / +X edges
+ *     heightAtMax: number,   //   clearance above terrain at the −X / +X edges
  *     solidBase:   boolean,  // true (default): base extends to terrain
  *     thickness:   number,   // slab thickness when solidBase is false
  *     layerId:     number,   // surface layer id (default 0)
@@ -139,37 +161,47 @@ export class DriveBox {
   _buildCollider(feature, derived, scene) {
     const { centerX, centerZ, width, depth, rotation = 0 } = feature;
     const { heights, thickness } = derived;
-    const yLo = heights[0];
-    const yHi = heights[1];
+    const [h00, h01, h10, h11] = heights;
 
     const colliderHeight = thickness - TRUCK_HALF_HEIGHT;
     if (colliderHeight <= 0.05) return;
 
-    const rise = yHi - yLo;
-    const slopeAngle = Math.atan2(rise, width);
-    const slopeLength = Math.hypot(width, rise);
+    // Read the finished top surface rather than the wedge rise alone, so the
+    // collider follows the terrain tilt baked into `heights` too.
+    const gradX = width > 0 ? ((h01 + h11) - (h00 + h10)) / (2 * width) : 0;
+    const gradZ = depth > 0 ? ((h10 + h11) - (h00 + h01)) / (2 * depth) : 0;
+    const centroidY = (h00 + h01 + h10 + h11) / 4;
+
+    // Babylon's rotation.y is the opposite sign of the _rotateVector convention.
+    // Roll (about local Z) tilts the surface along local X; pitch (about local X)
+    // tilts it along local Z — exact for either alone, a close approximation for
+    // the combination, which the TRUCK_HALF_HEIGHT inset absorbs.
+    const yaw = -rotation * Math.PI / 180;
+    const roll = Math.atan(gradX);
+    const pitch = -Math.atan(gradZ);
 
     const box = MeshBuilder.CreateBox(
       `drive_box_collider_${centerX}_${centerZ}`,
-      { width: slopeLength, height: colliderHeight, depth },
+      {
+        width: width * Math.hypot(1, gradX),
+        height: colliderHeight,
+        depth: depth * Math.hypot(1, gradZ),
+      },
       scene
     );
     box.isVisible = false;
     box.isPickable = false;
-    // Babylon's rotation.y is the opposite sign of the _rotateVector convention.
-    box.rotation.set(0, -rotation * Math.PI / 180, slopeAngle);
+    box.rotation.set(pitch, yaw, roll);
 
-    // Place the box so its top-center sits at the slope midpoint, lowered by the
-    // inset. The local top-center offset (0, H/2, 0) under roll φ becomes
-    // (−(H/2)sinφ, (H/2)cosφ, 0).
-    const halfH = colliderHeight / 2;
-    const topOffsetLocalX = -halfH * Math.sin(slopeAngle);
-    const topOffsetY = halfH * Math.cos(slopeAngle);
-    const rotatedOffset = _rotateVector(topOffsetLocalX, 0, rotation);
+    // Sit the box's top-center at the surface centroid, lowered by the inset.
+    const topOffset = Vector3.TransformNormal(
+      new Vector3(0, colliderHeight / 2, 0),
+      Matrix.RotationYawPitchRoll(yaw, pitch, roll)
+    );
     box.position = new Vector3(
-      centerX - rotatedOffset.x,
-      (yLo + yHi) / 2 - TRUCK_HALF_HEIGHT - topOffsetY,
-      centerZ - rotatedOffset.z
+      centerX - topOffset.x,
+      centroidY - TRUCK_HALF_HEIGHT - topOffset.y,
+      centerZ - topOffset.z
     );
 
     box.metadata = { truckCollider: true };

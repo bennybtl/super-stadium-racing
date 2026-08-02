@@ -4,7 +4,9 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
+  "oobDeadSpace": false,
   "name": "Zipper",
+  "image": "zipper.png",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -347,13 +349,13 @@
           "radius": 13
         },
         {
-          "x": -80,
-          "z": -80,
+          "x": -79.87209303003705,
+          "z": -78.81623074391892,
           "radius": 15
         },
         {
-          "x": -80,
-          "z": 80,
+          "x": -79.5,
+          "z": 79.5,
           "radius": 15
         },
         {
@@ -421,7 +423,8 @@
       "width": 30,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "polyWall",
@@ -464,7 +467,8 @@
       "width": 30,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -474,7 +478,8 @@
       "width": 15,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -484,7 +489,8 @@
       "width": 30,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -494,7 +500,8 @@
       "width": 30,
       "checkpointNumber": 5,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -504,7 +511,8 @@
       "width": 24,
       "checkpointNumber": 6,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "polyWall",
@@ -784,12 +792,20 @@
           "z": 58.90318805193426
         },
         {
-          "x": -15.704292174293895,
-          "z": 17.864548704708056
+          "x": -28.00536662425317,
+          "z": 29.839778964673805
         },
         {
-          "x": 10.567475137665541,
-          "z": 18.051830075095623
+          "x": -11.204292174293895,
+          "z": 18.864548704708056
+        },
+        {
+          "x": 9.067475137665541,
+          "z": 18.551830075095623
+        },
+        {
+          "x": 27.08,
+          "z": 30.15
         },
         {
           "x": 40.08414874263174,
@@ -809,15 +825,23 @@
         },
         {
           "x": 35.77,
-          "z": -55.68
+          "z": -56.18
+        },
+        {
+          "x": 27.89139135869747,
+          "z": -22.119794552021407
         },
         {
           "x": 8.86884961116116,
           "z": -5.94849827852266
         },
         {
-          "x": -13.298699043379525,
+          "x": -10.798699043379525,
           "z": -5.360404863952432
+        },
+        {
+          "x": -28.436359678549,
+          "z": -21.913807309497205
         },
         {
           "x": -35.85,
@@ -936,7 +960,7 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "polygon",
-      "x": 67.97365553206039,
+      "x": 67.84865553206039,
       "z": -21.65439129131665,
       "radius": 15,
       "points": [
@@ -945,7 +969,7 @@
           "z": -31.800605307586373
         },
         {
-          "x": 77.3096298191912,
+          "x": 76.8096298191912,
           "z": -30.90294154726643
         },
         {
@@ -1034,6 +1058,24 @@
       "depth": 20,
       "angle": 180,
       "opacity": 1
+    },
+    {
+      "type": "model",
+      "model": "tent",
+      "x": -3.655533770701421,
+      "z": 62.08454171956237,
+      "color": "white",
+      "scale": 1.5,
+      "heading": 1.5184364492350666
+    },
+    {
+      "type": "model",
+      "model": "tent",
+      "x": 4.941558712067957,
+      "z": 62.14197481255187,
+      "color": "white",
+      "scale": 1.5,
+      "heading": 1.6406094968746698
     }
   ]
 }

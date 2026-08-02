@@ -26,9 +26,10 @@ export const useMenuStore = defineStore('menu', () => {
   const navDirection = ref('forward');
   function setNavDirection(dir) { navDirection.value = dir; }
 
-  // True while the attract-mode demo race renders behind the menus; the menu
-  // backdrops go transparent so it shows through instead of the title image.
-  const demoActive = ref(false);
+  // True when the current mode has a scene worth showing behind the menus — the
+  // attract-mode demo race, or a paused race/editor. The menu backdrops go
+  // transparent (scrim only) so it shows through; otherwise they're solid black.
+  const liveBackdrop = ref(false);
 
   // Overlay data (null when not showing)
   const pitData         = ref(null);
@@ -53,6 +54,11 @@ export const useMenuStore = defineStore('menu', () => {
   function setBridge(manager) { _bridge.value = manager; }
 
   // ── Actions called by Vue components ──
+  // Forward entry into the start menu (title → start). Distinct from back(),
+  // which reaches the same screen while ascending the stack and so inverts the
+  // slide direction.
+  function showStartMenu() { _bridge.value?.showStartMenu(); }
+
   function showEditorTrackSelect() { _bridge.value?.showEditorTrackSelect(); }
 
   function startEditor(key) {
@@ -123,11 +129,12 @@ export const useMenuStore = defineStore('menu', () => {
 
   return {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
-    selectedReverse, navDirection, setNavDirection, demoActive,
+    selectedReverse, navDirection, setNavDirection, liveBackdrop,
     pitData, singleRaceData, championshipData, upgrades,
     champInitials, champTrackCount, hasActiveChampionship,
     loadingVisible, loadingMessage,
     setBridge,
+    showStartMenu,
     showEditorTrackSelect,
     startEditor,
     selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, setSelectedAIVehicleType, showPitMenu, startPracticeMode,

@@ -45,14 +45,14 @@ tracks.custom.<trackId>
 ----
 
 # Start Screen
-- Displays the background image from src/assets/title.png
+- Backdrop is the attract-mode demo race (MenuMode), dimmed by a scrim; plain black while it loads or if it fails to build
 - A single button animates from the bottom of the screen reading "START"
 
 Navigation
 - Clicking the START button navigates to the Main Menu
 
 # Main Menu
-- Displays the background image from src/assets/title.png
+- Backdrop is the attract-mode demo race (MenuMode), dimmed by a scrim; plain black while it loads or if it fails to build
 - A vertical menu consisting of these options:
   - PRACTICE
   - SINGLE RACE
@@ -130,7 +130,7 @@ Navigation
 
 # SETTINGS MENU
 > all settings persist in localStorage
-- Displays the background image from src/assets/title.png
+- Backdrop is the attract-mode demo race (MenuMode), dimmed by a scrim; plain black while it loads or if it fails to build
 - A vertical menu consisting of these options:
   - CONTROLS
   - SOUND

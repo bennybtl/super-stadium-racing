@@ -6,7 +6,7 @@ import {
   Color3,
   HighlightLayer,
 } from "@babylonjs/core";
-import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, DECAL_COLORS, MIN_COUNT, MAX_COUNT, createDecalTexture } from "../managers/decalShapes.js";
+import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, MIN_COUNT, MAX_COUNT, createDecalTexture } from "../managers/decalShapes.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 
 const HANDLE_POS_Y = 2.0; // handle sphere floats this far above the ground-hugging decal
@@ -44,6 +44,7 @@ export class SurfaceDecalEditor {
     this._color = 'white';
     this._count = 3;
     this._outline = false;
+    this._text = 'TEXT';
     this._angle = 0;
     this._width = 4;
     this._depth = 4;
@@ -271,6 +272,7 @@ export class SurfaceDecalEditor {
   changeCount(val)   { this._changeProp('count', Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(val)))); }
   changeOutline(val) { this._changeProp('outline', !!val); }
   changeColor(val)   { if (DECAL_COLORS.includes(val)) this._changeProp('color', val); }
+  changeText(val)    { this._changeProp('text', String(val ?? '')); }
 
   _changeProp(prop, val) {
     if (!this.selected) return;
@@ -305,6 +307,8 @@ export class SurfaceDecalEditor {
     s.hasOutline = OUTLINE_SHAPES.includes(s.shape);
     s.color      = f.color ?? 'white';
     s.colors     = DECAL_COLORS;
+    s.text       = f.text ?? '';
+    s.hasText    = TEXT_SHAPES.includes(s.shape);
     s.angle   = Math.round(f.angle ?? 0);
     s.width   = +(f.width ?? 4).toFixed(1);
     s.depth   = +(f.depth ?? 4).toFixed(1);
@@ -350,12 +354,14 @@ export class SurfaceDecalEditor {
     // (rounded, matching SurfaceDecalManager._getMaterial).
     const worldWidth = Math.max(1, Math.round(this._width));
     const worldDepth = Math.max(1, Math.round(this._depth));
-    const key = `${this._shape}:${this._count}:${this._outline}:${this._color}:${worldWidth}x${worldDepth}`;
+    const key = `${this._shape}:${this._count}:${this._outline}:${this._color}:${this._text}:${worldWidth}x${worldDepth}`;
     if (!this._ghostTexCache.has(key)) {
       this._ghostTexCache.set(key, createDecalTexture(this._scene, this._shape, {
         color: this._color,
         count: this._count,
         outline: this._outline,
+      text:    this._text,
+        text: this._text,
         worldWidth,
         worldDepth,
       }));
@@ -467,6 +473,14 @@ export class SurfaceDecalEditor {
     this._syncStore();
   }
 
+  setText(val) {
+    const next = String(val ?? '');
+    if (next === this._text) return;
+    this._text = next;
+    this._updateGhostTexture();
+    this._syncStore();
+  }
+
   setOutline(val) {
     const next = !!val;
     if (next === this._outline) return;
@@ -522,6 +536,8 @@ export class SurfaceDecalEditor {
     s.hasOutline = OUTLINE_SHAPES.includes(this._shape);
     s.color = this._color;
     s.colors = DECAL_COLORS;
+    s.text = this._text;
+    s.hasText = TEXT_SHAPES.includes(this._shape);
     s.angle = Math.round(this._angle);
     s.width = +this._width.toFixed(1);
     s.depth = +this._depth.toFixed(1);

@@ -12,13 +12,18 @@ import { basicColors } from "../constants";
  * decal's rotation angle maps intuitively to a compass-style heading.
  */
 
-export const DECAL_SHAPES = ['arrow', 'chevron', 'line', 'oval', 'rect', 'triangle'];
+export const DECAL_SHAPES = ['arrow', 'chevron', 'line', 'oval', 'rect', 'triangle', 'text'];
 
 /** Shapes whose look depends on the feature's `count` (repeat) property. */
 export const COUNTED_SHAPES = ['chevron'];
 
 /** Shapes that can be drawn solid or as an outline. */
-export const OUTLINE_SHAPES = ['oval', 'rect', 'triangle'];
+export const OUTLINE_SHAPES = ['oval', 'rect', 'triangle', 'text'];
+
+/** Shapes that take a user-typed `text` string. */
+export const TEXT_SHAPES = ['text'];
+
+const DEFAULT_TEXT = 'TEXT';
 
 /** Paint colours available for decals (CSS colours — used directly as fill/stroke). */
 export const DECAL_COLORS = ['white', 'yellow', 'red', 'blue', 'black', 'gray'];
@@ -34,15 +39,13 @@ const STROKE_RATIO = 0.09;
 const clampCount = (n) => Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(n ?? MIN_COUNT)));
 
 /** Draw the named shape onto a 2D canvas context sized w×h. */
-export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false } = {}) {
+export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false, text = '' } = {}) {
   const hexColor = basicColors[color]?.diffuse.toHexString() || '#FFFFFF';
 
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = hexColor;
   ctx.strokeStyle = hexColor;
   ctx.lineWidth = w * STROKE_RATIO;
-
-  console.log(color, hexColor);
 
   switch (shape) {
     case 'chevron':
@@ -59,6 +62,9 @@ export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, o
       break;
     case 'triangle':
       drawTriangle(ctx, w, h, outline);
+      break;
+    case 'text':
+      drawText(ctx, w, h, text, outline);
       break;
     case 'arrow':
     default:
@@ -143,6 +149,29 @@ function drawRect(ctx, w, h, outline) {
   const rw = w - 2 * x;
   const rh = h - 2 * y;
   outline ? ctx.strokeRect(x, y, rw, rh) : ctx.fillRect(x, y, rw, rh);
+}
+
+/**
+ * A single line of user text, scaled to fill the texture width. The caller sets
+ * fillStyle/strokeStyle/lineWidth; here we just size the font and paint. The
+ * user sets the decal's width/depth to control the final on-ground proportions.
+ */
+function drawText(ctx, w, h, text, outline) {
+  const str = (text ?? '').trim() || DEFAULT_TEXT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const maxW = w * 0.88;   // horizontal padding
+  const maxH = h * 0.7;    // cap height so short strings aren't full-bleed
+  let font = maxH;
+  ctx.font = `bold ${font}px Arial`;
+  const measured = ctx.measureText(str).width;
+  if (measured > maxW) {
+    font *= maxW / measured;
+    ctx.font = `bold ${font}px Arial`;
+  }
+  ctx.lineWidth = Math.max(1, font * 0.06);
+  outline ? ctx.strokeText(str, w / 2, h / 2) : ctx.fillText(str, w / 2, h / 2);
 }
 
 /** Triangle pointing toward the top of the texture. */
@@ -240,12 +269,12 @@ export function applyDecalWear(ctx, texW, texH, { seed = 0, worldWidth = 4, worl
  * neighbours (it is part of the manager's material cache key).
  */
 export function createDecalTexture(scene, shape, {
-  color = 'white', seed = 0, count = 1, outline = false,
+  color = 'white', seed = 0, count = 1, outline = false, text = '',
   worldWidth = 4, worldDepth = 4, size = TEX_SIZE,
 } = {}) {
   const tex = new DynamicTexture(`decalShape_${shape}`, { width: size, height: size }, scene);
   const ctx = tex.getContext();
-  drawDecalShape(ctx, shape, size, size, { color, count, outline });
+  drawDecalShape(ctx, shape, size, size, { color, count, outline, text });
   applyDecalWear(ctx, size, size, { seed, worldWidth, worldDepth });
   tex.hasAlpha = true;
   tex.update();

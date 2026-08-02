@@ -16,6 +16,10 @@ export class BaseMode {
     this.controller = controller;
     this.scene = null;
     this.visibilityHandler = null;
+    // Whether menus opened over this mode (pause, editor pause) should show its
+    // scene through a scrim rather than sit on solid black. Modes that build a
+    // real scene leave this true; MenuMode clears it for its blank fallback.
+    this.hasLiveBackdrop = true;
   }
 
   /**

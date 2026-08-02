@@ -35,7 +35,8 @@ function wearSeed(x, z) {
  *   centerZ: number,       // world Z
  *   shape:   string,       // "arrow" | "chevron" | "line" | "oval" | "rect" | "triangle"
  *   count:   number,       // repeats, 1–10 (chevron only)
- *   outline: boolean,      // draw as outline instead of solid (oval/rect/triangle)
+ *   outline: boolean,      // draw as outline instead of solid (oval/rect/triangle/text)
+ *   text:    string,       // marking text (text shape only)
  *   color:   string,       // CSS color, default "white"
  *   width:   number,       // world units
  *   depth:   number,       // world units
@@ -109,6 +110,7 @@ export class SurfaceDecalManager {
       opacity = 1,
       count  = 1,
       outline = false,
+      text = '',
     } = feature;
 
     if (!DECAL_SHAPES.includes(shape)) {
@@ -125,7 +127,7 @@ export class SurfaceDecalManager {
       angle: -(angle * Math.PI) / 180,
     });
 
-    decal.material = this._getMaterial(shape, color, opacity, wearSeed(centerX, centerZ), count, outline, width, depth);
+    decal.material = this._getMaterial(shape, color, opacity, wearSeed(centerX, centerZ), count, outline, text, width, depth);
     decal.isPickable = true;
     decal.metadata = { ...(decal.metadata ?? {}), surfaceDecal: true };
     // Lift the baked mesh a hair off the terrain so pointer picks hit the decal
@@ -136,15 +138,15 @@ export class SurfaceDecalManager {
     return decal;
   }
 
-  _getMaterial(shape, color, opacity, seed, count, outline, width, depth) {
+  _getMaterial(shape, color, opacity, seed, count, outline, text, width, depth) {
     // Wear is baked per world size, so the footprint is part of the key. It is
     // rounded to whole units to keep the cache from growing per slider step.
     const worldWidth = Math.max(1, Math.round(width));
     const worldDepth = Math.max(1, Math.round(depth));
-    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}:${worldWidth}x${worldDepth}`;
+    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}:${text}:${worldWidth}x${worldDepth}`;
     if (this._matCache.has(key)) return this._matCache.get(key);
 
-    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline, worldWidth, worldDepth });
+    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline, text, worldWidth, worldDepth });
     const mat = makeDecalMaterial(this._scene, `surfaceDecalMat_${key}`, tex, opacity);
 
     this._matCache.set(key, mat);

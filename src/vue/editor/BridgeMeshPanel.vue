@@ -146,6 +146,41 @@
       @mousedown.stop
     /> -->
 
+    <!-- Surface colors: terrain-blend look or flat diffuse, top and sides separately -->
+    <div class="flex justify-between items-center mb-3 text-[12px]">
+      <span class="flex items-center gap-2">
+        <span
+          class="inline-block w-3 h-3 rounded-sm border border-slate-500"
+          :style="{ background: swatch(editor.bridgeMesh.color) }"
+        />
+        Top
+      </span>
+      <select
+        :value="editor.bridgeMesh.color"
+        @change="editor.setFeatureProp('bridgeMesh', 'color', $event.target.value)"
+        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+      >
+        <option v-for="opt in colorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+    </div>
+
+    <div class="flex justify-between items-center mb-3 text-[12px]">
+      <span class="flex items-center gap-2">
+        <span
+          class="inline-block w-3 h-3 rounded-sm border border-slate-500"
+          :style="{ background: swatch(editor.bridgeMesh.sideColor) }"
+        />
+        Sides
+      </span>
+      <select
+        :value="editor.bridgeMesh.sideColor"
+        @change="editor.setFeatureProp('bridgeMesh', 'sideColor', $event.target.value)"
+        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+      >
+        <option v-for="opt in colorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+    </div>
+
     <hr class="border-t border-slate-700 my-4" />
 
     <div class="flex gap-2">
@@ -164,6 +199,7 @@
 <script setup>
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
+import { SURFACE_COLOR_OPTIONS as colorOptions, surfaceSwatch as swatch } from './surfaceColors.js';
 
 const editor = useEditorStore();
 </script>
