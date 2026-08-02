@@ -1,8 +1,8 @@
 {
-  "id": "default_buggy",
-  "name": "Hopper",
+  "id": "coati",
+  "name": "Coati",
   "engineAudio": "bac",
-  "modelFile": "Hopper.obj",
+  "modelFile": "coati.obj",
   "defaultColor": [0.8, 0.2, 0.5],
   "meshColors": {
     "cockpit_Body6": [0.1, 0.1, 0.1],
@@ -28,7 +28,7 @@
     "rearAxle":  -1.6
   },
   "params": {
-    "maxSpeed": 34,
+    "maxSpeed": 33,
     "maxReverseSpeed": -12,
     "acceleration": 26.5,
     "braking": 1.5,

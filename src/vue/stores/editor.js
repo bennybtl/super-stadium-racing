@@ -52,6 +52,22 @@ export const useEditorStore = defineStore('editor', () => {
     blendWidth: 0,
   });
 
+  // ── Drive box panel ──
+  const driveBox = reactive({
+    width: 10,
+    depth: 6,
+    rotation: 0,
+    height: 2,
+    slopeMode: false,
+    heightAtMin: 0,
+    heightAtMax: 2,
+    solidBase: true,
+    thickness: 0.4,
+    layerId: 0,
+    color: 'terrain',
+    sideColor: 'terrain',
+  });
+
   // ── Terrain shape panel (rect + circle/ellipse) ──
   const terrainShape = reactive({
     shape: 'rect',
@@ -441,7 +457,7 @@ export const useEditorStore = defineStore('editor', () => {
   // Only irregular setters (composite, normalizing, or convention-breaking
   // names) keep explicit actions above. New panels need zero store edits.
   const _panels = {
-    checkpoint, hill, squareHill, terrainShape, obstacle,
+    checkpoint, hill, squareHill, driveBox, terrainShape, obstacle,
     meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign,
     bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal,
   };
@@ -462,6 +478,7 @@ export const useEditorStore = defineStore('editor', () => {
     checkpoint,
     hill,
     squareHill,
+    driveBox,
     terrainShape,
     obstacle,
     meshGrid,

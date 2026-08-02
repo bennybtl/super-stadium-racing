@@ -10,8 +10,9 @@ const SKIRT = 2;
 // ── Ribbon visual tuning (tweak these by eye) ────────────────────────────────
 const SAMPLE_STEP = 2; // centerline resample spacing (world units)
 const SMOOTH_WINDOW = 18; // top-edge smoothing window (world units); larger = flatter top
-const SKIRT_DEPTH = 6; // how far the ribbon base is buried below raw terrain
+const SKIRT_DEPTH = 2; // how far the ribbon base is buried below raw terrain
 const STRIPE_LEN = 4; // colour stripe length along the wall (world units)
+const END_CAP_ANGLE = 60; // open-end rake angle off horizontal (deg); 90 = vertical
 
 /**
  * PolyWall — a wall that follows a polyline of world-space points.
@@ -308,11 +309,17 @@ export class PolyWall {
       nz[i] = tx; // rotate tangent +90° in XZ
     }
 
-    // Rails (x/z) and vertical extents.
+    // Rails (x/z) and vertical extents. Bottom rail carries its own x/z so the
+    // open ends can splay their base outward (see below); interior samples keep
+    // the base directly below the top.
     const lx = new Array(n),
       lz = new Array(n),
       rx = new Array(n),
       rz = new Array(n);
+    const lbx = new Array(n),
+      lbz = new Array(n),
+      rbx = new Array(n),
+      rbz = new Array(n);
     const topY = new Array(n),
       botY = new Array(n);
     for (let i = 0; i < n; i++) {
@@ -320,8 +327,36 @@ export class PolyWall {
       lz[i] = zs[i] + nz[i] * halfThick;
       rx[i] = xs[i] - nx[i] * halfThick;
       rz[i] = zs[i] - nz[i] * halfThick;
+      lbx[i] = lx[i];
+      lbz[i] = lz[i];
+      rbx[i] = rx[i];
+      rbz[i] = rz[i];
       topY[i] = smooth[i] + visualHeight;
       botY[i] = raw[i] - (onBridge[i] ? 0.15 : SKIRT_DEPTH);
+    }
+
+    // Splay the open-polyline end caps: push the base outward along the wall so
+    // the end face leans out to ~END_CAP_ANGLE from horizontal instead of a sheer
+    // vertical (90°) face. Closed loops have no ends and are left untouched.
+    if (!closed && n >= 2) {
+      const splayEnd = (i, iInward) => {
+        // outward tangent = away from the wall body
+        let tx = xs[i] - xs[iInward],
+          tz = zs[i] - zs[iInward];
+        const tl = Math.hypot(tx, tz) || 1;
+        tx /= tl;
+        tz /= tl;
+        // Splay so the VISIBLE face (ground→top) sits at END_CAP_ANGLE off
+        // horizontal. The base is buried, so scale by the full top→bottom height
+        // (not just the visible part) to land the right angle where it shows.
+        const run = (topY[i] - botY[i]) / Math.tan((END_CAP_ANGLE * Math.PI) / 180);
+        lbx[i] = lx[i] + tx * run;
+        lbz[i] = lz[i] + tz * run;
+        rbx[i] = rx[i] + tx * run;
+        rbz[i] = rz[i] + tz * run;
+      };
+      splayEnd(0, 1);
+      splayEnd(n - 1, n - 2);
     }
 
     const positions = [],
@@ -355,13 +390,13 @@ export class PolyWall {
       anx /= al;
       anz /= al;
 
-      const Li_b = [lx[i], botY[i], lz[i]],
+      const Li_b = [lbx[i], botY[i], lbz[i]],
         Li_t = [lx[i], topY[i], lz[i]];
-      const Lj_b = [lx[j], botY[j], lz[j]],
+      const Lj_b = [lbx[j], botY[j], lbz[j]],
         Lj_t = [lx[j], topY[j], lz[j]];
-      const Ri_b = [rx[i], botY[i], rz[i]],
+      const Ri_b = [rbx[i], botY[i], rbz[i]],
         Ri_t = [rx[i], topY[i], rz[i]];
-      const Rj_b = [rx[j], botY[j], rz[j]],
+      const Rj_b = [rbx[j], botY[j], rbz[j]],
         Rj_t = [rx[j], topY[j], rz[j]];
 
       // Outer (left) face — faces +n
@@ -378,19 +413,19 @@ export class PolyWall {
       // start cap faces −tangent (use sample 0 normal-perp); winding handled by
       // backFaceCulling=false so direction is cosmetic only.
       pushQuad(
-        [lx[0], botY[0], lz[0]],
+        [lbx[0], botY[0], lbz[0]],
         [lx[0], topY[0], lz[0]],
         [rx[0], topY[0], rz[0]],
-        [rx[0], botY[0], rz[0]],
+        [rbx[0], botY[0], rbz[0]],
         [-nz[0], 0, nx[0]],
         capCol,
       );
       const e = n - 1;
       pushQuad(
-        [lx[e], botY[e], lz[e]],
+        [lbx[e], botY[e], lbz[e]],
         [lx[e], topY[e], lz[e]],
         [rx[e], topY[e], rz[e]],
-        [rx[e], botY[e], rz[e]],
+        [rbx[e], botY[e], rbz[e]],
         [nz[e], 0, -nx[e]],
         capCol,
       );

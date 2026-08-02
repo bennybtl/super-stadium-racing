@@ -17,6 +17,7 @@
     <CheckpointPanel />
     <HillPanel />
     <SquareHillPanel />
+    <DriveBoxPanel />
     <TerrainShapePanel />
     <ObstaclePanel />
     <PolyWallPanel />
@@ -48,6 +49,7 @@ import VehicleDebugOverlay from './VehicleDebugOverlay.vue';
 import CheckpointPanel    from './editor/CheckpointPanel.vue';
 import HillPanel          from './editor/HillPanel.vue';
 import SquareHillPanel    from './editor/SquareHillPanel.vue';
+import DriveBoxPanel      from './editor/DriveBoxPanel.vue';
 import TerrainShapePanel  from './editor/TerrainShapePanel.vue';
 import ObstaclePanel      from './editor/ObstaclePanel.vue';
 import PolyWallPanel      from './editor/PolyWallPanel.vue';

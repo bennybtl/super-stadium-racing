@@ -1,0 +1,37 @@
+{
+  "id": "gila",
+  "name": "Gila",
+  "engineAudio": "bac",
+  "modelFile": "gila.obj",
+  "defaultColor": [0.2, 0.8, 0.5],
+  "meshColors": {
+    "widnshield_Cube.004": [0.1, 0.1, 0.1]
+  },
+  "bodyTransform": {
+    "position": [0, 0.3, 0.0],
+    "rotation": [0, 1.5708, 0],
+    "scaling":  [0.4, 0.4, 0.4]
+  },
+  "physicsBox": {
+    "width": 1.3,
+    "height": 0.65,
+    "depth": 2.6
+  },
+  "wheels": {
+    "frontTrackWidth": 2.2,
+    "rearTrackWidth": 2.3,
+    "frontScale": [0.75, 1.0, 1.0],
+    "rearScale": [1.0, 1.1, 1.1],
+    "frontAxle":  1.4,
+    "rearAxle":  -1.4
+  },
+  "params": {
+    "maxSpeed": 34,
+    "maxReverseSpeed": -12,
+    "acceleration": 27.5,
+    "braking": 1.5,
+    "turnSpeed": 4.6,
+    "weightTransfer": 1.12,
+    "grip": 1.55
+  }
+}

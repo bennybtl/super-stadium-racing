@@ -1,4 +1,5 @@
 import { BridgeMesh } from "../objects/BridgeMesh.js";
+import { DriveBox } from "../objects/DriveBox.js";
 
 const AUTO_ENDPOINT_LINK_MAX_DISTANCE = 30;
 const AUTO_TERRAIN_LINK_MAX_VERTICAL_DELTA = 0.75;
@@ -19,7 +20,8 @@ export class BridgeMeshManager {
   }
 
   create(feature) {
-    const bm = new BridgeMesh(
+    const Ctor = feature.type === 'driveBox' ? DriveBox : BridgeMesh;
+    const bm = new Ctor(
       feature,
       this.track,
       this.scene,
@@ -51,7 +53,7 @@ export class BridgeMeshManager {
     });
 
     for (const feature of allFeatures) {
-      if (feature.type !== 'bridgeMesh') continue;
+      if (feature.type !== 'bridgeMesh' && feature.type !== 'driveBox') continue;
       if (targetFeature === null || feature === targetFeature) {
         this.create(feature);
       }

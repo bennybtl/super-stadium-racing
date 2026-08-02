@@ -8,6 +8,7 @@ import { incrementUpgradeLevel, getUpgradeCatalog, applyPurchase } from "../mana
 import { basicColors } from "../constants.js";
 import { AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { generateDriverNames } from "../ai/driverNames.js";
+import { AI_COLOR_KEYS } from "../ai/setupAIDrivers.js";
 import {
   createChampionship,
   loadActiveChampionship,
@@ -18,6 +19,16 @@ import {
   standings,
   saveChampionshipScore,
 } from "../managers/ChampionshipStorage.js";
+
+/** Fisher-Yates shuffle; returns a new array. */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 /**
  * Owns the engine render loop and coordinates transitions between
@@ -147,9 +158,11 @@ export class ModeController {
    * 'random', resolved once here so it stays constant across the series).
    */
   _buildRoster({ aiCount, vehicleKey, playerColorKey, aiVehicleKey }) {
-    const colorKeys = Object.keys(basicColors);
-    const playerColor = playerColorKey ?? colorKeys[0];
-    const aiPalette = colorKeys.filter(k => k !== playerColor);
+    const playerColor = playerColorKey ?? 'red';
+    // Use the same vivid AI palette single races cycle through, minus the
+    // player's colour and any keys not in basicColors, shuffled so each cup's
+    // field looks varied. Assigned once here and persisted with the roster.
+    const aiPalette = shuffle(AI_COLOR_KEYS.filter(k => k !== playerColor && basicColors[k]));
     const vehicleKeys = window.vehicleLoader?.getVehicleList?.().map(v => v.key) ?? [vehicleKey];
 
     const skillKeys = Object.keys(AI_SKILL_PRESETS);

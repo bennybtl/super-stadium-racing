@@ -6,7 +6,7 @@ import { basicColors } from "../constants.js";
 /**
  * AI driver colour palette keys — cycled through for each AI slot.
  */
-const AI_COLOR_KEYS = [
+export const AI_COLOR_KEYS = [
   'blue',
   'yellow',
   'gray',

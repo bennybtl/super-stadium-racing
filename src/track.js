@@ -12,6 +12,7 @@ function getFeatureSerializationPriority(feature) {
   if (!feature || typeof feature !== 'object') return 10;
   if (feature.type === 'meshGrid') return 0;
   if (feature.type === 'bridgeMesh') return 1;
+  if (feature.type === 'driveBox') return 1;
   return 10;
 }
 

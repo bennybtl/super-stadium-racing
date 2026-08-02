@@ -1,4 +1,4 @@
-import { Mesh, VertexData, StandardMaterial, Color3, PhysicsAggregate, PhysicsShapeType, Texture } from "@babylonjs/core";
+import { Mesh, VertexData, StandardMaterial, MultiMaterial, SubMesh, Color3, PhysicsAggregate, PhysicsShapeType, Texture } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 import { _lerp, _clamp } from "../terrain-utils.js";
 
@@ -24,6 +24,16 @@ for (const [path, url] of Object.entries(_bridgeNormalModules)) {
 function _resolveBridgeAssetUrl(pathOrName, map) {
   if (!pathOrName || typeof pathOrName !== 'string') return null;
   return map[pathOrName] ?? map[pathOrName.split('/').at(-1)] ?? null;
+}
+
+/**
+ * A usable hex color, or null for "use the terrain look". Accepts the literal
+ * 'terrain' so panels can carry one value for both cases.
+ */
+function _resolveFlatColor(value) {
+  if (typeof value !== 'string') return null;
+  if (!value || value === 'terrain') return null;
+  return value;
 }
 
 function _lerpColor(colorA, colorB, t) {
@@ -130,63 +140,91 @@ export class BridgeMesh {
       Number.isFinite(terrainBlendConfig?.terrainWorldHalfDepth);
 
     // ── Material ─────────────────────────────────────────────────────────────
-    this._material = new StandardMaterial(`bmMat_${centerX}_${centerZ}`, scene);
-    this._material.diffuseColor = terrainColor;
-    this._material.specularColor = new Color3(
-      terrainType.specular ?? 0.13,
-      terrainType.specular ?? 0.13,
-      terrainType.specular ?? 0.13
-    );
+    // A hex color opts out of the terrain look entirely: plain diffuse, no blend
+    // plugin, no textures, no normal map. `feature.color` styles the top face,
+    // `feature.sideColor` the sides + bottom (absent = same material as the top).
     const textureWorldTile = Math.max(1, terrainType.diffuseTextureWorldUnitsPerTile ?? 24);
     const diffuseTilesU = Math.max(0.01, width / textureWorldTile);
     const diffuseTilesV = Math.max(0.01, depth / textureWorldTile);
-    if (hasTerrainBlendResources) {
-      new terrainBlendConfig.pluginClass(
-        this._material,
-        terrainBlendConfig.terrainIdTexture,
-        terrainBlendConfig.terrainPropertyTexture,
-        terrainBlendConfig.terrainWaterOverlayTexture,
-        terrainBlendConfig.terrainWearOverlayTexture,
-        terrainBlendConfig.terrainDiffuseOverlayTexture,
-        terrainBlendConfig.terrainTypeCount,
-        terrainBlendConfig.terrainCellCount,
-        terrainBlendConfig.terrainWorldHalfWidth,
-        terrainBlendConfig.terrainWorldHalfDepth,
-        { forcedTerrainTypeIndex: -1 }
-      );
-      this._material.diffuseColor = Color3.White();
-      this._material.specularColor = Color3.White();
-      this._material.specularPower = 48;
-    } else {
-      const diffuseUrl = _resolveBridgeAssetUrl(terrainType.diffuseTexture, _bridgeTextureUrls);
-      if (diffuseUrl) {
-        const diffuseTexture = new Texture(diffuseUrl, scene, true, false);
-        diffuseTexture.uScale = diffuseTilesU;
-        diffuseTexture.vScale = diffuseTilesV;
-        this._material.diffuseTexture = diffuseTexture;
-        // StandardMaterial multiplies texture by diffuseColor. Approximate
-        // texture-opacity blending by tinting toward white as texture influence
-        // increases, without darkening the whole surface.
-        const textureInfluence = _clamp(terrainType.diffuseTextureOpacity ?? 1, 0, 1);
-        this._material.diffuseColor = _lerpColor(terrainColor, Color3.White(), textureInfluence);
-      }
-    }
 
-    const normalUrl = _resolveBridgeAssetUrl(terrainType.normalMap, _bridgeNormalUrls);
-    if (normalUrl) {
-      const bumpTexture = new Texture(normalUrl, scene, true, false);
-      bumpTexture.uScale = diffuseTilesU;
-      bumpTexture.vScale = diffuseTilesV;
-      this._material.bumpTexture = bumpTexture;
-      this._material.bumpTexture.level = (terrainType.normalMapIntensity ?? 1) * 0.6;
-    }
-    this._material.backFaceCulling = false;
+    const createSurfaceMaterial = (name, colorHex) => {
+      const material = new StandardMaterial(name, scene);
+      material.diffuseColor = terrainColor;
+      material.specularColor = new Color3(
+        terrainType.specular ?? 0.13,
+        terrainType.specular ?? 0.13,
+        terrainType.specular ?? 0.13
+      );
+      if (colorHex) {
+        material.diffuseColor = Color3.FromHexString(colorHex);
+      } else if (hasTerrainBlendResources) {
+        new terrainBlendConfig.pluginClass(
+          material,
+          terrainBlendConfig.terrainIdTexture,
+          terrainBlendConfig.terrainPropertyTexture,
+          terrainBlendConfig.terrainWaterOverlayTexture,
+          terrainBlendConfig.terrainWearOverlayTexture,
+          terrainBlendConfig.terrainDiffuseOverlayTexture,
+          terrainBlendConfig.terrainTypeCount,
+          terrainBlendConfig.terrainCellCount,
+          terrainBlendConfig.terrainWorldHalfWidth,
+          terrainBlendConfig.terrainWorldHalfDepth,
+          { forcedTerrainTypeIndex: -1 }
+        );
+        material.diffuseColor = Color3.White();
+        material.specularColor = Color3.White();
+        material.specularPower = 48;
+      } else {
+        const diffuseUrl = _resolveBridgeAssetUrl(terrainType.diffuseTexture, _bridgeTextureUrls);
+        if (diffuseUrl) {
+          const diffuseTexture = new Texture(diffuseUrl, scene, true, false);
+          diffuseTexture.uScale = diffuseTilesU;
+          diffuseTexture.vScale = diffuseTilesV;
+          material.diffuseTexture = diffuseTexture;
+          // StandardMaterial multiplies texture by diffuseColor. Approximate
+          // texture-opacity blending by tinting toward white as texture influence
+          // increases, without darkening the whole surface.
+          const textureInfluence = _clamp(terrainType.diffuseTextureOpacity ?? 1, 0, 1);
+          material.diffuseColor = _lerpColor(terrainColor, Color3.White(), textureInfluence);
+        }
+      }
+
+      const normalUrl = colorHex ? null : _resolveBridgeAssetUrl(terrainType.normalMap, _bridgeNormalUrls);
+      if (normalUrl) {
+        const bumpTexture = new Texture(normalUrl, scene, true, false);
+        bumpTexture.uScale = diffuseTilesU;
+        bumpTexture.vScale = diffuseTilesV;
+        material.bumpTexture = bumpTexture;
+        material.bumpTexture.level = (terrainType.normalMapIntensity ?? 1) * 0.6;
+      }
+      material.backFaceCulling = false;
+      return material;
+    };
+
+    this._material = createSurfaceMaterial(`bmMat_${centerX}_${centerZ}`, _resolveFlatColor(feature.color));
+    // Only build a second material when the sides are styled independently —
+    // otherwise the whole slab stays a single-material, single-submesh mesh.
+    this._sideMaterial = feature.sideColor === undefined || feature.sideColor === null
+      ? null
+      : createSurfaceMaterial(`bmSideMat_${centerX}_${centerZ}`, _resolveFlatColor(feature.sideColor));
 
     // ── Visual mesh (top + bottom + sides) ───────────────────────────────────
     this._mesh = new Mesh(`bridge_mesh_${centerX}_${centerZ}`, scene);
     const solidVD = _buildSolidVD(centerX, centerZ, cols, rows, width, depth, safeHeights, thickness, rotation);
     solidVD.applyToMesh(this._mesh);
-    this._mesh.material = this._material;
+    if (this._sideMaterial) {
+      // _buildSolidVD emits the top face first, then bottom + the four sides.
+      const topIndexCount = Math.max(0, (rows - 1) * (cols - 1) * 6);
+      const vertexCount = solidVD.positions.length / 3;
+      this._multiMaterial = new MultiMaterial(`bmMulti_${centerX}_${centerZ}`, scene);
+      this._multiMaterial.subMaterials = [this._material, this._sideMaterial];
+      this._mesh.material = this._multiMaterial;
+      this._mesh.subMeshes = [];
+      new SubMesh(0, 0, vertexCount, 0, topIndexCount, this._mesh);
+      new SubMesh(1, 0, vertexCount, topIndexCount, solidVD.indices.length - topIndexCount, this._mesh);
+    } else {
+      this._mesh.material = this._material;
+    }
     this._mesh.isPickable = false;
     this._mesh.receiveShadows = true;
     shadows?.addShadowCaster(this._mesh);
@@ -429,8 +467,12 @@ export class BridgeMesh {
     this._driveMesh = null;
     this._mesh?.dispose();
     this._mesh = null;
+    this._multiMaterial?.dispose();
+    this._multiMaterial = null;
     this._material?.dispose();
     this._material = null;
+    this._sideMaterial?.dispose();
+    this._sideMaterial = null;
   }
 }
 

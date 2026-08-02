@@ -1,8 +1,8 @@
 {
-  "id": "default_truck",
+  "id": "baja",
   "name": "Baja",
   "engineAudio": "v8",
-  "modelFile": "Baja.obj",
+  "modelFile": "baja.obj",
   "defaultColor": [0.8, 0.2, 0.1],
   "meshColors": {
     "Body1": [0,0,0],

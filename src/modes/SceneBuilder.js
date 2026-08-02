@@ -489,7 +489,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Build bridge drive surfaces first so downstream terrain-following features
   // (poly walls/curbs) can sample across all bridge meshes in one pass.
   for (const feature of currentTrack.features) {
-    if (feature.type === "bridgeMesh") {
+    if (feature.type === "bridgeMesh" || feature.type === "driveBox") {
       bridgeMeshManager.create(feature);
     }
   }

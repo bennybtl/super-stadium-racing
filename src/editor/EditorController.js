@@ -7,6 +7,7 @@ import { PolyHillEditor } from "./PolyHillEditor.js";
 import { HillEditor } from "./HillEditor.js";
 import { CheckpointEditor } from "./CheckpointEditor.js";
 import { SquareHillEditor } from "./SquareHillEditor.js";
+import { DriveBoxEditor } from "./DriveBoxEditor.js";
 import { TerrainShapeEditor } from "./TerrainShapeEditor.js";
 import { ObstacleEditor } from "./ObstacleEditor.js";
 import { DecorationsEditor } from "./DecorationsEditor.js";
@@ -75,6 +76,7 @@ export class EditorController {
     // — adding a new editor means constructing it here and appending it there.
     this.hillEditor = new HillEditor(this);
     this.squareHillEditor = new SquareHillEditor(this);
+    this.driveBoxEditor = new DriveBoxEditor(this);              // drivable box/wedge
     this.terrainShapeEditor = new TerrainShapeEditor(this);      // terrain rect + circle
     this.obstacleEditor = new ObstacleEditor(this);              // tire stacks
     this.decorationsEditor = new DecorationsEditor(this);        // flags + banner strings
@@ -94,6 +96,7 @@ export class EditorController {
     this.subEditors = [
       this.hillEditor,
       this.squareHillEditor,
+      this.driveBoxEditor,
       this.terrainShapeEditor,
       this.obstacleEditor,
       this.decorationsEditor,
@@ -425,6 +428,10 @@ export class EditorController {
       return this._createVectorSelectionInteraction(this.squareHillEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
+    if (this.driveBoxEditor.selected) {
+      return this._createVectorSelectionInteraction(this.driveBoxEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
     if (this.terrainShapeEditor.selected) {
       return this._createVectorSelectionInteraction(this.terrainShapeEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
@@ -485,6 +492,7 @@ export class EditorController {
       { selected: () => this.checkpointEditor.selected, duplicate: () => this.checkpointEditor.duplicateSelected(), delete: () => this.checkpointEditor.deleteSelected() },
       { selected: () => this.hillEditor.selected, duplicate: () => this.hillEditor.duplicateSelected(), delete: () => this.hillEditor.deleteSelected() },
       { selected: () => this.squareHillEditor.selected, duplicate: () => this.squareHillEditor.duplicateSelected(), delete: () => this.squareHillEditor.deleteSelected() },
+      { selected: () => this.driveBoxEditor.selected, duplicate: () => this.driveBoxEditor.duplicateSelected(), delete: () => this.driveBoxEditor.deleteSelected() },
       { selected: () => this.terrainShapeEditor.selected, duplicate: () => this.terrainShapeEditor.duplicateSelected(), delete: () => this.terrainShapeEditor.deleteSelected() },
       { selected: () => this.obstacleEditor.selected, duplicate: () => this.obstacleEditor.duplicateSelected(), delete: () => this.obstacleEditor.deleteSelected() },
       { selected: () => this.decorationsEditor.selected, duplicate: () => this.decorationsEditor.duplicateSelected(), delete: () => this.decorationsEditor.deleteSelected() },
@@ -571,6 +579,7 @@ export class EditorController {
       for (const feature of this.currentTrack.features) {
         if (feature.type === 'hill') this.hillEditor.createVisual(feature);
         else if (feature.type === 'squareHill') this.squareHillEditor.createVisual(feature);
+        else if (feature.type === 'driveBox') this.driveBoxEditor.createVisual(feature);
         else if (feature.type === 'terrain') this.terrainShapeEditor.createVisual(feature);
         else if (feature.type === 'obstacle') this.obstacleEditor.createVisual(feature);
         else if (this.decorationsEditor.isModelFeature(feature)) this.decorationsEditor.createVisual(feature);
@@ -1181,6 +1190,7 @@ export class EditorController {
       [this.checkpointEditor, 'selected'],
       [this.hillEditor, 'selected'],
       [this.squareHillEditor, 'selected'],
+      [this.driveBoxEditor, 'selected'],
       [this.terrainShapeEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
@@ -1228,6 +1238,7 @@ export class EditorController {
     note('checkpoint',   this.checkpointEditor?.selected);
     note('hill',         this.hillEditor?.selected);
     note('squareHill',   this.squareHillEditor?.selected);
+    note('driveBox',     this.driveBoxEditor?.selected);
     note('terrainShape', this.terrainShapeEditor?.selected);
     note('obstacle',     this.obstacleEditor?.selected);
     note('surfaceDecal', this.surfaceDecalEditor?.selected);
@@ -1430,6 +1441,7 @@ export class EditorController {
           { editor: this.checkpointEditor },
           { editor: this.hillEditor },
           { editor: this.squareHillEditor },
+          { editor: this.driveBoxEditor },
           { editor: this.terrainShapeEditor },
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
@@ -1712,6 +1724,23 @@ export class EditorController {
     rebuild.terrainTexture?.();
     this._syncTrackSettingsPanel();
   }
+
+  addDriveBoxEntity()               { this.driveBoxEditor.addEntity(); }
+  deselectDriveBox()                { this.driveBoxEditor.deselect(); }
+  deleteSelectedDriveBox()          { this.driveBoxEditor.deleteSelected(); }
+  duplicateSelectedDriveBox()       { this.driveBoxEditor.duplicateSelected(); }
+  changeDriveBoxWidth(val)          { this.driveBoxEditor.changeWidth(val); }
+  changeDriveBoxDepth(val)          { this.driveBoxEditor.changeDepth(val); }
+  changeDriveBoxRotation(val)       { this.driveBoxEditor.changeRotation(val); }
+  changeDriveBoxHeight(val)         { this.driveBoxEditor.changeHeight(val); }
+  changeDriveBoxHeightAtMin(val)    { this.driveBoxEditor.changeHeightMin(val); }
+  changeDriveBoxHeightAtMax(val)    { this.driveBoxEditor.changeHeightMax(val); }
+  changeDriveBoxSlopeMode(sloped)   { this.driveBoxEditor.changeMode(sloped); }
+  changeDriveBoxSolidBase(val)      { this.driveBoxEditor.changeSolidBase(val); }
+  changeDriveBoxThickness(val)      { this.driveBoxEditor.changeThickness(val); }
+  changeDriveBoxLayerId(val)        { this.driveBoxEditor.changeLayerId(val); }
+  changeDriveBoxColor(val)          { this.driveBoxEditor.changeColor(val); }
+  changeDriveBoxSideColor(val)      { this.driveBoxEditor.changeSideColor(val); }
 
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }
   changeSquareHillDepth(val)        { this.squareHillEditor.changeDepth(val); }
@@ -2138,6 +2167,7 @@ export class EditorController {
     // so do not force all of those meshes visible on a global gizmo toggle.
     setListVisibility(this.hillEditor?.meshes, ['node', 'sphere']);
     setListVisibility(this.squareHillEditor?.meshes, ['node', 'sphere']);
+    setListVisibility(this.driveBoxEditor?.meshes, ['sphere']);
     // Terrain shapes have no overlay mesh — only a handle sphere (below).
     setListVisibility(this.obstacleEditor?.meshes, ['node', 'mesh']);
 
@@ -2247,6 +2277,9 @@ export class EditorController {
     }
     if (this.squareHillEditor?.selected?.sphere) {
       this.squareHillEditor.selected.sphere.isVisible = visible;
+    }
+    if (this.driveBoxEditor?.selected?.sphere) {
+      this.driveBoxEditor.selected.sphere.isVisible = visible;
     }
   }
 }

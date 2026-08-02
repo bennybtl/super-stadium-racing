@@ -48,6 +48,7 @@ import imgMeshGrid    from '../assets/mesh_grid.feature.png';
 import imgObstacle    from '../assets/tire_stack.feature.png';
 import imgActionZone  from '../assets/action_zone.feature.png';
 import imgBridge      from '../assets/bridge.feature.png';
+import imgDriveBox    from '../assets/drive_box.feature.png';
 import imgAiPath      from '../assets/ai_path.feature.png';
 import imgDecal       from '../assets/decals.feature.png';
 import imgTerrainPath from '../assets/terrain_path.feature.png';
@@ -63,6 +64,7 @@ const features = [
   { label: 'Poly Hill',        img: imgPolyHill,      action: () => editor.featureAction('addPolyHillEntity')       },
   { label: 'Mesh Grid',        img: imgMeshGrid,      action: () => editor.featureAction('addMeshGridEntity')       },
   { label: 'Bridge Mesh',      img: imgBridge,        action: () => editor.featureAction('addBridgeMeshEntity')     },
+  { label: 'Drive Box',        img: imgDriveBox,      action: () => editor.featureAction('addDriveBoxEntity')       },
   { label: 'Terrain Shape',   img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')         },
   { label: 'Obstacle',         img: imgObstacle,      action: () => editor.featureAction('addObstacleEntity')       },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.featureAction('addTrackSignEntity')      },
