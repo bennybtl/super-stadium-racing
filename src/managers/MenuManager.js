@@ -189,6 +189,14 @@ export class MenuManager {
     this._store.championshipData = data;
   }
 
+  /**
+   * True while the attract-mode demo race is rendering behind the menus, which
+   * drops the static title image so the live scene shows through.
+   */
+  setDemoActive(active) {
+    this._store.demoActive = !!active;
+  }
+
   hideMenu() {
     this.currentMenu = null;
     this.isPaused    = false;

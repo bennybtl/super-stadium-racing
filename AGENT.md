@@ -91,7 +91,7 @@ offroad/
     │   ├── DriveMode.js             # Base class for gameplay modes (shared scene setup)
     │   ├── SceneBuilder.js          # Shared scene construction: ground, lights, managers, physics
     │   ├── EditorMode.js
-    │   ├── MenuMode.js
+    │   ├── MenuMode.js              # Menu callbacks + attract-mode demo race behind the menus
     │   ├── PracticeMode.js
     │   ├── RaceMode.js              # Full race: lap tracking, AI drivers, timing, UI
     │   └── TestMode.js

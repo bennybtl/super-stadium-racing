@@ -129,12 +129,13 @@ export function setupAIDrivers({
   }
 
   // ── Cross-awareness: each driver knows about every other truck ─────────
+  // playerTruck is null in AI-only fields (the attract-mode demo), so drop it.
   const allOtherTrucksFor = (driverIndex) => [
     playerTruck,
     ...aiTrucks
       .filter((_, j) => j !== driverIndex)
       .map(t => t.truck),
-  ];
+  ].filter(Boolean);
 
   aiDrivers.forEach((driver, i) => {
     driver.setOtherTrucks(allOtherTrucksFor(i));

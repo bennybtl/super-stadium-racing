@@ -83,35 +83,10 @@ export class RaceMode extends DriveMode {
       startFinishCp,
     } = this.getStartFinishInfo(currentTrack);
 
-    const resolveGridAnchorCheckpoint = () => {
-      const numberedFeatures = checkpointManager.checkpointMeshes
-        .map(cp => cp.feature)
-        .filter(feature => feature.checkpointNumber != null);
+    const resolveGridAnchorCheckpoint = () =>
+      this.getStartFinishCheckpoint(checkpointManager) ?? startFinishCp;
 
-      if (numberedFeatures.length === 0) {
-        return startFinishCp;
-      }
-
-      return numberedFeatures.reduce((maxFeature, feature) => (
-        feature.checkpointNumber > maxFeature.checkpointNumber ? feature : maxFeature
-      ), numberedFeatures[0]);
-    };
-
-    const getGridSpawn = (index) => {
-      const gridAnchorCheckpoint = resolveGridAnchorCheckpoint();
-      if (!gridAnchorCheckpoint) {
-        const x = (index % 2) * 3, z = Math.floor(index / 2) * 3;
-        return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: 0 };
-      }
-      const h = gridAnchorCheckpoint.heading;
-      const fwdX = Math.sin(h), fwdZ = Math.cos(h);
-      const rightX = Math.cos(h), rightZ = -Math.sin(h);
-      const col = index % 2, row = Math.floor(index / 2);
-      const lateralSign = col === 0 ? -1 : 1;
-      const x = gridAnchorCheckpoint.centerX + rightX * (lateralSign * 2) + fwdX * -(3 + row * 7);
-      const z = gridAnchorCheckpoint.centerZ + rightZ * (lateralSign * 2) + fwdZ * -(3 + row * 7);
-      return { pos: new Vector3(x, currentTrack.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: h };
-    };
+    const getGridSpawn = this.makeGridSpawner(currentTrack, checkpointManager, startFinishCp);
 
     // -- Race state --
     let raceStarted = false;

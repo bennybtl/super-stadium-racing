@@ -1,4 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
+import { TRUCK_HALF_HEIGHT } from "../constants.js";
 import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";
 import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
@@ -149,6 +150,34 @@ export class DriveMode extends BaseMode {
       (max, f) => (f.checkpointNumber > max.checkpointNumber ? f : max),
       numbered[0],
     );
+  }
+
+  /**
+   * Build a starting-grid spawn function: `index` 0 is pole, then two-wide rows
+   * stacked back from the start/finish gate. The anchor gate is resolved per
+   * call so a reverse rebuild (which flips headings) is picked up.
+   *
+   * @param {Track} track
+   * @param {CheckpointManager} checkpointManager
+   * @param {object} [fallbackCheckpoint] Used when no gate carries a number.
+   * @returns {(index: number) => { pos: Vector3, heading: number }}
+   */
+  makeGridSpawner(track, checkpointManager, fallbackCheckpoint = null) {
+    return (index) => {
+      const anchor = this.getStartFinishCheckpoint(checkpointManager) ?? fallbackCheckpoint;
+      if (!anchor) {
+        const x = (index % 2) * 3, z = Math.floor(index / 2) * 3;
+        return { pos: new Vector3(x, track.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: 0 };
+      }
+      const h = anchor.heading;
+      const fwdX = Math.sin(h), fwdZ = Math.cos(h);
+      const rightX = Math.cos(h), rightZ = -Math.sin(h);
+      const col = index % 2, row = Math.floor(index / 2);
+      const lateralSign = col === 0 ? -1 : 1;
+      const x = anchor.centerX + rightX * (lateralSign * 2) + fwdX * -(3 + row * 7);
+      const z = anchor.centerZ + rightZ * (lateralSign * 2) + fwdZ * -(3 + row * 7);
+      return { pos: new Vector3(x, track.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: h };
+    };
   }
 
   /**

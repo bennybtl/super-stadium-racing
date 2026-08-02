@@ -26,6 +26,10 @@ export const useMenuStore = defineStore('menu', () => {
   const navDirection = ref('forward');
   function setNavDirection(dir) { navDirection.value = dir; }
 
+  // True while the attract-mode demo race renders behind the menus; the menu
+  // backdrops go transparent so it shows through instead of the title image.
+  const demoActive = ref(false);
+
   // Overlay data (null when not showing)
   const pitData         = ref(null);
   const singleRaceData  = ref(null);
@@ -119,7 +123,7 @@ export const useMenuStore = defineStore('menu', () => {
 
   return {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
-    selectedReverse, navDirection, setNavDirection,
+    selectedReverse, navDirection, setNavDirection, demoActive,
     pitData, singleRaceData, championshipData, upgrades,
     champInitials, champTrackCount, hasActiveChampionship,
     loadingVisible, loadingMessage,
