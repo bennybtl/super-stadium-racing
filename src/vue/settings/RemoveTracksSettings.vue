@@ -96,11 +96,16 @@ function refresh() {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function onDownload(t) {
+async function onDownload(t) {
   const trackLoader = window.trackLoader;
   if (!trackLoader) return;
   const track = trackLoader.getTrack(t.key);
-  if (track) trackLoader.downloadTrack(track);
+  if (!track) return;
+  try {
+    await trackLoader.downloadTrack(track);
+  } catch (e) {
+    console.error('[Tracks] Download failed:', e);
+  }
 }
 
 async function onConfirmDelete() {

@@ -4,6 +4,7 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
+  "oobDeadSpace": false,
   "name": "King of the Hill",
   "image": "king_of_the_hill.png",
   "width": 200,
@@ -1158,27 +1159,14 @@
     {
       "type": "surfaceDecal",
       "centerX": 11.08523985105318,
-      "centerZ": -42.0797900517179,
+      "centerZ": -41.0797900517179,
       "shape": "line",
       "color": "blue",
       "count": 5,
       "outline": false,
       "width": 6,
-      "depth": 16,
+      "depth": 17.5,
       "angle": 31,
-      "opacity": 0.6
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": 23.742569039392915,
-      "centerZ": -42.98942326524796,
-      "shape": "line",
-      "color": "blue",
-      "count": 5,
-      "outline": false,
-      "width": 6,
-      "depth": 16,
-      "angle": 335,
       "opacity": 0.6
     },
     {
@@ -1208,6 +1196,32 @@
       "heading": 0.47123889803846897,
       "mirrorZ": false,
       "mirrorX": true
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 22.672070754705068,
+      "centerZ": -72.47025190246627,
+      "shape": "line",
+      "color": "blue",
+      "count": 5,
+      "outline": false,
+      "width": 6,
+      "depth": 17.5,
+      "angle": 31,
+      "opacity": 0.6
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 24.41602423338922,
+      "centerZ": -42.18963460520834,
+      "shape": "line",
+      "color": "blue",
+      "count": 5,
+      "outline": false,
+      "width": 6,
+      "depth": 16,
+      "angle": 335,
+      "opacity": 0.6
     }
   ]
 }

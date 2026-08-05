@@ -23,6 +23,8 @@ import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 import { DEFAULT_TERRAIN_WEAR_CONFIG } from '../terrain-utils.js';
 import { loadControlsSettings } from '../settingsStorage.js';
+import { storeTrackImage } from '../managers/TrackPackLoader.js';
+import { getTrackJson, setTrackJson } from '../managers/TrackStore.js';
 
 /**
  * EditorController - Handles track editing mode
@@ -2135,12 +2137,15 @@ export class EditorController {
 
   /**
    * Frame the whole track from an overhead tilt (matching the in-game
-   * "screenshot" camera, scaled to the track's size), hide the editor gizmos,
-   * and download a PNG of the clean track. Restores the camera + gizmos after.
+   * "screenshot" camera angle), hide the editor gizmos, and download a square
+   * 1200×1200 PNG of the clean track. The framing fits the track's full width
+   * and centres it vertically — the near (lower) corners may fall outside the
+   * square crop, which is fine. Restores the camera + gizmos after.
    */
   async captureTrackScreenshot() {
     const engine = this.scene.getEngine();
     const camera = this.camera;
+    const SIZE = 1200;
 
     const savedPos = camera.position.clone();
     const savedTarget = camera.getTarget().clone();
@@ -2148,24 +2153,115 @@ export class EditorController {
 
     this.setGizmosVisible(false);
 
-    // Overhead tilt sized to the track (same framing ratio as the in-game
-    // screenshot camera: ~0.78× up, ~0.6× back relative to the largest span).
-    const maxDim = Math.max(this.currentTrack?.width ?? 160, this.currentTrack?.depth ?? 160);
-    camera.position.set(0, maxDim * 0.78, -maxDim * 0.80);
-    camera.setTarget(new Vector3(0, 0.5, -13));
+    // Force the engine to the capture size for the duration of the shot.
+    // Babylon derives the camera's projection from the engine's aspect ratio,
+    // not the render target's, so without this both the framing solve below
+    // and the render itself vary with the browser window — the same track
+    // came out cropped in a squarish window and postage-stamped in a wide one.
+    const savedWidth = engine.getRenderWidth();
+    const savedHeight = engine.getRenderHeight();
+    engine.setSize(SIZE, SIZE);
+
+    const width = this.currentTrack?.width ?? 160;
+    const depth = this.currentTrack?.depth ?? 160;
+    const maxDim = Math.max(width, depth);
+
+    // Corners of the track volume (ground rect + boundary-wall height) used to
+    // solve the framing.
+    const wallTop = maxDim * 0.08;
+    const corners = [];
+    for (const sx of [-1, 1])
+      for (const sz of [-1, 1])
+        for (const y of [0, wallTop])
+          corners.push(new Vector3(sx * width / 2, y, sz * depth / 2));
+
+    // Same overhead tilt as the in-game screenshot camera, aimed at the centre
+    // of the track.
+    const dir = new Vector3(0, 0.78, -0.80).normalize();
+    const target = new Vector3(0, 0, 0);
+    const place = (offset) => {
+      camera.position.copyFrom(target).addInPlace(offset);
+      camera.setTarget(target);
+      camera.getViewMatrix(true);
+      const view = camera.getViewMatrix();
+      return corners.map(c => Vector3.TransformCoordinates(c, view));
+    };
+
+    // Half-angle tangents read straight off the projection matrix (for a
+    // perspective matrix m[0] = 1/tanH, m[5] = 1/tanV) rather than derived
+    // from camera.fov, so this stays correct whatever the fovMode. With the
+    // engine forced square above, tanH and tanV agree.
+    const proj = camera.getProjectionMatrix(true);
+    const tanH = 1 / proj.m[0];
+    const tanV = 1 / proj.m[5];
+
+    // Dollying back along `dir` leaves camera-space x/y untouched and adds a
+    // constant to z, so the distance needed to fit the track horizontally
+    // solves in one step.
+    let pts = place(dir.scale(maxDim));
+    const back = Math.max(0, ...pts.map(p => Math.abs(p.x) / tanH - p.z));
+    pts = place(dir.scale(maxDim + back));
+
+    // Centre vertically: shifting camera + target along the camera's up vector
+    // slides everything the opposite way in camera space.
+    const ndcY = pts.map(p => p.y / (p.z * tanV));
+    const mid = (Math.min(...ndcY) + Math.max(...ndcY)) / 2;
+    const avgZ = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+    // Camera-local up (world up with the view direction removed), so the shift
+    // is a pure vertical slide in camera space.
+    const fwd = dir.scale(-1);
+    const camUp = new Vector3(0, 1, 0).subtract(fwd.scale(fwd.y)).normalize();
+    target.addInPlace(camUp.scale(mid * tanV * avgZ));
+    place(dir.scale(maxDim + back));
 
     const name = this.currentTrack?.id || this.currentTrack?.name || 'track';
     try {
-      await Tools.CreateScreenshotUsingRenderTargetAsync(
-        engine, camera, { width: 1920, height: 1200 },
-        'image/png', 4, true, `${name}.png`,
+      // No fileName → resolves with the PNG data-URL instead of downloading.
+      const dataUrl = await Tools.CreateScreenshotUsingRenderTargetAsync(
+        engine, camera, { width: SIZE, height: SIZE }, 'image/png', 4, true,
       );
+      await this._saveTrackImage(`${name}.png`, dataUrl);
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${name}.png`;
+      link.click();
     } catch (e) {
       console.warn('[Editor] Screenshot failed:', e);
     } finally {
+      engine.setSize(savedWidth, savedHeight);
+      engine.resize(true);
       camera.position.copyFrom(savedPos);
       camera.setTarget(savedTarget);
       this.setGizmosVisible(savedGizmos);
+    }
+  }
+
+  /**
+   * Store a freshly captured screenshot as this track's image so the track
+   * carousel picks it up without a rebuild: the thumbnail goes into TrackStore
+   * (IndexedDB) under `<filename>`, and the track JSON is updated
+   * to reference it. A track that is already saved only gets its
+   * `image` field patched, so capturing a screenshot never commits unsaved
+   * edits behind the user's back.
+   */
+  async _saveTrackImage(filename, dataUrl) {
+    if (!this.currentTrack) return;
+    try {
+      await storeTrackImage(filename, dataUrl);
+      this.currentTrack.image = filename;
+
+      const key = this.currentTrack.id;
+      if (!key) return;
+      const stored = getTrackJson(key);
+      if (stored) {
+        const data = JSON.parse(stored);
+        data.image = filename;
+        setTrackJson(key, JSON.stringify(data, null, 2));
+      } else {
+        setTrackJson(key, this.currentTrack.toJSON());
+      }
+    } catch (e) {
+      console.warn('[Editor] Failed to store track image:', e);
     }
   }
 

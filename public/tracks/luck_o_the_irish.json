@@ -4,6 +4,7 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
+  "oobDeadSpace": false,
   "name": "Luck O' The Irish",
   "image": "luck_o_the_irish.png",
   "width": 160,
@@ -189,6 +190,21 @@
         0,
         0
       ]
+    },
+    {
+      "type": "driveBox",
+      "centerX": 47.656208372657495,
+      "centerZ": 18.83003229888417,
+      "width": 7.5,
+      "depth": 11.5,
+      "rotation": 29,
+      "solidBase": true,
+      "thickness": 0.4,
+      "layerId": 0,
+      "heightAtMin": 0,
+      "heightAtMax": 2.5,
+      "color": "#9aa0a8",
+      "sideColor": "#3f7a3a"
     },
     {
       "type": "polyWall",

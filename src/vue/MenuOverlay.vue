@@ -45,7 +45,15 @@
       </div>
     </template>
 
-    <div v-else class="absolute inset-0 flex items-center justify-center pointer-events-auto">
+    <div v-else class="absolute inset-0 flex flex-col items-center justify-center gap-6 p-6 pointer-events-auto">
+      <!-- The main menu is short enough to carry the logo above it; the column
+           layout pushes the panel down to make room. -->
+      <img
+        v-if="store.screen === 'start'"
+        :src="logoSrc"
+        alt="Super Stadium Racing"
+        class="w-[min(45vw,380px)] shrink-0 drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] select-none"
+      />
       <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
       <div class="flex flex-col gap-4">
 
@@ -356,7 +364,7 @@ function tryEditorSave() {
   const saveKey = getSaveKey();
   const selectedTrack = window.menuManager?.selectedTrack;
   const isRenamingOrNew = !selectedTrack || selectedTrack === 'new' || selectedTrack === '__editor_live__' || saveKey !== selectedTrack;
-  const existsInStorage = localStorage.getItem(`track_${saveKey}`) !== null;
+  const existsInStorage = window.trackLoader?.hasStoredTrack(saveKey) ?? false;
 
   const existsAlready = existsInStorage || window.trackLoader?.builtinKeys.has(saveKey);
   if (isRenamingOrNew && existsAlready) {

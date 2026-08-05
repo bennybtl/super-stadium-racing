@@ -1,13 +1,13 @@
 import { unzipSync } from 'fflate';
+import { getImageUrl, removeImage, setImage, setTrackJson } from './TrackStore.js';
 
-const IMAGE_STORAGE_PREFIX = 'trackImage_';
 const THUMBNAIL_MAX = 200;
 const THUMBNAIL_QUALITY = 0.8;
 
 /**
- * Load a track-pack zip file. Extracts .json tracks and .png images,
- * stores tracks via TrackLoader and images as data-URLs in localStorage.
- * Returns { loaded: number, errors: string[] }.
+ * Load a track-pack zip file. Extracts .json tracks and .png images and
+ * persists both through TrackStore (IndexedDB), then registers the tracks
+ * with TrackLoader. Returns { loaded: number, errors: string[] }.
  */
 export async function loadTrackPack(file, trackLoader) {
   const buffer = await file.arrayBuffer();
@@ -20,13 +20,16 @@ export async function loadTrackPack(file, trackLoader) {
   for (const [path, data] of Object.entries(entries)) {
     const filename = path.split('/').pop();
     if (!filename) continue;
+    // Skip macOS Archive Utility cruft: a `__MACOSX/` tree of AppleDouble
+    // resource forks (`._<name>`) shadowing every real entry, plus the
+    // .DS_Store it drops in. These carry the real file's extension but hold
+    // binary metadata, so they fail to decode/parse if taken at face value.
+    if (path.startsWith('__MACOSX/') || filename.startsWith('._') || filename === '.DS_Store') continue;
 
     if (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.jpeg')) {
       const type = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
-      const blob = new Blob([data], { type });
       try {
-        const dataUrl = await resizeImageToDataUrl(blob);
-        images.set(filename, dataUrl);
+        images.set(filename, await resizeImage(new Blob([data], { type })));
       } catch (e) {
         errors.push(`Failed to process image ${filename}: ${e.message}`);
       }
@@ -35,9 +38,9 @@ export async function loadTrackPack(file, trackLoader) {
     }
   }
 
-  for (const [filename, dataUrl] of images) {
+  for (const [filename, blob] of images) {
     try {
-      localStorage.setItem(IMAGE_STORAGE_PREFIX + filename, dataUrl);
+      setImage(filename, blob);
     } catch (e) {
       errors.push(`Failed to store image ${filename}: ${e.message}`);
     }
@@ -49,7 +52,7 @@ export async function loadTrackPack(file, trackLoader) {
       const json = new TextDecoder().decode(data);
       JSON.parse(json);
       const key = filename.replace('.json', '');
-      localStorage.setItem(`track_${key}`, json);
+      setTrackJson(key, json);
       trackLoader.loadTrackFromStorage(key);
       loaded++;
     } catch (e) {
@@ -61,24 +64,44 @@ export async function loadTrackPack(file, trackLoader) {
 }
 
 /**
- * Look up a track image from localStorage (for pack-imported tracks).
- * Returns a data-URL string or null.
+ * Drop a locally stored preview image (pack import or editor screenshot).
  */
 export function removeStoredTrackImage(imageFilename) {
-  if (!imageFilename) return;
-  try { localStorage.removeItem(IMAGE_STORAGE_PREFIX + imageFilename); } catch {}
+  removeImage(imageFilename);
 }
 
+/**
+ * A URL for a locally stored preview image, usable as an <img> src, or null
+ * when the track's image only exists as a shipped file in public/tracks/.
+ */
 export function getStoredTrackImage(imageFilename) {
   if (!imageFilename) return null;
-  try {
-    return localStorage.getItem(IMAGE_STORAGE_PREFIX + imageFilename);
-  } catch {
-    return null;
-  }
+  return getImageUrl(imageFilename);
 }
 
-function resizeImageToDataUrl(blob) {
+/**
+ * Store a track image (data-URL or any loadable src) under `imageFilename`,
+ * downscaled to the same thumbnail size used for pack imports. Used by the
+ * editor's screenshot capture.
+ */
+export async function storeTrackImage(imageFilename, src) {
+  if (!imageFilename || !src) {
+    throw new Error(`Cannot store track image (filename="${imageFilename}", empty source: ${!src})`);
+  }
+  setImage(imageFilename, await resizeSrcToBlob(src));
+}
+
+function resizeImage(blob) {
+  const url = URL.createObjectURL(blob);
+  return resizeSrcToBlob(url).finally(() => URL.revokeObjectURL(url));
+}
+
+/**
+ * Decode `src`, downscale it to fit THUMBNAIL_MAX on its longest side, and
+ * re-encode as a JPEG Blob. Blobs (rather than data-URLs) keep the stored
+ * bytes raw — no base64 inflation on the way into IndexedDB.
+ */
+function resizeSrcToBlob(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -91,15 +114,13 @@ function resizeImageToDataUrl(blob) {
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', THUMBNAIL_QUALITY));
-      URL.revokeObjectURL(img.src);
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        blob => blob ? resolve(blob) : reject(new Error('Failed to encode image')),
+        'image/jpeg', THUMBNAIL_QUALITY,
+      );
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      reject(new Error('Failed to decode image'));
-    };
-    img.src = URL.createObjectURL(blob);
+    img.onerror = () => reject(new Error('Failed to decode image'));
+    img.src = src;
   });
 }
