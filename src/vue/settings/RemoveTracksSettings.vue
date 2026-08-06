@@ -60,7 +60,7 @@
 import { ref } from 'vue';
 import ConfirmDialog from '../ConfirmDialog.vue';
 import { deleteHotLapRecords } from '../../managers/HotLapStorage.js';
-import { removeStoredTrackImage } from '../../managers/TrackPackLoader.js';
+import { removeImage } from '../../managers/TrackStore.js';
 import { useMenuStore } from '../stores/menu.js';
 
 const store = useMenuStore();
@@ -91,7 +91,7 @@ function refresh() {
       };
     })
     // Show pack-imported tracks, editor-created tracks, and built-in tracks
-    // that were edited & saved to localStorage. Hide untouched built-ins.
+    // that were edited & saved. Hide untouched built-ins.
     .filter(t => !t.isBuiltin || t.hasLocalEdit)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -119,7 +119,7 @@ async function onConfirmDelete() {
     if (trackLoader) await trackLoader.revertTrack(t.key);
   } else {
     if (trackLoader) trackLoader.removeTrack(t.key);
-    if (t.image) removeStoredTrackImage(t.image);
+    if (t.image) removeImage(t.image);
     deleteHotLapRecords(t.key, false);
     deleteHotLapRecords(t.key, true);
   }

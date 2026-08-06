@@ -1,8 +1,7 @@
 import { zipSync, strToU8 } from 'fflate';
 import { Track } from '../track.js';
-import { getStoredTrackImage } from './TrackPackLoader.js';
 import {
-  getImageBlob, getTrackJson, hasTrackJson, openTrackStore,
+  getImageBlob, getImageUrl, getTrackJson, hasTrackJson, openTrackStore,
   removeTrackJson, setTrackJson, storedTrackKeys,
 } from './TrackStore.js';
 // Track filenames are scanned from public/tracks/ at build time (and re-scanned
@@ -103,7 +102,7 @@ export class TrackLoader {
       seen.add(image);
       const img = new Image();
       img.decoding = 'async';
-      img.src = getStoredTrackImage(image) ?? `${base}tracks/${image}`;
+      img.src = getImageUrl(image) ?? `${base}tracks/${image}`;
     }
   }
 

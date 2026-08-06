@@ -1,5 +1,5 @@
 import { unzipSync } from 'fflate';
-import { getImageUrl, removeImage, setImage, setTrackJson } from './TrackStore.js';
+import { setImage, setTrackJson } from './TrackStore.js';
 
 const THUMBNAIL_MAX = 200;
 const THUMBNAIL_QUALITY = 0.8;
@@ -61,22 +61,6 @@ export async function loadTrackPack(file, trackLoader) {
   }
 
   return { loaded, errors };
-}
-
-/**
- * Drop a locally stored preview image (pack import or editor screenshot).
- */
-export function removeStoredTrackImage(imageFilename) {
-  removeImage(imageFilename);
-}
-
-/**
- * A URL for a locally stored preview image, usable as an <img> src, or null
- * when the track's image only exists as a shipped file in public/tracks/.
- */
-export function getStoredTrackImage(imageFilename) {
-  if (!imageFilename) return null;
-  return getImageUrl(imageFilename);
 }
 
 /**

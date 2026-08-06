@@ -266,11 +266,19 @@ export class EditorMode extends BaseMode {
     // -- Menu callbacks --
     menuManager.onEditorResume = () => menuManager.hideMenu();
 
-    menuManager.onEditorSave = () => {
+    menuManager.onEditorSave = async () => {
       if (rebuild.currentTrack) {
         const saveKey = (menuManager.selectedTrack && menuManager.selectedTrack !== 'new')
           ? menuManager.selectedTrack
           : rebuild.currentTrack.id || 'custom';
+        // A track with no preview image yet gets one captured on its first
+        // save, so it shows up in the selection carousel without the author
+        // having to remember the screenshot button. No download here — that
+        // only happens when the button is pressed explicitly. The capture
+        // sets currentTrack.image, so the save below persists the reference.
+        if (!rebuild.currentTrack.image) {
+          await editorController.captureTrackScreenshot({ download: false, persistTrack: false });
+        }
         trackLoader.saveTrackToStorage(saveKey, rebuild.currentTrack);
         menuManager.selectedTrack = saveKey;
       }

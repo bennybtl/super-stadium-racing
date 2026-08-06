@@ -2137,15 +2137,22 @@ export class EditorController {
 
   /**
    * Frame the whole track from an overhead tilt (matching the in-game
-   * "screenshot" camera angle), hide the editor gizmos, and download a square
-   * 1200×1200 PNG of the clean track. The framing fits the track's full width
-   * and centres it vertically — the near (lower) corners may fall outside the
-   * square crop, which is fine. Restores the camera + gizmos after.
+   * "screenshot" camera angle), hide the editor gizmos, and produce a square
+   * 1200×1200 PNG of the clean track.
+   *
+   * The camera solve below consistently frames wider than intended — Babylon's
+   * effective field of view at render time doesn't match what the projection
+   * matrix reports here — so rather than keep chasing that discrepancy we
+   * capture at CAPTURE×CAPTURE and take the middle SIZE×SIZE. CAPTURE/SIZE is
+   * therefore the zoom factor: raise CAPTURE to crop in tighter, lower it to
+   * pull back. No rescaling happens, so the output is native pixels.
+   * Restores the camera + gizmos after.
    */
-  async captureTrackScreenshot() {
+  async captureTrackScreenshot({ download = true, persistTrack = true } = {}) {
     const engine = this.scene.getEngine();
     const camera = this.camera;
     const SIZE = 1200;
+    const CAPTURE = 1800;
 
     const savedPos = camera.position.clone();
     const savedTarget = camera.getTarget().clone();
@@ -2153,14 +2160,15 @@ export class EditorController {
 
     this.setGizmosVisible(false);
 
-    // Force the engine to the capture size for the duration of the shot.
-    // Babylon derives the camera's projection from the engine's aspect ratio,
-    // not the render target's, so without this both the framing solve below
-    // and the render itself vary with the browser window — the same track
-    // came out cropped in a squarish window and postage-stamped in a wide one.
+    // Force the engine square for the duration of the shot. Babylon derives
+    // the camera projection from the engine's aspect ratio rather than the
+    // render target's, so without this the framing drifts with the browser
+    // window — the same track came out cropped in a squarish window and
+    // postage-stamped in a wide one. Square here makes it repeatable, which
+    // is what lets a fixed crop factor work.
     const savedWidth = engine.getRenderWidth();
     const savedHeight = engine.getRenderHeight();
-    engine.setSize(SIZE, SIZE);
+    engine.setSize(CAPTURE, CAPTURE);
 
     const width = this.currentTrack?.width ?? 160;
     const depth = this.currentTrack?.depth ?? 160;
@@ -2182,15 +2190,13 @@ export class EditorController {
     const place = (offset) => {
       camera.position.copyFrom(target).addInPlace(offset);
       camera.setTarget(target);
-      camera.getViewMatrix(true);
-      const view = camera.getViewMatrix();
+      const view = camera.getViewMatrix(true);
       return corners.map(c => Vector3.TransformCoordinates(c, view));
     };
 
-    // Half-angle tangents read straight off the projection matrix (for a
-    // perspective matrix m[0] = 1/tanH, m[5] = 1/tanV) rather than derived
-    // from camera.fov, so this stays correct whatever the fovMode. With the
-    // engine forced square above, tanH and tanV agree.
+    // Half-angle tangents read off the projection matrix (for a perspective
+    // matrix m[0] = 1/tanH, m[5] = 1/tanV) rather than derived from
+    // camera.fov, so this stays correct whatever the fovMode.
     const proj = camera.getProjectionMatrix(true);
     const tanH = 1 / proj.m[0];
     const tanV = 1 / proj.m[5];
@@ -2217,14 +2223,17 @@ export class EditorController {
     const name = this.currentTrack?.id || this.currentTrack?.name || 'track';
     try {
       // No fileName → resolves with the PNG data-URL instead of downloading.
-      const dataUrl = await Tools.CreateScreenshotUsingRenderTargetAsync(
-        engine, camera, { width: SIZE, height: SIZE }, 'image/png', 4, true,
+      const rendered = await Tools.CreateScreenshotUsingRenderTargetAsync(
+        engine, camera, { width: CAPTURE, height: CAPTURE }, 'image/png', 4, true,
       );
-      await this._saveTrackImage(`${name}.png`, dataUrl);
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `${name}.png`;
-      link.click();
+      const dataUrl = await this._cropToSquare(rendered, SIZE);
+      await this._saveTrackImage(`${name}.png`, dataUrl, persistTrack);
+      if (download) {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `${name}.png`;
+        link.click();
+      }
     } catch (e) {
       console.warn('[Editor] Screenshot failed:', e);
     } finally {
@@ -2237,21 +2246,48 @@ export class EditorController {
   }
 
   /**
+   * Take the centre `size`×`size` pixels of a rendered screenshot. Pure crop,
+   * no rescaling — the caller renders larger than it needs and this trims the
+   * surplus evenly off all four sides, which zooms the framing in by
+   * (render size / size).
+   */
+  async _cropToSquare(dataUrl, size) {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Failed to decode screenshot'));
+      el.src = dataUrl;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    canvas.getContext('2d').drawImage(
+      img, (img.width - size) / 2, (img.height - size) / 2, size, size,
+      0, 0, size, size,
+    );
+    return canvas.toDataURL('image/png');
+  }
+
+  /**
    * Store a freshly captured screenshot as this track's image so the track
    * carousel picks it up without a rebuild: the thumbnail goes into TrackStore
    * (IndexedDB) under `<filename>`, and the track JSON is updated
    * to reference it. A track that is already saved only gets its
    * `image` field patched, so capturing a screenshot never commits unsaved
    * edits behind the user's back.
+   *
+   * `persistTrack` is false when the caller is a save that is about to write
+   * the track itself — it already knows the right storage key, which is not
+   * necessarily `currentTrack.id`, so writing here too would risk a stray entry.
    */
-  async _saveTrackImage(filename, dataUrl) {
+  async _saveTrackImage(filename, dataUrl, persistTrack = true) {
     if (!this.currentTrack) return;
     try {
       await storeTrackImage(filename, dataUrl);
       this.currentTrack.image = filename;
 
       const key = this.currentTrack.id;
-      if (!key) return;
+      if (!persistTrack || !key) return;
       const stored = getTrackJson(key);
       if (stored) {
         const data = JSON.parse(stored);
