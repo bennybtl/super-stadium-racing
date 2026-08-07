@@ -361,6 +361,13 @@ export class Truck {
       }
     });
 
+    // The terrain grid is XZ-only, so it reports whatever is painted below the
+    // truck even when the truck isn't touching it. `terrain` is already null
+    // while airborne; drop it too when riding an elevated surface, otherwise
+    // crossing a bridge over water sprays water off the deck.
+    const onNaturalGround = (this.terrainPhysics.floorSurface?.surfaceLevel ?? 0) === 0;
+    const effectsTerrain = onNaturalGround ? terrain : null;
+
     const speed = this.state.velocity.length();
     // Horizontal (XZ) speed for steering/grip calculations — excludes velocity.y
     // so that airborne Y velocity doesn't inflate speedRatio and cause extra understeer.
@@ -467,7 +474,7 @@ export class Truck {
         maxSpeed: this.state.maxSpeed,
         mesh: this.mesh,
         track,
-        currentTerrain: terrain,
+        currentTerrain: effectsTerrain,
         input,
       });
     });
@@ -500,10 +507,9 @@ export class Truck {
       profile('truck.particles', () => this.particles.update(
         this.state,
         hSpeed,
-        terrainManager,
         groundedness,
         particleDt,
-        terrain,
+        effectsTerrain,
         track,
         effectScaleOverride
       ));

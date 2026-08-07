@@ -170,6 +170,34 @@ export class CheckpointManager {
     this._activeCheckpointNumber = null;
     this._applyActiveCheckpointHighlight();
   }
+
+  /**
+   * World position of the player's current target gate, or null when there is
+   * no active checkpoint (before the highlight is set, or after the race ends).
+   * When a step has alternative gates, the one nearest `fromPosition` wins.
+   * @param {{x:number, z:number}|null} fromPosition
+   * @returns {import("@babylonjs/core").Vector3|null}
+   */
+  getActiveCheckpointPosition(fromPosition = null) {
+    if (this._activeCheckpointNumber === null) return null;
+
+    let best = null;
+    let bestDistSq = Infinity;
+    for (const checkpoint of this.checkpointMeshes) {
+      if (checkpoint.feature.checkpointNumber !== this._activeCheckpointNumber) continue;
+      const position = checkpoint.container.position;
+      if (!fromPosition) return position;
+
+      const dx = position.x - fromPosition.x;
+      const dz = position.z - fromPosition.z;
+      const distSq = dx * dx + dz * dz;
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq;
+        best = position;
+      }
+    }
+    return best;
+  }
   
   /**
    * Create a single checkpoint visual

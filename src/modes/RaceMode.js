@@ -16,6 +16,7 @@ import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 import { RacePositionLabels } from "../managers/RacePositionLabels.js";
 import { FloatingTextManager } from "../managers/FloatingTextManager.js";
+import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -36,6 +37,7 @@ export class RaceMode extends DriveMode {
     this.truckAudioController = null;
     this.positionLabels = null;
     this.floatingText = null;
+    this.checkpointArrow = null;
   }
 
   async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'baja', aiVehicleKey = 'random', playerColorKey = null, reverse = false, championship = null }) {
@@ -317,6 +319,10 @@ export class RaceMode extends DriveMode {
     // Transient world popups ("+$500" on coin pickup).
     const floatingText = new FloatingTextManager(scene);
     this.floatingText = floatingText;
+
+    // -- Pointer orbiting the player truck toward the next checkpoint --
+    const checkpointArrow = new CheckpointArrow(scene, checkpointManager);
+    this.checkpointArrow = checkpointArrow;
 
     // -- Truck collision --
     const truckCollisionManager = new TruckCollisionManager();
@@ -628,6 +634,7 @@ export class RaceMode extends DriveMode {
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
       frameProfiler.measure('floatingText.update', () => floatingText.update(dt));
+      frameProfiler.measure('checkpointArrow.update', () => checkpointArrow.update(playerTruckData.truck.mesh));
 
       truckStatusUiElapsedMs += dt * 1000;
       if (truckStatusUiElapsedMs >= truckStatusUiIntervalMs) {
@@ -848,6 +855,10 @@ export class RaceMode extends DriveMode {
     if (this.floatingText) {
       this.floatingText.dispose();
       this.floatingText = null;
+    }
+    if (this.checkpointArrow) {
+      this.checkpointArrow.dispose();
+      this.checkpointArrow = null;
     }
     if (this.uiManager) {
       this.uiManager.hideAll();

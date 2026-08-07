@@ -292,7 +292,11 @@ export class TruckAudioController {
       this._stopDriftAudio();
     }
 
-    const inDeepWater = isGrounded && this._isInDeepWater(mesh, track);
+    // `currentTerrain` is only set when the truck is actually riding the painted
+    // ground — it is null while airborne or on a bridge deck above it. The
+    // feature scan in _isInDeepWater is XZ-only, so without this gate the truck
+    // splashes while jumping or driving over water.
+    const inDeepWater = terrainName === "water" && isGrounded && this._isInDeepWater(mesh, track);
     if (inDeepWater && isGrounded && speed > 1) {
       this._startSplashDriveAudio();
       const splashDriveLevel = Math.max(0, Math.min(1, (speed - 1.0) / 10.0));

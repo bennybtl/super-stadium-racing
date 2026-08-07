@@ -51,6 +51,7 @@ export const DEFAULT_AUDIO_SETTINGS = {
 export const DEFAULT_DISPLAY_SETTINGS = {
   shadow: 'medium',
   lights: 4,
+  checkpointArrow: true,
 };
 
 function deepClone(value) {
@@ -112,6 +113,9 @@ function normalizeDisplaySettings(candidate) {
   return {
     shadow: validShadow ? shadow : DEFAULT_DISPLAY_SETTINGS.shadow,
     lights: validLights ? lights : DEFAULT_DISPLAY_SETTINGS.lights,
+    checkpointArrow: candidate?.checkpointArrow === undefined
+      ? DEFAULT_DISPLAY_SETTINGS.checkpointArrow
+      : Boolean(candidate.checkpointArrow),
   };
 }
 

@@ -266,13 +266,20 @@ export class ParticleEffects {
     return particles;
   }
 
-  update(state, speed, terrainManager, groundedness = 1, deltaTime = 0.016, currentTerrain = null, track = null, effectScaleOverride = 1) {
+  update(state, speed, groundedness = 1, deltaTime = 0.016, currentTerrain = null, track = null, effectScaleOverride = 1) {
     const effectiveScale = this._qualityScale * Math.max(0, Math.min(1, effectScaleOverride));
-    const terrain = currentTerrain ?? (terrainManager ? terrainManager.getTerrainAt(this.mesh.position) : null);
+    // `currentTerrain` is the terrain the truck is actually standing on: the
+    // caller passes null whenever there is no contact with the painted ground —
+    // airborne, or riding a bridge deck over it. The terrain grid is XZ-only, so
+    // re-deriving it from the position here would resurrect the bug where flying
+    // or driving over water still sprayed water.
+    const terrain = currentTerrain;
     const terrainName = terrain?.name ?? 'default';
 
-    // Swap drift color when terrain changes — read directly from terrain definition
-    if (terrainName !== this._currentTerrainName) {
+    // Swap drift color when terrain changes — read directly from terrain
+    // definition. Off the ground the last color is kept, so brief hops don't
+    // flicker the smoke back to the default tint.
+    if (terrain && terrainName !== this._currentTerrainName) {
       this._currentTerrainName = terrainName;
 
       const color = terrain?.smokeColor ?? terrain?.color ?? TERRAIN_TYPES.PACKED_DIRT.color;
@@ -287,7 +294,7 @@ export class ParticleEffects {
     // that still excludes a truck fully airborne over the water (groundedness ~0).
     const isSplashGrounded = groundedness > 0.1;
 
-    if (speed > 0.5) {
+    if (speed > 0.5 && isSplashGrounded) {
       const driftIntensity = Math.max(0, state.slipAngle - state.driftThreshold);
       const spinoutBoost = state.isSpinningOut ? 2.0 : 1.0;
       const driftRate = driftIntensity * 300 * effectiveScale * spinoutBoost;

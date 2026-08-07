@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "el_camino",
-  "packId": "offroad_pack_3",
+  "packId": "midwest_pack_1",
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": true,
@@ -344,7 +344,7 @@
     },
     {
       "type": "driveBox",
-      "centerX": 74.18242623723933,
+      "centerX": 74.68242623723933,
       "centerZ": -23.992926212787143,
       "width": 10,
       "depth": 10,
@@ -352,14 +352,14 @@
       "solidBase": true,
       "thickness": 0.4,
       "layerId": 0,
-      "color": "#9aa0a8",
+      "color": "tex:plywood",
       "sideColor": "#e0b32e",
       "heightAtMin": 0,
       "heightAtMax": 2
     },
     {
       "type": "driveBox",
-      "centerX": 74.18242623723933,
+      "centerX": 74.68242623723933,
       "centerZ": 16.507073787212857,
       "width": 10,
       "depth": 10,
@@ -367,7 +367,7 @@
       "solidBase": true,
       "thickness": 0.4,
       "layerId": 0,
-      "color": "#9aa0a8",
+      "color": "tex:plywood",
       "sideColor": "#e0b32e",
       "heightAtMin": 0,
       "heightAtMax": 2
@@ -382,7 +382,7 @@
       "solidBase": true,
       "thickness": 0.4,
       "layerId": 0,
-      "color": "#9aa0a8",
+      "color": "tex:plywood",
       "sideColor": "#e0b32e",
       "height": 2
     },
@@ -396,7 +396,7 @@
       "solidBase": true,
       "thickness": 0.4,
       "layerId": 0,
-      "color": "#9aa0a8",
+      "color": "tex:plywood",
       "sideColor": "#e0b32e",
       "height": 2
     },
@@ -855,13 +855,14 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -16.114995953062127,
-      "centerZ": 59.394318148463064,
-      "heading": 0.9599310885968813,
-      "width": 16,
+      "centerX": 16.74620956970071,
+      "centerZ": 49.401303304815094,
+      "heading": -3.141592653589793,
+      "width": 23,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "polyCurb",
@@ -1326,24 +1327,24 @@
       "type": "aiPath",
       "points": [
         {
-          "x": -60.77011733895589,
-          "z": 22.47837343651949
+          "x": -55.77011733895589,
+          "z": 23.47837343651949
         },
         {
-          "x": -70.71827811584063,
-          "z": 39.164560584490076
+          "x": -66.21827811584063,
+          "z": 38.664560584490076
         },
         {
-          "x": -63.429703615819,
-          "z": 53.081584704735
+          "x": -59.4987916334302,
+          "z": 48.77917432855815
         },
         {
-          "x": -33.62717211439912,
-          "z": 52.87642040780453
+          "x": -35.983239656112886,
+          "z": 47.05819692013363
         },
         {
-          "x": -2.89,
-          "z": 63.06999999999999
+          "x": -7.06929699575095,
+          "z": 61.005009522223375
         },
         {
           "x": 9.528298545042405,
@@ -1362,8 +1363,8 @@
           "z": -66.03039875846842
         },
         {
-          "x": -55.10552666654129,
-          "z": -67.17732225117662
+          "x": -56.6686599006428,
+          "z": -66.8092556008935
         },
         {
           "x": -65.62922492703835,
@@ -1772,7 +1773,8 @@
       "width": 19,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1782,7 +1784,8 @@
       "width": 19,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1792,7 +1795,8 @@
       "width": 16,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1802,7 +1806,8 @@
       "width": 17,
       "checkpointNumber": 5,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1812,7 +1817,8 @@
       "width": 16.5,
       "checkpointNumber": 6,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "terrain",

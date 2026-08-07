@@ -6,6 +6,7 @@ import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManag
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { HotLapTracker } from "../managers/HotLapTracker.js";
+import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { DriveMode } from "./DriveMode.js";
 import { basicColors } from "../constants.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
@@ -23,6 +24,7 @@ export class HotLapMode extends DriveMode {
     this.truckAudioController = null;
     this.hotLap = null;
     this.uiManager = null;
+    this.checkpointArrow = null;
   }
 
   async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false }) {
@@ -104,6 +106,9 @@ export class HotLapMode extends DriveMode {
       upgrades: playerUpgrades,
       onLap: ({ lapCount }) => pushTruckStatus(lapCount, playerTruck.state.boostActive),
     });
+
+    // Pointer orbiting the truck toward the next checkpoint.
+    this.checkpointArrow = new CheckpointArrow(scene, checkpointManager);
 
     const debugManager = new DebugManager(scene);
     this.debugManager = debugManager;
@@ -194,6 +199,7 @@ export class HotLapMode extends DriveMode {
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
 
       frameProfiler.measure('hotlap.update', () => this.hotLap.update(playerTruck, dt));
+      frameProfiler.measure('checkpointArrow.update', () => this.checkpointArrow.update(playerTruck.mesh));
 
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
@@ -207,6 +213,10 @@ export class HotLapMode extends DriveMode {
     if (this.hotLap) {
       this.hotLap.dispose();
       this.hotLap = null;
+    }
+    if (this.checkpointArrow) {
+      this.checkpointArrow.dispose();
+      this.checkpointArrow = null;
     }
     if (this.debugManager) {
       this.debugManager.hide();
