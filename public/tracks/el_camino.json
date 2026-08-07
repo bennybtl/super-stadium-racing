@@ -16,13 +16,13 @@
     "source": "aiPath",
     "alphaBreakup": 0.28,
     "width": 4,
-    "intensity": 0.8,
+    "intensity": 0.9,
     "laneSpacing": 2,
-    "pathWander": 0.7,
+    "pathWander": 0.9,
     "edgeSoftness": 1,
-    "secondaryPathCount": 60,
+    "secondaryPathCount": 70,
     "secondaryPathStrength": 0.8,
-    "secondaryPathSpacing": 0.04,
+    "secondaryPathSpacing": 0.05,
     "seed": 1337
   },
   "features": [
@@ -622,7 +622,7 @@
       "points": [
         {
           "x": 27.344645897199147,
-          "z": -67.00297288897599,
+          "z": -66.50297288897599,
           "radius": 0,
           "smoothing": 1
         },
@@ -705,13 +705,13 @@
           "radius": 10.5
         },
         {
-          "x": -3.9739907134824795,
-          "z": 80.17057588597805,
+          "x": -4.473990713482479,
+          "z": 80.67057588597805,
           "radius": 6.5
         },
         {
-          "x": 17.49,
-          "z": 80.04,
+          "x": 16.99,
+          "z": 79.54,
           "radius": 5.5
         },
         {
@@ -724,7 +724,11 @@
       "collisionHeight": 6,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": false
+      "closed": false,
+      "colors": [
+        "black",
+        "white"
+      ]
     },
     {
       "type": "polyWall",
@@ -739,14 +743,23 @@
           "x": -0.11,
           "z": -45.62,
           "radius": 0,
-          "smoothing": 0
+          "smoothing": 0.25
+        },
+        {
+          "x": -19.11,
+          "z": -45.12,
+          "radius": 5
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 4,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": false
+      "closed": false,
+      "colors": [
+        "white",
+        "black"
+      ]
     },
     {
       "type": "polyWall",
@@ -773,14 +786,14 @@
           "radius": 5
         },
         {
-          "x": 2.335944017527444,
-          "z": -56.27482107799923,
-          "radius": 5
+          "x": 2.646999712795367,
+          "z": -56.71866722395624,
+          "radius": 7
         },
         {
-          "x": 6.5515481304013266,
-          "z": -49.21759951567504,
-          "radius": 5
+          "x": 5.967501945362748,
+          "z": -49.466912194153664,
+          "radius": 8.5
         },
         {
           "x": 6.7292650280398,
@@ -886,7 +899,10 @@
       ],
       "height": 0.22,
       "width": 0.9,
-      "closed": false
+      "closed": false,
+      "colors": [
+        "white"
+      ]
     },
     {
       "type": "polyCurb",
@@ -927,14 +943,17 @@
           "radius": 8.5
         },
         {
-          "x": -2.62,
-          "z": -45.86,
+          "x": -21.349847557776286,
+          "z": -43.847675117641714,
           "radius": 0
         }
       ],
       "height": 0.22,
       "width": 0.9,
-      "closed": false
+      "closed": false,
+      "colors": [
+        "white"
+      ]
     },
     {
       "type": "model",
@@ -1335,7 +1354,7 @@
           "z": 6.34
         },
         {
-          "x": 17.75,
+          "x": 17.25,
           "z": -53.7
         },
         {
@@ -1359,8 +1378,8 @@
           "z": -16.091079987306678
         },
         {
-          "x": -20.05377655297106,
-          "z": -28.03734050351924
+          "x": -18.68067369333532,
+          "z": -32.190278440127486
         },
         {
           "x": 38.74835175256433,
@@ -1431,7 +1450,11 @@
       "collisionHeight": 2,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": false
+      "closed": false,
+      "colors": [
+        "white",
+        "black"
+      ]
     },
     {
       "type": "obstacle",
@@ -1652,17 +1675,17 @@
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "background": "black",
-      "primaryColor": "red",
+      "primaryColor": "yellow",
       "scale": 1.35,
       "heightOffset": 1.7,
       "width": 16.5
     },
     {
       "type": "trackSign",
-      "x": -9.772474940706445,
-      "z": -2.0788029774552683,
+      "x": -14.708026092039391,
+      "z": 0.9359820577514384,
       "name": "Track Name",
-      "rotation": 0,
+      "rotation": 0.10471975511965978,
       "contentType": "brand",
       "brandImage": "energizer-racing.png",
       "background": "black",
@@ -1673,10 +1696,10 @@
     },
     {
       "type": "trackSign",
-      "x": -6.772474940706445,
-      "z": -9.078802977455268,
+      "x": -18.89915600430045,
+      "z": -12.13176244502073,
       "name": "Track Name",
-      "rotation": 0,
+      "rotation": 1.2217304763960306,
       "contentType": "brand",
       "brandImage": "phoenix-auto.png",
       "background": "black",
@@ -1687,10 +1710,10 @@
     },
     {
       "type": "trackSign",
-      "x": -9.772474940706445,
-      "z": -16.57880297745527,
+      "x": -7.371661786613735,
+      "z": -20.586676442926336,
       "name": "Track Name",
-      "rotation": 0,
+      "rotation": -0.15707963267948966,
       "contentType": "brand",
       "brandImage": "roll-fast.png",
       "background": "black",
@@ -1813,6 +1836,62 @@
       "waterLevelOffset": 2.1,
       "terrainType": "water",
       "blendWidth": 1
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 38.146175888770365,
+      "centerZ": -33.78300084958174,
+      "terrainType": "loamy_dirt",
+      "width": 10,
+      "depth": 10,
+      "rotation": 0,
+      "blendWidth": 6
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 37.82104846526628,
+      "centerZ": 19.847955227990326,
+      "terrainType": "loamy_dirt",
+      "width": 10,
+      "depth": 10,
+      "rotation": 0,
+      "blendWidth": 6
+    },
+    {
+      "type": "model",
+      "model": "tree_1",
+      "x": 0.11279200723707117,
+      "z": -8.864364879313552,
+      "color": "yellow",
+      "scale": 0.7
+    },
+    {
+      "type": "model",
+      "model": "tree_1",
+      "x": -8.315086132452718,
+      "z": -13.968571806760476,
+      "color": "yellow",
+      "scale": 0.6,
+      "mirrorZ": true
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": -47.887207992762924,
+      "z": -48.364364879313555,
+      "color": "yellow",
+      "scale": 0.7
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": 3.733774055301356,
+      "z": 35.196191679871305,
+      "color": "yellow",
+      "scale": 0.7,
+      "heading": 5.201081170943102
     }
   ]
 }

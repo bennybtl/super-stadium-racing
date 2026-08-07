@@ -252,6 +252,37 @@ export function groupIntoBodies(track, features) {
   }));
 }
 
+/**
+ * How deep the water is over the terrain at a point, and zero where there is
+ * none.
+ *
+ * Built from the same bodies the surfaces are, so anything that keys off this —
+ * hiding tyre wear under a lake, say — agrees with the water actually drawn
+ * rather than with a second, slightly different idea of where water is.
+ *
+ * Returns a constant zero when the track has no water, so callers need no
+ * special case.
+ */
+export function createWaterDepthSampler(track) {
+  const features = (track?.features ?? []).filter(isWaterFeature);
+  if (features.length === 0) return () => 0;
+
+  const sample = createTerrainSampler(track);
+  const bodies = groupIntoBodies(track, features);
+
+  return (x, z) => {
+    let deepest = 0;
+    for (const body of bodies) {
+      const { minX, maxX, minZ, maxZ } = body.bounds;
+      if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
+      if (!body.footprints.some((footprint) => footprint.contains(x, z))) continue;
+      const depth = body.level - sample(x, z);
+      if (depth > deepest) deepest = depth;
+    }
+    return deepest;
+  };
+}
+
 // ─── Field rasterisation + marching squares ────────────────────────────────
 
 // Target spacing for the water grid, and the cell budget per axis that overrides

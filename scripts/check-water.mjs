@@ -41,6 +41,7 @@ export { Track } from ${JSON.stringify(join(root, 'src', 'track.js'))};
 export { featureFootprint } from ${JSON.stringify(join(root, 'src', 'feature-geometry.js'))};
 export { resampleWrapped } from ${JSON.stringify(join(root, 'src', 'terrain-blend-utils.js'))};
 export * from ${JSON.stringify(join(root, 'src', 'objects', 'water-field.js'))};
+export { traceAiPathWearStamps, WEAR_WATER_FADE_END } from ${JSON.stringify(join(root, 'src', 'terrain-utils.js'))};
 `);
 
 await esbuild.build({
@@ -57,7 +58,8 @@ const {
   Track, featureFootprint, resampleWrapped,
   createTerrainSampler, groupIntoBodies, rasterizeBody, buildSurfaceGeometry,
   traceShorelines, decimateLoop, foamSide, foamWidths, foamTiling,
-  isWaterFeature, FOAM_NOMINAL_WIDTH,
+  isWaterFeature, FOAM_NOMINAL_WIDTH, createWaterDepthSampler, traceAiPathWearStamps,
+  WEAR_WATER_FADE_END,
 } = await import(pathToFileURL(bundlePath).href);
 
 // ── Harness ──────────────────────────────────────────────────────────────────
@@ -256,7 +258,71 @@ check('footprint: unmodelled types report no reach', featureFootprint({ type: 'm
   check('depth: matches the field', worst <= 0.25 + 1e-6, `(worst ${worst.toFixed(4)})`);
 }
 
-// ── 5. Wrap-preserving resample ──────────────────────────────────────────────
+// ── 5. Water depth, and wear hidden beneath it ───────────────────────────────
+{
+  const pool = waterHill(0, 0, 20, -6);
+  const track = trackWith([pool]);
+  const depthAt = createWaterDepthSampler(track);
+
+  check('depth: dry ground reads zero', depthAt(120, 120) === 0, `(${depthAt(120, 120)})`);
+  check('depth: pool centre is level minus floor', Math.abs(depthAt(0, 0) - 2) < 0.05,
+    `(${depthAt(0, 0).toFixed(3)})`);
+  check('depth: shallows inside the rim', depthAt(8, 0) > 0.2 && depthAt(8, 0) < 1.5,
+    `(${depthAt(8, 0).toFixed(3)})`);
+  check('depth: dry inside the footprint but above the waterline', depthAt(13, 0) === 0,
+    `(${depthAt(13, 0).toFixed(3)})`);
+  check('depth: no water means a flat zero',
+    createWaterDepthSampler(trackWith([{ type: 'hill', centerX: 0, centerZ: 0, radiusX: 10, radiusZ: 10, height: 4 }]))(0, 0) === 0);
+
+  // An AI path straight through the pool. Wear fades by alpha, exactly like the
+  // steep-slope fade — stamps are still laid down, they just carry nothing.
+  const aiPath = {
+    type: 'aiPath', closed: true,
+    points: [{ x: -80, z: 0 }, { x: 80, z: 0 }, { x: 80, z: 60 }, { x: -80, z: 60 }],
+  };
+  const wet = traceAiPathWearStamps(trackWith([pool, aiPath]), 2048, 400, 400);
+  check('wear: the path lays down stamps', wet.stamps.length > 100, `(${wet.stamps.length})`);
+
+  const stampWorld = (stamp, worldSize = 400) => ({
+    x: (stamp.sx / 2048) * worldSize - worldSize / 2,
+    z: (stamp.sy / 2048) * worldSize - worldSize / 2,
+  });
+  const inDeepWater = wet.stamps.filter((s) => {
+    const { x, z } = stampWorld(s);
+    return depthAt(x, z) > WEAR_WATER_FADE_END;
+  });
+  check('wear: deep water has stamps to hide', inDeepWater.length > 5, `(${inDeepWater.length})`);
+  check('wear: none of them carry any alpha',
+    inDeepWater.every((s) => s.alpha === 0), `(max ${Math.max(0, ...inDeepWater.map((s) => s.alpha)).toFixed(4)})`);
+
+  // Dry ground away from the pool must be untouched, alphas included.
+  const dry = traceAiPathWearStamps(trackWith([aiPath]), 2048, 400, 400);
+  const alphaNear = (list, z0) => list.stamps
+    .filter((s) => Math.abs(stampWorld(s).z - z0) < 5)
+    .reduce((a, s) => a + s.alpha, 0);
+  check('wear: the far side of the loop is unchanged',
+    Math.abs(alphaNear(wet, 60) - alphaNear(dry, 60)) < 1e-9,
+    `(${alphaNear(wet, 60).toFixed(3)} vs ${alphaNear(dry, 60).toFixed(3)})`);
+
+  // A ford — the same basin filled to a tenth of a metre — keeps its wear. The
+  // pool still deforms the ground, so compare against a track with the same
+  // depression and no water rather than against flat ground.
+  const basin = { ...pool, terrainType: 'dirt' };
+  const fordTrack = trackWith([waterHill(0, 0, 20, -6, { waterLevelOffset: 0.1 }), aiPath]);
+  const ford = traceAiPathWearStamps(fordTrack, 2048, 400, 400);
+  const noWater = traceAiPathWearStamps(trackWith([basin, aiPath]), 2048, 400, 400);
+  const totalAlpha = (list) => list.stamps.reduce((a, s) => a + s.alpha, 0);
+  check('wear: a shallow ford stays fully marked',
+    Math.abs(totalAlpha(ford) - totalAlpha(noWater)) < 1e-9,
+    `(${totalAlpha(ford).toFixed(2)} vs ${totalAlpha(noWater).toFixed(2)})`);
+
+  // And the deep pool really does remove wear overall, not just locally.
+  check('wear: deep water lowers total wear',
+    totalAlpha(wet) < totalAlpha(noWater) * 0.98,
+    `(${totalAlpha(wet).toFixed(1)} vs ${totalAlpha(noWater).toFixed(1)})`);
+}
+
+// ── 6. Wrap-preserving resample ──────────────────────────────────────────────
 {
   const [sw, dw] = [512, 111];
   const src = new Uint8ClampedArray(sw * sw * 4);

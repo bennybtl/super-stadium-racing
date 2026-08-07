@@ -4,6 +4,7 @@
 
 import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline } from "./polyline-utils.js";
+import { createWaterDepthSampler } from "./objects/water-field.js";
 import { clamp, lerp, smoothstep } from "./math-utils.js";
 
 const TERRAIN_TYPE_LIST = Object.values(TERRAIN_TYPES);
@@ -24,6 +25,12 @@ export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
   seed: 1337,
 });
 
+// Depth over which wear fades out under water, mirroring the 20°–28° slope fade
+// below. A ford stays marked — the path really is driven through it — so the
+// fade only starts once the water is deeper than a wheel is tall, and is
+// complete by roughly axle depth.
+const WEAR_WATER_FADE_START = 0.15;
+export const WEAR_WATER_FADE_END = 0.6;
 // Scalar math now lives in math-utils.js; re-exported under the historical
 // underscore names so existing terrain code keeps working.
 export { clamp as _clamp, lerp as _lerp, smoothstep as _smoothstep };
@@ -92,8 +99,8 @@ let _blurTmpBuffer = null;
 let _blurOutBuffer = null;
 let _wearAccumBuffer = null;
 
-function _getScratchBuffer(current, length) {
-  return current && current.length === length ? current : new Uint8ClampedArray(length);
+function _getScratchBuffer(current, length, Kind = Uint8ClampedArray) {
+  return current instanceof Kind && current.length === length ? current : new Kind(length);
 }
 
 function _blurAlpha(data, width, height, radius) {
@@ -297,6 +304,7 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
   if (samples.length < 3) return { width, height, edgeSoftness: 1, stamps };
 
   const rng = _createSeededRandom(wear.seed);
+  const waterDepthAt = createWaterDepthSampler(track);
   const halfWorldX = worldWidth / 2;
   const halfWorldZ = worldDepth / 2;
   const mainLaneOffset = Math.max(0.35, wear.laneSpacing * 0.5);
@@ -427,6 +435,13 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
     );
     const steepnessFade = 1 - smoothstep(20, 28, slopeDeg);
 
+    // Wear under water fades the same way, and for the same reason: ruts and
+    // discolouration are dry-ground detail. Sampled on the centreline like the
+    // slope above, so both read the path the same way.
+    const submergedFade = 1 - smoothstep(
+      WEAR_WATER_FADE_START, WEAR_WATER_FADE_END, waterDepthAt(curr.x, curr.z)
+    );
+
     for (const lane of mainLanes) {
       const lanePresence = smoothstep(
         presenceThreshold - 0.08,
@@ -435,7 +450,7 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
       );
       stamp(curr.x, curr.z, tangentX, tangentZ, {
         offset: lane.offset + lane.wanderFn(i),
-        alpha: Math.max(0, lane.alpha * alphaBase * lanePresence * steepnessFade),
+        alpha: Math.max(0, lane.alpha * alphaBase * lanePresence * steepnessFade * submergedFade),
         radiusX: lane.radiusX * (1 + curvatureBoost * 0.18),
         radiusY: lane.radiusY * (1 + curvatureBoost * 0.08),
         lighten: lane.lighten,
@@ -463,7 +478,7 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
 
       stamp(curr.x, curr.z, tangentX, tangentZ, {
         offset: lane.offset + lane.wanderFn(i),
-        alpha: Math.max(0, lane.alpha * alphaBase * segmentAlpha * lanePresence * steepnessFade),
+        alpha: Math.max(0, lane.alpha * alphaBase * segmentAlpha * lanePresence * steepnessFade * submergedFade),
         radiusX: lane.radiusX * (1 + curvatureBoost * 0.22),
         radiusY: lane.radiusY * (1 + curvatureBoost * 0.16),
         lighten: lane.lighten,
@@ -480,27 +495,40 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
  * `acrossNorm` is the signed across-lane position (−1 wall … 0 centre … +1 wall),
  * which the rut normal pass uses to shape the groove cross-section.
  */
-export function forEachStampPixel(stamp, width, height, edgeSoftness, cb) {
+function forEachStampPixel(stamp, width, height, edgeSoftness, cb) {
   const { sx, sy, tangentX, tangentZ, normalX, normalZ, radiusX, radiusY, alpha } = stamp;
-  const pad = Math.ceil(Math.max(radiusX, radiusY) + 2);
-  const minX = clamp(Math.floor(sx - pad), 0, width - 1);
-  const maxX = clamp(Math.ceil(sx + pad), 0, width - 1);
-  const minY = clamp(Math.floor(sy - pad), 0, height - 1);
-  const maxY = clamp(Math.ceil(sy + pad), 0, height - 1);
+  // Over half the stamps come out of the trace at zero alpha — squeezed out by
+  // the presence gate, the steepness fade, or standing water. They cover pixels
+  // that would each be written with a weight of exactly zero.
+  if (alpha === 0) return;
+
+  // Exact bounds of the rotated ellipse, rather than a square of its longer
+  // radius: these stamps are ~3x longer than they are wide, so the square spent
+  // most of its area outside the shape (measured 16-20% of tested pixels landed
+  // inside it).
+  const padX = Math.ceil(Math.sqrt((radiusY * tangentX) ** 2 + (radiusX * normalX) ** 2) + 2);
+  const padY = Math.ceil(Math.sqrt((radiusY * tangentZ) ** 2 + (radiusX * normalZ) ** 2) + 2);
+  const minX = clamp(Math.floor(sx - padX), 0, width - 1);
+  const maxX = clamp(Math.ceil(sx + padX), 0, width - 1);
+  const minY = clamp(Math.floor(sy - padY), 0, height - 1);
+  const maxY = clamp(Math.ceil(sy + padY), 0, height - 1);
+
+  const invRadiusX2 = 1 / Math.max(1e-6, radiusX * radiusX);
+  const invRadiusY2 = 1 / Math.max(1e-6, radiusY * radiusY);
+  const innerEdge = 1 - edgeSoftness;
 
   for (let y = minY; y <= maxY; y++) {
+    const dy = y - sy;
     for (let x = minX; x <= maxX; x++) {
       const dx = x - sx;
-      const dy = y - sy;
       const localX = dx * tangentX + dy * tangentZ;
       const localY = dx * normalX + dy * normalZ;
-      const ellipse = Math.sqrt(
-        (localY * localY) / Math.max(1e-6, radiusX * radiusX) +
-        (localX * localX) / Math.max(1e-6, radiusY * radiusY)
-      );
-      if (ellipse >= 1) continue;
 
-      const falloff = 1 - smoothstep(1 - edgeSoftness, 1, ellipse);
+      // Squared test first: only pixels that land inside pay for the root.
+      const ellipse2 = localY * localY * invRadiusX2 + localX * localX * invRadiusY2;
+      if (ellipse2 >= 1) continue;
+
+      const falloff = 1 - smoothstep(innerEdge, 1, Math.sqrt(ellipse2));
       const weight = clamp(alpha * falloff, 0, 1);
       const acrossNorm = localY / Math.max(1e-6, radiusX);
       cb(x, y, weight, acrossNorm);
@@ -508,34 +536,134 @@ export function forEachStampPixel(stamp, width, height, edgeSoftness, cb) {
   }
 }
 
+// Rut relief, applied to the composite normal map.
+const RUT_STRENGTH = 0.5; // groove-wall steepness (tangent tilt magnitude)
+const RUT_OPACITY  = 0.85; // how strongly ruts override the underlying normals
+
+let _wearBakeCache = null;
+let _rutLayerBuffer = null;
+
 /**
- * Build the wear colour overlay (R: lighten alpha, G: darken alpha) from the
- * shared AI-path stamps. Same signature/output as before the rut-normal refactor.
+ * Rasterize the AI-path wear once into both layers that consume it: the colour
+ * overlay (R lighten / G darken) and the rut-normal layer.
+ *
+ * The two are baked into different textures on separate schedules, so they can't
+ * simply be merged into one call. Instead the expensive part — walking every
+ * stamp's pixels — happens once and is cached, and whichever consumer runs
+ * second gets its layer for free.
+ *
+ * The cache key is a digest of the traced stamps plus each stamp's rut
+ * eligibility. That is exact rather than a heuristic: the stamps already encode
+ * every upstream input (path shape, wear config, the steepness and water fades),
+ * and eligibility encodes the only other one (asphalt doesn't rut). Anything
+ * that would change a pixel changes the digest.
+ *
+ * The rut layer is composited stamp-over-stamp into a standalone RGBA layer
+ * rather than straight onto the normal canvas. Porter-Duff `over` is
+ * associative, so compositing that finished layer onto the canvas afterwards
+ * lands in the same place.
  */
-export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
+export function bakeAiPathWear(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const { width, height, edgeSoftness, stamps } = traceAiPathWearStamps(track, textureSize, worldWidth, worldDepth);
+
+  const pixelsPerUnitX = width / Math.max(1, worldWidth);
+  const pixelsPerUnitZ = height / Math.max(1, worldDepth);
+  const halfWorldX = worldWidth / 2;
+  const halfWorldZ = worldDepth / 2;
+
+  // Asphalt is hard — it picks up rubber and skid marks (the colour overlay) but
+  // never ruts, so the relief skips paved sections. Consecutive stamps are
+  // fractions of a metre apart and land in the same terrain cell over and over,
+  // so the lookup is memoized per cell rather than run per stamp.
+  const terrainTypeCache = new Map();
+  const rutEligible = stamps.map((stamp) => {
+    const worldX = stamp.sx / pixelsPerUnitX - halfWorldX;
+    const worldZ = stamp.sy / pixelsPerUnitZ - halfWorldZ;
+    const cellKey = (Math.round(worldX) << 12) ^ Math.round(worldZ);
+    let eligible = terrainTypeCache.get(cellKey);
+    if (eligible === undefined) {
+      const terrainType = track.getTerrainTypeAt(worldX, worldZ);
+      eligible = (typeof terrainType === 'string' ? terrainType : terrainType?.name) !== 'asphalt';
+      terrainTypeCache.set(cellKey, eligible);
+    }
+    return eligible;
+  });
+
+  // Numeric rolling hash rather than a built string: this runs on every bake,
+  // including the ones that go on to hit the cache, so it has to be cheap.
+  let digest = (width * 397) ^ (height * 149) ^ Math.round(edgeSoftness * 8191) ^ (stamps.length * 31);
+  for (let i = 0; i < stamps.length; i++) {
+    const s = stamps[i];
+    digest = (digest * 31 + Math.round(s.sx * 64)) | 0;
+    digest = (digest * 31 + Math.round(s.sy * 64)) | 0;
+    digest = (digest * 31 + Math.round(s.alpha * 4096)) | 0;
+    digest = (digest * 31 + Math.round(s.radiusX * 64)) | 0;
+    digest = (digest * 31 + Math.round(s.radiusY * 64)) | 0;
+    digest = (digest * 31 + Math.round(s.tangentX * 4096)) | 0;
+    digest = (digest * 31 + Math.round(s.normalX * 4096)) | 0;
+    digest = (digest * 31 + (s.lighten ? 1 : 0) + (rutEligible[i] ? 2 : 0)) | 0;
+  }
+  if (_wearBakeCache?.digest === digest) return _wearBakeCache.result;
+
   // R: lighten, G: darken (B/A unused). Stamps accumulate, so the reused
   // scratch buffer must start from zero.
-  const data = _wearAccumBuffer = _getScratchBuffer(_wearAccumBuffer, width * height * 4);
-  data.fill(0);
+  const overlay = _wearAccumBuffer = _getScratchBuffer(_wearAccumBuffer, width * height * 4);
+  overlay.fill(0);
+  // Premultiplied RGB + coverage, so overlapping stamps compose the same way
+  // they did when each was drawn straight onto the canvas.
+  const rut = _rutLayerBuffer = _getScratchBuffer(_rutLayerBuffer, width * height * 4, Float32Array);
+  rut.fill(0);
 
-  for (const stamp of stamps) {
-    forEachStampPixel(stamp, width, height, edgeSoftness, (x, y, weight) => {
+  for (let i = 0; i < stamps.length; i++) {
+    const stamp = stamps[i];
+    const lighten = stamp.lighten;
+    const ruts = rutEligible[i];
+
+    forEachStampPixel(stamp, width, height, edgeSoftness, (x, y, weight, acrossNorm) => {
       const base = (y * width + x) * 4;
+
       const contribution = Math.round(weight * 255);
-      if (stamp.lighten) {
-        data[base] = Math.min(255, data[base] + contribution);     // R: lighten
-      } else {
-        data[base + 1] = Math.min(255, data[base + 1] + contribution); // G: darken
-      }
+      if (lighten) overlay[base] = Math.min(255, overlay[base] + contribution);
+      else overlay[base + 1] = Math.min(255, overlay[base + 1] + contribution);
+
+      if (!ruts) return;
+      // Groove cross-section: no tilt at the centre, walls tilt toward the
+      // centre. The surface normal tilts opposite the wall slope, along the
+      // across-track direction (normalX/normalZ ≈ canvas X/Y on flat ground).
+      const tilt = Math.sin(acrossNorm * Math.PI / 2) * weight * RUT_STRENGTH;
+      let nx = -tilt * stamp.normalX;
+      let ny = -tilt * stamp.normalZ;
+      let nz = 1;
+      const inv = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+      nx *= inv; ny *= inv; nz *= inv;
+
+      const a = weight * RUT_OPACITY;
+      const keep = 1 - a;
+      rut[base]     = rut[base]     * keep + (nx * 0.5 + 0.5) * 255 * a;
+      rut[base + 1] = rut[base + 1] * keep + (ny * 0.5 + 0.5) * 255 * a;
+      rut[base + 2] = rut[base + 2] * keep + (nz * 0.5 + 0.5) * 255 * a;
+      rut[base + 3] = rut[base + 3] * keep + a;
     });
   }
 
-  const pixelsPerUnit = (width / Math.max(1, worldWidth) + height / Math.max(1, worldDepth)) * 0.5;
-  return {
+  const pixelsPerUnit = (pixelsPerUnitX + pixelsPerUnitZ) * 0.5;
+  const result = {
     width,
     height,
-    data: _blurAlpha(data, width, height, Math.max(1, pixelsPerUnit * 0.12)),
+    overlay: _blurAlpha(overlay, width, height, Math.max(1, pixelsPerUnit * 0.12)),
+    rut,
+    hasRuts: rutEligible.some(Boolean) && stamps.length > 0,
   };
+  _wearBakeCache = { digest, result };
+  return result;
+}
+
+/**
+ * The wear colour overlay (R: lighten alpha, G: darken alpha). Same signature
+ * and output as before; the rasterization is shared with the rut layer.
+ */
+export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
+  const { width, height, overlay } = bakeAiPathWear(track, textureSize, worldWidth, worldDepth);
+  return { width, height, data: overlay };
 }
 
