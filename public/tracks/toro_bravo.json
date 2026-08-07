@@ -4,12 +4,13 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
+  "oobDeadSpace": false,
   "name": "Toro Bravo",
-  "image": "toro_bravo.png",
+  "image": "toro_bravo.jpg",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
-  "borderTerrainType": "packed_dirt",
+  "borderTerrainType": "loose_dirt",
   "wear": {
     "enabled": true,
     "source": "aiPath",
@@ -128,12 +129,12 @@
           "radius": 0
         },
         {
-          "x": -46.45294334451873,
+          "x": -50.45294334451873,
           "z": -12.310232720050138,
           "radius": 5
         },
         {
-          "x": -45.027977815803084,
+          "x": -48.527977815803084,
           "z": -24.164335938405785,
           "radius": 6.5
         },
@@ -247,8 +248,8 @@
           "radius": 8.5
         },
         {
-          "x": -16.256414391139813,
-          "z": 5.916286255440085,
+          "x": -20.756414391139813,
+          "z": 1.4162862554400846,
           "radius": 13.5
         },
         {
@@ -321,13 +322,14 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -31.719518146910907,
+      "centerX": -34.71951814691091,
       "centerZ": -16.117920149894104,
       "heading": 0,
-      "width": 24.5,
+      "width": 28,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "terrainPath",
@@ -369,26 +371,42 @@
           "radius": 10
         },
         {
-          "x": -20.650610956732475,
-          "z": 51.01398248049068,
+          "x": -36.59858982139363,
+          "z": 25.596571842184154,
+          "radius": 10
+        },
+        {
+          "x": -34.48978804777113,
+          "z": 38.934031590029015,
+          "radius": 10
+        },
+        {
+          "x": -19.523269386866538,
+          "z": 48.54228020016406,
           "radius": 10
         },
         {
           "x": 12.098850677109537,
           "z": 56.67888960367435,
           "radius": 10
+        },
+        {
+          "x": -19.201924181164532,
+          "z": 22.55770847331553,
+          "radius": 10
         }
       ],
-      "height": -3.7,
+      "height": -1.7,
       "width": 12.5,
       "terrainType": "water",
       "closed": true,
       "filled": true,
-      "blendWidth": 4.5
+      "blendWidth": 4.5,
+      "waterLevelOffset": 1.6
     },
     {
       "type": "hill",
-      "centerX": -48.168609754293,
+      "centerX": -53.668609754293,
       "centerZ": -19.40066514191269,
       "radiusX": 10,
       "radiusZ": 10,
@@ -494,8 +512,8 @@
     },
     {
       "type": "squareHill",
-      "centerX": 42.45109893600786,
-      "centerZ": 26.812849754670577,
+      "centerX": 41.95109893600786,
+      "centerZ": 27.312849754670577,
       "width": 0.5,
       "depth": 23.5,
       "angle": 36,
@@ -604,7 +622,8 @@
       "width": 19.5,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -614,7 +633,8 @@
       "width": 25.5,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -624,7 +644,8 @@
       "width": 18.5,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "aiPath",
@@ -634,24 +655,24 @@
           "z": -67.5983040699086
         },
         {
-          "x": -53.90817680279405,
-          "z": -70.34890293841957
+          "x": -53.96330699168322,
+          "z": -69.20583191063218
         },
         {
-          "x": -64.07,
-          "z": -62.77
+          "x": -64.02721703295809,
+          "z": -57.00026079334235
         },
         {
           "x": -58.23,
           "z": -44.61
         },
         {
-          "x": -40.531090031458625,
-          "z": -29.959793699219322
+          "x": -43.83506038174016,
+          "z": -27.99271885314184
         },
         {
-          "x": -40.31284761200284,
-          "z": -10.785927591228809
+          "x": -41.199828472719574,
+          "z": -10.656899892884422
         },
         {
           "x": -59.90943907017141,
@@ -682,8 +703,8 @@
           "z": -33.09787155409761
         },
         {
-          "x": 16.82,
-          "z": -43
+          "x": 18.199083788511917,
+          "z": -41.55056785409934
         },
         {
           "x": 37.48,
@@ -716,8 +737,8 @@
     },
     {
       "type": "flag",
-      "x": -44.80480483645794,
-      "z": -16.442046268965242,
+      "x": -52.30480483645794,
+      "z": -17.442046268965242,
       "color": "red"
     },
     {
@@ -828,8 +849,8 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "circle",
-      "x": -35.30581741047402,
-      "z": -32.41199299720799,
+      "x": -36.37403257348546,
+      "z": -32.233741303300455,
       "radius": 13
     },
     {
@@ -853,6 +874,18 @@
       "scale": 1.35,
       "heightOffset": 2.5,
       "width": 10
+    },
+    {
+      "type": "squareHill",
+      "centerX": 47.95109893600786,
+      "centerZ": 30.81284975467058,
+      "width": 0.5,
+      "depth": 23.5,
+      "angle": 36,
+      "height": 1.5,
+      "waterLevelOffset": 0,
+      "transition": 0.5,
+      "terrainType": "loose_dirt"
     }
   ]
 }

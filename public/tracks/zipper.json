@@ -6,7 +6,7 @@
   "dirtChunks": true,
   "oobDeadSpace": false,
   "name": "Zipper",
-  "image": "zipper",
+  "image": "zipper.jpg",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -40,14 +40,14 @@
         0,
         0,
         0,
+        -2,
         0,
         0,
         0,
         0,
         0,
         0,
-        0,
-        0,
+        -0.5,
         0,
         0,
         0,
@@ -64,14 +64,14 @@
         0,
         0,
         8,
-        6,
+        8,
         4,
         6,
         0,
         0,
         0,
         6,
-        4,
+        6,
         0,
         0,
         0,
@@ -189,6 +189,21 @@
         0,
         0
       ]
+    },
+    {
+      "type": "driveBox",
+      "centerX": 67.95878791068117,
+      "centerZ": 8.49267743447722,
+      "width": 12,
+      "depth": 15.5,
+      "rotation": 270,
+      "solidBase": true,
+      "thickness": 0.4,
+      "layerId": 0,
+      "heightAtMin": 0,
+      "heightAtMax": 3,
+      "color": "#9aa0a8",
+      "sideColor": "#b3342e"
     },
     {
       "type": "squareHill",
@@ -430,12 +445,12 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -54,
+          "x": -54.5,
           "z": 46,
           "radius": 6.5
         },
         {
-          "x": -42,
+          "x": -41.5,
           "z": 46,
           "radius": 6.5
         },
@@ -445,7 +460,7 @@
           "radius": 5
         },
         {
-          "x": -54,
+          "x": -55,
           "z": -50,
           "radius": 6
         }
@@ -592,19 +607,6 @@
       "heightAtMax": 0
     },
     {
-      "type": "squareHill",
-      "centerX": 67,
-      "centerZ": 12,
-      "width": 12.5,
-      "depth": 17.5,
-      "angle": 90,
-      "waterLevelOffset": 0,
-      "transition": 4,
-      "terrainType": null,
-      "heightAtMin": 3.5,
-      "heightAtMax": 0
-    },
-    {
       "type": "polyHill",
       "points": [
         {
@@ -652,7 +654,7 @@
     },
     {
       "type": "squareHill",
-      "centerX": -66,
+      "centerX": -67,
       "centerZ": -42.5,
       "width": 10.5,
       "depth": 26,
@@ -745,8 +747,8 @@
     {
       "type": "model",
       "model": "tent",
-      "x": 47.49755955719509,
-      "z": -44.91901534017801,
+      "x": -1.750941936526516,
+      "z": -50.174581313899196,
       "color": "red",
       "scale": 1.5,
       "heading": 0.10471975511965978
@@ -763,8 +765,8 @@
     {
       "type": "model",
       "model": "tent",
-      "x": 1.7204266451460803,
-      "z": -41.623448758299844,
+      "x": 1.195659358772808,
+      "z": -41.25231307126825,
       "color": "gray",
       "scale": 1.5,
       "heading": 1.5009831567151235
@@ -1035,18 +1037,6 @@
       ]
     },
     {
-      "type": "hill",
-      "centerX": -2.3920789451750153,
-      "centerZ": -68.65399333348657,
-      "radiusX": 26.5,
-      "radiusZ": 17.5,
-      "angle": 4,
-      "height": -3,
-      "waterLevelOffset": 2.8,
-      "terrainType": "water",
-      "blendWidth": 1
-    },
-    {
       "type": "surfaceDecal",
       "centerX": -0.4095998942625094,
       "centerZ": 17.905103412759935,
@@ -1076,6 +1066,126 @@
       "color": "white",
       "scale": 1.5,
       "heading": 1.6406094968746698
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": -21.78588495870217,
+          "z": -73.45515595680773,
+          "radius": 10
+        },
+        {
+          "x": 1.5640517740025857,
+          "z": -72.53999071805403,
+          "radius": 10
+        },
+        {
+          "x": 20.859973816092783,
+          "z": -70.02159742496747,
+          "radius": 10
+        },
+        {
+          "x": 16.496171193486187,
+          "z": -53.95808806292614,
+          "radius": 10
+        },
+        {
+          "x": -0.41927538825782307,
+          "z": -57.31676163041206,
+          "radius": 10
+        },
+        {
+          "x": -16.602731050101625,
+          "z": -57.95110736549476,
+          "radius": 10
+        }
+      ],
+      "height": -1.7,
+      "width": 5,
+      "terrainType": "water",
+      "closed": true,
+      "filled": true,
+      "waterLevelOffset": 1.7,
+      "blendWidth": 4
+    },
+    {
+      "type": "hill",
+      "centerX": -20.21797038262555,
+      "centerZ": 62.90273469226452,
+      "radiusX": 8.5,
+      "radiusZ": 8.5,
+      "angle": 0,
+      "height": 3.5,
+      "waterLevelOffset": 0,
+      "terrainType": null
+    },
+    {
+      "type": "hill",
+      "centerX": 19.865236873753783,
+      "centerZ": 67.93764956383761,
+      "radiusX": 8.5,
+      "radiusZ": 8.5,
+      "angle": 0,
+      "height": 3.5,
+      "waterLevelOffset": 0,
+      "terrainType": null
+    },
+    {
+      "type": "trackSign",
+      "x": -48.314018395728496,
+      "z": -2.757040368212863,
+      "name": "Track Name",
+      "rotation": -1.3264502315156905,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.45,
+      "heightOffset": 1.5,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 49.73972722361748,
+      "z": 0.13817312661588943,
+      "name": "Track Name",
+      "rotation": 1.5184364492350666,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.45,
+      "heightOffset": 1.5,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 48.348106406065156,
+      "z": -39.06707238082679,
+      "name": "Track Name",
+      "rotation": 0.017453292519943295,
+      "contentType": "brand",
+      "brandImage": "turbo-king.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 1.5,
+      "width": 8
+    },
+    {
+      "type": "trackSign",
+      "x": -47.36103845816654,
+      "z": -42.69391305124942,
+      "name": "Track Name",
+      "rotation": 0.017453292519943295,
+      "contentType": "brand",
+      "brandImage": "turbo-king.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 1.5,
+      "width": 8
     }
   ]
 }
