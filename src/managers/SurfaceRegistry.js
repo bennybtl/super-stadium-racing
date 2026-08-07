@@ -20,7 +20,6 @@ export class SurfaceRegistry {
    * @param {string} [options.surfaceType='generic']
    * @param {number} [options.level=0]
    * @param {string} [options.role='drive']
-   * @param {number} [options.priority=0]
    * @param {object} [options.tags]
    * @returns {number|null}
    */
@@ -31,25 +30,18 @@ export class SurfaceRegistry {
       surfaceType = "generic",
       level = 0,
       role = "drive",
-      priority = 0,
       tags = {},
     } = options;
-    const isDriveRole = role === "drive";
 
     const existingId = mesh.metadata?.surfaceId;
     const surfaceId = Number.isFinite(existingId) ? existingId : this._nextSurfaceId++;
 
     mesh.metadata = {
       ...(mesh.metadata ?? {}),
-      // Legacy flags still used by TerrainQuery and existing systems.
-      isTerrain: isDriveRole,
-      isDriveSurface: isDriveRole,
-      // Layered-surface metadata.
       surfaceId,
       surfaceType,
       level,
       surfaceRole: role,
-      surfacePriority: priority,
       ...tags,
     };
 
@@ -59,7 +51,6 @@ export class SurfaceRegistry {
       surfaceType,
       level,
       role,
-      priority,
       tags,
     };
 

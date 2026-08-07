@@ -37,7 +37,6 @@ export class TelemetryRecorder {
     this._segments = [];       // completed segments
     this._currentSegment = null;
     this._sampleTimer = 0;
-    this._currentCheckpointIndex = 0; // which CP the player is heading toward
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -47,7 +46,6 @@ export class TelemetryRecorder {
     this.recording = true;
     this._segments = [];
     this._sampleTimer = 0;
-    this._currentCheckpointIndex = firstCheckpointTarget;
     this._openSegment(firstCheckpointTarget);
     console.debug(`[TelemetryRecorder] Recording started for "${this.trackId}"`);
   }
@@ -94,7 +92,6 @@ export class TelemetryRecorder {
 
     // Open a new segment heading to the next checkpoint
     const nextIndex = (checkpointIndex + 1) % this.checkpoints.length;
-    this._currentCheckpointIndex = nextIndex;
     this._openSegment(nextIndex);
   }
 

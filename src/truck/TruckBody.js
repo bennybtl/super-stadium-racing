@@ -106,7 +106,6 @@ export class TruckBody {
     // Per-vehicle body mesh transform overrides (position, rotation, scaling)
     const bt = vehicleDef?.bodyTransform ?? {};
     this._bodyPosition = bt.position ?? [0, 0.66, 0.0];
-    this._bodyYOffset = this._bodyPosition[1] ?? 0;
     this._bodyRotation = bt.rotation ?? [-Math.PI / 2, 0, 0];
     this._bodyScaling  = bt.scaling  ?? [1, 1, 1];
 

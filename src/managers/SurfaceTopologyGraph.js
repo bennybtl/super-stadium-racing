@@ -104,14 +104,6 @@ export class SurfaceTopologyGraph {
     this._ownerConnectorIds.delete(owner);
   }
 
-  getNode(nodeId) {
-    return this._nodesById.get(nodeId) ?? null;
-  }
-
-  getConnector(connectorId) {
-    return this._connectorsById.get(connectorId) ?? null;
-  }
-
   getAllNodes() {
     return Array.from(this._nodesById.values());
   }

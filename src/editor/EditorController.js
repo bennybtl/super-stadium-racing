@@ -1483,11 +1483,6 @@ export class EditorController {
 
   // ─── Checkpoint thin wrappers (delegated to CheckpointEditor) ──────────────
 
-  selectCheckpoint(checkpointData) {
-    this.deselectAll();
-    this.checkpointEditor.select(checkpointData);
-  }
-
   deselectCheckpoint() { this.checkpointEditor.deselect(); }
   deleteSelectedCheckpoint() { this.checkpointEditor.deleteSelected(); }
   duplicateSelectedCheckpoint() { this.checkpointEditor.duplicateSelected(); }
@@ -1517,9 +1512,6 @@ export class EditorController {
 
   // ─── Checkpoint Properties (delegated to CheckpointEditor) ─────────────────
 
-  showCheckpointProperties(cpData) { this.checkpointEditor.showProperties(cpData); }
-  hideCheckpointProperties()       { this.checkpointEditor.hideProperties(); }
-  repositionCheckpointBarrels(cpData) { this.checkpointEditor.repositionBarrels(cpData); }
   shiftCheckpointOrder(direction)  { this.checkpointEditor.shiftOrder(direction); }
 
   // ─── Grid Snapping ────────────────────────────────────────────────────────
@@ -1558,8 +1550,6 @@ export class EditorController {
   // ─── Hill Editing (delegated to HillEditor) ──────────────────────────────
 
   addHillEntity() { this.hillEditor.addEntity(); }
-  createHillVisual(feature) { return this.hillEditor.createVisual(feature); }
-  selectHill(hillData) { this.hillEditor.select(hillData); }
   deselectHill() { this.hillEditor.deselect(); }
   duplicateSelectedHill() { this.hillEditor.duplicateSelected(); }
   deleteSelectedHill() { this.hillEditor.deleteSelected(); }
@@ -1567,14 +1557,9 @@ export class EditorController {
   // ─── Square Hill Editing (delegated to SquareHillEditor) ─────────────────
 
   addSquareHillEntity()          { this.squareHillEditor.addEntity(); }
-  createSquareHillVisual(f)      { return this.squareHillEditor.createVisual(f); }
-  updateSquareHillVisual(d)      { this.squareHillEditor.updateVisual(d); }
-  selectSquareHill(d)            { this.squareHillEditor.select(d); }
   deselectSquareHill()           { this.squareHillEditor.deselect(); }
   deleteSelectedSquareHill()     { this.squareHillEditor.deleteSelected(); }
   duplicateSelectedSquareHill()  { this.squareHillEditor.duplicateSelected(); }
-  showSquareHillProperties(d)    { this.squareHillEditor.showProperties(d); }
-  hideSquareHillProperties()     { this.squareHillEditor.hideProperties(); }
 
   get selectedSquareHill()       { return this.squareHillEditor.selected; }
 
@@ -1801,13 +1786,7 @@ export class EditorController {
     }
     this.obstacleEditor.deselect();
   }
-  createObstacleVisual(f)          { return this.obstacleEditor.createVisual(f); }
-  updateObstacleVisual(d)          { this.obstacleEditor.updateVisual(d); }
-  selectObstacle(d)                { this.obstacleEditor.select(d); }
-  deselectObstacle()               { this.obstacleEditor.deselect(); }
-  moveSelectedObstacle(movement)   { return this.obstacleEditor.move(movement); }
   deleteSelectedObstacle()         { this.obstacleEditor.deleteSelectedObstacle(); }
-  duplicateSelectedObstacle()      { this.obstacleEditor.duplicateSelected(); }
 
   get selectedObstacle()           { return this.obstacleEditor.selected; }
 
@@ -2049,13 +2028,6 @@ export class EditorController {
   }
 
   // ── AI Path Vue bridge methods ────────────────────────────────────────────
-  addAiWaypointEntity() {
-    // Place new waypoint at the camera's look-at target
-    const target = this.camera.getTarget();
-    this.aiPathEditor.addPoint(target.x, target.z);
-    this.hideAddMenu();
-    this._syncAiPathPanel();
-  }
   insertAiWaypointEntity() {
     this.aiPathEditor.insertAfterSelected();
     this.hideAddMenu();
@@ -2063,14 +2035,12 @@ export class EditorController {
   }
   deleteAiWaypoint()   { this.aiPathEditor.deleteSelected(); }
   clearAiPath()        { this.aiPathEditor.clearAll(); }
-  deselectAiWaypoint() { this.aiPathEditor.deselect(); }
   editMainAiPath()             { this.aiPathEditor.editMainPath(); }
   createAiPathBranchFromSelected() { this.aiPathEditor.createBranchFromSelected(); }
   selectAiPathBranch(branchId) { this.aiPathEditor.selectBranch(branchId); }
   setActiveAiPathBranchWeight(weight) { this.aiPathEditor.setActiveBranchWeight(weight); }
   setActiveAiPathBranchRejoinIndex(index) { this.aiPathEditor.setActiveBranchRejoinIndex(index); }
   deleteActiveAiPathBranch()   { this.aiPathEditor.deleteActiveBranch(); }
-  clearAiPathBranches()        { this.aiPathEditor.clearBranches(); }
   changeAiPathWearEnabled(val)      { this._updateAiPathWear({ enabled: !!val }, false); }
   changeAiPathWearWidth(val)        { this._updateAiPathWear({ width: val }, true); }
   changeAiPathWearIntensity(val)    { this._updateAiPathWear({ intensity: val }, true); }
@@ -2082,12 +2052,6 @@ export class EditorController {
   changeAiPathWearSecondaryPathSpacing(val) { this._updateAiPathWear({ secondaryPathSpacing: val }, true); }
 
   // ── Terrain Path helper methods ──────────────────────────────────────────
-  openTerrainPath() {
-    if (this._editorStore) {
-      this._editorStore.selectedType = 'terrainPath';
-      this.terrainPathEditor.deselect();
-    }
-  }
 
   closeTerrainPath() {
     this.terrainPathEditor.deselect();
@@ -2106,7 +2070,6 @@ export class EditorController {
   insertTerrainPathWaypoint()   { this.terrainPathEditor.insertAfterSelected(); }
   duplicateTerrainPath()        { this.terrainPathEditor.duplicateActivePath(); }
   deleteTerrainPath()           { this.terrainPathEditor.clearActivePath(); }
-  clearTerrainPath()            { this.terrainPathEditor.clearActivePath(); }
   changeTerrainPathWidth(val)          { this.terrainPathEditor.changeWidth(val); }
   changeTerrainPathBlendWidth(val)     { this.terrainPathEditor.changeBlendWidth(val); }
   changeTerrainPathCornerRadius(val)   { this.terrainPathEditor.changeCornerRadius(val); }

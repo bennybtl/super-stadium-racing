@@ -257,7 +257,6 @@ export class MenuManager {
   // ── Query helpers (used by InputManager etc.) ─────────────────────────────
 
   isMenuActive() { return this.currentMenu !== null; }
-  isGamePaused() { return this.isPaused; }
 
   // ── Internal ──────────────────────────────────────────────────────────────
 

@@ -23,7 +23,6 @@ export class UIManager {
   }
 
   showRaceStatusPanel()              { this._race.visible = true; }
-  hideRaceStatusPanel()              { this._race.visible = false; }
 
   showCountdown(text) {
     this._race.countdownText    = text;

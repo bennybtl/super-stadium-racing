@@ -143,72 +143,6 @@ export class Track {
     return { width, depth, subdivisions };
   }
 
-  // Add a hill (ellipse when radiusX !== radiusZ)
-  addHill(centerX, centerZ, radiusX, radiusZ, height, angle = 0, terrainType = null) {
-    this.features.push({
-      type: "hill",
-      centerX,
-      centerZ,
-      radiusX,
-      radiusZ,
-      angle,
-      height,
-      terrainType,
-    });
-    return this;
-  }
-
-  // Add a square (rectangular) hill or depression with a cosine-smoothed transition band.
-  // width/depth: size of the flat top. height: elevation (negative = pit).
-  // transition: width of the slope skirt around the rectangle edges.
-  addSquareHill(centerX, centerZ, width, depth, height, transition = 4, terrainType = null) {
-    this.features.push({
-      type: "squareHill",
-      centerX,
-      centerZ,
-      width,
-      depth,
-      height,
-      transition,
-      terrainType,
-    });
-    return this;
-  }
-
-  addTerrain(centerX, centerZ, width, depth, shape = 'rect', terrainType = 'compactDirt') {
-    this.features.push({
-      type: "terrain",
-      shape,
-      centerX,
-      centerZ,
-      width,
-      depth,
-      terrainType,
-    });
-    return this;
-  }
-
-  // Add a square hill that slopes from one edge to the other.
-  // slopeAxis: 'x'→0°, 'z'→90°. Converted to angle (degrees).
-  // heightAtMin/heightAtMax: elevation at the − and + ends of the slope direction.
-  // transition: cosine falloff band outside the rectangle (0 = hard edge).
-  addSlopedRect(centerX, centerZ, width, depth, slopeAxis, heightAtMin, heightAtMax, terrainType = null, transition = 0) {
-    const angle = slopeAxis === 'z' ? 90 : 0;
-    this.features.push({
-      type: "squareHill",
-      centerX,
-      centerZ,
-      width,
-      depth,
-      angle,
-      heightAtMin,
-      heightAtMax,
-      terrainType,
-      transition,
-    });
-    return this;
-  }
-
   // Add a checkpoint gate for racing
   // heading is in radians (0 = facing +Z, PI/2 = facing +X)
   // checkpointNumber: optional number for ordered checkpoints (1, 2, 3, etc.)
@@ -222,53 +156,6 @@ export class Track {
       checkpointNumber,
       passed: false, // Track if checkpoint has been passed
     });
-    return this;
-  }
-
-  // Add a wall defined by a series of world-space points. Straight segments
-  // are generated between each consecutive pair of points, with terrain-following
-  // sub-segmentation so the wall hugs hills and dips.
-  // points: array of { x, z } coordinates
-  // height/thickness/friction: applied uniformly to all segments
-  addPolyWall(points, height = 2, thickness = 0.5, friction = 0.1) {
-    this.features.push({
-      type: "polyWall",
-      points,
-      height,
-      collisionHeight: height,
-      thickness,
-      friction,
-    });
-    return this;
-  }
-
-  // Add a generic movable obstacle at a world position.
-  // obstacleType: 'barrel' | 'hayBale' | 'tireStack'
-  addObstacle(x, z, obstacleType = 'barrel', angle = 0, color = 'yellow') {
-    this.features.push({ type: 'obstacle', obstacleType, x, z, angle, color });
-    return this;
-  }
-
-  // Add a flag at the specified position
-  addFlag(x, z, color = "red") {
-    this.features.push({ type: "flag", x, z, color });
-    return this;
-  }
-
-  // Add a circular action zone at a world position.
-  // zoneType: 'pickupSpawn' — tells PickupManager to restrict pickup spawns to this region.
-  addActionZone(x, z, radius = 15, zoneType = 'pickupSpawn') {
-    this.features.push({ type: 'actionZone', zoneType, x, z, radius });
-    return this;
-  }
-
-  // Add a poly curb — a flat, terrain-following strip of alternating red/white
-  // segments along a polyline.  Trucks can drive over curbs (no velocity blocking).
-  // points: array of { x, z, radius? } control points.
-  // height: bump height in metres (default 0.22).
-  // width:  lateral strip width in metres (default 0.9).
-  addPolyCurb(points, height = 0.22, width = 0.9, closed = false) {
-    this.features.push({ type: 'polyCurb', points, height, width, closed });
     return this;
   }
 
@@ -753,9 +640,6 @@ export class Track {
   }
 
   // Expand a polyline with optional rounded corners at each point
-  _expandPolylineForHill(points, closed = false) {
-    return expandPolyline(points, closed);
-  }
 
   // Cached polyline expansion + bounding box, keyed on the feature. Returns
   // { points, minX, maxX, minZ, maxZ }. `uniformRadius` (terrainPath) applies a

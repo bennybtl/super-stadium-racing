@@ -97,11 +97,9 @@ export class AIDriver {
 
     // Legacy aliases retained for older debug tooling that expects these fields.
     this.gridSize = Math.max(this.gridWidth, this.gridDepth);
-    this.gridCells = Math.max(this.gridCellsX, this.gridCellsZ);
     
     // Steering parameters (skill-based)
     this.lookAheadDistance = lookAheadDistance;
-    this.steeringStrength = steeringPrecision;
     this.pace = pace;
 
     // Vehicle-stat multipliers, applied to the truck's stats in setTruck().
@@ -306,14 +304,6 @@ export class AIDriver {
     if (!this.isValidCell(gridX, gridZ)) return false;
     const grid = this._ensureBlockedGrid();
     return grid[gridZ * this.gridCellsX + gridX] === 1;
-  }
-
-  /**
-   * Drop the cached occupancy grid so it rebuilds on next query. Call if the
-   * track's walls/curbs change (e.g. editor edits).
-   */
-  invalidateBlockedGrid() {
-    this._blockedGrid = null;
   }
 
   /** Build (once) the occupancy grid by rasterizing wall + curb segments. */

@@ -82,7 +82,6 @@ export class BridgeMesh {
     this._surfaceTopologyGraph = scene?.metadata?.surfaceTopologyGraph ?? null;
     this._terrainSeamMeshes = [];
     this._terrainSeamPhysics = [];
-    this._terrainSeamSides = [];
 
     const {
       centerX, centerZ,
@@ -275,16 +274,6 @@ export class BridgeMesh {
           bridgeMeshKey,
         },
       });
-    } else {
-      this._driveMesh.metadata = {
-        isTerrain: true,
-        isDriveSurface: true,
-        surfaceType: 'bridgeMesh',
-        level,
-        surfaceKind: 'bridge-mesh',
-        surfaceFace: 'top',
-        normalFilterMode: 'absoluteY',
-      };
     }
 
     this._registerTopologyGraph({
@@ -309,7 +298,6 @@ export class BridgeMesh {
     const uniqueSides = [...new Set((Array.isArray(sides) ? sides : []).filter(side =>
       side === 'north' || side === 'south' || side === 'east' || side === 'west'
     ))];
-    this._terrainSeamSides = uniqueSides;
     if (uniqueSides.length === 0 || !this._track || !this._scene) return;
 
     for (const side of uniqueSides) {
@@ -343,19 +331,6 @@ export class BridgeMesh {
             seamSide: side,
           },
         });
-      } else {
-        seamMesh.metadata = {
-          ...(seamMesh.metadata ?? {}),
-          isTerrain: true,
-          isDriveSurface: true,
-          surfaceType: 'bridgeMeshSeam',
-          level: this._resolvedLayerId,
-          surfaceKind: 'bridge-mesh-seam',
-          surfaceFace: 'top',
-          normalFilterMode: 'absoluteY',
-          bridgeMeshKey: this._bridgeMeshKey,
-          seamSide: side,
-        };
       }
     }
   }

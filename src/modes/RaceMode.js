@@ -34,7 +34,6 @@ export class RaceMode extends DriveMode {
     this.debugManager = null;
     this.audioManager = null;
     this.truckAudioController = null;
-    this.telemetryRecorder = null;
     this.positionLabels = null;
     this.floatingText = null;
   }
@@ -194,7 +193,6 @@ export class RaceMode extends DriveMode {
 
     // ── Telemetry ────────────────────────────────────────────────────────────
     const telemetryRecorder = new TelemetryRecorder(trackKey, /* checkpoints resolved below */ []);
-    this.telemetryRecorder = telemetryRecorder;
 
     // ── AI drivers ───────────────────────────────────────────────────────────
     const getAIName  = championship?.aiNames ? (i) => championship.aiNames[i] : (i) => `AI ${i + 1}`;
@@ -224,23 +222,17 @@ export class RaceMode extends DriveMode {
       count: aiCount,
       scene,
       shadows,
-      currentTrack,
-      checkpointManager,
-      wallManager,
       vehicleDef: playerVehicleDef,
       playerTruck,
       getGridSpawn,
       getAIName,
       getAIId,
-      getAISkill,
       getAIDriver,
       getAIColorKey,
       getAIVehicleKey,
       getAIUpgrades,
       getAIGridSlot,
-      trackKey,
       aiVehicleKey,
-      telemetryCheckpoints: null, // resolved below
       excludeColorKey: playerColorKey,
     });
 

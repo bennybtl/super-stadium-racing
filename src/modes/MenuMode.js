@@ -218,15 +218,11 @@ export class MenuMode extends DriveMode {
       count: DEMO_AI_COUNT,
       scene,
       shadows,
-      currentTrack,
-      checkpointManager,
-      wallManager,
       vehicleDef: window.vehicleLoader?.getVehicle('baja') ?? null,
       playerTruck: null,
       getGridSpawn,
       getAIName: (i) => names[i],
       getAIId:   (i) => `demo${i + 1}`,
-      getAISkill: () => ({}),
       // Mixed skills so the field spreads out and trades places instead of
       // running as a train.
       getAIDriver: (i) => {
@@ -237,9 +233,7 @@ export class MenuMode extends DriveMode {
       },
       // No player, so the field fills the grid from pole.
       getAIGridSlot: (i) => i,
-      trackKey,
       aiVehicleKey: 'random',
-      telemetryCheckpoints: null,
     });
 
     if (trucks.length === 0) return;

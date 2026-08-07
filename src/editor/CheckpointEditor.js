@@ -316,19 +316,6 @@ export class CheckpointEditor {
     if (s) s.checkpoint.orderNum = this.selected.feature.checkpointNumber;
   }
 
-  /** Re-render the number/finish decal on every checkpoint gate. */
-  refreshAllDecals() {
-    const mgr = this.editor.checkpointManager;
-    if (!mgr) return;
-    const maxNum = this.editor.currentTrack.features
-      .filter(f => f.type === 'checkpoint' && f.checkpointNumber != null)
-      .reduce((m, f) => Math.max(m, f.checkpointNumber), 0);
-    for (const cp of mgr.checkpointMeshes) {
-      const isFinish = maxNum > 0 && cp.feature.checkpointNumber === maxNum;
-      cp.updateDecal(cp.feature.checkpointNumber, isFinish);
-    }
-  }
-
   // ── Vue Bridge — called by Pinia store actions ────────────────────────────
 
   changeWidth(val) {

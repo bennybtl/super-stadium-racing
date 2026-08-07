@@ -217,32 +217,17 @@ export class TerrainQuery {
    * Cast a short downward probe to sample height only (no normal, no blending).
    * @returns {number|null}
    */
-  _probeHeight(x, z, fromY, layer = undefined, continuityOptions = undefined) {
-    const hit = this._pickDown(x, z, fromY, fromY + 50, layer, continuityOptions);
+  _probeHeight(x, z, fromY, layer = undefined) {
+    const hit = this._pickDown(x, z, fromY, fromY + 50, layer);
     return hit?.hit && hit.pickedPoint ? hit.pickedPoint.y : null;
   }
 
-  _pickDown(x, z, fromY, maxDistance, layer = undefined, continuityOptions = undefined) {
+  _pickDown(x, z, fromY, maxDistance, layer = undefined) {
     if (this._driveSurfaceManager?.castDownToDriveSurface) {
       const res = this._driveSurfaceManager.castDownToDriveSurface(x, z, fromY, {
         role: "drive",
         surfaceFace: "top",
         ...(Number.isFinite(layer) ? { layer } : {}),
-        ...(continuityOptions ?? {}),
-        maxDistance,
-        minNormalY: MIN_DRIVABLE_NORMAL_Y,
-      });
-      return res?.pickInfo ?? null;
-    }
-    return null;
-  }
-
-  _pickUp(x, z, fromY, maxDistance, continuityOptions = undefined) {
-    if (this._driveSurfaceManager?.castUpToDriveSurface) {
-      const res = this._driveSurfaceManager.castUpToDriveSurface(x, z, fromY, {
-        role: "drive",
-        surfaceFace: "top",
-        ...(continuityOptions ?? {}),
         maxDistance,
         minNormalY: MIN_DRIVABLE_NORMAL_Y,
       });

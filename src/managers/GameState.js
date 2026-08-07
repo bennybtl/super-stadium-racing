@@ -38,11 +38,6 @@ export class GameState {
     this.totalRaceTime = totalTime ?? null;
   }
 
-  resetCheckpoints() {
-    this.checkpointCount = 0;
-    this.lastCheckpointPassed = 0;
-  }
-
   reset() {
     this.checkpointCount = 0;
     this.lapCount = 0;
@@ -60,14 +55,5 @@ export class GameState {
       return true;
     }
     return false;
-  }
-
-  getState() {
-    return {
-      checkpoints: this.checkpointCount,
-      laps: this.lapCount,
-      boosts: this.boostCount,
-      lastCheckpoint: this.lastCheckpointPassed
-    };
   }
 }

@@ -40,7 +40,6 @@ export class TruckAudioController {
     this._prevGroundedness = 1;
     this._wasBoostActive = false;
     this._wasInDeepWater = false;
-    this._wasGroundedInDeepWater = false;
   }
 
   static async create(audioManager, preset = PRESETS.bac) {
@@ -323,7 +322,6 @@ export class TruckAudioController {
     this._prevGroundedness = groundedness;
     this._wasBoostActive = boosting;
     this._wasInDeepWater = inDeepWater;
-    this._wasGroundedInDeepWater = inDeepWater && isGrounded;
   }
 
   playNitroActivation() {

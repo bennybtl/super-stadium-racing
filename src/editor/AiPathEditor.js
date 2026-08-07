@@ -150,14 +150,6 @@ export class AiPathEditor {
     }
   }
 
-  /** Renumber handle pointIndex values after insertion / deletion. */
-  _renumberHandles() {
-    for (let i = 0; i < this.handles.length; i++) {
-      this.handles[i].pointIndex = i;
-      this.handles[i].mesh._aiPathIndex = i;
-    }
-  }
-
   clearMeshes() {
     for (const h of this.handles) h.mesh.dispose();
     this.handles = [];

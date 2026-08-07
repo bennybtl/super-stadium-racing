@@ -116,85 +116,14 @@ export class DriveSurfaceManager {
     }
   }
 
-  registerBoundary(mesh, options = {}) {
-    return this._surfaceRegistry.registerSurface(mesh, {
-      ...options,
-      role: "boundary",
-    });
-  }
-
   unregisterByMesh(mesh) {
     this._surfaceRegistry.unregisterByMesh(mesh);
     const idx = this._elevatedSurfaceMeshes.indexOf(mesh);
     if (idx !== -1) this._elevatedSurfaceMeshes.splice(idx, 1);
   }
 
-  getAll() {
-    return this._surfaceRegistry.getAllSurfaceMeshes();
-  }
-
-  getSurface(surfaceId) {
-    return this._surfaceRegistry.getSurface(surfaceId);
-  }
-
   getSurfaceByMesh(mesh) {
     return this._surfaceRegistry.getSurfaceByMesh(mesh);
-  }
-
-  getAllSurfaceRecords() {
-    return this._surfaceRegistry.getAllSurfaces();
-  }
-
-  /**
-   * Query registered surfaces intersecting a world-space bounds volume.
-   *
-   * Supported bounds shapes:
-   *  - { minX, maxX, minY?, maxY?, minZ, maxZ }
-   *  - { min: {x,y,z}, max: {x,y,z} }
-   *  - { center: {x,y,z}, extents: {x,y,z} }
-   *
-   * @param {object} bounds
-   * @param {object} [filter]
-   * @param {string|null} [filter.role='drive']
-   * @param {number} [filter.layer]
-   * @param {string} [filter.surfaceType]
-   * @param {string} [filter.surfaceFace]
-   * @param {object} [filter.tags] Exact key/value tag subset match.
-   * @param {(record: object) => boolean} [filter.predicate]
-   * @returns {object[]} matching surface records
-   */
-  querySurfacesInBounds(bounds, filter = {}) {
-    const queryBounds = this._normalizeBounds(bounds);
-    if (!queryBounds) return [];
-
-    const requestedRole = filter.role ?? "drive";
-    const requestedLayer = filter.layer;
-    const requestedType = filter.surfaceType;
-    const requestedFace = filter.surfaceFace;
-    const requiredTags = filter.tags;
-    const predicate = typeof filter.predicate === "function" ? filter.predicate : null;
-
-    const matches = [];
-    for (const record of this.getAllSurfaceRecords()) {
-      if (!record?.mesh) continue;
-      if (requestedRole && record.role !== requestedRole) continue;
-      if (Number.isFinite(requestedLayer) && record.level !== requestedLayer) continue;
-      if (requestedType && record.surfaceType !== requestedType) continue;
-
-      const surfaceFace = record.tags?.surfaceFace ?? record.mesh.metadata?.surfaceFace ?? "top";
-      if (requestedFace && surfaceFace !== requestedFace) continue;
-
-      if (requiredTags && !this._recordHasTags(record, requiredTags)) continue;
-      if (predicate && !predicate(record)) continue;
-
-      const recordBounds = this._getRecordBounds(record);
-      if (!recordBounds) continue;
-      if (!this._boundsIntersect(queryBounds, recordBounds)) continue;
-
-      matches.push(record);
-    }
-
-    return matches;
   }
 
   /**
@@ -315,23 +244,11 @@ export class DriveSurfaceManager {
       return true;
     }
 
-    // Legacy fallback path for meshes tagged before surface records are available.
-    // Kept migration-only: once any canonical surfaces are registered, callers
-    // must opt in explicitly via allowLegacyFallback.
-    const allowLegacyFallback =
-      options.allowLegacyFallback === true ||
-      this._surfaceRegistry.count === 0;
-    if (!allowLegacyFallback) return false;
-
-    const isLegacyDriveMesh = mesh.metadata?.isDriveSurface === true || mesh.metadata?.isTerrain === true;
-    if (!isLegacyDriveMesh) return false;
-    if (requestedRole && requestedRole !== "drive") return false;
-    if (Number.isFinite(requestedLayer) && mesh.metadata?.level !== requestedLayer) return false;
-    if (requestedSurfaceFace) {
-      const face = mesh.metadata?.surfaceFace ?? "top";
-      if (face !== requestedSurfaceFace) return false;
-    }
-    return true;
+    // A mesh with no surface record is not drivable. (There used to be a
+    // migration fallback here that read `isDriveSurface`/`isTerrain` metadata
+    // while the registry was empty — unreachable in practice: SceneBuilder
+    // registers the ground synchronously before anything that can query.)
+    return false;
   }
 
   _isHitAllowed(hit, options = {}) {
@@ -436,110 +353,6 @@ export class DriveSurfaceManager {
     }
 
     return true;
-  }
-
-  _recordHasTags(record, requiredTags) {
-    if (!requiredTags || typeof requiredTags !== "object") return true;
-    for (const [key, value] of Object.entries(requiredTags)) {
-      if (record.tags?.[key] !== value) return false;
-    }
-    return true;
-  }
-
-  _getRecordBounds(record) {
-    const mesh = record?.mesh;
-    if (!mesh || mesh.isDisposed?.()) return null;
-    const info = mesh.getBoundingInfo?.();
-    const box = info?.boundingBox;
-    if (!box?.minimumWorld || !box?.maximumWorld) return null;
-    return {
-      minX: box.minimumWorld.x,
-      maxX: box.maximumWorld.x,
-      minY: box.minimumWorld.y,
-      maxY: box.maximumWorld.y,
-      minZ: box.minimumWorld.z,
-      maxZ: box.maximumWorld.z,
-    };
-  }
-
-  _normalizeBounds(bounds) {
-    if (!bounds || typeof bounds !== "object") return null;
-
-    // Shape: { min: {x,y,z}, max: {x,y,z} }
-    if (bounds.min && bounds.max) {
-      const minX = this._finiteOrNull(bounds.min.x);
-      const maxX = this._finiteOrNull(bounds.max.x);
-      const minZ = this._finiteOrNull(bounds.min.z);
-      const maxZ = this._finiteOrNull(bounds.max.z);
-      if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minZ) || !Number.isFinite(maxZ)) {
-        return null;
-      }
-      return {
-        minX: Math.min(minX, maxX),
-        maxX: Math.max(minX, maxX),
-        minY: this._finiteOr(bounds.min.y, -Infinity),
-        maxY: this._finiteOr(bounds.max.y, Infinity),
-        minZ: Math.min(minZ, maxZ),
-        maxZ: Math.max(minZ, maxZ),
-      };
-    }
-
-    // Shape: { center: {x,y,z}, extents: {x,y,z} }
-    if (bounds.center && bounds.extents) {
-      const cx = this._finiteOrNull(bounds.center.x);
-      const cz = this._finiteOrNull(bounds.center.z);
-      const ex = Math.abs(this._finiteOrNull(bounds.extents.x));
-      const ez = Math.abs(this._finiteOrNull(bounds.extents.z));
-      if (!Number.isFinite(cx) || !Number.isFinite(cz) || !Number.isFinite(ex) || !Number.isFinite(ez)) {
-        return null;
-      }
-      const cy = this._finiteOr(bounds.center.y, 0);
-      const ey = Math.abs(this._finiteOr(bounds.extents.y, Infinity));
-      return {
-        minX: cx - ex,
-        maxX: cx + ex,
-        minY: cy - ey,
-        maxY: cy + ey,
-        minZ: cz - ez,
-        maxZ: cz + ez,
-      };
-    }
-
-    // Shape: { minX, maxX, minY?, maxY?, minZ, maxZ }
-    const minX = this._finiteOrNull(bounds.minX);
-    const maxX = this._finiteOrNull(bounds.maxX);
-    const minZ = this._finiteOrNull(bounds.minZ);
-    const maxZ = this._finiteOrNull(bounds.maxZ);
-    if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minZ) || !Number.isFinite(maxZ)) {
-      return null;
-    }
-    return {
-      minX: Math.min(minX, maxX),
-      maxX: Math.max(minX, maxX),
-      minY: this._finiteOr(bounds.minY, -Infinity),
-      maxY: this._finiteOr(bounds.maxY, Infinity),
-      minZ: Math.min(minZ, maxZ),
-      maxZ: Math.max(minZ, maxZ),
-    };
-  }
-
-  _boundsIntersect(a, b) {
-    return !(
-      a.maxX < b.minX ||
-      a.minX > b.maxX ||
-      a.maxY < b.minY ||
-      a.minY > b.maxY ||
-      a.maxZ < b.minZ ||
-      a.minZ > b.maxZ
-    );
-  }
-
-  _finiteOrNull(value) {
-    return Number.isFinite(value) ? value : null;
-  }
-
-  _finiteOr(value, fallback) {
-    return Number.isFinite(value) ? value : fallback;
   }
 
   get count() {

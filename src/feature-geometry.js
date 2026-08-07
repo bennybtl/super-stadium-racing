@@ -66,16 +66,6 @@ export function rotateToLocal(wx, wz, angleRad) {
   };
 }
 
-/** Inverse of `rotateToLocal` — local offset back to world offset. */
-export function fromLocalXZ(lx, lz, angleRad) {
-  const cosA = Math.cos(angleRad);
-  const sinA = Math.sin(angleRad);
-  return {
-    wx: lx * cosA - lz * sinA,
-    wz: lx * sinA + lz * cosA,
-  };
-}
-
 // ─── Footprints ────────────────────────────────────────────────────────────
 
 /**

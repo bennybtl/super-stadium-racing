@@ -11,9 +11,6 @@ export const LINE_COLOR_MESH_GRID   = basicColors.teal.diffuse; // teal
 export const LINE_COLOR_POLY_WALL   = basicColors.orange.diffuse;  // orange
 export const LINE_COLOR_POLY_HILL   = basicColors.green.diffuse;  // green
 export const LINE_COLOR_POLY_CURB   = basicColors.red.diffuse;  // red
-export const EMISSIVE_BLACK         = basicColors.black.emissive; // very dark grey (not pure black, so it shows up in the dark)
-export const EMISSIVE_GREY          = basicColors.gray.emissive;
-export const FALLBACK_GREY          = basicColors.gray.diffuse;
 
 /**
  * EditorMaterials — a lazily-populated registry of all editor gizmo materials.

@@ -535,12 +535,6 @@ export class BridgeMeshEditor {
     }
   }
 
-  setStepSize(v) {
-    this.stepSize = v;
-    const s = this.ec._editorStore;
-    if (s) s.bridgeMesh.stepSize = v;
-  }
-
   get selected() {
     return this.selectedCenter;
   }

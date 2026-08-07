@@ -64,12 +64,6 @@ export class SurfaceDecalManager {
     return mesh;
   }
 
-  createDecalsForTrack() {
-    for (const feature of this._track.features) {
-      if (feature.type === 'surfaceDecal') this.createDecal(feature);
-    }
-  }
-
   /** Map a picked mesh back to its { feature, mesh } entry (or null). */
   findByMesh(mesh) {
     return this._entries.find(e => e.mesh === mesh) || null;

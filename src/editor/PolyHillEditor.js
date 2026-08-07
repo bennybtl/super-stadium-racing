@@ -332,10 +332,6 @@ export class PolyHillEditor {
     return false;
   }
 
-  _startDrag(mesh) {
-    this._rawDrag = { startPos: mesh.position.clone() };
-  }
-
   // ─── Insert / Delete points ───────────────────────────────────────────────
 
   insertPointAfter() {

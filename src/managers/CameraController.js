@@ -132,10 +132,6 @@ export class CameraController {
     this.zoomLevel = Math.min(this.maxZoom, this.zoomLevel + this.zoomStep);
   }
 
-  getCurrentZoom() {
-    return this.zoomLevel;
-  }
-
   toggleFreeMode() {
     const entering = this.mode !== 'free';
     if (entering) {
@@ -168,10 +164,6 @@ export class CameraController {
       this.freeCameraTarget.addInPlace(moveDelta);
       console.debug(`Free camera move: position=${this.freeCameraPosition.toString()}, target=${this.freeCameraTarget.toString()}`);
     }
-  }
-
-  setZoom(level) {
-    this.zoomLevel = Math.max(this.minZoom, Math.min(this.maxZoom, level));
   }
 }
 

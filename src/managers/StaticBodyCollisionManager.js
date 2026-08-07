@@ -47,10 +47,6 @@ export class StaticBodyCollisionManager {
     }
   }
 
-  resetColliderCache() {
-    this._colliders = [];
-  }
-
   _getColliders() {
     if (this._colliders.length === 0) {
       this._colliders = this.scene.meshes.filter(mesh =>

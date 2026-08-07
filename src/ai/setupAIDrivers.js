@@ -1,7 +1,5 @@
-import { AIDriver } from "./AIDriver.js";
 import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
-import { TelemetryPlayer } from "../managers/TelemetryPlayer.js";
 import { basicColors } from "../constants.js";
 /**
  * AI driver colour palette keys — cycled through for each AI slot.
@@ -26,19 +24,13 @@ export const AI_COLOR_KEYS = [
  * @param {number}   opts.count          Number of AI competitors to create.
  * @param {object}   opts.scene          Babylon scene.
  * @param {object}   opts.shadows        ShadowGenerator (passed to Truck).
- * @param {object}   opts.currentTrack   Loaded track object.
- * @param {object}   opts.checkpointManager
- * @param {object}   opts.wallManager
  * @param {object}   opts.vehicleDef     Vehicle definition (shared with player).
  * @param {object}   opts.playerTruck    Player's Truck instance (for avoidance awareness).
  * @param {Function} opts.getGridSpawn   (index) => { pos: Vector3, heading: number }
  * @param {Function} opts.getAIName      (i) => string
  * @param {Function} opts.getAIId        (i) => string
- * @param {Function} opts.getAISkill     (i) => skillConfig object
- * @param {Function} [opts.getAIDriver]  (i) => AIDriver instance (optional preset factory)
- * @param {string}   opts.trackKey       Track key for telemetry lookup.
+ * @param {Function} opts.getAIDriver    (i) => AIDriver instance
  * @param {string}   [opts.aiVehicleKey] Vehicle key for AI trucks, or 'random'.
- * @param {Array}    opts.telemetryCheckpoints  Checkpoint list for telemetry replay.
  *
  * @returns {{ aiTruckDataList: Array, aiDrivers: Array }}
  *   aiTruckDataList — ready-to-push entries for the `trucks` array (without the player).
@@ -48,23 +40,17 @@ export function setupAIDrivers({
   count,
   scene,
   shadows,
-  currentTrack,
-  checkpointManager,
-  wallManager,
   vehicleDef,
   playerTruck,
   getGridSpawn,
   getAIName,
   getAIId,
-  getAISkill,
   getAIDriver,
   getAIColorKey = null,
   getAIVehicleKey = null,
   getAIUpgrades = null,
   getAIGridSlot = null,
-  trackKey,
   aiVehicleKey = 'random',
-  telemetryCheckpoints,
   excludeColorKey = null,
 }) {
   // Grid slot 0 is reserved for the player; AI starts at slot 1.
@@ -85,15 +71,7 @@ export function setupAIDrivers({
     : null;
 
   for (let i = 0; i < count; i++) {
-    const skillConfig = getAISkill(i);
-    const presetDriver = typeof getAIDriver === 'function' ? getAIDriver(i) : null;
-    const driver = presetDriver ?? new AIDriver(
-      currentTrack,
-      checkpointManager,
-      wallManager,
-      scene,
-      skillConfig,
-    );
+    const driver = getAIDriver(i);
 
     // A caller (e.g. a championship) may pin each AI's colour/vehicle for a
     // stable identity; otherwise fall back to the cycling palette / random pick.
@@ -145,16 +123,6 @@ export function setupAIDrivers({
   aiTrucks.forEach(({ driver, spawn }) => {
     driver.calculateFullPath({ x: spawn.pos.x, z: spawn.pos.z });
   });
-
-  // ── Load telemetry for any driver that can use it ──────────────────────
-  const savedTelemetry = window._telemetryStore?.[trackKey] ?? null;
-  if (savedTelemetry && telemetryCheckpoints?.length) {
-    const player = new TelemetryPlayer(trackKey, telemetryCheckpoints);
-    if (player.loadFromObject(savedTelemetry)) {
-      const waypoints = player.buildWaypoints();
-      aiDrivers.forEach(driver => driver.loadTelemetry(waypoints));
-    }
-  }
 
   // ── Build truckData entries (ready for the `trucks` array) ────────────
   const aiTruckDataList = aiTrucks.map(({ truck, gridSlot }, i) => ({
