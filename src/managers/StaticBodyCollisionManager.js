@@ -22,6 +22,10 @@ export class StaticBodyCollisionManager {
     this._prevPositions = new Map();
     this._invWorld = new Matrix();
     this._colliders = [];
+    // Per-frame scratch — see the methods that fill them.
+    this._closestHit = { cx: 0, cz: 0, i: 0, j: 0, t: 0, distSq: 0 };
+    this._frame = { frictionApplied: false };
+    this._normal = new Vector3();
   }
 
   dispose() {
@@ -38,7 +42,8 @@ export class StaticBodyCollisionManager {
    */
   notifyTeleport(truck) {
     if (truck?.mesh) {
-      this._prevPositions.set(truck.mesh.uniqueId, truck.mesh.position.clone());
+      this._rememberPosition(truck.mesh.uniqueId, truck.mesh.position)
+        .copyFrom(truck.mesh.position);
     }
   }
 
@@ -71,11 +76,12 @@ export class StaticBodyCollisionManager {
       if (!truck?.mesh || !truck?.state) continue;
 
       const id = truck.mesh.uniqueId;
-      const prevPos = this._prevPositions.get(id) ?? truck.mesh.position.clone();
+      const prevPos = this._rememberPosition(id, truck.mesh.position);
       const radius = truck.radius ?? TRUCK_RADIUS;
       const halfHeight = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
       // Overlapping colliders (adjacent wall segments) must not each scrub speed.
-      const frame = { frictionApplied: false };
+      const frame = this._frame;
+      frame.frictionApplied = false;
 
       for (const collider of colliders) {
         // Broad-phase only: swept AABB against collider world bounds.
@@ -96,15 +102,31 @@ export class StaticBodyCollisionManager {
         }
       }
 
-      this._prevPositions.set(id, truck.mesh.position.clone());
+      // prevPos IS the stored vector; overwrite it in place for next frame.
+      prevPos.copyFrom(truck.mesh.position);
     }
+  }
+
+  /**
+   * The stored previous-frame position for this truck, allocated once and then
+   * reused. On the first sighting it starts at the current position, so a truck
+   * never reads as having travelled on its first frame.
+   */
+  _rememberPosition(id, currentPos) {
+    let stored = this._prevPositions.get(id);
+    if (!stored) {
+      stored = currentPos.clone();
+      this._prevPositions.set(id, stored);
+    }
+    return stored;
   }
 
   _cachePrevPositions(trucks) {
     for (const truckData of trucks) {
       const truck = truckData.truck ?? truckData;
       if (!truck?.mesh) continue;
-      this._prevPositions.set(truck.mesh.uniqueId, truck.mesh.position.clone());
+      this._rememberPosition(truck.mesh.uniqueId, truck.mesh.position)
+        .copyFrom(truck.mesh.position);
     }
   }
 
@@ -404,7 +426,7 @@ export class StaticBodyCollisionManager {
     const penTop = top - truckBot;
     if (!crossed && penTop < penLateral) {
       pos.y = top + halfHeight + SKIN;
-      this._applyContactResponse(truck, new Vector3(0, 1, 0), dt, frame, {
+      this._applyContactResponse(truck, this._normal.set(0, 1, 0), dt, frame, {
         allowBounce: true,
         retain: null,
       });
@@ -413,30 +435,48 @@ export class StaticBodyCollisionManager {
 
     pos.x = cx + dx * (reach + SKIN);
     pos.z = cz + dz * (reach + SKIN);
-    this._applyContactResponse(truck, new Vector3(dx, 0, dz), dt, frame, {
+    this._applyContactResponse(truck, this._normal.set(dx, 0, dz), dt, frame, {
       allowBounce: true,
       retain: c.retain ?? DEFAULT_FRICTION,
     });
   }
 
-  /** Closest point on a (possibly closed) XZ polyline to (px, pz). */
+  /**
+   * Closest point on a (possibly closed) XZ polyline to (px, pz). Runs for every
+   * truck every frame, so the winner is tracked in scalars and written into a
+   * reusable result object — callers must consume it before the next call.
+   */
   _closestOnPolyline(xs, zs, closed, px, pz) {
     const n = xs.length;
     const segCount = closed ? n : n - 1;
-    let best = null;
+    let bestDistSq = Infinity;
+    let bestI = -1, bestT = 0, bestCx = 0, bestCz = 0;
     for (let i = 0; i < segCount; i++) {
       const j = (i + 1) % n;
       const abx = xs[j] - xs[i];
       const abz = zs[j] - zs[i];
       const lenSq = abx * abx + abz * abz;
       let t = lenSq > 1e-12 ? ((px - xs[i]) * abx + (pz - zs[i]) * abz) / lenSq : 0;
-      t = Math.max(0, Math.min(1, t));
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
       const cx = xs[i] + abx * t;
       const cz = zs[i] + abz * t;
-      const dSq = (px - cx) * (px - cx) + (pz - cz) * (pz - cz);
-      if (!best || dSq < best.distSq) best = { cx, cz, i, j, t, distSq: dSq };
+      const ddx = px - cx, ddz = pz - cz;
+      const dSq = ddx * ddx + ddz * ddz;
+      if (dSq < bestDistSq) {
+        bestDistSq = dSq;
+        bestI = i; bestT = t; bestCx = cx; bestCz = cz;
+      }
     }
-    return best;
+    if (bestI < 0) return null;
+
+    const out = this._closestHit;
+    out.cx = bestCx;
+    out.cz = bestCz;
+    out.i = bestI;
+    out.j = (bestI + 1) % n;
+    out.t = bestT;
+    out.distSq = bestDistSq;
+    return out;
   }
 
   /** Truck OBB half-extent projected onto a horizontal unit direction. */

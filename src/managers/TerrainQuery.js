@@ -1,4 +1,4 @@
-import { Ray, Vector3 } from "@babylonjs/core";
+import { Vector3 } from "@babylonjs/core";
 
 /**
  * TerrainQuery — hybrid raycast + cross-pattern mesh sampler.
@@ -22,11 +22,8 @@ import { Ray, Vector3 } from "@babylonjs/core";
  *    blended 50/50 with the ray's own interpolated vertex normal so fine surface
  *    detail is still captured.
  *
- * Surface tagging (required only for legacy migration fallback scenes):
- *   preferred: metadata.isDriveSurface = true
- *   legacy:    metadata.isTerrain = true
- *
- * All Ray objects are allocated once and reused every frame.
+ * All raycasting is delegated to the scene's DriveSurfaceManager; without one
+ * every query resolves to null/fallback.
  */
 
 // Distance between opposing cross-pattern probes (metres).
@@ -37,22 +34,10 @@ const MIN_DRIVABLE_NORMAL_Y = 0.15;
 const MAX_UPWARD_FALLBACK_RISE = 1.0;
 
 export class TerrainQuery {
-  constructor(scene, options = {}) {
+  constructor(scene) {
     this._scene = scene;
     this._driveSurfaceManager = scene?.metadata?.driveSurfaceManager ?? null;
     this._lastResolvedSurface = null;
-    this._allowLegacySceneFallback = options.allowLegacySceneFallback === true;
-
-    // Primary downward ray — resolves the correct surface layer.
-    this._rayDown = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 2000);
-    // Upward fallback — detects the surface when the origin has penetrated the mesh.
-    this._rayUp   = new Ray(Vector3.Zero(), new Vector3(0,  1, 0), 50);
-    // Short downward probe reused for the four cross-pattern height samples.
-    this._rayProbe = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 200);
-
-    this._predicate = mesh =>
-      mesh.metadata?.isDriveSurface === true ||
-      mesh.metadata?.isTerrain === true;
   }
 
   /**
@@ -66,78 +51,40 @@ export class TerrainQuery {
    */
   castDown(x, z, fromY = 500, options = {}) {
     const continuityOptions = this._buildContinuityOptions(options);
-    let hit = null;
+    if (!this._driveSurfaceManager?.queryDriveSurfaceAt) {
+      this._lastResolvedSurface = null;
+      return null;
+    }
+
+    const queryOptions = {
+      role: "drive",
+      surfaceFace: "top",
+      ...(continuityOptions ?? {}),
+      maxDistance: fromY + 200,
+      minNormalY: MIN_DRIVABLE_NORMAL_Y,
+      penetrationThreshold: 1.5,
+      maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
+    };
+    let resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, queryOptions);
+    let hit = resolved?.pickInfo ?? null;
+    // Steep terrain faces fail the minNormalY drivability filter, leaving
+    // callers (object placement: flags, obstacles, pickups, and the truck on
+    // very steep ground) with no height at all.  Retry once without the
+    // normal filter so we still resolve a surface height to sit on.
+    if (!hit?.hit || !hit.pickedPoint) {
+      resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
+        ...queryOptions,
+        minNormalY: 0,
+      });
+      hit = resolved?.pickInfo ?? null;
+    }
+    if (!hit?.hit || !hit.pickedPoint) {
+      this._lastResolvedSurface = null;
+      return null;
+    }
     // getNormal() on a back-face (upward hit) returns a downward-pointing normal,
     // so skip normal blending when queryDriveSurfaceAt resolved from upward fallback.
-    let usedUpward = false;
-
-    if (this._driveSurfaceManager?.queryDriveSurfaceAt) {
-      const queryOptions = {
-        role: "drive",
-        surfaceFace: "top",
-        ...(continuityOptions ?? {}),
-        maxDistance: fromY + 200,
-        minNormalY: MIN_DRIVABLE_NORMAL_Y,
-        penetrationThreshold: 1.5,
-        maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
-      };
-      let resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, queryOptions);
-      hit = resolved?.pickInfo ?? null;
-      // Steep terrain faces fail the minNormalY drivability filter, leaving
-      // callers (object placement: flags, obstacles, pickups, and the truck on
-      // very steep ground) with no height at all.  Retry once without the
-      // normal filter so we still resolve a surface height to sit on.
-      if (!hit?.hit || !hit.pickedPoint) {
-        resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
-          ...queryOptions,
-          minNormalY: 0,
-        });
-        hit = resolved?.pickInfo ?? null;
-      }
-      if (!hit?.hit || !hit.pickedPoint) {
-        this._lastResolvedSurface = null;
-        return null;
-      }
-      usedUpward = (hit.pickedPoint.y - fromY) > 1e-4;
-    } else {
-      // -----------------------------------------------------------------------
-      // Legacy migration-only path: direct scene raycasts without surface manager.
-      // -----------------------------------------------------------------------
-      if (!this._allowLegacySceneFallback) {
-        this._lastResolvedSurface = null;
-        return null;
-      }
-
-      this._rayDown.origin.set(x, fromY, z);
-      this._rayDown.length = fromY + 200;
-      hit = this._pickDown(x, z, fromY, fromY + 200, undefined, continuityOptions);
-
-      const PENETRATION_THRESHOLD = 1.5;
-      const downMissed = !hit?.hit || !hit.pickedPoint;
-      const likelyPenetrated = !downMissed && (fromY - hit.pickedPoint.y) > PENETRATION_THRESHOLD;
-
-      if (downMissed || likelyPenetrated) {
-        this._rayUp.origin.set(x, fromY - 0.05, z);
-        this._rayUp.length = likelyPenetrated ? (fromY - hit.pickedPoint.y + 1) : 50;
-        const upHit = this._pickUp(
-          x,
-          z,
-          fromY - 0.05,
-          likelyPenetrated ? (fromY - hit.pickedPoint.y + 1) : 50,
-          continuityOptions
-        );
-        const upRise = (upHit?.hit && upHit.pickedPoint)
-          ? (upHit.pickedPoint.y - fromY)
-          : Infinity;
-        if (upHit?.hit && upHit.pickedPoint && upRise <= MAX_UPWARD_FALLBACK_RISE) {
-          hit = upHit;
-          usedUpward = true;
-        } else if (downMissed) {
-          this._lastResolvedSurface = null;
-          return null;
-        }
-      }
-    }
+    const usedUpward = (hit.pickedPoint.y - fromY) > 1e-4;
 
     const hitY = hit.pickedPoint.y;
     const resolvedSurface = this._resolveSurfaceInfo(hit);
@@ -213,58 +160,26 @@ export class TerrainQuery {
 
   /**
    * Fast height-only query for high-frequency callers (e.g. wheel visuals).
-   * Uses a single downward ray and optional upward fallback, without normal
-   * smoothing probes.
+   * Single surface query, without the normal-smoothing probes castDown runs.
    */
   heightAtFast(x, z, fromY = 500, fallback = 0, options = {}) {
-    const continuityOptions = this._buildContinuityOptions(options);
-    if (this._driveSurfaceManager?.queryDriveSurfaceAt) {
-      const resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
-        role: "drive",
-        surfaceFace: "top",
-        ...(continuityOptions ?? {}),
-        maxDistance: fromY + 200,
-        minNormalY: MIN_DRIVABLE_NORMAL_Y,
-        penetrationThreshold: 1.5,
-        maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
-      });
-      const hit = resolved?.pickInfo ?? null;
-      if (hit?.hit && hit.pickedPoint) {
-        this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
-        return hit.pickedPoint.y;
-      }
-      this._lastResolvedSurface = null;
-      return fallback;
-    }
-
-    if (!this._allowLegacySceneFallback) {
-      this._lastResolvedSurface = null;
-      return fallback;
-    }
-
-    this._rayDown.origin.set(x, fromY, z);
-    this._rayDown.length = fromY + 200;
-
-    let hit = this._pickDown(x, z, fromY, fromY + 200, undefined, continuityOptions);
-    if (hit?.hit && hit.pickedPoint) {
-      this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
-      return hit.pickedPoint.y;
-    }
-
-    // Legacy no-manager fallback for penetration/underside cases.
-    this._rayUp.origin.set(x, fromY - 0.05, z);
-    this._rayUp.length = 50;
-    hit = this._pickUp(x, z, fromY - 0.05, 50, continuityOptions);
-    const upRise = (hit?.hit && hit.pickedPoint)
-      ? (hit.pickedPoint.y - fromY)
-      : Infinity;
-    if (hit?.hit && hit.pickedPoint && upRise <= MAX_UPWARD_FALLBACK_RISE) {
-      this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
-      return hit.pickedPoint.y;
-    }
-
     this._lastResolvedSurface = null;
-    return fallback;
+    if (!this._driveSurfaceManager?.queryDriveSurfaceAt) return fallback;
+
+    const resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
+      role: "drive",
+      surfaceFace: "top",
+      ...this._buildContinuityOptions(options),
+      maxDistance: fromY + 200,
+      minNormalY: MIN_DRIVABLE_NORMAL_Y,
+      penetrationThreshold: 1.5,
+      maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
+    });
+    const hit = resolved?.pickInfo ?? null;
+    if (!hit?.hit || !hit.pickedPoint) return fallback;
+
+    this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
+    return hit.pickedPoint.y;
   }
 
   // ---------------------------------------------------------------------------
@@ -273,7 +188,6 @@ export class TerrainQuery {
 
   /**
    * Cast a short downward probe to sample height only (no normal, no blending).
-   * Uses the dedicated _rayProbe object so it never clobbers _rayDown mid-frame.
    * @returns {number|null}
    */
   _probeHeight(x, z, fromY, layer = undefined, continuityOptions = undefined) {
@@ -293,12 +207,7 @@ export class TerrainQuery {
       });
       return res?.pickInfo ?? null;
     }
-
-    if (!this._allowLegacySceneFallback) return null;
-
-    this._rayDown.origin.set(x, fromY, z);
-    this._rayDown.length = maxDistance;
-    return this._scene.pickWithRay(this._rayDown, this._predicate);
+    return null;
   }
 
   _pickUp(x, z, fromY, maxDistance, continuityOptions = undefined) {
@@ -312,40 +221,17 @@ export class TerrainQuery {
       });
       return res?.pickInfo ?? null;
     }
-
-    if (!this._allowLegacySceneFallback) return null;
-
-    this._rayUp.origin.set(x, fromY, z);
-    this._rayUp.length = maxDistance;
-    return this._scene.pickWithRay(this._rayUp, this._predicate);
+    return null;
   }
 
+  /**
+   * Continuity hints are produced in exactly one shape, by
+   * TerrainPhysics._buildSurfaceContinuityOptions: `{ transitionLock: {…} }`.
+   * Anything else is passed through untouched.
+   */
   _buildContinuityOptions(options = {}) {
-    if (!options || typeof options !== "object") return {};
-
-    const transitionLock = options.transitionLock ?? null;
-    if (transitionLock?.enabled === false) {
-      return { transitionLock: { enabled: false } };
-    }
-
-    const hasTransitionLock = transitionLock && typeof transitionLock === "object";
-    const hasFlatHints =
-      Number.isFinite(options.preferredSurfaceId) ||
-      Number.isFinite(options.preferredLayer) ||
-      Number.isFinite(options.lockSurfaceId) ||
-      Number.isFinite(options.lockLayer) ||
-      typeof options.transitionLockMode === "string";
-
-    if (!hasTransitionLock && !hasFlatHints) return {};
-
-    return {
-      ...(hasTransitionLock ? { transitionLock } : {}),
-      ...(Number.isFinite(options.preferredSurfaceId) ? { preferredSurfaceId: options.preferredSurfaceId } : {}),
-      ...(Number.isFinite(options.preferredLayer) ? { preferredLayer: options.preferredLayer } : {}),
-      ...(Number.isFinite(options.lockSurfaceId) ? { lockSurfaceId: options.lockSurfaceId } : {}),
-      ...(Number.isFinite(options.lockLayer) ? { lockLayer: options.lockLayer } : {}),
-      ...(typeof options.transitionLockMode === "string" ? { transitionLockMode: options.transitionLockMode } : {}),
-    };
+    const transitionLock = options?.transitionLock;
+    return transitionLock ? { transitionLock } : {};
   }
 
   _resolveSurfaceInfo(hit) {

@@ -45,14 +45,34 @@ export function getPolyHillHalfWidth(feature) {
  * height math and the footprint differently.
  */
 export function toFeatureLocal(feature, x, z) {
-  const wx = x - feature.centerX;
-  const wz = z - feature.centerZ;
-  const angleRad = ((feature.angle ?? 0) * Math.PI) / 180;
+  return rotateToLocal(
+    x - feature.centerX,
+    z - feature.centerZ,
+    ((feature.angle ?? 0) * Math.PI) / 180,
+  );
+}
+
+/**
+ * The rotation kernel itself, for the features that name their angle something
+ * other than `angle` (terrainRegion uses `rotation`). Takes a center-relative
+ * offset so every caller shares one sign convention.
+ */
+export function rotateToLocal(wx, wz, angleRad) {
   const cosA = Math.cos(angleRad);
   const sinA = Math.sin(angleRad);
   return {
     lx: wx * cosA + wz * sinA,
     lz: -wx * sinA + wz * cosA,
+  };
+}
+
+/** Inverse of `rotateToLocal` — local offset back to world offset. */
+export function fromLocalXZ(lx, lz, angleRad) {
+  const cosA = Math.cos(angleRad);
+  const sinA = Math.sin(angleRad);
+  return {
+    wx: lx * cosA - lz * sinA,
+    wz: lx * sinA + lz * cosA,
   };
 }
 

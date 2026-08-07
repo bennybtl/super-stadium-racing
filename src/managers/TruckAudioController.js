@@ -1,5 +1,10 @@
 import { Vector3 } from "@babylonjs/core";
 import { EngineAudio } from "./EngineAudio.js";
+import {
+  getHillEllipseParams,
+  getSquareHillParams,
+  toFeatureLocal,
+} from "../feature-geometry.js";
 import sliding1Url from "../assets/sounds/sliding1.wav?url";
 import sliding2Url from "../assets/sounds/sliding2.wav?url";
 import sliding3Url from "../assets/sounds/sliding3.wav?url";
@@ -23,14 +28,6 @@ const PRESETS = {
 
 const MAX_SPEED_FALLBACK = 25;
 const DEEP_WATER_THRESHOLD = -0.9;
-
-function crossFade(value, start, end) {
-  const x = Math.max(0, Math.min(1, (value - start) / (end - start)));
-  return {
-    gain1: Math.cos((1.0 - x) * 0.5 * Math.PI),
-    gain2: Math.cos(x * 0.5 * Math.PI),
-  };
-}
 
 export class TruckAudioController {
   constructor(audioManager, engineAudio) {
@@ -216,15 +213,8 @@ export class TruckAudioController {
   }
 
   _hillContributionAt(feature, x, z) {
-    const radiusX = Math.max(0.001, feature.radiusX ?? 10);
-    const radiusZ = Math.max(0.001, feature.radiusZ ?? 10);
-    const angleRad = ((feature.angle ?? 0) * Math.PI) / 180;
-    const wx = x - feature.centerX;
-    const wz = z - feature.centerZ;
-    const cosA = Math.cos(angleRad);
-    const sinA = Math.sin(angleRad);
-    const lx = wx * cosA + wz * sinA;
-    const lz = -wx * sinA + wz * cosA;
+    const { radiusX, radiusZ } = getHillEllipseParams(feature);
+    const { lx, lz } = toFeatureLocal(feature, x, z);
     const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
     if (t2 >= 1) return 0;
     const t = Math.sqrt(t2);
@@ -232,17 +222,8 @@ export class TruckAudioController {
   }
 
   _squareHillContributionAt(feature, x, z) {
-    const hw = feature.width / 2;
-    const hd = (feature.depth ?? feature.width) / 2;
-    const transition = feature.transition ?? 4;
-
-    const wx = x - feature.centerX;
-    const wz = z - feature.centerZ;
-    const angleRad = (feature.angle ?? 0) * Math.PI / 180;
-    const cosA = Math.cos(angleRad);
-    const sinA = Math.sin(angleRad);
-    const lx = wx * cosA + wz * sinA;
-    const lz = -wx * sinA + wz * cosA;
+    const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
+    const { lx, lz } = toFeatureLocal(feature, x, z);
 
     const edgeDx = Math.max(0, Math.abs(lx) - hw);
     const edgeDz = Math.max(0, Math.abs(lz) - hd);

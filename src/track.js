@@ -1,10 +1,11 @@
 import { TERRAIN_TYPES } from "./terrain.js";
-import { expandPolyline, isPointInPolygon } from "./polyline-utils.js";
+import { expandPolyline, isPointInPolygon, distToPolyline } from "./polyline-utils.js";
 import {
   getHillEllipseParams,
   getSquareHillParams,
   getPolyHillHalfWidth,
   toFeatureLocal as getHillLocalCoords,
+  rotateToLocal,
 } from "./feature-geometry.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
 
@@ -361,11 +362,7 @@ export class Track {
             }
             if (dwx * dwx + dwz * dwz > mgBoundX * mgBoundX + mgBoundZ * mgBoundZ) break;
           }
-          const angleRad = (feature.angle ?? 0) * Math.PI / 180;
-          const cosA = Math.cos(angleRad);
-          const sinA = Math.sin(angleRad);
-          const lx =  dwx * cosA + dwz * sinA;
-          const lz = -dwx * sinA + dwz * cosA;
+          const { lx, lz } = getHillLocalCoords(feature, x, z);
 
           // Regional meshes (falloff band defined) contribute only inside their
           // bounds and ease to zero across the falloff band, so several small
@@ -509,21 +506,7 @@ export class Track {
               totalHeight += height;
             } else {
               // Falloff zone outside polygon boundary
-              let minDist = Infinity;
-              const numSegments = expandedPoints.length;
-              for (let i = 0; i < numSegments; i++) {
-                const p1 = expandedPoints[i];
-                const p2 = expandedPoints[(i + 1) % numSegments];
-                const dx = p2.x - p1.x;
-                const dz = p2.z - p1.z;
-                const len2 = dx * dx + dz * dz;
-                if (len2 < 0.0001) continue;
-                const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
-                const projX = p1.x + t * dx;
-                const projZ = p1.z + t * dz;
-                const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-                minDist = Math.min(minDist, dist);
-              }
+              const minDist = distToPolyline(x, z, expandedPoints, true);
               if (minDist < halfWidth) {
                 const falloff = 1 - (minDist / halfWidth);
                 totalHeight += height * falloff;
@@ -531,26 +514,7 @@ export class Track {
             }
           } else {
             // Original behavior: distance-based falloff from centerline
-            let minDist = Infinity;
-            const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
-            for (let i = 0; i < numSegments; i++) {
-              const p1 = expandedPoints[i];
-              const p2 = expandedPoints[(i + 1) % expandedPoints.length];
-              const dx = p2.x - p1.x;
-              const dz = p2.z - p1.z;
-              const len2 = dx * dx + dz * dz;
-              if (len2 < 0.0001) {
-                const pdx = x - p1.x;
-                const pdz = z - p1.z;
-                minDist = Math.min(minDist, Math.sqrt(pdx * pdx + pdz * pdz));
-                continue;
-              }
-              const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
-              const projX = p1.x + t * dx;
-              const projZ = p1.z + t * dz;
-              const distToSeg = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-              minDist = Math.min(minDist, distToSeg);
-            }
+            const minDist = distToPolyline(x, z, expandedPoints, closed);
             if (minDist < halfWidth) {
               const linearFalloff = 1 - (minDist / halfWidth);
               totalHeight += height * linearFalloff;
@@ -641,11 +605,7 @@ export class Track {
             const tBoundX = halfWidth + blendWidth;
             const tBoundZ = halfDepth + blendWidth;
             if (wx * wx + wz * wz > tBoundX * tBoundX + tBoundZ * tBoundZ) break;
-            const angleRad = (feature.rotation ?? 0) * Math.PI / 180;
-            const cosA = Math.cos(angleRad);
-            const sinA = Math.sin(angleRad);
-            const lx =  wx * cosA + wz * sinA;
-            const lz = -wx * sinA + wz * cosA;
+            const { lx, lz } = rotateToLocal(wx, wz, (feature.rotation ?? 0) * Math.PI / 180);
             const edgeDx = Math.max(0, Math.abs(lx) - halfWidth);
             const edgeDz = Math.max(0, Math.abs(lz) - halfDepth);
             const insideDist = Math.min(halfWidth - Math.abs(lx), halfDepth - Math.abs(lz));
@@ -656,15 +616,10 @@ export class Track {
               return feature.terrainType;
             }
           } else if (feature.shape === 'circle') {
-            const radAngle = (feature.rotation ?? 0) * Math.PI / 180;
-            const cosA = Math.cos(radAngle);
-            const sinA = Math.sin(radAngle);
             const dx = x - feature.centerX;
             const dz = z - feature.centerZ;
-            
-            // Reverse rotate the point to local axes
-            const localX =  dx * cosA + dz * sinA;
-            const localZ = -dx * sinA + dz * cosA;
+            const { lx: localX, lz: localZ } =
+              rotateToLocal(dx, dz, (feature.rotation ?? 0) * Math.PI / 180);
 
             const hw = (feature.width ?? 10) / 2;
             const hd = (feature.depth ?? 10) / 2;
@@ -695,11 +650,7 @@ export class Track {
           const shBoundX = hw + transition + blendWidth;
           const shBoundZ = hd + transition + blendWidth;
           if (wx * wx + wz * wz > shBoundX * shBoundX + shBoundZ * shBoundZ) break;
-          const angleRad = (feature.angle ?? 0) * Math.PI / 180;
-          const cosA = Math.cos(angleRad);
-          const sinA = Math.sin(angleRad);
-          const lx =  wx * cosA + wz * sinA;
-          const lz = -wx * sinA + wz * cosA;
+          const { lx, lz } = getHillLocalCoords(feature, x, z);
           const edgeDx = Math.max(0, Math.abs(lx) - hw);
           const edgeDz = Math.max(0, Math.abs(lz) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
@@ -731,21 +682,7 @@ export class Track {
           const reach = halfWidth + blendWidth;
           if (x < exp.minX - reach || x > exp.maxX + reach ||
               z < exp.minZ - reach || z > exp.maxZ + reach) break;
-          const numSegments = closed ? expanded.length : expanded.length - 1;
-          let minDist = Infinity;
-          for (let j = 0; j < numSegments; j++) {
-            const p1 = expanded[j];
-            const p2 = expanded[(j + 1) % expanded.length];
-            const dx = p2.x - p1.x;
-            const dz = p2.z - p1.z;
-            const len2 = dx * dx + dz * dz;
-            if (len2 < 1e-8) continue;
-            const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
-            const projX = p1.x + t * dx;
-            const projZ = p1.z + t * dz;
-            const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-            minDist = Math.min(minDist, dist);
-          }
+          const minDist = distToPolyline(x, z, expanded, closed);
           if (!Number.isFinite(minDist)) break;
           const signedDistToEdge = halfWidth - minDist;
           if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
@@ -770,21 +707,7 @@ export class Track {
               z < exp.minZ - reach || z > exp.maxZ + reach) break;
 
           // Distance to the polyline boundary.
-          const numSegments = closed ? expandedPoints.length : expandedPoints.length - 1;
-          let minDist = Infinity;
-          for (let j = 0; j < numSegments; j++) {
-            const p1 = expandedPoints[j];
-            const p2 = expandedPoints[(j + 1) % expandedPoints.length];
-            const dx = p2.x - p1.x;
-            const dz = p2.z - p1.z;
-            const len2 = dx * dx + dz * dz;
-            if (len2 < 1e-8) continue;
-            const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (z - p1.z) * dz) / len2));
-            const projX = p1.x + t * dx;
-            const projZ = p1.z + t * dz;
-            const dist = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-            minDist = Math.min(minDist, dist);
-          }
+          const minDist = distToPolyline(x, z, expandedPoints, closed);
           if (!Number.isFinite(minDist)) break;
 
           // Signed distance to the terrain edge (>0 inside the terrain region).

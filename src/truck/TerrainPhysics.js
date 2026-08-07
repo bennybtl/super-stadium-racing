@@ -6,6 +6,8 @@ const GRAVITY    = -20;           // m/s²
 const DEG_TO_RAD = Math.PI / 180;
 const RAY_OFFSET = 0.1;           // vertical offset above truck centre for raycasts (m)
 const UP         = new Vector3(0, 1, 0);  // world-up — reused to avoid per-frame allocation
+// Shared "no continuity hint" result; callers only read it.
+const EMPTY_CONTINUITY = Object.freeze({});
 
 // =============================================================================
 // Tunable constants
@@ -151,6 +153,16 @@ export class TerrainPhysics {
     this._multiProbeHalfTrack = Math.max(0, options?.multiProbeHalfTrack ?? 0.45);
     this._multiProbeMaxLift = Math.max(0, options?.multiProbeMaxLift ?? 0.35);
     this._lastFloorSurface = null;
+    // Reused by _buildSurfaceContinuityOptions; see the note there.
+    this._continuityOptions = {
+      transitionLock: {
+        mode: "prefer",
+        // Keep continuity only when candidate hits are nearly tied.
+        // This avoids sticky behavior when climbing ramps/bridge decks.
+        maxDistanceDelta: 0.08,
+        surfaceId: 0,
+      },
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -466,22 +478,14 @@ export class TerrainPhysics {
   }
 
   _buildSurfaceContinuityOptions() {
-    const surface = this.floorSurface;
-    const surfaceId = surface?.surfaceId;
+    const surfaceId = this.floorSurface?.surfaceId;
+    if (!Number.isFinite(surfaceId)) return EMPTY_CONTINUITY;
 
-    if (!Number.isFinite(surfaceId)) {
-      return {};
-    }
-
-    return {
-      transitionLock: {
-        mode: "prefer",
-        // Keep continuity only when candidate hits are nearly tied.
-        // This avoids sticky behavior when climbing ramps/bridge decks.
-        maxDistanceDelta: 0.08,
-        surfaceId,
-      },
-    };
+    // Reused per truck — this is called on every height sample, several times
+    // per frame, and only `surfaceId` ever varies. Consumers read it and don't
+    // retain it.
+    this._continuityOptions.transitionLock.surfaceId = surfaceId;
+    return this._continuityOptions;
   }
 
   // `center` is the already-resolved centre sample ({ y, surface }) from update();

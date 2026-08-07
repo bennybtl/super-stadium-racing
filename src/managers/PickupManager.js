@@ -175,7 +175,7 @@ export class PickupManager {
         const dx = tp.x - pp.x;
         const dz = tp.z - pp.z;
 
-        if (Math.sqrt(dx * dx + dz * dz) < COLLECT_RADIUS) {
+        if (dx * dx + dz * dz < COLLECT_RADIUS * COLLECT_RADIUS) {
           pickup.setVisible(false);
           pickup._collected = true;
           anyCollected = true;

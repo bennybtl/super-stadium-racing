@@ -7,7 +7,7 @@ import { basicColors } from "../constants";
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
-const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+import { clamp } from "../math-utils.js";
 
 /**
  * Sprung-mass body dynamics — one coherent model for all visual body motion.

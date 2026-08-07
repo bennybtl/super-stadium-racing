@@ -14,11 +14,24 @@ const Y_OFFSET = 4.6;   // height above the truck's origin
  * follow their truck's position; the texture is only redrawn when a truck's
  * rank changes.
  */
+/** Finished trucks first in finish order, then by progress, then gate distance. */
+function compareRank(a, b) {
+  return (a.finishIdx - b.finishIdx) || (b.progress - a.progress) || (a.dist - b.dist);
+}
+
 export class RacePositionLabels {
   constructor(scene) {
     this.scene = scene;
     this.labels = new Map(); // truckId -> { truck, plane, tex, mat, rank }
-    this._tmp = [];          // reused ranking scratch array
+    this._tmp = [];          // reused ranking scratch array (entries reused too)
+    this._tmpPool = [];      // pooled entry objects, indexed by slot
+    // checkpointNumber -> gate feature. Fixed once the gates are built, so it is
+    // rebuilt only when the checkpoint set changes, not every frame.
+    this._cpByNum = new Map();
+    this._cpSource = null;
+    this._cpCount = -1;
+    this._finishRank = new Map();
+    this._finishRankSize = -1;
   }
 
   attach(truckData) {
@@ -54,13 +67,28 @@ export class RacePositionLabels {
     const total = Math.max(1, checkpointManager.getTotalCheckpoints());
 
     // Map checkpoint number -> gate center for the distance tiebreak.
-    const cpByNum = new Map();
-    for (const cp of checkpointManager.checkpointMeshes || []) {
-      if (cp.feature?.checkpointNumber != null) cpByNum.set(cp.feature.checkpointNumber, cp.feature);
+    // Gates are pushed onto this array as they're built and the array itself is
+    // replaced on rebuild, so track both identity and length.
+    const meshes = checkpointManager.checkpointMeshes || [];
+    if (this._cpSource !== meshes || this._cpCount !== meshes.length) {
+      this._cpByNum.clear();
+      for (const cp of meshes) {
+        if (cp.feature?.checkpointNumber != null) {
+          this._cpByNum.set(cp.feature.checkpointNumber, cp.feature);
+        }
+      }
+      this._cpSource = meshes;
+      this._cpCount = meshes.length;
     }
+    const cpByNum = this._cpByNum;
 
-    const finishRank = new Map();
-    finishOrder.forEach((td, i) => finishRank.set(td.id, i));
+    // finishOrder only ever grows, so rebuild the lookup when it does.
+    const finishRank = this._finishRank;
+    if (this._finishRankSize !== finishOrder.length) {
+      finishRank.clear();
+      for (let i = 0; i < finishOrder.length; i++) finishRank.set(finishOrder[i].id, i);
+      this._finishRankSize = finishOrder.length;
+    }
 
     const ranked = this._tmp;
     ranked.length = 0;
@@ -78,13 +106,18 @@ export class RacePositionLabels {
       // Finished trucks sort first by their finish order; the rest are Infinity
       // and fall through to the live progress/distance comparison below.
       const finishIdx = finishRank.has(td.id) ? finishRank.get(td.id) : Infinity;
-      ranked.push({ id: td.id, progress, dist, finishIdx });
+      // Overwrite the pooled entry rather than allocating a new one each frame.
+      const slot = ranked.length;
+      const entry = this._tmpPool[slot] ?? (this._tmpPool[slot] = { id: 0, progress: 0, dist: 0, finishIdx: 0 });
+      entry.id = td.id;
+      entry.progress = progress;
+      entry.dist = dist;
+      entry.finishIdx = finishIdx;
+      ranked.push(entry);
     }
     // Finished (by finish order) first; then still-racing by furthest progress,
     // closer to the next gate breaking ties.
-    ranked.sort((a, b) =>
-      (a.finishIdx - b.finishIdx) || (b.progress - a.progress) || (a.dist - b.dist)
-    );
+    ranked.sort(compareRank);
 
     for (let i = 0; i < ranked.length; i++) {
       const entry = this.labels.get(ranked[i].id);

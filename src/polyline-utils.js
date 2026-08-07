@@ -121,6 +121,52 @@ export function expandPolyline(points, closed = false) {
 }
 
 /**
+ * Squared distance from (x, z) to the nearest point on an XZ polyline.
+ *
+ * Squared so callers that only compare distances (or compare against a squared
+ * radius) never pay for a sqrt; `distToPolyline` wraps it for the rest.
+ * Zero-length segments degrade to point distance rather than being skipped, so
+ * a degenerate polyline still reports a real distance instead of Infinity.
+ */
+export function distSqToPolyline(x, z, points, closed = false) {
+  const n = points?.length ?? 0;
+  if (n === 0) return Infinity;
+  if (n === 1) {
+    const dx = x - points[0].x, dz = z - points[0].z;
+    return dx * dx + dz * dz;
+  }
+
+  const segCount = closed ? n : n - 1;
+  let minSq = Infinity;
+  for (let i = 0; i < segCount; i++) {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % n];
+    const dx = p2.x - p1.x;
+    const dz = p2.z - p1.z;
+    const len2 = dx * dx + dz * dz;
+    let px, pz;
+    if (len2 < 1e-8) {
+      px = p1.x;
+      pz = p1.z;
+    } else {
+      let t = ((x - p1.x) * dx + (z - p1.z) * dz) / len2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      px = p1.x + t * dx;
+      pz = p1.z + t * dz;
+    }
+    const ex = x - px, ez = z - pz;
+    const dSq = ex * ex + ez * ez;
+    if (dSq < minSq) minSq = dSq;
+  }
+  return minSq;
+}
+
+/** Distance from (x, z) to the nearest point on an XZ polyline. */
+export function distToPolyline(x, z, points, closed = false) {
+  return Math.sqrt(distSqToPolyline(x, z, points, closed));
+}
+
+/**
  * Ray-casting point-in-polygon test over an XZ point list.
  *
  * The `|| 1e-8` guards a horizontal edge, where zj - zi is zero and the

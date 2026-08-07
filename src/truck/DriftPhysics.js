@@ -1,5 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
 import { tangentBasis } from "./surface-math.js";
+import { smoothstep } from "../math-utils.js";
 
 // ─── Grip / drift ────────────────────────────────────────────────────────────
 //
@@ -106,8 +107,7 @@ export class DriftPhysics {
     const bandScale = 1 - throttleBreak;
     const fadeLow = this.state.driftFadeLowSpeed * bandScale;
     const fadeHigh = Math.max(this.state.driftFadeHighSpeed * bandScale, fadeLow + 0.1);
-    const bandT = Math.min(1, Math.max(0, (tangentSpeed - fadeLow) / (fadeHigh - fadeLow)));
-    const driftability = bandT * bandT * (3 - 2 * bandT);
+    const driftability = smoothstep(fadeLow, fadeHigh, tangentSpeed);
 
     const isReversing = forwardVelocity < 0;
 
@@ -166,8 +166,7 @@ export class DriftPhysics {
       // Grip-zone taper, unclamped (pure below the window, faded out across it).
       g = this.state.gripZoneCorrection + (driftGrip - this.state.gripZoneCorrection) * (slipAngle / driftThresh);
       if (slipAngle > lo) {
-        const t = (slipAngle - lo) / (hi - lo);
-        const w = t * t * (3 - 2 * t);
+        const w = smoothstep(lo, hi, slipAngle);
         const decay = driftGrip * Math.exp(-(slipAngle - driftThresh) * this.state.slipDropoffRate);
         g += (decay - g) * w;
       }

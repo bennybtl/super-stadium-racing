@@ -1,6 +1,4 @@
-function clamp01(value) {
-  return Math.max(0, Math.min(1, value));
-}
+import { clamp01 } from "./math-utils.js";
 
 function stableNoise(x, z) {
   const qx = Math.floor(x);

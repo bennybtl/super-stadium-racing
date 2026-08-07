@@ -1,18 +1,13 @@
 import { CreateAudioEngineAsync } from "@babylonjs/core/AudioV2/webAudio/webAudioEngine";
 import { CreateSoundAsync } from "@babylonjs/core/AudioV2/abstractAudio/audioEngineV2";
 import { loadAudioSettings } from "../settingsStorage.js";
+import { clamp01 } from "../math-utils.js";
 
 const SOUND_CATEGORY = {
   ENGINE: "engine",
   EFFECTS: "effects",
   MUSIC: "music",
 };
-
-function clamp01(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(1, n));
-}
 
 function clampPercent(value) {
   const n = Number(value);

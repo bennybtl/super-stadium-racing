@@ -532,8 +532,12 @@ export class RaceMode extends DriveMode {
     const speedBoostZones = this.getSpeedBoostZones(currentTrack);
     const truckStatusUiIntervalMs = 200;
     const aiGripSampleIntervalMs = 100;
+    // The HUD shows MM:SS.cc, so 20Hz is finer than the readout — pushing a new
+    // value every frame re-renders the Vue component 60×/sec for nothing.
+    const timerUiIntervalMs = 50;
     let truckStatusUiElapsedMs = 0;
     let aiGripSampleElapsedMs = 0;
+    let timerUiElapsedMs = 0;
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
@@ -567,7 +571,11 @@ export class RaceMode extends DriveMode {
       }
 
       if (raceStarted && raceStartTime !== null) {
-        frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartTime));
+        timerUiElapsedMs += dt * 1000;
+        if (timerUiElapsedMs >= timerUiIntervalMs) {
+          timerUiElapsedMs = 0;
+          frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartTime));
+        }
       }
 
       const input = frameProfiler.measure('input', () => (

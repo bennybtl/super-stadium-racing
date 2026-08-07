@@ -4,6 +4,7 @@
 
 import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline } from "./polyline-utils.js";
+import { clamp, lerp, smoothstep } from "./math-utils.js";
 
 const TERRAIN_TYPE_LIST = Object.values(TERRAIN_TYPES);
 const TERRAIN_TYPE_INDEX = new Map(TERRAIN_TYPE_LIST.map((terrainType, index) => [terrainType, index]));
@@ -23,18 +24,9 @@ export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
   seed: 1337,
 });
 
-export function _clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-export function _lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-export function _smoothstep(edge0, edge1, x) {
-  const t = _clamp((x - edge0) / Math.max(1e-6, edge1 - edge0), 0, 1);
-  return t * t * (3 - 2 * t);
-}
+// Scalar math now lives in math-utils.js; re-exported under the historical
+// underscore names so existing terrain code keeps working.
+export { clamp as _clamp, lerp as _lerp, smoothstep as _smoothstep };
 
 function _createSeededRandom(seed = 1337) {
   let state = (seed >>> 0) || 1;
@@ -83,8 +75,8 @@ function _sampleClosedPath(points, spacing) {
     const end = points[(segmentIndex + 1) % points.length];
     const t = segmentLength > 0.001 ? (dist - segmentStart) / segmentLength : 0;
     samples.push({
-      x: _lerp(start.x, end.x, t),
-      z: _lerp(start.z, end.z, t),
+      x: lerp(start.x, end.x, t),
+      z: lerp(start.z, end.z, t),
     });
   }
 
@@ -116,7 +108,7 @@ function _blurAlpha(data, width, height, radius) {
       let totalR = 0, totalG = 0;
       let weight = 0;
       for (let dx = -r; dx <= r; dx++) {
-        const sx = _clamp(x + dx, 0, width - 1);
+        const sx = clamp(x + dx, 0, width - 1);
         const base = (y * width + sx) * 4;
         const w = r + 1 - Math.abs(dx);
         totalR += data[base] * w;
@@ -134,7 +126,7 @@ function _blurAlpha(data, width, height, radius) {
       let totalR = 0, totalG = 0;
       let weight = 0;
       for (let dy = -r; dy <= r; dy++) {
-        const sy = _clamp(y + dy, 0, height - 1);
+        const sy = clamp(y + dy, 0, height - 1);
         const base = (sy * width + x) * 4;
         const w = r + 1 - Math.abs(dy);
         totalR += tmp[base] * w;
@@ -291,7 +283,7 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
   const points = aiPath?.points;
   if (!Array.isArray(points) || points.length < 3) return { width, height, edgeSoftness: 1, stamps };
 
-  const smoothingRadius = _clamp(wear.width * 4.2, 1, 30);
+  const smoothingRadius = clamp(wear.width * 4.2, 1, 30);
   const smoothedPoints = expandPolyline(
     points.map(point => ({ ...point, radius: smoothingRadius })),
     true
@@ -300,7 +292,7 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
 
   const pixelsPerUnitX = width / Math.max(1, worldWidth);
   const pixelsPerUnitZ = height / Math.max(1, worldDepth);
-  const sampleSpacing = _clamp(wear.width * 0.2, 0.5, 1.0);
+  const sampleSpacing = clamp(wear.width * 0.2, 0.5, 1.0);
   const samples = _sampleClosedPath(smoothedPoints, sampleSpacing);
   if (samples.length < 3) return { width, height, edgeSoftness: 1, stamps };
 
@@ -315,8 +307,8 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
   const majorRadiusY = Math.max(6, majorRadiusX * 2.8);
   const minorRadiusX = Math.max(1.8, majorRadiusX * 0.62);
   const minorRadiusY = Math.max(4.5, majorRadiusY * 0.82);
-  const edgeSoftness = _clamp(wear.edgeSoftness, 0.1, 1.5);
-  const secondaryPathStrength = _clamp(wear.secondaryPathStrength ?? 0.62, 0, 3);
+  const edgeSoftness = clamp(wear.edgeSoftness, 0.1, 1.5);
+  const secondaryPathStrength = clamp(wear.secondaryPathStrength ?? 0.62, 0, 3);
 
   const mainLanes = [
     { offset: -mainLaneOffset, alpha: 1.0, radiusX: majorRadiusX, radiusY: majorRadiusY, lighten: false },
@@ -418,10 +410,10 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
     const curveX2 = next.x - curr.x;
     const curveZ2 = next.z - curr.z;
     const cross = curveX1 * curveZ2 - curveZ1 * curveX2;
-    const curvatureBoost = _clamp(Math.abs(cross) / 4, 0, 1);
+    const curvatureBoost = clamp(Math.abs(cross) / 4, 0, 1);
     const alphaBreak = (rng() - 0.5) * wear.alphaBreakup;
-    const alphaBase = wear.intensity * (1 + curvatureBoost * 0.35 + alphaBreak) * _lerp(0.70, 2.0, curvatureBoost);
-    const presenceThreshold = _lerp(0.55, 0.18, curvatureBoost);
+    const alphaBase = wear.intensity * (1 + curvatureBoost * 0.35 + alphaBreak) * lerp(0.70, 2.0, curvatureBoost);
+    const presenceThreshold = lerp(0.55, 0.18, curvatureBoost);
 
     // Steepness fade: sample height along tangent and normal, take max slope angle.
     const PROBE = 1.0; // metres between height probes
@@ -433,10 +425,10 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
       Math.abs(Math.atan2(hFwd - hBack, PROBE * 2) * (180 / Math.PI)),
       Math.abs(Math.atan2(hLeft - hRight, PROBE * 2) * (180 / Math.PI))
     );
-    const steepnessFade = 1 - _smoothstep(20, 28, slopeDeg);
+    const steepnessFade = 1 - smoothstep(20, 28, slopeDeg);
 
     for (const lane of mainLanes) {
-      const lanePresence = _smoothstep(
+      const lanePresence = smoothstep(
         presenceThreshold - 0.08,
         presenceThreshold + 0.08,
         lane.presenceFn(i)
@@ -456,14 +448,14 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
 
       let segmentAlpha = 1;
       if (dist < lane.fade) {
-        segmentAlpha *= _smoothstep(0, lane.fade, dist);
+        segmentAlpha *= smoothstep(0, lane.fade, dist);
       }
       const distToEnd = lane.span - dist;
       if (distToEnd < lane.fade) {
-        segmentAlpha *= _smoothstep(0, lane.fade, distToEnd);
+        segmentAlpha *= smoothstep(0, lane.fade, distToEnd);
       }
 
-      const lanePresence = _smoothstep(
+      const lanePresence = smoothstep(
         presenceThreshold - 0.08,
         presenceThreshold + 0.08,
         lane.presenceFn(i)
@@ -491,10 +483,10 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
 export function forEachStampPixel(stamp, width, height, edgeSoftness, cb) {
   const { sx, sy, tangentX, tangentZ, normalX, normalZ, radiusX, radiusY, alpha } = stamp;
   const pad = Math.ceil(Math.max(radiusX, radiusY) + 2);
-  const minX = _clamp(Math.floor(sx - pad), 0, width - 1);
-  const maxX = _clamp(Math.ceil(sx + pad), 0, width - 1);
-  const minY = _clamp(Math.floor(sy - pad), 0, height - 1);
-  const maxY = _clamp(Math.ceil(sy + pad), 0, height - 1);
+  const minX = clamp(Math.floor(sx - pad), 0, width - 1);
+  const maxX = clamp(Math.ceil(sx + pad), 0, width - 1);
+  const minY = clamp(Math.floor(sy - pad), 0, height - 1);
+  const maxY = clamp(Math.ceil(sy + pad), 0, height - 1);
 
   for (let y = minY; y <= maxY; y++) {
     for (let x = minX; x <= maxX; x++) {
@@ -508,8 +500,8 @@ export function forEachStampPixel(stamp, width, height, edgeSoftness, cb) {
       );
       if (ellipse >= 1) continue;
 
-      const falloff = 1 - _smoothstep(1 - edgeSoftness, 1, ellipse);
-      const weight = _clamp(alpha * falloff, 0, 1);
+      const falloff = 1 - smoothstep(1 - edgeSoftness, 1, ellipse);
+      const weight = clamp(alpha * falloff, 0, 1);
       const acrossNorm = localY / Math.max(1e-6, radiusX);
       cb(x, y, weight, acrossNorm);
     }

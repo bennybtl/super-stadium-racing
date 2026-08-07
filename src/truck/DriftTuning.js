@@ -12,9 +12,9 @@
 // All four at their neutral values (0.5 / 0.5 / 0 / 0.5) reproduce the historical
 // runtime defaults closely, so an undefined `handling` block yields sane mid feel.
 
-const lerp = (a, b, t) => a + (b - a) * t;
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const clampBias = (v) => Math.max(-1, Math.min(1, v));
+import { clamp, clamp01, lerp } from "../math-utils.js";
+
+const clampBias = (v) => clamp(v, -1, 1);
 
 // Retuned July 2026 after the Plan A continuity pass: the old defaults relied on
 // noise (3D-inflated slip readings over bumps, groundedness flicker) to tip the

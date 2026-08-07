@@ -1,6 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { Obstacle, normalizeObstacleType } from "../objects/Obstacle.js";
 import { TerrainQuery } from "./TerrainQuery.js";
+import { TRUCK_RADIUS } from "../constants.js";
 /**
  * ObstacleManager — creates and manages movable obstacles on the track.
  *
@@ -47,16 +48,24 @@ export class ObstacleManager {
     for (const stack of this._stacks) {
       const sp = stack.position;
 
+      // Cheap XZ reject before intersectsMesh, which refreshes world bounding
+      // info on both meshes. Nearly every pair fails this and costs 3 multiplies.
+      const rejectDist = (stack.radius ?? 1) + TRUCK_RADIUS;
+      const rejectDistSq = rejectDist * rejectDist;
+
       for (const truckData of trucks) {
         const truck = truckData.truck ?? truckData;
         if (!truck.mesh || !truck.state) continue;
 
-        if (!stack.body.intersectsMesh(truck.mesh, false)) continue;
-
         const tp = truck.mesh.position;
         const dx = sp.x - tp.x;
         const dz = sp.z - tp.z;
-        const dist = Math.sqrt(dx * dx + dz * dz);
+        const distSq = dx * dx + dz * dz;
+        if (distSq > rejectDistSq) continue;
+
+        if (!stack.body.intersectsMesh(truck.mesh, false)) continue;
+
+        const dist = Math.sqrt(distSq);
         if (dist < 0.01) continue;
 
         // Unit vector from truck → stack

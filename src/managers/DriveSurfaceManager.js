@@ -356,34 +356,18 @@ export class DriveSurfaceManager {
     return normal.y >= minNormalY;
   }
 
+  /**
+   * `transitionLock` is the one accepted shape: `{ mode?, surfaceId?, layer?,
+   * maxDistanceDelta? }`. Absent or without a surface/layer to prefer, continuity
+   * is off and the nearest eligible hit wins.
+   */
   _normalizeContinuityOptions(options = {}) {
     const transitionLock = options.transitionLock ?? null;
-    if (transitionLock?.enabled === false) {
-      return {
-        mode: "off",
-        preferredSurfaceId: null,
-        preferredLayer: null,
-      };
-    }
 
-    const mode =
-      transitionLock?.mode ??
-      options.transitionLockMode ??
-      (transitionLock?.strict === true ? "strict" : "prefer");
-    const preferredSurfaceId =
-      transitionLock?.surfaceId ??
-      options.preferredSurfaceId ??
-      options.lockSurfaceId ??
-      null;
-    const preferredLayer =
-      transitionLock?.layer ??
-      options.preferredLayer ??
-      options.lockLayer ??
-      null;
-    const maxDistanceDelta =
-      transitionLock?.maxDistanceDelta ??
-      options.transitionLockMaxDistanceDelta ??
-      0.75;
+    const mode = transitionLock?.mode ?? "prefer";
+    const preferredSurfaceId = transitionLock?.surfaceId ?? null;
+    const preferredLayer = transitionLock?.layer ?? null;
+    const maxDistanceDelta = transitionLock?.maxDistanceDelta ?? 0.75;
 
     const hasSurface = Number.isFinite(preferredSurfaceId);
     const hasLayer = Number.isFinite(preferredLayer);
