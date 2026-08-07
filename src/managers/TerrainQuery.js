@@ -24,6 +24,14 @@ import { Vector3 } from "@babylonjs/core";
  *
  * All raycasting is delegated to the scene's DriveSurfaceManager; without one
  * every query resolves to null/fallback.
+ *
+ * MISSES ARE EXPLICIT. `castDown`, `tryHeightAt` and `tryHeightAtFast` return
+ * null when no drivable surface exists at the point — which is a different
+ * statement from "the ground is at y = 0". This matters because a raycast only
+ * finds *registered surface meshes*, so it legitimately misses open terrain that
+ * the analytic heightfield (`track.getHeightAt`) knows about. The `heightAt`
+ * wrapper collapses that distinction into a caller-supplied number; reach for it
+ * only when its fallback really is an acceptable answer.
  */
 
 // Distance between opposing cross-pattern probes (metres).
@@ -146,25 +154,43 @@ export class TerrainQuery {
   }
 
   /**
-   * Convenience: return just the floor Y, or `fallback` if no terrain is hit.
+   * Height at (x, z), or `null` when there is no drivable surface there.
    *
-   * @param {number} x
-   * @param {number} z
-   * @param {number} fromY
-   * @param {number} fallback  Value returned when no hit is found.
+   * This is the honest primitive: it distinguishes "no surface here" from "the
+   * surface is at y = 0". Prefer it wherever the caller can do something better
+   * on a miss than pretend the ground is at sea level — the analytic heightfield
+   * (`track.getHeightAt`) is usually the right second choice, since it covers
+   * open terrain that carries no registered surface mesh.
+   *
+   * @returns {number|null}
+   */
+  tryHeightAt(x, z, fromY = 500, options = {}) {
+    return this.castDown(x, z, fromY, options)?.y ?? null;
+  }
+
+  /**
+   * Convenience wrapper over {@link tryHeightAt} for callers that genuinely have
+   * a sensible default. `fallback` is returned on a miss and is indistinguishable
+   * from a real hit at that height, so a caller passing the default 0 is
+   * asserting "sea level is a fine answer here" — if that isn't true, use
+   * `tryHeightAt` and decide.
+   *
+   * @param {number} fallback  Value returned when no surface is found.
    * @returns {number}
    */
   heightAt(x, z, fromY = 500, fallback = 0, options = {}) {
-    return this.castDown(x, z, fromY, options)?.y ?? fallback;
+    return this.tryHeightAt(x, z, fromY, options) ?? fallback;
   }
 
   /**
    * Fast height-only query for high-frequency callers (e.g. wheel visuals).
    * Single surface query, without the normal-smoothing probes castDown runs.
+   *
+   * @returns {number|null} null when no drivable surface exists at (x, z).
    */
-  heightAtFast(x, z, fromY = 500, fallback = 0, options = {}) {
+  tryHeightAtFast(x, z, fromY = 500, options = {}) {
     this._lastResolvedSurface = null;
-    if (!this._driveSurfaceManager?.queryDriveSurfaceAt) return fallback;
+    if (!this._driveSurfaceManager?.queryDriveSurfaceAt) return null;
 
     const resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
       role: "drive",
@@ -176,11 +202,12 @@ export class TerrainQuery {
       maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
     });
     const hit = resolved?.pickInfo ?? null;
-    if (!hit?.hit || !hit.pickedPoint) return fallback;
+    if (!hit?.hit || !hit.pickedPoint) return null;
 
     this._lastResolvedSurface = this._resolveSurfaceInfo(hit);
     return hit.pickedPoint.y;
   }
+
 
   // ---------------------------------------------------------------------------
   // Private helpers

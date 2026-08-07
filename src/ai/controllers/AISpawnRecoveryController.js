@@ -20,6 +20,21 @@ export class AISpawnRecoveryController {
     this.topologySearchRadius = config.topologySearchRadius ?? DEFAULT_SPAWN_RECOVERY_CONFIG.topologySearchRadius;
   }
 
+  /**
+   * Ground height to respawn onto at (x, z).
+   *
+   * Raycast first: AI recovery targets path waypoints and topology connectors,
+   * which can sit on bridge decks, and only the raycast sees those. But a miss
+   * must not read as "sea level" — it means no registered surface covers the
+   * point, and the analytic heightfield is the right answer there.
+   */
+  _respawnGroundY(x, z) {
+    const d = this.driver;
+    const y = d._terrainQuery?.tryHeightAt(x, z);
+    if (y != null) return y;
+    return d.track?.getHeightAt(x, z) ?? 0;
+  }
+
   snapPathIndexToPosition(pos) {
     if (!this.driver.path || this.driver.path.length === 0) return;
 
@@ -80,7 +95,7 @@ export class AISpawnRecoveryController {
 
     d.truckMesh.position.x = spawnPos.x;
     d.truckMesh.position.z = spawnPos.z;
-    d.truckMesh.position.y = d._terrainQuery.heightAt(spawnPos.x, spawnPos.z) + 0.6;
+    d.truckMesh.position.y = this._respawnGroundY(spawnPos.x, spawnPos.z) + 0.6;
 
     const dx = targetWaypoint.x - spawnPos.x;
     const dz = targetWaypoint.z - spawnPos.z;
@@ -121,7 +136,7 @@ export class AISpawnRecoveryController {
 
     d.truckMesh.position.x = spawnPos.x;
     d.truckMesh.position.z = spawnPos.z;
-    d.truckMesh.position.y = d._terrainQuery.heightAt(spawnPos.x, spawnPos.z) + 0.6;
+    d.truckMesh.position.y = this._respawnGroundY(spawnPos.x, spawnPos.z) + 0.6;
 
     // Face straight through the gate (entry → exit direction).
     const targetHeading = Math.atan2(fwdX, fwdZ);

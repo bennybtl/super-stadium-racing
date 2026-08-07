@@ -446,32 +446,27 @@ export class TerrainPhysics {
    * Fast height-only surface sampler for high-frequency visual systems.
    */
   sampleSurfaceYFastAt(x, z, fromY, track, fallback = 0) {
-    if (this._terrainQuery?.heightAtFast) {
-      return this._terrainQuery.heightAtFast(
-        x,
-        z,
-        fromY,
-        fallback,
-        this._buildSurfaceContinuityOptions()
-      );
-    }
     return this._sampleFloorYAt(x, z, fromY, track, fallback);
   }
 
   /**
-   * Resolve drivable floor height at XZ using TerrainQuery when available.
-   * Falls back to analytical terrain + bridge-floor logic.
+   * Resolve drivable floor height at XZ, preferring the raycast (which sees
+   * bridge decks and other layered surfaces) and falling back to the analytic
+   * heightfield where no registered surface covers the point.
+   *
+   * The fallback is the point of this function: raycasts only find registered
+   * surface meshes, so open terrain misses. Until TerrainQuery could report a
+   * miss, that case silently returned `fallback` and the analytic path below was
+   * reachable only when there was no terrainQuery at all — i.e. never.
    */
   _sampleFloorYAt(x, z, fromY, track, fallback = 0) {
-    if (this._terrainQuery) {
-      return this._terrainQuery.heightAtFast(
-        x,
-        z,
-        fromY,
-        fallback,
-        this._buildSurfaceContinuityOptions()
-      );
-    }
+    const y = this._terrainQuery?.tryHeightAtFast(
+      x,
+      z,
+      fromY,
+      this._buildSurfaceContinuityOptions()
+    );
+    if (y != null) return y;
 
     if (!track) return fallback;
     return track.getHeightAt(x, z);
@@ -574,16 +569,15 @@ export class TerrainPhysics {
     };
   }
 
+  // Deliberately does NOT fall back to the analytic heightfield: these are the
+  // wheel probes either side of the centre sample, used to keep the truck level
+  // across a bridge-deck edge. A probe that misses the deck should inherit the
+  // centre height (what callers pass as `fallback`), not drop to the ground
+  // under the bridge.
   _sampleFastSurface(x, z, fromY, fallback, continuityOptions) {
-    const y = this._terrainQuery.heightAtFast(
-      x,
-      z,
-      fromY,
-      fallback,
-      continuityOptions
-    );
+    const y = this._terrainQuery.tryHeightAtFast(x, z, fromY, continuityOptions);
     return {
-      y,
+      y: y ?? fallback,
       surface: this._terrainQuery.getLastResolvedSurface?.() ?? null,
     };
   }

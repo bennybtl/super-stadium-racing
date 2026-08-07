@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "check:terrain": "node scripts/check-terrain.mjs",
     "check:panels": "node scripts/check-panel-bindings.mjs",
+    "check:surface": "node scripts/check-surface.mjs",
+    "check:walls": "node scripts/check-walls.mjs",
     "check:water": "node scripts/check-water.mjs"
   },
   "dependencies": {
