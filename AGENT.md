@@ -105,8 +105,7 @@ offroad/
     │   ├── Pickup.js                # Item collectibles
     │   ├── PolyCurb.js              # Polyline-based curb
     │   ├── PolyWall.js              # Polyline-based wall mesh
-    │   ├── TrackSign.js             # Track name sign with DynamicTexture
-    │   └── WallSegment.js           # Single wall segment
+    │   └── TrackSign.js             # Track name sign with DynamicTexture
     ├── truck/
     │   ├── index.js                 # Re-exports Truck class
     │   ├── truck.js                 # Truck class — coordinates all subsystems

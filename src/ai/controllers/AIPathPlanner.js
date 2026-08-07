@@ -13,8 +13,8 @@ export const DEFAULT_PATH_CONFIG = {
   minSpeedFactor: 9,
   maxDecel: 22,
   curveWindowUnits: 9,
-  // Lateral grip budget (world units/s² per unit of skill maxSpeed). Corner
-  // target speed is v = maxSpeed * sqrt(grip * radius): the fastest the truck
+  // Lateral grip budget (world units/s² per unit of skill pace). Corner
+  // target speed is v = pace * sqrt(grip * radius): the fastest the truck
   // can hold that radius before sliding wide. But holdable grip isn't constant —
   // a sharp corner taken off a straight (turn-in transient, weight transfer)
   // holds less than a fast sweeper. So the budget tapers from `lateralAccel` on
@@ -90,8 +90,8 @@ export class AIPathPlanner {
     const authorNodes = aiPathFeature?.points?.length >= 2 ? aiPathFeature.points : null;
 
     const STEP = this.waypointStep;
-    const BASE_SPEED = this.baseSpeedFactor * d.maxSpeed;
-    const MIN_SPEED = this.minSpeedFactor * d.maxSpeed;
+    const BASE_SPEED = this.baseSpeedFactor * d.pace;
+    const MIN_SPEED = this.minSpeedFactor * d.pace;
     const MAX_DECEL = this.maxDecel;
     const CURVE_WINDOW_UNITS = this.curveWindowUnits;
     const LAT_GENTLE = this.lateralAccel;
@@ -219,7 +219,7 @@ export class AIPathPlanner {
     // Corner target speed from a lateral-grip limit: the fastest the truck can
     // hold this radius without sliding wide. We measure the path's turn angle
     // over a fixed-distance window (independent of how densely the corner was
-    // authored) and convert it to a radius, then apply v = maxSpeed * sqrt(
+    // authored) and convert it to a radius, then apply v = pace * sqrt(
     // grip * radius). The grip budget itself tapers from LAT_GENTLE (sweepers)
     // down to LAT_SHARP (hairpins) by the turn angle — but by the angle over
     // BOTH a local window and a wider "sweep" window, taking whichever reads
@@ -266,7 +266,7 @@ export class AIPathPlanner {
           }
           const sharpness = Math.max(localSharp, sweepSharp);
           const grip = LAT_GENTLE + (LAT_SHARP - LAT_GENTLE) * sharpness;
-          speed = d.maxSpeed * Math.sqrt(grip * radius);
+          speed = d.pace * Math.sqrt(grip * radius);
         }
       }
       curr.speed = Math.max(MIN_SPEED, Math.min(BASE_SPEED, speed));

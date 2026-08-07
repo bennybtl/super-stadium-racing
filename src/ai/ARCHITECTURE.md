@@ -51,8 +51,12 @@
 
 `AIDriver` constructor still accepts `skillConfig`, now including domains:
 
+- Vehicle stats:
+  - `stats` — multipliers applied to the truck's own stats (`maxSpeed`, `acceleration`,
+    `grip`, `turnSpeed`, …) in `setTruck()`, on top of the vehicle definition and upgrades.
+    A skill level modifies the base vehicle rather than replacing its stats.
 - Base handling:
-  - `lookAheadDistance`, `maxSpeed`, `steeringPrecision`
+  - `lookAheadDistance`, `pace` (how hard the driver pushes — scales path target speeds), `steeringPrecision`
 - Steering:
   - `avoidanceRadius`, `avoidanceMaxPush`, `avoidanceIgnoreBehind`, `steeringSmooth`, `steerGain`, `steeringThreshold`
 - Throttle:

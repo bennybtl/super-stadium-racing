@@ -13,8 +13,10 @@ import { AIDebugRenderer } from "./controllers/AIDebugRenderer.js";
  * AIDriver - Autonomous driver that navigates through checkpoints
  * 
  * Skill level parameters:
+ * - stats: Multipliers on the truck's base vehicle stats (see setTruck). Every
+ *   AI starts from whatever vehicle (and upgrades) it was given; skill scales it.
  * - lookAheadDistance: How far ahead the AI looks (higher = better planning)
- * - maxSpeed: Speed multiplier (0-1, higher = faster driving)
+ * - pace: How hard the driver pushes — scales path target speeds (not a vehicle stat)
  * - steeringPrecision: How accurately the AI steers (0-1, higher = better control)
  * - steering* params: Avoidance and turn smoothing behavior
  * - throttle* params: Speed-target lookahead and tolerance
@@ -30,8 +32,9 @@ export class AIDriver {
     
     // Skill-based parameters (can be customized per AI)
     const {
+      stats = {},              // Multipliers on the truck's base vehicle stats
       lookAheadDistance = 20,  // Good: 20, OK: 15, Bad: 12
-      maxSpeed = 0.8,          // Good: 1.0, OK: 0.8, Bad: 0.7
+      pace = 0.8,              // Good: 1.0, OK: 0.8, Bad: 0.7
       steeringPrecision = 1.0, // Good: 1.0, OK: 0.85, Bad: 0.7
       // Boost personality tuning (override per AI for different nitro behavior)
       boostMinSpeed = DEFAULT_BOOST_CONFIG.minSpeed,
@@ -99,7 +102,11 @@ export class AIDriver {
     // Steering parameters (skill-based)
     this.lookAheadDistance = lookAheadDistance;
     this.steeringStrength = steeringPrecision;
-    this.maxSpeed = maxSpeed;
+    this.pace = pace;
+
+    // Vehicle-stat multipliers, applied to the truck's stats in setTruck().
+    this.statMultipliers = stats;
+    this._statsApplied = false;
 
     this.truckMesh = null; // Will be set after truck creation
     
@@ -210,6 +217,24 @@ export class AIDriver {
   setTruck(truck) {
     this.truck = truck;
     this.truckMesh = truck.mesh;
+    this._applyStatMultipliers(truck);
+  }
+
+  /**
+   * Scale the truck's base vehicle stats by this driver's skill multipliers.
+   * A skill level is therefore a modifier on whatever vehicle (and upgrades)
+   * the AI was handed, not a fixed stat block — a fast truck driven badly is
+   * still fast. Runs once per driver; unknown or non-numeric keys are ignored.
+   */
+  _applyStatMultipliers(truck) {
+    const state = truck?.state;
+    if (!state || this._statsApplied) return;
+    this._statsApplied = true;
+
+    for (const [key, multiplier] of Object.entries(this.statMultipliers)) {
+      if (typeof multiplier !== 'number' || typeof state[key] !== 'number') continue;
+      state[key] *= multiplier;
+    }
   }
 
   /**
@@ -485,12 +510,23 @@ export class AIDriver {
   }
 }
 
-// Static factory methods for creating AI drivers with preset skill levels
+// Static factory methods for creating AI drivers with preset skill levels.
+//
+// `stats` entries are multipliers on the truck's own vehicle stats (after the
+// vehicle definition and any upgrades are applied), so every skill level starts
+// from the base vehicle and modifies it — `ok` is the vehicle as authored.
+// Everything outside `stats` tunes driver behaviour, not the machine.
 export const AI_SKILL_PRESETS = {
   good: {
+    stats: {
+      maxSpeed: 1.06,
+      acceleration: 1.08,
+      grip: 1.06,
+      turnSpeed: 1.05,
+    },
     lookAheadDistance: 24,
-    maxSpeed: 1.15,
-    steeringPrecision: 1.1,
+    pace: 1.35,
+    steeringPrecision: 1.3,
     boostBaseChance: 0.18,
     boostBehindWeight: 0.42,
     boostStockWeight: 0.32,
@@ -498,9 +534,15 @@ export const AI_SKILL_PRESETS = {
     boostStraightMaxAngle: Math.PI / 10.5,
   },
   ok: {
+    stats: {
+      maxSpeed: 1.0,
+      acceleration: 1.0,
+      grip: 1.0,
+      turnSpeed: 1.0,
+    },
     lookAheadDistance: 21,
-    maxSpeed: 1.05,
-    steeringPrecision: 0.98,
+    pace: 1.25,
+    steeringPrecision: 1.2,
     boostBaseChance: 0.16,
     boostBehindWeight: 0.38,
     boostStockWeight: 0.28,
@@ -508,9 +550,15 @@ export const AI_SKILL_PRESETS = {
     boostStraightMaxAngle: Math.PI / 10.5,
   },
   bad: {
+    stats: {
+      maxSpeed: 0.94,
+      acceleration: 0.92,
+      grip: 0.95,
+      turnSpeed: 0.97,
+    },
     lookAheadDistance: 19,
-    maxSpeed: 1.0,
-    steeringPrecision: 0.93,
+    pace: 1.15,
+    steeringPrecision: 1.1,
     boostBaseChance: 0.14,
     boostBehindWeight: 0.35,
     boostStockWeight: 0.24,

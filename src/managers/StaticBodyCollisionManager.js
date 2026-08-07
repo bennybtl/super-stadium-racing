@@ -49,7 +49,8 @@ export class StaticBodyCollisionManager {
   _getColliders() {
     if (this._colliders.length === 0) {
       this._colliders = this.scene.meshes.filter(mesh =>
-        mesh?.metadata?.truckCollider === true &&
+        (mesh?.metadata?.truckCollider === true ||
+          mesh?.metadata?.polylineCollider != null) &&
         !mesh.isDisposed() &&
         mesh.isEnabled()
       );
@@ -88,7 +89,11 @@ export class StaticBodyCollisionManager {
           );
         }
         if (!intersectsSweep) continue;
-        this._resolveTruckVsMesh(truck, prevPos, collider, dt, frame);
+        if (collider.metadata?.polylineCollider) {
+          this._resolveTruckVsPolyline(truck, prevPos, collider, dt, frame);
+        } else {
+          this._resolveTruckVsMesh(truck, prevPos, collider, dt, frame);
+        }
       }
 
       this._prevPositions.set(id, truck.mesh.position.clone());
@@ -274,46 +279,177 @@ export class StaticBodyCollisionManager {
 
     const worldNormal = Vector3.TransformNormal(localNormal, world).normalize();
 
+    // A hit resolved along an elongated collider's long horizontal axis is a
+    // seam/end artifact of sliding past a wall, not a real face impact — never
+    // bounce off it, no matter how aligned the velocity looks.
+    const glancingLengthHit = isElongated && axis === longHorizAxis;
+    const applyFriction = mesh.metadata?.truckColliderApplyFriction !== false;
+    this._applyContactResponse(truck, worldNormal, dt, frame, {
+      allowBounce: !glancingLengthHit,
+      retain: applyFriction
+        ? (mesh.metadata?.truckColliderFriction ?? DEFAULT_FRICTION)
+        : null,
+    });
+  }
+
+  /**
+   * Shared velocity response for a resolved contact: cancels the into-surface
+   * component, bounces + locks controls on head-on hits, and scrubs the
+   * along-surface component by `retain` (per-60fps-frame factor; null = none).
+   */
+  _applyContactResponse(truck, worldNormal, dt, frame, { allowBounce, retain }) {
     const vel = truck.state.velocity;
     const velDot = vel.x * worldNormal.x + vel.y * worldNormal.y + vel.z * worldNormal.z;
-    if (velDot < 0) {
-      // A hit resolved along an elongated collider's long horizontal axis is a
-      // seam/end artifact of sliding past a wall, not a real face impact — never
-      // bounce off it, no matter how aligned the velocity looks.
-      const glancingLengthHit = isElongated && axis === longHorizAxis;
+    if (velDot >= 0) return;
 
-      // Check if collision is head-on (within ±30 degrees of perpendicular)
-      const velMagnitude = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
-      const isHeadOn = !glancingLengthHit && velMagnitude > 0 && Math.abs(velDot) / velMagnitude >= BOUNCE_ANGLE_THRESHOLD;
-      
-      // Apply bounce coefficient only on head-on collisions, otherwise use 1.0 (no bounce)
-      const bounceCoeff = isHeadOn ? BOUNCE_COEFFICIENT : 1.0;
-      vel.x -= worldNormal.x * velDot * bounceCoeff;
-      vel.y -= worldNormal.y * velDot * bounceCoeff;
-      vel.z -= worldNormal.z * velDot * bounceCoeff;
+    // Check if collision is head-on (within ±30 degrees of perpendicular)
+    const velMagnitude = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
+    const isHeadOn = allowBounce && velMagnitude > 0 && Math.abs(velDot) / velMagnitude >= BOUNCE_ANGLE_THRESHOLD;
 
-      // If head-on, suppress forward drive force AND steering for 500ms so neither
-      // overrides the bounce — the truck rebounds straight back along the normal.
-      if (isHeadOn && truck.state) {
-        // Set cooldown timestamps; drive + steering logic check these and skip while active.
-        truck.state.noDriveUntil = Date.now() + 500;
-        truck.state.noSteerUntil = Date.now() + 500;
-      }
+    // Apply bounce coefficient only on head-on collisions, otherwise use 1.0 (no bounce)
+    const bounceCoeff = isHeadOn ? BOUNCE_COEFFICIENT : 1.0;
+    vel.x -= worldNormal.x * velDot * bounceCoeff;
+    vel.y -= worldNormal.y * velDot * bounceCoeff;
+    vel.z -= worldNormal.z * velDot * bounceCoeff;
 
-      const applyFriction = mesh.metadata?.truckColliderApplyFriction !== false;
-      if (applyFriction && !frame.frictionApplied && Math.abs(worldNormal.y) < 0.2) {
-        // Scrub only the along-wall component — the into-wall component was just
-        // resolved above, and scaling the whole vector killed forward speed while
-        // merely grazing. Exponent makes the decay frame-rate independent.
-        const retain = mesh.metadata?.truckColliderFriction ?? DEFAULT_FRICTION;
-        const scale = Math.pow(retain, Math.max(0, dt) * FRICTION_REF_FPS);
-        const vn = vel.x * worldNormal.x + vel.y * worldNormal.y + vel.z * worldNormal.z;
-        vel.x = worldNormal.x * vn + (vel.x - worldNormal.x * vn) * scale;
-        vel.y = worldNormal.y * vn + (vel.y - worldNormal.y * vn) * scale;
-        vel.z = worldNormal.z * vn + (vel.z - worldNormal.z * vn) * scale;
-        frame.frictionApplied = true;
-      }
+    // If head-on, suppress forward drive force AND steering for 500ms so neither
+    // overrides the bounce — the truck rebounds straight back along the normal.
+    if (isHeadOn && truck.state) {
+      // Set cooldown timestamps; drive + steering logic check these and skip while active.
+      truck.state.noDriveUntil = Date.now() + 500;
+      truck.state.noSteerUntil = Date.now() + 500;
     }
+
+    if (retain != null && !frame.frictionApplied && Math.abs(worldNormal.y) < 0.2) {
+      // Scrub only the along-wall component — the into-wall component was just
+      // resolved above, and scaling the whole vector killed forward speed while
+      // merely grazing. Exponent makes the decay frame-rate independent.
+      const scale = Math.pow(retain, Math.max(0, dt) * FRICTION_REF_FPS);
+      const vn = vel.x * worldNormal.x + vel.y * worldNormal.y + vel.z * worldNormal.z;
+      vel.x = worldNormal.x * vn + (vel.x - worldNormal.x * vn) * scale;
+      vel.y = worldNormal.y * vn + (vel.y - worldNormal.y * vn) * scale;
+      vel.z = worldNormal.z * vn + (vel.z - worldNormal.z * vn) * scale;
+      frame.frictionApplied = true;
+    }
+  }
+
+  /**
+   * Analytic truck-vs-polyline-wall resolver (poly walls). The wall is treated
+   * as its true shape — a thick centerline ribbon — instead of a chain of box
+   * segments, so there are no internal seam/end faces to ghost-hit while
+   * driving alongside it. The contact normal is always the real face normal
+   * (perpendicular to the centerline), continuous along curves; open ends
+   * resolve radially from the endpoint (rounded cap).
+   *
+   * Collider data (mesh.metadata.polylineCollider) comes from the same
+   * resampled centerline as the visible ribbon:
+   *   { xs, zs, topY, botY, halfThick, closed, retain }
+   */
+  _resolveTruckVsPolyline(truck, prevPos, mesh, dt, frame) {
+    const c = mesh.metadata.polylineCollider;
+    const xs = c.xs, zs = c.zs;
+    const n = xs.length;
+    if (n < 2) return;
+
+    const pos = truck.mesh.position;
+    const halfHeight = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
+
+    const hit = this._closestOnPolyline(xs, zs, c.closed, pos.x, pos.z);
+    if (!hit) return;
+    const { cx, cz, i, j, t } = hit;
+
+    // Vertical gate: interpolated wall extents at the closest point.
+    const top = c.topY[i] + (c.topY[j] - c.topY[i]) * t;
+    const bot = c.botY[i] + (c.botY[j] - c.botY[i]) * t;
+    const truckBot = pos.y - halfHeight;
+    if (truckBot >= top || pos.y + halfHeight <= bot) return;
+
+    // Outward direction from centerline to truck; if the truck center sits
+    // exactly on the centerline, fall back to the segment's left normal.
+    let dx = pos.x - cx, dz = pos.z - cz;
+    const d = Math.hypot(dx, dz);
+    const segLen = Math.hypot(xs[j] - xs[i], zs[j] - zs[i]) || 1;
+    const lnx = -(zs[j] - zs[i]) / segLen; // segment left normal
+    const lnz = (xs[j] - xs[i]) / segLen;
+    if (d < 1e-6) {
+      dx = lnx;
+      dz = lnz;
+    } else {
+      dx /= d;
+      dz /= d;
+    }
+
+    // Tunneling guard: did the truck cross to the other side since last frame?
+    // Only meaningful when the closest point is interior to the polyline — at a
+    // clamped open end the "side" is measured against the last segment's
+    // extended line, and legitimately driving around the tip flips it.
+    const atOpenEnd =
+      !c.closed && ((i === 0 && t <= 0) || (j === n - 1 && t >= 1));
+    const prevSide = Math.sign((prevPos.x - cx) * lnx + (prevPos.z - cz) * lnz);
+    const curSide = Math.sign(dx * lnx + dz * lnz);
+    const crossed =
+      !atOpenEnd && prevSide !== 0 && curSide !== 0 && prevSide !== curSide;
+    if (crossed) {
+      // Resolve back to the side the truck came from.
+      dx = lnx * prevSide;
+      dz = lnz * prevSide;
+    }
+
+    const reach = c.halfThick + this._truckSupportXZ(truck, dx, dz);
+    const penLateral = crossed ? reach + d : reach - d;
+    if (penLateral <= 0) return;
+
+    // Landing on top beats lateral ejection when it's the smaller correction
+    // (preserves driving onto/along a wall top, as the old box chain allowed).
+    const penTop = top - truckBot;
+    if (!crossed && penTop < penLateral) {
+      pos.y = top + halfHeight + SKIN;
+      this._applyContactResponse(truck, new Vector3(0, 1, 0), dt, frame, {
+        allowBounce: true,
+        retain: null,
+      });
+      return;
+    }
+
+    pos.x = cx + dx * (reach + SKIN);
+    pos.z = cz + dz * (reach + SKIN);
+    this._applyContactResponse(truck, new Vector3(dx, 0, dz), dt, frame, {
+      allowBounce: true,
+      retain: c.retain ?? DEFAULT_FRICTION,
+    });
+  }
+
+  /** Closest point on a (possibly closed) XZ polyline to (px, pz). */
+  _closestOnPolyline(xs, zs, closed, px, pz) {
+    const n = xs.length;
+    const segCount = closed ? n : n - 1;
+    let best = null;
+    for (let i = 0; i < segCount; i++) {
+      const j = (i + 1) % n;
+      const abx = xs[j] - xs[i];
+      const abz = zs[j] - zs[i];
+      const lenSq = abx * abx + abz * abz;
+      let t = lenSq > 1e-12 ? ((px - xs[i]) * abx + (pz - zs[i]) * abz) / lenSq : 0;
+      t = Math.max(0, Math.min(1, t));
+      const cx = xs[i] + abx * t;
+      const cz = zs[i] + abz * t;
+      const dSq = (px - cx) * (px - cx) + (pz - cz) * (pz - cz);
+      if (!best || dSq < best.distSq) best = { cx, cz, i, j, t, distSq: dSq };
+    }
+    return best;
+  }
+
+  /** Truck OBB half-extent projected onto a horizontal unit direction. */
+  _truckSupportXZ(truck, nx, nz) {
+    const halfDepth = (truck.depth ?? TRUCK_DEPTH) / 2;
+    const halfWidth = (truck.width ?? TRUCK_WIDTH) / 2;
+    const h = truck.state.heading;
+    const fwdX = Math.sin(h), fwdZ = Math.cos(h);
+    const rightX = Math.cos(h), rightZ = -Math.sin(h);
+    return (
+      halfDepth * Math.abs(fwdX * nx + fwdZ * nz) +
+      halfWidth * Math.abs(rightX * nx + rightZ * nz)
+    );
   }
 
   /**

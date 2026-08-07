@@ -1,6 +1,12 @@
-import { Mesh, VertexData, StandardMaterial, Color3 } from "@babylonjs/core";
+import {
+  Mesh,
+  VertexData,
+  StandardMaterial,
+  Color3,
+  PhysicsAggregate,
+  PhysicsShapeType,
+} from "@babylonjs/core";
 import { expandPolyline } from "../polyline-utils.js";
-import { WallSegment } from "./WallSegment.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { resolveStripeColors } from "./stripeColors.js";
 
@@ -10,11 +16,12 @@ const STRIPE_LEN = 2;
 /**
  * PolyCurb — builds terrain-following curb segments along a polyline.
  *
- * Collision is a chain of per-segment box colliders (WallSegment in
- * collisionOnly mode). The visible curb is a single continuous ribbon mesh
- * with vertex-colour stripes matching the kerb strips seen at the edge of
- * real race tracks. Segments are deliberately excluded from WallManager so
- * trucks can drive over curbs without being blocked.
+ * The visible curb is a single continuous ribbon mesh with vertex-colour
+ * stripes matching the kerb strips seen at the edge of real race tracks.
+ * Trucks drive over curbs freely (no truck collider); the ribbon carries a
+ * static Havok MESH aggregate so dynamic obstacles still collide with it.
+ * `this.collider` exposes the centerline so AI pathing treats curbs as
+ * track limits.
  *
  * Feature shape:
  * {
@@ -27,8 +34,9 @@ const STRIPE_LEN = 2;
  */
 export class PolyCurb {
   constructor(feature, track, scene, shadows) {
-    this.segments = [];
     this.ribbon = null;
+    this.collider = null; // centerline data for AI pathing (no truck collision)
+    this._physics = null;
     this._feature = feature;
     this._terrainQuery = new TerrainQuery(scene);
     this._useBridgeSurfaceSampling = this._featureUsesBridgeSurface(feature);
@@ -38,87 +46,35 @@ export class PolyCurb {
     if (!rawPoints || rawPoints.length < 2) return;
 
     const points = expandPolyline(rawPoints, closed);
-    const numPoints = points.length;
-    const edgeCount = closed ? numPoints : numPoints - 1;
 
-    // ── 1) Invisible collider chain ─────────────────────────────────────────
-    for (let i = 0; i < edgeCount; i++) {
-      const p0 = points[i];
-      const p1 = points[(i + 1) % numPoints];
-
-      const dx = p1.x - p0.x;
-      const dz = p1.z - p0.z;
-      const length = Math.sqrt(dx * dx + dz * dz);
-      if (length < 0.01) continue;
-
-      const heading = Math.atan2(-dz, dx);
-      const numSegs = Math.max(1, Math.round(length / 2));
-      const segLen = length / numSegs;
-      const dirX = dx / length;
-      const dirZ = dz / length;
-
-      for (let s = 0; s < numSegs; s++) {
-        const t = (s + 0.5) * segLen;
-        const px = p0.x + dirX * t;
-        const pz = p0.z + dirZ * t;
-
-        const half = segLen / 2;
-        const yA = this._sampleHeight(
-          track,
-          px - dirX * half,
-          pz - dirZ * half,
-        );
-        const yB = this._sampleHeight(
-          track,
-          px + dirX * half,
-          pz + dirZ * half,
-        );
-
-        const avgY = (yA + yB) / 2;
-        const centerY = avgY + height / 2;
-        const yShiftA = (yA - yB) / 2;
-        const yShiftB = (yB - yA) / 2;
-        const segW = segLen * 1.02;
-
-        this.segments.push(
-          new WallSegment(
-            px,
-            pz,
-            centerY,
-            segW,
-            height,
-            width,
-            heading,
-            0,
-            this.segments.length,
-            null, // `style` — unused by WallSegment (collider is invisible)
-            "curb_poly",
-            scene,
-            shadows,
-            yShiftA,
-            yShiftB,
-            false,
-          ),
-        );
-      }
-    }
-
-    // ── 2) Visible ribbon ───────────────────────────────────────────────────
     this.ribbon = this._buildRibbon(points, closed, track, scene, shadows, {
       height,
       width,
       stripeColors: resolveStripeColors(feature),
     });
+
+    if (this.ribbon) {
+      // Static collision for dynamic Havok bodies (obstacles). Trucks ignore
+      // statics (ANIMATED body) so they still drive over curbs freely.
+      this._physics = new PhysicsAggregate(this.ribbon, PhysicsShapeType.MESH, {
+        mass: 0,
+        restitution: 0.2,
+        friction: 0.8,
+      }, scene);
+    }
   }
 
   dispose() {
-    for (const seg of this.segments) seg.dispose();
-    this.segments = [];
+    if (this._physics) {
+      this._physics.dispose();
+      this._physics = null;
+    }
     if (this.ribbon) {
       this.ribbon.material?.dispose();
       this.ribbon.dispose();
       this.ribbon = null;
     }
+    this.collider = null;
   }
 
   _featureUsesBridgeSurface(feature) {
@@ -318,6 +274,10 @@ export class PolyCurb {
     mesh.isPickable = false;
     mesh.receiveShadows = true;
     shadows?.addShadowCaster(mesh);
+
+    // Centerline descriptor source for AI pathing (curbs mark track limits
+    // even though trucks can physically drive over them).
+    this.collider = { xs, zs, halfThick: halfWidth, closed, step };
 
     return mesh;
   }

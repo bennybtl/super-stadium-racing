@@ -1,11 +1,14 @@
-import { Mesh, VertexData, StandardMaterial, Color3 } from "@babylonjs/core";
-import { WallSegment } from "./WallSegment.js";
+import {
+  Mesh,
+  VertexData,
+  StandardMaterial,
+  Color3,
+  PhysicsAggregate,
+  PhysicsShapeType,
+} from "@babylonjs/core";
 import { expandPolyline } from "../polyline-utils.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { resolveStripeColors } from "./stripeColors.js";
-
-// Poly walls should sit flush on the sampled surface.
-const SKIRT = 2;
 
 // ── Ribbon visual tuning (tweak these by eye) ────────────────────────────────
 const SAMPLE_STEP = 2; // centerline resample spacing (world units)
@@ -17,11 +20,16 @@ const END_CAP_ANGLE = 60; // open-end rake angle off horizontal (deg); 90 = vert
 /**
  * PolyWall — a wall that follows a polyline of world-space points.
  *
- * Collision is a chain of per-segment box colliders (terrain-following, built by
- * WallSegment in collisionOnly mode). The VISIBLE wall is a single continuous
- * "ribbon" mesh whose top edge is a smoothed height profile and whose base is
- * buried in the terrain, so the wall reads as an embedded barrier of roughly
- * constant height and has no gaps on thick, sharply-curving corners.
+ * The wall is a single continuous "ribbon" mesh whose top edge is a smoothed
+ * height profile and whose base is buried in the terrain, so the wall reads as
+ * an embedded barrier of roughly constant height and has no gaps on thick,
+ * sharply-curving corners.
+ *
+ * Collision uses the same resampled centerline as the ribbon:
+ *  - trucks: analytic polyline collider (mesh.metadata.polylineCollider,
+ *    resolved by StaticBodyCollisionManager) — no box-segment seams to hit
+ *    while sliding along the wall.
+ *  - dynamic Havok bodies (obstacles): a static MESH aggregate on the ribbon.
  */
 export class PolyWall {
   /**
@@ -31,8 +39,9 @@ export class PolyWall {
    * @param {BABYLON.ShadowGenerator} shadows
    */
   constructor(feature, track, scene, shadows) {
-    this.segments = [];
     this.ribbon = null;
+    this.collider = null; // centerline collider data, also used for AI pathing
+    this._physics = null;
     this._feature = feature; // stored so the editor can identify this wall
     this._terrainQuery = new TerrainQuery(scene);
     this._useBridgeSurfaceSampling = this._featureUsesBridgeSurface(feature);
@@ -45,96 +54,37 @@ export class PolyWall {
     if (!rawPoints || rawPoints.length < 2) return;
 
     const points = expandPolyline(rawPoints, closed);
-    const numPoints = points.length;
-    const edgeCount = closed ? numPoints : numPoints - 1;
 
-    // ── 1) Invisible collider chain (unchanged collision behaviour) ──────────
-    for (let i = 0; i < edgeCount; i++) {
-      const p0 = points[i];
-      const p1 = points[(i + 1) % numPoints];
-
-      const dx = p1.x - p0.x;
-      const dz = p1.z - p0.z;
-      const length = Math.sqrt(dx * dx + dz * dz);
-      if (length < 0.01) continue;
-
-      // heading: matches the convention used by StraightWall (cos(h)=dx/len, -sin(h)=dz/len)
-      const heading = Math.atan2(-dz, dx);
-
-      // Sub-segment so each piece is ~4 units long (terrain-following)
-      const numSegs = Math.max(1, Math.round(length / 4));
-      const segLen = length / numSegs;
-      const dirX = dx / length;
-      const dirZ = dz / length;
-
-      for (let s = 0; s < numSegs; s++) {
-        const t = (s + 0.5) * segLen;
-        const px = p0.x + dirX * t;
-        const pz = p0.z + dirZ * t;
-
-        // Sample terrain at both ends of this segment
-        const half = segLen / 2;
-        const yA = this._sampleHeight(
-          track,
-          px - dirX * half,
-          pz - dirZ * half,
-        );
-        const yB = this._sampleHeight(
-          track,
-          px + dirX * half,
-          pz + dirZ * half,
-        );
-
-        // Parallelogram: each end matches its local terrain height
-        const avgY = (yA + yB) / 2;
-        const visualTotalH = visualHeight + SKIRT;
-        const visualCenterY = avgY + (visualHeight - SKIRT) / 2;
-        const collisionTotalH = collisionHeight + SKIRT;
-        const yShiftA = (yA - yB) / 2; // vertical offset at −X (start) end
-        const yShiftB = (yB - yA) / 2; // vertical offset at +X (end) end
-
-        // Tiny overlap prevents gaps between segments
-        const segW = segLen * 1.02;
-        this.segments.push(
-          new WallSegment(
-            px,
-            pz,
-            visualCenterY,
-            segW,
-            visualTotalH,
-            thickness,
-            heading,
-            friction,
-            this.segments.length,
-            null, // `style` — unused by WallSegment (collider is invisible)
-            "wall_poly",
-            scene,
-            shadows,
-            yShiftA,
-            yShiftB,
-            true,
-            collisionTotalH,
-          ),
-        );
-      }
-    }
-
-    // ── 2) Visible ribbon ────────────────────────────────────────────────────
     this.ribbon = this._buildRibbon(points, closed, track, scene, shadows, {
       visualHeight,
+      collisionHeight,
       thickness,
+      friction,
       stripeColors: resolveStripeColors(feature),
     });
+
+    if (this.ribbon) {
+      // Static collision for dynamic Havok bodies (obstacles). The truck's
+      // ANIMATED body ignores statics, so trucks only see the polyline collider.
+      this._physics = new PhysicsAggregate(this.ribbon, PhysicsShapeType.MESH, {
+        mass: 0,
+        restitution: 0.2,
+        friction: 0.8,
+      }, scene);
+    }
   }
 
   dispose() {
-    for (const seg of this.segments) seg.dispose();
-    this.segments = [];
+    if (this._physics) {
+      this._physics.dispose();
+      this._physics = null;
+    }
     if (this.ribbon) {
       this.ribbon.material?.dispose();
       this.ribbon.dispose();
       this.ribbon = null;
     }
+    this.collider = null;
   }
 
   _featureUsesBridgeSurface(feature) {
@@ -279,7 +229,7 @@ export class PolyWall {
     track,
     scene,
     shadows,
-    { visualHeight, thickness, stripeColors },
+    { visualHeight, collisionHeight, thickness, friction, stripeColors },
   ) {
     const cl = this._resampleCenterline(points, closed, track);
     if (!cl) return null;
@@ -448,6 +398,21 @@ export class PolyWall {
     mesh.isPickable = false;
     mesh.receiveShadows = true;
     shadows?.addShadowCaster(mesh);
+
+    // Truck collision: the same centerline the ribbon was built from, resolved
+    // analytically by StaticBodyCollisionManager. Collision top may differ from
+    // the visual top (feature.collisionHeight).
+    this.collider = {
+      xs,
+      zs,
+      topY: smooth.map((h) => h + collisionHeight),
+      botY,
+      halfThick,
+      closed,
+      step,
+      retain: Math.max(0, Math.min(1, 1 - friction)),
+    };
+    mesh.metadata = { ...(mesh.metadata ?? {}), polylineCollider: this.collider };
 
     return mesh;
   }
