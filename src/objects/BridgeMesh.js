@@ -1,6 +1,7 @@
 import { Mesh, VertexData, StandardMaterial, MultiMaterial, SubMesh, Color3, PhysicsAggregate, PhysicsShapeType, Texture } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 import { _lerp, _clamp } from "../terrain-utils.js";
+import { resolveSurfaceTexture, surfaceTextureUrl } from "../surface-textures.js";
 
 const _bridgeTextureModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
 const _bridgeNormalModules = import.meta.glob('../assets/normals/*', { eager: true, query: '?url', import: 'default' });
@@ -27,12 +28,14 @@ function _resolveBridgeAssetUrl(pathOrName, map) {
 }
 
 /**
- * A usable hex color, or null for "use the terrain look". Accepts the literal
- * 'terrain' so panels can carry one value for both cases.
+ * A usable hex color, or null for "use the terrain look" — and also null for a
+ * 'tex:*' value, which the texture path handles instead. Accepts the literal
+ * 'terrain' so panels can carry one value for every case.
  */
 function _resolveFlatColor(value) {
   if (typeof value !== 'string') return null;
   if (!value || value === 'terrain') return null;
+  if (resolveSurfaceTexture(value)) return null;
   return value;
 }
 
@@ -139,14 +142,17 @@ export class BridgeMesh {
       Number.isFinite(terrainBlendConfig?.terrainWorldHalfDepth);
 
     // ── Material ─────────────────────────────────────────────────────────────
-    // A hex color opts out of the terrain look entirely: plain diffuse, no blend
-    // plugin, no textures, no normal map. `feature.color` styles the top face,
-    // `feature.sideColor` the sides + bottom (absent = same material as the top).
+    // A hex color or a 'tex:*' surface texture opts out of the terrain look
+    // entirely: plain diffuse, no blend plugin, no terrain textures, no normal
+    // map. `feature.color` styles the top face, `feature.sideColor` the sides +
+    // bottom (absent = same material as the top).
     const textureWorldTile = Math.max(1, terrainType.diffuseTextureWorldUnitsPerTile ?? 24);
     const diffuseTilesU = Math.max(0.01, width / textureWorldTile);
     const diffuseTilesV = Math.max(0.01, depth / textureWorldTile);
 
-    const createSurfaceMaterial = (name, colorHex) => {
+    const createSurfaceMaterial = (name, styleValue) => {
+      const colorHex = _resolveFlatColor(styleValue);
+      const surfaceTexture = resolveSurfaceTexture(styleValue);
       const material = new StandardMaterial(name, scene);
       material.diffuseColor = terrainColor;
       material.specularColor = new Color3(
@@ -154,7 +160,19 @@ export class BridgeMesh {
         terrainType.specular ?? 0.13,
         terrainType.specular ?? 0.13
       );
-      if (colorHex) {
+      if (surfaceTexture) {
+        const surfaceUrl = surfaceTextureUrl(styleValue);
+        const surfaceTile = Math.max(1, surfaceTexture.worldUnitsPerTile ?? 12);
+        if (surfaceUrl) {
+          const surfaceDiffuse = new Texture(surfaceUrl, scene, true, false);
+          surfaceDiffuse.uScale = Math.max(0.01, width / surfaceTile);
+          surfaceDiffuse.vScale = Math.max(0.01, depth / surfaceTile);
+          material.diffuseTexture = surfaceDiffuse;
+          material.diffuseColor = Color3.White();
+        }
+        const surfaceSpecular = surfaceTexture.specular ?? 0.12;
+        material.specularColor = new Color3(surfaceSpecular, surfaceSpecular, surfaceSpecular);
+      } else if (colorHex) {
         material.diffuseColor = Color3.FromHexString(colorHex);
       } else if (hasTerrainBlendResources) {
         new terrainBlendConfig.pluginClass(
@@ -188,7 +206,9 @@ export class BridgeMesh {
         }
       }
 
-      const normalUrl = colorHex ? null : _resolveBridgeAssetUrl(terrainType.normalMap, _bridgeNormalUrls);
+      const normalUrl = (colorHex || surfaceTexture)
+        ? null
+        : _resolveBridgeAssetUrl(terrainType.normalMap, _bridgeNormalUrls);
       if (normalUrl) {
         const bumpTexture = new Texture(normalUrl, scene, true, false);
         bumpTexture.uScale = diffuseTilesU;
@@ -200,12 +220,12 @@ export class BridgeMesh {
       return material;
     };
 
-    this._material = createSurfaceMaterial(`bmMat_${centerX}_${centerZ}`, _resolveFlatColor(feature.color));
+    this._material = createSurfaceMaterial(`bmMat_${centerX}_${centerZ}`, feature.color);
     // Only build a second material when the sides are styled independently —
     // otherwise the whole slab stays a single-material, single-submesh mesh.
     this._sideMaterial = feature.sideColor === undefined || feature.sideColor === null
       ? null
-      : createSurfaceMaterial(`bmSideMat_${centerX}_${centerZ}`, _resolveFlatColor(feature.sideColor));
+      : createSurfaceMaterial(`bmSideMat_${centerX}_${centerZ}`, feature.sideColor);
 
     // ── Visual mesh (top + bottom + sides) ───────────────────────────────────
     this._mesh = new Mesh(`bridge_mesh_${centerX}_${centerZ}`, scene);
@@ -857,39 +877,58 @@ function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thic
     }
   }
 
-  // Side: front (r=0), c left→right, winding outward (-Z normal)
-  for (let c = 0; c < cols - 1; c++) {
-    const t0 = c,         t1 = c + 1;
-    const b0 = n + c,     b1 = n + c + 1;
-    indices.push(t0, b0, b1);
-    indices.push(t0, b1, t1);
-  }
+  // ── Sides ─────────────────────────────────────────────────────────────────
+  // Each side gets its own vertices rather than borrowing the top and bottom
+  // grid's. Two things come out of that: ComputeNormals no longer averages a
+  // wall's normal with the deck it used to share vertices with (so the top face
+  // gets a clean up-normal and the edges read crisp), and the wall can carry a
+  // UV that runs *down* it — sharing the top vertex's UV left the texture with
+  // no vertical variation at all, smearing it down the whole face.
+  //
+  // `u` is distance along the edge and `v` the drop, each normalized by (width,
+  // depth) so the material's own uScale/vScale — width/tile and depth/tile —
+  // turns them back into world-uniform tiles matching the top face.
+  const sideV = depth > 0 ? thickness / depth : 0;
+  const uAlongX = (c) => c / Math.max(cols - 1, 1);
+  const uAlongZ = (r) => (width > 0 ? (r / Math.max(rows - 1, 1)) * depth / width : 0);
 
-  // Side: back (r=rows-1), c left→right, winding outward (+Z normal)
-  const rLast = rows - 1;
-  for (let c = 0; c < cols - 1; c++) {
-    const t0 = rLast * cols + c,         t1 = rLast * cols + c + 1;
-    const b0 = n + rLast * cols + c,     b1 = n + rLast * cols + c + 1;
-    indices.push(t0, t1, b1);
-    indices.push(t0, b1, b0);
-  }
+  // `edge` runs from one end of the side to the other; `flipWinding` picks which
+  // way the quads face so every side ends up wound outward.
+  const addSide = (edge, flipWinding) => {
+    const base = positions.length / 3;
+    for (const { r, c, u } of edge) {
+      const p = grid[r * cols + c];
+      const topY = heights[r * cols + c] ?? 0;
+      positions.push(p.x, topY, p.z);
+      uvs.push(u, 0);
+      positions.push(p.x, topY - thickness, p.z);
+      uvs.push(u, sideV);
+    }
+    for (let i = 0; i < edge.length - 1; i++) {
+      const t0 = base + i * 2, b0 = t0 + 1, t1 = t0 + 2, b1 = t0 + 3;
+      if (flipWinding) {
+        indices.push(t0, t1, b1);
+        indices.push(t0, b1, b0);
+      } else {
+        indices.push(t0, b0, b1);
+        indices.push(t0, b1, t1);
+      }
+    }
+  };
 
-  // Side: left (c=0), r top→bottom, winding outward (-X normal)
-  for (let r = 0; r < rows - 1; r++) {
-    const t0 = r * cols,       t1 = (r + 1) * cols;
-    const b0 = n + r * cols,   b1 = n + (r + 1) * cols;
-    indices.push(t0, t1, b1);
-    indices.push(t0, b1, b0);
+  const frontEdge = [], backEdge = [], leftEdge = [], rightEdge = [];
+  for (let c = 0; c < cols; c++) {
+    frontEdge.push({ r: 0, c, u: uAlongX(c) });
+    backEdge.push({ r: rows - 1, c, u: uAlongX(c) });
   }
-
-  // Side: right (c=cols-1), r top→bottom, winding outward (+X normal)
-  const cLast = cols - 1;
-  for (let r = 0; r < rows - 1; r++) {
-    const t0 = r * cols + cLast,       t1 = (r + 1) * cols + cLast;
-    const b0 = n + r * cols + cLast,   b1 = n + (r + 1) * cols + cLast;
-    indices.push(t0, b0, b1);
-    indices.push(t0, b1, t1);
+  for (let r = 0; r < rows; r++) {
+    leftEdge.push({ r, c: 0, u: uAlongZ(r) });
+    rightEdge.push({ r, c: cols - 1, u: uAlongZ(r) });
   }
+  addSide(frontEdge, false);  // r=0, outward is -Z
+  addSide(backEdge, true);    // r=rows-1, outward is +Z
+  addSide(leftEdge, true);    // c=0, outward is -X
+  addSide(rightEdge, false);  // c=cols-1, outward is +X
 
   const vd = new VertexData();
   vd.positions = positions;

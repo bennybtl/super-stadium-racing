@@ -1,9 +1,12 @@
+import { SURFACE_TEXTURES, surfaceTextureUrl } from '../../surface-textures.js';
+
 /**
  * Palette for drivable-mesh surface colors (driveBox, bridgeMesh).
  *
  * 'terrain' is the default: no color on the feature, so the surface keeps the
- * terrain-blended material. Any other value is a hex passed straight to the
- * material as a flat diffuse color.
+ * terrain-blended material. A 'tex:*' value picks a tiled texture (see
+ * surface-textures.js). Any other value is a hex passed straight to the material
+ * as a flat diffuse color.
  */
 export const SURFACE_COLOR_OPTIONS = [
   { value: 'terrain', label: 'Terrain' },
@@ -16,9 +19,15 @@ export const SURFACE_COLOR_OPTIONS = [
   { value: '#e0b32e', label: 'Yellow' },
   { value: '#3f7a3a', label: 'Green' },
   { value: '#6e4f2f', label: 'Brown' },
+  ...Object.entries(SURFACE_TEXTURES).map(([value, texture]) => ({ value, label: texture.label })),
 ];
 
-/** CSS background for the panel swatch; terrain has no single color to show. */
+/**
+ * CSS background for the panel swatch: the tile itself for a texture, the color
+ * for a hex, nothing for terrain (which has no single color to show).
+ */
 export function surfaceSwatch(value) {
+  const textureUrl = surfaceTextureUrl(value);
+  if (textureUrl) return `url(${textureUrl}) center/cover`;
   return value === 'terrain' ? 'transparent' : value;
 }
