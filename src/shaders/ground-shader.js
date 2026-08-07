@@ -54,7 +54,18 @@ for (const [path, url] of Object.entries(_normalMapModules)) {
  * the pattern repeats on exact pixel boundaries with no resampling at all.
  * Cached, since the same texture and tile size recur across cells and rebuilds.
  */
+// A track uses under a dozen (texture, tile size) pairs, but each new track size
+// mints fresh keys, so the map is bounded rather than left to grow for the life
+// of the session. Tiles are small and cheap to rebuild; dropping the oldest is
+// enough, no need for real LRU accounting.
+const TILE_CACHE_LIMIT = 32;
 const _tileCanvasCache = new Map();
+
+function _cacheTile(cache, key, canvas) {
+  if (cache.size >= TILE_CACHE_LIMIT) cache.delete(cache.keys().next().value);
+  cache.set(key, canvas);
+  return canvas;
+}
 function _scaledTilePixels(img, tileWidth, tileHeight) {
   const sw = img.naturalWidth;
   const sh = img.naturalHeight;
@@ -82,8 +93,7 @@ function _buildScaledTileCanvas(img, tileWidth, tileHeight) {
   scaled.data.set(_scaledTilePixels(img, w, h));
   tileCtx.putImageData(scaled, 0, 0);
 
-  _tileCanvasCache.set(key, canvas);
-  return canvas;
+  return _cacheTile(_tileCanvasCache, key, canvas);
 }
 
 /**
@@ -317,8 +327,7 @@ function _buildWaterDepthTileCanvas(img, tileWidthPx, tileHeightPx, waterCfg) {
   }
 
   ctx.putImageData(image, 0, 0);
-  _waterTileCache.set(cacheKey, canvas);
-  return canvas;
+  return _cacheTile(_waterTileCache, cacheKey, canvas);
 }
 
 async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
@@ -570,6 +579,74 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWi
 }
 
 /**
+ * Paint normal-map decals onto the composite canvas.
+ *
+ * Each decal is a rotated rect repeated `repeatU × repeatV` times across itself.
+ * Whole repeats come from a pre-scaled, wrap-preserving tile so they meet
+ * seamlessly — the same treatment the terrain passes get. A fractional trailing
+ * repeat is a deliberate partial tile, so it is cropped from the source rather
+ * than squeezed into a smaller draw, which would distort it against its
+ * neighbours.
+ */
+async function _paintNormalMapDecals(ctx, normalMapDecals, textureSize, worldWidth, worldDepth) {
+  if (!normalMapDecals || normalMapDecals.length === 0) return;
+
+  const pixelsPerUnitX = textureSize / worldWidth;
+  const pixelsPerUnitY = textureSize / worldDepth;
+
+  const decalImages = await Promise.all(
+    normalMapDecals.map(async (decal) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      const normalMapPath = new URL(`../assets/${decal.normalMap}`, import.meta.url).href;
+      return new Promise((resolve) => {
+        img.onload = () => resolve({ decal, img });
+        img.onerror = () => resolve({ decal, img: null });
+        img.src = normalMapPath;
+      });
+    })
+  );
+
+  for (const { decal, img } of decalImages) {
+    if (!img || img.naturalWidth <= 0) continue;
+    const { centerX, centerZ, width, depth, angle = 0, repeatU = 1, repeatV = 1, intensity = 0.5 } = decal;
+
+    const canvasCenterX = (centerX + worldWidth / 2) * pixelsPerUnitX;
+    const canvasCenterY = (centerZ + worldDepth / 2) * pixelsPerUnitY;
+    const canvasWidth = width * pixelsPerUnitX;
+    const canvasHeight = depth * pixelsPerUnitY;
+    const tilePixelWidth = canvasWidth / repeatU;
+    const tilePixelHeight = canvasHeight / repeatV;
+
+    const tile = _buildScaledTileCanvas(img, tilePixelWidth, tilePixelHeight);
+
+    ctx.save();
+    ctx.translate(canvasCenterX, canvasCenterY);
+    ctx.rotate(angle * Math.PI / 180);
+    ctx.scale(-1, 1); // Flip horizontally in local space to match texture orientation
+    ctx.globalAlpha = intensity;
+    ctx.globalCompositeOperation = 'source-over';
+
+    for (let ty = 0; ty < Math.ceil(repeatV); ty++) {
+      for (let tx = 0; tx < Math.ceil(repeatU); tx++) {
+        const x = -canvasWidth / 2 + tx * tilePixelWidth;
+        const y = -canvasHeight / 2 + ty * tilePixelHeight;
+        const fracU = (tx === Math.floor(repeatU) && repeatU % 1 !== 0) ? repeatU % 1 : 1;
+        const fracV = (ty === Math.floor(repeatV) && repeatV % 1 !== 0) ? repeatV % 1 : 1;
+        ctx.drawImage(
+          tile,
+          0, 0, tile.width * fracU, tile.height * fracV,
+          x, y, tilePixelWidth * fracU, tilePixelHeight * fracV
+        );
+      }
+    }
+
+    ctx.restore();
+  }
+}
+
+
+/**
  * Create a composite normal map texture from multiple decals
  * @param {Scene} scene - Babylon scene
  * @param {Array} normalMapDecals - Array of decal feature objects from track
@@ -642,83 +719,10 @@ export async function createCompositeNormalMap(scene, normalMapDecals, terrainMa
   await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
   _paintAiPathRutNormals(ctx, track, textureSize, worldWidth, worldDepth);
 
-  // If no decals, build the raw texture from the canvas and return it.
-  if (!normalMapDecals || normalMapDecals.length === 0) {
-    const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
-    const rawTexture = RawTexture.CreateRGBATexture(
-      imageData.data,
-      textureSize,
-      textureSize,
-      scene,
-      false,
-      true,
-      Texture.BILINEAR_SAMPLINGMODE
-    );
-    rawTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
-    rawTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
-    rawTexture.gammaSpace = false;
-    return rawTexture;
-  }
-  
-  const pixelsPerUnitX = textureSize / worldWidth;
-  const pixelsPerUnitY = textureSize / worldDepth;
+  // No decals is not a special case: the painter no-ops and the texture is built
+  // from the passes above exactly the same way.
+  await _paintNormalMapDecals(ctx, normalMapDecals, textureSize, worldWidth, worldDepth);
 
-  // Load all normal map decal images
-  const decalImages = await Promise.all(
-    normalMapDecals.map(async (decal) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      const normalMapPath = new URL(`../assets/${decal.normalMap}`, import.meta.url).href;
-      
-      return new Promise((resolve) => {
-        img.onload = () => resolve({ decal, img });
-        img.onerror = () => resolve({ decal, img: null });
-        img.src = normalMapPath;
-      });
-    })
-  );
-  
-  // Draw each decal onto the canvas
-  for (const { decal, img } of decalImages) {
-    if (!img) continue;
-    
-    const { centerX, centerZ, width, depth, angle = 0, repeatU = 1, repeatV = 1, intensity = 0.5 } = decal;
-    
-    const canvasCenterX = (centerX + worldWidth / 2) * pixelsPerUnitX;
-    const canvasCenterY = (centerZ + worldDepth / 2) * pixelsPerUnitY;
-    const canvasWidth = width * pixelsPerUnitX;
-    const canvasHeight = depth * pixelsPerUnitY;
-    
-    ctx.save();
-    ctx.translate(canvasCenterX, canvasCenterY);
-    ctx.rotate(angle * Math.PI / 180);
-    ctx.scale(-1, 1); // Flip horizontally in local space to match texture orientation
-    
-    const tilePixelWidth = canvasWidth / repeatU;
-    const tilePixelHeight = canvasHeight / repeatV;
-    
-    ctx.globalAlpha = intensity;
-    ctx.globalCompositeOperation = 'source-over';
-    
-    for (let ty = 0; ty < Math.ceil(repeatV); ty++) {
-      for (let tx = 0; tx < Math.ceil(repeatU); tx++) {
-        const x = -canvasWidth / 2 + tx * tilePixelWidth;
-        const y = -canvasHeight / 2 + ty * tilePixelHeight;
-        
-        const drawWidth = (tx === Math.floor(repeatU) && repeatU % 1 !== 0)
-          ? tilePixelWidth * (repeatU % 1)
-          : tilePixelWidth;
-        const drawHeight = (ty === Math.floor(repeatV) && repeatV % 1 !== 0)
-          ? tilePixelHeight * (repeatV % 1)
-          : tilePixelHeight;
-        
-        ctx.drawImage(img, x, y, drawWidth, drawHeight);
-      }
-    }
-    
-    ctx.restore();
-  }
-  
   const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
   const rawTexture = RawTexture.CreateRGBATexture(
     imageData.data,
@@ -757,58 +761,7 @@ export async function updateCompositeNormalMap(rawTexture, scene, normalMapDecal
   await _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, worldWidth, worldDepth);
   _paintAiPathRutNormals(ctx, track, textureSize, worldWidth, worldDepth);
 
-  if (normalMapDecals && normalMapDecals.length > 0) {
-    const pixelsPerUnitX = textureSize / worldWidth;
-    const pixelsPerUnitY = textureSize / worldDepth;
-
-    const decalImages = await Promise.all(
-      normalMapDecals.map(async (decal) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        const normalMapPath = new URL(`../assets/${decal.normalMap}`, import.meta.url).href;
-        return new Promise((resolve) => {
-          img.onload = () => resolve({ decal, img });
-          img.onerror = () => resolve({ decal, img: null });
-          img.src = normalMapPath;
-        });
-      })
-    );
-
-    for (const { decal, img } of decalImages) {
-      if (!img) continue;
-      const { centerX, centerZ, width, depth, angle = 0, repeatU = 1, repeatV = 1, intensity = 0.5 } = decal;
-      const canvasCenterX = (centerX + worldWidth / 2) * pixelsPerUnitX;
-      const canvasCenterY = (centerZ + worldDepth / 2) * pixelsPerUnitY;
-      const canvasWidth = width * pixelsPerUnitX;
-      const canvasHeight = depth * pixelsPerUnitY;
-
-      ctx.save();
-      ctx.translate(canvasCenterX, canvasCenterY);
-      ctx.rotate(angle * Math.PI / 180);
-      ctx.scale(-1, 1);
-
-      const tilePixelWidth = canvasWidth / repeatU;
-      const tilePixelHeight = canvasHeight / repeatV;
-      ctx.globalAlpha = intensity;
-      ctx.globalCompositeOperation = 'source-over';
-
-      for (let ty = 0; ty < Math.ceil(repeatV); ty++) {
-        for (let tx = 0; tx < Math.ceil(repeatU); tx++) {
-          const x = -canvasWidth / 2 + tx * tilePixelWidth;
-          const y = -canvasHeight / 2 + ty * tilePixelHeight;
-          const drawWidth = (tx === Math.floor(repeatU) && repeatU % 1 !== 0)
-            ? tilePixelWidth * (repeatU % 1)
-            : tilePixelWidth;
-          const drawHeight = (ty === Math.floor(repeatV) && repeatV % 1 !== 0)
-            ? tilePixelHeight * (repeatV % 1)
-            : tilePixelHeight;
-          ctx.drawImage(img, x, y, drawWidth, drawHeight);
-        }
-      }
-
-      ctx.restore();
-    }
-  }
+  await _paintNormalMapDecals(ctx, normalMapDecals, textureSize, worldWidth, worldDepth);
 
   const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
   rawTexture.update(imageData.data);

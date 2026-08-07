@@ -1,5 +1,11 @@
 import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline, isPointInPolygon } from "./polyline-utils.js";
+import {
+  getHillEllipseParams,
+  getSquareHillParams,
+  getPolyHillHalfWidth,
+  toFeatureLocal as getHillLocalCoords,
+} from "./feature-geometry.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
 
 const TRACK_SCHEMA_VERSION = 2;
@@ -19,26 +25,6 @@ function getFeatureSerializationPriority(feature) {
   if (feature.type === 'bridgeMesh') return 1;
   if (feature.type === 'driveBox') return 1;
   return 10;
-}
-
-function getHillEllipseParams(feature) {
-  return {
-    radiusX: Math.max(0.001, feature.radiusX ?? 10),
-    radiusZ: Math.max(0.001, feature.radiusZ ?? 10),
-    angleRad: ((feature.angle ?? 0) * Math.PI) / 180,
-  };
-}
-
-function getHillLocalCoords(feature, x, z) {
-  const wx = x - feature.centerX;
-  const wz = z - feature.centerZ;
-  const { angleRad } = getHillEllipseParams(feature);
-  const cosA = Math.cos(angleRad);
-  const sinA = Math.sin(angleRad);
-  return {
-    lx: wx * cosA + wz * sinA,
-    lz: -wx * sinA + wz * cosA,
-  };
 }
 
 // Inverse of a bilinear map: given a point (px,pz) and the four corners of a
@@ -327,10 +313,7 @@ export class Track {
         }
 
         case "squareHill": {
-          const hw = feature.width / 2;
-          const hd = (feature.depth ?? feature.width) / 2;
-          const transition = feature.transition ?? 4;
-          // Rotate world offset into the box's local space
+          const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
           // AABB early-out: contribution reaches at most `transition` beyond the
@@ -338,11 +321,7 @@ export class Track {
           const shBoundX = hw + transition;
           const shBoundZ = hd + transition;
           if (wx * wx + wz * wz > shBoundX * shBoundX + shBoundZ * shBoundZ) break;
-          const angleRad = (feature.angle ?? 0) * Math.PI / 180;
-          const cosA = Math.cos(angleRad);
-          const sinA = Math.sin(angleRad);
-          const lx =  wx * cosA + wz * sinA;
-          const lz = -wx * sinA + wz * cosA;
+          const { lx, lz } = getHillLocalCoords(feature, x, z);
           const edgeDx = Math.max(0, Math.abs(lx) - hw);
           const edgeDz = Math.max(0, Math.abs(lz) - hd);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
@@ -516,7 +495,7 @@ export class Track {
           const { points, height = 3, slope = 5, closed = false, filled = false } = feature;
           if (!points || points.length < 2) break;
 
-          const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
+          const halfWidth = getPolyHillHalfWidth(feature);
           const exp = this._getExpandedPolyline(feature, points, closed);
           const expandedPoints = exp.points;
           // AABB early-out: contribution stays within halfWidth of the polyline
@@ -707,9 +686,7 @@ export class Track {
         }
 
         case "squareHill": {
-          const hw = feature.width / 2;
-          const hd = (feature.depth ?? feature.width) / 2;
-          const transition = feature.transition ?? 4;
+          const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
@@ -782,7 +759,7 @@ export class Track {
           if (!points || points.length < 2) break;
           const closed = feature.closed ?? false;
           const filled = feature.filled ?? false;
-          const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
+          const halfWidth = getPolyHillHalfWidth(feature);
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const exp = this._getExpandedPolyline(feature, points, closed);
           const expandedPoints = exp.points;
@@ -901,9 +878,7 @@ export class Track {
         };
       }
       case "squareHill": {
-        const hw = feature.width / 2;
-        const hd = (feature.depth ?? feature.width) / 2;
-        const transition = feature.transition ?? 4;
+        const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
         // Rotation-invariant circumscribed circle of the rect + transition band.
         const r = Math.sqrt((hw + transition) ** 2 + (hd + transition) ** 2);
         return {
@@ -930,7 +905,7 @@ export class Track {
         if (!points || points.length < 2) {
           return { minX: 0, maxX: 0, minZ: 0, maxZ: 0 }; // contributes nothing
         }
-        const halfWidth = (feature.width ?? feature.slope ?? 5) / 2;
+        const halfWidth = getPolyHillHalfWidth(feature);
         const exp = this._getExpandedPolyline(feature, points, closed);
         return {
           minX: exp.minX - halfWidth, maxX: exp.maxX + halfWidth,
