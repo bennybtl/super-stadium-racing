@@ -5,7 +5,7 @@ const rebuild = {
   terrainGrid: null,
   terrainTexture: null,
   normalMap: null,
-  hillWater: null,
+  water: null,
   polyWall: null,
   polyCurb: null,
   bridgeMesh: null,

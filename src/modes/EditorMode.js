@@ -196,20 +196,28 @@ export class EditorMode extends BaseMode {
       _rebuildNormalMapTimer = setTimeout(_rebuildNormalMapNow, 300);
     };
 
-    // Rebuild hill water meshes so water level/position changes are visible
-    // immediately. Pass a feature to rebuild only that one's water (much cheaper
-    // on tracks with many water features); omit it to rebuild all of them.
-    rebuild.hillWater = async (targetFeature = null) => {
+    // Rebuild water meshes so level/position changes are visible immediately.
+    // Water features are grouped into shared-level bodies, so an edit can move a
+    // feature between groups and every body has to be rebuilt — there is nothing
+    // meaningful to scope this to. Debounced like the other whole-track rebakes:
+    // a full rebuild costs ~20ms on a water-heavy track, which is a dropped frame
+    // if it runs on every pointermove of a drag.
+    const _rebuildWaterNow = async () => {
       for (const mesh of scene.meshes.slice()) {
         if (!mesh?.name?.startsWith('water_')) continue;
-        if (targetFeature === null || mesh._sourceFeature === targetFeature) mesh.dispose();
+        // Plain dispose: the water and foam materials are shared per scene, so
+        // taking them down with a mesh would break every rebuild after this one.
+        mesh.dispose();
       }
-      const { createHill } = await import('../objects/Hill.js');
-      for (const feature of currentTrack.features) {
-        if (feature.type !== 'hill' && feature.type !== 'squareHill' && feature.type !== 'polyHill') continue;
-        if (targetFeature !== null && feature !== targetFeature) continue;
-        createHill(feature, currentTrack, scene);
-      }
+      const { buildWaterBodies } = await import('../objects/Water.js');
+      buildWaterBodies(currentTrack, scene);
+    };
+    let _rebuildWaterTimer = null;
+    rebuild.water = (immediate = false) => {
+      clearTimeout(_rebuildWaterTimer);
+      _rebuildWaterTimer = null;
+      if (immediate) { _rebuildWaterNow(); return; }
+      _rebuildWaterTimer = setTimeout(_rebuildWaterNow, 120);
     };
 
     // Rebuild a specific polyWall (or all polyWalls if feature is null)

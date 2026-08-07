@@ -1,8 +1,13 @@
 import { TERRAIN_TYPES } from "./terrain.js";
-import { expandPolyline } from "./polyline-utils.js";
+import { expandPolyline, isPointInPolygon } from "./polyline-utils.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
 
 const TRACK_SCHEMA_VERSION = 2;
+
+// How far the ground extends past the editable area on each side. Height fades to
+// flat across exactly this strip (see HEIGHT_BLEND_OUTER in getHeightAt), so the
+// two are the same number by definition, not by coincidence.
+const GROUND_BORDER = 10;
 
 // Point-list feature types that are meaningless with zero points. Loaded tracks
 // strip any of these that carry an empty `points` array (see Track.fromJSON).
@@ -34,25 +39,6 @@ function getHillLocalCoords(feature, x, z) {
     lx: wx * cosA + wz * sinA,
     lz: -wx * sinA + wz * cosA,
   };
-}
-
-/**
- * Ray-casting point-in-polygon test using the winding number algorithm
- * Returns true if (x, z) is inside the polygon formed by points
- */
-function isPointInPolygon(x, z, points) {
-  if (!points || points.length < 3) return false;
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-    const xi = points[i].x;
-    const zi = points[i].z;
-    const xj = points[j].x;
-    const zj = points[j].z;
-    const intersects = ((zi > z) !== (zj > z))
-      && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-8) + xi);
-    if (intersects) inside = !inside;
-  }
-  return inside;
 }
 
 // Inverse of a bilinear map: given a point (px,pz) and the four corners of a
@@ -151,6 +137,23 @@ export class Track {
     this.defaultTerrainType = TERRAIN_TYPES.PACKED_DIRT;
     this.borderTerrainType = TERRAIN_TYPES.PACKED_DIRT;
     this.image = null;
+  }
+
+  /**
+   * Dimensions of the ground mesh for this track: the playable area plus its
+   * border, and how finely the mesh is subdivided across it.
+   *
+   * SceneBuilder builds the mesh from these numbers and the water builder samples
+   * heights on exactly this lattice, so shorelines land where the drawn terrain
+   * actually is rather than where the analytic field says it would be if the mesh
+   * were smooth. Both need the same answer, so it lives with the track rather
+   * than in either of them.
+   */
+  getGroundLattice() {
+    const width = (this.width ?? 160) + GROUND_BORDER * 2;
+    const depth = (this.depth ?? 160) + GROUND_BORDER * 2;
+    const subdivisions = Math.max(32, Math.min(64, Math.floor(Math.max(width, depth) / 2)));
+    return { width, depth, subdivisions };
   }
 
   // Add a hill (ellipse when radiusX !== radiusZ)
@@ -298,11 +301,14 @@ export class Track {
     return slopeDeg;
   }
 
-  // Get the height at a world position
-  getHeightAt(x, z) {
+  // Get the height at a world position. `skip` optionally drops features from the
+  // sum — the water builder uses it to read the ambient ground under a pool with
+  // the pool itself, and anything sitting inside it, taken out.
+  getHeightAt(x, z, skip = null) {
     let totalHeight = 0;
 
     for (const feature of this.features) {
+      if (skip !== null && skip(feature)) continue;
       switch (feature.type) {
         case "hill": {
           const { radiusX, radiusZ } = getHillEllipseParams(feature);
@@ -581,7 +587,7 @@ export class Track {
     const halfW = (this.width ?? 160) / 2;
     const halfD = (this.depth ?? 160) / 2;
     const HEIGHT_BLEND_INNER = 0;
-    const HEIGHT_BLEND_OUTER = 10;
+    const HEIGHT_BLEND_OUTER = GROUND_BORDER;
     const signedDistToEdge = Math.min(halfW - Math.abs(x), halfD - Math.abs(z));
 
     let blendedHeight;

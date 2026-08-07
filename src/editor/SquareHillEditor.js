@@ -302,7 +302,7 @@ export class SquareHillEditor {
     if (this.selected) this.updateVisual(this.selected);
     rebuild.terrain?.(this.selected?.feature);
     rebuild.terrainGrid?.();
-    rebuild.hillWater?.(this.selected?.feature);
+    rebuild.water?.();
     rebuild.terrainTexture?.();
   }
 

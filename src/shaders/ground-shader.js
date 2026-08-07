@@ -10,6 +10,7 @@ import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } fro
 import { TERRAIN_TYPES } from "../terrain.js";
 import { _smoothstep, _getTerrainSlopeDegAt as _getTerrainSlopeDeg } from "../terrain-utils.js";
 import { traceAiPathWearStamps, forEachStampPixel } from "../terrain-utils.js";
+import { resampleWrapped } from "../terrain-blend-utils.js";
 
 const _terrainTypeList = Object.values(TERRAIN_TYPES);
 const _terrainTypeIndexByName = new Map(_terrainTypeList.map((terrainType, index) => [terrainType?.name, index]));
@@ -37,6 +38,74 @@ for (const [path, url] of Object.entries(_normalMapModules)) {
   const filename = path.split('/').at(-1);
   _normalMapUrls[relativePath] = url;
   _normalMapUrls[filename] = url;
+}
+
+/**
+ * Pre-scale a source texture into a tile canvas of whole-pixel size, for use as
+ * a repeating pattern.
+ *
+ * `createPattern` + `setTransform` resamples the source at every repeat, and the
+ * filter cannot wrap across a tile edge. With a fractional tile size — 2000/180
+ * × 10 = 111.111px — each repeat also lands on a different subpixel phase, so
+ * the mismatch shows up as a line at every tile: a grid at the tiling spacing,
+ * even when the source texture itself is perfectly seamless.
+ *
+ * Scaling once into an integer-sized canvas and tiling that 1:1 removes both:
+ * the pattern repeats on exact pixel boundaries with no resampling at all.
+ * Cached, since the same texture and tile size recur across cells and rebuilds.
+ */
+const _tileCanvasCache = new Map();
+function _scaledTilePixels(img, tileWidth, tileHeight) {
+  const sw = img.naturalWidth;
+  const sh = img.naturalHeight;
+  const source = document.createElement('canvas');
+  source.width = sw;
+  source.height = sh;
+  const sourceCtx = source.getContext('2d', { willReadFrequently: true });
+  sourceCtx.drawImage(img, 0, 0);
+  const pixels = sourceCtx.getImageData(0, 0, sw, sh).data;
+  return resampleWrapped(pixels, sw, sh, tileWidth, tileHeight);
+}
+
+function _buildScaledTileCanvas(img, tileWidth, tileHeight) {
+  const w = Math.max(1, Math.round(tileWidth));
+  const h = Math.max(1, Math.round(tileHeight));
+  const key = `${img.src}|${w}x${h}`;
+  const cached = _tileCanvasCache.get(key);
+  if (cached) return cached;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const tileCtx = canvas.getContext('2d');
+  const scaled = tileCtx.createImageData(w, h);
+  scaled.data.set(_scaledTilePixels(img, w, h));
+  tileCtx.putImageData(scaled, 0, 0);
+
+  _tileCanvasCache.set(key, canvas);
+  return canvas;
+}
+
+/**
+ * Fill one terrain cell, snapped to whole texture pixels.
+ *
+ * `pixelsPerCell` is texture size ÷ cell count and is rarely a whole number
+ * (2000 / 180 = 11.111…), so filling at raw fractional coordinates leaves every
+ * cell edge antialiased. Two neighbouring cells then composite over the same
+ * boundary pixel, and source-over applied twice does not add up to one full
+ * cover: the pixel keeps a fraction of whatever was underneath. Over the grid
+ * that reads as a faint checkerboard of lines.
+ *
+ * Snapping both edges to integers hands each boundary to exactly one cell —
+ * cell i ends where cell i+1 begins, by construction, so there is no gap and no
+ * double coverage.
+ */
+function _fillTerrainCell(ctx, col, row, pixelsPerCell) {
+  const x0 = Math.round(col * pixelsPerCell);
+  const y0 = Math.round(row * pixelsPerCell);
+  const x1 = Math.round((col + 1) * pixelsPerCell);
+  const y1 = Math.round((row + 1) * pixelsPerCell);
+  ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
 }
 
 const _textureMapModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
@@ -123,12 +192,8 @@ async function _paintSteepTerrainOverlay(
   const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
   const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
   const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
-  const pattern = ctx.createPattern(img, 'repeat');
+  const pattern = ctx.createPattern(_buildScaledTileCanvas(img, tileSizeX, tileSizeY), 'repeat');
   if (!pattern) return;
-
-  const scaleX = tileSizeX / img.naturalWidth;
-  const scaleY = tileSizeY / img.naturalHeight;
-  pattern.setTransform(new DOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
 
   const cellsByBlend = new Map();
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
@@ -157,7 +222,7 @@ async function _paintSteepTerrainOverlay(
   for (const [blend, cells] of cellsByBlend.entries()) {
     ctx.globalAlpha = Math.min(1, Math.max(0, blend));
     for (const { col, row } of cells) {
-      ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+      _fillTerrainCell(ctx, col, row, pixelsPerCell);
     }
   }
 
@@ -186,15 +251,26 @@ async function _paintSteepGrassOverlay(ctx, track, terrainManager, textureSize, 
   });
 }
 
-function _buildWaterDepthTileCanvas(img, tileSizePx, waterCfg) {
-  const tileSize = Math.max(4, Math.round(tileSizePx));
+const _waterTileCache = new Map();
+function _buildWaterDepthTileCanvas(img, tileWidthPx, tileHeightPx, waterCfg) {
+  const tileWidth = Math.max(4, Math.round(tileWidthPx));
+  const tileHeight = Math.max(4, Math.round(tileHeightPx));
+  // Cached like the other tiles: this runs from rebakeTerrainTexture, which
+  // fires on every terrain edit, and the result only changes with the track's
+  // dimensions. The water config is a module constant, so it needs no key.
+  const cacheKey = `${img.src}|${tileWidth}x${tileHeight}`;
+  const cached = _waterTileCache.get(cacheKey);
+  if (cached) return cached;
+
   const canvas = document.createElement('canvas');
-  canvas.width = tileSize;
-  canvas.height = tileSize;
+  canvas.width = tileWidth;
+  canvas.height = tileHeight;
   const ctx = canvas.getContext('2d');
 
-  ctx.drawImage(img, 0, 0, tileSize, tileSize);
-  const image = ctx.getImageData(0, 0, tileSize, tileSize);
+  // Same wrap-preserving downscale the other tiles use — drawImage would clamp
+  // at the border and leave this tile seaming against itself when repeated.
+  const image = ctx.createImageData(tileWidth, tileHeight);
+  image.data.set(_scaledTilePixels(img, tileWidth, tileHeight));
   const data = image.data;
 
   const deepColor = waterCfg.diffuseDepthColor ?? new Color3(0.10, 0.30, 0.55);
@@ -241,6 +317,7 @@ function _buildWaterDepthTileCanvas(img, tileSizePx, waterCfg) {
   }
 
   ctx.putImageData(image, 0, 0);
+  _waterTileCache.set(cacheKey, canvas);
   return canvas;
 }
 
@@ -254,8 +331,11 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWi
 
   const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
   const worldUnitsPerTile = waterCfg.diffuseTextureWorldUnitsPerTile ?? 12;
-  const tileSize = (textureSize / ((worldWidth + worldDepth) * 0.5)) * worldUnitsPerTile;
-  const waterTile = _buildWaterDepthTileCanvas(img, tileSize, waterCfg);
+  // Per axis, like every other tiling pass — averaging the two stretches the
+  // repeat on a non-square track.
+  const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
+  const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
+  const waterTile = _buildWaterDepthTileCanvas(img, tileSizeX, tileSizeY, waterCfg);
   const pattern = ctx.createPattern(waterTile, 'repeat');
   if (!pattern) return;
 
@@ -268,7 +348,7 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWi
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
       if (cell?.name !== 'water') continue;
-      ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+      _fillTerrainCell(ctx, col, row, pixelsPerCell);
     }
   }
 
@@ -286,14 +366,19 @@ async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldW
     imgMap[name] = await _loadTextureMap(name);
   }));
 
-  const cellsByMap = {};
+  // Group by texture *and* tile size, taking both from the cell itself. Keying on
+  // the filename alone and then looking the tile size back up by first match
+  // would hand every type that shares a texture whichever size came first.
+  const groups = new Map();
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
       const name = cell?.diffuseTexture;
       if (!name) continue;
-      if (!cellsByMap[name]) cellsByMap[name] = [];
-      cellsByMap[name].push({
+      const worldUnitsPerTile = cell.diffuseTextureWorldUnitsPerTile ?? 10;
+      const key = `${name}|${worldUnitsPerTile}`;
+      if (!groups.has(key)) groups.set(key, { name, worldUnitsPerTile, cells: [] });
+      groups.get(key).cells.push({
         col,
         row,
         opacity: cell.diffuseTextureOpacity ?? 1.0,
@@ -301,22 +386,18 @@ async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldW
     }
   }
 
-  for (const [name, cells] of Object.entries(cellsByMap)) {
+  for (const { name, worldUnitsPerTile, cells } of groups.values()) {
     const img = imgMap[name];
     if (!img || img.naturalWidth <= 0) continue;
 
-    const pattern = ctx.createPattern(img, 'repeat');
-    if (!pattern) continue;
-
-    const worldUnitsPerTile = terrainManager.grid.find(cell => cell.diffuseTexture === name)?.diffuseTextureWorldUnitsPerTile ?? 10;
     const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
     const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
-    const scaleX = tileSizeX / img.naturalWidth;
-    const scaleY = tileSizeY / img.naturalHeight;
+
+    const pattern = ctx.createPattern(_buildScaledTileCanvas(img, tileSizeX, tileSizeY), 'repeat');
+    if (!pattern) continue;
 
     ctx.save();
     ctx.fillStyle = pattern;
-    pattern.setTransform(new DOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
 
     const byOpacity = {};
     for (const cell of cells) {
@@ -328,7 +409,7 @@ async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldW
     for (const [opacity, group] of Object.entries(byOpacity)) {
       ctx.globalAlpha = Number(opacity);
       for (const { col, row } of group) {
-        ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+        _fillTerrainCell(ctx, col, row, pixelsPerCell);
       }
     }
 
@@ -417,13 +498,8 @@ export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager,
  * Each cell uses the normal map specified by its terrain type.
  * @private
  */
-async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth, worldUnitsPerTile = 10) {
+async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
   const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
-  // tileSize is expressed in canvas pixels and spans worldUnitsPerTile world-units,
-  // so the texture can be larger than a single cell and tiles continuously
-  // across cell boundaries.
-  const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
-  const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
 
   // Pre-load all unique normal maps referenced by the current grid
   const uniqueMaps = [...new Set(
@@ -434,25 +510,34 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWi
     imgMap[name] = await _loadNormalMap(name);
   }));
 
-  // Group cells by their normalMap so we can paint each map in one pass.
-  // Also track per-cell intensity since the same normalMap can have different intensities.
-  const cellsByMap = {};
+  // Group by normal map *and* tile size, both read from the cell. Tile size is
+  // per terrain type here, same as the diffuse pass — otherwise a type's colour
+  // and its relief repeat at different rates.
+  const groups = new Map();
   for (let row = 0; row < terrainManager.cellsPerSide; row++) {
     for (let col = 0; col < terrainManager.cellsPerSide; col++) {
       const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
       const name = cell.normalMap;
       if (!name) continue;
-      if (!cellsByMap[name]) cellsByMap[name] = [];
-      cellsByMap[name].push({ col, row, intensity: cell.normalMapIntensity ?? 1.0 });
+      // Per terrain type, same as the diffuse pass; set
+      // `normalMapWorldUnitsPerTile` on a TERRAIN_TYPES entry to override.
+      const worldUnitsPerTile = cell.normalMapWorldUnitsPerTile ?? 10;
+      const key = `${name}|${worldUnitsPerTile}`;
+      if (!groups.has(key)) groups.set(key, { name, worldUnitsPerTile, cells: [] });
+      groups.get(key).cells.push({ col, row, intensity: cell.normalMapIntensity ?? 1.0 });
     }
   }
 
-  // For each unique map, create a repeating pattern scaled to tileSize and
-  // fill every cell that uses it, respecting per-cell intensity via globalAlpha.
+  // For each group, create a repeating pattern scaled to its tile size and fill
+  // every cell that uses it, respecting per-cell intensity via globalAlpha.
   // Because the pattern origin is the canvas origin (0,0), it tiles continuously
   // across cell boundaries. Cells with different intensities are drawn separately.
-  for (const [name, cells] of Object.entries(cellsByMap)) {
+  for (const { name, worldUnitsPerTile, cells } of groups.values()) {
     const img = imgMap[name];
+    // tileSize is expressed in canvas pixels and spans worldUnitsPerTile
+    // world-units, so the texture can be larger than a single cell.
+    const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
+    const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
 
     // First fill all cells with the flat normal (rgb 128,128,255) at full opacity
     // as a base, then composite the actual texture on top with the correct alpha.
@@ -460,13 +545,10 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWi
     ctx.globalAlpha = 1.0;
     ctx.fillStyle = 'rgb(128,128,255)';
     for (const { col, row } of cells)
-      ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+      _fillTerrainCell(ctx, col, row, pixelsPerCell);
 
     if (img && img.naturalWidth > 0) {
-      const pattern = ctx.createPattern(img, 'repeat');
-      const scaleX = tileSizeX / img.naturalWidth;
-      const scaleY = tileSizeY / img.naturalHeight;
-      pattern.setTransform(new DOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
+      const pattern = ctx.createPattern(_buildScaledTileCanvas(img, tileSizeX, tileSizeY), 'repeat');
       ctx.fillStyle = pattern;
 
       // Group cells by intensity to minimise globalAlpha state changes
@@ -479,7 +561,7 @@ async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWi
       for (const [intensity, group] of Object.entries(byIntensity)) {
         ctx.globalAlpha = Number(intensity);
         for (const { col, row } of group)
-          ctx.fillRect(col * pixelsPerCell, row * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+          _fillTerrainCell(ctx, col, row, pixelsPerCell);
       }
     }
 
@@ -767,7 +849,10 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
       float u = (typeIndex + 0.5) / terrainTypeCount;
       return texture2D(terrainPropertySampler, vec2(u, 0.5));
   }
-    vec4 _sampleSmoothedDiffuseOverlay(vec2 tUV, vec2 coord) {
+    // Cell overlays are painted as hard-edged rectangles, one per terrain cell,
+    // so they need the same neighbour weighting the type blend gets or their
+    // edges stay visible as squares.
+    vec4 _sampleSmoothedOverlay(sampler2D overlaySampler, vec2 tUV, vec2 coord) {
       float n = terrainCellCount;
       vec2 invN = vec2(1.0 / n);
       vec4 accum = vec4(0.0);
@@ -782,7 +867,7 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
           vec2 delta = sampleCenter - coord;
           float dist2 = dot(delta, delta);
           float w = exp(-dist2 * invTwoSigma2);
-          accum += texture2D(terrainDiffuseOverlaySampler, sampleUv) * w;
+          accum += texture2D(overlaySampler, sampleUv) * w;
           totalW += w;
         }
       }
@@ -829,9 +914,9 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   );
   vec2 _coord = clamp(_tUV * terrainCellCount, vec2(0.001), vec2((terrainCellCount - 1.0) + 0.999));
   _terrainBlendResult = _computeTerrainBlend(_tUV);
-  vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUV);
+  vec4 _waterOverlay = _sampleSmoothedOverlay(terrainWaterOverlaySampler, _tUV, _coord);
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
-  vec4 _diffuseOverlay = _sampleSmoothedDiffuseOverlay(_tUV, _coord);
+  vec4 _diffuseOverlay = _sampleSmoothedOverlay(terrainDiffuseOverlaySampler, _tUV, _coord);
   float _wearLighten = _wearOverlay.r;
   float _wearDarken  = _wearOverlay.g;
   vec3 _terrainRgb = mix(_terrainBlendResult.rgb, _waterOverlay.rgb, _waterOverlay.a);

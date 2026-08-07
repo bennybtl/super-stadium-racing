@@ -119,3 +119,24 @@ export function expandPolyline(points, closed = false) {
 
   return out;
 }
+
+/**
+ * Ray-casting point-in-polygon test over an XZ point list.
+ *
+ * The `|| 1e-8` guards a horizontal edge, where zj - zi is zero and the
+ * intersection parameter would otherwise be Infinity/NaN.
+ */
+export function isPointInPolygon(x, z, points) {
+  if (!points || points.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const xi = points[i].x;
+    const zi = points[i].z;
+    const xj = points[j].x;
+    const zj = points[j].z;
+    const intersects = ((zi > z) !== (zj > z))
+      && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-8) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}

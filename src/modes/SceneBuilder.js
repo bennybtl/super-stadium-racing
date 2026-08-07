@@ -32,7 +32,7 @@ import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
-import { createHill } from "../objects/Hill.js";
+import { buildWaterBodies } from "../objects/Water.js";
 import { scatterDirtChunks } from "../objects/DirtChunks.js";
 import {
   buildTerrainIdTexturePixelData,
@@ -101,8 +101,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const trackDepth = currentTrack.depth ?? 160;
   const maxTrackDim = Math.max(trackWidth, trackDepth);
   const terrainSize = maxTrackDim + 20;
-  const groundWidth = trackWidth + 20;
-  const groundDepth = trackDepth + 20;
+  const {
+    width: groundWidth,
+    depth: groundDepth,
+    subdivisions: groundSubdivisions,
+  } = currentTrack.getGroundLattice();
   const terrainResolutionTarget = 192;
   const terrainCellSize = terrainSize <= terrainResolutionTarget
     ? 1
@@ -235,7 +238,6 @@ export async function buildScene(engine, trackLoader, trackKey) {
   applySteepWaterTerrainRemap(terrainManager, currentTrack);
 
   // -- Ground mesh --
-  const groundSubdivisions = Math.max(32, Math.min(64, Math.floor(Math.max(groundWidth, groundDepth) / 2)));
   const ground = MeshBuilder.CreateGround(
     "ground",
     { width: groundWidth, height: groundDepth, subdivisions: groundSubdivisions },
@@ -251,8 +253,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   ground.createNormals(true);
 
   // -- Ground texture --
-  // Keep this divisible by terrainManager.cellsPerSide (40) to avoid
-  // floor/ceil cell raster overlap seams in terrain texture painting.
+  // Need not divide evenly by terrainManager.cellsPerSide — that count varies
+  // per track anyway, so it rarely did. The cell painters snap their rects to
+  // whole pixels instead (see _fillTerrainCell in ground-shader.js), which is
+  // what keeps the raster from seaming.
   const texSize = 2000;
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
@@ -509,10 +513,12 @@ export async function buildScene(engine, trackLoader, trackKey) {
       decorationManager.createDecoration(feature);
     } else if (feature.type === "surfaceDecal") {
       surfaceDecalManager.createDecal(feature);
-    } else if (feature.type === 'hill' || feature.type === 'squareHill' || feature.type === 'polyHill') {
-      createHill(feature, currentTrack, scene);
     }
   }
+
+  // Water is built per *body*, not per feature — overlapping water features share
+  // one surface — so it runs once over the whole track rather than in the loop.
+  buildWaterBodies(currentTrack, scene);
 
   // Procedural dirt-chunk scatter (along walls / outside the AI drive path).
   // Disabled per-track for on-road / paved tracks.

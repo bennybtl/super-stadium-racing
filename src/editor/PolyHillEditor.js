@@ -228,7 +228,7 @@ export class PolyHillEditor {
     this._waterRebuildTimer = setTimeout(() => {
       if (!this.scene) return; // tool was deactivated
       if (!this.track?.features?.includes(feature)) return; // feature was deleted
-      rebuild.hillWater?.(feature);
+      rebuild.water?.();
     }, delayMs);
   }
 
@@ -504,7 +504,7 @@ export class PolyHillEditor {
     rebuild.terrainGrid?.();
     rebuild.terrainTexture?.();
     rebuild.normalMap?.();
-    rebuild.hillWater?.(feature);
+    rebuild.water?.();
   }
 
   // ─── Snapshot restore ─────────────────────────────────────────────────────

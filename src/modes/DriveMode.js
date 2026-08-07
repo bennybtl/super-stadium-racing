@@ -1,5 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
+import { isPointInPolygon } from "../polyline-utils.js";
 import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";
 import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
@@ -223,27 +224,11 @@ export class DriveMode extends BaseMode {
     );
   }
 
-  _isPointInPolygon(x, z, points) {
-    if (!points || points.length < 3) return false;
-    let inside = false;
-    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-      const xi = points[i].x;
-      const zi = points[i].z;
-      const xj = points[j].x;
-      const zj = points[j].z;
-
-      const intersects = ((zi > z) !== (zj > z))
-        && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-8) + xi);
-      if (intersects) inside = !inside;
-    }
-    return inside;
-  }
-
   isPointInActionZone(x, z, zone) {
     if (!zone) return false;
 
     if (zone.shape === 'polygon' && Array.isArray(zone.points)) {
-      return this._isPointInPolygon(x, z, zone.points);
+      return isPointInPolygon(x, z, zone.points);
     }
 
     const cx = zone.x ?? 0;

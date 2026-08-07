@@ -28,11 +28,11 @@
           </div>
         </div>
       </div>
-      <div class="absolute inset-0 flex flex-col items-center justify-center gap-6">
+      <div class="absolute inset-0 flex flex-col items-center justify-flex-start gap-6">
         <img
           :src="logoSrc"
           alt="Super Stadium Racing"
-          class="w-[min(70vw,615px)] max-w-full drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] select-none"
+          class="w-[min(70vw,615px)] max-w-full mt-24 drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] select-none"
         />
       </div>
       <div class="absolute inset-x-0 bottom-0 flex justify-center pb-10">
