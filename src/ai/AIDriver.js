@@ -1,5 +1,7 @@
 import { useDebugStore } from "../vue/store.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
+import { DEFAULT_HANDLING, resolveHandling } from "../truck/DriftTuning.js";
+import { clamp } from "../math-utils.js";
 import { AIBoostController, DEFAULT_BOOST_CONFIG } from "./controllers/AIBoostController.js";
 import { AIStuckRecoveryController, DEFAULT_STUCK_CONFIG } from "./controllers/AIStuckRecoveryController.js";
 import { AIPathPlanner } from "./controllers/AIPathPlanner.js";
@@ -15,6 +17,8 @@ import { AIDebugRenderer } from "./controllers/AIDebugRenderer.js";
  * Skill level parameters:
  * - stats: Multipliers on the truck's base vehicle stats (see setTruck). Every
  *   AI starts from whatever vehicle (and upgrades) it was given; skill scales it.
+ *   `stats.lateralBias` scales the drift knob instead of a state value — raise it
+ *   to make a driver hang the tail out, lower it to keep the truck planted.
  * - lookAheadDistance: How far ahead the AI looks (higher = better planning)
  * - pace: How hard the driver pushes — scales path target speeds (not a vehicle stat)
  * - steeringPrecision: How accurately the AI steers (0-1, higher = better control)
@@ -230,9 +234,33 @@ export class AIDriver {
     this._statsApplied = true;
 
     for (const [key, multiplier] of Object.entries(this.statMultipliers)) {
-      if (typeof multiplier !== 'number' || typeof state[key] !== 'number') continue;
+      if (typeof multiplier !== 'number') continue;
+      if (key === 'lateralBias') {
+        this._applyLateralBiasMultiplier(state, multiplier);
+        continue;
+      }
+      if (typeof state[key] !== 'number') continue;
       state[key] *= multiplier;
     }
+  }
+
+  /**
+   * Scale the vehicle's lateralBias drift knob (how slidey vs planted it is).
+   * Unlike the other stats this is not a raw state value — it is a high-level
+   * handling knob, so the drift-grip params it expands into have to be
+   * re-resolved. Only the two params bias actually drives are written back, so
+   * upgrade deltas on the others (driftThreshold) survive.
+   *
+   * >1 slides more, <1 plants harder, relative to whatever the vehicle authored.
+   */
+  _applyLateralBiasMultiplier(state, multiplier) {
+    const handling = { ...DEFAULT_HANDLING, ...(state.handling ?? {}) };
+    handling.lateralBias = clamp(handling.lateralBias * multiplier, -1, 1);
+    state.handling = handling;
+
+    const resolved = resolveHandling(handling);
+    state.lateralRetention = resolved.lateralRetention;
+    state.gripZoneCorrection = resolved.gripZoneCorrection;
   }
 
   /**
@@ -505,6 +533,8 @@ export class AIDriver {
 // `stats` entries are multipliers on the truck's own vehicle stats (after the
 // vehicle definition and any upgrades are applied), so every skill level starts
 // from the base vehicle and modifies it — `ok` is the vehicle as authored.
+// `lateralBias` is the exception: it scales the vehicle's drift knob of the same
+// name (>1 = slides more, <1 = more planted) rather than a raw state value.
 // Everything outside `stats` tunes driver behaviour, not the machine.
 export const AI_SKILL_PRESETS = {
   good: {
@@ -513,6 +543,7 @@ export const AI_SKILL_PRESETS = {
       acceleration: 1.08,
       grip: 1.06,
       turnSpeed: 1.05,
+      lateralBias: 0.9,
     },
     lookAheadDistance: 24,
     pace: 1.35,
@@ -529,6 +560,7 @@ export const AI_SKILL_PRESETS = {
       acceleration: 1.0,
       grip: 1.0,
       turnSpeed: 1.0,
+      lateralBias: 1.0,
     },
     lookAheadDistance: 21,
     pace: 1.25,
@@ -545,6 +577,7 @@ export const AI_SKILL_PRESETS = {
       acceleration: 0.92,
       grip: 0.95,
       turnSpeed: 0.97,
+      lateralBias: 1.15,
     },
     lookAheadDistance: 19,
     pace: 1.15,

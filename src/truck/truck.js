@@ -182,15 +182,15 @@ export class Truck {
         state.springStrength += 20 * level;
         state.damping        += 1.5 * level;
         state.turnSpeed       += 0.2 * level;
-        state.lateralBias     -= 0.025 * level; // reduces sliding
         state.weightTransfer    -= 0.05 * level;
-      } else if (upgrade.id === 'grip') {
-        // Grip upgrades add a flat multiplier to the grip stat rather than scaling it,
+        this._reduceLateralBias(state, 0.025 * level); // reduces sliding
+      } else if (upgrade.id === 'tires') {
+        // Tires add a flat delta to the grip stat rather than scaling it,
         // so that it remains effective even with terrain modifiers and at high speeds.
         state.grip += upgrade.statDelta * level;
         state.turnSpeed       += 0.3 * level;
-        state.lateralBias     -= 0.025 * level;  // reduces sliding
         state.driftThreshold  -= 0.01 * level;
+        this._reduceLateralBias(state, 0.025 * level);  // reduces sliding
       } else if (upgrade.statKey) {
         state[upgrade.statKey] += upgrade.statDelta * level;
       }
@@ -198,6 +198,24 @@ export class Truck {
     // Apply persistent nitro pool
     state.boostCount = this.upgrades.nitroCount ?? state.boostCount;
     state.maxBoosts  = this.upgrades.nitroCount ?? state.maxBoosts;
+  }
+
+  /**
+   * Plant the truck by lowering the lateralBias handling knob.
+   *
+   * Bias is a high-level knob rather than a raw stat, so it has to be re-expanded
+   * into the drift-grip params it drives. Only those two are written back, leaving
+   * the caller's own driftThreshold delta intact. `handling` is already resolved on
+   * the state by the time upgrades run (see _buildState).
+   */
+  _reduceLateralBias(state, amount) {
+    const handling = { ...DEFAULT_HANDLING, ...(state.handling ?? {}) };
+    handling.lateralBias = Math.max(-1, Math.min(1, handling.lateralBias - amount));
+    state.handling = handling;
+
+    const resolved = resolveHandling(handling);
+    state.lateralRetention = resolved.lateralRetention;
+    state.gripZoneCorrection = resolved.gripZoneCorrection;
   }
 
   createMesh() {
