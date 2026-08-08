@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, reactive, computed, shallowRef } from 'vue';
 import { DEFAULT_STRIPE_COLORS } from '../../objects/stripeColors.js';
+import { DEFAULT_SPARK_COLOR } from '../../objects/sparkColors.js';
 import { getObstacleSpec } from '../../objects/Obstacle.js';
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
@@ -217,8 +218,12 @@ export const useEditorStore = defineStore('editor', () => {
     boostStrength: 1.5,
     boostDuration: 1.5,
     slowStrength: 3,
+    fireworkMode: 'shell',
     fireworkCount: 4,
+    fireworkDuration: 2,
+    fireworkColor: DEFAULT_SPARK_COLOR,
     fireworkHeight: 25,
+    heading: 0,   // degrees, firework launcher cans
   });
 
   // ── Poly Curb panel ──

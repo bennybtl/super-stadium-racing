@@ -60,29 +60,87 @@
     </template>
     <!-- Firework controls -->
     <template v-if="editor.actionZone.zoneType === 'fireworks'">
+      <div class="text-[12px] mb-1">Effect</div>
+      <select
+        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+        :value="editor.actionZone.fireworkMode"
+        @change="editor.setFeatureProp('actionZone', 'fireworkMode', $event.target.value)"
+      >
+        <option value="shell">Launched Shell</option>
+        <option value="sparks">Spark Fountain</option>
+        <option value="flame">Flame Blast</option>
+      </select>
+
+      <!-- Shell count -->
+      <template v-if="editor.actionZone.fireworkMode === 'shell'">
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Shells</span>
+          <span>{{ editor.actionZone.fireworkCount }}</span>
+        </div>
+        <input
+          type="range"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          min="1" max="6" step="1"
+          :value="editor.actionZone.fireworkCount"
+          @input="editor.setFeatureProp('actionZone', 'fireworkCount', +$event.target.value)"
+        />
+      </template>
+
+      <!-- Fountain colour -->
+      <template v-if="editor.actionZone.fireworkMode === 'sparks'">
+        <div class="text-[12px] mb-1">Spark Color</div>
+        <select
+          class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3 capitalize"
+          :value="editor.actionZone.fireworkColor"
+          @change="editor.setFeatureProp('actionZone', 'fireworkColor', $event.target.value)"
+        >
+          <option v-for="name in SPARK_COLOR_NAMES" :key="name" :value="name" class="capitalize">{{ name }}</option>
+        </select>
+      </template>
+
+      <!-- Burn time for the sustained modes -->
+      <template v-if="editor.actionZone.fireworkMode !== 'shell'">
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Duration</span>
+          <span>{{ editor.actionZone.fireworkDuration.toFixed(1) }}s</span>
+        </div>
+        <input
+          type="range"
+          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          min="0.3" max="6" step="0.1"
+          :value="editor.actionZone.fireworkDuration"
+          @input="editor.setFeatureProp('actionZone', 'fireworkDuration', +$event.target.value)"
+        />
+      </template>
+
       <div class="flex justify-between mb-1 text-[12px]">
-        <span>Shells</span>
-        <span>{{ editor.actionZone.fireworkCount }}</span>
-      </div>
-      <input
-        type="range"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-        min="1" max="6" step="1"
-        :value="editor.actionZone.fireworkCount"
-        @input="editor.setFeatureProp('actionZone', 'fireworkCount', +$event.target.value)"
-      />
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Burst Height</span>
+        <span>{{ heightLabel }}</span>
         <span>{{ editor.actionZone.fireworkHeight }} m</span>
       </div>
       <input
         type="range"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-        min="8" max="60" step="1"
+        :min="heightRange.min" :max="heightRange.max" step="1"
         :value="editor.actionZone.fireworkHeight"
         @input="editor.setFeatureProp('actionZone', 'fireworkHeight', +$event.target.value)"
       />
-      <div class="text-[10px] text-slate-400 mb-3">Fires a volley when a truck drives in. The zone re-arms a couple of seconds later.</div>
+
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Can Rotation</span>
+        <span>{{ editor.actionZone.heading.toFixed(0) }}°</span>
+      </div>
+      <input
+        type="range" min="-180" max="180" step="5"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        :value="editor.actionZone.heading"
+        @input="editor.setFeatureProp('actionZone', 'heading', +$event.target.value)"
+      />
+      <button
+        class="w-full rounded-md border border-purple-400/70 bg-purple-950/70 px-3 py-2 mb-3 text-[12px] font-bold uppercase tracking-[1px] text-purple-100 transition duration-150 hover:bg-purple-900"
+        @click="editor.featureAction('previewActionZoneFireworks')"
+      ><i class="bi bi-play-fill"></i> Preview</button>
+
+      <div class="text-[10px] text-slate-400 mb-3">{{ modeHint }} Q/E also turns the cans. The zone re-arms once the effect finishes.</div>
     </template>
 
     <!-- Zone shape -->
@@ -148,8 +206,26 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useEditorStore } from '../store.js';
+import { SPARK_COLOR_NAMES } from '../../objects/sparkColors.js';
 import EditorPanel from './EditorPanel.vue';
 
 const editor = useEditorStore();
+
+// Height means burst apex for shells and throw distance for the sustained modes,
+// so the slider relabels and rescales with the effect.
+const heightLabel = computed(() => (
+  editor.actionZone.fireworkMode === 'shell' ? 'Burst Height' : 'Reach'
+));
+
+const heightRange = computed(() => (
+  editor.actionZone.fireworkMode === 'shell' ? { min: 8, max: 60 } : { min: 3, max: 25 }
+));
+
+const modeHint = computed(() => ({
+  shell:  'Shells fire from the two cans, alternating.',
+  sparks: 'Both cans throw a fountain of sparks in the chosen colour.',
+  flame:  'Both cans blast a column of fire.',
+}[editor.actionZone.fireworkMode] ?? ''));
 </script>

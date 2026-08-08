@@ -1,5 +1,8 @@
 import { Vector3, MeshBuilder, Color3 } from "@babylonjs/core";
 import { EditorMaterials } from './EditorMaterials.js';
+import { FireworkLaunchers } from '../objects/FireworkLaunchers.js';
+import { DEFAULT_SPARK_COLOR } from '../objects/sparkColors.js';
+import { FireworksManager } from '../managers/FireworksManager.js';
 
 /** Height of the zone cylinder gizmo in world units. */
 const CYLINDER_HEIGHT = 8;
@@ -32,6 +35,10 @@ export class ActionZoneEditor {
     /** @type {{ feature: object, cyl: import('@babylonjs/core').Mesh|null, handle: import('@babylonjs/core').Mesh|null, pointHandles: import('@babylonjs/core').Mesh[], lineSystem: import('@babylonjs/core').Mesh|null } | null} */
     this._selected = null;
     this._selectedPointIndex = -1;
+
+    /** Lazily-built effects manager + render tick for the panel's Preview button. */
+    this._previewFx = null;
+    this._previewObserver = null;
 
     this._polyLineColor = {
       pickupSpawn: {
@@ -79,6 +86,7 @@ export class ActionZoneEditor {
       z.handle?.dispose();
       for (const p of z.pointHandles) p.dispose();
       z.lineSystem?.dispose();
+      z.launchers?.dispose();
     }
     this.zones     = [];
     this._selected = null;
@@ -87,9 +95,51 @@ export class ActionZoneEditor {
 
   /** Full cleanup — used by EditorController.deactivate(). */
   dispose() {
+    this._disposePreviewFx();
     this.clearMeshes();
     this.scene = null;
     this.track = null;
+  }
+
+  // ── Preview ────────────────────────────────────────────────────────────────
+
+  /**
+   * Fire the selected zone's effect in the editor so it can be tuned without a
+   * test drive. Uses the zone's own cans, so shells and jets come out of exactly
+   * the muzzles the race will use.
+   */
+  previewFireworks() {
+    const zoneData = this._selected;
+    if (!zoneData || zoneData.feature.zoneType !== 'fireworks') return;
+
+    this._ensurePreviewFx().trigger(
+      zoneData.feature,
+      zoneData.launchers?.launchPoints ?? null,
+      zoneData.feature.x ?? 0,
+      zoneData.feature.z ?? 0,
+    );
+  }
+
+  _ensurePreviewFx() {
+    if (this._previewFx) return this._previewFx;
+
+    this._previewFx = new FireworksManager(this.scene, this.track);
+    // The editor has no game loop, so the manager gets its own tick. Zones are
+    // passed empty: previews are fired by hand, never by driving through.
+    this._previewObserver = this.scene.onBeforeRenderObservable.add(() => {
+      const dt = Math.min(0.05, this.scene.getEngine().getDeltaTime() / 1000);
+      this._previewFx.update([], [], dt);
+    });
+    return this._previewFx;
+  }
+
+  _disposePreviewFx() {
+    if (this._previewObserver) {
+      this.scene?.onBeforeRenderObservable.remove(this._previewObserver);
+      this._previewObserver = null;
+    }
+    this._previewFx?.dispose();
+    this._previewFx = null;
   }
 
   // ── Visual creation ────────────────────────────────────────────────────────
@@ -112,6 +162,7 @@ export class ActionZoneEditor {
       handle: null,
       pointHandles: [],
       lineSystem: null,
+      launchers: null,
     };
 
     if (feature.shape === 'polygon') {
@@ -119,6 +170,7 @@ export class ActionZoneEditor {
     } else {
       this._buildCircleMeshes(zoneData);
     }
+    this._syncLaunchers(zoneData);
 
     this.zones.push(zoneData);
     return zoneData;
@@ -139,10 +191,17 @@ export class ActionZoneEditor {
       feature.slowStrength = feature.slowStrength ?? 3;
     }
 
-    // Firework zones set off a volley of shells when a truck drives in.
+    // Firework zones set off a volley of shells when a truck drives in. Heading
+    // turns the pair of mortar cans about the zone centre.
     if (feature.zoneType === 'fireworks') {
+      feature.fireworkMode = feature.fireworkMode ?? 'shell';
       feature.fireworkCount = feature.fireworkCount ?? 4;
-      feature.fireworkHeight = feature.fireworkHeight ?? 25;
+      feature.fireworkDuration = feature.fireworkDuration ?? 2;
+      feature.fireworkColor = feature.fireworkColor ?? DEFAULT_SPARK_COLOR;
+      // Height means burst apex for shells, throw distance for the two sustained
+      // modes — so a mode switch reseeds it into that mode's own range.
+      feature.fireworkHeight = feature.fireworkHeight ?? (feature.fireworkMode === 'shell' ? 25 : 10);
+      feature.heading = feature.heading ?? 0;
     }
 
     if (feature.shape === 'polygon') {
@@ -271,6 +330,7 @@ export class ActionZoneEditor {
     this._normaliseFeature(zoneData.feature);
     if (zoneData.feature.shape === 'polygon') this._buildPolygonMeshes(zoneData);
     else this._buildCircleMeshes(zoneData);
+    this._syncLaunchers(zoneData);
 
     if (keepSelected) {
       if (zoneData.feature.shape !== 'polygon') this._selectedPointIndex = -1;
@@ -278,6 +338,22 @@ export class ActionZoneEditor {
       this._applyZoneVisualState(zoneData, true);
       this._showProperties(zoneData);
     }
+  }
+
+  /**
+   * Create, refresh or drop a zone's mortar cans to match its current type and
+   * transform. The cans are the same object the race renders, so the editor
+   * shows exactly where shells will come from.
+   */
+  _syncLaunchers(zoneData) {
+    if (zoneData.feature.zoneType !== 'fireworks') {
+      zoneData.launchers?.dispose();
+      zoneData.launchers = null;
+      return;
+    }
+
+    if (zoneData.launchers) zoneData.launchers.refresh();
+    else zoneData.launchers = new FireworkLaunchers(zoneData.feature, this.track, this.scene);
   }
 
   _getPolygonCenter(points) {
@@ -408,6 +484,7 @@ export class ActionZoneEditor {
     const groundY = this.track.getHeightAt(newX, newZ);
     this._selected.cyl.position.set(newX, groundY + CYLINDER_HEIGHT / 2, newZ);
     this._selected.handle.position.set(newX, groundY + HANDLE_HEIGHT, newZ);
+    this._syncLaunchers(this._selected);
     return new Vector3(newX - prevX, 0, newZ - prevZ);
   }
 
@@ -446,6 +523,7 @@ export class ActionZoneEditor {
     this._selected.handle?.dispose();
     for (const p of this._selected.pointHandles) p.dispose();
     this._selected.lineSystem?.dispose();
+    this._selected.launchers?.dispose();
     const zi = this.zones.indexOf(this._selected);
     if (zi > -1) this.zones.splice(zi, 1);
     this._selected = null;
@@ -538,8 +616,12 @@ export class ActionZoneEditor {
     s.actionZone.boostStrength = zoneData.feature.boostStrength ?? 1.5;
     s.actionZone.boostDuration = zoneData.feature.boostDuration ?? 1.5;
     s.actionZone.slowStrength = zoneData.feature.slowStrength ?? 3;
+    s.actionZone.fireworkMode = zoneData.feature.fireworkMode ?? 'shell';
     s.actionZone.fireworkCount = zoneData.feature.fireworkCount ?? 4;
+    s.actionZone.fireworkDuration = zoneData.feature.fireworkDuration ?? 2;
+    s.actionZone.fireworkColor = zoneData.feature.fireworkColor ?? DEFAULT_SPARK_COLOR;
     s.actionZone.fireworkHeight = zoneData.feature.fireworkHeight ?? 25;
+    s.actionZone.heading = +(((zoneData.feature.heading ?? 0) * 180) / Math.PI).toFixed(1);
     s.selectedType = 'actionZone';
   }
 
@@ -553,6 +635,25 @@ export class ActionZoneEditor {
     this._selected.feature.radius = val;
     this._selected.cyl.scaling.x = val;
     this._selected.cyl.scaling.z = val;
+    // Cans sit at the zone edge, so a resize walks them in or out with it.
+    this._syncLaunchers(this._selected);
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
+  }
+
+  /** Turn the mortar cans about the zone centre (Q/E in the editor). */
+  rotate(angle) {
+    if (!this._selected || this._selected.feature.zoneType !== 'fireworks') return;
+    this._selected.feature.heading = (this._selected.feature.heading ?? 0) + angle;
+    this._syncLaunchers(this._selected);
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
+  }
+
+  changeHeading(degrees) {
+    if (!this._selected) return;
+    this._selected.feature.heading = (degrees * Math.PI) / 180;
+    this._syncLaunchers(this._selected);
     this._showProperties(this._selected);
     this.editor.saveSnapshot(true);
   }
@@ -561,6 +662,7 @@ export class ActionZoneEditor {
     if (!this._selected) return;
     this._selected.feature.zoneType = val;
     this._normaliseFeature(this._selected.feature); // seed type-specific defaults
+    this._syncLaunchers(this._selected);            // cans appear/vanish with the type
     this._applyZoneVisualState(this._selected, true);
     this._showProperties(this._selected);
     this.editor.saveSnapshot();
@@ -599,6 +701,36 @@ export class ActionZoneEditor {
     this._selected.feature.fireworkHeight = val;
     this._showProperties(this._selected);
     this.editor.saveSnapshot(true);
+  }
+
+  changeFireworkColor(val) {
+    if (!this._selected) return;
+    this._selected.feature.fireworkColor = val;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot();
+  }
+
+  changeFireworkDuration(val) {
+    if (!this._selected) return;
+    this._selected.feature.fireworkDuration = val;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
+  }
+
+  /**
+   * Switch between launched shells, spark fountain and flame blast. Height is
+   * re-seeded because it means very different distances per mode — a 25 m shell
+   * apex would be an absurd fountain.
+   */
+  changeFireworkMode(val) {
+    if (!this._selected) return;
+    const feature = this._selected.feature;
+    if (feature.fireworkMode === val) return;
+
+    feature.fireworkMode = val;
+    feature.fireworkHeight = val === 'shell' ? 25 : 10;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot();
   }
 
   changeShape(val) {

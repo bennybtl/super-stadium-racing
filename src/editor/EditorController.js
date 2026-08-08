@@ -455,7 +455,8 @@ export class EditorController {
     }
 
     if (this.actionZoneEditor.selected) {
-      return this._createVectorSelectionInteraction(this.actionZoneEditor);
+      // Q/E turns a firework zone's mortar cans; other zone types ignore it.
+      return this._createVectorSelectionInteraction(this.actionZoneEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
     if (this.bridgeMeshEditor?.selected) {
@@ -1871,6 +1872,11 @@ export class EditorController {
   changeActionZoneSlowStrength(val) { this.actionZoneEditor.changeSlowStrength(val); }
   changeActionZoneFireworkCount(val) { this.actionZoneEditor.changeFireworkCount(val); }
   changeActionZoneFireworkHeight(val) { this.actionZoneEditor.changeFireworkHeight(val); }
+  changeActionZoneHeading(degrees) { this.actionZoneEditor.changeHeading(degrees); }
+  changeActionZoneFireworkMode(val) { this.actionZoneEditor.changeFireworkMode(val); }
+  changeActionZoneFireworkDuration(val) { this.actionZoneEditor.changeFireworkDuration(val); }
+  changeActionZoneFireworkColor(val) { this.actionZoneEditor.changeFireworkColor(val); }
+  previewActionZoneFireworks()    { this.actionZoneEditor.previewFireworks(); }
   insertActionZonePoint()         { this.actionZoneEditor.insertPoint(); }
   deleteActionZonePoint()         { this.actionZoneEditor.deletePoint(); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }

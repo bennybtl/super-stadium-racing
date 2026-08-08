@@ -1,6 +1,8 @@
 import { Vector3, Color4, ParticleSystem } from "@babylonjs/core";
 import { getSharedCloudTexture } from "../truck/ParticleEffects.js";
 import { isPointInPolygon } from "../polyline-utils.js";
+import { FireworkLaunchers } from "../objects/FireworkLaunchers.js";
+import { resolveSparkColor, DEFAULT_SPARK_COLOR } from "../objects/sparkColors.js";
 
 // =============================================================================
 // Tunable constants
@@ -21,8 +23,10 @@ const SHELL_COLORS = [
 const SHELL_GRAVITY = 14;
 /** Seconds between the shells of one volley. */
 const LAUNCH_STAGGER = 0.16;
-/** Horizontal scatter (m) of launch points around the zone centre. */
+/** Horizontal scatter (m) of launch points when firing without cans. */
 const LAUNCH_SPREAD = 8;
+/** Horizontal jitter (m) applied to shells leaving a mortar can. */
+const MUZZLE_JITTER = 0.3;
 /** Seconds a zone must wait before it can fire again. */
 const ZONE_COOLDOWN = 2.5;
 /** Safety cap on shells in flight / bursts alight at once. */
@@ -33,18 +37,33 @@ const BURST_PARTICLES = 160;
 /** Longest a burst's particles can stay alive (used to free pooled systems). */
 const BURST_MAX_LIFETIME = 1.9;
 
+/** Sustained emitters (spark fountains, flame blasts): pool cap and per-mode feel. */
+const MAX_JETS = 6;
+const SPARK_EMIT_RATE = 400;
+const SPARK_MAX_LIFETIME = 1.1;
+/** Gravity on fountain sparks (downward-positive) — reach is solved against it. */
+const SPARK_GRAVITY = 9;
+const FLAME_EMIT_RATE = 260;
+const FLAME_MAX_LIFETIME = 0.6;
+/** Same convention, negative: hot gas keeps climbing instead of falling. */
+const FLAME_GRAVITY = -1.5;
+
 // =============================================================================
 
 /**
  * FireworksManager — launches a firework volley when a truck drives into a
  * `zoneType: "fireworks"` action zone.
  *
- * Each trigger fires `fireworkCount` shells from scattered points around the
- * zone centre. A shell is a trail particle system riding a ballistic point;
- * at apex the trail cuts out and a pooled burst system emits one radial
- * shell of sparks.
+ * Each zone gets a pair of mortar cans (FireworkLaunchers) built the first time
+ * it is seen, and fires one of three ways (`fireworkMode`):
  *
- * Trail and burst systems are pooled and reused — a volley never allocates.
+ *   shell  – `fireworkCount` shells alternate between the two muzzles. Each is a
+ *            trail particle system riding a ballistic point; at apex the trail
+ *            cuts out and a pooled burst system emits one radial shell of sparks.
+ *   sparks – both cans run a gerb-style fountain of sparks for `fireworkDuration`.
+ *   flame  – both cans throw a short column of fire for `fireworkDuration`.
+ *
+ * Every particle system is pooled and reused — a trigger never allocates.
  *
  * Usage:
  *   const fw = new FireworksManager(scene, track);
@@ -69,6 +88,10 @@ export class FireworksManager {
     this._cooldowns = new Map();
     /** Which zones each truck was inside last frame, for edge detection. */
     this._insideByTruckId = new Map();
+    /** @type {Map<object, FireworkLaunchers>} mortar cans, keyed by zone feature. */
+    this._launchersByZone = new Map();
+    /** Sustained emitters (fountains, flames), pooled per mode. */
+    this._jets = [];
   }
 
   /**
@@ -76,26 +99,35 @@ export class FireworksManager {
    * `zones` are the track's `fireworks` action-zone features.
    */
   update(trucks, zones, dt) {
+    this._syncLaunchers(zones);
     this._checkZoneEntries(trucks, zones, dt);
     this._advanceQueue(dt);
     this._advanceShells(dt);
+    this._advanceJets(dt);
     this._releaseFinishedBursts(dt);
   }
 
   /**
-   * Fire one volley centred on (x, z), rising from ground level there.
-   * Exposed so anything else (a lap win, a stunt) can set off fireworks too.
+   * Fire one volley centred on (x, z).
+   *
+   * With `points` (muzzle positions from a zone's cans) shells alternate between
+   * the tubes; without them they rise from scattered spots around (x, z) at
+   * ground level, so anything else — a lap win, a stunt — can set off fireworks
+   * anywhere without needing launchers.
    */
-  launch(x, z, { count = 4, height = 25 } = {}) {
+  launch(x, z, { count = 4, height = 25, points = null } = {}) {
     const shells = Math.max(1, Math.min(MAX_TRAILS, Math.round(count)));
     const baseY = this.track?.getHeightAt?.(x, z) ?? 0;
 
     for (let i = 0; i < shells; i++) {
+      const muzzle = points?.length ? points[i % points.length] : null;
       this._queued.push({
         delay: i * LAUNCH_STAGGER,
-        x: x + (Math.random() - 0.5) * LAUNCH_SPREAD,
-        z: z + (Math.random() - 0.5) * LAUNCH_SPREAD,
-        y: baseY,
+        // Muzzle shells get a touch of jitter so consecutive shots out of the
+        // same tube don't trace one identical line.
+        x: muzzle ? muzzle.x + (Math.random() - 0.5) * MUZZLE_JITTER : x + (Math.random() - 0.5) * LAUNCH_SPREAD,
+        z: muzzle ? muzzle.z + (Math.random() - 0.5) * MUZZLE_JITTER : z + (Math.random() - 0.5) * LAUNCH_SPREAD,
+        y: muzzle ? muzzle.y : baseY,
         // Vary the apex so a volley doesn't burst as one flat layer.
         height: Math.max(6, height * (0.8 + Math.random() * 0.4)),
         color: SHELL_COLORS[Math.floor(Math.random() * SHELL_COLORS.length)],
@@ -106,12 +138,37 @@ export class FireworksManager {
   dispose() {
     for (const t of this._trails) t.system.dispose();
     for (const b of this._bursts) b.system.dispose();
+    for (const j of this._jets) j.system.dispose();
+    for (const launchers of this._launchersByZone.values()) launchers.dispose();
+    this._launchersByZone.clear();
     this._trails = [];
     this._bursts = [];
+    this._jets = [];
     this._shells = [];
     this._queued = [];
     this._cooldowns.clear();
     this._insideByTruckId.clear();
+  }
+
+  // ── Launchers ──────────────────────────────────────────────────────────────
+
+  /** Build cans for zones we haven't seen yet, and drop any that went away. */
+  _syncLaunchers(zones) {
+    if (!this.track) return;
+
+    for (const zone of zones ?? []) {
+      if (!this._launchersByZone.has(zone)) {
+        this._launchersByZone.set(zone, new FireworkLaunchers(zone, this.track, this.scene));
+      }
+    }
+
+    if (this._launchersByZone.size === (zones?.length ?? 0)) return;
+    const live = new Set(zones ?? []);
+    for (const [zone, launchers] of this._launchersByZone) {
+      if (live.has(zone)) continue;
+      launchers.dispose();
+      this._launchersByZone.delete(zone);
+    }
   }
 
   // ── Triggering ─────────────────────────────────────────────────────────────
@@ -142,15 +199,99 @@ export class FireworksManager {
         // Edge trigger: only the frame a truck crosses in, and only once the
         // zone's cooldown has expired (a pack of trucks shouldn't chain-fire it).
         if (inside && !wasInside.has(zone) && !this._cooldowns.has(zone)) {
-          this.launch(zone.x ?? x, zone.z ?? z, {
-            count: zone.fireworkCount ?? 4,
-            height: zone.fireworkHeight ?? 25,
-          });
-          this._cooldowns.set(zone, ZONE_COOLDOWN);
+          this._fireZone(zone, x, z);
         }
         if (inside) wasInside.add(zone);
         else wasInside.delete(zone);
       }
+    }
+  }
+
+  /**
+   * Set a zone off in whichever mode it is authored for, right now, ignoring
+   * cooldowns. `points` are the muzzles to fire from — the caller's own cans in
+   * the editor preview, or the manager's for a zone it built itself.
+   *
+   * @returns {number} seconds the zone should stay shut afterwards.
+   */
+  trigger(zone, points = null, fallbackX = 0, fallbackZ = 0) {
+    const mode = zone.fireworkMode ?? 'shell';
+    const duration = Math.max(0.2, zone.fireworkDuration ?? 2);
+
+    if (mode === 'sparks' || mode === 'flame') {
+      this._startJets(mode, points, duration, zone.fireworkHeight ?? 10, zone.fireworkColor);
+      return Math.max(ZONE_COOLDOWN, duration + 0.5);
+    }
+
+    this.launch(zone.x ?? fallbackX, zone.z ?? fallbackZ, {
+      count: zone.fireworkCount ?? 4,
+      height: zone.fireworkHeight ?? 25,
+      points,
+    });
+    return ZONE_COOLDOWN;
+  }
+
+  /**
+   * Fire a zone a truck has just driven into, and start its cooldown. A
+   * sustained mode holds the zone shut until its own run has finished.
+   */
+  _fireZone(zone, truckX, truckZ) {
+    const points = this._launchersByZone.get(zone)?.launchPoints ?? null;
+    this._cooldowns.set(zone, this.trigger(zone, points, truckX, truckZ));
+  }
+
+  // ── Sustained emitters (sparks / flame) ────────────────────────────────────
+
+  /**
+   * Run a fountain or flame out of every muzzle for `duration` seconds.
+   * `reach` is the height the jet should throw to, solved against the mode's own
+   * gravity so the slider means roughly the same thing as the shell burst height.
+   * `colorName` tints spark fountains; flame always burns fire-coloured.
+   */
+  _startJets(mode, points, duration, reach, colorName = DEFAULT_SPARK_COLOR) {
+    const muzzles = points?.length ? points : [];
+    if (!muzzles.length) return;
+
+    const gravity = mode === 'flame' ? FLAME_GRAVITY : SPARK_GRAVITY;
+    // Flame climbs under negative gravity, so fall back to a plain speed for it.
+    const power = gravity > 0
+      ? Math.sqrt(2 * gravity * Math.max(1, reach))
+      : Math.max(10, reach * 1.55);
+
+    for (const muzzle of muzzles) {
+      const jet = this._acquireJet(mode);
+      if (!jet) return;
+
+      jet.busy = true;
+      jet.emitFor = duration;
+      // Hold the system out of the pool until the last particle has died.
+      jet.busyFor = duration + (mode === 'flame' ? FLAME_MAX_LIFETIME : SPARK_MAX_LIFETIME);
+      jet.emitter.set(muzzle.x, muzzle.y, muzzle.z);
+      jet.system.minEmitPower = power * 0.7;
+      jet.system.maxEmitPower = power;
+      jet.system.emitRate = mode === 'flame' ? FLAME_EMIT_RATE : SPARK_EMIT_RATE;
+      // Colours are read at emission, so re-tinting a pooled system only affects
+      // the sparks it is about to throw — anything still in the air keeps its own.
+      if (mode === 'sparks') this._tintSparkJet(jet, colorName);
+    }
+  }
+
+  _tintSparkJet(jet, colorName) {
+    const { core, body, dead } = resolveSparkColor(colorName);
+    jet.system.color1 = new Color4(core[0], core[1], core[2], 1);
+    jet.system.color2 = new Color4(body[0], body[1], body[2], 1);
+    jet.system.colorDead = new Color4(dead[0], dead[1], dead[2], 0);
+  }
+
+  _advanceJets(dt) {
+    for (const jet of this._jets) {
+      if (!jet.busy) continue;
+
+      jet.emitFor -= dt;
+      if (jet.emitFor <= 0 && jet.system.emitRate !== 0) jet.system.emitRate = 0;
+
+      jet.busyFor -= dt;
+      if (jet.busyFor <= 0) jet.busy = false;
     }
   }
 
@@ -237,6 +378,17 @@ export class FireworksManager {
     return trail;
   }
 
+  _acquireJet(mode) {
+    const free = this._jets.find(j => !j.busy && j.mode === mode);
+    if (free) return free;
+    if (this._jets.length >= MAX_JETS) return null;
+    const jet = mode === 'flame'
+      ? this._createFlameJet(this._jets.length)
+      : this._createSparkJet(this._jets.length);
+    this._jets.push(jet);
+    return jet;
+  }
+
   _acquireBurst() {
     const free = this._bursts.find(b => b.busyFor <= 0);
     if (free) return free;
@@ -270,6 +422,67 @@ export class FireworksManager {
 
     system.start();
     return { system, emitter, busy: false };
+  }
+
+  /** Gerb fountain: a tight cone of small, long-lived gold sparks. */
+  _createSparkJet(index) {
+    const emitter = new Vector3();
+    const system = new ParticleSystem(`fwSparks${index}`, 500, this.scene);
+    system.particleTexture = getSharedCloudTexture(this.scene);
+    system.emitter = emitter;
+    system.minEmitBox = new Vector3(-0.1, 0, -0.1);
+    system.maxEmitBox = new Vector3(0.1, 0, 0.1);
+
+    system.minSize = 0.14;
+    system.maxSize = 0.3;
+    system.minLifeTime = 0.45;
+    system.maxLifeTime = SPARK_MAX_LIFETIME;
+
+    system.emitRate = 0;
+    system.blendMode = ParticleSystem.BLENDMODE_ADD;
+    system.gravity = new Vector3(0, -SPARK_GRAVITY, 0);
+    system.direction1 = new Vector3(-0.15, 1, -0.15);
+    system.direction2 = new Vector3(0.15, 1, 0.15);
+    system.minAngularSpeed = 0;
+    system.maxAngularSpeed = Math.PI * 1.5;
+    system.updateSpeed = 0.01;
+
+    system.start();
+    const jet = { system, emitter, mode: 'sparks', busy: false, emitFor: 0, busyFor: 0 };
+    this._tintSparkJet(jet, DEFAULT_SPARK_COLOR);
+    return jet;
+  }
+
+  /** Flame blast: a fat, short-lived column of fire that keeps rising as it fades. */
+  _createFlameJet(index) {
+    const emitter = new Vector3();
+    const system = new ParticleSystem(`fwFlame${index}`, 420, this.scene);
+    system.particleTexture = getSharedCloudTexture(this.scene);
+    system.emitter = emitter;
+    system.minEmitBox = new Vector3(-0.2, 0, -0.2);
+    system.maxEmitBox = new Vector3(0.2, 0, 0.2);
+
+    system.color1 = new Color4(1.0, 0.85, 0.35, 0.9);
+    system.color2 = new Color4(1.0, 0.35, 0.05, 0.8);
+    system.colorDead = new Color4(0.35, 0.06, 0.0, 0);
+
+    system.minSize = 1.0;
+    system.maxSize = 3.0;
+    system.minLifeTime = 0.22;
+    system.maxLifeTime = FLAME_MAX_LIFETIME;
+
+    system.emitRate = 0;
+    system.blendMode = ParticleSystem.BLENDMODE_ADD;
+    // Negative gravity: the column keeps climbing and widening as it burns out.
+    system.gravity = new Vector3(0, -FLAME_GRAVITY, 0);
+    system.direction1 = new Vector3(-0.35, 1, -0.35);
+    system.direction2 = new Vector3(0.35, 1, 0.35);
+    system.minAngularSpeed = 0;
+    system.maxAngularSpeed = Math.PI;
+    system.updateSpeed = 0.012;
+
+    system.start();
+    return { system, emitter, mode: 'flame', busy: false, emitFor: 0, busyFor: 0 };
   }
 
   _createBurst(index) {
