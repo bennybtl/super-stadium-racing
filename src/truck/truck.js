@@ -7,6 +7,7 @@ import {
   PhysicsMotionType,
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
+import { TireMarks } from "./TireMarks.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { DriftPhysics } from "./DriftPhysics.js";
@@ -35,6 +36,15 @@ const AI_TERRAIN_LOW_DETAIL_DIST = 75; // metres
 // the mesh center makes the rear end swing out when the heading changes,
 // reading as a drift. 0 restores center-pivot rotation.
 const YAW_PIVOT_FORWARD = 1.5; // ≈ front axle (TruckBody frontAxle)
+// Forward speed above which stamping on the brakes starts laying rubber (m/s).
+const TIRE_MARK_BRAKE_SPEED = 7;
+// Ring size per rear wheel: each node covers ~0.5 m of mark, so the player
+// carries about 2 km of marks per side and AI trucks ~0.75 km — enough that a
+// race ends before the ring wraps and starts recycling the oldest marks.
+// Uploads are per-node, not per-buffer, so raising these costs memory
+// (~40 bytes a node) and nothing per frame.
+const TIRE_MARK_CAPACITY = 4096;
+const AI_TIRE_MARK_CAPACITY = 1536;
 
 /**
  * Main Truck class that coordinates all truck subsystems
@@ -141,6 +151,17 @@ export class Truck {
       body:   this.diffuseColor,
     }, vehicleDef ?? null, {
       disableDynamicShadows: !!this.driver,
+    });
+
+    // Built after the body so the marks can take the real rear-wheel placement
+    // from it — the physics box is narrower and shorter than the actual track
+    // and wheelbase, so deriving the spacing from it left the marks too close
+    // together and too far forward.
+    const rearWheels = this.body.rearWheelGeometry;
+    this.tireMarks = new TireMarks(scene, {
+      capacity: this.driver ? AI_TIRE_MARK_CAPACITY : TIRE_MARK_CAPACITY,
+      halfTrack: rearWheels.halfTrack,
+      rearOffset: -rearWheels.axleZ,
     });
   }
 
@@ -513,6 +534,29 @@ export class Truck {
         track,
         effectScaleOverride
       ));
+
+      // Tire marks: rubber scrubs off when the truck slides, and when it brakes
+      // hard from speed. Unlike the particle scale, distance is a plain on/off
+      // gate — marks persist, so a faint one laid at range would stay faint next
+      // to the dark ones laid up close.
+      profile('truck.tireMarks', () => {
+        const driftMark = Math.min(1, Math.max(0, this.state.slipAngle - this.state.driftThreshold) * 4);
+        const fwdSpeed = this.state.velocity.x * this._forward.x + this.state.velocity.z * this._forward.z;
+        const brakeMark = input.back && fwdSpeed > TIRE_MARK_BRAKE_SPEED
+          ? Math.min(1, (fwdSpeed - TIRE_MARK_BRAKE_SPEED) / 8)
+          : 0;
+        // Water leaves no rubber; bridge decks do, so this checks the painted
+        // terrain only where the truck is actually on it.
+        const onWater = onNaturalGround && terrain?.name === 'water';
+        const canMark = groundedness > 0.35 && !onWater && effectScaleOverride > 0.05;
+
+        this.tireMarks.update({
+          position: this.mesh.position,
+          heading: this.state.heading,
+          strength: canMark ? Math.max(driftMark, brakeMark) : 0,
+          sampleY: this._surfaceSampler,
+        });
+      });
       this._particleUpdateAccumulator = 0;
     }
 

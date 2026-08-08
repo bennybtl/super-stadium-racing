@@ -207,6 +207,17 @@ export class TruckBody {
     if (!this._ghost) this._createContactShadow();
   }
 
+  /**
+   * Rear wheel placement in truck-local metres, resolved from the vehicle def
+   * with the same fallbacks the wheel meshes use. `axleZ` is negative (behind
+   * the truck centre). Tire marks read this so they line up with the wheels
+   * rather than the physics box, which is narrower than the real track.
+   */
+  get rearWheelGeometry() {
+    const rear = this._wheelDefs.find(def => !def.isFront) ?? this._wheelDefs[0];
+    return { halfTrack: Math.abs(rear.x), axleZ: rear.z };
+  }
+
   _createContactShadow() {
     const shadow = MeshBuilder.CreateGround("truckContactShadow", {
       width: 3,
