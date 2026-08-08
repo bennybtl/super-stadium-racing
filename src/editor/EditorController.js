@@ -1815,6 +1815,7 @@ export class EditorController {
   changePolyWallCollisionHeight(val) { this.polyWallEditor.changePolyWallCollisionHeight(val); }
   changePolyWallThickness(val)       { this.polyWallEditor.changePolyWallThickness(val); }
   changePolyWallClosed(val)          { this.polyWallEditor.changePolyWallClosed(val); }
+  changePolyWallFence(val)           { this.polyWallEditor.changePolyWallFence(val); }
   changePolyWallColors(colors)       { this.polyWallEditor.changePolyWallColors(colors); }
   insertPolyWallPoint()         { this.polyWallEditor.insertPolyWallPoint(); }
   deletePolyWallPoint()         { this.polyWallEditor.deleteSelectedPoint(); }
@@ -1868,6 +1869,8 @@ export class EditorController {
   changeActionZoneBoostStrength(val) { this.actionZoneEditor.changeBoostStrength(val); }
   changeActionZoneBoostDuration(val) { this.actionZoneEditor.changeBoostDuration(val); }
   changeActionZoneSlowStrength(val) { this.actionZoneEditor.changeSlowStrength(val); }
+  changeActionZoneFireworkCount(val) { this.actionZoneEditor.changeFireworkCount(val); }
+  changeActionZoneFireworkHeight(val) { this.actionZoneEditor.changeFireworkHeight(val); }
   insertActionZonePoint()         { this.actionZoneEditor.insertPoint(); }
   deleteActionZonePoint()         { this.actionZoneEditor.deletePoint(); }
   deleteActionZone()              { this.actionZoneEditor.deleteSelected(); }

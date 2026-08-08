@@ -69,6 +69,7 @@ export class TestMode extends DriveMode {
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
+    const fireworkZones = this.getFireworkZones(currentTrack);
     let frameRenderStartMs = 0;
 
     scene.onAfterRenderObservable.add(() => {
@@ -89,6 +90,8 @@ export class TestMode extends DriveMode {
         'truck.update',
         () => playerTruck.update(input, dt, terrainManager, currentTrack, true, null, frameProfiler)
       );
+
+      frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
 
       frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
         truckId: 'player',

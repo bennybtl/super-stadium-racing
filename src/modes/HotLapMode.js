@@ -141,6 +141,7 @@ export class HotLapMode extends DriveMode {
     const slowZones = this.getSlowZones(currentTrack);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
     const speedBoostZones = this.getSpeedBoostZones(currentTrack);
+    const fireworkZones = this.getFireworkZones(currentTrack);
 
     this.setupVisibilityHandler(scene, trucks);
 
@@ -180,6 +181,7 @@ export class HotLapMode extends DriveMode {
 
       frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
       frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
+      frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
 
       const oobRemaining = frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
         truckId: 'player',

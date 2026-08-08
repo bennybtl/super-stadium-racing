@@ -15,6 +15,7 @@
       <option value="slowZone">Slow Zone</option>
       <option value="speedBoost">Speed Boost</option>
       <option value="outOfBounds">Out of Bounds</option>
+      <option value="fireworks">Fireworks</option>
     </select>
 
     <!-- Speed boost controls -->
@@ -57,6 +58,33 @@
         @input="editor.setFeatureProp('actionZone', 'slowStrength', +$event.target.value)"
       />
     </template>
+    <!-- Firework controls -->
+    <template v-if="editor.actionZone.zoneType === 'fireworks'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Shells</span>
+        <span>{{ editor.actionZone.fireworkCount }}</span>
+      </div>
+      <input
+        type="range"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        min="1" max="6" step="1"
+        :value="editor.actionZone.fireworkCount"
+        @input="editor.setFeatureProp('actionZone', 'fireworkCount', +$event.target.value)"
+      />
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Burst Height</span>
+        <span>{{ editor.actionZone.fireworkHeight }} m</span>
+      </div>
+      <input
+        type="range"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        min="8" max="60" step="1"
+        :value="editor.actionZone.fireworkHeight"
+        @input="editor.setFeatureProp('actionZone', 'fireworkHeight', +$event.target.value)"
+      />
+      <div class="text-[10px] text-slate-400 mb-3">Fires a volley when a truck drives in. The zone re-arms a couple of seconds later.</div>
+    </template>
+
     <!-- Zone shape -->
     <div class="text-[12px] mb-1">Shape</div>
     <select

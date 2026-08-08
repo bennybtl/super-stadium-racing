@@ -4,6 +4,7 @@ import { isPointInPolygon } from "../polyline-utils.js";
 import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";
 import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
+import { FireworksManager } from "../managers/FireworksManager.js";
 
 /**
  * DriveMode - shared utilities for drivable gameplay modes.
@@ -17,6 +18,7 @@ export class DriveMode extends BaseMode {
   constructor(controller) {
     super(controller);
     this._oobStateByTruckId = new Map();
+    this._fireworksManager = null;
     this.cameraController = null;
     this._photoModeActive = false;
     this.frameProfiler = null;
@@ -116,6 +118,10 @@ export class DriveMode extends BaseMode {
     if (this.frameProfiler) {
       this.frameProfiler.dispose(window, "gameLoopProfiler");
       this.frameProfiler = null;
+    }
+    if (this._fireworksManager) {
+      this._fireworksManager.dispose();
+      this._fireworksManager = null;
     }
     super.teardown();
   }
@@ -222,6 +228,26 @@ export class DriveMode extends BaseMode {
     return track.features.filter(
       f => f.type === "actionZone" && f.zoneType === "speedBoost"
     );
+  }
+
+  /** Resolve all firework action zones from track features. */
+  getFireworkZones(track) {
+    return track.features.filter(
+      f => f.type === "actionZone" && f.zoneType === "fireworks"
+    );
+  }
+
+  /**
+   * Set off a firework volley for any truck that has just driven into a
+   * firework zone, and advance shells already in the air. The manager is
+   * created on first use so tracks without firework zones pay nothing.
+   */
+  updateFireworkZones(scene, track, trucks, fireworkZones, dt) {
+    if (!fireworkZones?.length && !this._fireworksManager) return;
+    if (!this._fireworksManager) {
+      this._fireworksManager = new FireworksManager(scene, track);
+    }
+    this._fireworksManager.update(trucks, fireworkZones, dt);
   }
 
   isPointInActionZone(x, z, zone) {

@@ -281,6 +281,7 @@ export class MenuMode extends DriveMode {
     const slowZones = this.getSlowZones(currentTrack);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
     const speedBoostZones = this.getSpeedBoostZones(currentTrack);
+    const fireworkZones = this.getFireworkZones(currentTrack);
 
     // Camera cycles through the field so the demo doesn't dwell on one truck.
     this.cameraController = cameraController;
@@ -311,6 +312,7 @@ export class MenuMode extends DriveMode {
       staticBodyCollisionManager.update(trucks, dt);
       this.applySlowZones(trucks, slowZones);
       this.applySpeedBoostZones(trucks, speedBoostZones);
+      this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt);
 
       trucks.forEach(td => this.updateOutOfBoundsCountdown({
         truckId: td.id,

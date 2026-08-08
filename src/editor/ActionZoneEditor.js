@@ -50,6 +50,10 @@ export class ActionZoneEditor {
         normal: new Color3(0.4, 0.9, 0.3),
         highlight: new Color3(0.6, 1.0, 0.45),
       },
+      fireworks: {
+        normal: new Color3(0.75, 0.45, 1.0),
+        highlight: new Color3(0.9, 0.7, 1.0),
+      },
     };
   }
 
@@ -133,6 +137,12 @@ export class ActionZoneEditor {
 
     if (feature.zoneType === 'slowZone') {
       feature.slowStrength = feature.slowStrength ?? 3;
+    }
+
+    // Firework zones set off a volley of shells when a truck drives in.
+    if (feature.zoneType === 'fireworks') {
+      feature.fireworkCount = feature.fireworkCount ?? 4;
+      feature.fireworkHeight = feature.fireworkHeight ?? 25;
     }
 
     if (feature.shape === 'polygon') {
@@ -528,6 +538,8 @@ export class ActionZoneEditor {
     s.actionZone.boostStrength = zoneData.feature.boostStrength ?? 1.5;
     s.actionZone.boostDuration = zoneData.feature.boostDuration ?? 1.5;
     s.actionZone.slowStrength = zoneData.feature.slowStrength ?? 3;
+    s.actionZone.fireworkCount = zoneData.feature.fireworkCount ?? 4;
+    s.actionZone.fireworkHeight = zoneData.feature.fireworkHeight ?? 25;
     s.selectedType = 'actionZone';
   }
 
@@ -571,6 +583,20 @@ export class ActionZoneEditor {
   changeSlowStrength(val) {
     if (!this._selected) return;
     this._selected.feature.slowStrength = val;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
+  }
+
+  changeFireworkCount(val) {
+    if (!this._selected) return;
+    this._selected.feature.fireworkCount = val;
+    this._showProperties(this._selected);
+    this.editor.saveSnapshot(true);
+  }
+
+  changeFireworkHeight(val) {
+    if (!this._selected) return;
+    this._selected.feature.fireworkHeight = val;
     this._showProperties(this._selected);
     this.editor.saveSnapshot(true);
   }

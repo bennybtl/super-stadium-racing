@@ -326,4 +326,5 @@ const ZONE_COLORS = {
   slowZone:    basicColors.orange,
   outOfBounds: basicColors.red,
   speedBoost:  basicColors.green,
+  fireworks:   basicColors.purple,
 };

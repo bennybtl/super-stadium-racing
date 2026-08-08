@@ -23,6 +23,9 @@ const POINT_HEIGHT_OFFSET = 0.7
 // dead-space band that surrounds the track (ground mesh = track + 20, i.e. +10 per
 // side; border walls sit ~1 unit beyond that). Lets walls be built in the dead space.
 const DEAD_SPACE_REACH = 10;
+// Gap the fence tubing fills when it is switched on and the collision height is
+// still level with (or barely above) the wall top.
+const DEFAULT_FENCE_HEIGHT = 2.5;
 export class PolyWallEditor {
   constructor(editorController) {
     this.ec    = editorController;
@@ -88,6 +91,7 @@ export class PolyWallEditor {
       thickness:       0.5,
       friction:        0.05,
       closed:          false,
+      fence:           false,
     };
 
     this.ec.saveSnapshot();
@@ -456,6 +460,7 @@ export class PolyWallEditor {
     store.polyWall.collisionHeight = feature.collisionHeight ?? feature.height ?? 2;
     store.polyWall.thickness = feature.thickness ?? 0.5;
     store.polyWall.closed = feature.closed ?? false;
+    store.polyWall.fence = feature.fence ?? false;
     store.polyWall.colors = resolveStripeColorNames(feature);
   }
 
@@ -501,6 +506,28 @@ export class PolyWallEditor {
     this.ec.saveSnapshot(true);
     this._activeWall.feature.thickness = val;
     this._rebuildWall(this._activeWall.feature);
+  }
+
+  /**
+   * Toggle the chain-link fence. The tubing spans wall top → collision top, so
+   * enabling it on a wall whose two heights match would draw nothing; give it
+   * the default fence height to stand in rather than leaving the user to
+   * discover the coupling.
+   */
+  changePolyWallFence(val) {
+    if (!this._activeWall) return;
+    const feature = this._activeWall.feature;
+    this.ec.saveSnapshot(true);
+    feature.fence = !!val;
+    if (feature.fence) {
+      const height = Number(feature.height ?? 2);
+      const collisionHeight = Number(feature.collisionHeight ?? height);
+      if (collisionHeight - height < DEFAULT_FENCE_HEIGHT) {
+        feature.collisionHeight = height + DEFAULT_FENCE_HEIGHT;
+      }
+    }
+    this._syncStoreToFeature(feature, this.selectedPoint?.idx ?? null);
+    this._rebuildWall(feature);
   }
 
   changePolyWallClosed(val) {

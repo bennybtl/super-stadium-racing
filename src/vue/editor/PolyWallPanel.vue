@@ -161,6 +161,28 @@
       />
     </div>
 
+    <!-- Chain-link fence: metal tubing from the wall top up to the collision top -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Chain-Link Fence</span>
+      <input
+        type="checkbox"
+        :checked="editor.polyWall.fence"
+        @change="
+          editor.setFeatureProp('polyWall', 'fence', $event.target.checked)
+        "
+        class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+      />
+    </div>
+    <div class="text-[10px] text-slate-400 mb-3">
+      <template v-if="editor.polyWall.fence">
+        Fence fills {{ fenceHeightDisplay }} between the wall top and the
+        collision height — raise Collision Height for a taller fence.
+      </template>
+      <template v-else>
+        Adds posts and a top rail rising to the collision height.
+      </template>
+    </div>
+
     <!-- Stripe colours (1–3, any combination) -->
     <StripeColorPicker
       :model-value="editor.polyWall.colors"
@@ -198,6 +220,11 @@ const editor = useEditorStore();
 const radiusDisplay = computed(() => {
   if (!editor.polyWall.hasSelection) return "—";
   return editor.polyWall.radius.toFixed(1);
+});
+
+const fenceHeightDisplay = computed(() => {
+  const gap = editor.polyWall.collisionHeight - editor.polyWall.height;
+  return `${Math.max(0, gap).toFixed(1)}`;
 });
 
 const smoothingDisplay = computed(() => {

@@ -528,6 +528,7 @@ export class RaceMode extends DriveMode {
     const slowZones = this.getSlowZones(currentTrack);
     const outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
     const speedBoostZones = this.getSpeedBoostZones(currentTrack);
+    const fireworkZones = this.getFireworkZones(currentTrack);
     const truckStatusUiIntervalMs = 200;
     const aiGripSampleIntervalMs = 100;
     // The HUD shows MM:SS.cc, so 20Hz is finer than the readout — pushing a new
@@ -609,6 +610,7 @@ export class RaceMode extends DriveMode {
 
       frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
       frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
+      frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
 
       frameProfiler.measure('zones.oob', () => trucks.forEach((truckData) => {
         const oobRemaining = this.updateOutOfBoundsCountdown({

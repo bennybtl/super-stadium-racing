@@ -5,7 +5,7 @@ import cloudTextureUrl from "../assets/cloud.png";
 const CLOUD_TEXTURE_URL = cloudTextureUrl;
 const CLOUD_TEXTURES = new WeakMap();
 
-function getSharedCloudTexture(scene) {
+export function getSharedCloudTexture(scene) {
   let texture = CLOUD_TEXTURES.get(scene);
   if (!texture) {
     texture = new Texture(CLOUD_TEXTURE_URL, scene);

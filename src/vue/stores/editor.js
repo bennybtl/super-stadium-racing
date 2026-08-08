@@ -145,6 +145,7 @@ export const useEditorStore = defineStore('editor', () => {
     collisionHeight: 2,
     thickness: 0.5,
     closed: false,
+    fence: false,
     colors: [...DEFAULT_STRIPE_COLORS],
   });
 
@@ -216,6 +217,8 @@ export const useEditorStore = defineStore('editor', () => {
     boostStrength: 1.5,
     boostDuration: 1.5,
     slowStrength: 3,
+    fireworkCount: 4,
+    fireworkHeight: 25,
   });
 
   // ── Poly Curb panel ──
