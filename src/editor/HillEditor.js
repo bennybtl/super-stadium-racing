@@ -2,6 +2,7 @@ import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
+import { gizmoY } from './gizmo-height.js';
 
 /**
  * HillEditor – encapsulates all round-hill editing logic that was previously
@@ -81,10 +82,9 @@ export class HillEditor {
 
   /** Place a new hill in front of the camera and select it. */
   addEntity() {
-    const { camera } = this.editor;
-    const camTarget = camera.getTarget();
-    const newX = camTarget.x;
-    const newZ = camTarget.z;
+    const center = this.editor.viewCenterXZ();
+    const newX = center.x;
+    const newZ = center.z;
 
     const newFeature = {
       type: 'hill',
@@ -102,7 +102,7 @@ export class HillEditor {
     this.editor.currentTrack.features.push(newFeature);
     const hillData = this.createVisual(newFeature);
 
-    this.editor.deselectCheckpoint();
+    this.editor.deselectAll();
     this.select(hillData);
 
     rebuild.terrain?.();
@@ -129,7 +129,7 @@ export class HillEditor {
 
     // Brown sphere: the always-visible click target
     const sphere = MeshBuilder.CreateSphere('hillSphere', { diameter: 1.5, segments: 8 }, scene);
-    sphere.position = new Vector3(feature.centerX, node.position.y + node.scaling.y / 2, feature.centerZ);
+    sphere.position = new Vector3(feature.centerX, this._handleY(feature), feature.centerZ);
     sphere.material = this.sphereMaterial;
     sphere.isVisible = true;
     sphere.isPickable = true;
@@ -159,9 +159,27 @@ export class HillEditor {
     node.rotation.y = -(this._angleDeg(feature) * Math.PI / 180);
     if (sphere) {
       sphere.position.x = feature.centerX;
-      sphere.position.y = node.position.y + node.scaling.y / 2;
+      sphere.position.y = this._handleY(feature);
       sphere.position.z = feature.centerZ;
     }
+  }
+
+  /**
+   * Y for the handle. The analytic terrain at the center already includes this
+   * hill's own rise, so a raised hill only needs the standard clearance; a dug
+   * hill (negative height) is lifted back to its rim so the handle isn't sunk
+   * in the hole where the near edge would occlude the pick ray.
+   */
+  _handleY(feature) {
+    const track = this.editor.currentTrack;
+    const terrainH = track ? track.getHeightAt(feature.centerX, feature.centerZ) : 0;
+    const rim = terrainH + Math.max(0, -(feature.height ?? 0));
+    return gizmoY(track, feature.centerX, feature.centerZ, rim);
+  }
+
+  /** Re-sample handle heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    for (const hillData of this.meshes) this.updateVisual(hillData);
   }
 
   // ── Selection ─────────────────────────────────────────────────────────────

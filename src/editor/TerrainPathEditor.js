@@ -11,6 +11,7 @@ import { Vector3, MeshBuilder, Color3, Color4 } from "@babylonjs/core";
 import { EditorMaterials, RESTING_ALPHA, SELECTED_ALPHA } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 import { expandPolyline } from '../polyline-utils.js';
+import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 const FALLBACK_COLOR = new Color3(0.5, 0.5, 0.5);
 
@@ -121,7 +122,7 @@ export class TerrainPathEditor {
 
   _createHandle(feature, index) {
     const pt  = feature.points[index];
-    const y   = this.editor.terrainQuery.heightAt(pt.x, pt.z) + 1.5;
+    const y   = gizmoY(this.editor.currentTrack, pt.x, pt.z);
     const mesh = MeshBuilder.CreateSphere(`tpWpt_${index}_${Date.now()}`, { diameter: 1.4, segments: 6 }, this.scene);
     mesh.position  = new Vector3(pt.x, y, pt.z);
 
@@ -154,7 +155,7 @@ export class TerrainPathEditor {
       : pts;
 
     const positions = displayPts.map(p => {
-      const y = this.editor.terrainQuery.heightAt(p.x, p.z) + 1.6;
+      const y = gizmoLineY(this.editor.currentTrack, p.x, p.z);
       return new Vector3(p.x, y, p.z);
     });
     // Close the visual loop back to the first point.
@@ -169,6 +170,16 @@ export class TerrainPathEditor {
     }, this.scene);
     lineMesh.isPickable = false;
     this.lineMeshes.set(feature, lineMesh);
+  }
+
+  /** Re-sample waypoint + line heights after a terrain rebuild moved the ground. */
+  refreshGizmoHeights() {
+    const track = this.editor.currentTrack;
+    for (const h of this.handles) {
+      const pt = h.feature.points?.[h.pointIndex];
+      if (pt) h.mesh.position.y = gizmoY(track, pt.x, pt.z);
+    }
+    for (const feature of [...this.lineMeshes.keys()]) this._rebuildLineForFeature(feature);
   }
 
   /** Renumber handle pointIndex values for a specific feature after insertion / deletion. */
@@ -239,7 +250,7 @@ export class TerrainPathEditor {
     pt.x = e._snap(e._rawDragPos.x);
     pt.z = e._snap(e._rawDragPos.z);
 
-    const y = this.editor.terrainQuery.heightAt(pt.x, pt.z) + 1.5;
+    const y = gizmoY(this.editor.currentTrack, pt.x, pt.z);
     this.selected.mesh.position.set(pt.x, y, pt.z);
     this._rebuildLineForFeature(feature);
     this._scheduleTerrainRebuild();

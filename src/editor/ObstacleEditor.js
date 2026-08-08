@@ -1,6 +1,7 @@
 import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
 import { EditorMaterials } from './EditorMaterials.js';
 import { Obstacle, getObstacleSpec, normalizeObstacleType } from "../objects/Obstacle.js";
+import { GIZMO_CLEARANCE } from './gizmo-height.js';
 
 export class ObstacleEditor {
   constructor(editor) {
@@ -99,7 +100,7 @@ export class ObstacleEditor {
     }
 
     const visualTopOffset = Math.max(0, maxVisualY - terrainH);
-    const offset = Math.max(fallback, visualTopOffset + 0.8);
+    const offset = Math.max(fallback, visualTopOffset + GIZMO_CLEARANCE);
     stackData.handleYOffset = offset;
     return offset;
   }
@@ -191,6 +192,15 @@ export class ObstacleEditor {
 
     this.meshes.push(stackData);
     return stackData;
+  }
+
+  /**
+   * Re-sample obstacle + handle heights after a terrain rebuild. Obstacles rest
+   * on whatever surface is under them (terrain, bridge, drive box), so this
+   * re-runs the same surface query the visual was placed with.
+   */
+  refreshGizmoHeights() {
+    for (const stackData of this.meshes) this.updateVisual(stackData);
   }
 
   updateVisual(stackData) {
@@ -322,11 +332,8 @@ export class ObstacleEditor {
 
   addEntity() {
     const e = this.editor;
-    const camTarget = e.camera.getTarget();
-    this.addEntityAt(
-      camTarget.x,
-      camTarget.z
-    );
+    const center = e.viewCenterXZ();
+    this.addEntityAt(center.x, center.z);
     e.hideAddMenu();
   }
 

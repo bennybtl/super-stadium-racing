@@ -2,8 +2,8 @@ import { Vector3 } from '@babylonjs/core';
 import rebuild from './editor-rebuild.js';
 import { GizmoHandle } from './GizmoHandle.js';
 import { TERRAIN_TYPES } from '../terrain.js';
+import { gizmoY } from './gizmo-height.js';
 
-const HANDLE_POS_Y = 2.0; // handle sphere floats this far above the terrain
 /**
  * TerrainShapeEditor — handles terrain shape features (type: 'terrain').
  * Each feature carries a `shape` property ('rect' | 'circle') that controls
@@ -17,9 +17,6 @@ export class TerrainShapeEditor {
     this.meshes   = [];   // { feature, handle }[]
     this.selected = null; // the currently-selected entry
     this._terrainGridRebuildTimer = null;
-
-    // Cache for terrain heights
-    this._terrainHeightCache = new Map();
   }
 
   /** Called when editor mode activates — creates the gizmo handles. */
@@ -51,10 +48,8 @@ export class TerrainShapeEditor {
    */
   createVisual(feature) {
     const { scene } = this.editor;
-    const terrainH = this._getCachedTerrainHeight(feature.centerX, feature.centerZ);
-
     const handle = new GizmoHandle(scene, 'terrain');
-    handle.setPosition(feature.centerX, terrainH + HANDLE_POS_Y, feature.centerZ);
+    handle.setPosition(feature.centerX, this._handleY(feature), feature.centerZ);
 
     const data = { feature, handle };
     this.meshes.push(data);
@@ -65,8 +60,17 @@ export class TerrainShapeEditor {
 
   updateVisual(data) {
     const { feature, handle } = data;
-    const terrainH = this._getCachedTerrainHeight(feature.centerX, feature.centerZ);
-    handle?.setPosition(feature.centerX, terrainH + HANDLE_POS_Y, feature.centerZ);
+    handle?.setPosition(feature.centerX, this._handleY(feature), feature.centerZ);
+  }
+
+  /** Terrain patches are flat paint, so the handle only has to clear the ground. */
+  _handleY(feature) {
+    return gizmoY(this.editor.currentTrack, feature.centerX, feature.centerZ);
+  }
+
+  /** Re-sample handle heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    for (const data of this.meshes) this.updateVisual(data);
   }
 
   // ── Selection ────────────────────────────────────────────────────────────────
@@ -179,13 +183,12 @@ export class TerrainShapeEditor {
   }
 
   addEntity(shape = 'circle') {
-    const cam       = this.editor.camera;
-    const camTarget = cam.getTarget();
+    const center = this.editor.viewCenterXZ();
     const base = {
       type:        'terrain',
       shape,
-      centerX:     camTarget.x,
-      centerZ:     camTarget.z,
+      centerX:     center.x,
+      centerZ:     center.z,
       terrainType: TERRAIN_TYPES.MUD,
     };
     const newFeature = { ...base, width: 10, depth: 10, rotation: 0 };
@@ -193,9 +196,7 @@ export class TerrainShapeEditor {
     this.editor.saveSnapshot();
     this.editor.currentTrack.features.push(newFeature);
     const data = this.createVisual(newFeature);
-    this.editor.deselectCheckpoint?.();
-    this.editor.deselectHill?.();
-    this.editor.squareHillEditor.deselect();
+    this.editor.deselectAll();
     this.select(data);
     this.rebuildTerrain();
     this.editor.hideAddMenu();
@@ -307,15 +308,4 @@ export class TerrainShapeEditor {
     this.rebuildTerrain();
   }
 
-  // Helper to get cached terrain height
-  _getCachedTerrainHeight(x, z) {
-    const key = `${x},${z}`;
-    if (this._terrainHeightCache.has(key)) {
-      return this._terrainHeightCache.get(key);
-    }
-
-    const height = this.editor.terrainQuery.heightAt(x, z);
-    this._terrainHeightCache.set(key, height);
-    return height;
-  }
 }

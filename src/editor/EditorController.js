@@ -117,6 +117,9 @@ export class EditorController {
     this._rawDragPos = null;
     this._aiPathMouseDownSelectedWaypoint = null;
     this._aiPathMouseDownMoved = false;
+    // Debounce for the post-terrain-rebuild gizmo height sweep (see
+    // scheduleGizmoHeightRefresh) — a slider drag fires rebuilds every tick.
+    this._gizmoHeightRefreshTimer = null;
 
     // Undo / redo stacks (each entry is a JSON string of editable track state)
     this._undoStack = [];
@@ -215,7 +218,9 @@ export class EditorController {
     this.scene.onPointerObservable.removeCallback(this.boundPointerEvent);
     this._clearDragHoldTimer();
     this._mouseDrag = null;
-    
+    clearTimeout(this._gizmoHeightRefreshTimer);
+    this._gizmoHeightRefreshTimer = null;
+
     // Reset key states
     Object.keys(this.keys).forEach(key => this.keys[key] = false);
     Object.values(this._repeatingKeyState).forEach(state => {
@@ -1040,14 +1045,9 @@ export class EditorController {
     return !!this._getActiveSelectionInteraction();
   }
 
-  /** Ground point under the cursor, projected onto the y=planeY plane. */
-  _groundXZUnderPointer(planeY = this._panPlaneY) {
-    const ray = this.scene.createPickingRay(
-      this.scene.pointerX,
-      this.scene.pointerY,
-      undefined,
-      this.camera
-    );
+  /** Ground point under a screen position, projected onto the y=planeY plane. */
+  _groundXZAtScreen(screenX, screenY, planeY = this._panPlaneY) {
+    const ray = this.scene.createPickingRay(screenX, screenY, undefined, this.camera);
     const dirY = ray.direction.y;
     if (Math.abs(dirY) < 1e-6) return null;
     const t = (planeY - ray.origin.y) / dirY;
@@ -1056,6 +1056,31 @@ export class EditorController {
       x: ray.origin.x + ray.direction.x * t,
       z: ray.origin.z + ray.direction.z * t,
     };
+  }
+
+  /** Ground point under the cursor, projected onto the y=planeY plane. */
+  _groundXZUnderPointer(planeY = this._panPlaneY) {
+    return this._groundXZAtScreen(this.scene.pointerX, this.scene.pointerY, planeY);
+  }
+
+  /**
+   * Ground point at the center of the viewport — where every "add" that places a
+   * feature immediately (no click) should drop it.
+   *
+   * camera.getTarget() is NOT that point: a FreeCamera reports a point at the
+   * focal distance captured by the last setTarget(), so zooming (which dollies
+   * the position without re-targeting) leaves it short of / past the ground, and
+   * new features land low on the screen. Ray-cast through the canvas center
+   * instead, same as the drag-pan anchor.
+   */
+  viewCenterXZ() {
+    const rect = this.scene.getEngine().getRenderingCanvasClientRect?.();
+    if (rect) {
+      const center = this._groundXZAtScreen(rect.width / 2, rect.height / 2);
+      if (center) return center;
+    }
+    const target = this.camera.getTarget();
+    return { x: target.x, z: target.z };
   }
 
   /**
@@ -1300,6 +1325,27 @@ export class EditorController {
     if (this._editorStore) this._editorStore.selectedType = newType;
     this._rawDragPos = newDragPos;
     return true;
+  }
+
+  /**
+   * Re-sample every gizmo's height. Gizmo Y is a pure function of the feature +
+   * the terrain under it (see gizmo-height.js), so after a terrain rebuild moves
+   * the ground, replaying it lifts handles back out of whatever now covers them.
+   */
+  refreshGizmoHeights() {
+    if (!this.isActive) return;
+    this.checkpointEditor?.refreshGizmoHeights?.();
+    for (const editor of this.subEditors) editor.refreshGizmoHeights?.();
+  }
+
+  /** Debounced refreshGizmoHeights — terrain rebuilds fire on every slider tick. */
+  scheduleGizmoHeightRefresh(delayMs = 120) {
+    if (!this.isActive) return;
+    clearTimeout(this._gizmoHeightRefreshTimer);
+    this._gizmoHeightRefreshTimer = setTimeout(() => {
+      this._gizmoHeightRefreshTimer = null;
+      this.refreshGizmoHeights();
+    }, delayMs);
   }
 
   /** Deselect every sub-editor except `keep`. `keep === null` clears all — deselectAll delegates here. */

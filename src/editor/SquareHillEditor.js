@@ -2,6 +2,7 @@ import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
+import { gizmoY } from './gizmo-height.js';
 
 /**
  * SquareHillEditor – encapsulates all square-hill editing logic that was
@@ -88,12 +89,12 @@ export class SquareHillEditor {
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
 
     // Grey sphere: the always-visible click target. Float it above the whole
-    // feature (terrainH + absH, matching HillEditor) rather than flush on the
-    // surface — on a sloped square hill the high edge otherwise rises in front
-    // of the sphere and the isometric pick ray hits that ground first, so the
-    // gizmo becomes unclickable from some camera angles.
+    // feature (see _handleY) rather than flush on the surface — on a sloped
+    // square hill the high edge otherwise rises in front of the sphere and the
+    // isometric pick ray hits that ground first, so the gizmo becomes
+    // unclickable from some camera angles.
     const sphere = MeshBuilder.CreateSphere('squareHillSphere', { diameter: 1.5, segments: 8 }, scene);
-    sphere.position = new Vector3(feature.centerX, terrainH + absH, feature.centerZ);
+    sphere.position = new Vector3(feature.centerX, this._handleY(feature), feature.centerZ);
     sphere.material = this.sphereMaterial;
     sphere.isVisible = true;
     sphere.isPickable = true;
@@ -126,19 +127,41 @@ export class SquareHillEditor {
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
     if (sphere) {
       sphere.position.x = feature.centerX;
-      // Float above the whole feature (see createVisual) so a sloped edge can't
+      // Float above the whole feature (see _handleY) so a sloped edge can't
       // occlude the pick ray and make the gizmo unclickable.
-      sphere.position.y = terrainH + absH;
+      sphere.position.y = this._handleY(feature);
       sphere.position.z = feature.centerZ;
     }
   }
 
+  /**
+   * Y for the handle. The analytic terrain at the center already carries this
+   * hill's rise, so the extra lift is only what the feature reaches ABOVE its
+   * center: half the slope on a wedge, the full depth on a dug hill.
+   */
+  _handleY(feature) {
+    const track = this.editor.currentTrack;
+    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ)
+      ?? this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ)
+      ?? 0;
+    const sloped = feature.heightAtMin !== undefined;
+    const lo = sloped ? (feature.heightAtMin ?? 0) : (feature.height ?? 5);
+    const hi = sloped ? (feature.heightAtMax ?? 0) : (feature.height ?? 5);
+    const centerRel = (lo + hi) / 2;
+    const riseAboveCenter = Math.max(lo, hi, 0) - centerRel;
+    return gizmoY(track, feature.centerX, feature.centerZ, terrainH + riseAboveCenter);
+  }
+
+  /** Re-sample handle heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    for (const hillData of this.meshes) this.updateVisual(hillData);
+  }
+
   /** Place a new square hill in front of the camera and select it. */
   addEntity() {
-    const { camera } = this.editor;
-    const camTarget = camera.getTarget();
-    const newX = camTarget.x;
-    const newZ = camTarget.z;
+    const center = this.editor.viewCenterXZ();
+    const newX = center.x;
+    const newZ = center.z;
 
     const newFeature = {
       type: 'squareHill',
@@ -157,8 +180,7 @@ export class SquareHillEditor {
     this.editor.currentTrack.features.push(newFeature);
     const hillData = this.createVisual(newFeature);
 
-    this.editor.checkpointEditor.deselect();
-    this.editor.hillEditor.deselect();
+    this.editor.deselectAll();
     this.select(hillData);
 
     this.rebuildTerrain();

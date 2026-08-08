@@ -1,6 +1,7 @@
 import { Vector3, MeshBuilder, Color4 } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
+import { gizmoY, gizmoLineY, deckTopY } from './gizmo-height.js';
 
 /**
  * AiPathEditor — manages an ordered list of AI path waypoints stored as a
@@ -89,9 +90,24 @@ export class AiPathEditor {
     }
   }
 
+  /**
+   * Y for a waypoint handle. Racing lines cross bridges, so a waypoint over a
+   * deck rides the deck rather than the ground buried underneath it.
+   */
+  _waypointY(x, z) {
+    const e = this.editor;
+    return gizmoY(e.currentTrack, x, z, deckTopY(e.terrainQuery, x, z));
+  }
+
+  /** As _waypointY, at the shorter clearance used for the path lines. */
+  _lineY(x, z) {
+    const e = this.editor;
+    return gizmoLineY(e.currentTrack, x, z, deckTopY(e.terrainQuery, x, z));
+  }
+
   _createHandle(feature, index) {
     const pt  = this._getActivePoints(feature)[index];
-    const y   = this.editor.terrainQuery.heightAt(pt.x, pt.z) + 1.5;
+    const y   = this._waypointY(pt.x, pt.z);
     const pathPrefix = this.activeBranchId ? `aiWpt_b_${this.activeBranchId}` : 'aiWpt_main';
     const mesh = MeshBuilder.CreateSphere(`${pathPrefix}_${index}`, { diameter: 1.4, segments: 6 }, this.scene);
     mesh.position  = new Vector3(pt.x, y, pt.z);
@@ -120,7 +136,7 @@ export class AiPathEditor {
     const mainPoints = feature.points;
     if (mainPoints.length >= 2) {
       const positions = [...mainPoints, mainPoints[0]].map(p => {
-        const y = this.editor.terrainQuery.heightAt(p.x, p.z) + 1.6;
+        const y = this._lineY(p.x, p.z);
         return new Vector3(p.x, y, p.z);
       });
 
@@ -136,7 +152,8 @@ export class AiPathEditor {
     for (const branch of branches) {
       if (!Array.isArray(branch.points) || branch.points.length < 2) continue;
       const branchPositions = branch.points.map(p => {
-        const y = this.editor.terrainQuery.heightAt(p.x, p.z) + 1.65;
+        // Branch lines ride a hair over the main line where the two overlap.
+        const y = this._lineY(p.x, p.z) + 0.05;
         return new Vector3(p.x, y, p.z);
       });
       const isActive = branch.id === this.activeBranchId;
@@ -148,6 +165,20 @@ export class AiPathEditor {
       line.isPickable = false;
       this.lineMeshes.push(line);
     }
+  }
+
+  /** Re-sample waypoint + line heights after a terrain rebuild moved the ground. */
+  refreshGizmoHeights() {
+    let feature = null;
+    for (const h of this.handles) {
+      const pts = h.pathType === 'branch'
+        ? h.feature.branches?.find(b => b.id === h.branchId)?.points
+        : h.feature.points;
+      const pt = pts?.[h.pointIndex];
+      if (pt) h.mesh.position.y = this._waypointY(pt.x, pt.z);
+      feature = h.feature;
+    }
+    if (feature) this._rebuildLine(feature);
   }
 
   clearMeshes() {
@@ -210,7 +241,7 @@ export class AiPathEditor {
     pt.x = e._snap(e._rawDragPos.x);
     pt.z = e._snap(e._rawDragPos.z);
 
-    const y = this.editor.terrainQuery.heightAt(pt.x, pt.z) + 1.5;
+    const y = this._waypointY(pt.x, pt.z);
     this.selected.mesh.position.set(pt.x, y, pt.z);
 
     this._rebuildLine(this.selected.feature);

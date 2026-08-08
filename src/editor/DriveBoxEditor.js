@@ -1,6 +1,8 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
+import { deriveDriveBoxGrid } from '../objects/DriveBox.js';
+import { gizmoY } from './gizmo-height.js';
 
 /**
  * DriveBoxEditor – editing logic for the driveBox feature (parametric drivable
@@ -56,21 +58,25 @@ export class DriveBoxEditor {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
-  _maxRelHeight(feature) {
-    return feature.heightAtMin !== undefined
-      ? Math.max(0.5, feature.heightAtMin ?? 0, feature.heightAtMax ?? 0)
-      : Math.max(0.5, feature.height ?? 2);
+  /**
+   * Y for the handle: clear of the box's own highest corner (taken from the very
+   * grid the mesh is built from, so a wedge or a box on a slope can't outgrow
+   * it) and of the terrain, for a box sunk below the ground it sits on.
+   */
+  _handleY(feature) {
+    const track = this.editor.currentTrack;
+    const heights = deriveDriveBoxGrid(feature, track)?.heights ?? [];
+    const topY = heights.length ? Math.max(...heights) : null;
+    return gizmoY(track, feature.centerX, feature.centerZ, topY);
   }
 
   /** Build the sphere gizmo for a driveBox feature. */
   createVisual(feature) {
     const scene = this.editor.scene;
-    const track = this.editor.currentTrack;
-    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ) ?? 0;
 
     // Float above the whole feature so the box top can't occlude the pick ray.
     const sphere = MeshBuilder.CreateSphere('driveBoxSphere', { diameter: 1.5, segments: 8 }, scene);
-    sphere.position = new Vector3(feature.centerX, terrainH + this._maxRelHeight(feature) + 1, feature.centerZ);
+    sphere.position = new Vector3(feature.centerX, this._handleY(feature), feature.centerZ);
     sphere.material = this.sphereMaterial;
     sphere.isVisible = true;
     sphere.isPickable = true;
@@ -82,24 +88,26 @@ export class DriveBoxEditor {
 
   updateVisual(boxData) {
     const { feature, sphere } = boxData;
-    const track = this.editor.currentTrack;
-    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ) ?? 0;
     if (sphere) {
       sphere.position.x = feature.centerX;
-      sphere.position.y = terrainH + this._maxRelHeight(feature) + 1;
+      sphere.position.y = this._handleY(feature);
       sphere.position.z = feature.centerZ;
     }
   }
 
+  /** Re-sample handle heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    for (const boxData of this.meshes) this.updateVisual(boxData);
+  }
+
   /** Place a new drive box in front of the camera and select it. */
   addEntity() {
-    const { camera } = this.editor;
-    const camTarget = camera.getTarget();
+    const center = this.editor.viewCenterXZ();
 
     const newFeature = {
       type: 'driveBox',
-      centerX: camTarget.x,
-      centerZ: camTarget.z,
+      centerX: center.x,
+      centerZ: center.z,
       width: 10,
       depth: 6,
       rotation: 0,
@@ -113,14 +121,13 @@ export class DriveBoxEditor {
     this.editor.currentTrack.features.push(newFeature);
     const boxData = this.createVisual(newFeature);
 
-    this.editor.checkpointEditor.deselect();
-    this.editor.hillEditor.deselect();
+    this.editor.deselectAll();
     this.select(boxData);
 
     this.rebuildMesh();
 
     this.editor.hideAddMenu();
-    console.debug('[DriveBoxEditor] Added drive box at', camTarget.x.toFixed(1), camTarget.z.toFixed(1));
+    console.debug('[DriveBoxEditor] Added drive box at', center.x.toFixed(1), center.z.toFixed(1));
   }
 
   // ── Click test ────────────────────────────────────────────────────────────

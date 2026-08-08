@@ -2,8 +2,7 @@ import { Vector3 } from "@babylonjs/core";
 import { TrackSign } from "../objects/TrackSign.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 import { TRACK_SIGN_BRANDS } from "../constants.js";
-
-const HANDLE_GAP_Y = 1.0; // handle sphere floats this far above the top of the sign
+import { gizmoY } from './gizmo-height.js';
 
 export class TrackSignEditor {
   constructor(editor) {
@@ -63,7 +62,12 @@ export class TrackSignEditor {
   /** Park the handle just above the sign's top, tracking scale / height offset. */
   _positionHandle(sign) {
     const { x, z } = sign.feature;
-    this._handles.get(sign)?.setPosition(x, sign.topY + HANDLE_GAP_Y, z);
+    this._handles.get(sign)?.setPosition(x, gizmoY(this._track, x, z, sign.topY), z);
+  }
+
+  /** Re-sample handle heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    for (const sign of this._signs) this._positionHandle(sign);
   }
 
   // ── Lookup ─────────────────────────────────────────────────────────────────
@@ -137,9 +141,9 @@ export class TrackSignEditor {
 
   addEntity() {
     const e         = this.editor;
-    const camTarget = e.camera.getTarget();
-    const newX      = camTarget.x;
-    const newZ      = camTarget.z;
+    const center    = e.viewCenterXZ();
+    const newX      = center.x;
+    const newZ      = center.z;
     const feature   = {
       type: 'trackSign',
       x: newX,

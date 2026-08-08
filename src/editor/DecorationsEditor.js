@@ -9,9 +9,11 @@ import {
   readDecorationProp,
   applyDecorationProp,
 } from "../decorations-registry.js";
+import { gizmoY } from './gizmo-height.js';
 
-const HANDLE_POS_Y = 3.0; // fallback height above ground for decorations with no known top
-const HANDLE_GAP_Y = 1.0; // gap above a decoration that reports its own topY
+// Assumed prop height for decorations that don't report their own topY, so the
+// handle still clears a typical model instead of sitting inside it.
+const ASSUMED_TOP_Y = 1.5;
 
 /**
  * DecorationsEditor — editing for every decoration in /decorations/.
@@ -84,15 +86,20 @@ export class DecorationsEditor {
 
   /**
    * Park the handle above the decoration. Types that know their own height
-   * (banner strings) sit just over the top; the rest fall back to a fixed
-   * offset above the ground.
+   * (banner strings) report topY; the rest assume a typical prop height so the
+   * handle still clears the model.
    */
   _positionHandle(decoration) {
     const { x, z } = decoration.feature;
-    const y = typeof decoration.topY === 'number'
-      ? decoration.topY + HANDLE_GAP_Y
-      : this.track.getHeightAt(x, z) + HANDLE_POS_Y;
-    this._handles.get(decoration)?.setPosition(x, y, z);
+    const topY = typeof decoration.topY === 'number'
+      ? decoration.topY
+      : (this.track?.getHeightAt(x, z) ?? 0) + ASSUMED_TOP_Y;
+    this._handles.get(decoration)?.setPosition(x, gizmoY(this.track, x, z, topY), z);
+  }
+
+  /** Re-sample handle heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    for (const decoration of this.decorations) this._positionHandle(decoration);
   }
 
   /** Dispose a decoration's meshes and drop it from the list. */
@@ -291,9 +298,9 @@ export class DecorationsEditor {
 
   addEntity() {
     const e = this.editor;
-    const camTarget = e.camera.getTarget();
-    const x = e._snap(camTarget.x);
-    const z = e._snap(camTarget.z);
+    const center = e.viewCenterXZ();
+    const x = e._snap(center.x);
+    const z = e._snap(center.z);
     const loader = getDecorationLoader();
     // Reuse the last-picked kind, else the first decoration available.
     const id = this.editor._editorStore?.decoration?.model ?? loader?.decorationList?.[0];

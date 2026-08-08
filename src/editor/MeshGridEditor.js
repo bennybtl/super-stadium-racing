@@ -1,6 +1,7 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_MESH_GRID } from './EditorMaterials.js';
+import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 // Defaults for a new *regional* mesh grid (added when a base mesh already exists).
 const REGIONAL_DEFAULT = { width: 60, depth: 60, falloff: 15, angle: 0, cols: 9, rows: 9 };
@@ -117,10 +118,12 @@ export class MeshGridEditor {
       };
     } else {
       // Additional region: smaller, rotatable, blends out across a falloff band.
+      // Dropped at the center of the view, like every other immediate add.
       const { width, depth, falloff, angle, cols, rows } = REGIONAL_DEFAULT;
+      const center = this.ec.viewCenterXZ();
       feature = {
         type: 'meshGrid', regional: true,
-        centerX: 0, centerZ: 0, angle,
+        centerX: center.x, centerZ: center.z, angle,
         width, depth, falloff,
         cols, rows, heights: new Array(cols * rows).fill(0),
       };
@@ -277,7 +280,7 @@ export class MeshGridEditor {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const { x: worldX, z: worldZ } = this._gridPointWorld(feature, r, c);
-        const worldY = this.track.getHeightAt(worldX, worldZ);
+        const worldY = gizmoY(this.track, worldX, worldZ);
 
         const mesh = MeshBuilder.CreateSphere(`mgPt_${r}_${c}`, {
           diameter: radius,
@@ -321,7 +324,6 @@ export class MeshGridEditor {
 
   _buildLineSystem(feature) {
     const { cols, rows } = feature;
-    const LINE_Y_OFFSET = 0.08;
     const lines = [];
 
     // Horizontal lines (each row left→right)
@@ -329,7 +331,7 @@ export class MeshGridEditor {
       const row = [];
       for (let c = 0; c < cols; c++) {
         const { x: wx, z: wz } = this._gridPointWorld(feature, r, c);
-        row.push(new Vector3(wx, this.track.getHeightAt(wx, wz) + LINE_Y_OFFSET, wz));
+        row.push(new Vector3(wx, gizmoLineY(this.track, wx, wz), wz));
       }
       lines.push(row);
     }
@@ -339,7 +341,7 @@ export class MeshGridEditor {
       const col = [];
       for (let r = 0; r < rows; r++) {
         const { x: wx, z: wz } = this._gridPointWorld(feature, r, c);
-        col.push(new Vector3(wx, this.track.getHeightAt(wx, wz) + LINE_Y_OFFSET, wz));
+        col.push(new Vector3(wx, gizmoLineY(this.track, wx, wz), wz));
       }
       lines.push(col);
     }
@@ -354,12 +356,17 @@ export class MeshGridEditor {
    * Refresh sphere positions (rotation/height aware) and rebuild grid lines.
    * Called after height, position, angle or size changes before rebuildTerrain.
    */
+  /** Re-sample gizmo heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    this._updateGizmoPositions();
+  }
+
   _updateGizmoPositions() {
     for (const p of this.pointMeshes) {
       const { x: wx, z: wz } = this._gridPointWorld(p.feature, p.r, p.c);
       p.mesh.position.x = wx;
       p.mesh.position.z = wz;
-      p.mesh.position.y = this.track.getHeightAt(wx, wz);
+      p.mesh.position.y = gizmoY(this.track, wx, wz);
     }
     for (const ls of this.lineSystems) ls.dispose();
     this.lineSystems = [];

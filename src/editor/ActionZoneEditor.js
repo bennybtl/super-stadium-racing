@@ -3,11 +3,10 @@ import { EditorMaterials } from './EditorMaterials.js';
 import { FireworkLaunchers } from '../objects/FireworkLaunchers.js';
 import { DEFAULT_SPARK_COLOR } from '../objects/sparkColors.js';
 import { FireworksManager } from '../managers/FireworksManager.js';
+import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 /** Height of the zone cylinder gizmo in world units. */
 const CYLINDER_HEIGHT = 8;
-const HANDLE_HEIGHT = 0.75;
-const POLY_POINT_HEIGHT = 0.9;
 const POLY_POINT_MIN = 3;
 
 /**
@@ -244,7 +243,7 @@ export class ActionZoneEditor {
     cyl.isPickable = false;
 
     const handle = MeshBuilder.CreateSphere('azHandle', { diameter: 1.5, segments: 8 }, this.scene);
-    handle.position = new Vector3(x, groundY + HANDLE_HEIGHT, z);
+    handle.position = new Vector3(x, gizmoY(this.track, x, z), z);
     handle.isPickable = true;
 
     zoneData.cyl = cyl;
@@ -257,17 +256,15 @@ export class ActionZoneEditor {
     const mats = this._getMaterialsForZoneType(feature.zoneType);
 
     const center = this._getPolygonCenter(feature.points);
-    const centerY = this.track.getHeightAt(center.x, center.z);
     const handle = MeshBuilder.CreateSphere('azPolyHandle', { diameter: 1.7, segments: 10 }, this.scene);
-    handle.position = new Vector3(center.x, centerY + HANDLE_HEIGHT, center.z);
+    handle.position = new Vector3(center.x, gizmoY(this.track, center.x, center.z), center.z);
     handle.material = mats.handle;
     handle.isPickable = true;
     zoneData.handle = handle;
 
     zoneData.pointHandles = feature.points.map((pt, idx) => {
-      const y = this.track.getHeightAt(pt.x, pt.z);
       const p = MeshBuilder.CreateSphere(`azPolyPt_${idx}`, { diameter: 1.2, segments: 8 }, this.scene);
-      p.position = new Vector3(pt.x, y + POLY_POINT_HEIGHT, pt.z);
+      p.position = new Vector3(pt.x, gizmoY(this.track, pt.x, pt.z), pt.z);
       p.material = mats.handle;
       p.isPickable = true;
       return p;
@@ -279,7 +276,7 @@ export class ActionZoneEditor {
 
   _buildPolygonLine(points, zoneType) {
     if (!points || points.length < POLY_POINT_MIN) return null;
-    const linePoints = points.map(pt => new Vector3(pt.x, this.track.getHeightAt(pt.x, pt.z) + 0.25, pt.z));
+    const linePoints = points.map(pt => new Vector3(pt.x, gizmoLineY(this.track, pt.x, pt.z), pt.z));
     linePoints.push(linePoints[0].clone());
     const ls = MeshBuilder.CreateLineSystem('azPolyLine', { lines: [linePoints] }, this.scene);
     ls.color = this._getLineColor(zoneType, false);
@@ -311,6 +308,24 @@ export class ActionZoneEditor {
       const pointMesh = zoneData.pointHandles[i];
       const isActivePoint = selected && i === this._selectedPointIndex;
       pointMesh.material = isActivePoint ? mats.handleHighlight : mats.handle;
+    }
+  }
+
+  /** Re-sample gizmo heights after a terrain rebuild (EditorController sweep). */
+  refreshGizmoHeights() {
+    for (const zoneData of this.zones) {
+      const { feature, cyl, handle, pointHandles } = zoneData;
+      if (cyl) cyl.position.y = this.track.getHeightAt(feature.x, feature.z) + CYLINDER_HEIGHT / 2;
+      if (handle) handle.position.y = gizmoY(this.track, feature.x, feature.z);
+      for (let i = 0; i < pointHandles.length; i++) {
+        const pt = feature.points?.[i];
+        if (pt) pointHandles[i].position.y = gizmoY(this.track, pt.x, pt.z);
+      }
+      if (zoneData.lineSystem) {
+        zoneData.lineSystem.dispose();
+        zoneData.lineSystem = this._buildPolygonLine(feature.points, feature.zoneType);
+        this._applyZoneVisualState(zoneData, this._selected === zoneData);
+      }
     }
   }
 
@@ -483,7 +498,7 @@ export class ActionZoneEditor {
     feature.z = newZ;
     const groundY = this.track.getHeightAt(newX, newZ);
     this._selected.cyl.position.set(newX, groundY + CYLINDER_HEIGHT / 2, newZ);
-    this._selected.handle.position.set(newX, groundY + HANDLE_HEIGHT, newZ);
+    this._selected.handle.position.set(newX, gizmoY(this.track, newX, newZ), newZ);
     this._syncLaunchers(this._selected);
     return new Vector3(newX - prevX, 0, newZ - prevZ);
   }
@@ -492,9 +507,9 @@ export class ActionZoneEditor {
 
   addEntity() {
     const e        = this.editor;
-    const camTarget = e.camera.getTarget();
-    const newX     = e._snap(camTarget.x);
-    const newZ     = e._snap(camTarget.z);
+    const center   = e.viewCenterXZ();
+    const newX     = e._snap(center.x);
+    const newZ     = e._snap(center.z);
 
     const feature = {
       type: 'actionZone',

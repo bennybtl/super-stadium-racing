@@ -2,6 +2,7 @@ import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_CURB } from './EditorMaterials.js';
 import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
+import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 /**
  * PolyCurbEditor — place and edit polyCurb features in the track editor.
@@ -12,8 +13,6 @@ import { resolveStripeColorNames, normalizeStripeColors } from '../objects/strip
  *
  * Curb gizmo colour: teal / cyan (distinct from the orange polyWall gizmos).
  */
-
-const POINT_HEIGHT_OFFSET = 0.5;
 
 export class PolyCurbEditor {
   constructor(editorController) {
@@ -129,11 +128,20 @@ export class PolyCurbEditor {
     this._curbGizmos = [];
   }
 
+  /** Y for a control-point handle: clear of both the terrain and the curb top. */
+  _pointY(feature, pt) {
+    return gizmoY(this.track, pt.x, pt.z, this._curbTopY(feature, pt));
+  }
+
+  /** World Y of the curb's top face over (pt.x, pt.z). */
+  _curbTopY(feature, pt) {
+    return (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + (feature?.height ?? 0.22);
+  }
+
   _createSphere(feature, idx) {
     const pt = feature.points[idx];
-    const y  = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (feature.height ?? 0.22);
     const mesh = MeshBuilder.CreateSphere(`pcPt_${idx}_${Date.now()}`, { diameter: 1.2, segments: 6 }, this.scene);
-    mesh.position  = new Vector3(pt.x, y + 0.6, pt.z);
+    mesh.position  = new Vector3(pt.x, this._pointY(feature, pt), pt.z);
     mesh.material  = this._activeGizmo?.feature === feature ? this.activeMat : this.normalMat;
     mesh.isPickable = true;
     return mesh;
@@ -142,8 +150,8 @@ export class PolyCurbEditor {
   _buildLines(feature) {
     if (!feature.points || feature.points.length < 2) return null;
     const pts  = feature.points.map(pt => {
-      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + (feature.height ?? 0.22);
-      return new Vector3(pt.x, y + 0.08, pt.z);
+      const y = gizmoLineY(this.track, pt.x, pt.z, this._curbTopY(feature, pt));
+      return new Vector3(pt.x, y, pt.z);
     });
     const ls = MeshBuilder.CreateLineSystem(`pcLines_${Date.now()}`, { lines: [pts] }, this.scene);
     ls.color      = LINE_COLOR_POLY_CURB; // red preview line
@@ -163,13 +171,17 @@ export class PolyCurbEditor {
     cg.lineSystem = this._buildLines(cg.feature);
   }
 
+  /** Re-sample every curb's gizmo heights after a terrain rebuild. */
+  refreshGizmoHeights() {
+    for (const cg of this._curbGizmos) this._updatePositions(cg);
+  }
+
   _updatePositions(cg, { rebuildLines = true } = {}) {
     const { feature, pointMeshes } = cg;
     for (let i = 0; i < pointMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = this.ec.terrainQuery.heightAt(pt.x, pt.z) + POINT_HEIGHT_OFFSET + (this._activeGizmo?.feature?.height ?? 0.22);
-      pointMeshes[i].position.set(pt.x, y + 0.6, pt.z);
+      pointMeshes[i].position.set(pt.x, this._pointY(feature, pt), pt.z);
     }
     if (rebuildLines) {
       if (cg.lineSystem) { cg.lineSystem.dispose(); cg.lineSystem = null; }

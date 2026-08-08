@@ -211,10 +211,10 @@ export class CheckpointEditor {
   // ── Add entity ────────────────────────────────────────────────────────────
 
   addEntity() {
-    const { camera, currentTrack } = this.editor;
-    const camTarget = camera.getTarget();
-    const newX = camTarget.x;
-    const newZ = camTarget.z;
+    const { currentTrack } = this.editor;
+    const center = this.editor.viewCenterXZ();
+    const newX = center.x;
+    const newZ = center.z;
 
     // Get terrain height
     const terrainHeight = this.editor.terrainQuery.heightAt(newX, newZ);
@@ -240,12 +240,27 @@ export class CheckpointEditor {
     // Create visual representation
     const checkpoint = this.editor.checkpointManager.createSingleCheckpoint(newFeature);
     this.editor.checkpointManager.renumberCheckpoints();
+    this.editor.deselectAll();
     this.select(checkpoint);
 
     // Hide menu
     this.editor.hideAddMenu();
 
     console.debug('[CheckpointEditor] Added checkpoint at', newX.toFixed(1), newZ.toFixed(1));
+  }
+
+  /**
+   * Re-seat every gate on the terrain after a rebuild moved it. The gate IS the
+   * click target here (there is no floating handle), so a raised hill would
+   * otherwise swallow it exactly like a buried gizmo.
+   */
+  refreshGizmoHeights() {
+    const track = this.editor.currentTrack;
+    for (const checkpoint of this.editor.checkpointManager?.checkpointMeshes ?? []) {
+      const f = checkpoint.feature;
+      checkpoint.container.position.y = track?.getHeightAt?.(f.centerX, f.centerZ) ?? 0;
+      checkpoint.reseatBarrels?.();
+    }
   }
 
   // ── Properties (Vue store bridge) ─────────────────────────────────────────

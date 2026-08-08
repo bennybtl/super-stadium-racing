@@ -2,6 +2,7 @@ import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
+import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 /**
  * PolyHillEditor – place and edit polyHill features in the track editor.
@@ -19,8 +20,6 @@ import { TERRAIN_TYPES } from "../terrain.js";
  * This tool manages ONE feature at a time (the "active" one). Clicking a gizmo
  * from a different feature switches focus.
  */
-const POINT_HEIGHT_OFFSET = 0.7;
-
 export class PolyHillEditor {
   constructor(editorController) {
     this.ec = editorController;
@@ -72,10 +71,9 @@ export class PolyHillEditor {
   // ─── Adding a new poly hill ───────────────────────────────────────────────
 
   addPolyHillFeature() {
-    const cam = this.ec.camera;
-    const target = cam.getTarget();
-    const cx = target.x;
-    const cz = target.z;
+    const center = this.ec.viewCenterXZ();
+    const cx = center.x;
+    const cz = center.z;
 
     const feature = {
       type: 'polyHill',
@@ -124,14 +122,23 @@ export class PolyHillEditor {
     this._hillGizmos = [];
   }
 
+  /**
+   * Y for a control-point handle. The analytic terrain already carries the
+   * hill's own rise, so only a dug hill (negative height) needs a lift: its
+   * sampled point sits at the trench floor, below the rim the handle must clear.
+   */
+  _pointY(feature, pt) {
+    const terrainY = this.track?.getHeightAt(pt.x, pt.z) ?? 0;
+    return gizmoY(this.track, pt.x, pt.z, terrainY + Math.max(0, -(feature?.height ?? 0)));
+  }
+
   _createPointSphere(feature, idx) {
     const pt = feature.points[idx];
-    const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET;
     const mesh = MeshBuilder.CreateSphere(`phPt_${idx}_${Date.now()}`, {
       diameter: 1.4,
       segments: 6,
     }, this.scene);
-    mesh.position = new Vector3(pt.x, y, pt.z);
+    mesh.position = new Vector3(pt.x, this._pointY(feature, pt), pt.z);
     mesh.material = this._activeHill?.feature === feature ? this.activeMat : this.normalMat;
     mesh.isPickable = true;
     return mesh;
@@ -143,7 +150,7 @@ export class PolyHillEditor {
 
     // Draw the polyline
     const ctrlPts = hg.feature.points.map(pt => {
-      const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET;
+      const y = gizmoLineY(this.track, pt.x, pt.z);
       return new Vector3(pt.x, y, pt.z);
     });
 
@@ -190,13 +197,17 @@ export class PolyHillEditor {
     this._buildLineSystem(hg, true);
   }
 
+  /** Re-sample every hill's gizmo heights after a terrain rebuild. */
+  refreshGizmoHeights() {
+    for (const hg of this._hillGizmos) this._updatePointPositions(hg);
+  }
+
   _updatePointPositions(hg, { rebuildLines = true } = {}) {
     const { feature, pointMeshes } = hg;
     for (let i = 0; i < pointMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET;
-      pointMeshes[i].position.set(pt.x, y, pt.z);
+      pointMeshes[i].position.set(pt.x, this._pointY(feature, pt), pt.z);
     }
     if (rebuildLines) {
       this._buildLineSystem(hg, true);

@@ -2,6 +2,7 @@ import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
 import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
+import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 /**
  * Editor – place and edit polyWall features in the track editor.
@@ -18,7 +19,6 @@ import { resolveStripeColorNames, normalizeStripeColors } from '../objects/strip
  * This tool manages ONE feature at a time (the "active" one). Clicking a gizmo
  * from a different feature switches focus.
  */
-const POINT_HEIGHT_OFFSET = 0.7
 // How far past the track perimeter poly-wall points may be dragged, matching the
 // dead-space band that surrounds the track (ground mesh = track + 20, i.e. +10 per
 // side; border walls sit ~1 unit beyond that). Lets walls be built in the dead space.
@@ -148,17 +148,23 @@ export class PolyWallEditor {
     this._wallGizmos = [];
   }
 
+  /** Y for a control-point handle: clear of both the terrain and the wall top. */
+  _pointY(feature, pt) {
+    return gizmoY(this.track, pt.x, pt.z, this._wallTopY(feature, pt));
+  }
+
+  /** World Y of the wall's top edge over (pt.x, pt.z). */
+  _wallTopY(feature, pt) {
+    return (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + (feature?.height || 0);
+  }
+
   _createPointSphere(feature, idx) {
     const pt = feature.points[idx];
-    // Deterministic analytic terrain height — see HillEditor/PolyHillEditor.
-    // (A raycast via terrainQuery relies on the ground's picking octree, which
-    // goes stale after terrain edits in the editor, so gizmos stop tracking Y.)
-    const y  = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET + (feature?.height || 0);
     const mesh = MeshBuilder.CreateSphere(`pwPt_${idx}_${Date.now()}`, {
       diameter: 1.4,
       segments: 6,
     }, this.scene);
-    mesh.position  = new Vector3(pt.x, y + 0.7, pt.z);
+    mesh.position  = new Vector3(pt.x, this._pointY(feature, pt), pt.z);
     mesh.material  = this._activeWall?.feature === feature ? this.activeMat : this.normalMat;
     mesh.isPickable = true;
     return mesh;
@@ -169,8 +175,8 @@ export class PolyWallEditor {
 
     // Draw the polyline
     const ctrlPts = feature.points.map(pt => {
-      const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + (feature?.height || 0);
-      return new Vector3(pt.x, y + 0.15, pt.z);
+      const y = gizmoLineY(this.track, pt.x, pt.z, this._wallTopY(feature, pt));
+      return new Vector3(pt.x, y, pt.z);
     });
 
     const lines = [ctrlPts];
@@ -198,13 +204,17 @@ export class PolyWallEditor {
     wg.lineSystem = this._buildLineSystem(wg.feature);
   }
 
+  /** Re-sample every wall's gizmo heights after a terrain rebuild. */
+  refreshGizmoHeights() {
+    for (const wg of this._wallGizmos) this._updatePointPositions(wg);
+  }
+
   _updatePointPositions(wg, { rebuildLines = true } = {}) {
     const { feature, pointMeshes } = wg;
     for (let i = 0; i < pointMeshes.length; i++) {
       const pt = feature.points[i];
       if (!pt) continue;
-      const y = (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + POINT_HEIGHT_OFFSET + (this._activeWall?.feature?.height || 0);
-      pointMeshes[i].position.set(pt.x, y + 0.7, pt.z);
+      pointMeshes[i].position.set(pt.x, this._pointY(feature, pt), pt.z);
     }
     if (rebuildLines) {
       if (wg.lineSystem) { wg.lineSystem.dispose(); wg.lineSystem = null; }

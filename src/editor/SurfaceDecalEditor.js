@@ -8,8 +8,7 @@ import {
 } from "@babylonjs/core";
 import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, MIN_COUNT, MAX_COUNT, createDecalTexture } from "../managers/decalShapes.js";
 import { GizmoHandle } from "./GizmoHandle.js";
-
-const HANDLE_POS_Y = 2.0; // handle sphere floats this far above the ground-hugging decal
+import { gizmoY } from './gizmo-height.js';
 
 const HIGHLIGHT_COLOR = new Color3(1, 0.85, 0.2); // amber selection outline
 
@@ -100,7 +99,7 @@ export class SurfaceDecalEditor {
         this._handles.set(entry, handle);
       }
       const { centerX, centerZ } = entry.feature;
-      handle.setPosition(centerX, this._track.getHeightAt(centerX, centerZ) + HANDLE_POS_Y, centerZ);
+      handle.setPosition(centerX, gizmoY(this._track, centerX, centerZ), centerZ);
       handle.setSelected(entry === this.selected);
     }
   }

@@ -1,6 +1,7 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_MESH_GRID } from './EditorMaterials.js';
+import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 /**
  * BridgeMeshEditor — edits `bridgeMesh` features via a grid of draggable
@@ -69,8 +70,9 @@ export class BridgeMeshEditor {
 
   addBridgeMeshFeature() {
     const track = this.track;
-    const centerX = 0;
-    const centerZ = 0;
+    const center = this.ec.viewCenterXZ();
+    const centerX = center.x;
+    const centerZ = center.z;
     const cols = 4, rows = 2;
     const defaultElevation = 5;
 
@@ -206,7 +208,7 @@ export class BridgeMeshEditor {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const { x: wx, z: wz } = this._gridPoint(feature, r, c);
-        const wy = heights[r * cols + c] ?? 0;
+        const wy = gizmoY(this.track, wx, wz, heights[r * cols + c] ?? 0);
 
         const mesh = MeshBuilder.CreateSphere(`bmPt_${centerX}_${centerZ}_${r}_${c}`, {
           diameter: radius * 2,
@@ -278,15 +280,13 @@ export class BridgeMeshEditor {
     this.lineSystems = this.lineSystems.filter(l => l.featureRef !== feature);
 
     const { cols, rows, heights } = feature;
-    const OFFSET = 0.08;
-
     const lines = [];
 
     for (let r = 0; r < rows; r++) {
       const row = [];
       for (let c = 0; c < cols; c++) {
         const { x: wx, z: wz } = this._gridPoint(feature, r, c);
-        const wy = (heights[r * cols + c] ?? 0) + OFFSET;
+        const wy = gizmoLineY(this.track, wx, wz, heights[r * cols + c] ?? 0);
         row.push(new Vector3(wx, wy, wz));
       }
       lines.push(row);
@@ -296,7 +296,7 @@ export class BridgeMeshEditor {
       const col = [];
       for (let r = 0; r < rows; r++) {
         const { x: wx, z: wz } = this._gridPoint(feature, r, c);
-        const wy = (heights[r * cols + c] ?? 0) + OFFSET;
+        const wy = gizmoLineY(this.track, wx, wz, heights[r * cols + c] ?? 0);
         col.push(new Vector3(wx, wy, wz));
       }
       lines.push(col);
@@ -309,6 +309,25 @@ export class BridgeMeshEditor {
     this.lineSystems.push({ mesh: lineSystem, featureRef: feature });
   }
 
+  /**
+   * Re-sample every bridge's gizmo heights after a terrain rebuild. Deck heights
+   * are absolute, but the handles float over whichever is higher — deck or the
+   * ground that just moved under it.
+   */
+  refreshGizmoHeights() {
+    for (const p of this.pointMeshes) {
+      const f = p.featureRef;
+      const { x: wx, z: wz } = this._gridPoint(f, p.r, p.c);
+      p.mesh.position.set(wx, gizmoY(this.track, wx, wz, f.heights?.[p.r * f.cols + p.c] ?? 0), wz);
+    }
+    for (const c of this.centerGizmos) {
+      c.mesh.position.y = this._centerHandleY(c.featureRef);
+    }
+    for (const feature of [...new Set(this.lineSystems.map(l => l.featureRef))]) {
+      this._buildLineSystemForFeature(feature);
+    }
+  }
+
   _updateGizmoPositions() {
     if (!this.activeFeature) return;
     const { cols, rows, centerX, centerZ, heights } = this.activeFeature;
@@ -316,7 +335,7 @@ export class BridgeMeshEditor {
     for (const p of this.pointMeshes) {
       if (p.featureRef !== this.activeFeature) continue;
       const { x: wx, z: wz } = this._gridPoint(this.activeFeature, p.r, p.c);
-      p.mesh.position.set(wx, heights[p.r * cols + p.c] ?? 0, wz);
+      p.mesh.position.set(wx, gizmoY(this.track, wx, wz, heights[p.r * cols + p.c] ?? 0), wz);
     }
 
     for (const c of this.centerGizmos) {
@@ -562,7 +581,9 @@ export class BridgeMeshEditor {
   _centerHandleY(feature) {
     const safeHeights = (feature.heights ?? []).filter(v => Number.isFinite(v));
     const maxY = safeHeights.length > 0 ? Math.max(...safeHeights) : 0;
-    return maxY + 1.5;
+    // Clears the deck's high corner and the terrain at the center, whichever wins
+    // (a deck that dips under a hill would otherwise bury its own handle).
+    return gizmoY(this.track, feature.centerX, feature.centerZ, maxY);
   }
 
   _gridPoint(feature, r, c) {

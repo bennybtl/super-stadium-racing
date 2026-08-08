@@ -134,6 +134,9 @@ export class EditorMode extends BaseMode {
       ground.setVerticesData(VertexBuffer.PositionKind, positions);
       ground.createNormals(true);
       rebuildSlopeCollidersDebounced();
+      // The ground just moved under every gizmo placed against the old heights —
+      // lift the handles back out (debounced; this runs on every slider tick).
+      editorController.scheduleGizmoHeightRefresh();
     };
 
     // Fast: sync terrainManager.grid from track features (no canvas writes)
