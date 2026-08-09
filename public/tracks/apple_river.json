@@ -6,7 +6,7 @@
   "dirtChunks": true,
   "oobDeadSpace": true,
   "borderWall": {
-    "enabled": true,
+    "enabled": false,
     "thickness": 2,
     "height": 24,
     "color": "#808080"
@@ -26,7 +26,7 @@
     "laneSpacing": 2,
     "pathWander": 0.7,
     "edgeSoftness": 1,
-    "secondaryPathCount": 60,
+    "secondaryPathCount": 65,
     "secondaryPathStrength": 0.8,
     "secondaryPathSpacing": 0.04,
     "seed": 1337
@@ -47,7 +47,7 @@
         2.5,
         2.5,
         0,
-        4,
+        0,
         3.5,
         7,
         0,
@@ -199,8 +199,8 @@
     },
     {
       "type": "driveBox",
-      "centerX": 68.89400568167856,
-      "centerZ": 4.272805952886989,
+      "centerX": 69.89400568167856,
+      "centerZ": 1.2728059528869888,
       "width": 14,
       "depth": 17,
       "rotation": 270,
@@ -214,10 +214,10 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 0,
-      "centerZ": -64.50002375279658,
-      "heading": 0,
-      "width": 10,
+      "centerX": -50.66487259461024,
+      "centerZ": -24.927135350255117,
+      "heading": 1.4835298641951802,
+      "width": 21,
       "checkpointNumber": 1,
       "_altIndex": 0,
       "_altCount": 1
@@ -345,8 +345,8 @@
           "z": -4.960000000000001
         },
         {
-          "x": -27.21,
-          "z": -28.87
+          "x": -28.3874221260338,
+          "z": -26.14910786967018
         },
         {
           "x": -65.91,
@@ -391,12 +391,12 @@
       "blendWidth": 2,
       "cornerRadius": 11.5,
       "closed": false,
-      "terrainType": "mud"
+      "terrainType": "loamy_dirt"
     },
     {
       "type": "squareHill",
-      "centerX": -38.1450144622947,
-      "centerZ": -80,
+      "centerX": -38.055431316091045,
+      "centerZ": -71.91870338983344,
       "width": 10,
       "depth": 10,
       "angle": 0,
@@ -404,6 +404,454 @@
       "waterLevelOffset": 1,
       "transition": 4,
       "terrainType": null
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -56.543074399220835,
+          "z": -44.124732694035096,
+          "radius": 0
+        },
+        {
+          "x": -56.25591274331293,
+          "z": -35.6794246692456,
+          "radius": 7.5
+        },
+        {
+          "x": -25.65,
+          "z": -37.52,
+          "radius": 13.5
+        },
+        {
+          "x": 42.26,
+          "z": -0.2699999999999996,
+          "radius": 15
+        },
+        {
+          "x": 31.06,
+          "z": 37.3,
+          "radius": 16
+        },
+        {
+          "x": -2.2864700509930884,
+          "z": 30.178961611872634,
+          "radius": 11
+        },
+        {
+          "x": -28.164271399338592,
+          "z": 14.00800768060617,
+          "radius": 5
+        },
+        {
+          "x": -52.99,
+          "z": 15.71,
+          "radius": 7
+        },
+        {
+          "x": -53.21,
+          "z": 33.23,
+          "radius": 10.5
+        },
+        {
+          "x": -9.15,
+          "z": 44.39,
+          "radius": 12
+        },
+        {
+          "x": 40.29,
+          "z": 50.53,
+          "radius": 8.5
+        },
+        {
+          "x": 59.95,
+          "z": 39.22,
+          "radius": 10.5
+        },
+        {
+          "x": 60.08472873387466,
+          "z": -3.0012745472453286,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 6,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false,
+      "fence": false
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": 30.96880875786841,
+          "z": 72.4448050952298,
+          "radius": 0
+        },
+        {
+          "x": -67.53114027403196,
+          "z": 53.23610157912998,
+          "radius": 21.5
+        },
+        {
+          "x": -79.54347886064791,
+          "z": 23.651598372014604,
+          "radius": 13
+        },
+        {
+          "x": -69.41114917858017,
+          "z": -3.317734242550609,
+          "radius": 5
+        },
+        {
+          "x": -58.3053624766899,
+          "z": -8.845014596571252,
+          "radius": 5
+        },
+        {
+          "x": -28.25760237060077,
+          "z": -7.980309050249421,
+          "radius": 5
+        },
+        {
+          "x": 3.2201476968033296,
+          "z": 10.701236482641528,
+          "radius": 17.5
+        },
+        {
+          "x": 6.192834305315632,
+          "z": 6.790641755211806,
+          "radius": 5
+        },
+        {
+          "x": -26.941644157813844,
+          "z": -13.377981427283459,
+          "radius": 11
+        },
+        {
+          "x": -58.19,
+          "z": -12.85,
+          "radius": 13
+        },
+        {
+          "x": -76.17,
+          "z": -18,
+          "radius": 16
+        },
+        {
+          "x": -84.08942223269187,
+          "z": -43.11170362470071,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false,
+      "fence": false
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -26.208376043871336,
+          "z": -60.741759728752356,
+          "radius": 2
+        },
+        {
+          "x": 1.1703953389055757,
+          "z": -55.846639247364486,
+          "radius": 5
+        },
+        {
+          "x": 26.43779437738824,
+          "z": -39.029622576417594,
+          "radius": 10.5
+        },
+        {
+          "x": 56.13978350000878,
+          "z": -30.657509106125232,
+          "radius": 5
+        },
+        {
+          "x": 47.658885037126225,
+          "z": -54.22163644466265,
+          "radius": 30
+        },
+        {
+          "x": 4.691526118134578,
+          "z": -62.128806353429425,
+          "radius": 30
+        },
+        {
+          "x": -26.51,
+          "z": -64.7,
+          "radius": 0
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 5,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": true,
+      "fence": true,
+      "colors": [
+        "red"
+      ]
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": -66.80147293462029,
+      "centerZ": -39.542496616813665,
+      "shape": "chevron",
+      "color": "white",
+      "count": 5,
+      "outline": false,
+      "width": 5,
+      "depth": 7.5,
+      "angle": 110,
+      "opacity": 1
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 66.80521776609602,
+      "centerZ": -35.184988610205714,
+      "shape": "chevron",
+      "color": "white",
+      "count": 4,
+      "outline": false,
+      "width": 4,
+      "depth": 8,
+      "angle": 285,
+      "opacity": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 20.283853483298994,
+      "centerZ": 13.192134356189651,
+      "heading": -0.17453292519943295,
+      "width": 30,
+      "checkpointNumber": 2,
+      "_altIndex": 0,
+      "_altCount": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -46.60252367478515,
+      "centerZ": 46.39150448662103,
+      "heading": 1.2217304763960306,
+      "width": 20,
+      "checkpointNumber": 3,
+      "_altIndex": 0,
+      "_altCount": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 70.33693972280584,
+      "centerZ": 31.213857297981683,
+      "heading": -3.141592653589793,
+      "width": 19.5,
+      "checkpointNumber": 4,
+      "_altIndex": 0,
+      "_altCount": 1
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -21.74895617799622,
+      "centerZ": -72.96975553471076,
+      "heading": -1.6580627893946132,
+      "width": 15,
+      "checkpointNumber": 5,
+      "_altIndex": 0,
+      "_altCount": 1
+    },
+    {
+      "type": "aiPath",
+      "points": [
+        {
+          "x": -4.66,
+          "z": -73.59
+        },
+        {
+          "x": -25.39,
+          "z": -74.13
+        },
+        {
+          "x": -55.82,
+          "z": -77.33
+        },
+        {
+          "x": -67.43,
+          "z": -68.28
+        },
+        {
+          "x": -69.87,
+          "z": -41.87
+        },
+        {
+          "x": -52.61,
+          "z": -31.99
+        },
+        {
+          "x": -11.48,
+          "z": -17.19
+        },
+        {
+          "x": 12.87,
+          "z": 0.74
+        },
+        {
+          "x": 13.51,
+          "z": 13.76
+        },
+        {
+          "x": -0.23,
+          "z": 13.66
+        },
+        {
+          "x": -51.93,
+          "z": 6.45
+        },
+        {
+          "x": -61.97,
+          "z": 24.12
+        },
+        {
+          "x": -56.84,
+          "z": 37.05
+        },
+        {
+          "x": 29.03,
+          "z": 56.06
+        },
+        {
+          "x": 56.52,
+          "z": 51.42
+        },
+        {
+          "x": 67.94308622526178,
+          "z": 38.01517111167077
+        },
+        {
+          "x": 65.34781316691968,
+          "z": -43.15964088821369
+        },
+        {
+          "x": 44.63,
+          "z": -59.24
+        }
+      ],
+      "branches": []
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 61.365095226365554,
+      "z": -51.92713176606699,
+      "radius": 11
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -63.75178082966222,
+      "z": 28.777709829487563,
+      "radius": 11
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -62.26335747357824,
+      "z": -70.85876365466338,
+      "radius": 11
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 67.52157939365608,
+      "z": 37.61041948551894,
+      "radius": 7.5
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": -34.52405533799252,
+      "z": -23.816172815184245,
+      "radius": 7.5
+    },
+    {
+      "type": "model",
+      "model": "tree_1",
+      "x": 48.83186119511816,
+      "z": -39.149293153238375,
+      "color": "red",
+      "scale": 1
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": 28.177473024972915,
+      "z": -48.261409259500596,
+      "color": "red",
+      "scale": 1
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": 37.96307118080108,
+      "z": -50.32864546082068,
+      "color": "red",
+      "scale": 1
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": -39.71824196746352,
+      "z": 19.033951056317463,
+      "color": "red",
+      "scale": 1,
+      "heading": 1.064650843716541
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": 14.80113991496955,
+      "z": -59.10182631665542,
+      "color": "red",
+      "scale": 1,
+      "heading": 1.064650843716541
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": -25.298301532496026,
+      "z": 21.871780237611596,
+      "color": "red",
+      "scale": 1
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": 53.10593724634318,
+      "z": 8.617761359111434,
+      "color": "red",
+      "scale": 0.8,
+      "heading": 0.8901179185171081
+    },
+    {
+      "type": "model",
+      "model": "tree_1",
+      "x": 52.06193330361574,
+      "z": 26.355168838419452,
+      "color": "red",
+      "scale": 1,
+      "heading": 0.8901179185171081
     }
   ]
 }

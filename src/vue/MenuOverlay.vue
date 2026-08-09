@@ -398,7 +398,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
 });
 
-const logoSrc = new URL('../assets/ssr-logo.png', import.meta.url).href;
+const logoSrc = new URL('../assets/brands/ssr-logo.png', import.meta.url).href;
 
 const panelStyle = {
   backgroundImage: `url(${new URL('../assets/checker-black.png', import.meta.url).href})`,

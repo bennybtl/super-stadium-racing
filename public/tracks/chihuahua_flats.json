@@ -973,8 +973,8 @@
     },
     {
       "type": "trackSign",
-      "x": 2.4287244811742164,
-      "z": -62.12801485083832,
+      "x": -33.12848669355576,
+      "z": 25.422669144657867,
       "name": "Chihuahua Flats",
       "rotation": -0.05235987755982989,
       "contentType": "text",
@@ -983,7 +983,8 @@
       "primaryColor": "white",
       "scale": 1.5,
       "heightOffset": 2.9,
-      "width": 16
+      "width": 16,
+      "logoScale": 1
     },
     {
       "type": "model",
@@ -1116,7 +1117,8 @@
       "primaryColor": "red",
       "scale": 2.2,
       "heightOffset": 0,
-      "width": 10
+      "width": 10,
+      "logoScale": 1.25
     },
     {
       "type": "trackSign",
@@ -1130,35 +1132,38 @@
       "primaryColor": "red",
       "scale": 2.2,
       "heightOffset": 0,
-      "width": 10
+      "width": 10,
+      "logoScale": 1.25
     },
     {
       "type": "trackSign",
-      "x": -30.52328575248415,
-      "z": 25.727822619164222,
+      "x": 20.55334057757316,
+      "z": 51.129162559456226,
       "name": "Track Name",
       "rotation": 0,
       "contentType": "brand",
-      "brandImage": "turbo-blend.png",
-      "background": "gray",
+      "brandImage": "ssr-logo.png",
+      "background": "black",
       "primaryColor": "red",
-      "scale": 2.2,
-      "heightOffset": 1.1,
-      "width": 10
+      "scale": 2.5,
+      "heightOffset": 0.8,
+      "width": 14,
+      "logoScale": 1.1
     },
     {
       "type": "trackSign",
-      "x": 74.73028860473862,
-      "z": 3.2081216994128354,
+      "x": 71.54654639657397,
+      "z": 3.8479988222206956,
       "name": "Track Name",
       "rotation": -0.33161255787892263,
       "contentType": "brand",
-      "brandImage": "turbo-blend.png",
-      "background": "gray",
+      "brandImage": "rocket-gasoline.png",
+      "background": "black",
       "primaryColor": "red",
-      "scale": 2.2,
+      "scale": 1.95,
       "heightOffset": 1.1,
-      "width": 10
+      "width": 10.5,
+      "logoScale": 1.7
     },
     {
       "type": "aiPath",
@@ -1446,10 +1451,14 @@
       "zoneType": "fireworks",
       "shape": "circle",
       "x": -10.813156937892408,
-      "z": 75.92364973426977,
-      "radius": 10,
+      "z": 77.92364973426977,
+      "radius": 13,
       "fireworkCount": 4,
-      "fireworkHeight": 20
+      "fireworkHeight": 20,
+      "fireworkMode": "shell",
+      "fireworkDuration": 2,
+      "fireworkColor": "orange",
+      "heading": -1.5707963267948966
     },
     {
       "type": "actionZone",
@@ -1457,9 +1466,97 @@
       "shape": "circle",
       "x": 28.0437828986061,
       "z": 76.58093724456909,
-      "radius": 10,
+      "radius": 13,
       "fireworkCount": 4,
-      "fireworkHeight": 20
+      "fireworkHeight": 20,
+      "fireworkMode": "shell",
+      "fireworkDuration": 2,
+      "fireworkColor": "orange",
+      "heading": -1.5707963267948966
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": -44.9616250699966,
+      "centerZ": -79.23181197558432,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 22.5,
+      "depth": 15.5,
+      "angle": 90,
+      "opacity": 1,
+      "text": "CHIHUAHUA"
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 79.67302015040433,
+      "centerZ": -37.95408314839498,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 13,
+      "depth": 10.5,
+      "angle": 49,
+      "opacity": 1,
+      "text": "4"
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": -22.99216405754222,
+      "centerZ": -79.32485832131455,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 24,
+      "depth": 19.5,
+      "angle": 90,
+      "opacity": 1,
+      "text": "FLATS RACEWAY"
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 79.06461149640286,
+      "centerZ": 54.738229604454496,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 13,
+      "depth": 10.5,
+      "angle": 94,
+      "opacity": 1,
+      "text": "3"
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": -90.77389059811357,
+      "centerZ": 38.41587417631413,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 13,
+      "depth": 10.5,
+      "angle": 94,
+      "opacity": 1,
+      "text": "2"
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": -73.32505513019473,
+      "centerZ": -56.49258476259821,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 13,
+      "depth": 10.5,
+      "angle": 94,
+      "opacity": 1,
+      "text": "1"
     }
   ]
 }

@@ -2,16 +2,16 @@
   "id": "coati",
   "name": "Coati",
   "engineAudio": "bac",
-  "modelFile": "coati.obj",
+  "modelFile": "coati2.obj",
   "defaultColor": [0.8, 0.2, 0.5],
   "meshColors": {
-    "cockpit_Body6": [0.1, 0.1, 0.1],
-    "wing_Body7": [0.9, 0.9, 0.9],
-    "frame_Body9": [0.7, 0.7, 0.7]
+    "windows": [0.1, 0.1, 0.1],
+    "wing_wing": [0.9, 0.9, 0.9],
+    "bumper_bumper": [0.7, 0.7, 0.7]
   },
   "bodyTransform": {
     "position": [0, 0.4, 0.0],
-    "rotation": [-1.5708, 0, 0],
+    "rotation": [0, 1.5708, 0],
     "scaling":  [1, 1, 1]
   },
   "physicsBox": {

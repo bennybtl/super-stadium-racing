@@ -43,13 +43,18 @@ export const TERRAIN_COLORS = {
 
 export const TRACK_SIGN_BRANDS = [
   { value: 'energizer-racing.png', label: 'Energizer Racing' },
-  { value: 'turbo-king.png', label: 'Turbo King' },
-  { value: 'ultra-grip.png', label: 'Ultra Grip' },
-  { value: 'luck-dice.png', label: 'Luck Dice' },
+  { value: 'lucky-dice.png', label: 'Lucky Dice' },
   { value: 'phoenix-auto.png', label: 'Phoenix Auto' },
   { value: 'power-lube.png', label: 'Power Lube' },
   { value: 'rally-master.png', label: 'Rally Master' },
   { value: 'rocket-gasoline.png', label: 'Rocket Gasoline' },
   { value: 'roll-fast.png', label: 'Roll Fast' },
+  { value: 'solar.png', label: 'Solar' },
+  { value: 'sonic-speed.png', label: 'Sonic Speed' },
+  { value: 'speedhawk.png', label: 'Speed Hawk Performance' },
+  { value: 'ssr-logo.png', label: 'Super Stadium Racing' },
+  { value: 'top-boost.png', label: 'Top Boost' },
   { value: 'turbo-blend.png', label: 'Turbo Blend' },
+  { value: 'turbo-king.png', label: 'Turbo King' },
+  { value: 'ultra-grip.png', label: 'Ultra Grip' },
 ];
