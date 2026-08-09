@@ -741,8 +741,8 @@
     },
     {
       "type": "hill",
-      "centerX": 5.024333215190797,
-      "centerZ": -21.985464901630905,
+      "centerX": 13.47009449439975,
+      "centerZ": -23.329856294854313,
       "radiusX": 16,
       "radiusZ": 10,
       "angle": 0,
@@ -951,9 +951,10 @@
       "brandImage": "energizer-racing.png",
       "background": "black",
       "primaryColor": "orange",
-      "scale": 1.85,
-      "heightOffset": 1.2,
-      "width": 12.5
+      "scale": 1.6,
+      "heightOffset": 2.8,
+      "width": 12.5,
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -967,7 +968,8 @@
       "primaryColor": "orange",
       "scale": 1.85,
       "heightOffset": 1.2,
-      "width": 12.5
+      "width": 12.5,
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -981,7 +983,8 @@
       "primaryColor": "orange",
       "scale": 1.85,
       "heightOffset": 1.2,
-      "width": 12.5
+      "width": 12.5,
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -995,7 +998,8 @@
       "primaryColor": "orange",
       "scale": 1.6,
       "heightOffset": 1.8,
-      "width": 8.5
+      "width": 8.5,
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -1009,11 +1013,12 @@
       "primaryColor": "orange",
       "scale": 1.6,
       "heightOffset": 1.8,
-      "width": 8.5
+      "width": 8.5,
+      "logoScale": 1
     },
     {
       "type": "checkpoint",
-      "centerX": -46.756228955455,
+      "centerX": -45.756228955455,
       "centerZ": -4.878665883410633,
       "heading": -3.141592653589793,
       "width": 24,
@@ -1024,7 +1029,7 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 30.37012586207395,
+      "centerX": 30.87012586207395,
       "centerZ": -39.11732568795995,
       "heading": 1.5707963267948966,
       "width": 17,
@@ -1036,9 +1041,9 @@
     {
       "type": "checkpoint",
       "centerX": -27.81984877044292,
-      "centerZ": -70.09002155190234,
+      "centerZ": -70.59002155190234,
       "heading": -1.5707963267948966,
-      "width": 17.5,
+      "width": 19,
       "checkpointNumber": 5,
       "_altIndex": 0,
       "_altCount": 1,
@@ -1165,23 +1170,26 @@
       "type": "polyWall",
       "points": [
         {
-          "x": 48.61525768079399,
-          "z": -81.30229768552284,
-          "radius": 0
+          "x": 41.941561908643855,
+          "z": -80.33482808167969,
+          "radius": 0,
+          "smoothing": 0
         },
         {
-          "x": 74.7446564836709,
+          "x": 75.2446564836709,
           "z": -77.99723822861563,
-          "radius": 18.5
+          "radius": 18.5,
+          "smoothing": 0
         },
         {
           "x": 79.0932707709306,
           "z": -55.5172100964976,
-          "radius": 0
+          "radius": 0,
+          "smoothing": 0
         }
       ],
-      "height": 2,
-      "collisionHeight": 7.5,
+      "height": 0.5,
+      "collisionHeight": 6,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
@@ -1382,6 +1390,60 @@
       "heading": 1.3264502315156905,
       "mirrorZ": true,
       "mirrorX": true
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -47.8,
+          "z": -81.23,
+          "radius": 0
+        },
+        {
+          "x": -21.82,
+          "z": -80.6,
+          "radius": 0
+        },
+        {
+          "x": 16.47,
+          "z": -80.57,
+          "radius": 0,
+          "smoothing": 0
+        }
+      ],
+      "height": 0.5,
+      "collisionHeight": 6,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false,
+      "fence": true,
+      "colors": [
+        "gray"
+      ]
+    },
+    {
+      "type": "squareHill",
+      "centerX": -44.85442861880122,
+      "centerZ": 10.962936053369361,
+      "width": 10,
+      "depth": 7.5,
+      "angle": 0,
+      "height": -2,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": null
+    },
+    {
+      "type": "squareHill",
+      "centerX": 69.7620360649172,
+      "centerZ": 13.342942471954137,
+      "width": 10,
+      "depth": 7.5,
+      "angle": 0,
+      "height": -2,
+      "waterLevelOffset": 0,
+      "transition": 5,
+      "terrainType": "rocky"
     }
   ]
 }

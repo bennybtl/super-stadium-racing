@@ -5,8 +5,14 @@
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": false,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 24,
+    "color": "#808080"
+  },
   "name": "Luck O' The Irish",
-  "image": "luck_o_the_irish.png",
+  "image": "luck_o_the_irish.jpg",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -317,8 +323,9 @@
       "closed": true,
       "colors": [
         "green",
-        "white"
-      ]
+        "yellow"
+      ],
+      "fence": false
     },
     {
       "type": "polyWall",
@@ -492,19 +499,6 @@
       "opacity": 0.85
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -4.900873666948334,
-      "centerZ": 4.389066602205103,
-      "shape": "oval",
-      "color": "yellow",
-      "count": 5,
-      "outline": true,
-      "width": 13,
-      "depth": 13,
-      "angle": 269,
-      "opacity": 0.55
-    },
-    {
       "type": "squareHill",
       "centerX": -22.63831451179089,
       "centerZ": -6.497509696946956,
@@ -554,7 +548,7 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 65.5219860187384,
+      "centerX": 66.0219860187384,
       "centerZ": 40.50721361211651,
       "heading": 0,
       "width": 26,
@@ -566,7 +560,7 @@
     {
       "type": "checkpoint",
       "centerX": 40.18966473320715,
-      "centerZ": -64.11076088007377,
+      "centerZ": -65.61076088007377,
       "heading": 1.5707963267948966,
       "width": 26,
       "checkpointNumber": 4,
@@ -659,12 +653,12 @@
       "points": [
         {
           "x": -25.996484422552975,
-          "z": -72.71132673773342,
+          "z": -73.21132673773342,
           "radius": 10
         },
         {
-          "x": -66.92296986729383,
-          "z": -69.12063077257129,
+          "x": -67.42296986729383,
+          "z": -71.12063077257129,
           "radius": 20.5
         },
         {
@@ -1042,7 +1036,8 @@
       "primaryColor": "black",
       "scale": 1.4,
       "heightOffset": 5.8,
-      "width": 15
+      "width": 15,
+      "logoScale": 1
     },
     {
       "type": "model",
@@ -1140,45 +1135,6 @@
       "blendWidth": 3.5
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 3.5991263330516663,
-      "centerZ": 4.889066602205103,
-      "shape": "oval",
-      "color": "yellow",
-      "count": 5,
-      "outline": true,
-      "width": 13,
-      "depth": 13,
-      "angle": 269,
-      "opacity": 0.55
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": 3.751856439762811,
-      "centerZ": -3.257361711977337,
-      "shape": "oval",
-      "color": "yellow",
-      "count": 5,
-      "outline": true,
-      "width": 13,
-      "depth": 13,
-      "angle": 269,
-      "opacity": 0.55
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": -4.50430342683244,
-      "centerZ": -3.548163310125032,
-      "shape": "oval",
-      "color": "yellow",
-      "count": 5,
-      "outline": true,
-      "width": 13,
-      "depth": 13,
-      "angle": 269,
-      "opacity": 0.55
-    },
-    {
       "type": "hill",
       "centerX": 67.11132387672498,
       "centerZ": -13.966441668008102,
@@ -1194,8 +1150,8 @@
       "type": "hill",
       "centerX": 40.36954163641691,
       "centerZ": -41.80335029648791,
-      "radiusX": 8,
-      "radiusZ": 8,
+      "radiusX": 14.5,
+      "radiusZ": 14,
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -1206,8 +1162,8 @@
       "type": "hill",
       "centerX": 42.33790826560509,
       "centerZ": 40.465485488965406,
-      "radiusX": 8,
-      "radiusZ": 8,
+      "radiusX": 16,
+      "radiusZ": 14.5,
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -1218,8 +1174,8 @@
       "type": "hill",
       "centerX": -40.59121954573812,
       "centerZ": -42.23922562187365,
-      "radiusX": 8,
-      "radiusZ": 8,
+      "radiusX": 15.5,
+      "radiusZ": 16,
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
