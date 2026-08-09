@@ -368,7 +368,7 @@ export class ActionZoneEditor {
     }
 
     if (zoneData.launchers) zoneData.launchers.refresh();
-    else zoneData.launchers = new FireworkLaunchers(zoneData.feature, this.track, this.scene);
+    else zoneData.launchers = new FireworkLaunchers(zoneData.feature, this.track, this.scene, { editorTint: true });
   }
 
   _getPolygonCenter(points) {

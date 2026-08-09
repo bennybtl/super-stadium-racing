@@ -8,6 +8,7 @@ import {
   rotateToLocal,
 } from "./feature-geometry.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
+import { DEFAULT_BORDER_WALL } from "./objects/BorderWall.js";
 
 const TRACK_SCHEMA_VERSION = 2;
 
@@ -118,6 +119,9 @@ export class Track {
     // triggers the out-of-bounds countdown/respawn (in addition to any explicit
     // out-of-bounds zones). Off by default.
     this.oobDeadSpace = false;
+    // Perimeter wall appearance (see src/objects/BorderWall.js). Turn `enabled`
+    // off for open tracks with no visible boundary.
+    this.borderWall = { ...DEFAULT_BORDER_WALL };
     this.width = width;
     this.depth = depth;
     this.features = [];
@@ -434,7 +438,10 @@ export class Track {
 
     // Add subtle vertical breakup in the outside border strip so the border
     // is less uniformly flat while keeping the track edge transition smooth.
-    if (signedDistToEdge < 0) {
+    // Skipped with no perimeter wall: the outskirt plain (src/objects/Outskirts.js)
+    // butts against the mesh edge at y = 0, and jitter there would open a
+    // ragged seam along the whole boundary.
+    if (signedDistToEdge < 0 && this.borderWall?.enabled !== false) {
       const BORDER_Y_JITTER = 1.0;
       const borderT = Math.max(0, Math.min(1, -signedDistToEdge / HEIGHT_BLEND_OUTER));
       const jitterMask = Math.max(0, Math.min(1, (borderT - 0.2) / 0.8));
@@ -751,6 +758,7 @@ export class Track {
       hidden: this.hidden,
       dirtChunks: this.dirtChunks,
       oobDeadSpace: this.oobDeadSpace,
+      borderWall: { ...DEFAULT_BORDER_WALL, ...(this.borderWall ?? {}) },
       name: this.name,
       image: this.image ?? undefined,
       width: this.width,
@@ -775,6 +783,9 @@ export class Track {
     track.hidden = data.hidden ?? track.hidden;
     track.dirtChunks = data.dirtChunks ?? track.dirtChunks;
     track.oobDeadSpace = data.oobDeadSpace ?? track.oobDeadSpace;
+    // Tracks saved before the perimeter-wall options existed fall back to the
+    // defaults, which reproduce the original grey wall.
+    track.borderWall = { ...DEFAULT_BORDER_WALL, ...(data.borderWall ?? {}) };
     if (data.defaultTerrainType) {
       const key = Object.keys(TERRAIN_TYPES).find(
         k => TERRAIN_TYPES[k].name === data.defaultTerrainType

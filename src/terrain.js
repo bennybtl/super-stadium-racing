@@ -11,7 +11,7 @@ export const TERRAIN_TYPES = {
     dustIntensity: 0,        // Paved — no cruising dust
     diffuseTexture: 'textures/asphalt_2.texture.png',
     diffuseTextureWorldUnitsPerTile: 20,
-    diffuseTextureOpacity: 0.7,
+    diffuseTextureOpacity: 0.5,
     dragMultiplier: 0.3,
     roughness: 0,            // Perfectly smooth
     normalMap: 'normals/616-normal.jpg',
@@ -39,7 +39,7 @@ export const TERRAIN_TYPES = {
     dustIntensity: 0.3,      // Loose soil — kicks up readily
     diffuseTexture: 'textures/loamy-soil.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
-    diffuseTextureOpacity: 0.7,
+    diffuseTextureOpacity: 0.5,
     dragMultiplier: 1.1,
     roughness: 0.25,         // Noticeable ruts and loose clumps
     normalMap: 'normals/6481-normal.jpg',
@@ -53,7 +53,7 @@ export const TERRAIN_TYPES = {
     dustIntensity: 0.3,      // Loose — kicks up readily
     diffuseTexture: 'textures/dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 30,
-    diffuseTextureOpacity: 0.6,
+    diffuseTextureOpacity: 0.5,
     dragMultiplier: 0.7,
     roughness: 0.15,         // Noticeable ruts and loos6e clumps
     normalMap: 'normals/6481-normal.jpg',
@@ -99,6 +99,9 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 1.0,     // Unpredictable rocky surface
     color: TERRAIN_COLORS.rocky, // Dark reddish-brown rock
     dustIntensity: 0.2,      // Grit and rock powder
+    diffuseTexture: 'textures/rocky.texture.png',
+    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.8,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
     normalMap: 'normals/rocky.normal.jpg',

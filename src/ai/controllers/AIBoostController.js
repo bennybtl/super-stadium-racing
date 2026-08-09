@@ -1,6 +1,11 @@
 export const DEFAULT_BOOST_CONFIG = {
   minSpeed: 8,
   straightMaxAngle: Math.PI / 12, // ~15°
+  // Drift gating (see _isSlipAcceptable). Slip below driftThreshold × this
+  // counts as settled; above it, boost only on a slide that is unwinding.
+  slipSettledFactor: 0.6,
+  driftExitSlipRate: 0.35,       // rad/s of slip DECREASE that reads as a drift exit
+  maxBoostSlipAngle: 0.6,        // rad (~34°) — too sideways to boost, unwinding or not
   clearAheadDist: 15,
   clearLateralDist: 4,
   decisionCooldownMs: 600,
@@ -28,6 +33,9 @@ export class AIBoostController {
 
     this.minSpeed = config.minSpeed ?? DEFAULT_BOOST_CONFIG.minSpeed;
     this.straightMaxAngle = config.straightMaxAngle ?? DEFAULT_BOOST_CONFIG.straightMaxAngle;
+    this.slipSettledFactor = config.slipSettledFactor ?? DEFAULT_BOOST_CONFIG.slipSettledFactor;
+    this.driftExitSlipRate = config.driftExitSlipRate ?? DEFAULT_BOOST_CONFIG.driftExitSlipRate;
+    this.maxBoostSlipAngle = config.maxBoostSlipAngle ?? DEFAULT_BOOST_CONFIG.maxBoostSlipAngle;
     this.clearAheadDist = config.clearAheadDist ?? DEFAULT_BOOST_CONFIG.clearAheadDist;
     this.clearLateralDist = config.clearLateralDist ?? DEFAULT_BOOST_CONFIG.clearLateralDist;
     this.decisionCooldownMs = config.decisionCooldownMs ?? DEFAULT_BOOST_CONFIG.decisionCooldownMs;
@@ -46,6 +54,12 @@ export class AIBoostController {
     this._nextBoostDecisionAtMs = 0;
     this._lastDebugAtByKey = new Map();
     this._lastBoostBlocker = null;
+
+    // Slip trend, sampled every update so the rate is warm whenever a boost
+    // actually becomes possible.
+    this._lastSlipAngle = null;
+    this._lastSlipAtMs = 0;
+    this._slipRate = 0; // rad/s, negative while a drift unwinds
   }
 
   setGameState(gameState) {
@@ -60,6 +74,9 @@ export class AIBoostController {
   reset() {
     this._nextBoostDecisionAtMs = 0;
     this._lastBoostBlocker = null;
+    this._lastSlipAngle = null;
+    this._lastSlipAtMs = 0;
+    this._slipRate = 0;
   }
 
   update({ position, forward, rightVec, fwdSpeed, input }) {
@@ -69,6 +86,12 @@ export class AIBoostController {
       this._debug('missing-state', 'Skipping boost: missing truck or gameState');
       return;
     }
+
+    // Sampled before every other gate so the trend is continuous — the checks
+    // below bail on most ticks, and a rate measured across those gaps is noise.
+    const now = Date.now();
+    const slipAngle = this._sampleSlip(truck.state, now);
+
     if (this.gameState.boostCount <= 0) {
       this._debug('no-boost-stock', 'Skipping boost: no boosts left');
       return;
@@ -86,9 +109,18 @@ export class AIBoostController {
       return;
     }
 
-    const now = Date.now();
     if (now < this._nextBoostDecisionAtMs) {
       this._debug('cooldown', `Skipping boost: cooldown ${(this._nextBoostDecisionAtMs - now)}ms remaining`);
+      return;
+    }
+
+    // Deliberately does NOT arm the cooldown: a drift exit is a short window,
+    // and sitting out 600ms would miss the moment worth boosting on.
+    if (!this._isSlipAcceptable(slipAngle, truck.state)) {
+      this._debug(
+        'drifting',
+        `Skipping boost: slip ${slipAngle.toFixed(3)} rate ${this._slipRate.toFixed(3)} rad/s (threshold ${(truck.state?.driftThreshold ?? 0).toFixed(3)})`
+      );
       return;
     }
 
@@ -143,6 +175,43 @@ export class AIBoostController {
     }
 
     this._nextBoostDecisionAtMs = now + this.decisionCooldownMs;
+  }
+
+  /**
+   * Track the slip angle's rate of change (rad/s). Called every update, before
+   * the gates that bail early, so a usable trend exists the moment one passes.
+   * A long gap between samples (paused, respawned) yields no trend rather than a
+   * fabricated one.
+   */
+  _sampleSlip(state, now) {
+    const slip = state?.slipAngle ?? 0;
+    const dtMs = now - this._lastSlipAtMs;
+
+    if (this._lastSlipAngle !== null && dtMs >= 16 && dtMs <= 500) {
+      this._slipRate = (slip - this._lastSlipAngle) / (dtMs / 1000);
+    } else if (dtMs > 500) {
+      this._slipRate = 0;
+    }
+
+    this._lastSlipAngle = slip;
+    this._lastSlipAtMs = now;
+    return slip;
+  }
+
+  /**
+   * Nitro while sideways just spins the truck, but boosting *out* of a drift is
+   * the real technique — so the gate is on the slide unwinding, not on slip
+   * being small. Settled slip passes outright; a slide that is still building
+   * (or is simply too far gone) is blocked however fast it is recovering.
+   */
+  _isSlipAcceptable(slipAngle, state) {
+    const driftThreshold = state?.driftThreshold;
+    if (!Number.isFinite(driftThreshold)) return true;
+
+    if (slipAngle <= driftThreshold * this.slipSettledFactor) return true;
+    if (slipAngle > this.maxBoostSlipAngle) return false;
+
+    return this._slipRate <= -this.driftExitSlipRate;
   }
 
   _isBoostLaneClear(position, forward, rightVec) {

@@ -5,6 +5,12 @@
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": true,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 24,
+    "color": "#808080"
+  },
   "name": "The Quarry",
   "image": "the_quarry.jpg",
   "width": 160,
@@ -408,7 +414,7 @@
     },
     {
       "type": "driveBox",
-      "centerX": -52.31792618515138,
+      "centerX": -51.31792618515138,
       "centerZ": -46.62637652444483,
       "width": 9.5,
       "depth": 4,
@@ -436,11 +442,11 @@
     },
     {
       "type": "driveBox",
-      "centerX": 50.10936074920868,
-      "centerZ": -54.49225014382974,
+      "centerX": 28.12786333968734,
+      "centerZ": -52.71665074087307,
       "width": 9.5,
       "depth": 4,
-      "rotation": 0,
+      "rotation": 25,
       "height": 2,
       "solidBase": true,
       "thickness": 0.4,
@@ -451,9 +457,9 @@
     {
       "type": "driveBox",
       "centerX": -9.436340460275755,
-      "centerZ": 69.41797868572034,
-      "width": 14,
-      "depth": 16,
+      "centerZ": 65.41797868572034,
+      "width": 14.5,
+      "depth": 7,
       "rotation": 0,
       "solidBase": true,
       "thickness": 0.4,
@@ -466,10 +472,10 @@
     {
       "type": "driveBox",
       "centerX": -7.245466326805957,
-      "centerZ": 39.44411620752361,
+      "centerZ": 38.44411620752361,
       "width": 15,
-      "depth": 13.5,
-      "rotation": 176,
+      "depth": 10,
+      "rotation": 181,
       "solidBase": true,
       "thickness": 0.4,
       "layerId": 0,
@@ -557,25 +563,25 @@
           "radius": 9
         },
         {
-          "x": -8.318756057250091,
-          "z": -49.88881859809812,
+          "x": -10.818756057250091,
+          "z": -48.88881859809812,
           "radius": 5,
           "smoothing": 0
         },
         {
-          "x": -6.575622365328003,
+          "x": -7.075622365328003,
           "z": -30.973000238657484,
           "radius": 5,
           "smoothing": 0
         },
         {
-          "x": 4.589881848952805,
+          "x": 3.589881848952805,
           "z": -30.312371204746498,
           "radius": 5,
           "smoothing": 0
         },
         {
-          "x": 5.765332089199646,
+          "x": 7.765332089199646,
           "z": -48.007337937626765,
           "radius": 5
         },
@@ -591,14 +597,14 @@
           "smoothing": 0
         },
         {
-          "x": -59.504999999999995,
+          "x": -57.504999999999995,
           "z": -59.92,
           "radius": 5
         },
         {
-          "x": -60.28,
+          "x": -59.78,
           "z": 61.75,
-          "radius": 7.5
+          "radius": 6
         },
         {
           "x": 60.8,
@@ -616,13 +622,13 @@
           "radius": 4
         },
         {
-          "x": 54.43,
+          "x": 55.43,
           "z": 15,
           "radius": 0
         }
       ],
       "height": 2,
-      "collisionHeight": 5,
+      "collisionHeight": 7.5,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
@@ -635,19 +641,26 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -77.85,
-          "z": -77.67,
+          "x": -84.35,
+          "z": -64.17,
           "radius": 0
+        },
+        {
+          "x": -80.005,
+          "z": -58.06,
+          "radius": 5
         },
         {
           "x": -77.16,
           "z": 77.55,
-          "radius": 0
+          "radius": 18,
+          "smoothing": 0
         },
         {
           "x": 75.46,
           "z": 76.78,
-          "radius": 9.5
+          "radius": 10.5,
+          "smoothing": 0
         },
         {
           "x": 77.36,
@@ -666,8 +679,9 @@
         },
         {
           "x": 32.56,
-          "z": 31.71,
-          "radius": 5
+          "z": 32.21,
+          "radius": 5,
+          "smoothing": 1
         },
         {
           "x": -33.120000000000005,
@@ -688,7 +702,8 @@
       "colors": [
         "orange",
         "black"
-      ]
+      ],
+      "fence": true
     },
     {
       "type": "terrain",
@@ -767,7 +782,7 @@
       "color": "yellow",
       "scale": 1.2,
       "heading": 0,
-      "width": 9,
+      "width": 10,
       "height": 3,
       "collider": true
     },
@@ -837,7 +852,8 @@
       "width": 14,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -847,7 +863,8 @@
       "width": 16,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "squareHill",
@@ -1002,7 +1019,8 @@
       "width": 24,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1012,7 +1030,8 @@
       "width": 17,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1022,7 +1041,8 @@
       "width": 17.5,
       "checkpointNumber": 5,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "model",
@@ -1161,13 +1181,14 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 7.5,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
       "colors": [
         "gray"
-      ]
+      ],
+      "fence": true
     },
     {
       "type": "terrain",
@@ -1286,6 +1307,81 @@
       "x": 67.05276895975025,
       "z": -6.19300838949048,
       "radius": 9
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "fireworks",
+      "shape": "circle",
+      "x": -2.1164527786341885,
+      "z": 65.32108030401349,
+      "radius": 4,
+      "fireworkMode": "flame",
+      "fireworkCount": 4,
+      "fireworkDuration": 1,
+      "fireworkColor": "orange",
+      "fireworkHeight": 15,
+      "heading": -1.5707963267948966
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "fireworks",
+      "shape": "circle",
+      "x": -15.241071107079113,
+      "z": 37.86982747326533,
+      "radius": 5,
+      "fireworkMode": "flame",
+      "fireworkCount": 4,
+      "fireworkDuration": 1,
+      "fireworkColor": "orange",
+      "fireworkHeight": 15,
+      "heading": -1.5707963267948966
+    },
+    {
+      "type": "model",
+      "model": "tree_1",
+      "x": -77.39412837623053,
+      "z": -80,
+      "color": "gray",
+      "scale": 1,
+      "heading": 0
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": -80,
+      "z": -62,
+      "color": "gray",
+      "scale": 1,
+      "heading": 0
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": 76.7321369858642,
+      "z": -80,
+      "color": "gray",
+      "scale": 0.8,
+      "heading": 1.3264502315156905
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": 76.2321369858642,
+      "z": -40,
+      "color": "gray",
+      "scale": 0.8,
+      "heading": 1.3264502315156905
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": 80,
+      "z": -46.5,
+      "color": "gray",
+      "scale": 0.8,
+      "heading": 1.3264502315156905,
+      "mirrorZ": true,
+      "mirrorX": true
     }
   ]
 }

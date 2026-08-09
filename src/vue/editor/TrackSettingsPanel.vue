@@ -123,7 +123,60 @@
       @update:modelValue="editor.setTrackBorderTerrain"
     />
 
-    
+    <div class="mt-5 text-[12px] font-semibold text-slate-200">Perimeter Wall</div>
+
+    <label class="mt-2 flex items-center gap-2 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+        :checked="editor.trackBorderWall.enabled"
+        @change="editor.setTrackBorderWall('enabled', $event.target.checked)"
+      />
+      <span class="text-[13px] text-white">Wall</span>
+    </label>
+    <div class="mt-2 text-[10px] text-slate-400">The boxes sealing the track edge. Off leaves the perimeter open and carries the border terrain out to the horizon instead — pair with Reset in Dead Space to keep trucks on the track.</div>
+
+    <template v-if="editor.trackBorderWall.enabled">
+      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+        <span>Thickness</span>
+        <span>{{ editor.trackBorderWall.thickness }}m</span>
+      </div>
+      <input
+        type="range"
+        min="0.5"
+        max="20"
+        step="0.5"
+        :value="editor.trackBorderWall.thickness"
+        @input="editor.setTrackBorderWall('thickness', +$event.target.value)"
+        class="w-full accent-[var(--accent)] cursor-pointer"
+      />
+
+      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+        <span>Height</span>
+        <span>{{ editor.trackBorderWall.height }}m</span>
+      </div>
+      <input
+        type="range"
+        min="1"
+        max="60"
+        step="1"
+        :value="editor.trackBorderWall.height"
+        @input="editor.setTrackBorderWall('height', +$event.target.value)"
+        class="w-full accent-[var(--accent)] cursor-pointer"
+      />
+
+      <div class="mt-3 flex items-center justify-between text-[12px]">
+        <span>Color</span>
+        <input
+          type="color"
+          class="h-7 w-14 cursor-pointer rounded border border-slate-700 bg-slate-800"
+          :value="editor.trackBorderWall.color"
+          @input="editor.setTrackBorderWall('color', $event.target.value)"
+        />
+      </div>
+    </template>
+
+
 
     <div class="mt-3 text-[10px] text-slate-400">Track metadata and terrain defaults participate in undo/redo.</div>
   </EditorPanel>

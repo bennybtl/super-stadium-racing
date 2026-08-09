@@ -59,6 +59,7 @@ export class TrackSign {
     feature.rotation = feature.rotation ?? 0;
     feature.contentType = feature.contentType ?? 'text';
     feature.brandImage = feature.brandImage ?? 'energizer-racing.png';
+    feature.logoScale = feature.logoScale ?? 1;
     feature.background = feature.background ?? 'black';
     feature.primaryColor = feature.primaryColor ?? 'red';
     feature.scale = feature.scale ?? 1;
@@ -203,12 +204,13 @@ export class TrackSign {
       if (this._disposed || this._drawRequestId !== drawId || !this._texture || this._texture !== texture) return;
       if (image && image.naturalWidth > 0 && image.naturalHeight > 0) {
         const pad = 24;
-        const maxH = TEX_H - pad * 2;
+        const logoScale = this.feature.logoScale ?? 1;
+        const maxH = (TEX_H - pad * 2) * logoScale;
         const width = this.feature.width ?? BASE_BANNER_W;
         const tileCount = Math.max(1, Math.floor(width / 5));
 
         if (tileCount === 1) {
-          const maxW = TEX_W - pad * 2;
+          const maxW = (TEX_W - pad * 2) * logoScale;
           const scale = Math.min(maxW / image.naturalWidth, maxH / image.naturalHeight);
           const w = image.naturalWidth * scale;
           const h = image.naturalHeight * scale;
@@ -219,7 +221,7 @@ export class TrackSign {
           const availW = TEX_W - pad * 2;
           const slotW = availW / tileCount;
           for (let i = 0; i < tileCount; i++) {
-            const targetW = slotW * 0.8;
+            const targetW = slotW * 0.8 * logoScale;
             const scale = Math.min(targetW / image.naturalWidth, maxH / image.naturalHeight);
             const w = image.naturalWidth * scale;
             const h = image.naturalHeight * scale;
@@ -292,6 +294,11 @@ export class TrackSign {
 
   setBrandImage(filename) {
     this.feature.brandImage = filename;
+    this._drawContent();
+  }
+
+  setLogoScale(logoScale) {
+    this.feature.logoScale = Math.max(0.2, Math.min(2, logoScale));
     this._drawContent();
   }
 

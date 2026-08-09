@@ -5,6 +5,12 @@
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": false,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 24,
+    "color": "#808080"
+  },
   "name": "Surfs' Up",
   "image": "surfs_up.png",
   "width": 160,
@@ -178,9 +184,9 @@
       "depth": 14,
       "angle": 159,
       "waterLevelOffset": 0,
-      "transition": 6.5,
+      "transition": 7,
       "terrainType": null,
-      "heightAtMin": 6,
+      "heightAtMin": 6.5,
       "heightAtMax": 0
     },
     {
@@ -439,18 +445,18 @@
         },
         {
           "x": -66.86910003384249,
-          "z": 30.80097258334906,
+          "z": 31.30097258334906,
           "radius": 10
         },
         {
           "x": -7.226996247401125,
-          "z": 13.690654436955523,
+          "z": 11.690654436955523,
           "radius": 5.5,
           "smoothing": 0.3
         },
         {
           "x": -9.127823512046744,
-          "z": 8.358725754976742,
+          "z": 7.858725754976742,
           "radius": 6
         },
         {
@@ -473,7 +479,8 @@
       "collisionHeight": 5,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": false
+      "closed": false,
+      "fence": false
     },
     {
       "type": "polyWall",
@@ -511,10 +518,11 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 5,
+      "collisionHeight": 6,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": true
+      "closed": true,
+      "fence": true
     },
     {
       "type": "actionZone",
@@ -612,10 +620,11 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 6,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": true
+      "closed": true,
+      "fence": false
     },
     {
       "type": "checkpoint",
@@ -663,7 +672,7 @@
     {
       "type": "checkpoint",
       "centerX": -22.765198076111385,
-      "centerZ": 28.142412266210926,
+      "centerZ": 27.642412266210926,
       "heading": 2.007128639793479,
       "width": 17,
       "checkpointNumber": 4,
@@ -1014,8 +1023,8 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "circle",
-      "x": 37.47021772536167,
-      "z": 44.16168092959389,
+      "x": 36.03882299766286,
+      "z": 40.409652000942984,
       "radius": 15
     },
     {

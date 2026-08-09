@@ -9,8 +9,12 @@ const RIM_HEIGHT = 0.14;
 const RIM_DIAMETER = 0.95;
 
 const BODY_COLOR = new Color3(0.14, 0.13, 0.17);
-const RIM_COLOR = basicColors.purple.diffuse;
-const RIM_EMISSIVE = basicColors.purple.emissive;
+/** In-race rim: a plain gunmetal band, so a can reads as a prop on the track. */
+const RIM_COLOR = new Color3(0.32, 0.32, 0.36);
+const RIM_EMISSIVE = Color3.Black();
+/** Editor rim: the zone's own gizmo hue, matching its cylinder and handles. */
+const EDITOR_RIM_COLOR = basicColors.purple.diffuse;
+const EDITOR_RIM_EMISSIVE = basicColors.purple.emissive;
 
 /**
  * FireworkLaunchers — the pair of mortar cans a firework action zone fires from.
@@ -22,15 +26,18 @@ const RIM_EMISSIVE = basicColors.purple.emissive;
  * straddling a slope still sits on the ground.
  *
  * Used by both FireworksManager (in game) and ActionZoneEditor (as the gizmo),
- * so what the editor shows is what the race renders.
+ * so the cans stand exactly where the race will fire from. The only difference
+ * is the rim: the editor glows it in the zone's gizmo hue, the race leaves it a
+ * plain metal band so nothing on the track looks like an editor overlay.
  */
 export class FireworkLaunchers {
   /**
    * @param {object} feature  track feature of type "actionZone", zoneType "fireworks"
    * @param {Track} track     used to sample terrain height
    * @param {import('@babylonjs/core').Scene} scene
+   * @param {{ editorTint?: boolean }} [options]  editor gizmos tint the rim
    */
-  constructor(feature, track, scene) {
+  constructor(feature, track, scene, options = {}) {
     this.feature = feature;
     this._track = track;
     this._scene = scene;
@@ -41,9 +48,10 @@ export class FireworkLaunchers {
     this._bodyMat.diffuseColor = BODY_COLOR.clone();
     this._bodyMat.specularColor = new Color3(0.15, 0.15, 0.18);
 
+    const tinted = options.editorTint === true;
     this._rimMat = new StandardMaterial('fwCanRim', scene);
-    this._rimMat.diffuseColor = RIM_COLOR.clone();
-    this._rimMat.emissiveColor = RIM_EMISSIVE.clone();
+    this._rimMat.diffuseColor = (tinted ? EDITOR_RIM_COLOR : RIM_COLOR).clone();
+    this._rimMat.emissiveColor = (tinted ? EDITOR_RIM_EMISSIVE : RIM_EMISSIVE).clone();
     this._rimMat.specularColor = new Color3(0.2, 0.2, 0.2);
 
     this.cans = [this._createCan('fwCanA', 1), this._createCan('fwCanB', -1)];

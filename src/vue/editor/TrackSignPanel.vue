@@ -47,6 +47,18 @@
           <option v-for="brand in TRACK_SIGN_BRANDS" :key="brand.value" :value="brand.value">{{ brand.label }}</option>
         </select>
       </div>
+
+      <!-- Logo size -->
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Logo Size</span>
+        <span>{{ editor.trackSign.logoScale.toFixed(2) }}x</span>
+      </div>
+      <input
+        type="range" min="0.2" max="2" step="0.05"
+        :value="editor.trackSign.logoScale"
+        @input="editor.setFeatureProp('trackSign', 'logoScale', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
     </template>
 
     <!-- Background -->

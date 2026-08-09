@@ -43,6 +43,9 @@ export class AIDriver {
       // Boost personality tuning (override per AI for different nitro behavior)
       boostMinSpeed = DEFAULT_BOOST_CONFIG.minSpeed,
       boostStraightMaxAngle = DEFAULT_BOOST_CONFIG.straightMaxAngle,
+      boostSlipSettledFactor = DEFAULT_BOOST_CONFIG.slipSettledFactor,
+      boostDriftExitSlipRate = DEFAULT_BOOST_CONFIG.driftExitSlipRate,
+      boostMaxSlipAngle = DEFAULT_BOOST_CONFIG.maxBoostSlipAngle,
       boostClearAheadDist = DEFAULT_BOOST_CONFIG.clearAheadDist,
       boostClearLateralDist = DEFAULT_BOOST_CONFIG.clearLateralDist,
       boostDecisionCooldownMs = DEFAULT_BOOST_CONFIG.decisionCooldownMs,
@@ -135,6 +138,9 @@ export class AIDriver {
     this._boostController = new AIBoostController(this, {
       minSpeed: boostMinSpeed,
       straightMaxAngle: boostStraightMaxAngle,
+      slipSettledFactor: boostSlipSettledFactor,
+      driftExitSlipRate: boostDriftExitSlipRate,
+      maxBoostSlipAngle: boostMaxSlipAngle,
       clearAheadDist: boostClearAheadDist,
       clearLateralDist: boostClearLateralDist,
       decisionCooldownMs: boostDecisionCooldownMs,

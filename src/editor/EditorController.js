@@ -19,6 +19,8 @@ import { AiPathEditor } from './AiPathEditor.js';
 import { TerrainPathEditor } from './TerrainPathEditor.js';
 import { SurfaceDecalEditor } from './SurfaceDecalEditor.js';
 import { scatterDirtChunks } from '../objects/DirtChunks.js';
+import { buildBorderWalls, resolveBorderWall } from '../objects/BorderWall.js';
+import { buildOutskirts, OUTSKIRTS_MATERIAL_NAME } from '../objects/Outskirts.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../terrain.js';
 import { DEFAULT_TERRAIN_WEAR_CONFIG } from '../terrain-utils.js';
@@ -282,6 +284,7 @@ export class EditorController {
       depth: this.currentTrack.depth,
       defaultTerrainType: this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt',
       borderTerrainType: this.currentTrack.borderTerrainType?.name ?? this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt',
+      borderWall: resolveBorderWall(this.currentTrack),
       features: this.currentTrack.features,
       wear: this.currentTrack.wear ?? null,
     });
@@ -297,6 +300,7 @@ export class EditorController {
     this._editorStore.trackSettings.packId = this.currentTrack.packId ?? '';
     this._editorStore.trackSettings.dirtChunks = this.currentTrack.dirtChunks ?? true;
     this._editorStore.trackSettings.oobDeadSpace = this.currentTrack.oobDeadSpace ?? false;
+    Object.assign(this._editorStore.trackBorderWall, resolveBorderWall(this.currentTrack));
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
   }
@@ -564,6 +568,7 @@ export class EditorController {
         const borderKey = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === parsed.borderTerrainType);
         if (borderKey) this.currentTrack.borderTerrainType = TERRAIN_TYPES[borderKey];
       }
+      this.currentTrack.borderWall = { ...resolveBorderWall({ borderWall: parsed.borderWall }) };
       this.currentTrack.features = parsed.features ?? [];
       this.currentTrack.wear = {
         ...DEFAULT_TERRAIN_WEAR_CONFIG,
@@ -621,6 +626,8 @@ export class EditorController {
     rebuild.terrainGrid?.();
     rebuild.terrainTexture?.();
     rebuild.polyWall?.(null);
+    // Perimeter walls follow both the restored size and the restored wall settings.
+    this._refreshPerimeter();
   }
 
   undo() {
@@ -1657,6 +1664,17 @@ export class EditorController {
     rebuild.terrainTexture?.(false, { wear: false, normals: false });
     rebuild.normalMap?.();
     this._syncTrackSettingsPanel();
+    // The outskirt plain fades to the border terrain, and that target is a
+    // uniform rather than something the terrain bake carries.
+    this._refreshOutskirtsTerrain(name);
+  }
+
+  /** Retarget the outskirt plain's outside-fade at a terrain type by name. */
+  async _refreshOutskirtsTerrain(name) {
+    const material = this.scene?.getMaterialByName(OUTSKIRTS_MATERIAL_NAME);
+    if (!material) return;
+    const { setTerrainOutsideType } = await import('../shaders/ground-shader.js');
+    setTerrainOutsideType(material, name);
   }
 
   // Track id slug: lowercase, spaces → underscores, drop any other non-slug
@@ -1710,6 +1728,30 @@ export class EditorController {
     this._syncTrackSettingsPanel();
   }
 
+  /** Patch the perimeter-wall settings and rebuild the perimeter in place.
+   *  Done in place (rather than via Rebuild Scene, which reloads the track from
+   *  storage) so the change shows immediately without dropping unsaved edits. */
+  changeTrackBorderWall(patch) {
+    if (!this.currentTrack || !this.scene) return;
+    this.saveSnapshot(true);
+    this.currentTrack.borderWall = {
+      ...resolveBorderWall(this.currentTrack),
+      ...patch,
+    };
+    this._syncTrackSettingsPanel();
+    // Toggling the wall also toggles the ground's border-edge jitter (it has to
+    // stay flat to meet the outskirt plain), so the ground mesh is re-displaced.
+    if ('enabled' in patch) rebuild.terrainGrid?.();
+    this._refreshPerimeter();
+  }
+
+  /** Rebuild the perimeter walls and the outskirt plain from current settings. */
+  _refreshPerimeter() {
+    if (!this.scene) return;
+    buildBorderWalls(this.scene, this.currentTrack);
+    buildOutskirts(this.scene, this.currentTrack, this.scene.metadata?.driveSurfaceManager ?? null);
+  }
+
   /** Dispose any existing dirt-chunk meshes/materials and regenerate if enabled.
    *  Done in place so the toggle is instant (a full scene rebuild reloads the
    *  track from storage and would drop the unsaved setting change). */
@@ -1748,6 +1790,7 @@ export class EditorController {
     rebuild.terrainGrid?.();
     rebuild.terrainTexture?.();
     this._syncTrackSettingsPanel();
+    this._refreshPerimeter();
   }
 
   changeTrackDepth(val) {
@@ -1757,6 +1800,7 @@ export class EditorController {
     rebuild.terrainGrid?.();
     rebuild.terrainTexture?.();
     this._syncTrackSettingsPanel();
+    this._refreshPerimeter();
   }
 
   addDriveBoxEntity()               { this.driveBoxEditor.addEntity(); }
@@ -1899,6 +1943,7 @@ export class EditorController {
   changeTrackSignRotation(val) { this.trackSignEditor.changeRotation(val); }
   changeTrackSignContentType(val) { this.trackSignEditor.changeContentType(val); }
   changeTrackSignBrandImage(val) { this.trackSignEditor.changeBrandImage(val); }
+  changeTrackSignLogoScale(val) { this.trackSignEditor.changeLogoScale(val); }
   changeTrackSignBackground(val) { this.trackSignEditor.changeBackground(val); }
   changeTrackSignPrimaryColor(val) { this.trackSignEditor.changePrimaryColor(val); }
   changeTrackSignScale(val) { this.trackSignEditor.changeScale(val); }

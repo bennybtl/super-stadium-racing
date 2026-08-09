@@ -3,6 +3,7 @@ import { ref, reactive, computed, shallowRef } from 'vue';
 import { DEFAULT_STRIPE_COLORS } from '../../objects/stripeColors.js';
 import { DEFAULT_SPARK_COLOR } from '../../objects/sparkColors.js';
 import { getObstacleSpec } from '../../objects/Obstacle.js';
+import { DEFAULT_BORDER_WALL } from '../../objects/BorderWall.js';
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
 export const useEditorStore = defineStore('editor', () => {
@@ -194,6 +195,7 @@ export const useEditorStore = defineStore('editor', () => {
     rotation: 0,   // degrees
     contentType: 'text', // 'text' | 'brand'
     brandImage: 'energizer-racing.png',
+    logoScale: 1,
     background: 'black', // 'black' | 'white'
     primaryColor: 'red',
     scale: 1,
@@ -250,6 +252,7 @@ export const useEditorStore = defineStore('editor', () => {
     dirtChunks: true,
     oobDeadSpace: false,
   });
+  const trackBorderWall = reactive({ ...DEFAULT_BORDER_WALL });
   const trackDefaultTerrain = ref('packed_dirt');
   const trackBorderTerrain = ref('packed_dirt');
 
@@ -355,6 +358,10 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackOobDeadSpace(enabled) {
     trackSettings.oobDeadSpace = !!enabled;
     _bridge.value?.changeTrackOobDeadSpace?.(!!enabled);
+  }
+  function setTrackBorderWall(prop, value) {
+    trackBorderWall[prop] = value;
+    _bridge.value?.changeTrackBorderWall?.({ [prop]: value });
   }
   function _normalizeTrackDimension(val, fallback) {
     const numeric = Number(val);
@@ -508,6 +515,7 @@ export const useEditorStore = defineStore('editor', () => {
     openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackOobDeadSpace, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
+    trackBorderWall, setTrackBorderWall,
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
     toggleSnap, cycleSnapSize, quickTestTrack,

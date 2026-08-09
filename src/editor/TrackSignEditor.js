@@ -93,6 +93,7 @@ export class TrackSignEditor {
     s.trackSign.rotation = Math.round((signObj.feature.rotation ?? 0) * (180 / Math.PI));
     s.trackSign.contentType = signObj.feature.contentType ?? 'text';
     s.trackSign.brandImage = signObj.feature.brandImage ?? TRACK_SIGN_BRANDS[0].value;
+    s.trackSign.logoScale = signObj.feature.logoScale ?? 1;
     s.trackSign.background = signObj.feature.background ?? 'black';
     s.trackSign.primaryColor = signObj.feature.primaryColor ?? 'red';
     s.trackSign.scale = signObj.feature.scale ?? 1;
@@ -152,6 +153,7 @@ export class TrackSignEditor {
       rotation: 0,
       contentType: 'text',
       brandImage: TRACK_SIGN_BRANDS[0].value,
+      logoScale: 1,
       background: 'black',
       primaryColor: 'red',
       scale: 1,
@@ -212,6 +214,13 @@ export class TrackSignEditor {
     if (!this._selected) return;
     this._selected.setBrandImage(val);
     this.editor._editorStore.trackSign.brandImage = val;
+    this.editor.saveSnapshot(true);
+  }
+
+  changeLogoScale(val) {
+    if (!this._selected) return;
+    this._selected.setLogoScale(val);
+    this.editor._editorStore.trackSign.logoScale = val;
     this.editor.saveSnapshot(true);
   }
 

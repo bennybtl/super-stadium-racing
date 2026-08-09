@@ -6,7 +6,7 @@
  * to the standard material's bump texture.
  */
 
-import { RawTexture, Texture, MaterialPluginBase, StandardMaterial, Color3 } from "@babylonjs/core";
+import { RawTexture, RawTexture2DArray, Texture, MaterialPluginBase, StandardMaterial, Color3, Constants } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
 import { _smoothstep, _getTerrainSlopeDegAt as _getTerrainSlopeDeg } from "../terrain-utils.js";
 import { bakeAiPathWear } from "../terrain-utils.js";
@@ -364,70 +364,126 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWi
   ctx.restore();
 }
 
-async function _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
-  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
+// Per-terrain-type detail textures, packed into one sampler2DArray.
+//
+// These used to be baked into a single 2000px canvas stretched over the whole
+// ground, which capped detail at ~10 texels per metre on a 200m track — grass
+// blades and dirt grain washed out into flat mush, and the cap got worse as
+// tracks got bigger. Sampling the source textures per-fragment instead, tiled by
+// world position, makes detail independent of track size.
+//
+// A 2D array (not an atlas) because the layer index can be non-uniform per
+// fragment without the UV-wrap seams an atlas would need textureGrad to avoid.
+// Layers are index-aligned with TERRAIN_TYPES, so the terrain id sampled from
+// the grid doubles as the layer index.
+const DETAIL_TILE_PIXELS = 1024;
+// Normal maps tile every ~10 world units against the diffuse's ~40, so a quarter
+// of the pixels already gives finer relief than the albedo has colour.
+const DETAIL_NORMAL_TILE_PIXELS = 512;
 
-  const uniqueTextures = [...new Set(
-    terrainManager.grid.map(cell => cell.diffuseTexture).filter(Boolean)
-  )];
-  const imgMap = {};
-  await Promise.all(uniqueTextures.map(async (name) => {
-    imgMap[name] = await _loadTextureMap(name);
-  }));
+/**
+ * Pack one image per terrain type into a texture array, index-aligned with
+ * TERRAIN_TYPES so a terrain id doubles as the layer index. Types with no image
+ * (or a file that failed to load) get `emptyFill`, chosen so the shader's use of
+ * that layer is a no-op.
+ * @private
+ */
+async function _buildTypeTextureArray(scene, { size, sourceName, loadImage, emptyFill }) {
+  const layers = _terrainTypeList.length;
+  const bytesPerLayer = size * size * 4;
+  const data = new Uint8Array(layers * bytesPerLayer);
 
-  // Group by texture *and* tile size, taking both from the cell itself. Keying on
-  // the filename alone and then looking the tile size back up by first match
-  // would hand every type that shares a texture whichever size came first.
-  const groups = new Map();
-  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
-    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-      const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
-      const name = cell?.diffuseTexture;
-      if (!name) continue;
-      const worldUnitsPerTile = cell.diffuseTextureWorldUnitsPerTile ?? 10;
-      const key = `${name}|${worldUnitsPerTile}`;
-      if (!groups.has(key)) groups.set(key, { name, worldUnitsPerTile, cells: [] });
-      groups.get(key).cells.push({
-        col,
-        row,
-        opacity: cell.diffuseTextureOpacity ?? 1.0,
-      });
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  for (let i = 0; i < layers; i++) {
+    ctx.globalCompositeOperation = 'copy';
+    ctx.fillStyle = emptyFill;
+    ctx.fillRect(0, 0, size, size);
+
+    const name = sourceName(_terrainTypeList[i]);
+    if (name) {
+      const img = await loadImage(name);
+      if (img && img.naturalWidth > 0) ctx.drawImage(img, 0, 0, size, size);
     }
+    data.set(ctx.getImageData(0, 0, size, size).data, i * bytesPerLayer);
   }
 
-  for (const { name, worldUnitsPerTile, cells } of groups.values()) {
-    const img = imgMap[name];
-    if (!img || img.naturalWidth <= 0) continue;
-
-    const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
-    const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
-
-    const pattern = ctx.createPattern(_buildScaledTileCanvas(img, tileSizeX, tileSizeY), 'repeat');
-    if (!pattern) continue;
-
-    ctx.save();
-    ctx.fillStyle = pattern;
-
-    const byOpacity = {};
-    for (const cell of cells) {
-      const key = cell.opacity;
-      if (!byOpacity[key]) byOpacity[key] = [];
-      byOpacity[key].push(cell);
-    }
-
-    for (const [opacity, group] of Object.entries(byOpacity)) {
-      ctx.globalAlpha = Number(opacity);
-      for (const { col, row } of group) {
-        _fillTerrainCell(ctx, col, row, pixelsPerCell);
-      }
-    }
-
-    ctx.restore();
-  }
+  const array = new RawTexture2DArray(
+    data,
+    size,
+    size,
+    layers,
+    Constants.TEXTUREFORMAT_RGBA,
+    scene,
+    true,   // mip maps — the plain runs to the horizon, so minification matters
+    false,
+    Texture.TRILINEAR_SAMPLINGMODE
+  );
+  array.wrapU = Texture.WRAP_ADDRESSMODE;
+  array.wrapV = Texture.WRAP_ADDRESSMODE;
+  array.anisotropicFilteringLevel = 8;
+  // Sampled straight in the plugin rather than through a material texture slot,
+  // like the other raw terrain textures — no gamma conversion on the way in.
+  array.gammaSpace = false;
+  return array;
 }
 
-async function _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
-  await _paintTerrainDiffuseBase(ctx, terrainManager, textureSize, worldWidth, worldDepth);
+/**
+ * Build the per-type albedo detail array. Static across tracks — the terrain type
+ * list never changes at runtime — so it is built once per scene.
+ * @param {Scene} scene
+ * @returns {Promise<RawTexture2DArray>}
+ */
+export async function createTerrainDetailTextureArray(scene) {
+  return _buildTypeTextureArray(scene, {
+    size: DETAIL_TILE_PIXELS,
+    sourceName: (terrainType) => terrainType?.diffuseTexture,
+    loadImage: _loadTextureMap,
+    // White is the identity for the multiply the shader does, so a type with no
+    // texture renders as its flat colour.
+    emptyFill: '#ffffff',
+  });
+}
+
+/**
+ * Build the per-type detail NORMAL array — the relief counterpart of the albedo
+ * array, and for the same reason: the composite bake could only afford ~10
+ * texels/m for grain that repeats every 10 world units.
+ * @param {Scene} scene
+ * @returns {Promise<RawTexture2DArray>}
+ */
+export async function createTerrainDetailNormalArray(scene) {
+  return _buildTypeTextureArray(scene, {
+    size: DETAIL_NORMAL_TILE_PIXELS,
+    sourceName: (terrainType) => terrainType?.normalMap,
+    loadImage: _loadNormalMap,
+    // Flat normal: decodes to (0,0,1), i.e. no perturbation at all.
+    emptyFill: 'rgb(128,128,255)',
+  });
+}
+
+/**
+ * GLSL for the per-type detail lookup: world units per tile in x, texture
+ * opacity in y. Generated rather than uniform-bound because the values are
+ * compile-time constants of the terrain type table.
+ * @private
+ */
+function _buildDetailParamsGlsl() {
+  const lines = _terrainTypeList.map((terrainType, index) => {
+    const tile = Number(terrainType?.diffuseTextureWorldUnitsPerTile ?? 20).toFixed(1);
+    // No texture for this type: opacity 0 leaves the flat colour untouched.
+    const opacity = Number(terrainType?.diffuseTexture ? (terrainType?.diffuseTextureOpacity ?? 1) : 0).toFixed(3);
+    // Normal maps carry their own tiling — finer than the diffuse — and their own
+    // strength. Intensity 0 for a type with no map leaves the surface flat.
+    const normalTile = Number(terrainType?.normalMapWorldUnitsPerTile ?? 10).toFixed(1);
+    const normalIntensity = Number(terrainType?.normalMap ? (terrainType?.normalMapIntensity ?? 1) : 0).toFixed(3);
+    return `      if (typeIndex < ${(index + 0.5).toFixed(1)}) return vec4(${tile}, ${opacity}, ${normalTile}, ${normalIntensity});`;
+  });
+  lines.push('      return vec4(20.0, 0.0, 10.0, 0.0);');
+  return lines.join('\n');
 }
 
 export async function createWaterDepthOverlayTexture(scene, terrainManager, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
@@ -454,42 +510,6 @@ export async function createWaterDepthOverlayTexture(scene, terrainManager, text
   return rawTexture;
 }
 
-export async function createTerrainDiffuseOverlayTexture(scene, terrainManager, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
-  const canvas = document.createElement('canvas');
-  canvas.width = textureSize;
-  canvas.height = textureSize;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, textureSize, textureSize);
-  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth);
-
-  const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
-  const rawTexture = RawTexture.CreateRGBATexture(
-    imageData.data,
-    textureSize,
-    textureSize,
-    scene,
-    false,
-    false,
-    Texture.BILINEAR_SAMPLINGMODE
-  );
-  rawTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
-  rawTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
-  rawTexture.gammaSpace = false;
-  return rawTexture;
-}
-
-export async function updateTerrainDiffuseOverlayTexture(rawTexture, terrainManager, worldWidth = 160, worldDepth = worldWidth) {
-  const textureSize = rawTexture.getSize().width;
-  const canvas = document.createElement('canvas');
-  canvas.width = textureSize;
-  canvas.height = textureSize;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, textureSize, textureSize);
-  await _paintTerrainDiffuseOverlay(ctx, terrainManager, textureSize, worldWidth, worldDepth);
-  const imageData = ctx.getImageData(0, 0, textureSize, textureSize);
-  rawTexture.update(imageData.data);
-}
-
 export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager, worldWidth = 160, worldDepth = worldWidth) {
   const textureSize = rawTexture.getSize().width;
   const canvas = document.createElement('canvas');
@@ -503,79 +523,22 @@ export async function updateWaterDepthOverlayTexture(rawTexture, terrainManager,
 }
 
 /**
- * Paint the per-terrain-type base normal map layer.
- * Each cell uses the normal map specified by its terrain type.
+ * Lay the flat-normal base the composite normal map is built on.
+ *
+ * The per-terrain-type grain used to be painted here, at whatever resolution the
+ * whole-track bake could afford (~10 texels/m). The shader now tiles each type's
+ * normal map live from terrainDetailNormalSampler, so painting it here too would
+ * apply the same relief twice — once sharp, once blurred. What stays baked is
+ * everything world-positioned that tiling cannot express: the steep-slope
+ * overlays, the AI-path ruts, and normal-map decals, all composited over this.
  * @private
  */
-async function _paintTerrainNormalBase(ctx, terrainManager, textureSize, worldWidth, worldDepth = worldWidth) {
-  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
-
-  // Pre-load all unique normal maps referenced by the current grid
-  const uniqueMaps = [...new Set(
-    terrainManager.grid.map(cell => cell.normalMap).filter(Boolean)
-  )];
-  const imgMap = {};
-  await Promise.all(uniqueMaps.map(async (name) => {
-    imgMap[name] = await _loadNormalMap(name);
-  }));
-
-  // Group by normal map *and* tile size, both read from the cell. Tile size is
-  // per terrain type here, same as the diffuse pass — otherwise a type's colour
-  // and its relief repeat at different rates.
-  const groups = new Map();
-  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
-    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-      const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
-      const name = cell.normalMap;
-      if (!name) continue;
-      // Per terrain type, same as the diffuse pass; set
-      // `normalMapWorldUnitsPerTile` on a TERRAIN_TYPES entry to override.
-      const worldUnitsPerTile = cell.normalMapWorldUnitsPerTile ?? 10;
-      const key = `${name}|${worldUnitsPerTile}`;
-      if (!groups.has(key)) groups.set(key, { name, worldUnitsPerTile, cells: [] });
-      groups.get(key).cells.push({ col, row, intensity: cell.normalMapIntensity ?? 1.0 });
-    }
-  }
-
-  // For each group, create a repeating pattern scaled to its tile size and fill
-  // every cell that uses it, respecting per-cell intensity via globalAlpha.
-  // Because the pattern origin is the canvas origin (0,0), it tiles continuously
-  // across cell boundaries. Cells with different intensities are drawn separately.
-  for (const { name, worldUnitsPerTile, cells } of groups.values()) {
-    const img = imgMap[name];
-    // tileSize is expressed in canvas pixels and spans worldUnitsPerTile
-    // world-units, so the texture can be larger than a single cell.
-    const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
-    const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
-
-    // First fill all cells with the flat normal (rgb 128,128,255) at full opacity
-    // as a base, then composite the actual texture on top with the correct alpha.
-    ctx.save();
-    ctx.globalAlpha = 1.0;
-    ctx.fillStyle = 'rgb(128,128,255)';
-    for (const { col, row } of cells)
-      _fillTerrainCell(ctx, col, row, pixelsPerCell);
-
-    if (img && img.naturalWidth > 0) {
-      const pattern = ctx.createPattern(_buildScaledTileCanvas(img, tileSizeX, tileSizeY), 'repeat');
-      ctx.fillStyle = pattern;
-
-      // Group cells by intensity to minimise globalAlpha state changes
-      const byIntensity = {};
-      for (const c of cells) {
-        const key = c.intensity;
-        if (!byIntensity[key]) byIntensity[key] = [];
-        byIntensity[key].push(c);
-      }
-      for (const [intensity, group] of Object.entries(byIntensity)) {
-        ctx.globalAlpha = Number(intensity);
-        for (const { col, row } of group)
-          _fillTerrainCell(ctx, col, row, pixelsPerCell);
-      }
-    }
-
-    ctx.restore();
-  }
+async function _paintTerrainNormalBase(ctx, _terrainManager, textureSize) {
+  ctx.save();
+  ctx.globalAlpha = 1.0;
+  ctx.fillStyle = 'rgb(128,128,255)';
+  ctx.fillRect(0, 0, textureSize, textureSize);
+  ctx.restore();
 }
 
 /**
@@ -752,7 +715,23 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   uniform sampler2D terrainPropertySampler;
   uniform sampler2D terrainWaterOverlaySampler;
   uniform sampler2D terrainWearOverlaySampler;
-  uniform sampler2D terrainDiffuseOverlaySampler;
+  // Per-type detail textures, one layer per terrain type, tiled in world space.
+  // The precision qualifier is required: ESSL3 gives sampler2DArray no default
+  // one (unlike sampler2D), and omitting it fails to compile.
+  uniform highp sampler2DArray terrainDetailSampler;
+  // Matching per-type relief, tiled the same way.
+  uniform highp sampler2DArray terrainDetailNormalSampler;
+
+  // How far past the ground mesh the terrain grid's edge value survives before
+  // the surrounding border terrain has fully taken over, in metres. The grid
+  // clamps outside the play area, which is what makes the ground/outskirts join
+  // seamless — but it also extrudes whatever sits on the edge (a mud patch, a
+  // track path) in a straight band to the horizon. This fades those away.
+  const float terrainOutsideFade = 60.0;
+
+  // How hard the tiled per-type relief tilts the surface normal, on top of each
+  // type's own normalMapIntensity. Turn down if the ground reads too crunchy.
+  const float terrainDetailNormalStrength = 0.4;
 
   // Compile-time constants injected from JS.
   const float terrainTypeCount = __TERRAIN_TYPE_COUNT__;
@@ -760,10 +739,18 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   const float terrainWorldHalfWidth = __TERRAIN_WORLD_HALF_WIDTH__;
   const float terrainWorldHalfDepth = __TERRAIN_WORLD_HALF_DEPTH__;
   const float terrainForcedTypeIndex = __TERRAIN_FORCED_TYPE_INDEX__;
+  const float terrainOutsideTypeIndex = __TERRAIN_OUTSIDE_TYPE_INDEX__;
 
   // Declared as module-level so both CUSTOM_FRAGMENT_UPDATE_DIFFUSE and the
   // specularColor override can access the result.
   vec4 _terrainBlendResult;
+  // Blended detail texture for this fragment: rgb = tiled texture, a = how much
+  // of the flat terrain colour it replaces.
+  vec4 _terrainDetailResult;
+  // Blended detail relief: tangent-space xy slope, already scaled by the type's
+  // normal intensity. z is unused — the surface is near-horizontal and the
+  // perturbation below rebuilds it.
+  vec2 _terrainDetailNormalResult;
 
   float _decodeTerrainId(vec4 encoded) {
       return floor(encoded.r * 255.0 + 0.5);
@@ -771,6 +758,40 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   vec4 _sampleTypeProps(float typeIndex) {
       float u = (typeIndex + 0.5) / terrainTypeCount;
       return texture2D(terrainPropertySampler, vec2(u, 0.5));
+  }
+  // Per-type detail tiling (x = world units per tile) and texture opacity (y),
+  // generated from the terrain type table.
+  vec4 _detailParams(float typeIndex) {
+__TERRAIN_DETAIL_PARAMS__
+  }
+  // World-space tiling, so detail stays the same size no matter how big the
+  // track is. Layer index is the terrain id; array layers avoid the wrap seams
+  // an atlas would have at tile boundaries.
+  // NOTE: texture(), not texture2D() like the samplers above. Babylon rewrites
+  // texture2D( -> texture( when it migrates this shader to ESSL3 for WebGL2,
+  // which is why the ES1 spelling works elsewhere in here — but there is no
+  // texture2D overload taking a sampler2DArray to spell in the first place, so
+  // this one is written as the ES3 call it ends up being. The plugin only runs
+  // on WebGL2, so that migration always happens.
+  //
+  // Never write the literal version pragma in here, not even in a comment:
+  // ProcessShaderConversion treats any source containing it as already migrated
+  // and skips the pass entirely, after which the varyings fail to compile.
+  vec4 _sampleDetail(float typeIndex, vec2 worldXZ) {
+      vec4 params = _detailParams(typeIndex);
+      vec3 rgb = texture(terrainDetailSampler, vec3(worldXZ / params.x, typeIndex)).rgb;
+      return vec4(rgb, params.y);
+  }
+  // Tangent-space slope from the type's normal map, tiled in world XZ. Because
+  // the tiling IS world XZ, the tangent frame is world X and world Z — no TBN to
+  // reconstruct, and it works the same on the ground mesh and the flat plain.
+  // Green is negated to match invertNormalMapY on the baked composite map, so
+  // both relief sources agree on which way is up. If bumps read as dents, this
+  // is the sign to flip.
+  vec2 _sampleDetailNormal(float typeIndex, vec2 worldXZ) {
+      vec4 params = _detailParams(typeIndex);
+      vec3 n = texture(terrainDetailNormalSampler, vec3(worldXZ / params.z, typeIndex)).xyz * 2.0 - 1.0;
+      return vec2(n.x, -n.y) * params.w;
   }
     // Cell overlays are painted as hard-edged rectangles, one per terrain cell,
     // so they need the same neighbour weighting the type blend gets or their
@@ -800,8 +821,10 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
     // fragment position (in cell space) to each neighbour cell center.
     // This keeps blending continuous inside each tile instead of a constant
     // value per tile.
-  vec4 _computeTerrainBlend(vec2 tUV) {
+  vec4 _computeTerrainBlend(vec2 tUV, vec2 worldXZ) {
       if (terrainForcedTypeIndex >= 0.0) {
+        _terrainDetailResult = _sampleDetail(terrainForcedTypeIndex, worldXZ);
+        _terrainDetailNormalResult = _sampleDetailNormal(terrainForcedTypeIndex, worldXZ);
         return _sampleTypeProps(terrainForcedTypeIndex);
       }
       float n  = terrainCellCount;
@@ -809,6 +832,8 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
       vec2 coord = clamp(tUV * n, vec2(0.001), vec2(nm + 0.999));
       vec2 cell  = floor(coord);
       vec4  accum  = vec4(0.0);
+      vec4  detail = vec4(0.0);
+      vec2  detailNormal = vec2(0.0);
       float totalW = 0.0;
       const float sigma = 0.75;
       const float invTwoSigma2 = 1.0 / (2.0 * sigma * sigma);
@@ -821,9 +846,15 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
             float w = exp(-dist2 * invTwoSigma2);
               float nId  = _decodeTerrainId(texture2D(terrainIdSampler, (nc + 0.5) / n));
               accum  += _sampleTypeProps(nId) * w;
+              // Detail rides the same weights as the colour blend, so a type
+              // boundary crossfades texture and tint together.
+              detail += _sampleDetail(nId, worldXZ) * w;
+              detailNormal += _sampleDetailNormal(nId, worldXZ) * w;
               totalW += w;
           }
       }
+      _terrainDetailResult = detail / totalW;
+      _terrainDetailNormalResult = detailNormal / totalW;
       return accum / totalW;
   }
 `;
@@ -836,18 +867,47 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
     vPositionW.z / (terrainWorldHalfDepth * 2.0) + 0.5
   );
   vec2 _coord = clamp(_tUV * terrainCellCount, vec2(0.001), vec2((terrainCellCount - 1.0) + 0.999));
-  _terrainBlendResult = _computeTerrainBlend(_tUV);
+  _terrainBlendResult = _computeTerrainBlend(_tUV, vPositionW.xz);
+  // Outside the ground mesh (the outskirt plain), hand over to the track's
+  // border terrain so the grid's clamped edge cells don't run to the horizon.
+  // Zero everywhere on the ground itself, and skipped for a forced-type surface
+  // (bridge decks), which are one type by definition.
+  if (terrainForcedTypeIndex < 0.0) {
+    vec2 _outside = max(
+      abs(vPositionW.xz) - vec2(terrainWorldHalfWidth, terrainWorldHalfDepth),
+      vec2(0.0)
+    );
+    float _outsideT = smoothstep(0.0, 1.0, clamp(length(_outside) / terrainOutsideFade, 0.0, 1.0));
+    // Sampled unconditionally: a branch here would put a texture fetch in
+    // non-uniform control flow, where implicit mip derivatives are undefined.
+    // terrainForcedTypeIndex is a compile-time constant, so the outer test folds.
+    _terrainBlendResult = mix(_terrainBlendResult, _sampleTypeProps(terrainOutsideTypeIndex), _outsideT);
+    _terrainDetailResult = mix(_terrainDetailResult, _sampleDetail(terrainOutsideTypeIndex, vPositionW.xz), _outsideT);
+    _terrainDetailNormalResult = mix(_terrainDetailNormalResult, _sampleDetailNormal(terrainOutsideTypeIndex, vPositionW.xz), _outsideT);
+  }
   vec4 _waterOverlay = _sampleSmoothedOverlay(terrainWaterOverlaySampler, _tUV, _coord);
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
-  vec4 _diffuseOverlay = _sampleSmoothedOverlay(terrainDiffuseOverlaySampler, _tUV, _coord);
   float _wearLighten = _wearOverlay.r;
   float _wearDarken  = _wearOverlay.g;
   vec3 _terrainRgb = mix(_terrainBlendResult.rgb, _waterOverlay.rgb, _waterOverlay.a);
+  // Straight lerp from the flat terrain colour to the tiled texture, weighted by
+  // the type's diffuseTextureOpacity. That is the one dial on how photographic a
+  // surface looks: 0 leaves the plain palette, 1 is all texture. (It used to
+  // multiply a white-bleached tint instead, which darkened as you turned it down
+  // rather than fading toward the flat colour, making the parameter useless for
+  // exactly the tuning it is named for.)
+  _terrainRgb = mix(_terrainRgb, _terrainDetailResult.rgb, _terrainDetailResult.a);
+  // Wear rides on top of the detail so ruts still read through the texture.
   _terrainRgb = clamp(_terrainRgb * (1.0 + _wearLighten * 0.22), 0.0, 1.0);
   _terrainRgb = clamp(_terrainRgb * (1.0 - _wearDarken  * 0.22), 0.0, 1.0);
-  _terrainRgb = mix(_terrainRgb, _diffuseOverlay.rgb, _diffuseOverlay.a * 0.7);
   _terrainBlendResult.a = clamp(_terrainBlendResult.a + max(_wearLighten, _wearDarken) * 0.06, 0.0, 1.0);
   baseColor = vec4(_terrainRgb, 1.0);
+  // Tilt the surface normal by the tiled per-type relief. This block runs after
+  // Babylon's bumpFragment, so normalW already carries the baked composite map
+  // (ruts, decals, steep-slope overlays) and this adds the fine grain the bake
+  // is too coarse to hold. Tangent frame is world X/Z, matching how the detail
+  // is tiled, so the two just add.
+  normalW = normalize(normalW + vec3(_terrainDetailNormalResult.x, 0.0, _terrainDetailNormalResult.y) * terrainDetailNormalStrength);
 `;
 
 // Per-pixel specular intensity is now injected via a regex replacement
@@ -858,7 +918,7 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
  * StandardMaterial keeps CSM shadow receiving, lighting, and normal mapping.
  */
 export class TerrainBlendPlugin extends MaterialPluginBase {
-  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth, options = {}) {
+  constructor(material, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDetailTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth, options = {}) {
     // Per-track dimensions (cell count, world half-extents) are baked into the
     // shader SOURCE via getCustomCode(). Babylon's effect cache is keyed by the
     // defines string, NOT by injected custom-code, so two ground materials with
@@ -873,12 +933,18 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       TERRAIN_CELLCOUNT_KEY: 0,
       TERRAIN_HALFWIDTH_KEY: 0,
       TERRAIN_HALFDEPTH_KEY: 0,
+      TERRAIN_OUTSIDETYPE_KEY: 0,
     });
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
     this._terrainWaterOverlayTex = terrainWaterOverlayTex;
     this._terrainWearOverlayTex = terrainWearOverlayTex;
-    this._terrainDiffuseOverlayTex = terrainDiffuseOverlayTex;
+    this._terrainDetailTex = terrainDetailTex;
+    // Passed via options rather than another positional argument — the list is
+    // long enough. Falls back to the albedo array so an un-updated caller binds
+    // *something* rather than leaving the sampler unbound (which reads black,
+    // i.e. a normal of (-1,-1,-1)).
+    this._terrainDetailNormalTex = options?.detailNormalTexture ?? terrainDetailTex;
     this._terrainTypeCount    = terrainTypeCount;
     this._terrainCellCount    = terrainCellCount;
     this._terrainWorldHalfWidth = terrainWorldHalfWidth;
@@ -886,7 +952,23 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     this._forcedTerrainTypeIndex = Number.isFinite(options?.forcedTerrainTypeIndex)
       ? Math.max(-1, Math.round(options.forcedTerrainTypeIndex))
       : -1;
+    // Which type the terrain fades to beyond the ground mesh. Baked into the
+    // shader source like the other per-track values rather than bound as a
+    // uniform: this material does not use uniform buffers, and a plugin uniform
+    // declared through getUniforms() never reaches the GLSL on that path.
+    this._outsideTerrainTypeIndex = Number.isFinite(options?.outsideTerrainTypeIndex)
+      ? Math.max(0, Math.round(options.outsideTerrainTypeIndex))
+      : 0;
     this._enable(true);
+  }
+
+  /** Retarget the outside fade. Recompiles the effect (the index is baked in). */
+  setOutsideTerrainTypeIndex(index) {
+    if (!Number.isFinite(index) || index < 0) return;
+    const next = Math.round(index);
+    if (next === this._outsideTerrainTypeIndex) return;
+    this._outsideTerrainTypeIndex = next;
+    this.markAllDefinesAsDirty();
   }
 
   // Fold the per-track dimensions into the material defines so the effect cache
@@ -897,10 +979,11 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     defines.TERRAIN_CELLCOUNT_KEY = this._terrainCellCount ?? 0;
     defines.TERRAIN_HALFWIDTH_KEY = this._terrainWorldHalfWidth ?? 0;
     defines.TERRAIN_HALFDEPTH_KEY = this._terrainWorldHalfDepth ?? 0;
+    defines.TERRAIN_OUTSIDETYPE_KEY = this._outsideTerrainTypeIndex ?? 0;
   }
 
   getSamplers(samplers) {
-    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler", "terrainDiffuseOverlaySampler");
+    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler", "terrainDetailSampler", "terrainDetailNormalSampler");
   }
 
   bindForSubMesh(uniformBuffer, scene) {
@@ -909,7 +992,8 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       uniformBuffer.setTexture("terrainPropertySampler", this._terrainPropertyTex);
       uniformBuffer.setTexture("terrainWaterOverlaySampler", this._terrainWaterOverlayTex);
       uniformBuffer.setTexture("terrainWearOverlaySampler", this._terrainWearOverlayTex);
-      uniformBuffer.setTexture("terrainDiffuseOverlaySampler", this._terrainDiffuseOverlayTex);
+      uniformBuffer.setTexture("terrainDetailSampler", this._terrainDetailTex);
+      uniformBuffer.setTexture("terrainDetailNormalSampler", this._terrainDetailNormalTex);
     }
   }
 
@@ -926,7 +1010,9 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       .replace("__TERRAIN_CELL_COUNT__", terrainCellCount)
       .replace("__TERRAIN_WORLD_HALF_WIDTH__", terrainWorldHalfWidth)
       .replace("__TERRAIN_WORLD_HALF_DEPTH__", terrainWorldHalfDepth)
-      .replace("__TERRAIN_FORCED_TYPE_INDEX__", terrainForcedTypeIndex);
+      .replace("__TERRAIN_FORCED_TYPE_INDEX__", terrainForcedTypeIndex)
+      .replace("__TERRAIN_OUTSIDE_TYPE_INDEX__", Number(this._outsideTerrainTypeIndex ?? 0).toFixed(1))
+      .replace("__TERRAIN_DETAIL_PARAMS__", _buildDetailParamsGlsl());
 
     return {
       "CUSTOM_FRAGMENT_DEFINITIONS": defs,
@@ -954,9 +1040,14 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
  * @param {number}     terrainCellCount     grid cells per side
  * @param {number}     terrainWorldHalfWidth half of terrain world width (metres)
  * @param {number}     terrainWorldHalfDepth half of terrain world depth (metres)
+ * @param {object}     [options]             { outsideTerrainTypeIndex } — the type the
+ *                                           terrain fades to beyond the ground mesh
+ *                                           (see setTerrainOutsideType);
+ *                                           { detailNormalTexture } — per-type relief
+ *                                           array (see createTerrainDetailNormalArray)
  * @returns {StandardMaterial}
  */
-export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDiffuseOverlayTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth = terrainWorldHalfWidth) {
+export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, terrainWaterOverlayTex, terrainWearOverlayTex, terrainDetailTex, terrainTypeCount, terrainCellCount, terrainWorldHalfWidth, terrainWorldHalfDepth = terrainWorldHalfWidth, options = {}) {
   const mat = new StandardMaterial("groundMat", scene);
   mat.specularColor = new Color3(1, 1, 1);
   mat.specularPower = 48;
@@ -971,11 +1062,15 @@ export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, t
       terrainPropertyTex,
       terrainWaterOverlayTex,
       terrainWearOverlayTex,
-      terrainDiffuseOverlayTex,
+      terrainDetailTex,
       terrainTypeCount,
       terrainCellCount,
       terrainWorldHalfWidth,
-      terrainWorldHalfDepth
+      terrainWorldHalfDepth,
+      {
+        outsideTerrainTypeIndex: options?.outsideTerrainTypeIndex,
+        detailNormalTexture: options?.detailNormalTexture,
+      }
     );
   } else {
     // WebGL1 fallback: use a stable flat color material
@@ -987,4 +1082,17 @@ export function createTerrainMaterial(scene, terrainIdTex, terrainPropertyTex, t
   }
 
   return mat;
+}
+
+/**
+ * Point a terrain material's outside-fade at a terrain type by name — what the
+ * surface becomes past the ground mesh, once the grid's clamped edge cells have
+ * faded out. Call when the track's border terrain changes; it binds as a uniform,
+ * so there is no shader recompile.
+ * @param {StandardMaterial} material
+ * @param {string} terrainTypeName
+ */
+export function setTerrainOutsideType(material, terrainTypeName) {
+  const plugin = material?.pluginManager?.getPlugin?.("TerrainBlend");
+  plugin?.setOutsideTerrainTypeIndex?.(getTerrainTypeIndexByName(terrainTypeName));
 }

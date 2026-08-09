@@ -4,7 +4,13 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
-  "night": true,
+  "oobDeadSpace": false,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 24,
+    "color": "#808080"
+  },
   "name": "Cross-Over",
   "image": "crossover.png",
   "width": 160,
@@ -940,6 +946,16 @@
       "spread": 80,
       "intensity": 15,
       "color": "warm"
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "fireworks",
+      "shape": "circle",
+      "x": -10,
+      "z": -21.00002025578458,
+      "radius": 15,
+      "fireworkCount": 5,
+      "fireworkHeight": 25
     }
   ]
 }

@@ -135,7 +135,7 @@ export class BridgeMesh {
       !!terrainBlendConfig?.terrainPropertyTexture &&
       !!terrainBlendConfig?.terrainWaterOverlayTexture &&
       !!terrainBlendConfig?.terrainWearOverlayTexture &&
-      !!terrainBlendConfig?.terrainDiffuseOverlayTexture &&
+      !!terrainBlendConfig?.terrainDetailTexture &&
       Number.isFinite(terrainBlendConfig?.terrainTypeCount) &&
       Number.isFinite(terrainBlendConfig?.terrainCellCount) &&
       Number.isFinite(terrainBlendConfig?.terrainWorldHalfWidth) &&
@@ -181,12 +181,15 @@ export class BridgeMesh {
           terrainBlendConfig.terrainPropertyTexture,
           terrainBlendConfig.terrainWaterOverlayTexture,
           terrainBlendConfig.terrainWearOverlayTexture,
-          terrainBlendConfig.terrainDiffuseOverlayTexture,
+          terrainBlendConfig.terrainDetailTexture,
           terrainBlendConfig.terrainTypeCount,
           terrainBlendConfig.terrainCellCount,
           terrainBlendConfig.terrainWorldHalfWidth,
           terrainBlendConfig.terrainWorldHalfDepth,
-          { forcedTerrainTypeIndex: -1 }
+          {
+            forcedTerrainTypeIndex: -1,
+            detailNormalTexture: terrainBlendConfig.terrainDetailNormalTexture,
+          }
         );
         material.diffuseColor = Color3.White();
         material.specularColor = Color3.White();
