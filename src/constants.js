@@ -23,7 +23,7 @@ export const basicColors = {
   red: { diffuse: new Color3(0.8, 0.0, 0.0), emissive: new Color3(0.55, 0.10, 0.10) },  // X
   orange: { diffuse: new Color3(1.0, 0.6, 0.3), emissive: new Color3(0.3, 0.15, 0.05) },
   yellow: { diffuse: new Color3(1.0, 0.8, 0.2), emissive: new Color3(0.6, 0.4, 0.0) },  // X
-  green: { diffuse: new Color3(0.6, 0.8, 0.3), emissive: new Color3(.2, 0.3, 0.1) },  // X
+  green: { diffuse: new Color3(0.3, 0.8, 0.3), emissive: new Color3(.2, 0.3, 0.1) },  // X
   teal: { diffuse: new Color3(0.2, 1.0, 0.9), emissive: new Color3(0.05, 0.40, 0.35) }, // X
   blue: { diffuse: new Color3(0.0, 0.5, 1.0), emissive: new Color3(0.05, 0.15, 0.3) },  // X
   purple: { diffuse: new Color3(0.8, 0.4, 0.9), emissive: new Color3(0.15, 0.08, 0.18) }, // X

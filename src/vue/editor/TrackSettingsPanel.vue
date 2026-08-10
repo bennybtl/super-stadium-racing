@@ -158,7 +158,7 @@
       <input
         type="range"
         min="1"
-        max="60"
+        max="40"
         step="1"
         :value="editor.trackBorderWall.height"
         @input="editor.setTrackBorderWall('height', +$event.target.value)"

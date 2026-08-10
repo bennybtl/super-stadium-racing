@@ -21,13 +21,21 @@ import {
 export const DEFAULT_BORDER_WALL = {
   enabled: true,
   thickness: 2,
-  height: 24,
+  // Height ABOVE the track surface. 12 matches what the original fixed wall
+  // showed: a 24-tall box centred on y = 0, half of it buried.
+  height: 12,
   color: "#808080",
 };
 
 // Gap between the editable track area and the wall's inner face. Matches
 // GROUND_BORDER in track.js so the wall sits at the edge of the ground mesh.
 const WALL_INSET = 10;
+
+// How far the wall continues below y = 0. It stands just outside the ground
+// mesh, so there is no terrain under it to meet — this skirt is what hides the
+// void beneath. Anchoring the base here rather than centring the box on y = 0 is
+// what keeps a short wall sitting on the track instead of floating above it.
+const WALL_SKIRT = 3;
 
 const WALL_NAMES = ["borderNorth", "borderSouth", "borderEast", "borderWest"];
 
@@ -37,7 +45,7 @@ export function resolveBorderWall(track) {
   return {
     enabled: raw.enabled !== false,
     thickness: clamp(raw.thickness, 0.5, 20, DEFAULT_BORDER_WALL.thickness),
-    height: clamp(raw.height, 1, 60, DEFAULT_BORDER_WALL.height),
+    height: clamp(raw.height, 1, 40, DEFAULT_BORDER_WALL.height),
     color: typeof raw.color === "string" ? raw.color : DEFAULT_BORDER_WALL.color,
   };
 }
@@ -82,8 +90,14 @@ export function buildBorderWalls(scene, track, wallManager = null) {
   const spanZ = trackDepth + WALL_INSET * 2;
 
   const create = (name, x, z, width, depth) => {
-    const wall = MeshBuilder.CreateBox(name, { width, height: settings.height, depth }, scene);
-    wall.position = new Vector3(x, 0, z); // Center relative to 0 y-height
+    const wall = MeshBuilder.CreateBox(
+      name,
+      { width, height: settings.height + WALL_SKIRT, depth },
+      scene
+    );
+    // Base pinned at -WALL_SKIRT, top at `height` above the track: adjusting the
+    // height only moves the top.
+    wall.position = new Vector3(x, settings.height / 2 - WALL_SKIRT / 2, z);
     wall.metadata = {
       ...(wall.metadata ?? {}),
       truckCollider: true,

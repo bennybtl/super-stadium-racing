@@ -8,8 +8,8 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 24,
-    "color": "#808080"
+    "height": 7,
+    "color": "#aa551d"
   },
   "name": "Luck O' The Irish",
   "image": "luck_o_the_irish.jpg",
@@ -323,7 +323,7 @@
       "closed": true,
       "colors": [
         "green",
-        "yellow"
+        "orange"
       ],
       "fence": false
     },
@@ -342,12 +342,12 @@
         },
         {
           "x": -32,
-          "z": -51,
+          "z": -50.5,
           "radius": 7.5
         },
         {
           "x": -50,
-          "z": -51,
+          "z": -50.5,
           "radius": 9.5
         }
       ],
@@ -398,26 +398,26 @@
       "points": [
         {
           "x": -50,
-          "z": 51,
+          "z": 50.5,
           "radius": 10.5
         },
         {
           "x": -31,
-          "z": 51,
+          "z": 50.5,
           "radius": 11.5
         },
         {
           "x": -31,
-          "z": 32,
+          "z": 33,
           "radius": 12.5
         },
         {
           "x": -49,
-          "z": 32,
+          "z": 33,
           "radius": 10
         }
       ],
-      "height": 2,
+      "height": 3,
       "collisionHeight": 6,
       "thickness": 1,
       "friction": 0.05,
@@ -760,7 +760,7 @@
       "terrainType": "water",
       "closed": true,
       "filled": true,
-      "blendWidth": 11,
+      "blendWidth": 4,
       "waterLevelOffset": 0.7
     },
     {
@@ -1026,16 +1026,16 @@
     },
     {
       "type": "trackSign",
-      "x": -0.7988973910473076,
-      "z": -1.142569379250535,
+      "x": -0.16929322559914084,
+      "z": -1.1425693792505278,
       "name": "Luck O' the Irish",
       "rotation": 0,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
-      "background": "yellow",
+      "background": "green",
       "primaryColor": "black",
       "scale": 1.4,
-      "heightOffset": 5.8,
+      "heightOffset": 6.6,
       "width": 15,
       "logoScale": 1
     },
@@ -1181,6 +1181,107 @@
       "waterLevelOffset": 0,
       "terrainType": "grass",
       "blendWidth": 3
+    },
+    {
+      "type": "trackSign",
+      "x": 48.33070677440086,
+      "z": -1.1425693792505278,
+      "name": "Luck O' the Irish",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "lucky-dice.png",
+      "background": "white",
+      "primaryColor": "black",
+      "scale": 1.4,
+      "heightOffset": 2.8,
+      "width": 10,
+      "logoScale": 1.35
+    },
+    {
+      "type": "trackSign",
+      "x": -51.16929322559914,
+      "z": -0.6425693792505278,
+      "name": "Luck O' the Irish",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "lucky-dice.png",
+      "background": "white",
+      "primaryColor": "black",
+      "scale": 1.4,
+      "heightOffset": 2.8,
+      "width": 10,
+      "logoScale": 1.35
+    },
+    {
+      "type": "trackSign",
+      "x": 40.33070677440086,
+      "z": -42.64256937925053,
+      "name": "Luck O' the Irish",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "sonic-speed.png",
+      "background": "white",
+      "primaryColor": "black",
+      "scale": 1.4,
+      "heightOffset": 0,
+      "width": 6.5,
+      "logoScale": 1.35
+    },
+    {
+      "type": "trackSign",
+      "x": -40.67266571793586,
+      "z": -42.30674726597661,
+      "name": "Luck O' the Irish",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "sonic-speed.png",
+      "background": "white",
+      "primaryColor": "black",
+      "scale": 1.4,
+      "heightOffset": 0,
+      "width": 6.5,
+      "logoScale": 1.35
+    },
+    {
+      "type": "trackSign",
+      "x": 41.81270555161046,
+      "z": 40.76871482951107,
+      "name": "Luck O' the Irish",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "top-boost.png",
+      "background": "white",
+      "primaryColor": "black",
+      "scale": 1.4,
+      "heightOffset": 0,
+      "width": 6.5,
+      "logoScale": 1.35
+    },
+    {
+      "type": "trackSign",
+      "x": -40.43966666258517,
+      "z": 41.86029642558593,
+      "name": "Luck O' the Irish",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "top-boost.png",
+      "background": "white",
+      "primaryColor": "black",
+      "scale": 1.4,
+      "heightOffset": 1.2,
+      "width": 6.5,
+      "logoScale": 1.35
+    },
+    {
+      "type": "hill",
+      "centerX": -61.71103268699913,
+      "centerZ": 60.76401319073776,
+      "radiusX": 10,
+      "radiusZ": 10,
+      "angle": 0,
+      "height": -2,
+      "waterLevelOffset": 0.7,
+      "terrainType": "water"
     }
   ]
 }
