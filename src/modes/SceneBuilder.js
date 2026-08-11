@@ -33,6 +33,7 @@ import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
 import { buildWaterBodies } from "../objects/Water.js";
+import { createWaterDepthSampler } from "../objects/water-field.js";
 import { scatterDirtChunks } from "../objects/DirtChunks.js";
 import { buildBorderWalls } from "../objects/BorderWall.js";
 import { buildOutskirts, OUTSKIRTS_MATERIAL_NAME } from "../objects/Outskirts.js";
@@ -507,6 +508,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Water is built per *body*, not per feature — overlapping water features share
   // one surface — so it runs once over the whole track rather than in the loop.
   buildWaterBodies(currentTrack, scene);
+  // Published for anything that needs to know how deep the water is at a point —
+  // splash effects, most of all. Shared so each truck doesn't build its own, and
+  // scene-scoped so it can never outlive the track it was built from.
+  scene.metadata.waterDepthAt = createWaterDepthSampler(currentTrack);
 
   // Procedural dirt-chunk scatter (along walls / outside the AI drive path).
   // Disabled per-track for on-road / paved tracks.

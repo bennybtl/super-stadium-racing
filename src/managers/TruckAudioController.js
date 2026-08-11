@@ -1,10 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
 import { EngineAudio } from "./EngineAudio.js";
-import {
-  getHillEllipseParams,
-  getSquareHillParams,
-  toFeatureLocal,
-} from "../feature-geometry.js";
+import { DEEP_SPLASH_DEPTH } from "../constants.js";
 import sliding1Url from "../assets/sounds/sliding1.wav?url";
 import sliding2Url from "../assets/sounds/sliding2.wav?url";
 import sliding3Url from "../assets/sounds/sliding3.wav?url";
@@ -27,7 +23,6 @@ const PRESETS = {
 };
 
 const MAX_SPEED_FALLBACK = 25;
-const DEEP_WATER_THRESHOLD = -0.9;
 
 export class TruckAudioController {
   constructor(audioManager, engineAudio) {
@@ -206,66 +201,18 @@ export class TruckAudioController {
     this._playSound("splashLanding", 0.5);
   }
 
-  _isWaterTerrain(terrainType) {
-    const name = typeof terrainType === "string" ? terrainType : terrainType?.name;
-    return name === "water";
-  }
-
-  _hillContributionAt(feature, x, z) {
-    const { radiusX, radiusZ } = getHillEllipseParams(feature);
-    const { lx, lz } = toFeatureLocal(feature, x, z);
-    const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
-    if (t2 >= 1) return 0;
-    const t = Math.sqrt(t2);
-    return feature.height * Math.cos(t * Math.PI / 2);
-  }
-
-  _squareHillContributionAt(feature, x, z) {
-    const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
-    const { lx, lz } = toFeatureLocal(feature, x, z);
-
-    const edgeDx = Math.max(0, Math.abs(lx) - hw);
-    const edgeDz = Math.max(0, Math.abs(lz) - hd);
-    const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
-    if (dist >= transition) return 0;
-
-    const falloff = dist === 0 ? 1 : Math.cos((dist / transition) * Math.PI / 2);
-    if (feature.heightAtMin !== undefined) {
-      const t = (Math.max(-hw, Math.min(hw, lx)) + hw) / feature.width;
-      const innerHeight = feature.heightAtMin + (feature.heightAtMax - feature.heightAtMin) * t;
-      return innerHeight * falloff;
-    }
-    return feature.height * falloff;
-  }
-
-  _isInDeepWater(mesh, track) {
-    if (!track?.features?.length) return false;
-
-    const x = mesh.position.x;
-    const z = mesh.position.z;
-
-    for (let i = track.features.length - 1; i >= 0; i--) {
-      const feature = track.features[i];
-      if (!this._isWaterTerrain(feature?.terrainType)) continue;
-
-      if (feature.type === "hill" && feature.height < 0) {
-        const h = this._hillContributionAt(feature, x, z);
-        if (h <= DEEP_WATER_THRESHOLD) return true;
-      } else if (feature.type === "squareHill") {
-        const isNegativeFlat = (feature.height ?? 0) < 0;
-        const isNegativeSlope =
-          feature.heightAtMin !== undefined &&
-          feature.heightAtMax !== undefined &&
-          feature.heightAtMin < 0 &&
-          feature.heightAtMax < 0;
-        if (!isNegativeFlat && !isNegativeSlope) continue;
-
-        const h = this._squareHillContributionAt(feature, x, z);
-        if (h <= DEEP_WATER_THRESHOLD) return true;
-      }
-    }
-
-    return false;
+  /**
+   * How deep the water is under the truck, 0 on dry ground.
+   *
+   * Reads the scene's shared water-depth query — the same bodies that are drawn.
+   * This used to walk the feature list re-deriving hill and squareHill heights
+   * itself, which meant it missed polyHill pools entirely and judged depth by an
+   * absolute world height, so a lake dug into a hill never registered.
+   */
+  _waterDepthUnder(mesh) {
+    const depthAt = mesh?.getScene?.()?.metadata?.waterDepthAt;
+    if (!depthAt) return 0;
+    return depthAt(mesh.position.x, mesh.position.z);
   }
 
   update({ state, speed, hSpeed, groundedness, deltaTime, maxSpeed = MAX_SPEED_FALLBACK, mesh, track, currentTerrain, input }) {
@@ -293,10 +240,13 @@ export class TruckAudioController {
     }
 
     // `currentTerrain` is only set when the truck is actually riding the painted
-    // ground — it is null while airborne or on a bridge deck above it. The
-    // feature scan in _isInDeepWater is XZ-only, so without this gate the truck
-    // splashes while jumping or driving over water.
-    const inDeepWater = terrainName === "water" && isGrounded && this._isInDeepWater(mesh, track);
+    // ground — it is null while airborne or on a bridge deck above it. The depth
+    // query is XZ-only and knows nothing about what the truck is standing on, so
+    // without this gate the truck splashes while jumping over a lake or crossing
+    // a bridge above one.
+    const onPaintedGround = !!currentTerrain;
+    const inDeepWater = onPaintedGround && isGrounded
+      && this._waterDepthUnder(mesh) >= DEEP_SPLASH_DEPTH;
     if (inDeepWater && isGrounded && speed > 1) {
       this._startSplashDriveAudio();
       const splashDriveLevel = Math.max(0, Math.min(1, (speed - 1.0) / 10.0));

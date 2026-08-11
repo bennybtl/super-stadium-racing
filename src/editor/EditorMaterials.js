@@ -278,6 +278,24 @@ export class EditorMaterials {
     });
   }
 
+  // ── Start Position ────────────────────────────────────────────────────────
+
+  /**
+   * Ghost-slot materials for the starting-grid marker: `{ slot, pole }`. The
+   * pole slot (index 0) is brighter so the front of the grid reads at a glance.
+   */
+  get startGridSlot() {
+    return this._get('startGridSlot', s => makeMat('edStartGridSlot', s, {
+      diffuse: basicColors.white.diffuse, emissive: basicColors.white.emissive, alpha: 0.35,
+    }));
+  }
+
+  get startGridPole() {
+    return this._get('startGridPole', s => makeMat('edStartGridPole', s, {
+      diffuse: basicColors.yellow.diffuse, emissive: basicColors.yellow.emissive, alpha: 0.65,
+    }));
+  }
+
   // ── Action Zones ──────────────────────────────────────────────────────────
 
   /**
@@ -314,6 +332,7 @@ const HANDLE_COLORS = {
   sign:       basicColors.black,  // track signs
   decoration: basicColors.green,  // flags / decorations / banners
   decal:      basicColors.white,  // surface decals
+  start:      basicColors.yellow, // starting-grid marker
 };
 
 // AI-path waypoint hues. Specular is zeroed so the small spheres read flat.

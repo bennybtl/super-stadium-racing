@@ -21,7 +21,7 @@
 //
 // Exits non-zero on any failure.
 
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import esbuild from 'esbuild';
@@ -41,6 +41,7 @@ export { Track } from ${JSON.stringify(join(root, 'src', 'track.js'))};
 export { featureFootprint } from ${JSON.stringify(join(root, 'src', 'feature-geometry.js'))};
 export { resampleWrapped } from ${JSON.stringify(join(root, 'src', 'terrain-blend-utils.js'))};
 export * from ${JSON.stringify(join(root, 'src', 'objects', 'water-field.js'))};
+export { DEEP_SPLASH_DEPTH } from ${JSON.stringify(join(root, 'src', 'constants.js'))};
 export { traceAiPathWearStamps, WEAR_WATER_FADE_END } from ${JSON.stringify(join(root, 'src', 'terrain-utils.js'))};
 `);
 
@@ -59,7 +60,7 @@ const {
   createTerrainSampler, groupIntoBodies, rasterizeBody, buildSurfaceGeometry,
   traceShorelines, decimateLoop, foamSide, foamWidths, foamTiling,
   isWaterFeature, FOAM_NOMINAL_WIDTH, createWaterDepthSampler, traceAiPathWearStamps,
-  WEAR_WATER_FADE_END,
+  WEAR_WATER_FADE_END, DEEP_SPLASH_DEPTH,
 } = await import(pathToFileURL(bundlePath).href);
 
 // ── Harness ──────────────────────────────────────────────────────────────────
@@ -322,7 +323,48 @@ check('footprint: unmodelled types report no reach', featureFootprint({ type: 'm
     `(${totalAlpha(wet).toFixed(1)} vs ${totalAlpha(noWater).toFixed(1)})`);
 }
 
-// ── 6. Wrap-preserving resample ──────────────────────────────────────────────
+// ── 6. Deep water is deep water, whatever is painted under it ────────────────
+{
+  // A pool dug into a hillside: its floor sits well above y=0, and its water
+  // spills over ground that is not painted water. Both used to defeat the splash
+  // trigger — one via the terrain-type gate, the other via an absolute height
+  // test on getHeightAt.
+  const track = trackWith([
+    { type: 'hill', centerX: 0, centerZ: 0, radiusX: 60, radiusZ: 60, height: 14, terrainType: 'dirt' },
+    waterHill(0, 0, 22, -8),
+  ]);
+  const depthAt = createWaterDepthSampler(track);
+
+  check('splash: water on a hillside is deep', depthAt(0, 0) > DEEP_SPLASH_DEPTH,
+    `(depth ${depthAt(0, 0).toFixed(2)})`);
+  check('splash: its floor sits above the old height gate', track.getHeightAt(0, 0) > -0.2,
+    `(floor y ${track.getHeightAt(0, 0).toFixed(2)})`);
+  check('splash: the ground under it is not painted water',
+    track.getTerrainTypeAt(0, 0)?.name !== 'water', `(${track.getTerrainTypeAt(0, 0)?.name})`);
+  check('splash: dry ground outside reads zero', depthAt(80, 80) === 0);
+
+  // And on the shipped tracks, how much deep water the old absolute-height gate
+  // silently excluded.
+  const missed = [];
+  for (const file of ['king_of_the_hill', 'luck_o_the_irish', 'the_quarry']) {
+    const real = Track.fromJSON(readFileSync(join(root, 'public', 'tracks', `${file}.json`), 'utf8'));
+    const realDepth = createWaterDepthSampler(real);
+    let deep = 0, aboveOldGate = 0;
+    const half = (real.width ?? 160) / 2;
+    for (let z = -half; z <= half; z += 2) {
+      for (let x = -half; x <= half; x += 2) {
+        if (realDepth(x, z) < DEEP_SPLASH_DEPTH) continue;
+        deep++;
+        if (real.getHeightAt(x, z) > -0.2) aboveOldGate++;
+      }
+    }
+    if (deep > 0 && aboveOldGate > 0) missed.push(`${file} ${Math.round(100 * aboveOldGate / deep)}%`);
+  }
+  check('splash: shipped tracks have deep water the old gate missed', missed.length > 0,
+    `(${missed.join(', ')})`);
+}
+
+// ── 7. Wrap-preserving resample ──────────────────────────────────────────────
 {
   const [sw, dw] = [512, 111];
   const src = new Uint8ClampedArray(sw * sw * 4);

@@ -1,5 +1,11 @@
 import { Color3 } from "@babylonjs/core";
 
+// Water depth (metres, measured against the drawn water surface) at which the
+// wheels start throwing spray, and at which the truck is wading deeply enough
+// for the heavy splash. Shared so the effect and its sound agree on "deep".
+export const SPLASH_MIN_DEPTH = 0.05;
+export const DEEP_SPLASH_DEPTH = 0.35;
+
 export const TRUCK_HEIGHT = 0.8; // full box height (0.8)
 export const TRUCK_HALF_HEIGHT = TRUCK_HEIGHT / 2; // half of box height (0.8)
 export const TRUCK_WIDTH = 1.5; // full box width (1.5)

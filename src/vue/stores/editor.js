@@ -203,6 +203,14 @@ export const useEditorStore = defineStore('editor', () => {
     width: 10,
   });
 
+  // ── Start Position panel (starting-grid marker) ──
+  const startPosition = reactive({
+    rotation: 0,    // degrees — direction the trucks face
+    columns: 2,     // trucks per row
+    colSpacing: 4,  // side-to-side gap between slots
+    rowSpacing: 7,  // front-to-back gap between rows
+  });
+
   // ── Banner String panel ──
   const bannerString = reactive({
     width: 8,
@@ -475,7 +483,7 @@ export const useEditorStore = defineStore('editor', () => {
   // names) keep explicit actions above. New panels need zero store edits.
   const _panels = {
     checkpoint, hill, squareHill, driveBox, terrainShape, obstacle,
-    meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign,
+    meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign, startPosition,
     bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal,
   };
   function setFeatureProp(panelKey, prop, val) {
@@ -507,7 +515,7 @@ export const useEditorStore = defineStore('editor', () => {
     setBridge,
     setHillRadius, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     decoration,
-    setDecorationType, setDecorationProp, trackSign,
+    setDecorationType, setDecorationProp, trackSign, startPosition,
     bannerString,
     actionZone,
     setActionZoneType, polyCurb,

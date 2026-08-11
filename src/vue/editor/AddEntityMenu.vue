@@ -57,6 +57,7 @@ const editor = useEditorStore();
 
 const features = [
   { label: 'Checkpoint',       img: imgCheckpoint,    action: () => editor.featureAction('addCheckpoint')           },
+  { label: 'Start Position',                          action: () => editor.featureAction('addStartPositionEntity') },
   { label: 'Poly Wall',        img: imgPolyWall,      action: () => editor.featureAction('addPolyWallEntity')       },
   { label: 'Poly Curb',        img: imgPolyCurb,      action: () => editor.featureAction('addPolyCurbEntity')       },
   { label: 'Round Hill',       img: imgRoundHill,     action: () => editor.featureAction('addHillEntity')           },

@@ -1,8 +1,10 @@
 import { Vector3, ParticleSystem, Texture, Color4 } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../terrain.js";
+import { SPLASH_MIN_DEPTH, DEEP_SPLASH_DEPTH } from "../constants.js";
 
 import cloudTextureUrl from "../assets/cloud.png";
 const CLOUD_TEXTURE_URL = cloudTextureUrl;
+
 const CLOUD_TEXTURES = new WeakMap();
 
 export function getSharedCloudTexture(scene) {
@@ -47,24 +49,19 @@ export class ParticleEffects {
     this._nitroDir2 = new Vector3();
   }
 
-  _isWaterTerrain(terrainType) {
-    const name = typeof terrainType === 'string' ? terrainType : terrainType?.name;
-    return name === 'water';
-  }
-
-
-  _isInDeepWater(track) {
-    if (!track) return false;
-
-    const x = this.mesh.position.x;
-    const z = this.mesh.position.z;
-    const DEEP_WATER_THRESHOLD = -0.2;
-
-    // Only the region the truck is actually standing in matters. getTerrainTypeAt
-    // and getHeightAt resolve the right feature (hill, squareHill, polyHill,
-    // terrain, …) respecting bounds and priority, so every water shape is covered.
-    if (!this._isWaterTerrain(track.getTerrainTypeAt(x, z))) return false;
-    return track.getHeightAt(x, z) <= DEEP_WATER_THRESHOLD;
+  /**
+   * How deep the water is under the truck right now, 0 on dry ground.
+   *
+   * Read from the scene's shared water-depth query — the same water bodies that
+   * are drawn — rather than from the painted terrain type. A body's level is set
+   * by the pool that holds it, so deep water routinely spills over ground painted
+   * dirt or grass, and its floor can sit well above y=0 when the pool is dug into
+   * a hill. Neither is visible to a terrain-type or absolute-height test.
+   */
+  _waterDepthUnderTruck() {
+    const depthAt = this.scene?.metadata?.waterDepthAt;
+    if (!depthAt) return 0;
+    return depthAt(this.mesh.position.x, this.mesh.position.z);
   }
 
   /**
@@ -266,7 +263,7 @@ export class ParticleEffects {
     return particles;
   }
 
-  update(state, speed, groundedness = 1, deltaTime = 0.016, currentTerrain = null, track = null, effectScaleOverride = 1) {
+  update(state, speed, groundedness = 1, deltaTime = 0.016, currentTerrain = null, effectScaleOverride = 1) {
     const effectiveScale = this._qualityScale * Math.max(0, Math.min(1, effectScaleOverride));
     // `currentTerrain` is the terrain the truck is actually standing on: the
     // caller passes null whenever there is no contact with the painted ground —
@@ -313,8 +310,16 @@ export class ParticleEffects {
       this.driftParticles.emitRate = 0;
     }
     
-    // Update splash particles when in water and wheels are on the ground
-    const isInWater = terrainName === 'water';
+    // Update splash particles when in water and wheels are on the ground.
+    //
+    // Standing water counts wherever it actually is; terrain painted water still
+    // counts too, since some tracks paint a water look onto flat ground that
+    // holds no body — that reads as water to the player, so it should spray.
+    // Both are gated on `terrain`, which the caller sets only when the truck is
+    // riding the painted ground: the depth query is XZ-only, so without that gate
+    // a truck jumping over a lake, or crossing a bridge above one, would splash.
+    const waterDepth = terrain ? this._waterDepthUnderTruck() : 0;
+    const isInWater = !!terrain && (waterDepth > SPLASH_MIN_DEPTH || terrainName === 'water');
     const isInMud = terrainName === 'mud';
     if (isInWater && isSplashGrounded && speed > 1) {
       const rate = speed * 80 * effectiveScale;
@@ -332,7 +337,7 @@ export class ParticleEffects {
 
     // Deep-water splash: a strong burst on entry, periodic pulses while driving,
     // and a small steady spray between pulses so the truck visibly churns through.
-    const inDeepWater = isInWater && isSplashGrounded && this._isInDeepWater(track);
+    const inDeepWater = isInWater && isSplashGrounded && waterDepth >= DEEP_SPLASH_DEPTH;
     if (inDeepWater && !this._wasInDeepWater) {
       this._deepSplashPulseTimer = 0.16;
       this._deepSplashPulseCooldown = 2.5;

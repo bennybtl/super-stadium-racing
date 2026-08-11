@@ -549,7 +549,6 @@ export class Truck {
         groundedness,
         particleDt,
         effectsTerrain,
-        track,
         effectScaleOverride
       ));
 

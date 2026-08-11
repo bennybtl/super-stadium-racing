@@ -365,7 +365,7 @@
       "points": [
         {
           "x": 32,
-          "z": -50.5,
+          "z": -50,
           "radius": 9.5
         },
         {
@@ -559,10 +559,10 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 40.18966473320715,
-      "centerZ": -65.61076088007377,
+      "centerX": 39.981669233218376,
+      "centerZ": -64.50926736592044,
       "heading": 1.5707963267948966,
-      "width": 26,
+      "width": 20,
       "checkpointNumber": 4,
       "_altIndex": 0,
       "_altCount": 1,
@@ -1282,6 +1282,97 @@
       "height": -2,
       "waterLevelOffset": 0.7,
       "terrainType": "water"
+    },
+    {
+      "type": "startPosition",
+      "x": 18.262160668352458,
+      "z": 49.50402588501622,
+      "heading": -3.141592653589793,
+      "columns": 5,
+      "colSpacing": 3.5,
+      "rowSpacing": 7
+    },
+    {
+      "type": "model",
+      "model": "scaffold",
+      "x": 41.25078498973089,
+      "z": -64.79729192964442,
+      "color": "yellow",
+      "scale": 1.2,
+      "heading": 1.5707963267948966,
+      "width": 9,
+      "height": 4,
+      "collider": true
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 35.82062469415632,
+      "z": -52.8166944801772,
+      "angle": 0,
+      "scale": 1.4,
+      "weight": 65,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 33.9221936922236,
+      "z": -51.84166130770757,
+      "angle": 0,
+      "scale": 1.4,
+      "weight": 65,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 36.51742553377676,
+      "z": -76.64220345678109,
+      "angle": 0,
+      "scale": 1.4,
+      "weight": 65,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 34.33957970651755,
+      "z": -76.58175953026898,
+      "angle": 0,
+      "scale": 1.4,
+      "weight": 65,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 71.30386600303027,
+      "z": 20.223814565189883,
+      "angle": 0,
+      "scale": 1.4,
+      "weight": 65,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 70.03350616109532,
+      "z": 18.37693773350881,
+      "angle": 0,
+      "scale": 1.4,
+      "weight": 65,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 68.66334826109745,
+      "z": 16.94414124035073,
+      "angle": 0,
+      "scale": 1.4,
+      "weight": 65,
+      "color": "yellow"
     }
   ]
 }

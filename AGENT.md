@@ -49,6 +49,7 @@ offroad/
     │   ├── PolyHillEditor.js
     │   ├── PolyWallEditor.js
     │   ├── SquareHillEditor.js
+    │   ├── StartPositionEditor.js
     │   ├── SurfaceDecalEditor.js
     │   ├── TerrainPathEditor.js
     │   ├── TerrainShapeEditor.js
@@ -167,6 +168,7 @@ Defines terrain layouts using a composable `features[]` array. Tracks are loaded
 - `pickup` — item collectible (boost, repair)
 - `flag` — decorative flag with spring-damper bend physics
 - `trackSign` — track name sign with DynamicTexture
+- `startPosition` — optional starting-grid marker (anchor + facing + grid shape); overrides the default two-wide grid behind the finish line. Slot math shared with the race spawner in `src/start-grid.js`
 - `bridgeMesh` — drivable elevated surface (see §Multi-Level Surfaces)
 - `normalMapDecal` — normal-map decal on terrain surface
 

@@ -213,7 +213,10 @@ export class EditorMode extends BaseMode {
         mesh.dispose();
       }
       const { buildWaterBodies } = await import('../objects/Water.js');
+      const { createWaterDepthSampler } = await import('../objects/water-field.js');
       buildWaterBodies(currentTrack, scene);
+      // Keep the shared depth query in step with the surfaces it describes.
+      scene.metadata.waterDepthAt = createWaterDepthSampler(currentTrack);
     };
     let _rebuildWaterTimer = null;
     rebuild.water = (immediate = false) => {

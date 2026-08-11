@@ -14,7 +14,14 @@ export const DEFAULT_STEERING_CONFIG = {
   // scrubs speed, but wags/over-rotates everywhere. 0 = pure nose: plows wide in
   // a slide (aims the nose at the apex but ignores where it's actually going).
   // Between: rotate-and-scrub without the over-rotation.
-  trajectorySteer: 0.7,
+  //
+  // This is the over-rotation knob, and it is self-targeting: with no slip the
+  // velocity direction IS the heading, so the blend collapses to `forward` and
+  // the value is inert. It only bites once the truck is already sideways, where
+  // it asks for extra yaw on top of the slip angle to point the *velocity* at
+  // the target — which is where the AI was rotating past its line. Lowering it
+  // softens sliding corners without touching grippy turn-in.
+  trajectorySteer: 0.45,
   // Low-pass on the raw turn signal (0..1, higher = snappier). The AI only
   // re-decides steering every ~100ms, so a heavy filter here reads as late
   // turn-in and the truck washes wide through corners. Keep it responsive

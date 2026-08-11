@@ -6,6 +6,10 @@ export const DEFAULT_PATH_CONFIG = {
   // findLookAheadPoint) so it tracks sweepers instead of ballooning wide; this
   // stops it getting so short that steering turns twitchy.
   minLookAhead: 8,
+  // How far ahead curvature is allowed to pull the aim point in (world units).
+  // Deliberately much shorter than the look-ahead itself — see findLookAheadPoint
+  // for why a long scan makes the AI turn in late.
+  radiusScanDistance: 9,
   waypointStep: 3,
   baseSpeedFactor: 28,
   // Floor is low enough that the grip limit below (not this clamp) sets the
@@ -24,6 +28,10 @@ export const DEFAULT_PATH_CONFIG = {
   lateralAccelSharp: 11,  // hairpin grip (holds Zipper's ~68-90° apexes)
 };
 
+// Waypoints either side of a gate's anchor to search for the racing line's
+// crossing of that gate's plane. ~12 waypoints ≈ 36u, plenty either way.
+const GATE_CROSS_SEARCH = 12;
+
 /**
  * AIPathPlanner
  *
@@ -36,6 +44,7 @@ export class AIPathPlanner {
     this.lookBack = config.lookBack ?? DEFAULT_PATH_CONFIG.lookBack;
     this.lookAhead = config.lookAhead ?? DEFAULT_PATH_CONFIG.lookAhead;
     this.minLookAhead = config.minLookAhead ?? DEFAULT_PATH_CONFIG.minLookAhead;
+    this.radiusScanDistance = config.radiusScanDistance ?? DEFAULT_PATH_CONFIG.radiusScanDistance;
     this.waypointStep = config.waypointStep ?? DEFAULT_PATH_CONFIG.waypointStep;
     this.baseSpeedFactor = config.baseSpeedFactor ?? DEFAULT_PATH_CONFIG.baseSpeedFactor;
     this.minSpeedFactor = config.minSpeedFactor ?? DEFAULT_PATH_CONFIG.minSpeedFactor;
@@ -314,6 +323,40 @@ export class AIPathPlanner {
       return bestIndex;
     });
 
+    // How far off a gate's centre the racing line actually crosses its plane.
+    // The checkpoint steer-through guidance uses this to stay out of the way:
+    // when the authored line already threads the gate, overriding the steering
+    // with a "drive at the gate centre" target just drags the truck off its line
+    // (badly so when the gate is offset from the apex of a corner).
+    d.checkpointGateLineOffset = d.checkpoints.map((cp, cpIdx) => {
+      const anchor = d.checkpointNearestPathIndex[cpIdx];
+      if (!Number.isInteger(anchor)) return Infinity;
+
+      const fwdX = Math.sin(cp.heading);
+      const fwdZ = Math.cos(cp.heading);
+      const perpX = Math.cos(cp.heading);
+      const perpZ = -Math.sin(cp.heading);
+
+      const from = Math.max(0, anchor - GATE_CROSS_SEARCH);
+      const to = Math.min(d.path.length - 2, anchor + GATE_CROSS_SEARCH);
+
+      let best = Infinity;
+      for (let i = from; i <= to; i++) {
+        const a = d.path[i];
+        const b = d.path[i + 1];
+        const alongA = (a.x - cp.x) * fwdX + (a.z - cp.z) * fwdZ;
+        const alongB = (b.x - cp.x) * fwdX + (b.z - cp.z) * fwdZ;
+        if ((alongA < 0) === (alongB < 0)) continue; // no plane crossing here
+
+        const t = Math.abs(alongA) / (Math.abs(alongA) + Math.abs(alongB) || 1);
+        const cx = a.x + (b.x - a.x) * t;
+        const cz = a.z + (b.z - a.z) * t;
+        const offset = Math.abs((cx - cp.x) * perpX + (cz - cp.z) * perpZ);
+        if (offset < best) best = offset;
+      }
+      return best;
+    });
+
     d.currentCheckpointTarget = 0;
     d.currentPathIndex = 0;
 
@@ -380,13 +423,21 @@ export class AIPathPlanner {
 
     const n = d.path.length;
 
-    // The next required checkpoint's spot on the racing line acts as a hard cap
-    // while it lies ahead of us this lap: neither the closest-point search nor
-    // the look-ahead target may advance past it. This keeps the truck pulled
-    // toward the gate instead of cutting across a tight loop to a later part of
-    // the path (which skipped the checkpoint inside the loop). The cap releases
-    // as soon as the checkpoint is physically passed (currentCheckpointTarget
-    // advances) or when it is behind us in path order (a lap-wrap gate).
+    // The next required checkpoint's spot on the racing line caps how far the
+    // *closest-point search* may advance while that gate is still ahead of us
+    // this lap. That is what stops progress jumping across a tight loop to a
+    // later part of the path (which skipped the checkpoint inside the loop).
+    // The cap releases as soon as the checkpoint is physically passed
+    // (currentCheckpointTarget advances) or it is behind us in path order.
+    //
+    // It deliberately does NOT cap the aim point any more. Pinning the aim to
+    // the gate collapsed the effective look-ahead to zero as the truck arrived,
+    // and pure pursuit with a vanishing look-ahead has unbounded gain: the truck
+    // reached the gate with no anticipation of the corner past it, then snapped
+    // to full lock. Walking the aim on past the gate still follows the path (it
+    // is an arc-length walk, not a straight line), so the loop-skip it guarded
+    // against is already covered by the index cap above plus the miss-detect
+    // respawn in AICheckpointGuidanceController.
     const gateIndex = d.checkpointNearestPathIndex?.[d.currentCheckpointTarget];
     const gateCap = Number.isInteger(gateIndex) && gateIndex >= d.currentPathIndex
       ? gateIndex
@@ -412,13 +463,25 @@ export class AIPathPlanner {
 
     d.currentPathIndex = closestIndex;
 
-    // Shrink the look-ahead toward the tightest path radius just ahead. A fixed
-    // long look-ahead on a sustained sweeper aims across the arc, so the truck
-    // under-turns and runs wide; matching it to the radius keeps the aim on the
-    // line. Radius is cached on the path by calculateFullPath; telemetry paths
-    // lack it, so we keep the full distance there.
+    // Shrink the look-ahead toward the tightest path radius *near the truck*. A
+    // fixed long look-ahead on a sustained sweeper aims across the arc, so the
+    // truck under-turns and runs wide; matching it to the radius keeps the aim
+    // on the line.
+    //
+    // The scan window has to stay local, though. Scanning the full look-ahead
+    // meant a hairpin still ~20u away collapsed the aim point back to ~8u —
+    // which lands on the *straight approach*, where the heading error is ~0. So
+    // the AI drove straight at the corner and only turned in once the corner was
+    // under it, overshooting and needing a big oversteer save. Limiting the scan
+    // to `radiusScanDistance` keeps the aim long while a corner is still ahead,
+    // so the aim point reaches into the corner and turn-in starts early; the
+    // shrink then engages once the truck is actually at the arc.
+    //
+    // Radius is cached on the path by calculateFullPath; telemetry paths lack
+    // it, so we keep the full distance there.
     let adaptiveLookAhead = d.lookAheadDistance;
-    const scan = Math.max(1, Math.round(d.lookAheadDistance / (this.waypointStep || 3)));
+    const scanDist = Math.min(this.radiusScanDistance, d.lookAheadDistance);
+    const scan = Math.max(1, Math.round(scanDist / (this.waypointStep || 3)));
     let minRadius = Infinity;
     for (let i = closestIndex; i < Math.min(n, closestIndex + scan); i++) {
       const r = d.path[i].radius;
@@ -428,8 +491,7 @@ export class AIPathPlanner {
       adaptiveLookAhead = Math.max(this.minLookAhead, Math.min(d.lookAheadDistance, minRadius));
     }
 
-    const endIndex = gateCap !== null ? gateCap : n - 1;
-    const clampedToGate = gateCap !== null;
+    const endIndex = n - 1;
 
     let accumulatedDist = 0;
     for (let i = closestIndex; i < endIndex; i++) {
@@ -447,10 +509,6 @@ export class AIPathPlanner {
 
       accumulatedDist += segmentDist;
     }
-
-    // Reached the gate cap before covering the full look-ahead distance — aim
-    // at the gate point so the truck heads into the loop, not past it.
-    if (clampedToGate) return d.path[endIndex];
 
     if (d.currentPathIndex >= d.path.length - 10) {
       d.currentPathIndex = 0;

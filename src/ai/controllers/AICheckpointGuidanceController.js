@@ -3,6 +3,11 @@ export const DEFAULT_CHECKPOINT_GUIDANCE_CONFIG = {
   // its centre (world units). Outside this radius the normal look-ahead path
   // drives, so racing lines on long straights are unaffected.
   approachRadius: 20,
+  // Skip the steer-through entirely when the racing line already crosses the
+  // gate plane inside this fraction of the gate's half-width. See
+  // getApproachTarget — overriding a line that already threads the gate does
+  // nothing but pull the truck off its line.
+  lineClearFraction: 0.8,
   // Aim point is placed this far PAST the gate centre (along the gate's forward
   // direction) so the steering line is pulled through the gate, not merely to it.
   throughDistance: 6,
@@ -39,6 +44,7 @@ export class AICheckpointGuidanceController {
   constructor(driver, config = {}) {
     this.driver = driver;
     this.approachRadius = config.approachRadius ?? DEFAULT_CHECKPOINT_GUIDANCE_CONFIG.approachRadius;
+    this.lineClearFraction = config.lineClearFraction ?? DEFAULT_CHECKPOINT_GUIDANCE_CONFIG.lineClearFraction;
     this.throughDistance = config.throughDistance ?? DEFAULT_CHECKPOINT_GUIDANCE_CONFIG.throughDistance;
     this.passMargin = config.passMargin ?? DEFAULT_CHECKPOINT_GUIDANCE_CONFIG.passMargin;
     this.missCorridor = config.missCorridor ?? DEFAULT_CHECKPOINT_GUIDANCE_CONFIG.missCorridor;
@@ -74,6 +80,19 @@ export class AICheckpointGuidanceController {
   getApproachTarget(position) {
     const gate = this._currentGate();
     if (!gate) return null;
+
+    // Don't fight the racing line. This override exists for gates the path
+    // misses; when the line already threads the gate, aiming at the gate centre
+    // instead is actively harmful. A gate offset from a corner's apex (Apple
+    // River's CP2 sits ~8.5u outside the apex, in a 30u-wide gate) drags the
+    // truck to the *outside* of the corner all the way in, then hands control
+    // back to the path target at the apex — a ~150° swing in the steering
+    // target in one tick, which no steering model can absorb without a big
+    // over-correction and a slide.
+    const lineOffset = this.driver.checkpointGateLineOffset?.[this.driver.currentCheckpointTarget];
+    if (Number.isFinite(lineOffset) && lineOffset < ((gate.width ?? 10) / 2) * this.lineClearFraction) {
+      return null;
+    }
 
     const dx = gate.x - position.x;
     const dz = gate.z - position.z;
