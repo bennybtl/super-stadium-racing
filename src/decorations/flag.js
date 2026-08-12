@@ -1,5 +1,5 @@
 import { Flag, COLLISION_RADIUS, POLE_HEIGHT } from "./lib/Flag.js";
-import { TRUCK_RADIUS } from "../src/constants.js";
+import { TRUCK_RADIUS } from "../constants.js";
 
 /** Lateral speed (m/s) → impulse magnitude applied to the pole. */
 const BEND_IMPULSE_SCALE = 1.2;

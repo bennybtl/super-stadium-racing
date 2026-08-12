@@ -67,6 +67,7 @@
 <script setup>
 import { computed, ref, watch, onMounted } from 'vue';
 import { getImageUrl } from '../managers/TrackStore.js';
+import { trackImageUrl } from '../managers/TrackLoader.js';
 
 const props = defineProps({
   tracks: {
@@ -128,7 +129,7 @@ const displayTracks = computed(() => {
     key: trackData.key,
     name: trackData.name,
     image: trackData?.image
-      ? (getImageUrl(trackData.image) ?? `${import.meta.env.BASE_URL}tracks/${trackData.image}`)
+      ? (getImageUrl(trackData.image) ?? trackImageUrl(trackData.image))
       : null,
   }));
 });

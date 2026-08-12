@@ -2,14 +2,14 @@
   "id": "solano",
   "name": "Solano",
   "engineAudio": "v8",
-  "modelFile": "solano.obj",
+  "modelFile": "solano2.obj",
   "defaultColor": [0.8, 0.2, 0.1],
   "meshColors": {
-    "cabin_cabin": [0.0, 0.0, 0.0]
+    "window_Cube.006": [0.0, 0.0, 0.0]
   },
   "bodyTransform": {
-    "position": [0, 0.16, 0.0],
-    "rotation": [-1.5708, 0, 0],
+    "position": [0, 0.20, 0.0],
+    "rotation": [0, 1.5708, 0],
     "scaling":  [1, 1, 1]
   },
   "physicsBox": {
@@ -20,17 +20,20 @@
   "wheels": {
     "trackWidth": 1.9,
     "frontAxle":  1.4,
-    "rearAxle":  -1.1,
-    "frontScale": [0.8,0.9,0.9],
+    "rearAxle":  -1.15,
+    "frontScale": [0.8,0.8,0.8],
     "rearScale": [0.8, 0.9, 0.9]
   },
   "params": {
-    "maxSpeed": 37,
+    "maxSpeed": 36,
     "maxReverseSpeed": -15,
     "acceleration": 21,
     "braking": 2.5,
     "turnSpeed": 5.5,
     "weightTransfer": 1.10
   },
-  "suspensionTravel": 0.6
+  "handling": {
+    "lateralBias": 0
+  },
+  "suspensionTravel": 0.4
 }

@@ -74,7 +74,7 @@ Loading is handled by `src/managers/DecorationLoader.js`; each instance is built
 ## Folder layout
 
 ```
-decorations/
+src/decorations/
   myprop.json      // config (required)
   myprop.obj       // model — omit for procedural decorations
   myprop.png       // optional texture / preview image

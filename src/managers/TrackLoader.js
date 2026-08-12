@@ -4,10 +4,25 @@ import {
   getImageBlob, getImageUrl, getTrackJson, hasTrackJson, openTrackStore,
   removeTrackJson, setTrackJson, storedTrackKeys,
 } from './TrackStore.js';
-// Track filenames are scanned from public/tracks/ at build time (and re-scanned
-// on add/remove during dev) by the track-manifest Vite plugin — see
-// vite.config.js. Dropping a new .json there surfaces it without editing source.
-import TRACK_FILENAMES from 'virtual:track-manifest';
+// Shipped tracks are bundled straight out of /src/tracks/ — dropping a
+// `<name>.json` (plus optional `<name>.jpg` preview) in that folder surfaces it
+// in-game without editing source. User-authored tracks come in separately
+// through the track-pack importer in settings and live in TrackStore.
+const TRACK_MODULES = import.meta.glob('/src/tracks/*.json', { query: '?raw', import: 'default' });
+// Eager so preview images resolve to their hashed build URL synchronously.
+const TRACK_IMAGE_URLS = import.meta.glob('/src/tracks/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
+
+const TRACK_FILENAMES = Object.keys(TRACK_MODULES).map(path => path.split('/').pop()).sort();
+
+/**
+ * Bundled URL for a shipped track's preview image, or null when the track has
+ * no image or it isn't a shipped one (imported tracks resolve through
+ * TrackStore's getImageUrl instead).
+ */
+export function trackImageUrl(image) {
+  if (!image) return null;
+  return TRACK_IMAGE_URLS[`/src/tracks/${image}`] ?? null;
+}
 
 /**
  * TrackLoader - Loads tracks from JSON files
@@ -24,11 +39,11 @@ export class TrackLoader {
    */
   async loadTrack(filename) {
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}tracks/${filename}`);
-      if (!response.ok) {
-        throw new Error(`Failed to load track: ${response.statusText}`);
+      const load = TRACK_MODULES[`/src/tracks/${filename}`];
+      if (!load) {
+        throw new Error(`No bundled track named ${filename}`);
       }
-      const jsonString = await response.text();
+      const jsonString = await load();
       const track = Track.fromJSON(jsonString);
       
       // Store with filename (without .json extension) as key
@@ -86,23 +101,24 @@ export class TrackLoader {
   }
 
   /**
-   * Kick off background fetches for every track's preview image that still
-   * lives in public/tracks. Fire-and-forget: the browser caches each one, so
-   * the <img> tags in the track-selection carousel render from cache rather
-   * than loading visibly when it first appears. Locally stored images resolve
-   * to an already-hydrated object URL and need no warming.
+   * Kick off background fetches for every shipped track's preview image.
+   * Fire-and-forget: the browser caches each one, so the <img> tags in the
+   * track-selection carousel render from cache rather than loading visibly
+   * when it first appears. Locally stored images resolve to an
+   * already-hydrated object URL and need no warming.
    */
   preloadTrackImages() {
     if (typeof Image === 'undefined') return; // guard non-browser contexts
-    const base = import.meta.env.BASE_URL;
     const seen = new Set();
     for (const track of this.tracks.values()) {
       const image = track?.image;
       if (!image || seen.has(image)) continue;
       seen.add(image);
+      const src = getImageUrl(image) ?? trackImageUrl(image);
+      if (!src) continue;
       const img = new Image();
       img.decoding = 'async';
-      img.src = getImageUrl(image) ?? `${base}tracks/${image}`;
+      img.src = src;
     }
   }
 
@@ -218,8 +234,8 @@ export class TrackLoader {
 
   /**
    * Raw bytes for a track's preview image, preferring the locally stored copy
-   * (editor screenshots / pack imports) and falling back to the shipped file
-   * in public/tracks. Returns { bytes, ext } or null.
+   * (editor screenshots / pack imports) and falling back to the shipped image
+   * bundled from src/tracks. Returns { bytes, ext } or null.
    */
   async _loadTrackImageBytes(image) {
     if (!image) return null;
@@ -232,11 +248,17 @@ export class TrackLoader {
       };
     }
 
+    const url = trackImageUrl(image);
+    if (!url) return null;
+
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}tracks/${image}`);
+      const res = await fetch(url);
       if (!res.ok) return null;
-      const ext = image.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
-      return { bytes: new Uint8Array(await res.arrayBuffer()), ext };
+      // Read the extension off the resolved URL, not the source filename: the
+      // dist optimizer re-encodes bundled images (png → jpg/webp), so the two
+      // can disagree and the zip should be named after what we actually got.
+      const ext = url.toLowerCase().match(/\.(png|jpe?g|webp)(?:\?|$)/)?.[1] ?? 'jpg';
+      return { bytes: new Uint8Array(await res.arrayBuffer()), ext: ext === 'jpeg' ? 'jpg' : ext };
     } catch {
       return null;
     }

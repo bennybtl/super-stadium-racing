@@ -1,13 +1,13 @@
 /**
  * DecorationLoader - Loads model-decoration definitions from JSON files in
- * /decorations/.
+ * /src/decorations/.
  *
  * Each JSON file defines one placeable prop (an OBJ model plus how to orient,
  * scale and colour it). This mirrors VehicleLoader so the rest of the codebase
  * uses the same patterns (glob loading, keyed map, window exposure).
  *
  * Drop a `<name>.obj` + `<name>.json` (and optional preview image) into
- * /decorations/ and it becomes selectable in the editor's Decoration panel —
+ * /src/decorations/ and it becomes selectable in the editor's Decoration panel —
  * no code changes required.
  *
  * JSON schema:
@@ -17,7 +17,7 @@
  *                   one entry in the editor's Type dropdown, with a variation
  *                   picker for the members (e.g. tree_1/2/3 → one "Tree").
  *   packName        string   label for the pack (falls back to packId)
- *   modelFile       string   OBJ filename in /decorations/. Optional — omit it
+ *   modelFile       string   OBJ filename in /src/decorations/. Optional — omit it
  *                   when a controller builds the geometry procedurally.
  *   controller      string   behaviour module filename; defaults to <id>.js when
  *                   that file exists. May export build() for procedural
@@ -25,7 +25,7 @@
  *                   edit.controls()/edit.apply() for dynamic editing.
  *   featureDefaults object   initial props for a newly placed instance
  *                   (e.g. { "width": 8, "poleHeight": 4.2 })
- *   imageFile       string   optional preview image in /decorations/
+ *   imageFile       string   optional preview image in /src/decorations/
  *   rotationX       number   degrees; corrects Z-up authored models (default 0)
  *   baseScale       number   base model scale before the user scale (default 1)
  *   offsetY         number   vertical offset in model space (default 0)
@@ -38,7 +38,7 @@
  *   meshTextures    { "<groupName>": "file.png" | { file, scale, uScale,
  *                   vScale, uOffset, vOffset } }   per-mesh texture applied
  *                   instead of a colour (takes priority over meshColors). The
- *                   image must sit in /decorations/ and the model must have UVs.
+ *                   image must sit in /src/decorations/ and the model must have UVs.
  *                   `scale`/`uScale`/`vScale` tile the texture (2 = repeats
  *                   twice = pattern half the size); default 1.
  *   colliderMeshes  string[] OBJ group names that become truck colliders when
@@ -80,15 +80,15 @@ export class DecorationLoader {
   }
 
   /**
-   * Load all decoration definitions from /decorations/*.json at startup.
+   * Load all decoration definitions from /src/decorations/*.json at startup.
    * Uses Vite's import.meta.glob so the files are bundled correctly.
    */
   async loadAllDecorations() {
-    const modules = import.meta.glob('/decorations/*.json', { query: '?raw', import: 'default' });
-    const objUrls = import.meta.glob('/decorations/*.obj', { query: '?url', import: 'default', eager: true });
-    const imgUrls = import.meta.glob('/decorations/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
-    // Optional behaviour modules: /decorations/<id>.js (or def.controller).
-    const controllers = import.meta.glob('/decorations/*.js', { eager: true });
+    const modules = import.meta.glob('/src/decorations/*.json', { query: '?raw', import: 'default' });
+    const objUrls = import.meta.glob('/src/decorations/*.obj', { query: '?url', import: 'default', eager: true });
+    const imgUrls = import.meta.glob('/src/decorations/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
+    // Optional behaviour modules: /src/decorations/<id>.js (or def.controller).
+    const controllers = import.meta.glob('/src/decorations/*.js', { eager: true });
 
     const loadPromises = Object.entries(modules).map(async ([path, load]) => {
       try {
@@ -96,10 +96,10 @@ export class DecorationLoader {
         const def = JSON.parse(raw);
         const key = def.id ?? path.split('/').pop().replace('.json', '');
         if (def.modelFile) {
-          def.modelUrl = objUrls[`/decorations/${def.modelFile}`] ?? null;
+          def.modelUrl = objUrls[`/src/decorations/${def.modelFile}`] ?? null;
         }
         if (def.imageFile) {
-          def.imageUrl = imgUrls[`/decorations/${def.imageFile}`] ?? null;
+          def.imageUrl = imgUrls[`/src/decorations/${def.imageFile}`] ?? null;
         }
         // Resolve per-mesh texture entries to bundled URLs + tiling params so
         // ModelDecoration can load them by mesh (group) name. An entry is either
@@ -109,15 +109,15 @@ export class DecorationLoader {
           for (const [mesh, entry] of Object.entries(def.meshTextures)) {
             const t = normalizeTextureEntry(entry);
             if (!t) { console.warn(`[DecorationLoader] ${key}: invalid meshTextures entry for '${mesh}'`); continue; }
-            const url = imgUrls[`/decorations/${t.file}`] ?? null;
+            const url = imgUrls[`/src/decorations/${t.file}`] ?? null;
             if (url) def.meshTextureUrls[mesh] = { url, uScale: t.uScale, vScale: t.vScale, uOffset: t.uOffset, vOffset: t.vOffset };
-            else console.warn(`[DecorationLoader] ${key}: texture '${t.file}' for mesh '${mesh}' not found in /decorations/`);
+            else console.warn(`[DecorationLoader] ${key}: texture '${t.file}' for mesh '${mesh}' not found in /src/decorations/`);
           }
         }
         // Attach the optional controller module (procedural build / runtime
-        // behaviour / dynamic editing). Convention: /decorations/<id>.js.
+        // behaviour / dynamic editing). Convention: /src/decorations/<id>.js.
         const controllerFile = def.controller ?? `${key}.js`;
-        def.controller = controllers[`/decorations/${controllerFile}`]?.default ?? null;
+        def.controller = controllers[`/src/decorations/${controllerFile}`]?.default ?? null;
         this.decorations.set(key, def);
         if (!this.decorationList.includes(key)) this.decorationList.push(key);
         console.debug(`[DecorationLoader] Loaded decoration: ${def.name} (${key}) modelUrl=${def.modelUrl ?? 'none'}`);

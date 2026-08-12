@@ -1,6 +1,6 @@
 # Vehicle Setup
 
-Vehicle definitions live in `vehicles/*.json`. The `params` block is merged into the truck runtime state, so every field below is optional. If a field is omitted, the game falls back to the runtime default.
+Vehicle definitions live in `src/vehicles/*.json`. The `params` block is merged into the truck runtime state, so every field below is optional. If a field is omitted, the game falls back to the runtime default.
 
 Suggested tuning ranges below are pragmatic starting points for arcade/off-road vehicles in this project, not hard validation limits.
 

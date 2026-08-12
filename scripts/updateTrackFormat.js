@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const tracksDir = path.join(__dirname, '..', 'tracks');
+const tracksDir = path.join(__dirname, '..', 'src', 'tracks');
 const trackFiles = fs.readdirSync(tracksDir).filter(f => f.endsWith('.json'));
 
 console.log(`Found ${trackFiles.length} track files to update`);

@@ -54,7 +54,7 @@ export function applyColliderMetadata(meshes, enabled, def) {
 
 /**
  * ModelDecoration — a static OBJ prop placed on the terrain, driven entirely by
- * a definition loaded from /decorations/<id>.json (see DecorationLoader).
+ * a definition loaded from /src/decorations/<id>.json (see DecorationLoader).
  *
  * Editor-managed like Flag / BannerString (no physics). Only position, heading,
  * scale and colour are meaningful. The heading rotates the container; scale
@@ -64,7 +64,7 @@ export function applyColliderMetadata(meshes, enabled, def) {
  * `meshTextures` is textured instead of coloured (requires UVs on the model).
  *
  * This generalises the former bespoke Tent object; tent is now just one
- * decoration definition among any number you drop into /decorations/.
+ * decoration definition among any number you drop into /src/decorations/.
  */
 export class ModelDecoration {
   /**

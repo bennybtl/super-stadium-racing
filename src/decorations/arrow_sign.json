@@ -10,6 +10,9 @@
   "meshColors": {
     "structure_obj_0.002": [0.45, 0.45, 0.45]
   },
+  "colliderMeshes": [
+    "arrow_1_obj_0"
+  ],
   "castsShadows": true,
   "editable": { "color": true, "scale": true, "heading": true }
 }

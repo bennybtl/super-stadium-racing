@@ -6,7 +6,7 @@ import {
   TransformNode,
   VertexData,
 } from "@babylonjs/core";
-import { basicColors } from "../../src/constants.js";
+import { basicColors } from "../../constants.js";
 
 export const POLE_HEIGHT = 7.5;
 export const POLE_RADIUS = 0.1;

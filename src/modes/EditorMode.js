@@ -49,6 +49,7 @@ export class EditorMode extends BaseMode {
       bridgeMeshManager,
       steepSlopeColliderManager,
       surfaceDecalManager,
+      driveSurfaceManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
     // Dispose runtime ObstacleManager stacks – the ObstacleEditor creates
@@ -87,16 +88,24 @@ export class EditorMode extends BaseMode {
     rebuild.currentTrack = currentTrack;
     rebuild.currentScene = scene;
 
-    // Steep-slope colliders are consumed only by physics/collision, which does
-    // not run in the editor. Rebuilding them (thousands of getHeightAt samples +
-    // mesh churn) on every slider tick is wasted work, so debounce them off the
-    // drag; the fresh race/test scene rebuilds its own colliders regardless.
-    let _slopeColliderTimer = null;
-    this._clearSlopeColliderTimer = () => { clearTimeout(_slopeColliderTimer); _slopeColliderTimer = null; };
-    const rebuildSlopeCollidersDebounced = () => {
-      clearTimeout(_slopeColliderTimer);
-      _slopeColliderTimer = setTimeout(() => {
-        _slopeColliderTimer = null;
+    // Work that has to follow a terrain edit but not on every slider tick:
+    //
+    //  • Steep-slope colliders are consumed only by physics/collision, which does
+    //    not run in the editor. Rebuilding them (thousands of getHeightAt samples
+    //    + mesh churn) mid-drag is wasted work; the fresh race/test scene
+    //    rebuilds its own colliders regardless.
+    //  • The ground's picking acceleration describes the shape it had when the
+    //    track loaded. Until it is rebuilt, `scene.pick` and every TerrainQuery
+    //    raycast cull against the old terrain, so a ray aimed at a hill raised
+    //    this session passes through it and reports the ground behind it — that
+    //    is what dropped right-click-placed poly points past a slope.
+    let _postTerrainEditTimer = null;
+    this._clearSlopeColliderTimer = () => { clearTimeout(_postTerrainEditTimer); _postTerrainEditTimer = null; };
+    const refreshAfterTerrainEditDebounced = () => {
+      clearTimeout(_postTerrainEditTimer);
+      _postTerrainEditTimer = setTimeout(() => {
+        _postTerrainEditTimer = null;
+        driveSurfaceManager.refreshPickingAcceleration(ground);
         steepSlopeColliderManager.rebuild();
       }, 300);
     };
@@ -133,7 +142,7 @@ export class EditorMode extends BaseMode {
       }
       ground.setVerticesData(VertexBuffer.PositionKind, positions);
       ground.createNormals(true);
-      rebuildSlopeCollidersDebounced();
+      refreshAfterTerrainEditDebounced();
       // The ground just moved under every gizmo placed against the old heights —
       // lift the handles back out (debounced; this runs on every slider tick).
       editorController.scheduleGizmoHeightRefresh();

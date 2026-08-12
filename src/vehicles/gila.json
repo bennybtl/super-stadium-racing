@@ -26,12 +26,12 @@
     "rearAxle":  -1.4
   },
   "params": {
-    "maxSpeed": 36,
+    "maxSpeed": 34,
     "maxReverseSpeed": -12,
-    "acceleration": 22.5,
+    "acceleration": 22,
     "braking": 1.5,
-    "turnSpeed": 4.3,
+    "turnSpeed": 4.2,
     "weightTransfer": 1.12,
-    "grip": 0.255
+    "grip": 0.240
   }
 }

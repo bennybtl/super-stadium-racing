@@ -116,6 +116,26 @@ export class DriveSurfaceManager {
     }
   }
 
+  /**
+   * Rebuild a registered mesh's picking data after its vertices moved.
+   *
+   * Displacing the ground (an editor terrain edit) invalidates everything the
+   * pick path culls against: `setVerticesData` collapses the subdivided
+   * submeshes back into one global submesh, and `_submeshesOctree` keeps the
+   * bounding boxes of the terrain as it was when the track loaded. Rays then get
+   * culled where a newly raised hill stands and hit whatever lies beyond it —
+   * the ground *looks* right but picks (and every TerrainQuery raycast) answer
+   * for the old shape.
+   *
+   * @param {BABYLON.AbstractMesh} mesh
+   */
+  refreshPickingAcceleration(mesh) {
+    if (!mesh) return;
+    // Refreshes the mesh bbox *and* every submesh's, from the current positions.
+    mesh.refreshBoundingInfo();
+    this._enablePickingAcceleration(mesh);
+  }
+
   unregisterByMesh(mesh) {
     this._surfaceRegistry.unregisterByMesh(mesh);
     const idx = this._elevatedSurfaceMeshes.indexOf(mesh);

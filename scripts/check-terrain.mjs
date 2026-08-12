@@ -1,7 +1,7 @@
 // Terrain regression checks: `npm run check:terrain`
 //
 // Bundles src/track.js with a Babylon stub (esbuild) so it runs headless, then
-// verifies every track in public/tracks/:
+// verifies every track in src/tracks/:
 //
 //   1. golden  — heights + terrain types sampled on a 2m grid hash to the values
 //                recorded in scripts/terrain-golden.json. Catches unintended
@@ -134,7 +134,7 @@ function checkPatchInvariant(track, fail) {
 }
 
 // ── Run ──────────────────────────────────────────────────────────────────────
-const tracksDir = join(root, 'public', 'tracks');
+const tracksDir = join(root, 'src', 'tracks');
 const trackFiles = readdirSync(tracksDir).filter(f => f.endsWith('.json')).sort();
 const golden = update ? {} : JSON.parse(readFileSync(goldenPath, 'utf8'));
 

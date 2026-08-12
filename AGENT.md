@@ -18,9 +18,7 @@ offroad/
 ├── index.html
 ├── package.json
 ├── vite.config.js
-├── public/
-│   └── tracks/                      # JSON track definitions + PNG previews
-├── vehicles/                        # Vehicle model assets and configs
+├── track-packs/                     # Importable track-pack zips/folders (not built)
 └── src/
     ├── main.js                      # Game entry point, Babylon scene setup, mode bootstrap
     ├── track.js                     # Track class: feature definitions, height/terrain queries, serialization
@@ -33,6 +31,8 @@ offroad/
     ├── ai/
     │   ├── AIDriver.js              # A* pathfinding, skill config, stuck detection, respawn
     │   └── setupAIDrivers.js        # AI driver instantiation helper
+    ├── decorations/                 # Prop assets + configs; top-level *.js are controllers
+    │   └── lib/                     # Geometry classes shared by decoration controllers
     ├── editor/                      # Track editor subsystem (one file per entity type)
     │   ├── EditorController.js      # Main editor coordinator (~78KB): input, undo/redo, entity delegation
     │   ├── EditorMaterials.js       # Shared material definitions for editor visualization
@@ -78,13 +78,13 @@ offroad/
     │   ├── TelemetryPlayer.js       # Replay recorded telemetry
     │   ├── TelemetryRecorder.js     # Record truck telemetry for replay
     │   ├── TerrainQuery.js          # Layered raycast + cross-pattern sampler for floor detection
-    │   ├── TrackLoader.js           # JSON track loading from public/tracks/
+    │   ├── TrackLoader.js           # JSON track loading from src/tracks/
     │   ├── TrackSignManager.js      # Track name sign rendering
     │   ├── TruckAudioController.js  # Per-truck audio: engine, collision, pickups
     │   ├── TruckCollisionManager.js # Truck-to-truck collision detection and response
     │   ├── UIManager.js             # HUD elements
     │   ├── UpgradeStorage.js        # Vehicle upgrade system with localStorage
-    │   ├── VehicleLoader.js         # Vehicle definition loading from vehicles/
+    │   ├── VehicleLoader.js         # Vehicle definition loading from src/vehicles/
     │   └── WallManager.js           # Wall/barrier physics meshes
     ├── modes/
     │   ├── ModeController.js        # Orchestrates switching between game modes
@@ -107,6 +107,7 @@ offroad/
     │   ├── PolyCurb.js              # Polyline-based curb
     │   ├── PolyWall.js              # Polyline-based wall mesh
     │   └── TrackSign.js             # Track name sign with DynamicTexture
+    ├── tracks/                      # Shipped track JSON + preview images
     ├── truck/
     │   ├── index.js                 # Re-exports Truck class
     │   ├── truck.js                 # Truck class — coordinates all subsystems
@@ -115,6 +116,7 @@ offroad/
     │   ├── ParticleEffects.js       # Drift smoke, water splash, nitro burst
     │   ├── TerrainPhysics.js        # Gravity, suspension spring, slope orientation
     │   └── TruckBody.js             # Visual puppet: OBJ body + procedural wheels
+    ├── vehicles/                    # Vehicle model assets and configs
     └── vue/
         ├── main.js                  # Vue app bootstrap
         ├── store.js                 # Pinia state store (~47KB): all reactive game/editor state
@@ -152,7 +154,7 @@ offroad/
 ## Core Systems
 
 ### 1. Track System (`track.js`)
-Defines terrain layouts using a composable `features[]` array. Tracks are loaded from JSON in `public/tracks/` or built programmatically.
+Defines terrain layouts using a composable `features[]` array. Tracks are loaded from JSON in `src/tracks/` or built programmatically.
 
 **Feature Types:**
 - `hill` — circular Gaussian hill
@@ -612,10 +614,10 @@ Feed the `_lastResolvedSurface` continuity hint back each frame so the query pre
 7. Add to `store.js`, `AppShell.vue`, `AddEntityMenu.vue`
 
 ### New track (JSON)
-Place a `.json` file in `public/tracks/` with `name` and `features[]`. Feature objects mirror the parameters of the corresponding `add___()` method.
+Place a `.json` file in `src/tracks/` with `name` and `features[]`. Feature objects mirror the parameters of the corresponding `add___()` method.
 
 ### New vehicle
-Place assets and config in `vehicles/`. `VehicleLoader.js` discovers vehicles from that directory.
+Place assets and config in `src/vehicles/`. `VehicleLoader.js` discovers vehicles from that directory.
 
 ---
 

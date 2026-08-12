@@ -545,11 +545,11 @@ export class AIDriver {
 export const AI_SKILL_PRESETS = {
   good: {
     stats: {
-      maxSpeed: 1.06,
+      maxSpeed: 1.00,
       acceleration: 1.08,
       grip: 1.06,
       turnSpeed: 1.05,
-      lateralBias: 0.9,
+      lateralBias: 0.8,
     },
     lookAheadDistance: 24,
     pace: 1.35,
@@ -562,11 +562,11 @@ export const AI_SKILL_PRESETS = {
   },
   ok: {
     stats: {
-      maxSpeed: 1.0,
+      maxSpeed: 0.95,
       acceleration: 1.0,
       grip: 1.0,
       turnSpeed: 1.0,
-      lateralBias: 1.0,
+      lateralBias: 0.9,
     },
     lookAheadDistance: 21,
     pace: 1.25,
@@ -579,11 +579,11 @@ export const AI_SKILL_PRESETS = {
   },
   bad: {
     stats: {
-      maxSpeed: 0.94,
+      maxSpeed: 0.90,
       acceleration: 0.92,
       grip: 0.95,
       turnSpeed: 0.97,
-      lateralBias: 1.15,
+      lateralBias: 0.95,
     },
     lookAheadDistance: 19,
     pace: 1.15,

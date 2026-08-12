@@ -89,7 +89,7 @@ export function removeTrackJson(key) {
 
 /**
  * A URL for a stored preview image, usable directly as an <img> src, or null
- * if this image isn't stored locally (callers fall back to public/tracks/).
+ * if this image isn't stored locally (callers fall back to the image bundled from src/tracks/).
  */
 export function getImageUrl(filename) {
   return imageUrls.get(filename) ?? null;

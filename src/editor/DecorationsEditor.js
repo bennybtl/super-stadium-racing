@@ -16,13 +16,13 @@ import { gizmoY } from './gizmo-height.js';
 const ASSUMED_TOP_Y = 1.5;
 
 /**
- * DecorationsEditor — editing for every decoration in /decorations/.
+ * DecorationsEditor — editing for every decoration in /src/decorations/.
  *
  * There are no per-type branches: a feature resolves to a definition, the
  * definition's optional controller supplies geometry / editable controls, and
  * everything else (select, move, rotate, duplicate, delete) is generic. Flags
  * and banner strings are just decorations whose controller builds procedural
- * geometry — see decorations/flag.js and decorations/bannerString.js.
+ * geometry — see src/decorations/flag.js and src/decorations/bannerString.js.
  */
 export class DecorationsEditor {
   constructor(editor) {

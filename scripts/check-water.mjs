@@ -347,7 +347,7 @@ check('footprint: unmodelled types report no reach', featureFootprint({ type: 'm
   // silently excluded.
   const missed = [];
   for (const file of ['king_of_the_hill', 'luck_o_the_irish', 'the_quarry']) {
-    const real = Track.fromJSON(readFileSync(join(root, 'public', 'tracks', `${file}.json`), 'utf8'));
+    const real = Track.fromJSON(readFileSync(join(root, 'src', 'tracks', `${file}.json`), 'utf8'));
     const realDepth = createWaterDepthSampler(real);
     let deep = 0, aboveOldGate = 0;
     const half = (real.width ?? 160) / 2;

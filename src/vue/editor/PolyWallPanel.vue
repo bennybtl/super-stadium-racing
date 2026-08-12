@@ -4,7 +4,7 @@
     title="Poly Wall"
     @close="editor.featureAction('closePolyWall')"
   >
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="text-[10px] text-slate-400 mb-3 max-w-48">
       Right-click terrain to add points. Select a point to edit it. Press <kbd>Esc</kbd> to close the panel.
     </div>
 
@@ -39,7 +39,7 @@
     />
     <div
       v-if="!editor.polyWall.canHaveRadius && editor.polyWall.hasSelection"
-      class="text-[10px] text-slate-400 mb-3"
+      class="text-[10px] text-slate-400 mb-3  max-w-48"
       style="color: #ff9800"
     >
       First and last points cannot be rounded (unless closed loop is enabled)
@@ -144,7 +144,7 @@
       "
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="text-[10px] text-slate-400 mb-3  max-w-48">
       Collision height defaults to the visual height unless adjusted separately.
     </div>
 

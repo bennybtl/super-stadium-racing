@@ -56,7 +56,7 @@
       />
       Alternative to previous (same step)
     </label>
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="text-[10px] text-slate-400 mb-3 max-w-48">
       Shares this step with the previous checkpoint — the driver passes either one to advance. Use for branching routes.
     </div>
 

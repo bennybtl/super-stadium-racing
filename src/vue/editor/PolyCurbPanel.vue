@@ -4,7 +4,7 @@
     title="Poly Curb"
     @close="editor.featureAction('closePolyCurb')"
   >
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="text-[10px] text-slate-400 mb-3 max-w-48">
       Right-click terrain to add points. Select a point to edit it. Press <kbd>Esc</kbd> to close the panel.
     </div>
 

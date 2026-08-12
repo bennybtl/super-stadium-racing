@@ -7,7 +7,7 @@
     <!-- Hint -->
     <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
 
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="text-[10px] text-slate-400 mb-3 max-w-48">
       Overrides the default grid behind the finish line. Pole sits on the marker, the rest fill
       back from it — keep it behind the finish line so the first lap still counts.
     </div>

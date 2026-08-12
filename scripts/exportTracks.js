@@ -12,9 +12,9 @@ const tracks = ['simple', 'crossroads', 'rollercoaster', 'hills', 'mudPit', 'ban
 for (const trackKey of tracks) {
   const track = EXAMPLE_TRACKS[trackKey]();
   const json = track.toJSON();
-  const filePath = join(__dirname, '..', 'tracks', `${trackKey}.json`);
+  const filePath = join(__dirname, '..', 'src', 'tracks', `${trackKey}.json`);
   writeFileSync(filePath, json, 'utf-8');
-  console.log(`Created tracks/${trackKey}.json`);
+  console.log(`Created src/tracks/${trackKey}.json`);
 }
 
 console.log('All tracks exported successfully!');

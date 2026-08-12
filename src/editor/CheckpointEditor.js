@@ -118,7 +118,13 @@ export class CheckpointEditor {
     feature.centerX = this.editor._snap(this.editor._rawDragPos.x);
     feature.centerZ = this.editor._snap(this.editor._rawDragPos.z);
 
-    const terrainHeight = this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ);
+    // Analytic height, never a ground raycast (see gizmo-height.js): the ground
+    // mesh's picking octree goes stale after a terrain edit, and a miss falls
+    // back to y = 0, so a gate dragged onto a hill kept the old/flat height and
+    // sank out of sight. It also has to match the source `reseatBarrels` uses —
+    // barrel Y is an offset from the centre height, so mixing the two buries the
+    // barrels by whatever the two sources disagree about.
+    const terrainHeight = this.editor.currentTrack.getHeightAt(feature.centerX, feature.centerZ);
     checkpoint.container.position.x = feature.centerX;
     checkpoint.container.position.z = feature.centerZ;
     checkpoint.container.position.y = terrainHeight;
@@ -215,9 +221,6 @@ export class CheckpointEditor {
     const center = this.editor.viewCenterXZ();
     const newX = center.x;
     const newZ = center.z;
-
-    // Get terrain height
-    const terrainHeight = this.editor.terrainQuery.heightAt(newX, newZ);
 
     // Find next checkpoint number
     const checkpointFeatures = currentTrack.features.filter(f => f.type === 'checkpoint');

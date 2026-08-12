@@ -4,12 +4,12 @@ import {
   Vector3,
   TransformNode,
 } from "@babylonjs/core";
-import { basicColors } from "../../src/constants.js";
+import { basicColors } from "../../constants.js";
 import {
   ModelDecoration,
   applyColliderMetadata,
   colliderEnabledFor,
-} from "../../src/objects/ModelDecoration.js";
+} from "../../objects/ModelDecoration.js";
 
 const DEFAULT_COLOR = "gray";
 const MIN_UNITS = 1;
