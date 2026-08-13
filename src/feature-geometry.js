@@ -15,21 +15,112 @@ import { expandPolyline, isPointInPolygon } from "./polyline-utils.js";
  * Babylon-free on purpose, so both consumers stay runnable outside a browser.
  */
 
+/**
+ * The height profile every feature uses to meet the terrain.
+ *
+ * `u` runs 0 (full feature height) → 1 (terrain), and the curve is smoothstep,
+ * `2u³ − 3u² + 1`, whose slope is zero at BOTH ends. That second half is the
+ * point: the quarter-cosine this replaced left a slope of −(π/2)·height at u=1,
+ * so every hill met flat ground in a crease ring. It was invisible while the
+ * ground mesh sampled every ~2.8 units and averaged it away, and became obvious
+ * the moment the lattice got fine enough to resolve it.
+ *
+ * `shape` warps u before the curve, moving WHERE the steep part of the drop
+ * sits rather than smoothing globally (for that, widen the band itself):
+ *   shape < 1  falls away early, long gentle toe — steeper up near the top
+ *   shape = 1  plain smoothstep
+ *   shape > 1  height holds, then falls late and steeply — mesa-like (sharper)
+ *
+ * The floor is 0.8, not 0.5. The slope at u=0 only vanishes for shape > 0.5, and
+ * approaches zero so slowly below 0.8 that the top of the band creases harder
+ * than the toe we set out to fix: measured |f'| near u=0 is 2.0–2.6 at shape
+ * 0.5–0.6 versus 1.571 for the quarter-cosine's toe. At 0.8 it stays under 1.0
+ * across the range a real lattice samples, so both ends beat the old curve.
+ *
+ * @param {number} u      0..1, normalized distance across the falloff band
+ * @param {number} shape  EDGE_SHAPE_MIN..MAX profile warp; 1 is neutral
+ * @returns {number} height multiplier, 1 at u=0 → 0 at u=1
+ */
+export function edgeFalloff(u, shape = 1) {
+  if (!(u > 0)) return 1;
+  if (u >= 1) return 0;
+  const s = clampEdgeShape(shape);
+  const v = s === 1 ? u : Math.pow(u, s);
+  return 1 + v * v * (2 * v - 3);
+}
+
+export const EDGE_SHAPE_MIN = 0.8;
+export const EDGE_SHAPE_MAX = 4;
+
+/**
+ * Default shape — deliberately not 1.
+ *
+ * Smoothstep is thinner through the middle of the band than the quarter-cosine
+ * it replaced (0.500 vs 0.707 at the midpoint), so defaulting to 1 would quietly
+ * shrink every hill on every existing track — most visibly as water pools, whose
+ * wetted area is where the bowl is deeper than the level: a 20-radius, 6-deep
+ * pool lost about a third of its radius. 1.75 is the least-squares match to the
+ * old curve (max deviation 0.085 rather than 0.207) with the toe slope still
+ * ~0.02 instead of 1.571, so tracks keep their shape and lose the crease.
+ */
+export const EDGE_SHAPE_DEFAULT = 1.75;
+
+/** Clamp a `shape` to the range where both ends of the profile stay clean. */
+export function clampEdgeShape(val) {
+  const s = Number(val);
+  if (!Number.isFinite(s)) return 1;
+  return Math.min(EDGE_SHAPE_MAX, Math.max(EDGE_SHAPE_MIN, s));
+}
+
+/** The `shape` knob for any feature that has a falloff band. */
+export function getEdgeShape(feature) {
+  return clampEdgeShape(feature?.edgeShape ?? EDGE_SHAPE_DEFAULT);
+}
+
 /** Ellipse radii and rotation of a hill, with radii clamped away from zero. */
 export function getHillEllipseParams(feature) {
   return {
     radiusX: Math.max(0.001, feature.radiusX ?? 10),
     radiusZ: Math.max(0.001, feature.radiusZ ?? 10),
     angleRad: ((feature.angle ?? 0) * Math.PI) / 180,
+    // Fraction of the radius that stays flat before the falloff starts, so a
+    // hill can be a mesa rather than only a dome. A fraction rather than a
+    // world-space band (squareHill's `transition`) because the band would be a
+    // different width along X than along Z on any non-circular ellipse; in the
+    // ellipse's own normalized radius it is exact in every direction.
+    flatTop: Math.min(0.95, Math.max(0, feature.flatTop ?? 0)),
   };
 }
 
-/** Flat top half-extents and falloff band of a squareHill. */
+/**
+ * Extents and falloff band of a squareHill.
+ *
+ * `width`/`depth` are the feature's FOOTPRINT — the falloff is inset, running
+ * from the flat top out to the rect edge, so changing `transition` reshapes the
+ * edge without resizing the hill. (It used to be added outside the rect, which
+ * made the smoothing slider grow the whole feature by 2·transition per axis;
+ * schema v3 migrates old tracks by folding that skirt into width/depth.)
+ *
+ * `band` is the transition clamped to what fits: a band wider than the half
+ * extent would leave the profile still above zero at the rect edge, i.e. a cliff
+ * exactly where this is meant to produce a soft join.
+ *
+ *   halfWidth/halfDepth      half the footprint
+ *   innerHalfWidth/Depth     the flat top, footprint minus the band
+ *   band                     falloff width actually used
+ */
 export function getSquareHillParams(feature) {
+  const halfWidth = feature.width / 2;
+  const halfDepth = (feature.depth ?? feature.width) / 2;
+  const transition = feature.transition ?? 4;
+  const band = Math.max(0, Math.min(transition, halfWidth, halfDepth));
   return {
-    halfWidth: feature.width / 2,
-    halfDepth: (feature.depth ?? feature.width) / 2,
-    transition: feature.transition ?? 4,
+    halfWidth,
+    halfDepth,
+    transition,
+    band,
+    innerHalfWidth: halfWidth - band,
+    innerHalfDepth: halfDepth - band,
     angleRad: ((feature.angle ?? 0) * Math.PI) / 180,
   };
 }
@@ -201,20 +292,27 @@ function footprintShape(feature) {
   }
 
   if (feature.type === 'squareHill') {
-    const { halfWidth: hw, halfDepth: hd, transition, angleRad } = getSquareHillParams(feature);
+    const { halfWidth: hw, halfDepth: hd, band, innerHalfWidth, innerHalfDepth, angleRad } =
+      getSquareHillParams(feature);
+    // The falloff band is inset, so the outline is exactly the rect.
     const outline = rectContour(
       feature.centerX, feature.centerZ,
-      feature.width + transition * 2, (feature.depth ?? feature.width) + transition * 2,
+      hw * 2, hd * 2,
       angleRad
     );
     return {
       outline,
       bounds: boundsOf(outline),
+      // Mirrors the height test in Track.getHeightAt — including the corners,
+      // where the band runs out diagonally before it reaches the rect corner and
+      // the hill contributes nothing. The outline is the bounding rect; this is
+      // the real support.
       contains: (x, z) => {
         const { lx, lz } = toFeatureLocal(feature, x, z);
-        const edgeDx = Math.max(0, Math.abs(lx) - hw);
-        const edgeDz = Math.max(0, Math.abs(lz) - hd);
-        return edgeDx * edgeDx + edgeDz * edgeDz < transition * transition;
+        if (band <= 0) return Math.abs(lx) < hw && Math.abs(lz) < hd;
+        const edgeDx = Math.max(0, Math.abs(lx) - innerHalfWidth);
+        const edgeDz = Math.max(0, Math.abs(lz) - innerHalfDepth);
+        return edgeDx * edgeDx + edgeDz * edgeDz < band * band;
       },
     };
   }

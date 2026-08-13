@@ -37,6 +37,8 @@ export const useEditorStore = defineStore('editor', () => {
     waterLevelOffset: 2,
     terrainType: 'none',
     blendWidth: 0,
+    edgeShape: 1.75,
+    flatTop: 0,
   });
 
   // ── Square hill panel ──
@@ -46,6 +48,7 @@ export const useEditorStore = defineStore('editor', () => {
     height: 3,
     waterLevelOffset: 1,
     transition: 4,
+    edgeShape: 1.75,
     angle: 0,
     slopeMode: false,
     heightAtMin: 0,
@@ -161,6 +164,7 @@ export const useEditorStore = defineStore('editor', () => {
     width: 5,
     terrainType: 'none',
     blendWidth: 0,
+    edgeShape: 1.75,
     closed: false,
     filled: false,
     waterLevelOffset: 2,

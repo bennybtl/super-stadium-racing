@@ -3,6 +3,7 @@ import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
 import { gizmoY } from './gizmo-height.js';
+import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../feature-geometry.js';
 
 /**
  * HillEditor – encapsulates all round-hill editing logic that was previously
@@ -270,6 +271,8 @@ export class HillEditor {
     s.hill.waterLevelOffset = feature.waterLevelOffset ?? 2;
     s.hill.terrainType = feature.terrainType?.name || 'none';
     s.hill.blendWidth = feature.blendWidth ?? 0;
+    s.hill.edgeShape = feature.edgeShape ?? EDGE_SHAPE_DEFAULT;
+    s.hill.flatTop = feature.flatTop ?? 0;
     s.selectedType = 'hill';
   }
 
@@ -370,6 +373,22 @@ export class HillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.blendWidth = Math.max(0, val);
+    this.rebuildTerrain();
+  }
+
+  /** Falloff profile: <1 gentler toe, 1 neutral, >1 mesa-like. */
+  changeEdgeShape(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.edgeShape = clampEdgeShape(val);
+    this.rebuildTerrain();
+  }
+
+  /** Fraction of the radius held flat before the falloff starts. */
+  changeFlatTop(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.flatTop = Math.min(0.95, Math.max(0, val));
     this.rebuildTerrain();
   }
 

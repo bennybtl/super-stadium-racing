@@ -6,16 +6,37 @@ import {
   getPolyHillHalfWidth,
   toFeatureLocal as getHillLocalCoords,
   rotateToLocal,
+  edgeFalloff,
+  getEdgeShape,
 } from "./feature-geometry.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
 import { DEFAULT_BORDER_WALL } from "./objects/BorderWall.js";
 
-const TRACK_SCHEMA_VERSION = 2;
+const TRACK_SCHEMA_VERSION = 3;
 
 // How far the ground extends past the editable area on each side. Height fades to
 // flat across exactly this strip (see HEIGHT_BLEND_OUTER in getHeightAt), so the
 // two are the same number by definition, not by coincidence.
 const GROUND_BORDER = 10;
+
+// Ground lattice density. GROUND_CELL_TARGET is the world-space spacing between
+// terrain vertices, and it is the hard floor on terrain detail: the mesh samples
+// the analytic height field at these points and nothing narrower survives. A
+// feature under ~2 cells wide aliases into pyramids (one lone displaced vertex
+// renders as a cell-sized pyramid whose height depends on where the vertex
+// happened to land inside it); ~4 cells reads as smooth. So the smallest hill
+// that can look like a hill is roughly 2x this, and a good one 4x.
+//
+// Costs scale with the vertex count, i.e. quadratically as this shrinks. Halving
+// it quadruples: editor rebuild time, the Havok collision mesh, and the water
+// field lattice (water-field.js derives its own grid from this). Measured on a
+// 180x180 ground, a full terrain rebuild is ~5ms at cell 2.81 and ~38ms at cell
+// 1.0; per-tick drag cost stays far smaller because the editor only re-samples
+// the edited feature's bounds.
+const GROUND_CELL_TARGET = 1.0;
+// Guard rail for very large tracks — past this the vertex count wins regardless
+// of the target, and cells simply get coarser.
+const GROUND_SUBDIVISIONS_MAX = 256;
 
 // Point-list feature types that are meaningless with zero points. Loaded tracks
 // strip any of these that carry an empty `points` array (see Track.fromJSON).
@@ -143,7 +164,10 @@ export class Track {
   getGroundLattice() {
     const width = (this.width ?? 160) + GROUND_BORDER * 2;
     const depth = (this.depth ?? 160) + GROUND_BORDER * 2;
-    const subdivisions = Math.max(32, Math.min(64, Math.floor(Math.max(width, depth) / 2)));
+    const subdivisions = Math.max(32, Math.min(
+      GROUND_SUBDIVISIONS_MAX,
+      Math.round(Math.max(width, depth) / GROUND_CELL_TARGET),
+    ));
     return { width, depth, subdivisions };
   }
 
@@ -189,7 +213,7 @@ export class Track {
       if (skip !== null && skip(feature)) continue;
       switch (feature.type) {
         case "hill": {
-          const { radiusX, radiusZ } = getHillEllipseParams(feature);
+          const { radiusX, radiusZ, flatTop } = getHillEllipseParams(feature);
           // AABB early-out: the ellipse fits inside a circle of radius max(rX,rZ).
           const dhx = x - feature.centerX;
           const dhz = z - feature.centerZ;
@@ -199,26 +223,37 @@ export class Track {
           const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
           if (t2 < 1) {
             const t = Math.sqrt(t2);
-            totalHeight += feature.height * Math.cos(t * Math.PI / 2);
+            // Falloff spans the radius outside the flat top; flatTop = 0 (the
+            // default) makes that the whole radius, i.e. a plain dome.
+            const u = Math.max(0, (t - flatTop) / (1 - flatTop));
+            totalHeight += feature.height * edgeFalloff(u, getEdgeShape(feature));
           }
           break;
         }
 
         case "squareHill": {
-          const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
+          const { halfWidth: hw, halfDepth: hd, band, innerHalfWidth, innerHalfDepth } =
+            getSquareHillParams(feature);
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
-          // AABB early-out: contribution reaches at most `transition` beyond the
-          // rect; the rotation-invariant circumscribed circle bounds that region.
-          const shBoundX = hw + transition;
-          const shBoundZ = hd + transition;
-          if (wx * wx + wz * wz > shBoundX * shBoundX + shBoundZ * shBoundZ) break;
+          // AABB early-out: the feature stops at the rect (the band is inset), so
+          // the rotation-invariant circumscribed circle bounds it.
+          if (wx * wx + wz * wz > hw * hw + hd * hd) break;
           const { lx, lz } = getHillLocalCoords(feature, x, z);
-          const edgeDx = Math.max(0, Math.abs(lx) - hw);
-          const edgeDz = Math.max(0, Math.abs(lz) - hd);
+          // Distance out from the flat top; the band runs from there to the rect
+          // edge, so a point past the rect is already beyond the band.
+          const edgeDx = Math.max(0, Math.abs(lx) - innerHalfWidth);
+          const edgeDz = Math.max(0, Math.abs(lz) - innerHalfDepth);
           const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
-          if (dist >= transition) break;
-          const falloff = dist === 0 ? 1 : Math.cos((dist / transition) * Math.PI / 2);
+          let falloff;
+          if (band <= 0) {
+            // No band to fall off across — a bare slab that ends at its edge.
+            if (Math.abs(lx) > hw || Math.abs(lz) > hd) break;
+            falloff = 1;
+          } else {
+            if (dist >= band) break;
+            falloff = edgeFalloff(dist / band, getEdgeShape(feature));
+          }
           if (feature.heightAtMin !== undefined) {
             // Slope runs along local X (the rotated width axis)
             const t = (Math.max(-hw, Math.min(hw, lx)) + hw) / feature.width;
@@ -270,7 +305,7 @@ export class Track {
               if (dist > 0) break;            // hard bounds — nothing outside
             } else {
               if (dist >= falloff) break;     // beyond the blend band
-              weight = dist === 0 ? 1 : Math.cos((dist / falloff) * Math.PI / 2);
+              weight = edgeFalloff(dist / falloff, getEdgeShape(feature));
             }
           }
 
@@ -399,16 +434,14 @@ export class Track {
               // Falloff zone outside polygon boundary
               const minDist = distToPolyline(x, z, expandedPoints, true);
               if (minDist < halfWidth) {
-                const falloff = 1 - (minDist / halfWidth);
-                totalHeight += height * falloff;
+                totalHeight += height * edgeFalloff(minDist / halfWidth, getEdgeShape(feature));
               }
             }
           } else {
             // Original behavior: distance-based falloff from centerline
             const minDist = distToPolyline(x, z, expandedPoints, closed);
             if (minDist < halfWidth) {
-              const linearFalloff = 1 - (minDist / halfWidth);
-              totalHeight += height * linearFalloff;
+              totalHeight += height * edgeFalloff(minDist / halfWidth, getEdgeShape(feature));
             }
           }
           break;
@@ -535,26 +568,29 @@ export class Track {
         }
 
         case "squareHill": {
-          const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
+          const { halfWidth: hw, halfDepth: hd } = getSquareHillParams(feature);
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
-          // AABB early-out: dithered band reaches transition + blendWidth past
-          // the rect; bound its rotation-invariant circumscribed circle.
-          const shBoundX = hw + transition + blendWidth;
-          const shBoundZ = hd + transition + blendWidth;
+          // AABB early-out: the dithered band reaches blendWidth past the rect
+          // (the height falloff is inset and adds nothing); bound its
+          // rotation-invariant circumscribed circle.
+          const shBoundX = hw + blendWidth;
+          const shBoundZ = hd + blendWidth;
           if (wx * wx + wz * wz > shBoundX * shBoundX + shBoundZ * shBoundZ) break;
           const { lx, lz } = getHillLocalCoords(feature, x, z);
-          const edgeDx = Math.max(0, Math.abs(lx) - hw);
-          const edgeDz = Math.max(0, Math.abs(lz) - hd);
-          const dist = Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
+          const outDx = Math.max(0, Math.abs(lx) - hw);
+          const outDz = Math.max(0, Math.abs(lz) - hd);
+          const outside = Math.sqrt(outDx * outDx + outDz * outDz);
           if (blendWidth <= 0) {
-            if (dist < transition) return feature.terrainType;
+            if (outside === 0) return feature.terrainType;
             break;
           }
-          // The terrain region reaches the outer rim of the height transition
-          // zone; dither across the blend band straddling that boundary.
-          const signedDistToEdge = transition - dist;
+          // The terrain region fills the footprint, so the dither straddles the
+          // rect edge: positive inside, negative out.
+          const signedDistToEdge = outside > 0
+            ? -outside
+            : Math.min(hw - Math.abs(lx), hd - Math.abs(lz));
           if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
             return feature.terrainType;
           }
@@ -692,9 +728,11 @@ export class Track {
         };
       }
       case "squareHill": {
-        const { halfWidth: hw, halfDepth: hd, transition } = getSquareHillParams(feature);
-        // Rotation-invariant circumscribed circle of the rect + transition band.
-        const r = Math.sqrt((hw + transition) ** 2 + (hd + transition) ** 2);
+        const { halfWidth: hw, halfDepth: hd } = getSquareHillParams(feature);
+        // Rotation-invariant circumscribed circle of the rect. The falloff band
+        // is inset, so the rect is the whole reach; blendWidth only tints
+        // terrain type and never moves height.
+        const r = Math.sqrt(hw ** 2 + hd ** 2);
         return {
           minX: feature.centerX - r, maxX: feature.centerX + r,
           minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
@@ -807,8 +845,22 @@ export class Track {
       track.wear = { ...data.wear };
     }
 
+    // v3: squareHill's transition band moved from outside the rect to inside it,
+    // so `width`/`depth` now mean the whole footprint instead of just the flat
+    // top. Folding the old skirt into the size reproduces the previous shape
+    // exactly — same footprint, same flat top, same band — so tracks authored
+    // before the change render identically.
+    const foldSquareHillSkirt = track.schemaVersion < 3;
+
     track.features = (data.features || []).map(feature => {
       const loaded = { ...feature };
+
+      if (foldSquareHillSkirt && loaded.type === 'squareHill') {
+        const t = loaded.transition ?? 4;
+        const priorWidth = loaded.width;
+        loaded.width = priorWidth + t * 2;
+        loaded.depth = (loaded.depth ?? priorWidth) + t * 2;
+      }
 
       // Migrate legacy terrainRect / terrainCircle to unified terrain+shape format
       if (loaded.type === 'terrainRect') {
@@ -848,6 +900,10 @@ export class Track {
     track.features = track.features.filter(f =>
       !(EMPTY_STRIP_TYPES.has(f.type) && Array.isArray(f.points) && f.points.length === 0)
     );
+
+    // Migrations above have brought the in-memory track up to date, so the next
+    // save records the current schema rather than re-running them on reload.
+    track.schemaVersion = TRACK_SCHEMA_VERSION;
 
     return track;
   }

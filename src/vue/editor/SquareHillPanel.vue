@@ -100,6 +100,19 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Edge: falloff profile across the smoothing band — low = gentle toe,
+         high = holds height then drops late (mesa) -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Edge</span>
+      <span>{{ editor.squareHill.edgeShape.toFixed(2) }}</span>
+    </div>
+    <input
+      type="range" min="0.8" max="4" step="0.05"
+      :value="editor.squareHill.edgeShape"
+      @input="editor.setFeatureProp('squareHill', 'edgeShape', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <TerrainTypeSelect
       :model-value="editor.squareHill.terrainType"
       @update:modelValue="v => editor.setFeatureProp('squareHill', 'terrainType', v)"

@@ -1655,6 +1655,8 @@ export class EditorController {
   changeHillWaterLevelOffset(val) { this.hillEditor.changeWaterLevelOffset(val); }
   changeHillTerrainType(name) { this.hillEditor.changeTerrainType(name); }
   changeHillBlendWidth(val) { this.hillEditor.changeBlendWidth(val); }
+  changeHillEdgeShape(val) { this.hillEditor.changeEdgeShape(val); }
+  changeHillFlatTop(val) { this.hillEditor.changeFlatTop(val); }
 
   changeTrackDefaultTerrain(name) {
     const key = Object.keys(TERRAIN_TYPES).find(k => TERRAIN_TYPES[k].name === name);
@@ -1835,6 +1837,7 @@ export class EditorController {
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }
   changeSquareHillDepth(val)        { this.squareHillEditor.changeDepth(val); }
   changeSquareHillTransition(val)   { this.squareHillEditor.changeTransition(val); }
+  changeSquareHillEdgeShape(val)    { this.squareHillEditor.changeEdgeShape(val); }
   changeSquareHillAngle(val)        { this.squareHillEditor.changeAngle(val); }
   changeSquareHillHeight(val)       { this.squareHillEditor.changeHeight(val); }
   changeSquareHillWaterLevelOffset(val) { this.squareHillEditor.changeWaterLevelOffset(val); }
@@ -1939,6 +1942,7 @@ export class EditorController {
   changePolyHillWidth(val)      { this.polyHillEditor.setWidth(val); }
   changePolyHillTerrainType(val){ this.polyHillEditor.setTerrainType(val); }
   changePolyHillBlendWidth(val) { this.polyHillEditor.setBlendWidth(val); }
+  changePolyHillEdgeShape(val)  { this.polyHillEditor.setEdgeShape(val); }
   changePolyHillWaterLevelOffset(val) { this.polyHillEditor.setWaterLevelOffset(val); }
   changePolyHillClosed(val)     { this.polyHillEditor.setClosed(val); }
   changePolyHillFilled(val)     { this.polyHillEditor.setFilled(val); }

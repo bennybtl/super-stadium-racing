@@ -121,7 +121,7 @@ console.log(`dirty region: ${region ? `${(region.maxX - region.minX).toFixed(1)}
 console.log(`${ITERS} timed iterations after ${WARMUP} warmup\n`);
 
 const header = ['sub', 'verts', 'tris', 'cell', 'get', 'loop', 'set', 'normals', 'TICK', 'full', 'load'];
-const rows = [64, 128].map(bench).map(r => [
+const rows = [64, 180, 220, 256].map(bench).map(r => [
   String(r.subdivisions),
   String(r.vertexCount),
   String(r.triCount),

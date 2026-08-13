@@ -54,6 +54,30 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Flat Top: fraction of the radius held flat before the slope starts -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Flat Top</span>
+      <span>{{ (editor.hill.flatTop * 100).toFixed(0) }}%</span>
+    </div>
+    <input
+      type="range" min="0" max="0.95" step="0.05"
+      :value="editor.hill.flatTop"
+      @input="editor.setFeatureProp('hill', 'flatTop', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
+    <!-- Edge: falloff profile — low = gentle toe, high = mesa-like -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Edge</span>
+      <span>{{ editor.hill.edgeShape.toFixed(2) }}</span>
+    </div>
+    <input
+      type="range" min="0.8" max="4" step="0.05"
+      :value="editor.hill.edgeShape"
+      @input="editor.setFeatureProp('hill', 'edgeShape', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
       <!-- Terrain Type -->
     <TerrainTypeSelect
       :model-value="editor.hill.terrainType"

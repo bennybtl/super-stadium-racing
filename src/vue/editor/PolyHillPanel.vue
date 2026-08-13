@@ -74,6 +74,18 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Edge: falloff profile — low = gentle toe, high = mesa-like -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Edge</span>
+      <span>{{ editor.polyHill.edgeShape.toFixed(2) }}</span>
+    </div>
+    <input
+      type="range" min="0.8" max="4" step="0.05"
+      :value="editor.polyHill.edgeShape"
+      @input="editor.setFeatureProp('polyHill', 'edgeShape', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <!-- Closed toggle -->
     <div class="flex justify-between mb-3 text-[12px]">
       <span>Closed Loop</span>

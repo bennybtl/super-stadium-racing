@@ -3,6 +3,7 @@ import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
 import { gizmoY } from './gizmo-height.js';
+import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../feature-geometry.js';
 
 /**
  * SquareHillEditor – encapsulates all square-hill editing logic that was
@@ -75,7 +76,6 @@ export class SquareHillEditor {
   createVisual(feature) {
     const scene = this.editor.scene;
     const track = this.editor.currentTrack;
-    const transition = feature.transition ?? 8;
     const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ)
       ?? this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ)
       ?? 0;
@@ -85,7 +85,8 @@ export class SquareHillEditor {
 
     const node = new TransformNode('squareHillNode', scene);
     node.position = new Vector3(feature.centerX, terrainH + absH / 2, feature.centerZ);
-    node.scaling  = new Vector3(feature.width + transition * 2, absH, (feature.depth ?? feature.width) + transition * 2);
+    // The falloff band is inset, so the box IS the footprint.
+    node.scaling  = new Vector3(feature.width, absH, feature.depth ?? feature.width);
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
 
     // Grey sphere: the always-visible click target. Float it above the whole
@@ -108,7 +109,6 @@ export class SquareHillEditor {
   updateVisual(hillData) {
     const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
-    const transition = feature.transition ?? 8;
     // Mirror createVisual: use the deterministic track.getHeightAt rather than a
     // ground-mesh raycast, which runs before the terrain rebuild and falls back
     // to 0 on a miss — that buried the sphere and made the gizmo vanish on edit.
@@ -121,9 +121,9 @@ export class SquareHillEditor {
     node.position.x = feature.centerX;
     node.position.z = feature.centerZ;
     node.position.y = terrainH + absH / 2;
-    node.scaling.x  = feature.width + transition * 2;
+    node.scaling.x  = feature.width;
     node.scaling.y  = absH;
-    node.scaling.z  = (feature.depth ?? feature.width) + transition * 2;
+    node.scaling.z  = feature.depth ?? feature.width;
     node.rotation.y = -(feature.angle ?? 0) * Math.PI / 180;
     if (sphere) {
       sphere.position.x = feature.centerX;
@@ -167,8 +167,10 @@ export class SquareHillEditor {
       type: 'squareHill',
       centerX: newX,
       centerZ: newZ,
-      width: 10,
-      depth: 10,
+      // Footprint, band included — a 10x10 flat top inside a 4-wide falloff,
+      // which is the shape this default produced before the band moved inside.
+      width: 18,
+      depth: 18,
       angle: 0,
       height: 3,
       waterLevelOffset: 1,
@@ -301,6 +303,7 @@ export class SquareHillEditor {
     s.squareHill.width       = feature.width;
     s.squareHill.depth       = feature.depth ?? feature.width;
     s.squareHill.transition  = feature.transition ?? 8;
+    s.squareHill.edgeShape   = feature.edgeShape ?? EDGE_SHAPE_DEFAULT;
     s.squareHill.angle       = feature.angle ?? 0;
     s.squareHill.waterLevelOffset = feature.waterLevelOffset ?? 1;
     s.squareHill.slopeMode   = sloped;
@@ -366,6 +369,18 @@ export class SquareHillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.transition = val;
+    this.rebuildTerrain();
+  }
+
+  /**
+   * Falloff profile across the transition band: <1 gentler toe, 1 neutral,
+   * >1 holds height then drops late (mesa). Independent of `transition`, which
+   * sets how wide the band is rather than the curve across it.
+   */
+  changeEdgeShape(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.edgeShape = clampEdgeShape(val);
     this.rebuildTerrain();
   }
 
