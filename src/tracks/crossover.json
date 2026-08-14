@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "crossover",
   "packId": "offroad_pack_3",
   "hidden": false,
@@ -41,9 +41,9 @@
           "radius": 10
         },
         {
-          "x": -47.092579998537886,
-          "z": -54.524524227116416,
-          "radius": 16
+          "x": -46.092579998537886,
+          "z": -55.024524227116416,
+          "radius": 21
         },
         {
           "x": -35.1027355419972,
@@ -66,12 +66,13 @@
           "radius": 10
         }
       ],
-      "height": 5,
+      "height": 4,
       "width": 16.5,
       "terrainType": "loose_dirt",
       "closed": false,
       "filled": false,
-      "blendWidth": 4
+      "blendWidth": 4,
+      "edgeShape": 0.8
     },
     {
       "type": "polyHill",
@@ -97,12 +98,13 @@
           "radius": 10
         }
       ],
-      "height": 5,
+      "height": 4,
       "width": 18,
       "terrainType": "loose_dirt",
       "closed": false,
       "filled": false,
-      "blendWidth": 3
+      "blendWidth": 3,
+      "edgeShape": 0.8
     },
     {
       "type": "polyWall",
@@ -189,10 +191,11 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 6,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": true
+      "closed": true,
+      "fence": true
     },
     {
       "type": "polyWall",
@@ -252,14 +255,15 @@
       "collisionHeight": 6,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": true
+      "closed": true,
+      "fence": true
     },
     {
       "type": "squareHill",
-      "centerX": 26.972270730490926,
+      "centerX": 26.472270730490926,
       "centerZ": -34.5320500671151,
-      "width": 20.5,
-      "depth": 0.5,
+      "width": 24.5,
+      "depth": 4.5,
       "angle": 54,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -268,10 +272,10 @@
     },
     {
       "type": "squareHill",
-      "centerX": 34.972270730490926,
+      "centerX": 30.972270730490926,
       "centerZ": -36.5320500671151,
-      "width": 20.5,
-      "depth": 0.5,
+      "width": 24.5,
+      "depth": 4.5,
       "angle": 54,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -280,10 +284,10 @@
     },
     {
       "type": "squareHill",
-      "centerX": 42.472270730490926,
-      "centerZ": -39.5320500671151,
-      "width": 20.5,
-      "depth": 0.5,
+      "centerX": 44.472270730490926,
+      "centerZ": -41.5320500671151,
+      "width": 24.5,
+      "depth": 4.5,
       "angle": 54,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -294,8 +298,8 @@
       "type": "squareHill",
       "centerX": 48.972270730490926,
       "centerZ": -43.5320500671151,
-      "width": 20.5,
-      "depth": 0.5,
+      "width": 24.5,
+      "depth": 4.5,
       "angle": 54,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -306,8 +310,8 @@
       "type": "squareHill",
       "centerX": 60.406051043576824,
       "centerZ": 20.772691366012026,
-      "width": 10,
-      "depth": 10,
+      "width": 18,
+      "depth": 18,
       "angle": 87,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -319,8 +323,8 @@
       "type": "squareHill",
       "centerX": 72.18897802652052,
       "centerZ": 35.562295122590676,
-      "width": 8.5,
-      "depth": 10,
+      "width": 16.5,
+      "depth": 18,
       "angle": 87,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -412,10 +416,11 @@
       "radiusX": 5.5,
       "radiusZ": 6.5,
       "angle": 0,
-      "height": 5,
-      "waterLevelOffset": 2,
+      "height": 4,
+      "waterLevelOffset": 0,
       "terrainType": "loose_dirt",
-      "blendWidth": 4
+      "blendWidth": 4,
+      "flatTop": 0
     },
     {
       "type": "hill",
@@ -581,7 +586,7 @@
       "x": 11.561151128169858,
       "z": -54.16111618168528,
       "name": "Cross Over",
-      "rotation": 0,
+      "rotation": 0.06981317007977318,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "background": "black",
@@ -631,8 +636,8 @@
     },
     {
       "type": "flag",
-      "x": -11.034874365908255,
-      "z": -53.80977025606271,
+      "x": -12.534874365908255,
+      "z": -54.30977025606271,
       "color": "red"
     },
     {
@@ -848,22 +853,23 @@
     },
     {
       "type": "hill",
-      "centerX": 61.292082515450026,
-      "centerZ": -67.41424182593146,
+      "centerX": 62.292082515450026,
+      "centerZ": -68.91424182593146,
       "radiusX": 9.5,
       "radiusZ": 9.5,
       "angle": 0,
       "height": -3.5,
       "waterLevelOffset": 0,
       "terrainType": null,
-      "blendWidth": 4
+      "blendWidth": 4,
+      "edgeShape": 0.8
     },
     {
       "type": "squareHill",
       "centerX": -65,
       "centerZ": -2.0006523340835827,
-      "width": 10,
-      "depth": 10,
+      "width": 29,
+      "depth": 29,
       "angle": 0,
       "height": -2,
       "waterLevelOffset": 1,
@@ -950,20 +956,6 @@
       "spread": 80,
       "intensity": 15,
       "color": "warm"
-    },
-    {
-      "type": "actionZone",
-      "zoneType": "fireworks",
-      "shape": "circle",
-      "x": -10,
-      "z": -21.00002025578458,
-      "radius": 15,
-      "fireworkCount": 5,
-      "fireworkHeight": 25,
-      "fireworkMode": "shell",
-      "fireworkDuration": 2,
-      "fireworkColor": "orange",
-      "heading": 0
     }
   ]
 }
