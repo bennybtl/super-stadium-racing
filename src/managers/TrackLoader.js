@@ -150,6 +150,16 @@ export class TrackLoader {
    */
   saveTrackToStorage(key, track) {
     setTrackJson(key, track.toJSON());
+    // Register the key in-memory too. Storage alone isn't enough: the menu
+    // carousel is built from `trackList`, which is otherwise only populated at
+    // boot (loadStorageTracks), so a track saved under a key this session —
+    // a brand-new track, or one whose id was just renamed — stayed invisible
+    // until a reload.
+    this.tracks.set(key, track);
+    if (!this.trackList.includes(key)) {
+      this.trackList.push(key);
+      this.trackList.sort((a, b) => a.localeCompare(b));
+    }
   }
 
   /**

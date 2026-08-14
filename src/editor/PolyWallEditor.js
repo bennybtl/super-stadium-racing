@@ -3,6 +3,7 @@ import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
 import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
+import { DEFAULT_CORNER_RADIUS } from '../polyline-utils.js';
 
 /**
  * Editor – place and edit polyWall features in the track editor.
@@ -113,7 +114,7 @@ export class PolyWallEditor {
     wg.feature.points.push({
       x: parseFloat(x.toFixed(2)),
       z: parseFloat(z.toFixed(2)),
-      radius: 0,
+      radius: DEFAULT_CORNER_RADIUS,
     });
     this._refreshWallGizmos(wg);
     this.selectPoint(wg, wg.feature.points.length - 1);
@@ -371,7 +372,7 @@ export class PolyWallEditor {
     const newPt = {
       x: (p1.x + p2.x) / 2,
       z: (p1.z + p2.z) / 2,
-      radius: 5,
+      radius: DEFAULT_CORNER_RADIUS,
     };
     this.ec.saveSnapshot();
     pts.splice(idx + 1, 0, newPt);

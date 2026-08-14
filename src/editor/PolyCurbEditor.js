@@ -3,6 +3,7 @@ import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_CURB } from './EditorMaterials.js';
 import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
+import { DEFAULT_CORNER_RADIUS } from '../polyline-utils.js';
 
 /**
  * PolyCurbEditor — place and edit polyCurb features in the track editor.
@@ -95,7 +96,7 @@ export class PolyCurbEditor {
     cg.feature.points.push({
       x: parseFloat(x.toFixed(2)),
       z: parseFloat(z.toFixed(2)),
-      radius: 0,
+      radius: DEFAULT_CORNER_RADIUS,
     });
     this._refreshGizmos(cg);
     this.selectPoint(cg, cg.feature.points.length - 1);
@@ -312,7 +313,7 @@ export class PolyCurbEditor {
     const pts = cg.feature.points;
     const p1  = pts[idx];
     const p2  = pts[Math.min(idx + 1, pts.length - 1)];
-    const newPt = { x: (p1.x + p2.x) / 2, z: (p1.z + p2.z) / 2, radius: 0 };
+    const newPt = { x: (p1.x + p2.x) / 2, z: (p1.z + p2.z) / 2, radius: DEFAULT_CORNER_RADIUS };
     this.ec.saveSnapshot();
     pts.splice(idx + 1, 0, newPt);
     this._refreshGizmos(cg);

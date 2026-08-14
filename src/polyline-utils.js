@@ -1,4 +1,15 @@
 /**
+ * Corner radius a newly placed control point starts with, shared by every
+ * polyline feature editor (poly wall / curb / hill) so they agree.
+ *
+ * Rounded is the common case — a hard corner is the exception you dial in — and
+ * this is only a starting value: expandPolyline clamps each corner to 45% of its
+ * shorter neighbouring segment, so it degrades to the tightest round that fits
+ * rather than distorting short segments.
+ */
+export const DEFAULT_CORNER_RADIUS = 10;
+
+/**
  * Expand a polyline by rounding corners at each interior point.
  *
  * Each point may carry an optional `radius` property. If a uniform radius is

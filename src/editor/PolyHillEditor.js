@@ -4,6 +4,7 @@ import { EditorMaterials, LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../terrain.js";
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../feature-geometry.js';
+import { DEFAULT_CORNER_RADIUS } from '../polyline-utils.js';
 
 /**
  * PolyHillEditor – place and edit polyHill features in the track editor.
@@ -79,10 +80,10 @@ export class PolyHillEditor {
     const feature = {
       type: 'polyHill',
       points: [
-        { x: cx - 10, z: cz - 10, radius: 10 },
-        { x: cx + 10, z: cz - 10, radius: 10 },
-        { x: cx + 10, z: cz + 10, radius: 10 },
-        { x: cx - 10, z: cz + 10, radius: 10 },
+        { x: cx - 10, z: cz - 10, radius: DEFAULT_CORNER_RADIUS },
+        { x: cx + 10, z: cz - 10, radius: DEFAULT_CORNER_RADIUS },
+        { x: cx + 10, z: cz + 10, radius: DEFAULT_CORNER_RADIUS },
+        { x: cx - 10, z: cz + 10, radius: DEFAULT_CORNER_RADIUS },
       ],
       height: 3,
       width: 5,
@@ -356,7 +357,7 @@ export class PolyHillEditor {
     const newPt = {
       x: (p1.x + p2.x) / 2,
       z: (p1.z + p2.z) / 2,
-      radius: 10,
+      radius: DEFAULT_CORNER_RADIUS,
     };
     pts.splice(idx + 1, 0, newPt);
     this._refreshHillGizmos(hg);

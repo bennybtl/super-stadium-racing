@@ -506,6 +506,11 @@ export class EditorController {
     return null;
   }
 
+  /** True when the properties panel for `type` is the one currently showing. */
+  _panelOpenFor(type) {
+    return this._editorStore?.selectedType === type;
+  }
+
   _getSelectedFeatureActions() {
     const featureActions = [
       { selected: () => this.checkpointEditor.selected, duplicate: () => this.checkpointEditor.duplicateSelected(), delete: () => this.checkpointEditor.deleteSelected() },
@@ -521,8 +526,15 @@ export class EditorController {
       { selected: () => this.actionZoneEditor.selected, duplicate: () => this.actionZoneEditor.duplicateSelected(), delete: () => this.actionZoneEditor.deleteSelected() },
       { selected: () => this.aiPathEditor?.selected, delete: () => this.aiPathEditor?.deleteSelected?.() },
       { selected: () => this.terrainPathEditor?.selected, delete: () => this.terrainPathEditor?.deleteSelected?.() },
-      { selected: () => this.meshGridEditor?.activeFeature, delete: () => this.meshGridEditor?.deleteMeshGrid?.() },
-      { selected: () => this.bridgeMeshEditor?.activeFeature, delete: () => this.bridgeMeshEditor?.deleteBridgeMesh?.() },
+      // meshGrid / bridgeMesh gate on their panel being open, not on
+      // `activeFeature`. That field means "which one subsequent edits apply to"
+      // and MeshGridEditor.activate() points it at the track's first mesh grid
+      // the moment the editor opens — so keying Delete off it armed the key to
+      // wipe the whole terrain mesh with nothing selected and no panel showing.
+      { selected: () => this._panelOpenFor('meshGrid') && this.meshGridEditor?.activeFeature,
+        delete: () => this.meshGridEditor?.deleteMeshGrid?.() },
+      { selected: () => this._panelOpenFor('bridgeMesh') && this.bridgeMeshEditor?.activeFeature,
+        delete: () => this.bridgeMeshEditor?.deleteBridgeMesh?.() },
       { selected: () => this.polyWallEditor?.selectedPoint, delete: () => this.polyWallEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyHillEditor?.selectedPoint, delete: () => this.polyHillEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyCurbEditor?.selectedPoint, delete: () => this.polyCurbEditor?.deletePolyCurbPoint?.() },
@@ -2373,7 +2385,12 @@ export class EditorController {
       await storeTrackImage(filename, dataUrl);
       this.currentTrack.image = filename;
 
-      const key = this.currentTrack.id;
+      // The key the track is actually filed under, which is only the same as
+      // `currentTrack.id` once a save has moved it there — patching by id after
+      // a rename would file a stray copy under the new id and leave the real
+      // entry untouched.
+      const openKey = this.menuManager?.selectedTrack;
+      const key = (openKey && openKey !== 'new') ? openKey : this.currentTrack.id;
       if (!persistTrack || !key) return;
       const stored = getTrackJson(key);
       if (stored) {

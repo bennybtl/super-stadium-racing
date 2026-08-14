@@ -291,9 +291,33 @@ export class EditorMode extends BaseMode {
 
     menuManager.onEditorSave = async () => {
       if (rebuild.currentTrack) {
-        const saveKey = (menuManager.selectedTrack && menuManager.selectedTrack !== 'new')
+        const openKey = (menuManager.selectedTrack && menuManager.selectedTrack !== 'new')
           ? menuManager.selectedTrack
-          : rebuild.currentTrack.id || 'custom';
+          : null;
+        const desiredKey = rebuild.currentTrack.id || 'custom';
+
+        // The id in Track Settings IS the storage key, so a rename has to move
+        // the entry. Without this a track keeps whatever key it was born with —
+        // a new one is created as `New Track <stamp>`, so it stayed filed under
+        // `new_track_<stamp>` forever no matter what the panel said.
+        //
+        // Built-in keys are exempt: their stored copy is an override of a
+        // shipped track and has to stay under the shipped key to be found. And
+        // an id already in use is never overwritten — the save falls back to the
+        // existing key rather than clobbering another track.
+        let saveKey = openKey ?? desiredKey;
+        let renamedFrom = null;
+        if (openKey && desiredKey !== openKey && !trackLoader.builtinKeys.has(openKey)) {
+          if (trackLoader.builtinKeys.has(desiredKey) || trackLoader.hasStoredTrack(desiredKey)) {
+            console.warn(
+              `[Editor] Not renaming "${openKey}" to "${desiredKey}" — that id is already taken. ` +
+              `Saved under "${openKey}".`
+            );
+          } else {
+            saveKey = desiredKey;
+            renamedFrom = openKey;
+          }
+        }
         // A track with no preview image yet gets one captured on its first
         // save, so it shows up in the selection carousel without the author
         // having to remember the screenshot button. No download here — that
@@ -303,6 +327,12 @@ export class EditorMode extends BaseMode {
           await editorController.captureTrackScreenshot({ download: false, persistTrack: false });
         }
         trackLoader.saveTrackToStorage(saveKey, rebuild.currentTrack);
+        // Write first, then drop the old entry — a failed write leaves the track
+        // where it was rather than losing it between the two keys.
+        if (renamedFrom) {
+          trackLoader.removeTrack(renamedFrom);
+          console.debug(`[Editor] Renamed saved track "${renamedFrom}" → "${saveKey}"`);
+        }
         menuManager.selectedTrack = saveKey;
       }
       menuManager.hideMenu();
