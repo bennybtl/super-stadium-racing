@@ -37,6 +37,16 @@ export class StaticBodyCollisionManager {
   }
 
   /**
+   * Drop the cached collider list so it is re-scanned on the next update.
+   * Must be called whenever the wall/obstacle colliders are rebuilt (e.g. a
+   * race reset): the cache otherwise keeps disposed collider meshes, whose
+   * stale bounds produce phantom penetrations that pin trucks in place.
+   */
+  invalidateColliderCache() {
+    this._colliders = [];
+  }
+
+  /**
    * Call immediately after teleporting a truck so the swept-AABB broadphase
    * doesn't treat the teleport as a wall-crossing trajectory.
    */

@@ -263,9 +263,13 @@ export class Controls {
       
       const reverseSpeed = this.state.velocity.dot(forward);
       if (reverseSpeed < this.state.maxReverseSpeed) {
-        this.state.velocity.x = forward.x * this.state.maxReverseSpeed;
-        this.state.velocity.y = 0;
-        this.state.velocity.z = forward.z * this.state.maxReverseSpeed;
+        // Strip only the excess along-heading component so vertical/lateral
+        // velocity (bounce, gravity, spring) survives the cap — zeroing the
+        // whole vector here wiped upward velocity on every bounce, causing the
+        // truck to slowly sink into rough terrain while holding reverse.
+        const excess = reverseSpeed - this.state.maxReverseSpeed;
+        this.state.velocity.x -= forward.x * excess;
+        this.state.velocity.z -= forward.z * excess;
       }
     }
   }

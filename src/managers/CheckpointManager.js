@@ -1,6 +1,22 @@
 import { Checkpoint } from "../objects/Checkpoint.js";
 
 /**
+ * How far past each barrel still counts as passing the gate, in world units.
+ *
+ * The test measures the truck's ORIGIN against the gate's half width, and the
+ * barrels stand exactly at that half width — so a truck whose flank clips a
+ * barrel has its centre outside the band and reads as a miss, which is the
+ * "barely missed" case that feels unfair.
+ *
+ * Trucks are only ~1.2–1.65 wide, so 3 units is well past merely forgiving a
+ * clipped barrel: the truck can clear a barrel entirely and still score. That is
+ * deliberate — generous gates read as fun, and the gate still has to be crossed
+ * within 2 units of its line and in the right direction. Turn it down if a gate
+ * sitting close to the racing line starts scoring drive-bys.
+ */
+const PASS_MARGIN = 3;
+
+/**
  * CheckpointManager - Creates and manages racing checkpoints.
  *
  * Construction and disposal of individual gates is handled by the Checkpoint
@@ -113,7 +129,7 @@ export class CheckpointManager {
       const velocityDotForward = truckVelocity.x * forwardX + truckVelocity.z * forwardZ;
       
       // Trigger only if truck is within width, crosses the line, AND moving in correct direction
-      if (perpDist < feature.width / 2 && Math.abs(forwardDist) < 2 && velocityDotForward > 0) {
+      if (perpDist < feature.width / 2 + PASS_MARGIN && Math.abs(forwardDist) < 2 && velocityDotForward > 0) {
         feature.passedBy.add(truckId);
         return { passed: true, index: feature.checkpointNumber };
       }

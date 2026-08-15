@@ -490,6 +490,10 @@ export class RaceMode extends DriveMode {
       wallManager.rebuild();
       obstacleManager.rebuild();
       pickupManager.clearAll();
+      // wall/obstacle rebuild disposed and recreated the collider meshes, so the
+      // collision manager must drop its cached (now-disposed) collider list —
+      // stale bounds otherwise phantom-collide and pin trucks in place after reset.
+      staticBodyCollisionManager.invalidateColliderCache();
 
       uiManager.updateBoosts(playerTruckData.gameState.boostCount);
       uiManager.updateLaps(0, totalLaps);
