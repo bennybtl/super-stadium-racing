@@ -402,9 +402,15 @@ export class Truck {
 
     // The terrain grid is XZ-only, so it reports whatever is painted below the
     // truck even when the truck isn't touching it. `terrain` is already null
-    // while airborne; drop it too when riding an elevated surface, otherwise
-    // crossing a bridge over water sprays water off the deck.
-    const onNaturalGround = (this.terrainPhysics.floorSurface?.surfaceLevel ?? 0) === 0;
+    // while airborne; drop it too when riding a built surface, otherwise crossing
+    // a bridge — or launching off a ramp at a water's edge — sprays water off a
+    // deck the truck never left.
+    //
+    // Asked by surface *type*, not by layer: a driveBox registers its deck at
+    // level 0 (deriveDriveBoxGrid defaults layerId to 0), so a level test reads a
+    // ramp as natural ground and hands back whatever is painted underneath it.
+    const floorSurfaceType = this.terrainPhysics.floorSurface?.surfaceType ?? 'ground';
+    const onNaturalGround = floorSurfaceType === 'ground';
     const effectsTerrain = onNaturalGround ? terrain : null;
 
     const speed = this.state.velocity.length();
