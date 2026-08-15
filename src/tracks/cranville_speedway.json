@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "cranville_speedway",
   "packId": "midwest_pack_1",
   "hidden": false,
@@ -47,7 +47,7 @@
         0,
         4,
         0,
-        5,
+        6,
         0,
         0,
         0,
@@ -56,7 +56,7 @@
         3,
         -1.5,
         0,
-        5,
+        6,
         0,
         -1,
         3,
@@ -129,16 +129,16 @@
         0,
         0,
         0,
-        6.5,
-        0,
-        -10.5,
-        0,
-        0,
+        10,
+        -1.5,
+        -11.025,
         0,
         0,
         0,
         0,
-        7.539513402182564,
+        0,
+        0,
+        10.539513402182564,
         0,
         -9.5,
         0,
@@ -522,8 +522,8 @@
           "radius": 6
         },
         {
-          "x": 52.17,
-          "z": 11.07,
+          "x": 51.67,
+          "z": 10.57,
           "radius": 7
         },
         {
@@ -673,7 +673,8 @@
       "width": 22,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -683,7 +684,8 @@
       "width": 20.5,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -693,7 +695,8 @@
       "width": 22,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "polyWall",
@@ -799,8 +802,8 @@
       "type": "squareHill",
       "centerX": -37.38721834211045,
       "centerZ": -31.09781036358654,
-      "width": 23.5,
-      "depth": 27,
+      "width": 31.5,
+      "depth": 35,
       "angle": 42,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -827,7 +830,8 @@
       "width": 21,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -837,7 +841,8 @@
       "width": 17.5,
       "checkpointNumber": 5,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -847,7 +852,8 @@
       "width": 22,
       "checkpointNumber": 6,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "aiPath",
@@ -926,7 +932,7 @@
         },
         {
           "x": 50.47,
-          "z": 16.31
+          "z": 16.81
         },
         {
           "x": 32.64,
@@ -1092,10 +1098,10 @@
       "type": "hill",
       "centerX": 50.65129327175634,
       "centerZ": 73.85359416913298,
-      "radiusX": 10,
-      "radiusZ": 10,
+      "radiusX": 12,
+      "radiusZ": 12,
       "angle": 0,
-      "height": -5,
+      "height": -2.5,
       "waterLevelOffset": 0,
       "terrainType": null
     },
@@ -1103,10 +1109,10 @@
       "type": "hill",
       "centerX": -30.67766252440439,
       "centerZ": -1.4757637751796935,
-      "radiusX": 10,
-      "radiusZ": 10,
+      "radiusX": 12.5,
+      "radiusZ": 13.5,
       "angle": 0,
-      "height": -2.5,
+      "height": -2,
       "waterLevelOffset": 2,
       "terrainType": "mud",
       "blendWidth": 2
@@ -1115,8 +1121,8 @@
       "type": "squareHill",
       "centerX": -57.01105548571277,
       "centerZ": 40.58044216508754,
-      "width": 10,
-      "depth": 10,
+      "width": 18,
+      "depth": 18,
       "angle": 97,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -1129,8 +1135,8 @@
       "type": "squareHill",
       "centerX": -72.07589375687893,
       "centerZ": -6.2117738641447815,
-      "width": 10,
-      "depth": 10,
+      "width": 18,
+      "depth": 18,
       "angle": 95,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -1138,6 +1144,158 @@
       "heightAtMin": 3,
       "heightAtMax": -0.5,
       "blendWidth": 1.5
+    },
+    {
+      "type": "model",
+      "model": "tree_1",
+      "x": -40.299797153570964,
+      "z": 65.16600579339334,
+      "color": "yellow",
+      "scale": 1
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": -39.299797153570964,
+      "z": 45.66600579339334,
+      "color": "yellow",
+      "scale": 1,
+      "heading": 1.7453292519943295
+    },
+    {
+      "type": "model",
+      "model": "tree_2",
+      "x": -27.658787233705468,
+      "z": 47.4550271880014,
+      "color": "yellow",
+      "scale": 0.9,
+      "heading": 2.6354471705114375,
+      "mirrorX": true
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": 18.76161171280465,
+      "z": 23.65993674125117,
+      "color": "yellow",
+      "scale": 0.9,
+      "heading": 2.6354471705114375,
+      "mirrorX": true
+    },
+    {
+      "type": "model",
+      "model": "tree_3",
+      "x": 46.76161171280465,
+      "z": -5.340063258748831,
+      "color": "yellow",
+      "scale": 0.9,
+      "heading": 2.6354471705114375,
+      "mirrorX": true
+    },
+    {
+      "type": "trackSign",
+      "x": -5.685794836566691,
+      "z": -29.92852709807204,
+      "name": "Cranville",
+      "rotation": -0.5585053606381855,
+      "contentType": "text",
+      "brandImage": "energizer-racing.png",
+      "logoScale": 1,
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 3.6,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -19.685794836566693,
+      "z": -44.92852709807204,
+      "name": "Cranville",
+      "rotation": -0.5585053606381855,
+      "contentType": "brand",
+      "brandImage": "energizer-racing.png",
+      "logoScale": 1.2,
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 2.814205163433307,
+      "z": -70.42852709807204,
+      "name": "Cranville",
+      "rotation": 0.06981317007977318,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "logoScale": 1.2,
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 50.31420516343331,
+      "z": -12.928527098072038,
+      "name": "Cranville",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "top-boost.png",
+      "logoScale": 1.2,
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 32.31420516343331,
+      "z": 70.57147290192796,
+      "name": "Cranville",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "ssr-logo.png",
+      "logoScale": 1.2,
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": 12.814205163433307,
+      "z": 70.57147290192796,
+      "name": "Cranville",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "speedhawk.png",
+      "logoScale": 1.2,
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 2.2,
+      "width": 10
+    },
+    {
+      "type": "trackSign",
+      "x": -6.185794836566693,
+      "z": 70.57147290192796,
+      "name": "Cranville",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "sonic-speed.png",
+      "logoScale": 1.2,
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.6,
+      "heightOffset": 2.2,
+      "width": 10
     }
   ]
 }

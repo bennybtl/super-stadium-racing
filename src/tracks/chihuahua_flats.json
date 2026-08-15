@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "chihuahua_flats",
   "packId": null,
   "hidden": false,
@@ -291,7 +291,7 @@
         0,
         0
       ],
-      "smoothing": 0.4
+      "smoothing": 0.65
     },
     {
       "type": "terrainPath",
@@ -412,12 +412,12 @@
           "radius": 10
         },
         {
-          "x": -121.28238027262209,
+          "x": -118.78238027262209,
           "z": -75.60345005093659,
           "radius": 10
         },
         {
-          "x": -122.74848215994467,
+          "x": -117.74848215994467,
           "z": -39.291985858596504,
           "radius": 10
         },
@@ -436,7 +436,8 @@
       "width": 18,
       "terrainType": null,
       "closed": false,
-      "filled": false
+      "filled": false,
+      "edgeShape": 0.8
     },
     {
       "type": "trackLight",
@@ -480,7 +481,8 @@
       "width": 21.5,
       "terrainType": null,
       "closed": false,
-      "filled": false
+      "filled": false,
+      "edgeShape": 0.85
     },
     {
       "type": "hill",
@@ -495,10 +497,10 @@
     },
     {
       "type": "squareHill",
-      "centerX": 36.68984770157822,
-      "centerZ": 17.249410985530794,
-      "width": 10,
-      "depth": 17,
+      "centerX": 37.18984770157822,
+      "centerZ": 16.749410985530794,
+      "width": 18,
+      "depth": 30.5,
       "angle": 74,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -508,10 +510,10 @@
     },
     {
       "type": "squareHill",
-      "centerX": 29.480887743944887,
-      "centerZ": 3.4693755644124664,
-      "width": 10,
-      "depth": 17,
+      "centerX": 31.480887743944887,
+      "centerZ": 2.4693755644124664,
+      "width": 18,
+      "depth": 29,
       "angle": 74,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -521,10 +523,10 @@
     },
     {
       "type": "squareHill",
-      "centerX": 23.951966966112685,
+      "centerX": 25.451966966112685,
       "centerZ": -11.372904651041502,
-      "width": 10,
-      "depth": 17,
+      "width": 18,
+      "depth": 27.5,
       "angle": 74,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -693,9 +695,9 @@
           "radius": 6.5
         },
         {
-          "x": 53.73,
-          "z": 21.18,
-          "radius": 6
+          "x": 52.23,
+          "z": 20.68,
+          "radius": 7.5
         },
         {
           "x": 28.55191211459047,
@@ -746,11 +748,12 @@
           "radius": 10
         }
       ],
-      "height": 5.5,
+      "height": 4.8,
       "width": 19,
       "terrainType": null,
       "closed": false,
-      "filled": false
+      "filled": false,
+      "edgeShape": 1
     },
     {
       "type": "polyWall",
@@ -1044,50 +1047,50 @@
       "type": "squareHill",
       "centerX": -72.35168453430057,
       "centerZ": -78.12270820177876,
-      "width": 17,
-      "depth": 21.5,
+      "width": 25,
+      "depth": 29.5,
       "angle": 159,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 5.5,
       "terrainType": null,
-      "heightAtMin": 1,
+      "heightAtMin": 0,
       "heightAtMax": 5.5
     },
     {
       "type": "squareHill",
       "centerX": 101.87571071291724,
       "centerZ": 52.741976914031724,
-      "width": 14.5,
-      "depth": 11.5,
-      "angle": 104,
+      "width": 22.5,
+      "depth": 19.5,
+      "angle": 81,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 5.5,
       "terrainType": null,
       "heightAtMin": 4,
       "heightAtMax": 0
     },
     {
       "type": "squareHill",
-      "centerX": 92.29567299296386,
-      "centerZ": -66.19307233441702,
-      "width": 14.5,
-      "depth": 11.5,
+      "centerX": 91.29567299296386,
+      "centerZ": -65.69307233441702,
+      "width": 21,
+      "depth": 20.5,
       "angle": 37,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 5,
       "terrainType": null,
-      "heightAtMin": 4,
+      "heightAtMin": 5,
       "heightAtMax": 0
     },
     {
       "type": "squareHill",
       "centerX": 3.342970932419769,
       "centerZ": 77.14985717198881,
-      "width": 9,
-      "depth": 20,
+      "width": 17,
+      "depth": 28,
       "angle": 0,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 4.5,
       "terrainType": null,
       "heightAtMin": 0,
       "heightAtMax": 3
@@ -1096,14 +1099,14 @@
       "type": "squareHill",
       "centerX": -59.58230136938593,
       "centerZ": 78.4732714595627,
-      "width": 9,
-      "depth": 20,
+      "width": 17,
+      "depth": 28,
       "angle": 0,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 5,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3
+      "heightAtMax": 3.5
     },
     {
       "type": "trackSign",
@@ -1122,7 +1125,7 @@
     },
     {
       "type": "trackSign",
-      "x": 61.62766960761601,
+      "x": 60.62766960761601,
       "z": 49.8436398498235,
       "name": "Track Name",
       "rotation": 0.12217304763960307,
@@ -1226,11 +1229,11 @@
         },
         {
           "x": -12.19,
-          "z": 43.89
+          "z": 40.89
         },
         {
           "x": -50.45,
-          "z": 41.83
+          "z": 39.33
         },
         {
           "x": -82.58,
@@ -1266,7 +1269,7 @@
         },
         {
           "x": 52.73,
-          "z": 30.19
+          "z": 29.69
         },
         {
           "x": 38.66827233171193,
@@ -1329,24 +1332,24 @@
       "type": "squareHill",
       "centerX": 31.619338600394084,
       "centerZ": 77.34046813736882,
-      "width": 10,
-      "depth": 17.5,
+      "width": 18,
+      "depth": 25.5,
       "angle": 0,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 5,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3
+      "heightAtMax": 4
     },
     {
       "type": "squareHill",
       "centerX": -14.322315567994,
       "centerZ": 77.38740569207714,
-      "width": 10,
-      "depth": 17.5,
+      "width": 18,
+      "depth": 25.5,
       "angle": 0,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 5,
       "terrainType": null,
       "heightAtMin": 0,
       "heightAtMax": 4
@@ -1476,8 +1479,8 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": -44.9616250699966,
-      "centerZ": -79.23181197558432,
+      "centerX": -45.43375064781432,
+      "centerZ": -79.16028761938452,
       "shape": "text",
       "color": "white",
       "count": 3,
@@ -1504,8 +1507,8 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": -22.99216405754222,
-      "centerZ": -79.32485832131455,
+      "centerX": -23.703823133919904,
+      "centerZ": -79.06415711658232,
       "shape": "text",
       "color": "white",
       "count": 3,
