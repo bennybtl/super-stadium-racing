@@ -1,6 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { projectOnPlane } from "./surface-math.js";
 import { GROUNDEDNESS } from "../constants.js";
+import { lerp, smoothstep } from "../math-utils.js";
 
 const UP = new Vector3(0, 1, 0);
 
@@ -46,18 +47,25 @@ const STEER_RAMP_UP = 4;
  *  ramp-up so letting go straightens out promptly. */
 const STEER_RAMP_DOWN = 7;
 
+// ─── Steering authority vs. speed ───────────────────────────────────────────
+// One curve for "how much of turnSpeed is available right now", computed once
+// in calculateSpeedFactors(). Replaces two previously-separate speed-based
+// multipliers (a stationary-spin ramp applied at delta-application time, and
+// a flat high-speed understeer term applied earlier) that both scaled the
+// same quantity and had to be tuned against each other. Authority rises from
+// idleAuthority at a dead stop to its 1.0 peak by rampSpeed·maxSpeed — fast,
+// so low/moderate-speed steering feels sharp well before top speed — then
+// eases toward topSpeedAuthority by maxSpeed. All three overridable per
+// vehicle via state.idleAuthority / state.rampSpeed / state.topSpeedAuthority.
+const DEFAULT_IDLE_AUTHORITY = 0.35;
+const DEFAULT_RAMP_SPEED = 0.22;
+const DEFAULT_TOP_SPEED_AUTHORITY = 0.9;
+
 // ─── Weight-transfer steering / grip feel ────────────────────────────────────
 // Gains in calculateSpeedFactors(). All scale with speedRatio; the throttle/brake
 // ones also scale with the vehicle's `weightTransfer` stat. These are the primary
 // "how does it corner" feel knobs — tweak here rather than in the formula.
 
-/** Baseline understeer at top speed (finite tire lateral force). */
-const BASE_UNDERSTEER = 0.10;
-/** Flat steering-authority bonus. Historically this was an accidental constant
- *  (a Math.max clamp whose lerp could never win), but it is part of the tuned
- *  feel: every truck steers at 1.2× nominal turnSpeed before the understeer
- *  terms subtract from it. Now explicit so it can be tuned deliberately. */
-const STEER_BASE_BONUS = 0.2;
 /** Added understeer under throttle (weight shifts rearward, front lightens). */
 const THROTTLE_UNDERSTEER_GAIN = 0.10;
 /** Oversteer under braking (weight shifts forward, rear lightens). */
@@ -69,8 +77,11 @@ const BRAKE_OVERSTEER_GAIN = 0.15;
  *  step used to feel jarring, so it ramps instead. */
 const WEIGHT_SHIFT_ONSET_RATE = 22;
 const WEIGHT_SHIFT_SETTLE_RATE = 6;
-/** Floor on steering factor so turn-in is never fully lost. */
-const MIN_STEER_FACTOR = 0.40;
+/** Default floor on steer authority after the weight-transfer term is
+ *  applied, so a hard throttle understeer moment never removes turn-in
+ *  entirely. Scaled down for vehicles tuned below this at rest — see
+ *  calculateSpeedFactors. */
+const MIN_STEER_AUTHORITY = 0.40;
 /** Lateral-grip taper with speed, and its floor (tire limit at speed). */
 const LATERAL_GRIP_SPEED_TAPER = 0.30;
 const MIN_LATERAL_GRIP_FACTOR = 0.50;
@@ -100,18 +111,12 @@ export class Controls {
     this._loadShift = 0; // smoothed weight-transfer direction, -1 (front/brake) .. 1 (rear/throttle)
   }
 
-  updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime) {
+  updateSteering(input, effectiveTurnSpeed, groundedness, deltaTime) {
     if (groundedness > GROUNDEDNESS.STEER) {
       // Invert steering when reversing so the truck turns the natural direction
       this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
       const fwdSpeed = this.state.velocity.dot(this._forward);
       const steerSign = fwdSpeed < 0 ? -1 : 1;
-
-      // Stationary spin factor — controls how much turn authority the truck has at rest.
-      // 0 = no turning when stopped, 1 = full turn speed regardless of velocity.
-      // The lerp blends from stationarySpinRate at speed=0 up to 1.0 at full speed.
-      const stationarySpinRate = this.state.stationarySpinRate ?? 0.35;
-      const spinFactor = stationarySpinRate + (1.0 - stationarySpinRate) * speedRatio;
 
       // After a head-on collision the truck bounces straight back; ignore steering
       // during that window so held input can't curve the rebound off-line.
@@ -134,7 +139,7 @@ export class Controls {
       // Snap steering dead-center while suppressed so heading holds through the bounce.
       if (steerSuppressed) this._steerAmount = 0;
 
-      const delta = steerSign * effectiveTurnSpeed * spinFactor * groundedness * deltaTime * this._steerAmount;
+      const delta = steerSign * effectiveTurnSpeed * groundedness * deltaTime * this._steerAmount;
       this.state.heading += delta;
 
       // Remember the rate so it can carry over the moment the wheels leave the ground.
@@ -295,6 +300,21 @@ export class Controls {
     }
   }
 
+  /**
+   * How much of turnSpeed is available at this speedRatio, before the
+   * weight-transfer term. Rises from idleAuthority to a 1.0 peak by
+   * rampSpeed·maxSpeed, then eases toward topSpeedAuthority by maxSpeed.
+   */
+  _steerAuthority(speedRatio) {
+    const idleAuthority = this.state.idleAuthority ?? DEFAULT_IDLE_AUTHORITY;
+    const rampSpeed = this.state.rampSpeed ?? DEFAULT_RAMP_SPEED;
+    const topSpeedAuthority = this.state.topSpeedAuthority ?? DEFAULT_TOP_SPEED_AUTHORITY;
+
+    return speedRatio <= rampSpeed
+      ? lerp(idleAuthority, 1, smoothstep(0, rampSpeed, speedRatio))
+      : lerp(1, topSpeedAuthority, smoothstep(rampSpeed, 1, speedRatio));
+  }
+
   getEffectiveAcceleration() {
     const nitro = this.state.boostActive ? this.state.boostAccelMult : 1.0;
     const zone  = this.state.speedBoostActive ? this.state.speedBoostAccelMult : 1.0;
@@ -344,12 +364,15 @@ export class Controls {
     const rearLoad  = Math.max(0, load);  // rearward shift (throttle)
     const frontLoad = Math.max(0, -load); // forward shift (braking)
 
-    const steerFactor = Math.max(MIN_STEER_FACTOR,
-      1 + STEER_BASE_BONUS
-        - speedRatio * BASE_UNDERSTEER
+    const baseAuthority = this._steerAuthority(speedRatio);
+    // Floor scales down with the curve itself, so a vehicle deliberately tuned
+    // below MIN_STEER_AUTHORITY at rest (e.g. a low idleAuthority) keeps its
+    // own lower floor instead of being pulled back up to the default one.
+    const steerAuthority = Math.max(Math.min(MIN_STEER_AUTHORITY, baseAuthority),
+      baseAuthority
         - rearLoad * THROTTLE_UNDERSTEER_GAIN
         + frontLoad * BRAKE_OVERSTEER_GAIN);
-    const effectiveTurnSpeed = this.state.turnSpeed * steerFactor;
+    const effectiveTurnSpeed = this.state.turnSpeed * steerAuthority;
 
     const lateralGripFactor = Math.max(MIN_LATERAL_GRIP_FACTOR, 1 - speedRatio * LATERAL_GRIP_SPEED_TAPER);
     const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness * (this.state.plantedness ?? 1);
@@ -375,6 +398,6 @@ export class Controls {
     const tbf = 1 - Math.exp(-THROTTLE_BREAK_SMOOTHING_RATE * deltaTime);
     this._throttleBreak += (throttleBreakTarget - this._throttleBreak) * tbf;
 
-    return { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak: this._throttleBreak };
+    return { effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak: this._throttleBreak };
   }
 }

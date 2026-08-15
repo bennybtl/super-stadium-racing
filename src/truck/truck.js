@@ -272,10 +272,13 @@ export class Truck {
       // Higher = more understeer on throttle, more oversteer on brakes.
       // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.
       weightTransfer: 1.45,
-      // Fraction of turn speed available when stationary (0 = can't spin, 1 = full rate).
-      // At 0, turn rate scales with actual speed (constant turn radius, no spinning
-      // on the spot); raise toward 1 for an arcade tank-turn feel. Tune per vehicle.
-      stationarySpinRate: 0.35,
+      // Steer authority curve (see Controls._steerAuthority): fraction of
+      // turnSpeed available at a dead stop (0 = can't spin, 1 = full rate),
+      // the fraction of maxSpeed at which authority peaks, and the authority
+      // at maxSpeed after easing down from that peak. Tune per vehicle.
+      idleAuthority: 0.35,
+      rampSpeed: 0.22,
+      topSpeedAuthority: 0.9,
 
       // Boost parameters
       boostCount: 5,
@@ -428,16 +431,16 @@ export class Truck {
     this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
     
     // Calculate speed-based factors (use hSpeed so velocity.y doesn't inflate understeer)
-    const { speedRatio, effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak } = profile(
+    const { effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak } = profile(
       'truck.controls.speedFactors',
       () => this.controls.calculateSpeedFactors(
         hSpeed, terrainGripMultiplier, groundedness, input, deltaTime
       )
     );
-    
+
     // Handle input
     profile('truck.controls.steering', () =>
-      this.controls.updateSteering(input, effectiveTurnSpeed, speedRatio, groundedness, deltaTime)
+      this.controls.updateSteering(input, effectiveTurnSpeed, groundedness, deltaTime)
     );
     profile('truck.controls.acceleration', () =>
       this.controls.updateAcceleration(input, this._forward, groundedness, deltaTime)

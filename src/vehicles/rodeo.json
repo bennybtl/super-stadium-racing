@@ -30,10 +30,10 @@
     "maxReverseSpeed": -12,
     "acceleration": 20,
     "braking": 1.5,
-    "turnSpeed": 5.7,
+    "turnSpeed": 4.7,
     "weightTransfer": 1.1,
     "grip": 0.220,
-    "stationarySpinRate": 0.52
+    "idleAuthority": 0.52
   },
   "handling": {
     "lateralBias": -0.4

@@ -20,7 +20,9 @@
     <Slider label="Grip"     :value="debug.vehicle.grip"           :min="0.04" :max="0.3" :step="0.005" :digits="3" @change="v => debug.setVehicleParam('grip', v)" />
     <Slider label="Turn"     :value="debug.vehicle.turnSpeed"       :min="3"  :max="8"   :step="0.1"   :digits="1" @change="v => debug.setVehicleParam('turnSpeed', v)" />
     <Slider label="Wt Xfer"  :value="debug.vehicle.weightTransfer"  :min="0.6"  :max="1.8" :step="0.05"  :digits="2" @change="v => debug.setVehicleParam('weightTransfer', v)" />
-    <Slider label="LowSpin"  :value="debug.vehicle.stationarySpinRate" :min="0" :max="0.7" :step="0.05" :digits="2" @change="v => debug.setVehicleParam('stationarySpinRate', v)" />
+    <Slider label="Idle"     :value="debug.vehicle.idleAuthority"     :min="0" :max="0.7" :step="0.05" :digits="2" @change="v => debug.setVehicleParam('idleAuthority', v)" />
+    <Slider label="RampSpd"  :value="debug.vehicle.rampSpeed"         :min="0.05" :max="0.6" :step="0.01" :digits="2" @change="v => debug.setVehicleParam('rampSpeed', v)" />
+    <Slider label="TopAuth"  :value="debug.vehicle.topSpeedAuthority" :min="0.6" :max="1.0" :step="0.05" :digits="2" @change="v => debug.setVehicleParam('topSpeedAuthority', v)" />
     <Slider label="MaxSpd"   :value="debug.vehicle.maxSpeed"       :min="15" :max="50"  :step="1"     :digits="0" @change="v => debug.setVehicleParam('maxSpeed', v)" />
     <Slider label="Accel"    :value="debug.vehicle.acceleration"   :min="5"  :max="40"  :step="1"     :digits="0" @change="v => debug.setVehicleParam('acceleration', v)" />
     <Slider label="Brake"    :value="debug.vehicle.braking"        :min="0.5" :max="5"  :step="0.1"   :digits="1" @change="v => debug.setVehicleParam('braking', v)" />

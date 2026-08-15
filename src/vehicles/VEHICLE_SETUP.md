@@ -49,7 +49,9 @@ runtime defaults closely, so a vehicle that omits `handling` gets sane mid handl
 | `grip` | 0.06 | 0.12 | 0.24 | Base cornering traction (grip zone only). Drift-zone grip is governed by the `handling` knobs. |
 | `dragCoasting` | 0.2 | 0.45 | 0.8 | Extra drag while off throttle and not braking. |
 | `weightTransfer` | 0.7 | 1.35 | 1.6 | Higher increases throttle understeer and brake oversteer feel. |
-| `stationarySpinRate` | 0.0 | 0.6 | 0.8 | Fraction of turn speed allowed while nearly stopped. |
+| `idleAuthority` | 0.0 | 0.35 | 0.8 | Fraction of turn speed available at a dead stop. |
+| `rampSpeed` | 0.1 | 0.22 | 0.6 | Fraction of maxSpeed at which steer authority peaks. Lower = sharper low-speed steering sooner. |
+| `topSpeedAuthority` | 0.6 | 0.9 | 1.0 | Steer authority at maxSpeed, easing down from the peak. |
 | `boostCount` | 0 | 5 | 9 | Starting nitro count. |
 | `maxBoosts` | 0 | 9 | 12 | Maximum nitro capacity. |
 | `boostDuration` | 0.8 | 1.6 | 2.5 | How long each boost lasts. |
@@ -99,7 +101,7 @@ Use these `handling` knob sets as a fast way to build a new archetype:
 		"grip": 0.18,
 		"dragCoasting": 0.45,
 		"weightTransfer": 1.2,
-		"stationarySpinRate": 0.6,
+		"idleAuthority": 0.6,
 		"boostCount": 5,
 		"maxBoosts": 9,
 		"boostDuration": 1.8,

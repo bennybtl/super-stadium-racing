@@ -30,7 +30,7 @@
     "maxReverseSpeed": -12,
     "acceleration": 27.5,
     "braking": 1.5,
-    "turnSpeed": 5.3,
+    "turnSpeed": 4.3,
     "weightTransfer": 0.8,
     "grip": 0.240
   },
