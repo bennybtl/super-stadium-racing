@@ -635,7 +635,7 @@ export class RaceMode extends DriveMode {
         }
       }));
 
-      frameProfiler.measure('collision.truck.resolve', () => truckCollisionManager.update(trucks));
+      frameProfiler.measure('collision.truck.resolve', () => truckCollisionManager.update(trucks, dt));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));

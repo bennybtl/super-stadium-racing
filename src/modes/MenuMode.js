@@ -324,7 +324,7 @@ export class MenuMode extends DriveMode {
         onTimeout: () => respawnToLastGate(td),
       }));
 
-      truckCollisionManager.update(trucks);
+      truckCollisionManager.update(trucks, dt);
       obstacleManager.update(trucks);
       decorationManager.update(trucks, dt);
 

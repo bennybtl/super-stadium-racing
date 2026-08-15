@@ -27,7 +27,7 @@
   "params": {
     "maxSpeed": 39,
     "acceleration": 24,
-    "turnSpeed": 4.0,
+    "turnSpeed": 4.5,
     "stationarySpinRate": 0.25
   },
   "handling": {
