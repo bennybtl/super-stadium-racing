@@ -46,7 +46,7 @@
         <span>{{ editor.terrainShape.rotation.toFixed(0) }}°</span>
       </div>
       <input
-        type="range" min="0" max="180" step="1"
+        type="range" min="-180" max="180" step="2"
         :value="editor.terrainShape.rotation"
         @input="editor.setFeatureProp('terrainShape', 'rotation', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

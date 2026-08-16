@@ -2,6 +2,7 @@ const STORAGE_KEYS = {
   controls: 'settings.controls',
   audio: 'settings.audio',
   display: 'settings.display',
+  gameplay: 'settings.gameplay',
 };
 
 export const DEFAULT_CONTROLS_SETTINGS = {
@@ -52,6 +53,10 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   shadow: 'medium',
   lights: 4,
   checkpointArrow: true,
+};
+
+export const DEFAULT_GAMEPLAY_SETTINGS = {
+  rubberBand: 'medium',
 };
 
 function deepClone(value) {
@@ -119,6 +124,15 @@ function normalizeDisplaySettings(candidate) {
   };
 }
 
+function normalizeGameplaySettings(candidate) {
+  const rubberBand = candidate?.rubberBand;
+  const validRubberBand = rubberBand === 'off' || rubberBand === 'low' || rubberBand === 'medium' || rubberBand === 'high';
+
+  return {
+    rubberBand: validRubberBand ? rubberBand : DEFAULT_GAMEPLAY_SETTINGS.rubberBand,
+  };
+}
+
 function writeStorageObject(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
@@ -164,6 +178,19 @@ export function saveDisplaySettings(value) {
   }));
 }
 
+export function loadGameplaySettings() {
+  return normalizeGameplaySettings(readStorageObject(STORAGE_KEYS.gameplay));
+}
+
+export function saveGameplaySettings(value) {
+  const normalized = normalizeGameplaySettings(value);
+  writeStorageObject(STORAGE_KEYS.gameplay, normalized);
+
+  window.dispatchEvent(new CustomEvent('offroad:gameplay-settings-changed', {
+    detail: normalized,
+  }));
+}
+
 export function getDefaultControlsSettings() {
   return deepClone(DEFAULT_CONTROLS_SETTINGS);
 }
@@ -172,10 +199,12 @@ export function initializeSettingsStorage() {
   const controls = loadControlsSettings();
   const audio = loadAudioSettings();
   const display = loadDisplaySettings();
+  const gameplay = loadGameplaySettings();
 
   saveControlsSettings(controls);
   saveAudioSettings(audio);
   saveDisplaySettings(display);
+  saveGameplaySettings(gameplay);
 
-  return { controls, audio, display };
+  return { controls, audio, display, gameplay };
 }

@@ -56,7 +56,7 @@
       <span>Rotation</span>
       <span>{{ s.angle }}°</span>
     </div>
-    <input type="range" min="0" max="360" step="1"
+    <input type="range" min="-180" max="180" step="1"
       :value="s.angle"
       @input="set('angle', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

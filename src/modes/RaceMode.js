@@ -17,6 +17,8 @@ import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 import { RacePositionLabels } from "../managers/RacePositionLabels.js";
 import { FloatingTextManager } from "../managers/FloatingTextManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
+import { loadGameplaySettings } from "../settingsStorage.js";
+import { stepRubberBandMultiplier } from "../ai/RubberBand.js";
 
 /**
  * RaceMode – full racing gameplay.
@@ -43,6 +45,7 @@ export class RaceMode extends DriveMode {
   async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'baja', aiVehicleKey = 'random', playerColorKey = null, reverse = false, championship = null }) {
     const { engine, menuManager } = this.controller;
     const totalLaps = laps || 3;
+    const rubberBandLevel = loadGameplaySettings().rubberBand;
 
     const {
       scene,
@@ -472,6 +475,7 @@ export class RaceMode extends DriveMode {
         truckData.gameState.reset();
         truckData.gameState.lastCheckpointPassed = maxCheckpointNumber > 0 ? maxCheckpointNumber - 1 : 0;
         truckData.hasStarted = false;
+        truckData.truck.state.rubberBandSpeedMult = 1;
       });
 
       // Reset AI navigation + recovery state to match a freshly-built driver.
@@ -833,6 +837,27 @@ export class RaceMode extends DriveMode {
           }
         }
       }));
+
+      // Rubber-band: nudge each AI's effective top speed toward the player based
+      // on race-progress gap (laps + checkpoints). Player speed is never touched.
+      frameProfiler.measure('ai.rubberBand', () => {
+        if (!raceStarted || raceEnded || rubberBandLevel === 'off') return;
+        const total = Math.max(1, checkpointManager.getTotalCheckpoints());
+        const playerGs = playerTruckData.gameState;
+        const playerProgress = playerGs.lapCount * total + playerGs.checkpointCount;
+        trucks.forEach(td => {
+          if (td.isPlayer || td.gameState.raceFinished) return;
+          const gs = td.gameState;
+          const aiProgress = gs.lapCount * total + gs.checkpointCount;
+          const gapLaps = (playerProgress - aiProgress) / total;
+          td.truck.state.rubberBandSpeedMult = stepRubberBandMultiplier(
+            td.truck.state.rubberBandSpeedMult ?? 1,
+            gapLaps,
+            rubberBandLevel,
+            dt
+          );
+        });
+      });
 
       frameProfiler.measure('positions', () => {
         if (raceStarted && !raceEnded) positionLabels.update(trucks, checkpointManager, finishOrder);

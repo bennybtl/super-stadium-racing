@@ -298,6 +298,10 @@ export class Truck {
       speedBoostSpeedMult: 1,
       speedBoostAccelMult: 1,
 
+      // Rubber-band catch-up — set each frame by the game loop for AI trucks
+      // only, based on race-progress gap to the player (see ai/RubberBand.js).
+      rubberBandSpeedMult: 1,
+
       // Multiplies the steering ramp rate. AI trucks steer on a slow, cached
       // left/right cadence, so the player-facing easing would keep them from
       // ever reaching lock — give them a near-instant ramp instead.

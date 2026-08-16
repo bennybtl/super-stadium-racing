@@ -49,6 +49,13 @@ export class AIThrottleController {
       }
     }
 
+    // Rubber-band catch-up (set each frame by the game loop) scales the target
+    // the AI actually drives to, not just its physical top-speed ceiling —
+    // otherwise the boost only bites for vehicle/skill combos whose physical
+    // maxSpeed happens to sit below the baked path target already.
+    const rubberBand = this.driver.truck?.state?.rubberBandSpeedMult;
+    if (typeof rubberBand === 'number') targetSpeed *= rubberBand;
+
     // Well over the target → brake into the corner. Within the tolerance band →
     // coast. Below target → accelerate.
     if (fwdSpeed - targetSpeed > this.brakeMargin) {

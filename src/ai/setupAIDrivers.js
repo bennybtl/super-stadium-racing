@@ -121,7 +121,7 @@ export function setupAIDrivers({
 
   // ── Build precomputed paths ────────────────────────────────────────────
   aiTrucks.forEach(({ driver, spawn }) => {
-    driver.calculateFullPath({ x: spawn.pos.x, z: spawn.pos.z });
+    driver.calculateFullPath({ x: spawn.pos.x, z: spawn.pos.z, heading: spawn.heading });
   });
 
   // ── Build truckData entries (ready for the `trucks` array) ────────────

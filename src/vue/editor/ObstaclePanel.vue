@@ -44,7 +44,7 @@
         <span>{{ editor.obstacle.rotation.toFixed(0) }}°</span>
       </div>
       <input
-        type="range" min="0" max="180" step="1"
+        type="range" min="-180" max="180" step="5"
         :value="editor.obstacle.rotation"
         @input="editor.setFeatureProp('obstacle', 'rotation', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

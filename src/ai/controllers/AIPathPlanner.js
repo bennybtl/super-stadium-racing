@@ -361,8 +361,20 @@ export class AIPathPlanner {
     d.currentPathIndex = 0;
 
     if (startPosition && typeof startPosition.x === 'number' && typeof startPosition.z === 'number') {
+      // On a wide starting grid a lateral slot can sit geometrically closer to
+      // a different loop of track (e.g. a hairpin curling back past the start)
+      // than to the correct spot on the start straight — pure nearest-distance
+      // then locks the AI onto that wrong index and it drives backward to join
+      // it. Bias the search toward path points the truck is actually facing
+      // along; only fall back to plain nearest-distance if none qualify.
+      const hasHeading = typeof startPosition.heading === 'number';
+      const fwdX = hasHeading ? Math.sin(startPosition.heading) : 0;
+      const fwdZ = hasHeading ? Math.cos(startPosition.heading) : 0;
+
       let bestIndex = 0;
       let bestDistSq = Infinity;
+      let bestAlignedIndex = -1;
+      let bestAlignedDistSq = Infinity;
       for (let i = 0; i < d.path.length; i++) {
         const dx = d.path[i].x - startPosition.x;
         const dz = d.path[i].z - startPosition.z;
@@ -371,8 +383,16 @@ export class AIPathPlanner {
           bestDistSq = distSq;
           bestIndex = i;
         }
+        if (hasHeading) {
+          const heading = d.path[i].heading ?? 0;
+          const alignment = Math.sin(heading) * fwdX + Math.cos(heading) * fwdZ;
+          if (alignment > 0.5 && distSq < bestAlignedDistSq) {
+            bestAlignedDistSq = distSq;
+            bestAlignedIndex = i;
+          }
+        }
       }
-      d.currentPathIndex = bestIndex;
+      d.currentPathIndex = bestAlignedIndex >= 0 ? bestAlignedIndex : bestIndex;
     }
 
     const sourceLabel = authoredPath

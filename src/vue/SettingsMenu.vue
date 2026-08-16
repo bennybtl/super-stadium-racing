@@ -8,6 +8,7 @@
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('controls')">Controls</button>
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('sound')">Sound</button>
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('display')">Display</button>
+      <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('gameplay')">Gameplay</button>
       <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('tracks')">Manage Tracks</button>
       <hr class="my-2 opacity-60">
       <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="$emit('back')">Back</button>
@@ -21,6 +22,9 @@
     <div v-else-if="screen === 'display'">
       <DisplaySettings @back="close" />
     </div>
+    <div v-else-if="screen === 'gameplay'">
+      <GameplaySettings @back="close" />
+    </div>
     <div v-else-if="screen === 'tracks'">
       <ManageTracksSettings @back="close" />
     </div>
@@ -33,6 +37,7 @@ import { computed, ref } from 'vue';
 import ControlsSettings from './settings/ControlsSettings.vue';
 import SoundSettings from './settings/SoundSettings.vue';
 import DisplaySettings from './settings/DisplaySettings.vue';
+import GameplaySettings from './settings/GameplaySettings.vue';
 import ManageTracksSettings from './settings/ManageTracksSettings.vue';
 
 // Declared so the listener doesn't fall through onto the root <Transition>.

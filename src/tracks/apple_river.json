@@ -1,15 +1,15 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "apple_river",
   "packId": "midwest_pack_1",
   "hidden": false,
   "dirtChunks": true,
-  "oobDeadSpace": true,
+  "oobDeadSpace": false,
   "borderWall": {
-    "enabled": false,
-    "thickness": 2,
-    "height": 24,
-    "color": "#808080"
+    "enabled": true,
+    "thickness": 4,
+    "height": 4,
+    "color": "#6b4d3d"
   },
   "name": "Apple River",
   "image": "apple_river.jpg",
@@ -54,16 +54,16 @@
         0,
         0,
         -4.5,
-        -1,
-        -3,
+        -2.5,
+        -3.5,
         3.5,
         4,
         -2.5,
         0,
         0,
         0,
-        0.5,
-        1,
+        -1,
+        0,
         4,
         0,
         0,
@@ -151,7 +151,7 @@
         0,
         0,
         2.004829654239856,
-        10.998673588514123,
+        10.498673588514123,
         0,
         0,
         0,
@@ -199,8 +199,8 @@
     },
     {
       "type": "driveBox",
-      "centerX": 69.89400568167856,
-      "centerZ": 1.2728059528869888,
+      "centerX": 69.94790078299981,
+      "centerZ": 1.7698927843898689,
       "width": 14,
       "depth": 17,
       "rotation": 270,
@@ -213,10 +213,25 @@
       "heightAtMax": 3.5
     },
     {
+      "type": "driveBox",
+      "centerX": -41.16947733061111,
+      "centerZ": -19.841214996618977,
+      "width": 10,
+      "depth": 12,
+      "rotation": 0,
+      "solidBase": true,
+      "thickness": 0.4,
+      "layerId": 0,
+      "heightAtMin": 0,
+      "heightAtMax": 2,
+      "color": "#b3342e",
+      "sideColor": "tex:plywood"
+    },
+    {
       "type": "checkpoint",
       "centerX": -50.66487259461024,
       "centerZ": -24.927135350255117,
-      "heading": 1.4835298641951802,
+      "heading": 1.5835298641951803,
       "width": 21,
       "checkpointNumber": 1,
       "_altIndex": 0,
@@ -252,13 +267,13 @@
           "radius": 10
         },
         {
-          "x": 89.45560002239964,
-          "z": -20.674436058004336,
+          "x": 86.47307903338233,
+          "z": -20.351065450076863,
           "radius": 10
         },
         {
-          "x": 89.40842466396622,
-          "z": -9.634308772015196,
+          "x": 87.36618223663343,
+          "z": -9.915815198233087,
           "radius": 10
         },
         {
@@ -287,7 +302,7 @@
           "radius": 10
         }
       ],
-      "height": -4.4,
+      "height": -4.2,
       "width": 14.5,
       "terrainType": "water",
       "closed": true,
@@ -396,15 +411,16 @@
     },
     {
       "type": "squareHill",
-      "centerX": -38.055431316091045,
-      "centerZ": -71.91870338983344,
-      "width": 10,
-      "depth": 10,
-      "angle": 0,
-      "height": 3,
-      "waterLevelOffset": 1,
+      "centerX": 15.239785994280991,
+      "centerZ": -70.534896521048,
+      "width": 18,
+      "depth": 18,
+      "angle": 180,
+      "waterLevelOffset": 0,
       "transition": 4,
-      "terrainType": null
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 3
     },
     {
       "type": "polyWall",
@@ -547,7 +563,7 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 7,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
@@ -582,8 +598,8 @@
           "radius": 30
         },
         {
-          "x": 4.691526118134578,
-          "z": -62.128806353429425,
+          "x": 4.578511218257107,
+          "z": -62.61586654725118,
           "radius": 30
         },
         {
@@ -613,7 +629,7 @@
       "width": 5,
       "depth": 7.5,
       "angle": 110,
-      "opacity": 1
+      "opacity": 0.8
     },
     {
       "type": "surfaceDecal",
@@ -857,6 +873,173 @@
       "color": "red",
       "scale": 1,
       "heading": 0.8901179185171081
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 1.8545308687229172,
+          "z": -80.96310907546602,
+          "radius": 10
+        },
+        {
+          "x": 24.882581687821062,
+          "z": -81.51616779987744,
+          "radius": 10
+        },
+        {
+          "x": 56.47335460660764,
+          "z": -78.13757090793837,
+          "radius": 18.5
+        },
+        {
+          "x": 73.44739395699092,
+          "z": -64.39448081623769,
+          "radius": 10
+        }
+      ],
+      "height": 3,
+      "width": 10,
+      "terrainType": null,
+      "closed": false,
+      "filled": false,
+      "edgeShape": 1.15
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": 17.01718849682508,
+      "centerZ": -71.10260741385086,
+      "shape": "chevron",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 6,
+      "depth": 7.5,
+      "angle": 0,
+      "opacity": 0.55
+    },
+    {
+      "type": "hill",
+      "centerX": -55.8782461658556,
+      "centerZ": 19.584351021466148,
+      "radiusX": 10,
+      "radiusZ": 14.5,
+      "angle": 0,
+      "height": -1,
+      "waterLevelOffset": 0,
+      "terrainType": null,
+      "flatTop": 0.35
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 80.80342092438977,
+          "z": 0.04368577494113879,
+          "radius": 10
+        },
+        {
+          "x": 85.18241460154562,
+          "z": 24.665211850003658,
+          "radius": 10
+        },
+        {
+          "x": 85.17187911513565,
+          "z": 46.0586625549954,
+          "radius": 10
+        },
+        {
+          "x": 71.13818939355097,
+          "z": 64.07618537146516,
+          "radius": 10
+        }
+      ],
+      "height": 1.6,
+      "width": 8.5,
+      "terrainType": "loamy_dirt",
+      "closed": false,
+      "filled": false,
+      "edgeShape": 0.8
+    },
+    {
+      "type": "hill",
+      "centerX": -74.4204221910675,
+      "centerZ": -75.88325215477025,
+      "radiusX": 10,
+      "radiusZ": 5,
+      "angle": -20,
+      "height": 3.8,
+      "waterLevelOffset": 0,
+      "terrainType": "packed_dirt",
+      "flatTop": 0.2
+    },
+    {
+      "type": "hill",
+      "centerX": -36.87051376901318,
+      "centerZ": -62.4304397697979,
+      "radiusX": 12,
+      "radiusZ": 5.5,
+      "angle": 0,
+      "height": 1.2,
+      "waterLevelOffset": 0,
+      "terrainType": "loamy_dirt",
+      "flatTop": 0.2
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -63.234876355823445,
+      "z": -79.83172092992884,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -65.30114272702254,
+      "z": -75.80847310363387,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -68.83360221531592,
+      "z": -72.13207254413857,
+      "angle": 0,
+      "scale": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "squareHill",
+      "centerX": -3.82180041175106,
+      "centerZ": 59.523795279647814,
+      "width": 18,
+      "depth": 18,
+      "angle": 5,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 0,
+      "heightAtMax": 3
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": -4.920418434576862,
+      "centerZ": 58.568044946117084,
+      "shape": "chevron",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 6,
+      "depth": 7.5,
+      "angle": 172,
+      "opacity": 0.55
     }
   ]
 }

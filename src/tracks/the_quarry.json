@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "the_quarry",
   "packId": "midwest_pack_1",
   "hidden": false,
@@ -43,9 +43,9 @@
       "cols": 11,
       "rows": 11,
       "heights": [
-        0,
-        0,
-        0,
+        3,
+        1,
+        2.5,
         0,
         0,
         0,
@@ -54,9 +54,9 @@
         4,
         5,
         7,
-        0,
-        0,
-        0,
+        2,
+        -2,
+        -1,
         0,
         0,
         0,
@@ -67,9 +67,9 @@
         7,
         1.0999999999999996,
         1.0999999999999999,
-        4,
-        4,
-        4,
+        5,
+        6,
+        4.5,
         4,
         0,
         2.999999999999999,
@@ -79,7 +79,7 @@
         4.4,
         4.4,
         4,
-        1,
+        -1,
         0,
         0,
         2,
@@ -95,8 +95,8 @@
         0,
         3,
         15,
-        15,
-        15,
+        18,
+        18,
         15,
         11,
         10.4,
@@ -106,8 +106,8 @@
         0,
         3,
         15,
-        15,
-        15,
+        14,
+        14,
         15,
         12.8,
         12.56,
@@ -140,7 +140,7 @@
         10,
         15,
         15,
-        20,
+        19,
         20,
         22,
         22,
@@ -150,8 +150,8 @@
         25,
         20,
         20,
-        20,
-        20,
+        19,
+        18.5,
         20,
         25,
         25,
@@ -166,6 +166,8 @@
         20
       ],
       "offsetsX": [
+        7.673718710682266,
+        0.5108431442751069,
         0,
         0,
         0,
@@ -175,11 +177,9 @@
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        5.145042443198328,
-        -0.5,
+        0.9509186997826333,
+        6.159073428014182,
+        3.422539997750299,
         0,
         0,
         0,
@@ -203,7 +203,7 @@
         3.5,
         -3.5,
         1,
-        -7.84,
+        -5.84,
         0,
         7.84,
         0,
@@ -289,6 +289,8 @@
         0
       ],
       "offsetsZ": [
+        7.84,
+        2.7556143945291893,
         0,
         0,
         0,
@@ -298,11 +300,9 @@
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        4.003505285755551,
-        3.5,
+        4.863461935869182,
+        3.992597368939194,
+        3.3381769855680687,
         4,
         4,
         4,
@@ -314,7 +314,7 @@
         0,
         0.08766258343477773,
         -3,
-        -4.5,
+        -3.5,
         -1,
         0,
         0,
@@ -415,7 +415,7 @@
     {
       "type": "driveBox",
       "centerX": -51.31792618515138,
-      "centerZ": -46.62637652444483,
+      "centerZ": -46.12637652444483,
       "width": 9.5,
       "depth": 4,
       "rotation": 162,
@@ -492,8 +492,8 @@
           "z": -69.16
         },
         {
-          "x": -66.89,
-          "z": 68.84
+          "x": -66.93795650719416,
+          "z": 67.69169393584652
         },
         {
           "x": 68.74,
@@ -536,8 +536,8 @@
           "z": -20.99434342311373
         },
         {
-          "x": 10.9,
-          "z": -39.81
+          "x": 16.875469721463954,
+          "z": -40.44071065808595
         },
         {
           "x": 67.22,
@@ -549,7 +549,7 @@
         }
       ],
       "width": 17,
-      "blendWidth": 2,
+      "blendWidth": 3,
       "cornerRadius": 5,
       "closed": true,
       "terrainType": "loose_dirt"
@@ -617,8 +617,8 @@
           "radius": 3
         },
         {
-          "x": 51.03,
-          "z": -0.9199999999999999,
+          "x": 52.03,
+          "z": 0.08000000000000002,
           "radius": 4
         },
         {
@@ -664,11 +664,11 @@
         },
         {
           "x": 77.36,
-          "z": -15.760000000000002,
+          "z": -16.26,
           "radius": 9
         },
         {
-          "x": 58.36,
+          "x": 55.86,
           "z": -20.34,
           "radius": 8.5
         },
@@ -720,13 +720,15 @@
       "type": "squareHill",
       "centerX": -0.0958098136325134,
       "centerZ": -6.820605561847188,
-      "width": 32,
-      "depth": 30,
+      "width": 38,
+      "depth": 36,
       "angle": 0,
-      "height": -2,
+      "height": -1.4,
       "waterLevelOffset": 1,
       "transition": 3,
-      "terrainType": "water"
+      "terrainType": "water",
+      "edgeShape": 0.8,
+      "blendWidth": 3
     },
     {
       "type": "hill",
@@ -737,18 +739,20 @@
       "angle": 0,
       "height": -2,
       "waterLevelOffset": 2,
-      "terrainType": "water"
+      "terrainType": "water",
+      "blendWidth": 2.5
     },
     {
       "type": "hill",
-      "centerX": 13.47009449439975,
-      "centerZ": -23.329856294854313,
+      "centerX": 10.972299174149462,
+      "centerZ": -23.224887070146455,
       "radiusX": 16,
       "radiusZ": 10,
       "angle": 0,
       "height": -2,
       "waterLevelOffset": 2,
-      "terrainType": "water"
+      "terrainType": "water",
+      "blendWidth": 3.5
     },
     {
       "type": "model",
@@ -789,20 +793,21 @@
     {
       "type": "model",
       "model": "arrow_sign",
-      "x": 0.9409794905263986,
-      "z": 19.68842409833651,
+      "x": 0.9499794892931451,
+      "z": 21.188397098100907,
       "color": "yellow",
       "scale": 1.1,
       "heading": 0,
       "mirrorX": true,
-      "mirrorZ": true
+      "mirrorZ": true,
+      "collider": true
     },
     {
       "type": "squareHill",
       "centerX": 29.688644607688726,
       "centerZ": -67.62301249124444,
-      "width": 15,
-      "depth": 16,
+      "width": 23,
+      "depth": 24,
       "angle": 180,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -823,11 +828,11 @@
     },
     {
       "type": "hill",
-      "centerX": -23.30389455027064,
-      "centerZ": 44.62683907974255,
+      "centerX": -44.56924451465323,
+      "centerZ": 45.940755271785534,
       "radiusX": 8,
-      "radiusZ": 7,
-      "angle": 0,
+      "radiusZ": 15.5,
+      "angle": -35,
       "height": 2,
       "waterLevelOffset": 0,
       "terrainType": null
@@ -857,8 +862,8 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 56.243771044545,
-      "centerZ": -9.878665883410633,
+      "centerX": 55.743771044545,
+      "centerZ": -10.378665883410633,
       "heading": -1.5707963267948966,
       "width": 16,
       "checkpointNumber": 2,
@@ -870,8 +875,8 @@
       "type": "squareHill",
       "centerX": -69.45119009008427,
       "centerZ": -23.23094058290997,
-      "width": 10,
-      "depth": 10,
+      "width": 18,
+      "depth": 18,
       "angle": 90,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -883,8 +888,8 @@
       "type": "squareHill",
       "centerX": -66.95119009008427,
       "centerZ": 3.7690594170900305,
-      "width": 10,
-      "depth": 10,
+      "width": 18,
+      "depth": 18,
       "angle": 89,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -896,8 +901,8 @@
       "type": "squareHill",
       "centerX": -68.45119009008427,
       "centerZ": 32.26905941709003,
-      "width": 10,
-      "depth": 10,
+      "width": 18,
+      "depth": 18,
       "angle": 90,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -907,14 +912,14 @@
     },
     {
       "type": "hill",
-      "centerX": 69.61599779565833,
-      "centerZ": 70.76519758735098,
+      "centerX": 70.63610976870002,
+      "centerZ": 71.2227689615179,
       "radiusX": 7,
-      "radiusZ": 8,
-      "angle": 0,
+      "radiusZ": 19.5,
+      "angle": 20,
       "height": -1,
       "waterLevelOffset": 1,
-      "terrainType": "rocky",
+      "terrainType": "grass",
       "blendWidth": 3
     },
     {
@@ -988,8 +993,8 @@
     },
     {
       "type": "trackSign",
-      "x": -19,
-      "z": 20,
+      "x": -18.997000000411084,
+      "z": 20.499990999921465,
       "name": "The Quarry",
       "rotation": -0.5235987755982988,
       "contentType": "brand",
@@ -1003,8 +1008,8 @@
     },
     {
       "type": "trackSign",
-      "x": 19,
-      "z": 19,
+      "x": 19.00599999917783,
+      "z": 19.99998199984293,
       "name": "The Quarry",
       "rotation": 0.5061454830783556,
       "contentType": "brand",
@@ -1232,8 +1237,8 @@
           "radius": 10
         },
         {
-          "x": 42.68684613073072,
-          "z": 44.932183393322205,
+          "x": 46.025435788575884,
+          "z": 51.03368046682041,
           "radius": 10
         },
         {
@@ -1423,27 +1428,74 @@
     },
     {
       "type": "squareHill",
-      "centerX": -44.85442861880122,
+      "centerX": -41.35442861880122,
       "centerZ": 10.962936053369361,
-      "width": 10,
-      "depth": 7.5,
+      "width": 18,
+      "depth": 15.5,
       "angle": 0,
-      "height": -2,
+      "height": -1.6,
       "waterLevelOffset": 0,
       "transition": 4,
-      "terrainType": null
+      "terrainType": null,
+      "edgeShape": 0.8
     },
     {
       "type": "squareHill",
       "centerX": 69.7620360649172,
       "centerZ": 13.342942471954137,
-      "width": 10,
-      "depth": 7.5,
+      "width": 20,
+      "depth": 17.5,
       "angle": 0,
       "height": -2,
       "waterLevelOffset": 0,
       "transition": 5,
       "terrainType": "rocky"
+    },
+    {
+      "type": "polyHill",
+      "points": [
+        {
+          "x": 34.39029980396212,
+          "z": -0.23674473149456787,
+          "radius": 10
+        },
+        {
+          "x": 35.62789827409402,
+          "z": -15.318889114480022,
+          "radius": 10
+        },
+        {
+          "x": 58.794128108700825,
+          "z": -19.860382075314025,
+          "radius": 10
+        },
+        {
+          "x": 77.25929135574783,
+          "z": -14.31872169912026,
+          "radius": 10
+        },
+        {
+          "x": 76.49604661625425,
+          "z": 0.1742392659927674,
+          "radius": 10
+        }
+      ],
+      "height": 3,
+      "width": 5,
+      "terrainType": null,
+      "closed": false,
+      "filled": false
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 17.44576664324482,
+      "centerZ": 9.10673923164051,
+      "terrainType": "rocky",
+      "width": 27,
+      "depth": 10,
+      "rotation": 129,
+      "blendWidth": 6
     }
   ]
 }

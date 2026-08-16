@@ -56,7 +56,7 @@
       <span>{{ editor.polyHill.height.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="-16" max="16" step="0.1"
+      type="range" min="-16" max="16" step="0.2"
       :value="editor.polyHill.height"
       @input="editor.setFeatureProp('polyHill', 'height', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

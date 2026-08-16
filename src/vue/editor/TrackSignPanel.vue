@@ -106,7 +106,7 @@
       <span>{{ editor.trackSign.heightOffset.toFixed(1) }} m</span>
     </div>
     <input
-      type="range" min="0" max="10" step="0.1"
+      type="range" min="0" max="10" step="0.2"
       :value="editor.trackSign.heightOffset"
       @input="editor.setFeatureProp('trackSign', 'heightOffset', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

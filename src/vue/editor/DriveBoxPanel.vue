@@ -44,7 +44,7 @@
       <span>{{ editor.driveBox.rotation.toFixed(0) }}°</span>
     </div>
     <input
-      type="range" min="0" max="360" step="1"
+      type="range" min="-180" max="180" step="2"
       :value="editor.driveBox.rotation"
       @input="editor.setFeatureProp('driveBox', 'rotation', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
