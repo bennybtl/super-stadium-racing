@@ -1,10 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "id": "huevos_grande",
   "packId": "offroad_pack_1",
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": false,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 12,
+    "color": "#808080"
+  },
   "name": "Huevos Grande",
   "image": "huevos_grande.jpg",
   "width": 160,
@@ -139,7 +145,7 @@
         },
         {
           "x": 24,
-          "z": 65,
+          "z": 65.5,
           "radius": 17
         },
         {
@@ -154,7 +160,7 @@
         },
         {
           "x": -20,
-          "z": 65.5,
+          "z": 66,
           "radius": 12
         },
         {
@@ -184,7 +190,7 @@
         },
         {
           "x": 78.5,
-          "z": 5,
+          "z": 4.5,
           "radius": 11.5
         },
         {
@@ -202,7 +208,8 @@
       "thickness": 0.5,
       "friction": 0.1,
       "closed": true,
-      "collisionHeight": 12
+      "collisionHeight": 8,
+      "fence": true
     },
     {
       "type": "polyWall",
@@ -309,8 +316,8 @@
       "type": "squareHill",
       "centerX": -24,
       "centerZ": -55.5,
-      "width": 0.5,
-      "depth": 20,
+      "width": 23.5,
+      "depth": 43,
       "height": 4,
       "transition": 11.5,
       "terrainType": null,
@@ -330,8 +337,8 @@
     },
     {
       "type": "trackSign",
-      "x": 2,
-      "z": -36.27521310516259,
+      "x": 0.2749264117930963,
+      "z": -30.568366910700206,
       "name": "Heuvos Grande",
       "rotation": 0,
       "contentType": "text",
@@ -339,8 +346,9 @@
       "background": "black",
       "scale": 2.15,
       "heightOffset": 2.5,
-      "width": 11.5,
-      "primaryColor": "red"
+      "width": 9.5,
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "polyHill",
@@ -362,20 +370,21 @@
         },
         {
           "x": 31,
-          "z": 4.934872136902456,
+          "z": 7.934872136902456,
           "radius": 0
         }
       ],
       "height": 3,
       "width": 8.5,
-      "closed": false
+      "closed": false,
+      "edgeShape": 0.8
     },
     {
       "type": "squareHill",
       "centerX": 5.5,
       "centerZ": 26.224786894837415,
-      "width": 2,
-      "depth": 19,
+      "width": 4,
+      "depth": 21,
       "height": 1,
       "transition": 1,
       "terrainType": null,
@@ -385,8 +394,8 @@
       "type": "squareHill",
       "centerX": 13,
       "centerZ": 26,
-      "width": 2,
-      "depth": 19,
+      "width": 4,
+      "depth": 21,
       "height": 1,
       "transition": 1,
       "terrainType": null,
@@ -396,8 +405,8 @@
       "type": "squareHill",
       "centerX": 20,
       "centerZ": 26,
-      "width": 2,
-      "depth": 19,
+      "width": 4,
+      "depth": 21,
       "height": 1,
       "transition": 1,
       "terrainType": null,
@@ -427,21 +436,22 @@
     },
     {
       "type": "squareHill",
-      "centerX": -9.5,
-      "centerZ": -11,
-      "width": 10,
-      "depth": 6,
-      "transition": 4,
+      "centerX": -6,
+      "centerZ": -10,
+      "width": 18,
+      "depth": 14,
+      "transition": 1.5,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3.5
+      "heightAtMax": 3.5,
+      "edgeShape": 0.8
     },
     {
       "type": "squareHill",
-      "centerX": 38,
-      "centerZ": -2.7752131051625923,
-      "width": 10,
-      "depth": 5,
+      "centerX": 35.45115607945718,
+      "centerZ": -1.0415045955472877,
+      "width": 18,
+      "depth": 13,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 4,
@@ -454,7 +464,9 @@
       "heading": 1.5707963267948966,
       "width": 26.5,
       "checkpointNumber": 1,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -463,7 +475,9 @@
       "heading": -3.141592653589793,
       "width": 22.5,
       "checkpointNumber": 2,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -472,7 +486,9 @@
       "heading": -3.141592653589793,
       "width": 28.5,
       "checkpointNumber": 3,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -481,7 +497,9 @@
       "heading": -3.141592653589793,
       "width": 26,
       "checkpointNumber": 4,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -490,7 +508,9 @@
       "heading": -1.5707963267948966,
       "width": 26,
       "checkpointNumber": 5,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "tireStack",
@@ -567,8 +587,8 @@
       "type": "squareHill",
       "centerX": 27,
       "centerZ": 26,
-      "width": 2,
-      "depth": 19,
+      "width": 4,
+      "depth": 21,
       "height": 1,
       "transition": 1,
       "terrainType": null,
@@ -788,24 +808,26 @@
       "contentType": "brand",
       "brandImage": "energizer-racing.png",
       "background": "black",
-      "scale": 2.15,
+      "scale": 1.8,
       "heightOffset": 2.5,
       "width": 11.5,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "trackSign",
-      "x": -37.3420840934334,
-      "z": -26.744737557361745,
+      "x": -32.3420840934334,
+      "z": -28.744737557361745,
       "name": "Heuvos Grande",
       "rotation": 0.33161255787892263,
       "contentType": "brand",
       "brandImage": "energizer-racing.png",
       "background": "black",
-      "scale": 2.15,
+      "scale": 1.8,
       "heightOffset": 2.5,
       "width": 11.5,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -819,7 +841,8 @@
       "scale": 1.45,
       "heightOffset": 0,
       "width": 10,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -833,7 +856,8 @@
       "scale": 1.45,
       "heightOffset": 0,
       "width": 10,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "bannerString",
@@ -871,8 +895,8 @@
       "type": "squareHill",
       "centerX": 14,
       "centerZ": -5.500369954967926,
-      "width": 13.5,
-      "depth": 17,
+      "width": 21.5,
+      "depth": 25,
       "height": -3.5,
       "transition": 4,
       "terrainType": "water",

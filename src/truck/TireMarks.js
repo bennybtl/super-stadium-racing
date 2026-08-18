@@ -3,10 +3,11 @@ import { Mesh, VertexBuffer, VertexData, StandardMaterial, Color3 } from "@babyl
 const MARK_WIDTH = 0.66;        // rubber stripe width (m)
 const MARK_LIFT = 0.05;         // above the sampled surface (m)
 const NODE_SPACING = 0.5;       // minimum travel before a new node is laid (m)
-// Marks are pure black blended over the ground, so alpha *is* the darkening
-// factor: the terrain underneath survives at (1 - alpha). A full-strength mark
-// leaves it at 78%, and lighter marks stay above 85%.
+// Marks blend toward the caller-supplied target colour (see update()'s
+// `color` param), so alpha *is* the blend strength. A full-strength mark
+// pushes the terrain 18% of the way toward that colour.
 const MAX_ALPHA = 0.18;
+const DEFAULT_COLOR = [0, 0, 0]; // fallback: plain darken, if the caller has no terrain sample
 
 /**
  * TireMarks — rubber laid down behind a truck's rear wheels.
@@ -42,12 +43,7 @@ export class TireMarks {
     const nodeCount = capacity * 2; // two ribbons in one buffer
     this._positions = new Float32Array(nodeCount * 2 * 3);
     this._colors = new Float32Array(nodeCount * 2 * 4);
-    for (let i = 0; i < nodeCount * 2; i++) {
-      this._colors[i * 4] = 1;
-      this._colors[i * 4 + 1] = 1;
-      this._colors[i * 4 + 2] = 1;
-      this._colors[i * 4 + 3] = 0;
-    }
+    // RGB defaults to black (darken); alpha 0 keeps every node invisible until written.
 
     // Per-ribbon ring state: write head, and whether a streak is in progress.
     this._heads = [0, capacity];
@@ -68,11 +64,15 @@ export class TireMarks {
    * @param {object} params
    * @param {{x:number,y:number,z:number}} params.position - truck centre
    * @param {number} params.heading                        - truck yaw (rad)
-   * @param {number} params.strength                       - 0 = no mark, 1 = fully dark
+   * @param {number} params.strength                       - 0 = no mark, 1 = fully saturated
+   * @param {[number,number,number]} [params.color]         - RGB (0-1) the mark blends
+   *   toward. Callers derive this from the terrain under the truck (e.g. its own colour
+   *   scaled darker/lighter, matching the AI-path wear overlay's ±22% multiply) so marks
+   *   read as worn terrain rather than a fixed paint colour. Defaults to plain black.
    * @param {(x:number, z:number, fromY:number) => number} params.sampleY
    *   resolves the drivable surface height, so marks sit on bridge decks too
    */
-  update({ position, heading, strength, sampleY }) {
+  update({ position, heading, strength, color = DEFAULT_COLOR, sampleY }) {
     const sin = Math.sin(heading);
     const cos = Math.cos(heading);
     // forward = (sin, cos); right = (cos, -sin)
@@ -83,7 +83,7 @@ export class TireMarks {
       const sideSign = side === 0 ? -1 : 1;
       const x = rearX + cos * this._halfTrack * sideSign;
       const z = rearZ - sin * this._halfTrack * sideSign;
-      this._updateRibbon(side, x, z, cos, -sin, strength, position.y, sampleY);
+      this._updateRibbon(side, x, z, cos, -sin, strength, color, position.y, sampleY);
     }
 
     for (let side = 0; side < 2; side++) {
@@ -101,12 +101,12 @@ export class TireMarks {
     }
   }
 
-  _updateRibbon(side, x, z, acrossX, acrossZ, strength, fromY, sampleY) {
+  _updateRibbon(side, x, z, acrossX, acrossZ, strength, color, fromY, sampleY) {
     if (strength <= 0) {
       // Streak ended: taper it off so the bridge to the next streak is
       // transparent at both ends.
       if (this._active[side]) {
-        this._layNode(side, x, z, acrossX, acrossZ, 0, fromY, sampleY);
+        this._layNode(side, x, z, acrossX, acrossZ, 0, color, fromY, sampleY);
         this._active[side] = false;
       }
       return;
@@ -116,39 +116,39 @@ export class TireMarks {
       const dx = x - this._lastX[side];
       const dz = z - this._lastZ[side];
       if (dx * dx + dz * dz < NODE_SPACING * NODE_SPACING) return;
-      this._layNode(side, x, z, acrossX, acrossZ, strength * MAX_ALPHA, fromY, sampleY);
+      this._layNode(side, x, z, acrossX, acrossZ, strength * MAX_ALPHA, color, fromY, sampleY);
       return;
     }
 
     // Streak start: an alpha-0 node first, so it fades in rather than beginning
     // with a hard edge, and the bridging quad from the previous streak stays
     // invisible.
-    this._layNode(side, x, z, acrossX, acrossZ, 0, fromY, sampleY);
-    this._layNode(side, x, z, acrossX, acrossZ, strength * MAX_ALPHA, fromY, sampleY);
+    this._layNode(side, x, z, acrossX, acrossZ, 0, color, fromY, sampleY);
+    this._layNode(side, x, z, acrossX, acrossZ, strength * MAX_ALPHA, color, fromY, sampleY);
     this._active[side] = true;
   }
 
-  _layNode(side, x, z, acrossX, acrossZ, alpha, fromY, sampleY) {
+  _layNode(side, x, z, acrossX, acrossZ, alpha, color, fromY, sampleY) {
     const base = side * this._capacity;
     const head = this._heads[side];
     const y = sampleY(x, z, fromY + 1) + MARK_LIFT;
     const halfWidth = MARK_WIDTH / 2;
 
-    this._writeNode(head, x, y, z, acrossX * halfWidth, acrossZ * halfWidth, alpha);
+    this._writeNode(head, x, y, z, acrossX * halfWidth, acrossZ * halfWidth, alpha, color);
 
     // Erase ahead of the head: collapse the next node onto this one and zero
     // the one after, so no quad spans from the newest mark to the oldest.
     const next = base + ((head - base + 1) % this._capacity);
     const after = base + ((head - base + 2) % this._capacity);
-    this._writeNode(next, x, y, z, acrossX * halfWidth, acrossZ * halfWidth, 0);
-    this._setNodeAlpha(after, 0);
+    this._writeNode(next, x, y, z, acrossX * halfWidth, acrossZ * halfWidth, 0, color);
+    this._setNodeColor(after, 0, color);
 
     this._heads[side] = next;
     this._lastX[side] = x;
     this._lastZ[side] = z;
   }
 
-  _writeNode(node, x, y, z, offsetX, offsetZ, alpha) {
+  _writeNode(node, x, y, z, offsetX, offsetZ, alpha, color) {
     const p = node * 6;
     this._positions[p]     = x - offsetX;
     this._positions[p + 1] = y;
@@ -156,12 +156,22 @@ export class TireMarks {
     this._positions[p + 3] = x + offsetX;
     this._positions[p + 4] = y;
     this._positions[p + 5] = z + offsetZ;
-    this._setNodeAlpha(node, alpha);
+    this._setNodeColor(node, alpha, color);
   }
 
-  _setNodeAlpha(node, alpha) {
+  // RGB carries the target colour this node blends toward; alpha carries the
+  // strength. See the material's emissiveColor comment in _createMesh for how
+  // that multiply reaches the framebuffer.
+  _setNodeColor(node, alpha, color) {
     const c = node * 8;
+    const [r, g, b] = color;
+    this._colors[c]     = r;
+    this._colors[c + 1] = g;
+    this._colors[c + 2] = b;
     this._colors[c + 3] = alpha;
+    this._colors[c + 4] = r;
+    this._colors[c + 5] = g;
+    this._colors[c + 6] = b;
     this._colors[c + 7] = alpha;
     const side = node < this._capacity ? 0 : 1;
     if (node < this._dirtyMin[side]) this._dirtyMin[side] = node;
@@ -195,12 +205,14 @@ export class TireMarks {
     vertexData.applyToMesh(mesh, true);
 
     const material = new StandardMaterial("tireMarksMat", scene);
-    // With lighting disabled the diffuse term drops out entirely and emissive is
-    // the only colour that reaches the framebuffer — same recipe as the ground
-    // decals. Leaving it black turns the standard alpha blend into a plain
-    // multiply: dst*(1-a) + 0*a, so the terrain keeps its own hue and only
-    // darkens. Vertex alpha carries the per-node strength (alpha *= vColor.a).
-    material.emissiveColor = Color3.Black();
+    // With lighting disabled the diffuse term drops out entirely, so the only
+    // colour that reaches the framebuffer is emissiveColor * vertexColor.rgb —
+    // same recipe as the ground decals, but white here (not black) so the
+    // per-node vertex colour (see _setNodeColor) passes through unchanged
+    // instead of being crushed to black. That, blended by vertex alpha via
+    // the standard alpha-combine (dst*(1-a) + colour*a), is what lets a mark
+    // blend toward whatever target colour update()'s `color` param supplies.
+    material.emissiveColor = Color3.White();
     material.diffuseColor = Color3.Black();
     material.specularColor = Color3.Black();
     material.disableLighting = true;

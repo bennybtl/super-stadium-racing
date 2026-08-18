@@ -1,7 +1,7 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_MESH_GRID } from './EditorMaterials.js';
-import { gizmoY, gizmoLineY } from './gizmo-height.js';
+import { GIZMO_CLEARANCE, GIZMO_LINE_CLEARANCE } from './gizmo-height.js';
 
 // Defaults for a new *regional* mesh grid (added when a base mesh already exists).
 const REGIONAL_DEFAULT = { width: 60, depth: 60, falloff: 15, angle: 0, cols: 9, rows: 9 };
@@ -245,6 +245,20 @@ export class MeshGridEditor {
 
   // ─── Gizmo creation / teardown ────────────────────────────────────────────
 
+  /**
+   * This feature's own height contribution at (x, z), with every other
+   * feature excluded from the sum. `Track.getHeightAt` sums all features
+   * together, so sampling it plain would place a mesh grid's handles at the
+   * *combined* terrain height — meaning a hill or crater placed over the grid
+   * would visibly drag its control points along, even though the grid's own
+   * `heights[]` data never changed. Isolating the feature keeps handles at
+   * exactly what this mesh grid contributes, so it reads as the base layer
+   * other features build on top of, matching what's actually stored.
+   */
+  _ownHeightAt(feature, x, z) {
+    return this.track.getHeightAt(x, z, f => f !== feature);
+  }
+
   /** World position of grid point (r, c), applying the mesh's rotation. */
   _gridPointWorld(feature, r, c) {
     const { centerX, centerZ, width, depth, cols, rows } = feature;
@@ -280,7 +294,7 @@ export class MeshGridEditor {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const { x: worldX, z: worldZ } = this._gridPointWorld(feature, r, c);
-        const worldY = gizmoY(this.track, worldX, worldZ);
+        const worldY = this._ownHeightAt(feature, worldX, worldZ) + GIZMO_CLEARANCE;
 
         const mesh = MeshBuilder.CreateSphere(`mgPt_${r}_${c}`, {
           diameter: radius,
@@ -331,7 +345,7 @@ export class MeshGridEditor {
       const row = [];
       for (let c = 0; c < cols; c++) {
         const { x: wx, z: wz } = this._gridPointWorld(feature, r, c);
-        row.push(new Vector3(wx, gizmoLineY(this.track, wx, wz), wz));
+        row.push(new Vector3(wx, this._ownHeightAt(feature, wx, wz) + GIZMO_LINE_CLEARANCE, wz));
       }
       lines.push(row);
     }
@@ -341,7 +355,7 @@ export class MeshGridEditor {
       const col = [];
       for (let r = 0; r < rows; r++) {
         const { x: wx, z: wz } = this._gridPointWorld(feature, r, c);
-        col.push(new Vector3(wx, gizmoLineY(this.track, wx, wz), wz));
+        col.push(new Vector3(wx, this._ownHeightAt(feature, wx, wz) + GIZMO_LINE_CLEARANCE, wz));
       }
       lines.push(col);
     }
@@ -366,7 +380,7 @@ export class MeshGridEditor {
       const { x: wx, z: wz } = this._gridPointWorld(p.feature, p.r, p.c);
       p.mesh.position.x = wx;
       p.mesh.position.z = wz;
-      p.mesh.position.y = gizmoY(this.track, wx, wz);
+      p.mesh.position.y = this._ownHeightAt(p.feature, wx, wz) + GIZMO_CLEARANCE;
     }
     for (const ls of this.lineSystems) ls.dispose();
     this.lineSystems = [];

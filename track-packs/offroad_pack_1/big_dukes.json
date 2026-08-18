@@ -1,10 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "id": "big_dukes",
   "packId": "offroad_pack_1",
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": false,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 12,
+    "color": "#808080"
+  },
   "name": "Big Dukes",
   "image": "big_dukes.jpg",
   "width": 160,
@@ -15,13 +21,13 @@
     "enabled": true,
     "source": "aiPath",
     "alphaBreakup": 1,
-    "width": 3.2,
-    "intensity": 2,
+    "width": 2.5,
+    "intensity": 0.8,
     "laneSpacing": 1.6,
     "pathWander": 1.07,
     "edgeSoftness": 0.75,
-    "secondaryPathCount": 100,
-    "secondaryPathStrength": 3,
+    "secondaryPathCount": 65,
+    "secondaryPathStrength": 0.8,
     "secondaryPathSpacing": 0.08,
     "seed": 1337,
     "breakup": 0.69
@@ -131,7 +137,8 @@
       "scale": 1.45,
       "heightOffset": 2.3,
       "width": 12.5,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "polyWall",
@@ -164,13 +171,14 @@
     },
     {
       "type": "hill",
-      "centerX": 63,
+      "centerX": 60.5,
       "centerZ": -42.5,
       "height": 4,
       "terrainType": null,
       "radiusX": 8,
       "radiusZ": 8,
-      "angle": 0
+      "angle": 0,
+      "edgeShape": 0.8
     },
     {
       "type": "polyWall",
@@ -187,7 +195,7 @@
         },
         {
           "x": -21,
-          "z": 46,
+          "z": 43,
           "radius": 9
         },
         {
@@ -290,24 +298,27 @@
       "radiusX": 8,
       "radiusZ": 8,
       "angle": 0,
-      "blendWidth": 3
+      "blendWidth": 3,
+      "edgeShape": 0.8,
+      "flatTop": 0.1
     },
     {
       "type": "hill",
-      "centerX": -52,
-      "centerZ": 49,
+      "centerX": -51.976774382981574,
+      "centerZ": 48.97833264039516,
       "height": 4,
       "terrainType": "loose_dirt",
       "radiusX": 8,
       "radiusZ": 8,
-      "angle": 0
+      "angle": 0,
+      "edgeShape": 0.8
     },
     {
       "type": "squareHill",
       "centerX": 37,
       "centerZ": 55,
-      "width": 7,
-      "depth": 6,
+      "width": 15,
+      "depth": 14,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
@@ -318,8 +329,8 @@
       "type": "squareHill",
       "centerX": 23,
       "centerZ": 67,
-      "width": 7,
-      "depth": 6,
+      "width": 15,
+      "depth": 14,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
@@ -330,8 +341,8 @@
       "type": "squareHill",
       "centerX": 9,
       "centerZ": 56,
-      "width": 7,
-      "depth": 6,
+      "width": 15,
+      "depth": 14,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
@@ -342,8 +353,8 @@
       "type": "squareHill",
       "centerX": -4,
       "centerZ": 67,
-      "width": 7,
-      "depth": 6,
+      "width": 15,
+      "depth": 14,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
@@ -354,8 +365,8 @@
       "type": "squareHill",
       "centerX": -18,
       "centerZ": 56.5,
-      "width": 7,
-      "depth": 6,
+      "width": 15,
+      "depth": 14,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
@@ -366,8 +377,8 @@
       "type": "squareHill",
       "centerX": -31,
       "centerZ": 66.5,
-      "width": 7,
-      "depth": 6,
+      "width": 15,
+      "depth": 14,
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
@@ -523,7 +534,8 @@
       "scale": 1.4,
       "heightOffset": 3.2,
       "width": 16,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1.35
     },
     {
       "type": "trackSign",
@@ -537,7 +549,8 @@
       "scale": 2.5,
       "heightOffset": 1.9,
       "width": 12,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1.15
     },
     {
       "type": "trackSign",
@@ -551,7 +564,8 @@
       "scale": 2.5,
       "heightOffset": 1.9,
       "width": 12,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1.15
     },
     {
       "type": "trackSign",
@@ -565,7 +579,8 @@
       "scale": 2.5,
       "heightOffset": 1.9,
       "width": 12,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1.15
     },
     {
       "type": "actionZone",
@@ -598,54 +613,57 @@
       "points": [
         {
           "x": -14.887762022064358,
-          "z": -33.75637975279428,
+          "z": -32.25637975279428,
           "radius": 0
         },
         {
           "x": 4.8776657866124875,
-          "z": -33.37122854984604,
+          "z": -31.871228549846037,
           "radius": 0
         }
       ],
       "height": 7,
       "width": 25,
-      "closed": false
+      "closed": false,
+      "edgeShape": 0.8
     },
     {
       "type": "polyHill",
       "points": [
         {
-          "x": 17.31727569404802,
+          "x": 15.817275694048021,
           "z": -22.223792560171393,
           "radius": 0
         },
         {
-          "x": 17.858089441274636,
+          "x": 16.358089441274636,
           "z": -5.6595052974438325,
           "radius": 0
         }
       ],
       "height": 7,
       "width": 25,
-      "closed": false
+      "closed": false,
+      "edgeShape": 0.8
     },
     {
       "type": "polyHill",
       "points": [
         {
-          "x": -24.547301507390678,
+          "x": -23.547301507390678,
           "z": -3.9229792869071147,
           "radius": 0
         },
         {
-          "x": -25.035870377887544,
+          "x": -23.535870377887544,
           "z": -19.593052995737636,
           "radius": 0
         }
       ],
       "height": 7,
       "width": 25,
-      "closed": false
+      "closed": false,
+      "edgeShape": 0.8
     },
     {
       "type": "polyHill",
@@ -656,26 +674,28 @@
           "radius": 0
         },
         {
-          "x": -13.117170827162987,
-          "z": 5.506900984476388,
+          "x": -13.617170827162987,
+          "z": 4.506900984476388,
           "radius": 0
         }
       ],
       "height": 7,
       "width": 25,
-      "closed": false
+      "closed": false,
+      "edgeShape": 0.8
     },
     {
       "type": "squareHill",
       "centerX": -4.005979174222559,
       "centerZ": -14.000000000000007,
-      "width": 18.5,
-      "depth": 18.5,
+      "width": 25.5,
+      "depth": 25,
       "height": -1,
       "transition": 5.5,
       "terrainType": "water",
       "angle": 0,
-      "waterLevelOffset": 1
+      "waterLevelOffset": 1,
+      "blendWidth": 3
     },
     {
       "type": "actionZone",
@@ -735,7 +755,7 @@
     {
       "type": "trackSign",
       "x": -45.5759587683932,
-      "z": -32.80895410247707,
+      "z": -32.30895410247707,
       "name": "Track Name",
       "rotation": -0.03490658503988659,
       "contentType": "brand",
@@ -744,7 +764,8 @@
       "scale": 2,
       "heightOffset": 0,
       "width": 14,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1.1
     },
     {
       "type": "tireStack",
@@ -826,7 +847,7 @@
       "shape": "circle",
       "centerX": 58.49018212577383,
       "centerZ": -13.784701828831118,
-      "terrainType": "rocky",
+      "terrainType": "mud",
       "width": 29,
       "depth": 21,
       "rotation": 143,
@@ -859,12 +880,13 @@
       "type": "squareHill",
       "centerX": -33.9993854627051,
       "centerZ": 30.71243524928601,
-      "width": 14,
-      "depth": 2.5,
+      "width": 26,
+      "depth": 14.5,
       "height": 4,
       "transition": 6,
       "terrainType": "packed_dirt",
-      "angle": 87
+      "angle": 102,
+      "edgeShape": 0.8
     },
     {
       "type": "hill",
@@ -959,13 +981,13 @@
       "outline": false,
       "width": 4,
       "depth": 18,
-      "angle": 89,
+      "angle": 90,
       "opacity": 1
     },
     {
       "type": "surfaceDecal",
       "centerX": -3.4155807809038263,
-      "centerZ": 6.744261729853299,
+      "centerZ": 6.244261729853299,
       "shape": "line",
       "color": "white",
       "count": 3,
@@ -990,7 +1012,7 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": -36.03806379481293,
+      "centerX": -34.03806379481293,
       "centerZ": -8.117576603141735,
       "shape": "chevron",
       "color": "white",
@@ -1003,7 +1025,7 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": -36.25548082428742,
+      "centerX": -34.25548082428742,
       "centerZ": -16.566891918819856,
       "shape": "chevron",
       "color": "white",
@@ -1017,26 +1039,26 @@
     {
       "type": "surfaceDecal",
       "centerX": -10.13178146310255,
-      "centerZ": -42.962976803579586,
+      "centerZ": -41.962976803579586,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
       "width": 4,
-      "depth": 10.5,
+      "depth": 8,
       "angle": 90,
       "opacity": 1
     },
     {
       "type": "surfaceDecal",
       "centerX": -0.13178146310255023,
-      "centerZ": -42.962976803579586,
+      "centerZ": -41.962976803579586,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
       "width": 4,
-      "depth": 10.5,
+      "depth": 8,
       "angle": 90,
       "opacity": 1
     }

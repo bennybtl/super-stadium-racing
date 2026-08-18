@@ -38,6 +38,15 @@ const AI_TERRAIN_LOW_DETAIL_DIST = 75; // metres
 const YAW_PIVOT_FORWARD = 1.5; // ≈ front axle (TruckBody frontAxle)
 // Forward speed above which stamping on the brakes starts laying rubber (m/s).
 const TIRE_MARK_BRAKE_SPEED = 7;
+// Perceptual-luminance split for tire marks: below this, the terrain reads as
+// "dark" and marks darken it further; above, the terrain reads as "light"
+// (sand, snow) and marks lighten it instead. Standard Rec. 601 weights.
+const TIRE_MARK_LIGHTEN_LUMINANCE = 0.5;
+// Same ±22% swing the AI-path wear overlay multiplies the terrain colour by
+// (see ground-shader.js) — kept in sync so tire marks and baked wear read as
+// the same intensity of discolouration, just against terrain.color instead of
+// the actual rendered pixel (see TireMarks.js's update() doc for why).
+const TIRE_MARK_WEAR_FACTOR = 0.22;
 // Ring size per rear wheel: each node covers ~0.5 m of mark, so the player
 // carries about 2 km of marks per side and AI trucks ~0.75 km — enough that a
 // race ends before the ring wraps and starts recycling the oldest marks.
@@ -579,11 +588,30 @@ export class Truck {
         // terrain only where the truck is actually on it.
         const onWater = onNaturalGround && terrain?.name === 'water';
         const canMark = groundedness > 0.35 && !onWater && effectScaleOverride > 0.05;
+        // Same lighten/darken call the AI-path wear overlay makes for this terrain
+        // (see ground-shader.js), so tire marks read consistently with baked wear
+        // instead of always crushing toward black. Scaling terrain.color itself
+        // (rather than blending toward a fixed black/tan) keeps the mark's hue
+        // matched to whatever terrain it's actually laid on.
+        const terrainColor = terrain?.color;
+        let markColor;
+        if (terrainColor) {
+          const luminance = 0.299 * terrainColor.r + 0.587 * terrainColor.g + 0.114 * terrainColor.b;
+          const factor = luminance > TIRE_MARK_LIGHTEN_LUMINANCE
+            ? 1 + TIRE_MARK_WEAR_FACTOR
+            : 1 - TIRE_MARK_WEAR_FACTOR;
+          markColor = [
+            Math.min(1, terrainColor.r * factor),
+            Math.min(1, terrainColor.g * factor),
+            Math.min(1, terrainColor.b * factor),
+          ];
+        }
 
         this.tireMarks.update({
           position: this.mesh.position,
           heading: this.state.heading,
           strength: canMark ? Math.max(driftMark, brakeMark) : 0,
+          color: markColor,
           sampleY: this._surfaceSampler,
         });
       });

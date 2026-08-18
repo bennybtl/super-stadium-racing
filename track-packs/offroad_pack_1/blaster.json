@@ -1,10 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "id": "blaster",
   "packId": "offroad_pack_1",
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": false,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 12,
+    "color": "#808080"
+  },
   "name": "Blaster",
   "image": "blaster.jpg",
   "width": 160,
@@ -26,99 +32,6 @@
     "seed": 1337
   },
   "features": [
-    {
-      "type": "meshGrid",
-      "centerX": 0,
-      "centerZ": 0,
-      "width": 160,
-      "depth": 160,
-      "cols": 9,
-      "rows": 9,
-      "heights": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        1.5,
-        1.5,
-        2,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        2,
-        2,
-        2,
-        1.5,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        1.5,
-        -0.5,
-        -0.5,
-        -0.5,
-        0,
-        0,
-        0,
-        0.5,
-        1.5,
-        1.5,
-        -1.5,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.5,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        -1,
-        0,
-        1.5,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        -0.5,
-        0,
-        2,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1,
-        1.5,
-        2,
-        2.5
-      ],
-      "smoothing": 1
-    },
     {
       "type": "polyHill",
       "points": [
@@ -145,7 +58,8 @@
       ],
       "height": 5.5,
       "width": 14.5,
-      "closed": false
+      "closed": false,
+      "edgeShape": 0.8
     },
     {
       "type": "polyHill",
@@ -173,7 +87,8 @@
       ],
       "height": 5.5,
       "width": 14,
-      "closed": false
+      "closed": false,
+      "edgeShape": 0.8
     },
     {
       "type": "polyWall",
@@ -258,7 +173,8 @@
       "radius": 8,
       "height": 5,
       "terrainType": "rocky",
-      "blendWidth": 3.5
+      "blendWidth": 3.5,
+      "edgeShape": 0.8
     },
     {
       "type": "hill",
@@ -267,7 +183,8 @@
       "radius": 6.5,
       "height": 5,
       "terrainType": "rocky",
-      "blendWidth": 4
+      "blendWidth": 4,
+      "edgeShape": 0.8
     },
     {
       "type": "hill",
@@ -276,7 +193,8 @@
       "radius": 7.5,
       "height": 2,
       "terrainType": "loose_dirt",
-      "blendWidth": 4
+      "blendWidth": 4,
+      "edgeShape": 0.8
     },
     {
       "type": "hill",
@@ -285,7 +203,8 @@
       "radius": 6.5,
       "height": 6,
       "terrainType": "rocky",
-      "blendWidth": 3
+      "blendWidth": 3,
+      "edgeShape": 0.8
     },
     {
       "type": "hill",
@@ -416,7 +335,8 @@
       "scale": 1.45,
       "heightOffset": 0.8,
       "width": 11.5,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "hill",
@@ -424,7 +344,8 @@
       "centerZ": 29.5,
       "radius": 10,
       "height": 5,
-      "terrainType": null
+      "terrainType": null,
+      "edgeShape": 1.35
     },
     {
       "type": "polyWall",
@@ -453,7 +374,9 @@
       "height": 2,
       "thickness": 0.5,
       "friction": 0.1,
-      "closed": false
+      "closed": false,
+      "collisionHeight": 6,
+      "fence": true
     },
     {
       "type": "bannerString",
@@ -491,8 +414,8 @@
       "type": "squareHill",
       "centerX": 51.39884431444753,
       "centerZ": -71.79765207624321,
-      "width": 10,
-      "depth": 13,
+      "width": 20,
+      "depth": 23,
       "transition": 5,
       "terrainType": null,
       "heightAtMin": 4.5,
@@ -502,8 +425,8 @@
       "type": "squareHill",
       "centerX": 37.5,
       "centerZ": -28.275213105162592,
-      "width": 2,
-      "depth": 20,
+      "width": 3,
+      "depth": 21,
       "height": 2,
       "transition": 0.5,
       "terrainType": "loose_dirt",
@@ -513,8 +436,8 @@
       "type": "squareHill",
       "centerX": 43.5,
       "centerZ": -28.775213105162592,
-      "width": 2,
-      "depth": 20,
+      "width": 3,
+      "depth": 21,
       "height": 2,
       "transition": 0.5,
       "terrainType": "loose_dirt",
@@ -524,8 +447,8 @@
       "type": "squareHill",
       "centerX": 49.5,
       "centerZ": -29.275213105162592,
-      "width": 2,
-      "depth": 20,
+      "width": 3,
+      "depth": 21,
       "height": 2,
       "transition": 0.5,
       "terrainType": "loose_dirt",
@@ -535,8 +458,8 @@
       "type": "squareHill",
       "centerX": 55.5,
       "centerZ": -29.775213105162592,
-      "width": 2,
-      "depth": 20,
+      "width": 3,
+      "depth": 21,
       "height": 2,
       "transition": 0.5,
       "terrainType": "loose_dirt",
@@ -604,7 +527,9 @@
       "heading": -3.141592653589793,
       "width": 19,
       "checkpointNumber": 1,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -613,7 +538,9 @@
       "heading": 0,
       "width": 24.5,
       "checkpointNumber": 2,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -622,7 +549,9 @@
       "heading": 0,
       "width": 24.5,
       "checkpointNumber": 3,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -631,7 +560,9 @@
       "heading": 3.0415926535897935,
       "width": 21,
       "checkpointNumber": 4,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -640,7 +571,9 @@
       "heading": -1.5707963267948966,
       "width": 24,
       "checkpointNumber": 5,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
@@ -649,16 +582,20 @@
       "heading": -3.141592653589793,
       "width": 16,
       "checkpointNumber": 6,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "checkpoint",
       "centerX": -27,
-      "centerZ": -24.71008524206502,
+      "centerZ": -24.21008524206502,
       "heading": 1.5707963267948966,
       "width": 22.5,
       "checkpointNumber": 7,
-      "passedBy": {}
+      "passedBy": {},
+      "_altIndex": 0,
+      "_altCount": 1
     },
     {
       "type": "hill",
@@ -687,7 +624,8 @@
       "radius": 7,
       "height": 3.5,
       "terrainType": "loose_dirt",
-      "blendWidth": 4.5
+      "blendWidth": 4.5,
+      "edgeShape": 1.45
     },
     {
       "type": "aiPath",
@@ -1034,7 +972,8 @@
       "scale": 1.85,
       "heightOffset": 2,
       "width": 10,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -1048,7 +987,8 @@
       "scale": 1.85,
       "heightOffset": 2,
       "width": 10,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -1062,7 +1002,8 @@
       "scale": 1.85,
       "heightOffset": 2,
       "width": 10,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -1076,7 +1017,8 @@
       "scale": 1.85,
       "heightOffset": 0.2,
       "width": 10,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "trackSign",
@@ -1090,7 +1032,8 @@
       "scale": 1.85,
       "heightOffset": 0,
       "width": 10,
-      "primaryColor": "red"
+      "primaryColor": "red",
+      "logoScale": 1
     },
     {
       "type": "obstacle",
