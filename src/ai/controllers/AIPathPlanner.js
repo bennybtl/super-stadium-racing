@@ -1,3 +1,22 @@
+import { TERRAIN_TYPES } from "../../terrain.js";
+
+// Corner-speed grip constants below were tuned against the default terrain
+// (packed dirt) with no terrain awareness at all, so its gripMultiplier is
+// the "no change" baseline: a waypoint on packed dirt scales by 1. See
+// calculateFullPath.
+const BASELINE_GRIP = TERRAIN_TYPES.PACKED_DIRT.gripMultiplier;
+
+// The terrain-grip scale factor is floored at 1 (never below baseline), so
+// anything looser than packed dirt — loose/loamy dirt, rocky, mud, grass,
+// water — bakes corner speed exactly as it did before terrain awareness
+// existed, rather than compounding a new, more conservative target on top of
+// already-low real grip. The truck's *real* physics grip there is still
+// exactly as low as the terrain defines (see Controls.js's effectiveGrip);
+// this floor only keeps the AI's planned pace from being more timid than the
+// drift/slip model it's already built to handle. Only terrain grippier than
+// packed dirt (asphalt) scales the target up above baseline.
+const MIN_TERRAIN_GRIP_FACTOR = 1;
+
 export const DEFAULT_PATH_CONFIG = {
   lookBack: 5,
   lookAhead: 30,
@@ -26,6 +45,14 @@ export const DEFAULT_PATH_CONFIG = {
   // sweepers keep their pace while sharp corners slow disproportionately more.
   lateralAccel: 19,       // gentle-bend grip (fast sweepers)
   lateralAccelSharp: 11,  // hairpin grip (holds Zipper's ~68-90° apexes)
+
+  // Per-driver "racing line" variety (see calculateFullPath's line-variety
+  // pass) — without it every AI bakes the exact same deterministic path.
+  wanderAmplitude: 0.5,          // max sideways drift on straights (m)
+  wanderWavelengthMin: 25,       // shortest per-driver wander cycle length (m)
+  wanderWavelengthMax: 45,       // longest per-driver wander cycle length (m)
+  cornerBiasMax: 1.3,            // max inside/outside shift through a hairpin (m)
+  cornerFullAngle: Math.PI / 2,  // turn angle (rad) at which corner bias reaches full strength
 };
 
 // Waypoints either side of a gate's anchor to search for the racing line's
@@ -52,6 +79,11 @@ export class AIPathPlanner {
     this.curveWindowUnits = config.curveWindowUnits ?? DEFAULT_PATH_CONFIG.curveWindowUnits;
     this.lateralAccel = config.lateralAccel ?? DEFAULT_PATH_CONFIG.lateralAccel;
     this.lateralAccelSharp = config.lateralAccelSharp ?? DEFAULT_PATH_CONFIG.lateralAccelSharp;
+    this.wanderAmplitude = config.wanderAmplitude ?? DEFAULT_PATH_CONFIG.wanderAmplitude;
+    this.wanderWavelengthMin = config.wanderWavelengthMin ?? DEFAULT_PATH_CONFIG.wanderWavelengthMin;
+    this.wanderWavelengthMax = config.wanderWavelengthMax ?? DEFAULT_PATH_CONFIG.wanderWavelengthMax;
+    this.cornerBiasMax = config.cornerBiasMax ?? DEFAULT_PATH_CONFIG.cornerBiasMax;
+    this.cornerFullAngle = config.cornerFullAngle ?? DEFAULT_PATH_CONFIG.cornerFullAngle;
   }
 
   getCheckpointPositions() {
@@ -108,6 +140,11 @@ export class AIPathPlanner {
     // Turn angle (rad) at which the grip budget reaches LAT_SHARP; sharper turns
     // stay there. ~90° — Zipper's tightest apexes measure just under this.
     const GRIP_TAPER_ANGLE = Math.PI / 2;
+    const WANDER_AMPLITUDE = this.wanderAmplitude;
+    const WANDER_WAVELEN_MIN = this.wanderWavelengthMin;
+    const WANDER_WAVELEN_MAX = this.wanderWavelengthMax;
+    const CORNER_BIAS_MAX = this.cornerBiasMax;
+    const CORNER_FULL_ANGLE = this.cornerFullAngle;
 
     const buildAuthoredNodesWithBranches = () => {
       const mainNodes = authorNodes.map(p => ({ x: p.x, z: p.z }));
@@ -225,6 +262,76 @@ export class AIPathPlanner {
     }
     d.path.push({ x: nodes[0].x, z: nodes[0].z });
 
+    const P = d.path.length;
+    const win = Math.max(2, Math.round(CURVE_WINDOW_UNITS / STEP));
+
+    // Per-driver "racing line" variety: without this every AI drives the exact
+    // same pixel-perfect line, since the bake above is fully deterministic. A
+    // gentle sideways wander on straights, plus a per-driver bias toward the
+    // inside (tight) or outside (wide) of a corner scaled by how sharp it is,
+    // breaks that up without needing authored branch geometry. Offsets are
+    // computed from the untouched centerline first and applied afterward, so
+    // a neighbour's curvature read is never corrupted by an already-shifted
+    // point earlier in the same pass.
+    {
+      const wanderWavelength = WANDER_WAVELEN_MIN +
+        Math.random() * (WANDER_WAVELEN_MAX - WANDER_WAVELEN_MIN);
+      const wanderFreq = (2 * Math.PI) / wanderWavelength;
+      const wanderPhase = Math.random() * 2 * Math.PI;
+      const cornerBias = Math.random() * 2 - 1; // -1 = wide, +1 = tight
+
+      const offsets = new Array(P);
+      for (let i = 0; i < P - 1; i++) {
+        const a = d.path[Math.max(0, i - win)];
+        const curr = d.path[i];
+        const b = d.path[Math.min(P - 1, i + win)];
+        const inX = curr.x - a.x, inZ = curr.z - a.z;
+        const outX = b.x - curr.x, outZ = b.z - curr.z;
+        const inLen = Math.sqrt(inX * inX + inZ * inZ);
+        const outLen = Math.sqrt(outX * outX + outZ * outZ);
+        if (inLen < 0.001 || outLen < 0.001) continue;
+
+        const tx = outX / outLen, tz = outZ / outLen; // local tangent (unit)
+        const rightX = tz, rightZ = -tx;
+
+        const inDotOut = (inX * outX + inZ * outZ) / (inLen * outLen);
+        const angle = Math.acos(Math.max(-1, Math.min(1, inDotOut)));
+        const sharpness = Math.min(angle / CORNER_FULL_ANGLE, 1);
+
+        // Signed turn direction: positive = turning left (CCW), so the curve's
+        // inside is to the left of travel; negative = right turn, inside right.
+        const cross = inX * outZ - inZ * outX;
+        const insideSign = cross >= 0 ? 1 : -1;
+        const insideX = -insideSign * rightX, insideZ = -insideSign * rightZ;
+
+        // Wander fades out as the corner sharpens, so it doesn't fight the
+        // deliberate corner bias right where that bias matters most.
+        const wanderAmount = Math.sin(i * STEP * wanderFreq + wanderPhase)
+          * WANDER_AMPLITUDE * (1 - sharpness);
+        const cornerAmount = cornerBias * sharpness * CORNER_BIAS_MAX;
+
+        const offsetX = rightX * wanderAmount + insideX * cornerAmount;
+        const offsetZ = rightZ * wanderAmount + insideZ * cornerAmount;
+
+        // Never wander a waypoint into a wall/curb — drop the offset there.
+        const grid = d.worldToGrid(curr.x + offsetX, curr.z + offsetZ);
+        if (!d.isBlocked(grid.x, grid.z)) {
+          offsets[i] = { x: offsetX, z: offsetZ };
+        }
+      }
+
+      for (let i = 0; i < P - 1; i++) {
+        const off = offsets[i];
+        if (!off) continue;
+        d.path[i].x += off.x;
+        d.path[i].z += off.z;
+      }
+      // Keep the loop-closing duplicate exactly matching the (now offset) start
+      // rather than independently wandering — otherwise the lap seams visibly.
+      d.path[P - 1].x = d.path[0].x;
+      d.path[P - 1].z = d.path[0].z;
+    }
+
     // Corner target speed from a lateral-grip limit: the fastest the truck can
     // hold this radius without sliding wide. We measure the path's turn angle
     // over a fixed-distance window (independent of how densely the corner was
@@ -235,8 +342,14 @@ export class AIPathPlanner {
     // sharper. A long sweeping corner is locally gentle yet demands sustained
     // grip and drifts wide at sweeper speed, so the wide window pulls its target
     // down. The backward braking pass below turns these into early braking.
-    const P = d.path.length;
-    const win = Math.max(2, Math.round(CURVE_WINDOW_UNITS / STEP));
+    //
+    // The grip budget is also scaled by the painted terrain's real gripMultiplier
+    // (relative to BASELINE_GRIP) so corner targets track what the truck can
+    // actually carry there — without this, a track painted entirely in a
+    // higher-grip surface (e.g. asphalt) bakes corner speeds as if it were still
+    // packed dirt, leaving real speed on the table that a player exploits just by
+    // driving the physics directly.
+    const terrainManager = d.terrainManager;
     // Wider window (~24u) catches sustained curvature; SWEEP_FULL_ANGLE is the
     // deflection across it that counts as fully sharp for the grip taper.
     const sweepWin = Math.max(win + 1, Math.round(24 / STEP));
@@ -274,8 +387,12 @@ export class AIPathPlanner {
             sweepSharp = Math.min(wAngle / SWEEP_FULL_ANGLE, 1);
           }
           const sharpness = Math.max(localSharp, sweepSharp);
-          const grip = LAT_GENTLE + (LAT_SHARP - LAT_GENTLE) * sharpness;
-          speed = d.pace * Math.sqrt(grip * radius);
+          const baseGrip = LAT_GENTLE + (LAT_SHARP - LAT_GENTLE) * sharpness;
+          const terrainGripMultiplier = terrainManager?.getTerrainAt({ x: curr.x, z: curr.z })?.gripMultiplier;
+          const terrainFactor = Number.isFinite(terrainGripMultiplier)
+            ? Math.max(MIN_TERRAIN_GRIP_FACTOR, terrainGripMultiplier / BASELINE_GRIP)
+            : 1;
+          speed = d.pace * Math.sqrt(baseGrip * terrainFactor * radius);
         }
       }
       curr.speed = Math.max(MIN_SPEED, Math.min(BASE_SPEED, speed));

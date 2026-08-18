@@ -227,9 +227,12 @@ export class MenuMode extends DriveMode {
       // running as a train.
       getAIDriver: (i) => {
         const slot = i % 3;
-        if (slot === 0) return AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
-        if (slot === 1) return AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
-        return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
+        let driver;
+        if (slot === 0) driver = AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
+        else if (slot === 1) driver = AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
+        else driver = AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
+        driver.setTerrainManager(terrainManager);
+        return driver;
       },
       // No player, so the field fills the grid from pole.
       getAIGridSlot: (i) => i,

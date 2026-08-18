@@ -132,6 +132,12 @@ export class AIDriver {
     // so respawnFacingTarget can flush prevPos after teleporting.
     this._staticBodyCollisionManager = null;
 
+    // TerrainManager — set via setTerrainManager() so path baking can scale
+    // corner-speed targets by the actual painted terrain's grip (see
+    // AIPathPlanner). Without it, corners are baked assuming packed-dirt-like
+    // grip everywhere, underdriving higher-grip surfaces such as asphalt.
+    this.terrainManager = null;
+
     // Race context for AI nitro decisions
     this.gameState = null;
 
@@ -283,6 +289,15 @@ export class AIDriver {
    */
   setStaticBodyCollisionManager(mgr) {
     this._staticBodyCollisionManager = mgr;
+  }
+
+  /**
+   * Provide the TerrainManager so path baking can scale corner-speed targets
+   * by the painted terrain's actual grip. Call before calculateFullPath() (or
+   * before the next re-bake) for it to take effect.
+   */
+  setTerrainManager(terrainManager) {
+    this.terrainManager = terrainManager;
   }
 
   /**
@@ -445,7 +460,7 @@ export class AIDriver {
       dt: aiDt,
     });
 
-    const { shouldMoveForward, shouldReverse } = this._throttleController.compute({
+    const { shouldMoveForward, shouldReverse, brakeIntensity } = this._throttleController.compute({
       fwdSpeed,
     });
 
@@ -460,6 +475,7 @@ export class AIDriver {
       left: steerCmd < 0,
       right: steerCmd > 0,
       steer: steerCmd,
+      brake: brakeIntensity,
     };
 
     this._boostController.update({ position, forward, rightVec, fwdSpeed, input });

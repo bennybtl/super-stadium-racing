@@ -131,11 +131,24 @@ export class TruckCollisionManager {
 
     const halfA = tA.halfHeight ?? TRUCK_HALF_HEIGHT;
     const halfB = tB.halfHeight ?? TRUCK_HALF_HEIGHT;
+    const vertRange = halfA + halfB + VERTICAL_SKIN;
     const dy = posA.y - posB.y;
-    const overlapY = halfA + halfB + VERTICAL_SKIN - Math.abs(dy);
+    const overlapY = vertRange - Math.abs(dy);
     if (overlapY <= 0) return null;
 
-    if (overlapY < overlapXZ) {
+    // Compare penetration as a FRACTION of each axis's own range, not raw
+    // depth. The vertical range tops out at truck height (~0.8m) while the
+    // horizontal range runs up to ~3.3m — comparing raw depth meant a hard,
+    // sustained ram (easily >0.8m of horizontal overlap within a couple
+    // frames) got misread as a vertical/stacking contact once it out-grew
+    // the much smaller vertical ceiling, even with dy≈0 (same ground level).
+    // That handed the contact to the vertical spring, which only damps
+    // vertical velocity — nothing stopped the horizontal momentum, so the
+    // truck drove straight through.
+    const xzFraction = overlapXZ / collisionDist;
+    const yFraction = overlapY / vertRange;
+
+    if (yFraction < xzFraction) {
       return { axis: "y", overlapY, dy };
     }
 

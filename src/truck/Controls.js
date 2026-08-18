@@ -169,7 +169,7 @@ export class Controls {
       this.brakingToStop = false; // Clear if accelerating forward
       this.handleForwardInput(forward, deltaTime);
     } else if (input.back) {
-      this.handleBackwardInput(forward, deltaTime);
+      this.handleBackwardInput(forward, deltaTime, input.brake);
     }
   }
 
@@ -236,15 +236,18 @@ export class Controls {
     }
   }
 
-  handleBackwardInput(forward, deltaTime) {
+  // brakeIntensity (0-1) scales braking g-force for AI drivers trimming toward
+  // a target speed (see AIThrottleController) — full lock by default so player
+  // input (which has no analog value) keeps its existing binary brake feel.
+  handleBackwardInput(forward, deltaTime, brakeIntensity = 1) {
     const accelDir = this._surfaceDriveDir(forward);
 
     const forwardSpeed = this.state.velocity.dot(forward);
     const speed = this.state.velocity.length();
-    
+
     if (forwardSpeed > 0.5) {
       // Moving forward - apply brakes (reduced from full braking power)
-      const brakeScale = -this.state.braking * deltaTime;
+      const brakeScale = -this.state.braking * brakeIntensity * deltaTime;
       this.state.velocity.x += this.state.velocity.x * brakeScale;
       this.state.velocity.y += this.state.velocity.y * brakeScale;
       this.state.velocity.z += this.state.velocity.z * brakeScale;

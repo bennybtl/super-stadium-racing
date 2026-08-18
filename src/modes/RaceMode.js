@@ -206,14 +206,20 @@ export class RaceMode extends DriveMode {
     const getAIDriver = (i) => {
       // In a championship, each AI keeps the skill preset persisted in its roster
       // entry; outside a cup, cycle good/ok/bad by grid slot as before.
+      let driver;
       if (championship?.aiSkills) {
         const preset = AI_SKILL_PRESETS[championship.aiSkills[i]] ?? AI_SKILL_PRESETS.ok;
-        return new AIDriver(currentTrack, checkpointManager, wallManager, scene, preset);
+        driver = new AIDriver(currentTrack, checkpointManager, wallManager, scene, preset);
+      } else {
+        const slot = i % 3;
+        if (slot === 0) driver = AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
+        else if (slot === 1) driver = AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
+        else driver = AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
       }
-      const slot = i % 3;
-      if (slot === 0) return AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
-      if (slot === 1) return AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
-      return AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
+      // So path baking can scale corner-speed targets by the track's actual
+      // painted terrain grip instead of assuming packed dirt everywhere.
+      driver.setTerrainManager(terrainManager);
+      return driver;
     };
 
     // In a championship, AI colour/vehicle come from the persisted roster so a

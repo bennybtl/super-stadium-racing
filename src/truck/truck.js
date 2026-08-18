@@ -587,7 +587,13 @@ export class Truck {
         // Water leaves no rubber; bridge decks do, so this checks the painted
         // terrain only where the truck is actually on it.
         const onWater = onNaturalGround && terrain?.name === 'water';
-        const canMark = groundedness > 0.35 && !onWater && effectScaleOverride > 0.05;
+        // groundedness alone isn't enough here: it's smoothed over several frames
+        // (see TerrainPhysics.js) so grip/pitch don't flicker on bumps, but that
+        // lag means it reads "grounded" for a beat after a real launch. sampleY()
+        // then draws the mark onto whatever terrain sits under the truck's XZ,
+        // even mid-arc over a ramp face it never touched. isGrounded is the same
+        // instant, unlagged check used above for water spray — reuse it here.
+        const canMark = groundedness > 0.35 && isGrounded && !onWater && effectScaleOverride > 0.05;
         // Same lighten/darken call the AI-path wear overlay makes for this terrain
         // (see ground-shader.js), so tire marks read consistently with baked wear
         // instead of always crushing toward black. Scaling terrain.color itself

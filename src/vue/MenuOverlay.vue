@@ -309,7 +309,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useMenuStore } from './store.js';
 import { basicColors } from '../constants.js';
 import { loadControlsSettings } from '../settingsStorage.js';
@@ -328,6 +328,11 @@ import TruckSetup from './TruckSetup.vue';
 const store = useMenuStore();
 const showSafariWarning = isSafari();
 const setupStep = ref('selectTruck');
+// Each fresh pit-menu visit should start at vehicle selection, not wherever
+// the previous visit left off.
+watch(() => store.pitData, (newVal, oldVal) => {
+  if (newVal && !oldVal) setupStep.value = 'selectTruck';
+});
 // The pit overlay is a single panel with two setup steps; keying the slide on
 // the step makes stepping between them read like any other menu change.
 const pitScreenKey = computed(() =>

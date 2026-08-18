@@ -6,7 +6,7 @@ const NODE_SPACING = 0.5;       // minimum travel before a new node is laid (m)
 // Marks blend toward the caller-supplied target colour (see update()'s
 // `color` param), so alpha *is* the blend strength. A full-strength mark
 // pushes the terrain 18% of the way toward that colour.
-const MAX_ALPHA = 0.18;
+const MAX_ALPHA = 0.28;
 const DEFAULT_COLOR = [0, 0, 0]; // fallback: plain darken, if the caller has no terrain sample
 
 /**

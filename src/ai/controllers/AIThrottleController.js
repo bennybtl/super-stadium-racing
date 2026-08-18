@@ -3,10 +3,17 @@ export const DEFAULT_THROTTLE_CONFIG = {
   telemetryLookWaypoints: 3,
   pathLookWaypoints: 12,
   // How far over the upcoming target speed (world units/s) the AI must be before
-  // it brakes instead of just coasting. Coasting sheds almost nothing (only
-  // rolling resistance), so anything in this band is carried into the apex —
-  // keep it tight so the AI doesn't enter corners hot.
-  brakeMargin: 2,
+  // it starts trimming speed with the brake, rather than just coasting. Coasting
+  // sheds almost nothing (only rolling resistance), so anything below this is
+  // carried into the apex — keep it tight so the AI doesn't enter corners hot.
+  brakeStart: 2,
+  // Overspeed (world units/s) at which brake intensity reaches full lock.
+  // Between brakeStart and brakeFull, intensity ramps 0→1 instead of snapping
+  // straight to full deceleration — a single 100ms AI tick at full brake sheds
+  // more speed than the old dead-zone was wide, which flipped the AI between
+  // full brake and full throttle every tick. Ramping keeps small corrections
+  // gentle so it settles at the target instead of oscillating around it.
+  brakeFull: 8,
 };
 
 /**
@@ -22,7 +29,8 @@ export class AIThrottleController {
     this.speedTolerance = config.speedTolerance ?? DEFAULT_THROTTLE_CONFIG.speedTolerance;
     this.telemetryLookWaypoints = config.telemetryLookWaypoints ?? DEFAULT_THROTTLE_CONFIG.telemetryLookWaypoints;
     this.pathLookWaypoints = config.pathLookWaypoints ?? DEFAULT_THROTTLE_CONFIG.pathLookWaypoints;
-    this.brakeMargin = config.brakeMargin ?? DEFAULT_THROTTLE_CONFIG.brakeMargin;
+    this.brakeStart = config.brakeStart ?? DEFAULT_THROTTLE_CONFIG.brakeStart;
+    this.brakeFull = config.brakeFull ?? DEFAULT_THROTTLE_CONFIG.brakeFull;
   }
 
   compute({ fwdSpeed }) {
@@ -38,7 +46,7 @@ export class AIThrottleController {
     }
 
     if (targetSpeed === Infinity) {
-      return { shouldMoveForward: true, shouldReverse: false };
+      return { shouldMoveForward: true, shouldReverse: false, brakeIntensity: 0 };
     }
 
     // Telemetry speeds were recorded on specific terrain grip; scale to current.
@@ -56,14 +64,17 @@ export class AIThrottleController {
     const rubberBand = this.driver.truck?.state?.rubberBandSpeedMult;
     if (typeof rubberBand === 'number') targetSpeed *= rubberBand;
 
-    // Well over the target → brake into the corner. Within the tolerance band →
-    // coast. Below target → accelerate.
-    if (fwdSpeed - targetSpeed > this.brakeMargin) {
-      return { shouldMoveForward: false, shouldReverse: true };
+    // Past brakeStart → brake, ramping intensity up to full lock by brakeFull
+    // over. Within the tolerance band → coast. Below target → accelerate.
+    const overspeed = fwdSpeed - targetSpeed;
+    if (overspeed > this.brakeStart) {
+      const brakeIntensity = Math.min(1, (overspeed - this.brakeStart) / (this.brakeFull - this.brakeStart));
+      return { shouldMoveForward: false, shouldReverse: true, brakeIntensity };
     }
     return {
       shouldMoveForward: fwdSpeed < targetSpeed + this.speedTolerance,
       shouldReverse: false,
+      brakeIntensity: 0,
     };
   }
 }
