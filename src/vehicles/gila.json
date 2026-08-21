@@ -3,7 +3,7 @@
   "name": "Gila",
   "engineAudio": "bac",
   "modelFile": "gila.obj",
-  "defaultColor": [0.2, 0.8, 0.5],
+  "defaultColor": [0.8, 0.2, 0.1],
   "meshColors": {
     "widnshield_Cube.004": [0.1, 0.1, 0.1]
   },
