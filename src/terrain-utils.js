@@ -8,7 +8,11 @@ import { createWaterDepthSampler } from "./objects/water-field.js";
 import { clamp, lerp, smoothstep } from "./math-utils.js";
 
 const TERRAIN_TYPE_LIST = Object.values(TERRAIN_TYPES);
-const TERRAIN_TYPE_INDEX = new Map(TERRAIN_TYPE_LIST.map((terrainType, index) => [terrainType, index]));
+// Keyed by name rather than object identity: a terrain-region feature with a
+// roughness override (see Track._resolveTerrainType) hands back a clone of
+// its terrainType, which would otherwise miss an identity-keyed map and bake
+// as index 0 (asphalt).
+const TERRAIN_TYPE_INDEX = new Map(TERRAIN_TYPE_LIST.map((terrainType, index) => [terrainType.name, index]));
 
 export const DEFAULT_TERRAIN_WEAR_CONFIG = Object.freeze({
   enabled: true,
@@ -225,7 +229,7 @@ export function buildTerrainIdTexturePixelData(terrainManager) {
   for (let row = 0; row < n; row++) {
     for (let col = 0; col < n; col++) {
       const cell = terrainManager.grid[row * n + col];
-      const typeIndex = cell ? (TERRAIN_TYPE_INDEX.get(cell) ?? 0) : 0;
+      const typeIndex = cell ? (TERRAIN_TYPE_INDEX.get(cell.name) ?? 0) : 0;
       const base = (row * n + col) * 4;
       data[base] = typeIndex;
       data[base + 1] = 0;

@@ -145,6 +145,7 @@ export class TerrainShapeEditor {
 
     this.updateVisual(this.selected);
     this._scheduleTerrainGridRebuild();
+    rebuild.terrain?.(feature);
     rebuild.terrainTexture?.(false, { wear: false, normals: false });
     rebuild.normalMap?.();
 
@@ -166,6 +167,7 @@ export class TerrainShapeEditor {
     this.editor._rawDragPos = null;
     this.hideProperties();
     rebuild.terrainGrid?.();
+    rebuild.terrain?.();
     rebuild.terrainTexture?.(false, { wear: false, normals: false });
     rebuild.normalMap?.();
   }
@@ -190,6 +192,7 @@ export class TerrainShapeEditor {
       centerX:     center.x,
       centerZ:     center.z,
       terrainType: TERRAIN_TYPES.MUD,
+      roughness:   TERRAIN_TYPES.MUD.roughness,
     };
     const newFeature = { ...base, width: 10, depth: 10, rotation: 0 };
     newFeature.blendWidth = 0;
@@ -233,6 +236,7 @@ export class TerrainShapeEditor {
     ts.depth       = feature.depth ?? 10;
     ts.rotation    = feature.rotation ?? 0;
     ts.blendWidth  = feature.blendWidth ?? 0;
+    ts.roughness   = feature.roughness ?? feature.terrainType?.roughness ?? 0;
     s.selectedType = 'terrainShape';
   }
 
@@ -258,6 +262,7 @@ export class TerrainShapeEditor {
   rebuildTerrain() {
     const flushed = this._flushTerrainGridRebuild();
     if (!flushed) rebuild.terrainGrid?.();
+    rebuild.terrain?.(this.selected?.feature);
     rebuild.terrainTexture?.(false, { wear: false, normals: false });
     rebuild.normalMap?.();
     if (this.selected) this.updateVisual(this.selected);
@@ -305,6 +310,16 @@ export class TerrainShapeEditor {
     this.editor.saveSnapshot();
     const entry = Object.values(TERRAIN_TYPES).find(t => t.name === name);
     this.selected.feature.terrainType = entry || null;
+    // Follow the new type's own roughness by default; the user can still
+    // dial it in independently afterward via changeRoughness.
+    this.selected.feature.roughness = entry?.roughness ?? 0;
+    this.rebuildTerrain();
+  }
+
+  changeRoughness(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    this.selected.feature.roughness = Math.max(0, Math.min(1, val));
     this.rebuildTerrain();
   }
 

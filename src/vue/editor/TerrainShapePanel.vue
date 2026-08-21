@@ -65,6 +65,17 @@
         type="range" min="0" max="20" step="0.5"
         :value="editor.terrainShape.blendWidth"
         @input="editor.setFeatureProp('terrainShape', 'blendWidth', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Roughness</span>
+        <span>{{ editor.terrainShape.roughness.toFixed(2) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="1" step="0.05"
+        :value="editor.terrainShape.roughness"
+        @input="editor.setFeatureProp('terrainShape', 'roughness', +$event.target.value)"
         class="w-full accent-[var(--accent)] cursor-pointer"
       />
     </template>

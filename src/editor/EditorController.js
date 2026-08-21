@@ -1865,6 +1865,7 @@ export class EditorController {
   changeTerrainShapeRotation(val) { this.terrainShapeEditor.changeRotation(val); }
   changeTerrainShapeBlendWidth(val) { this.terrainShapeEditor.changeBlendWidth(val); }
   changeTerrainShapeTerrainType(n) { this.terrainShapeEditor.changeTerrainType(n); }
+  changeTerrainShapeRoughness(val) { this.terrainShapeEditor.changeRoughness(val); }
 
   // ─── Obstacle Editing (delegated to ObstacleEditor) ─────────────────────
 

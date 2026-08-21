@@ -19,6 +19,21 @@ const TRACK_SCHEMA_VERSION = 3;
 // two are the same number by definition, not by coincidence.
 const GROUND_BORDER = 10;
 
+// Max vertical breakup a fully-rough (roughness = 1) area adds to the ground
+// mesh, in metres. Shared by the outside-border breakup and terrain-region
+// roughness (see ROUGHNESS_NOISE below) so both read as the same kind of
+// "rough ground" at the same knob value.
+const ROUGHNESS_JITTER_AMPLITUDE = 1.0;
+
+// Deterministic pseudo-noise in [-1, 1], world-space so it holds still under
+// re-bakes. Two offset sine lattices avoid the axis-aligned banding a single
+// one shows.
+function ROUGHNESS_NOISE(x, z) {
+  const n1 = Math.sin((x + 31.7) * 0.37 + (z - 17.3) * 0.53) * 43758.5453;
+  const n2 = Math.sin((x - 11.1) * 0.91 - (z + 23.9) * 0.41) * 24634.6345;
+  return ((n1 - Math.floor(n1)) * 2 - 1) * 0.65 + ((n2 - Math.floor(n2)) * 2 - 1) * 0.35;
+}
+
 // Ground lattice density. GROUND_CELL_TARGET is the world-space spacing between
 // terrain vertices, and it is the hard floor on terrain detail: the mesh samples
 // the analytic height field at these points and nothing narrower survives. A
@@ -446,6 +461,44 @@ export class Track {
           }
           break;
         }
+
+        case "terrain": {
+          // Roughness adds the same procedural breakup as the outside border
+          // (see ROUGHNESS_NOISE below), fading in from the shape's edge so it
+          // never creases against neighbouring terrain. blendWidth doubles as
+          // that fade-in margin; unset/zero roughness costs nothing.
+          const roughness = feature.roughness;
+          if (!roughness) break;
+          const margin = Math.max(1, feature.blendWidth ?? 0);
+          let insideDist;
+          if (feature.shape === 'rect') {
+            const halfWidth = feature.width / 2;
+            const halfDepth = feature.depth / 2;
+            const wx = x - feature.centerX;
+            const wz = z - feature.centerZ;
+            const rBound = Math.sqrt(halfWidth * halfWidth + halfDepth * halfDepth);
+            if (wx * wx + wz * wz > rBound * rBound) break;
+            const { lx, lz } = rotateToLocal(wx, wz, (feature.rotation ?? 0) * Math.PI / 180);
+            if (Math.abs(lx) > halfWidth || Math.abs(lz) > halfDepth) break;
+            insideDist = Math.min(halfWidth - Math.abs(lx), halfDepth - Math.abs(lz));
+          } else if (feature.shape === 'circle') {
+            const dx = x - feature.centerX;
+            const dz = z - feature.centerZ;
+            const hw = (feature.width ?? 10) / 2;
+            const hd = (feature.depth ?? 10) / 2;
+            const rBound = Math.max(hw, hd);
+            if (dx * dx + dz * dz > rBound * rBound) break;
+            const { lx: localX, lz: localZ } = rotateToLocal(dx, dz, (feature.rotation ?? 0) * Math.PI / 180);
+            const ellipseDist = Math.sqrt((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd));
+            if (ellipseDist >= 1) break;
+            insideDist = (1 - ellipseDist) * Math.min(hw, hd);
+          } else {
+            break;
+          }
+          const mask = Math.max(0, Math.min(1, insideDist / margin));
+          totalHeight += ROUGHNESS_NOISE(x, z) * ROUGHNESS_JITTER_AMPLITUDE * roughness * mask;
+          break;
+        }
       }
     }
 
@@ -475,19 +528,26 @@ export class Track {
     // butts against the mesh edge at y = 0, and jitter there would open a
     // ragged seam along the whole boundary.
     if (signedDistToEdge < 0 && this.borderWall?.enabled !== false) {
-      const BORDER_Y_JITTER = 1.0;
       const borderT = Math.max(0, Math.min(1, -signedDistToEdge / HEIGHT_BLEND_OUTER));
       const jitterMask = Math.max(0, Math.min(1, (borderT - 0.2) / 0.8));
-      const n1 = Math.sin((x + 31.7) * 0.37 + (z - 17.3) * 0.53) * 43758.5453;
-      const n2 = Math.sin((x - 11.1) * 0.91 - (z + 23.9) * 0.41) * 24634.6345;
-      const jitter = ((n1 - Math.floor(n1)) * 2 - 1) * 0.65 + ((n2 - Math.floor(n2)) * 2 - 1) * 0.35;
-      blendedHeight += jitter * BORDER_Y_JITTER * jitterMask;
+      blendedHeight += ROUGHNESS_NOISE(x, z) * ROUGHNESS_JITTER_AMPLITUDE * jitterMask;
     }
 
     return blendedHeight;
   }
 
   // Get the terrain type at a world position (returns null if not specified)
+  // Terrain-region features (`type: "terrain"`) may carry a `roughness`
+  // override independent of their terrainType's baked-in value, so the same
+  // visual terrain (say, packed dirt) can be made rougher or smoother in a
+  // specific area. Returns the feature's terrainType as-is when no override
+  // is set, or a shallow clone with `roughness` replaced when one is.
+  _resolveTerrainType(feature) {
+    const terrainType = feature.terrainType;
+    if (typeof feature.roughness !== 'number' || !terrainType) return terrainType;
+    return { ...terrainType, roughness: feature.roughness };
+  }
+
   getTerrainTypeAt(x, z) {
     // Check features in reverse order so later additions take priority
     for (let i = this.features.length - 1; i >= 0; i--) {
@@ -540,7 +600,7 @@ export class Track {
               ? insideDist
               : -Math.sqrt(edgeDx * edgeDx + edgeDz * edgeDz);
             if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
-              return feature.terrainType;
+              return this._resolveTerrainType(feature);
             }
           } else if (feature.shape === 'circle') {
             const dx = x - feature.centerX;
@@ -561,7 +621,7 @@ export class Track {
             const ellipseDist = Math.sqrt((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd));
             const signedDistToEdge = (1 - ellipseDist) * Math.min(hw, hd);
             if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
-              return feature.terrainType;
+              return this._resolveTerrainType(feature);
             }
           }
           break;
@@ -762,6 +822,16 @@ export class Track {
         return {
           minX: exp.minX - halfWidth, maxX: exp.maxX + halfWidth,
           minZ: exp.minZ - halfWidth, maxZ: exp.maxZ + halfWidth,
+        };
+      }
+      case "terrain": {
+        if (!feature.roughness) return { minX: 0, maxX: 0, minZ: 0, maxZ: 0 }; // flat — no height contribution
+        const hw = (feature.width ?? 10) / 2;
+        const hd = (feature.depth ?? 10) / 2;
+        const r = Math.sqrt(hw * hw + hd * hd); // rotation-invariant circumscribed circle
+        return {
+          minX: feature.centerX - r, maxX: feature.centerX + r,
+          minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
         };
       }
       default:

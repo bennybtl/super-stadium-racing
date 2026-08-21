@@ -81,6 +81,7 @@ export const useEditorStore = defineStore('editor', () => {
     rotation: 0,
     blendWidth: 0,
     terrainType: 'mud',
+    roughness: 0.15,
   });
 
   // ── Obstacle panel ──
