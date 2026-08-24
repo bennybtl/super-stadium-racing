@@ -37,6 +37,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.75,    // Slides much more
     color: TERRAIN_COLORS.loamy_dirt,
     dustIntensity: 0.3,      // Loose soil — kicks up readily
+    roosterTail: 1.0,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/loamy-soil.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.5,
@@ -51,6 +52,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 1.5,    // Slides more
     color: TERRAIN_COLORS.loose_dirt,
     dustIntensity: 0.3,      // Loose — kicks up readily
+    roosterTail: 0.9,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 30,
     diffuseTextureOpacity: 0.5,

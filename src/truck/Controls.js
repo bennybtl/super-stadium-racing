@@ -153,6 +153,15 @@ export class Controls {
   }
 
   updateAcceleration(input, forward, groundedness, deltaTime) {
+    // Boost is treated as its own propulsion source: if active, keep driving
+    // forward even when throttle is released (unless player/AI is braking).
+    const boostProvidesThrottle = (this.state.boostActive || this.state.speedBoostActive) && !input.back;
+
+    // Throttle signal (0..1) exposed for effects that key off the gas rather than
+    // speed, e.g. the dirt rooster tail. Set every frame, before the grounded
+    // gate below, so it never goes stale mid-air.
+    this.state.throttle = (input.forward || boostProvidesThrottle) ? 1 : 0;
+
     if (groundedness <= GROUNDEDNESS.STEER) return;
 
     // Clear brake-to-stop flag when back button is released
@@ -160,10 +169,6 @@ export class Controls {
       this.brakingToStop = false;
     }
     this.lastBackInput = input.back;
-
-    // Boost is treated as its own propulsion source: if active, keep driving
-    // forward even when throttle is released (unless player/AI is braking).
-    const boostProvidesThrottle = (this.state.boostActive || this.state.speedBoostActive) && !input.back;
 
     if (input.forward || boostProvidesThrottle) {
       this.brakingToStop = false; // Clear if accelerating forward

@@ -17,27 +17,107 @@ export function getSharedCloudTexture(scene) {
 }
 
 /**
- * Manages particle effects for the truck (drift smoke and water splash)
+ * Declarative definitions for every particle system the truck emits. Each spec is
+ * the full set of tunables for one emitter; _buildEmitter() turns a spec into a
+ * live ParticleSystem so the systems stay consistent and easy to compare/tweak.
+ *
+ * Conventions:
+ *  - emitBox x is an OFFSET from the emitter centre; for `paired` systems the
+ *    centre is `sideCenter * sideSign` (±), giving a left/right pair. y and z are
+ *    absolute in the truck's local frame (local -Z is rearward).
+ *  - `tint` marks a terrain-coloured system (alpha derived so it fades out); its
+ *    base colour is swapped at runtime as the truck changes surface. `color` is a
+ *    fixed palette (c1/c2/dead as RGBA arrays).
+ *  - `worldEmitter` emits from a world-space Vector3 the caller repositions each
+ *    burst, instead of tracking the mesh.
+ */
+const EMITTER_SPECS = {
+  // Drift smoke + light cruising dust. Terrain-tinted; sits under the truck.
+  drift: {
+    capacity: 300,
+    emitBox: { min: [-0.7, -1, -1], max: [0.7, -1, -1] },
+    tint: { a1: 0.5, a2: 0.3 },
+    size: [1.5, 3.2], life: [0.5, 2.0],
+    gravity: [0, -1, 0], dir1: [-1, 0.5, -0.5], dir2: [1, 0.5, -0.5],
+    angular: [0, Math.PI], power: [1, 4], updateSpeed: 0.01, emitRate: 2,
+  },
+  // Rooster tail: dirt thrown up and back off the rear tires under throttle.
+  // Terrain-tinted, denser and longer-lived than drift, launched with force.
+  rooster: {
+    paired: true, sideCenter: 1.0, capacity: 320, renderingGroupId: 1,
+    emitBox: { min: [-0.35, -0.3, -3.0], max: [0.35, 0.2, -1.8] },
+    tint: { a1: 0.85, a2: 0.6 },
+    size: [0.5, 1.7], life: [0.35, 0.8],
+    gravity: [0, -42, 0], dir1: [-0.7, 1.8, -3.2], dir2: [0.7, 3.2, -5.5],
+    angular: [0, Math.PI * 2], power: [3, 5], updateSpeed: 0.012,
+  },
+  // Water spray off the rear sides while wading.
+  splash: {
+    paired: true, sideCenter: 1.15, capacity: 180, renderingGroupId: 1,
+    emitBox: { min: [-0.28, 0.45, -2.9], max: [0.28, 0.9, -1.1] },
+    color: { c1: [0.8, 0.9, 1.0, 0.6], c2: [0.6, 0.8, 0.9, 0.4], dead: [0.4, 0.6, 0.8, 0] },
+    size: [0.4, 1.2], life: [0.2, 0.5],
+    gravity: [0, -5, 0], dir1: [-2, 2, -1], dir2: [2, 3, 1],
+    angular: [0, Math.PI * 2], power: [3, 6], updateSpeed: 0.01,
+  },
+  // Heavy mud spray.
+  mud: {
+    paired: true, sideCenter: 1.1, capacity: 220, renderingGroupId: 1,
+    emitBox: { min: [-0.3, -0.6, -2.8], max: [0.3, 0, -1.0] },
+    color: { c1: [0.42, 0.25, 0.10, 0.75], c2: [0.30, 0.18, 0.07, 0.50], dead: [0.18, 0.10, 0.04, 0] },
+    size: [0.55, 1.7], life: [0.18, 0.38],
+    gravity: [0, -16, 0], dir1: [-1.4, 1.1, -0.8], dir2: [1.4, 1.8, 0.8],
+    angular: [0, Math.PI * 1.5], power: [1.8, 4.0], updateSpeed: 0.01,
+  },
+  // Big white burst pulses when churning through deep water.
+  deep: {
+    paired: true, sideCenter: 1.35, capacity: 380, renderingGroupId: 1,
+    emitBox: { min: [-0.42, 0.55, -2.9], max: [0.42, 1.2, -1.1] },
+    color: { c1: [1.0, 1.0, 1.0, 0.95], c2: [1.0, 1.0, 1.0, 0.65], dead: [1.0, 1.0, 1.0, 0] },
+    size: [0.9, 2.0], life: [0.22, 0.42],
+    gravity: [0, -28, 0], dir1: [-2.8, 2.0, -2.8], dir2: [2.8, 3.1, 2.8],
+    angular: [0, Math.PI * 2], power: [1.8, 4.5], updateSpeed: 0.012,
+  },
+  // Nitro/boost puff. World-space emitter repositioned per burst (see _fireNitroBurst).
+  nitro: {
+    worldEmitter: true, capacity: 600,
+    emitBox: { min: [-0.4, -0.1, -0.4], max: [0.4, 0.2, 0.4] },
+    color: { c1: [1.0, 1.0, 1.0, 0.90], c2: [0.88, 0.88, 0.88, 0.70], dead: [0.70, 0.70, 0.70, 0] },
+    size: [0.5, 3.0], life: [0.3, 0.8],
+    gravity: [0, 1.5, 0], dir1: [0, 0.5, -8], dir2: [0, 2.0, -5],
+    angular: [0, Math.PI], power: [1, 3], updateSpeed: 0.02,
+  },
+};
+
+/**
+ * Manages particle effects for the truck: drift smoke, cruising dust, dirt
+ * rooster tails, water/mud/deep-water spray, and nitro bursts.
  */
 export class ParticleEffects {
   constructor(mesh, scene, options = null) {
     this.mesh = mesh;
     this.scene = scene;
     this._qualityScale = Math.max(0.1, Math.min(1, options?.qualityScale ?? 1));
-    this.driftParticles = this._createDriftParticles(TERRAIN_TYPES.PACKED_DIRT.color);
+
+    this.driftParticles = this._buildEmitter("drift", EMITTER_SPECS.drift);
+    this.roosterParticles = [
+      this._buildEmitter("roosterL", EMITTER_SPECS.rooster, -1),
+      this._buildEmitter("roosterR", EMITTER_SPECS.rooster, 1),
+    ];
     this.splashParticles = [
-      this._createSplashParticles("splashL", -1),
-      this._createSplashParticles("splashR", 1),
+      this._buildEmitter("splashL", EMITTER_SPECS.splash, -1),
+      this._buildEmitter("splashR", EMITTER_SPECS.splash, 1),
     ];
     this.mudSplashParticles = [
-      this._createMudSplashParticles("mudSplashL", -1),
-      this._createMudSplashParticles("mudSplashR", 1),
+      this._buildEmitter("mudSplashL", EMITTER_SPECS.mud, -1),
+      this._buildEmitter("mudSplashR", EMITTER_SPECS.mud, 1),
     ];
     this.deepSplashParticles = [
-      this._createDeepSplashParticles("deepSplashL", -1),
-      this._createDeepSplashParticles("deepSplashR", 1),
+      this._buildEmitter("deepSplashL", EMITTER_SPECS.deep, -1),
+      this._buildEmitter("deepSplashR", EMITTER_SPECS.deep, 1),
     ];
-    this.nitroParticles = this._createNitroParticles();
+    this.nitroParticles = this._buildEmitter("nitro", EMITTER_SPECS.nitro);
+
     this._currentTerrainName = null;
     this._wasInDeepWater = false;
     this._deepSplashPulseTimer = 0;
@@ -47,6 +127,68 @@ export class ParticleEffects {
     this._nitroEmitter = new Vector3();
     this._nitroDir1 = new Vector3();
     this._nitroDir2 = new Vector3();
+  }
+
+  /**
+   * Turn an EMITTER_SPECS entry into a started ParticleSystem. `sideSign` is -1/+1
+   * for the two halves of a `paired` system, 0 (default) for single emitters.
+   */
+  _buildEmitter(name, spec, sideSign = 0) {
+    const ps = new ParticleSystem(name, Math.round(spec.capacity * this._qualityScale), this.scene);
+    ps.particleTexture = getSharedCloudTexture(this.scene);
+    ps.emitter = spec.worldEmitter ? Vector3.Zero() : this.mesh;
+
+    const cx = (spec.sideCenter ?? 0) * sideSign;
+    const { min, max } = spec.emitBox;
+    ps.minEmitBox = new Vector3(cx + min[0], min[1], min[2]);
+    ps.maxEmitBox = new Vector3(cx + max[0], max[1], max[2]);
+
+    if (spec.renderingGroupId) ps.renderingGroupId = spec.renderingGroupId;
+
+    if (spec.color) {
+      ps.color1 = new Color4(...spec.color.c1);
+      ps.color2 = new Color4(...spec.color.c2);
+      ps.colorDead = new Color4(...spec.color.dead);
+    } else if (spec.tint) {
+      this._applyTint(ps, TERRAIN_TYPES.PACKED_DIRT.color, spec.tint);
+    }
+
+    ps.minSize = spec.size[0];
+    ps.maxSize = spec.size[1];
+    ps.minLifeTime = spec.life[0];
+    ps.maxLifeTime = spec.life[1];
+    ps.gravity = new Vector3(...spec.gravity);
+    ps.direction1 = new Vector3(...spec.dir1);
+    ps.direction2 = new Vector3(...spec.dir2);
+    ps.minAngularSpeed = spec.angular[0];
+    ps.maxAngularSpeed = spec.angular[1];
+    ps.minEmitPower = spec.power[0];
+    ps.maxEmitPower = spec.power[1];
+    ps.updateSpeed = spec.updateSpeed;
+    ps.emitRate = spec.emitRate ?? 0;
+    ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+
+    ps.start();
+    return ps;
+  }
+
+  /**
+   * Tint a terrain-coloured emitter from a base { r, g, b }. Alpha is derived so
+   * the smoke always fades to transparent; the two live colours darken toward the
+   * dead colour for depth.
+   */
+  _applyTint(ps, color, { a1 = 0.5, a2 = 0.3 } = {}) {
+    ps.color1    = new Color4(color.r,        color.g,        color.b,        a1);
+    ps.color2    = new Color4(color.r * 0.75, color.g * 0.75, color.b * 0.75, a2);
+    ps.colorDead = new Color4(color.r * 0.5,  color.g * 0.5,  color.b * 0.5,  0);
+  }
+
+  setDriftColor(color) {
+    this._applyTint(this.driftParticles, color, EMITTER_SPECS.drift.tint);
+  }
+
+  setRoosterColor(color) {
+    for (const p of this.roosterParticles) this._applyTint(p, color, EMITTER_SPECS.rooster.tint);
   }
 
   /**
@@ -64,83 +206,7 @@ export class ParticleEffects {
     return depthAt(this.mesh.position.x, this.mesh.position.z);
   }
 
-  /**
-   * Create a drift particle system tinted with the given base color { r, g, b }.
-   * Alpha is derived automatically so colors always fade to transparent.
-   */
-  _createDriftParticles(color) {
-    const particles = new ParticleSystem("drift", Math.round(300 * this._qualityScale), this.scene);
-    particles.particleTexture = getSharedCloudTexture(this.scene);
-    particles.emitter = this.mesh;
-    particles.minEmitBox = new Vector3(-0.7, -1, -1);
-    particles.maxEmitBox = new Vector3(0.7, -1, -1);
-
-    particles.color1    = new Color4(color.r,        color.g,        color.b,        0.5);
-    particles.color2    = new Color4(color.r * 0.75, color.g * 0.75, color.b * 0.75, 0.3);
-    particles.colorDead = new Color4(color.r * 0.5,  color.g * 0.5,  color.b * 0.5,  0);
-
-    particles.minSize = 1.5;
-    particles.maxSize = 3.2;
-    particles.minLifeTime = 0.50;
-    particles.maxLifeTime = 2.0;
-
-    particles.emitRate = 2;
-    particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
-    particles.gravity = new Vector3(0, -1, 0);
-    particles.direction1 = new Vector3(-1, 0.5, -0.5);
-    particles.direction2 = new Vector3(1,  0.5, -0.5);
-    particles.minAngularSpeed = 0;
-    particles.maxAngularSpeed = Math.PI;
-    particles.minEmitPower = 1;
-    particles.maxEmitPower = 4;
-    particles.updateSpeed = 0.01;
-
-    particles.start();
-    return particles;
-  }
-
-  setDriftColor(color) {
-    this.driftParticles.color1 = new Color4(color.r, color.g, color.b, 0.5);
-    this.driftParticles.color2 = new Color4(color.r * 0.75, color.g * 0.75, color.b * 0.75, 0.3);
-    this.driftParticles.colorDead = new Color4(color.r * 0.5, color.g * 0.5, color.b * 0.5, 0);
-  }
-
-  _createNitroParticles() {
-    const particles = new ParticleSystem("nitro", Math.round(600 * this._qualityScale), this.scene);
-    particles.particleTexture = getSharedCloudTexture(this.scene);
-    particles.emitter = Vector3.Zero();
-
-    particles.minEmitBox = new Vector3(-0.4, -0.1, -0.4);
-    particles.maxEmitBox = new Vector3(0.4, 0.2, 0.4);
-
-    particles.color1 = new Color4(1.00, 1.00, 1.00, 0.90);
-    particles.color2 = new Color4(0.88, 0.88, 0.88, 0.70);
-    particles.colorDead = new Color4(0.70, 0.70, 0.70, 0.00);
-
-    particles.minSize = 0.5;
-    particles.maxSize = 3.0;
-    particles.minLifeTime = 0.3;
-    particles.maxLifeTime = 0.8;
-
-    particles.emitRate = 0;
-    particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
-    particles.gravity = new Vector3(0, 1.5, 0);
-    particles.direction1 = new Vector3(0, 0.5, -8);
-    particles.direction2 = new Vector3(0, 2.0, -5);
-    particles.minAngularSpeed = 0;
-    particles.maxAngularSpeed = Math.PI;
-    particles.minEmitPower = 1;
-    particles.maxEmitPower = 3;
-    particles.updateSpeed = 0.02;
-
-    particles.start();
-    return particles;
-  }
-
-  /**
-   * Swap drift particle color to match the current terrain.
-   * Updates colors in-place to avoid system churn when terrain changes.
-   */
+  /** Reposition and fire the nitro puff behind the truck for the given heading. */
   _fireNitroBurst(heading) {
     const sin = Math.sin(heading);
     const cos = Math.cos(heading);
@@ -161,108 +227,6 @@ export class ParticleEffects {
     this._nitroTimer = 0.35;
   }
 
-  _createSplashParticles(name, sideSign) {
-    const splashParticles = new ParticleSystem(name, Math.round(180 * this._qualityScale), this.scene);
-    splashParticles.particleTexture = getSharedCloudTexture(this.scene);
-    splashParticles.emitter = this.mesh;
-    const sideCenterX = sideSign * 1.15;
-    splashParticles.minEmitBox = new Vector3(sideCenterX - 0.28, 0.45, -2.9);
-    splashParticles.maxEmitBox = new Vector3(sideCenterX + 0.28, 0.9, -1.1);
-    // Render after the translucent water surface so splashes are visibly on top.
-    splashParticles.renderingGroupId = 2;
-    
-    splashParticles.color1 = new Color4(0.8, 0.9, 1.0, 0.6);
-    splashParticles.color2 = new Color4(0.6, 0.8, 0.9, 0.4);
-    splashParticles.colorDead = new Color4(0.4, 0.6, 0.8, 0);
-    
-    splashParticles.minSize = 0.4;
-    splashParticles.maxSize = 1.2;
-    splashParticles.minLifeTime = 0.2;
-    splashParticles.maxLifeTime = 0.5;
-    
-    splashParticles.emitRate = 0;
-    splashParticles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
-    splashParticles.gravity = new Vector3(0, -5, 0);
-    splashParticles.direction1 = new Vector3(-2, 2, -1);
-    splashParticles.direction2 = new Vector3(2, 3, 1);
-    splashParticles.minAngularSpeed = 0;
-    splashParticles.maxAngularSpeed = Math.PI * 2;
-    splashParticles.minEmitPower = 3;
-    splashParticles.maxEmitPower = 6;
-    splashParticles.updateSpeed = 0.01;
-    
-    splashParticles.start();
-    return splashParticles;
-  }
-
-  _createMudSplashParticles(name, sideSign) {
-    const particles = new ParticleSystem(name, Math.round(220 * this._qualityScale), this.scene);
-    particles.particleTexture = getSharedCloudTexture(this.scene);
-    particles.emitter = this.mesh;
-    const sideCenterX = sideSign * 1.1;
-    particles.minEmitBox = new Vector3(sideCenterX - 0.3, -0.6, -2.8);
-    particles.maxEmitBox = new Vector3(sideCenterX + 0.3, 0, -1.0);
-    // Render after the translucent water surface so mud spray is visibly on top.
-    particles.renderingGroupId = 2;
-
-    particles.color1 = new Color4(0.42, 0.25, 0.10, 0.75);
-    particles.color2 = new Color4(0.30, 0.18, 0.07, 0.50);
-    particles.colorDead = new Color4(0.18, 0.10, 0.04, 0);
-
-    particles.minSize = 0.55;
-    particles.maxSize = 1.7;
-    particles.minLifeTime = 0.18;
-    particles.maxLifeTime = 0.38;
-
-    particles.emitRate = 0;
-    particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
-    particles.gravity = new Vector3(0, -16, 0);
-    particles.direction1 = new Vector3(-1.4, 1.1, -0.8);
-    particles.direction2 = new Vector3(1.4, 1.8, 0.8);
-    particles.minAngularSpeed = 0;
-    particles.maxAngularSpeed = Math.PI * 1.5;
-    particles.minEmitPower = 1.8;
-    particles.maxEmitPower = 4.0;
-    particles.updateSpeed = 0.01;
-
-    particles.start();
-    return particles;
-  }
-
-  _createDeepSplashParticles(name, sideSign) {
-    const particles = new ParticleSystem(name, Math.round(380 * this._qualityScale), this.scene);
-    particles.particleTexture = getSharedCloudTexture(this.scene);
-    particles.emitter = this.mesh;
-    const sideCenterX = sideSign * 1.35;
-    particles.minEmitBox = new Vector3(sideCenterX - 0.42, 0.55, -2.9);
-    particles.maxEmitBox = new Vector3(sideCenterX + 0.42, 1.2, -1.1);
-    // Render after the translucent water surface so pulses are not occluded by it.
-    particles.renderingGroupId = 2;
-
-    particles.color1 = new Color4(1.0, 1.0, 1.0, 0.95);
-    particles.color2 = new Color4(1.0, 1.0, 1.0, 0.65);
-    particles.colorDead = new Color4(1.0, 1.0, 1.0, 0);
-
-    particles.minSize = 0.9;
-    particles.maxSize = 2.0;
-    particles.minLifeTime = 0.22;
-    particles.maxLifeTime = 0.42;
-
-    particles.emitRate = 0;
-    particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
-    particles.gravity = new Vector3(0, -28, 0);
-    particles.direction1 = new Vector3(-2.8, 2.0, -2.8);
-    particles.direction2 = new Vector3(2.8, 3.1, 2.8);
-    particles.minAngularSpeed = 0;
-    particles.maxAngularSpeed = Math.PI * 2;
-    particles.minEmitPower = 1.8;
-    particles.maxEmitPower = 4.5;
-    particles.updateSpeed = 0.012;
-
-    particles.start();
-    return particles;
-  }
-
   update(state, speed, groundedness = 1, deltaTime = 0.016, currentTerrain = null, effectScaleOverride = 1) {
     const effectiveScale = this._qualityScale * Math.max(0, Math.min(1, effectScaleOverride));
     // `currentTerrain` is the terrain the truck is actually standing on: the
@@ -273,14 +237,15 @@ export class ParticleEffects {
     const terrain = currentTerrain;
     const terrainName = terrain?.name ?? 'default';
 
-    // Swap drift color when terrain changes — read directly from terrain
-    // definition. Off the ground the last color is kept, so brief hops don't
-    // flicker the smoke back to the default tint.
+    // Swap terrain-tinted colours when terrain changes — read directly from the
+    // terrain definition. Off the ground the last colour is kept, so brief hops
+    // don't flicker the smoke back to the default tint.
     if (terrain && terrainName !== this._currentTerrainName) {
       this._currentTerrainName = terrainName;
 
       const color = terrain?.smokeColor ?? terrain?.color ?? TERRAIN_TYPES.PACKED_DIRT.color;
       this.setDriftColor(color);
+      this.setRoosterColor(color);
     }
 
     // Update drift particles
@@ -309,7 +274,21 @@ export class ParticleEffects {
     } else {
       this.driftParticles.emitRate = 0;
     }
-    
+
+    // Rooster tail: rear tires throw dirt up and back under throttle. This is
+    // driven by the gas (state.throttle), not speed — flooring it digs in and
+    // sprays. Speed only ramps the effect in from a crawl so a truck barely
+    // rolling doesn't erupt. Per-terrain roosterTail knob (0 = none) scales it.
+    const roosterIntensity = terrain?.roosterTail ?? 0;
+    const throttle = state.throttle ?? 0;
+    if (roosterIntensity > 0 && isGrounded && throttle > 0.05 && speed > 1.5) {
+      const speedRamp = Math.min(1, speed / 6);
+      const rate = throttle * roosterIntensity * 260 * speedRamp * effectiveScale;
+      for (const p of this.roosterParticles) p.emitRate = rate;
+    } else {
+      for (const p of this.roosterParticles) p.emitRate = 0;
+    }
+
     // Update splash particles when in water and wheels are on the ground.
     //
     // Standing water counts wherever it actually is; terrain painted water still

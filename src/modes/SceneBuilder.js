@@ -58,6 +58,16 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.15, 0.12, 0.1, 1);
 
+  // Truck spray particles (splash/mud/deep/rooster) live in rendering group 1 so
+  // they draw after the translucent water surface in group 0. By default Babylon
+  // clears the depth buffer before each rendering group, which would let those
+  // particles paint straight over the truck, walls and bridges (all group 0).
+  // Keeping group 1's depth means the particles still test against that solid
+  // geometry and get occluded by it, while remaining on top of the water (which
+  // is alpha-blended and never wrote depth anyway). The checkpoint arrow keeps
+  // its own group 2 with the default depth-clear, so it stays a HUD-style cue.
+  scene.setRenderingAutoClearDepthStencil(1, false);
+
   // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
   const driveSurfaceManager = new DriveSurfaceManager(scene);
   const surfaceTopologyGraph = new SurfaceTopologyGraph(scene);
