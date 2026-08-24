@@ -455,7 +455,7 @@ export class EditorController {
     }
 
     if (this.decorationsEditor.selected) {
-      return this._createVectorSelectionInteraction(this.decorationsEditor);
+      return this._createVectorSelectionInteraction(this.decorationsEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
     if (this.trackSignEditor.selected) {
@@ -1250,7 +1250,6 @@ export class EditorController {
       [this.terrainShapeEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
-      [this.startPositionEditor, 'selected'],
       [this.surfaceDecalEditor, 'selected'],
       [this.decorationsEditor, '_selected'],
       [this.aiPathEditor, 'selected'],
@@ -1268,6 +1267,17 @@ export class EditorController {
     if (selectedObjectMatches(this.polyWallEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyHillEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyCurbEditor?.selectedPoint)) return true;
+
+    // Start-position marker: like the action zone below, only the sub-target
+    // that is actually selected counts. findByMesh maps every one of its grid
+    // pads to the marker, so matching on that would read a click on a DIFFERENT
+    // pad as "already selected" and swallow it before the selection dispatch.
+    const startMarker = this.startPositionEditor?.selected;
+    if (startMarker) {
+      const slot = this.startPositionEditor.selectedSlot;
+      if (slot < 0 && meshMatches(startMarker.handle?.mesh)) return true;
+      if (slot >= 0 && meshMatches(startMarker.slots?.[slot])) return true;
+    }
 
     const zoneData = this.actionZoneEditor?._selected;
     if (zoneData) {
@@ -1516,6 +1526,9 @@ export class EditorController {
         // Action zone center/point handles
         if (this._selectViaPointEditor(this.actionZoneEditor, clickedMesh)) return;
 
+        // Start-position marker handle + its grid slot pads
+        if (this._selectViaPointEditor(this.startPositionEditor, clickedMesh)) return;
+
         const clickHandlers = [
           { editor: this.checkpointEditor },
           { editor: this.hillEditor },
@@ -1525,7 +1538,6 @@ export class EditorController {
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
-          { editor: this.startPositionEditor },
           { editor: this.surfaceDecalEditor },
         ];
 
@@ -1969,7 +1981,11 @@ export class EditorController {
   addStartPositionEntity()          { this.startPositionEditor.addEntity(); }
   deselectStartPosition()           { this.startPositionEditor.deselect(); }
   deleteStartPosition()             { this.startPositionEditor.deleteSelected(); }
+  changeStartPositionMode(val)      { this.startPositionEditor.changeMode(val); }
+  setStartPositionPole()            { this.startPositionEditor.setPole(); }
+  resetStartPositionLayout()        { this.startPositionEditor.resetLayout(); }
   changeStartPositionRotation(val)  { this.startPositionEditor.changeRotation(val); }
+  changeStartPositionSlotRotation(val) { this.startPositionEditor.changeSlotRotation(val); }
   changeStartPositionColumns(val)   { this.startPositionEditor.changeColumns(val); }
   changeStartPositionColSpacing(val){ this.startPositionEditor.changeColSpacing(val); }
   changeStartPositionRowSpacing(val){ this.startPositionEditor.changeRowSpacing(val); }

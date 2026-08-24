@@ -99,6 +99,13 @@ export class TruckBody {
     this._wheelMaxDrop   = (g.maxDrop ?? 0.32);
     this._wheelMaxRise   = (g.maxRise ?? 0.15);
     this._wheelFollowMinGroundedness = (g.followMinGroundedness ?? 0.2);
+    // Fallback trigger for wheel terrain-following, using raw (unsmoothed)
+    // penetration instead of the twice-smoothed groundedness above. On a hard
+    // landing or steep uphill entry, groundedness takes a few frames to ramp
+    // through its low-pass filters, during which the wheels would otherwise sit
+    // at their flat "hanging" pose while the chassis is already near the slope
+    // — visible as the front tires sinking in for a moment before popping out.
+    this._wheelFollowHoverGap = (g.followHoverGap ?? 0.35);
 
     // Body OBJ URL — resolved by VehicleLoader and stored on the def
     this._modelUrl = vehicleDef?.modelUrl ?? null;
@@ -416,7 +423,8 @@ export class TruckBody {
     this._updateBodyDynamics(state, groundedness, dt, penetration);
 
     let sampledWheelBaseY = this._hasWheelSamples ? this._sampledWheelBaseY : null;
-    if (sampleSurfaceY && groundedness >= this._wheelFollowMinGroundedness) {
+    const nearGround = penetration !== null && penetration > -this._wheelFollowHoverGap;
+    if (sampleSurfaceY && (groundedness >= this._wheelFollowMinGroundedness || nearGround)) {
       const parentY = this.parent.position.y;
       const fromY = parentY + 2;
       const world = this.parent.getWorldMatrix();

@@ -281,8 +281,9 @@ export class EditorMaterials {
   // ── Start Position ────────────────────────────────────────────────────────
 
   /**
-   * Ghost-slot materials for the starting-grid marker: `{ slot, pole }`. The
-   * pole slot (index 0) is brighter so the front of the grid reads at a glance.
+   * Ghost-slot pads for the starting-grid marker. Ordinary slots are faint
+   * white; the pole slot is yellow so the front of the field reads at a glance;
+   * the pad being edited goes solid, matching the shared selection convention.
    */
   get startGridSlot() {
     return this._get('startGridSlot', s => makeMat('edStartGridSlot', s, {
@@ -293,6 +294,12 @@ export class EditorMaterials {
   get startGridPole() {
     return this._get('startGridPole', s => makeMat('edStartGridPole', s, {
       diffuse: basicColors.yellow.diffuse, emissive: basicColors.yellow.emissive, alpha: 0.65,
+    }));
+  }
+
+  get startGridSelected() {
+    return this._get('startGridSelected', s => makeSelectedMat('edStartGridSel', s, {
+      diffuse: basicColors.yellow.diffuse, emissive: basicColors.yellow.emissive,
     }));
   }
 

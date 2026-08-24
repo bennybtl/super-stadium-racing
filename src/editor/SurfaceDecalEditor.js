@@ -17,6 +17,9 @@ const HIGHLIGHT_COLOR = new Color3(1, 0.85, 0.2); // amber selection outline
 // stamped decal at every angle.
 const GHOST_ROTATION_OFFSET_DEG = -90;
 
+// Normalize degrees into [-180, 180) — decal rotation is signed.
+const norm180 = (deg) => ((deg % 360) + 540) % 360 - 180;
+
 /**
  * SurfaceDecalEditor — stamp-mode editor for placing programmatic surface decals.
  *
@@ -230,7 +233,7 @@ export class SurfaceDecalEditor {
   rotate(deltaRad) {
     if (!this.selected) return;
     const f = this.selected.feature;
-    f.angle = ((f.angle ?? 0) + deltaRad * 180 / Math.PI + 360) % 360;
+    f.angle = norm180((f.angle ?? 0) + deltaRad * 180 / Math.PI);
     this._rebuildSelected();
     this._syncEditPanel();
   }
@@ -266,7 +269,7 @@ export class SurfaceDecalEditor {
 
   changeWidth(val)   { this._changeProp('width', val); }
   changeDepth(val)   { this._changeProp('depth', val); }
-  changeAngle(val)   { this._changeProp('angle', ((val % 360) + 360) % 360); }
+  changeAngle(val)   { this._changeProp('angle', norm180(val)); }
   changeOpacity(val) { this._changeProp('opacity', val); }
   changeCount(val)   { this._changeProp('count', Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(val)))); }
   changeOutline(val) { this._changeProp('outline', !!val); }
@@ -425,11 +428,11 @@ export class SurfaceDecalEditor {
     if (!this.isOpen) return false;
     const key = event.key.toLowerCase();
     if (key === 'q') {
-      this.setAngle((this._angle - 15 + 360) % 360);
+      this.setAngle(this._angle - 15);
       return true;
     }
     if (key === 'e') {
-      this.setAngle((this._angle + 15) % 360);
+      this.setAngle(this._angle + 15);
       return true;
     }
     return false;
@@ -489,7 +492,7 @@ export class SurfaceDecalEditor {
   }
 
   setAngle(val) {
-    this._angle = ((val % 360) + 360) % 360;
+    this._angle = norm180(val);
     this._updateGhostTransform();
     this._syncStore();
   }

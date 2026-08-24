@@ -210,10 +210,15 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Start Position panel (starting-grid marker) ──
   const startPosition = reactive({
-    rotation: 0,    // degrees — direction the trucks face
-    columns: 2,     // trucks per row
-    colSpacing: 4,  // side-to-side gap between slots
-    rowSpacing: 7,  // front-to-back gap between rows
+    mode: 'grid',       // 'grid' (generated rows) | 'custom' (hand-placed slots)
+    rotation: 0,        // degrees — direction the grid faces
+    columns: 2,         // trucks per row
+    colSpacing: 4,      // side-to-side gap between slots
+    rowSpacing: 7,      // front-to-back gap between rows
+    poleIndex: 0,       // layout slot the field's leader starts on
+    selectedSlot: -1,   // layout index of the picked pad, -1 = none
+    slotOrder: 0,       // picked pad's place in the field, 1 = pole (0 = none)
+    slotRotation: 0,    // picked pad's own heading, degrees (custom mode)
   });
 
   // ── Banner String panel ──

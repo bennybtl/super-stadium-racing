@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
 import { isPointInPolygon } from "../polyline-utils.js";
-import { gridSlotXZ, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../start-grid.js";
+import { gridSlotXZ, startGridSlot, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../start-grid.js";
 import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";
 import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
@@ -161,51 +161,25 @@ export class DriveMode extends BaseMode {
   }
 
   /**
-   * Resolve the anchor the starting grid is laid out from (see start-grid.js).
-   *
-   * A `startPosition` feature wins when the track has one — that is the whole
-   * point of the marker: the designer chose the spot, its facing and how wide
-   * the rows are (e.g. a single wide row for a land-rush start). Otherwise the
-   * grid falls back to two-wide rows stacked behind the start/finish gate.
+   * The track's `startPosition` marker, if it has one and it applies.
    *
    * The marker is ignored in a reverse race: it is only "behind the line" for
-   * the forward direction, so a reversed run uses the gate — whose heading the
-   * reverse rebuild has already flipped — and grids on the other side of it.
-   *
-   * @returns {{x, z, heading, columns, colSpacing, rowSpacing, backOffset}|null}
+   * the forward direction, so a reversed run falls back to the gate — whose
+   * heading the reverse rebuild has already flipped — and grids behind that.
    */
-  getStartGridAnchor(track, checkpointManager, fallbackCheckpoint = null) {
-    const marker = checkpointManager?._reverse
-      ? null
-      : track.features.find(f => f.type === 'startPosition');
-    if (marker) {
-      return {
-        x: marker.x ?? 0,
-        z: marker.z ?? 0,
-        heading: marker.heading ?? 0,
-        columns:    marker.columns    ?? DEFAULT_START_GRID.columns,
-        colSpacing: marker.colSpacing ?? DEFAULT_START_GRID.colSpacing,
-        rowSpacing: marker.rowSpacing ?? DEFAULT_START_GRID.rowSpacing,
-        // The marker itself is where the front row sits.
-        backOffset: 0,
-      };
-    }
-
-    const gate = this.getStartFinishCheckpoint(checkpointManager) ?? fallbackCheckpoint;
-    if (!gate) return null;
-    return {
-      x: gate.centerX,
-      z: gate.centerZ,
-      heading: gate.heading,
-      ...DEFAULT_START_GRID,
-      backOffset: CHECKPOINT_GRID_BACK_OFFSET,
-    };
+  getStartPositionFeature(track, checkpointManager) {
+    if (checkpointManager?._reverse) return null;
+    return track.features.find(f => f.type === 'startPosition') ?? null;
   }
 
   /**
-   * Build a starting-grid spawn function: `index` 0 is pole, then rows stacked
-   * back from the grid anchor. The anchor is resolved per call so a reverse
-   * rebuild (which flips headings) is picked up.
+   * Build a starting-grid spawn function. `index` is a race index: 0 is pole,
+   * then back through the field. A `startPosition` marker places the slots (a
+   * grid of its own shape, or hand-placed positions — see start-grid.js);
+   * without one, slots are two-wide rows stacked behind the start/finish gate.
+   *
+   * Both are resolved per call so an edit — or a reverse rebuild, which flips
+   * gate headings — is picked up.
    *
    * @param {Track} track
    * @param {CheckpointManager} checkpointManager
@@ -213,14 +187,31 @@ export class DriveMode extends BaseMode {
    * @returns {(index: number) => { pos: Vector3, heading: number }}
    */
   makeGridSpawner(track, checkpointManager, fallbackCheckpoint = null) {
+    const atGround = (x, z, heading) => ({
+      pos: new Vector3(x, track.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z),
+      heading,
+    });
+
     return (index) => {
-      const anchor = this.getStartGridAnchor(track, checkpointManager, fallbackCheckpoint);
-      if (!anchor) {
-        const x = (index % 2) * 3, z = Math.floor(index / 2) * 3;
-        return { pos: new Vector3(x, track.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: 0 };
+      const marker = this.getStartPositionFeature(track, checkpointManager);
+      if (marker) {
+        const slot = startGridSlot(marker, index);
+        return atGround(slot.x, slot.z, slot.heading);
       }
-      const { x, z } = gridSlotXZ(index, anchor);
-      return { pos: new Vector3(x, track.getHeightAt(x, z) + TRUCK_HALF_HEIGHT, z), heading: anchor.heading };
+
+      const gate = this.getStartFinishCheckpoint(checkpointManager) ?? fallbackCheckpoint;
+      if (!gate) {
+        return atGround((index % 2) * 3, Math.floor(index / 2) * 3, 0);
+      }
+
+      const { x, z } = gridSlotXZ(index, {
+        x: gate.centerX,
+        z: gate.centerZ,
+        heading: gate.heading,
+        ...DEFAULT_START_GRID,
+        backOffset: CHECKPOINT_GRID_BACK_OFFSET,
+      });
+      return atGround(x, z, gate.heading);
     };
   }
 
