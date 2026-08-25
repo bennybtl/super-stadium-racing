@@ -16,6 +16,7 @@ import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
 import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js"; // used as fallback defaults only
 import { UPGRADES } from "../managers/UpgradeStorage.js";
+import { TERRAIN_TYPES } from "../terrain.js";
 
 // --- AI terrain-sampling LOD -------------------------------------------------
 // AI trucks only need the expensive multi-probe floor sampling near bridges,
@@ -401,6 +402,16 @@ export class Truck {
       })
     );
     
+    // The terrain paint grid is XZ-only, so a naive lookup reports whatever is
+    // painted on the ground below even when the truck is actually riding a
+    // built surface (driveBox ramp, bridge deck) well above it.
+    //
+    // Asked by surface *type*, not by layer: a driveBox registers its deck at
+    // level 0 (deriveDriveBoxGrid defaults layerId to 0), so a level test reads
+    // a ramp as natural ground and hands back whatever is painted underneath it.
+    const floorSurfaceType = this.terrainPhysics.floorSurface?.surfaceType ?? 'ground';
+    const onNaturalGround = floorSurfaceType === 'ground';
+
     // Get terrain modifiers — only apply when wheels are actually on or near the ground
     let terrainGripMultiplier = 1.0;
     let terrainDragMultiplier = 1.0;
@@ -408,25 +419,22 @@ export class Truck {
     let terrain = null;
     const isGrounded = penetration > -0.3;
     profile('truck.terrainSample', () => {
-      if (terrainManager && isGrounded) {
-        terrain = terrainManager.getTerrainAt(this.mesh.position);
-        terrainGripMultiplier = terrain.gripMultiplier;
-        terrainDragMultiplier = terrain.dragMultiplier;
-        terrainRoughness = terrain.roughness ?? 0;
-      }
+      if (!isGrounded) return;
+      // Built drive surfaces render with packed-dirt texturing (see BridgeMesh's
+      // terrainType) regardless of what's painted below — grip and drag should
+      // match that, not the ground paint underneath, so a ramp built over grass
+      // or mud doesn't inherit that terrain's grip.
+      terrain = (onNaturalGround && terrainManager)
+        ? terrainManager.getTerrainAt(this.mesh.position)
+        : TERRAIN_TYPES.PACKED_DIRT;
+      terrainGripMultiplier = terrain.gripMultiplier;
+      terrainDragMultiplier = terrain.dragMultiplier;
+      terrainRoughness = terrain.roughness ?? 0;
     });
 
-    // The terrain grid is XZ-only, so it reports whatever is painted below the
-    // truck even when the truck isn't touching it. `terrain` is already null
-    // while airborne; drop it too when riding a built surface, otherwise crossing
-    // a bridge — or launching off a ramp at a water's edge — sprays water off a
-    // deck the truck never left.
-    //
-    // Asked by surface *type*, not by layer: a driveBox registers its deck at
-    // level 0 (deriveDriveBoxGrid defaults layerId to 0), so a level test reads a
-    // ramp as natural ground and hands back whatever is painted underneath it.
-    const floorSurfaceType = this.terrainPhysics.floorSurface?.surfaceType ?? 'ground';
-    const onNaturalGround = floorSurfaceType === 'ground';
+    // `terrain` is already null while airborne; drop it too when riding a built
+    // surface, otherwise crossing a bridge — or launching off a ramp at a
+    // water's edge — sprays water off a deck the truck never left.
     const effectsTerrain = onNaturalGround ? terrain : null;
 
     const speed = this.state.velocity.length();

@@ -1,0 +1,13 @@
+{
+  "id": "flag_stand",
+  "name": "Flag Stand",
+  "modelFile": "decorations.obj",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "defaultColor": "white",
+  "defaultScale": 1,
+  "colorableMeshes": ["flag_stand_Material"],
+  "castsShadows": true,
+  "editable": { "color": true, "scale": true, "heading": true }
+}

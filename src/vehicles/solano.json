@@ -4,9 +4,7 @@
   "engineAudio": "v8",
   "modelFile": "solano2.obj",
   "defaultColor": [0.8, 0.2, 0.1],
-  "meshColors": {
-    "window_Cube.006": [0.0, 0.0, 0.0]
-  },
+  "colorableMeshes": "solano2_Material.001",
   "bodyTransform": {
     "position": [0, 0.20, 0.0],
     "rotation": [0, 1.5708, 0],

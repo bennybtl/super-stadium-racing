@@ -3,12 +3,7 @@
   "name": "Coati",
   "engineAudio": "bac",
   "modelFile": "coati2.obj",
-  "defaultColor": [0.8, 0.2, 0.1],
-  "meshColors": {
-    "windows": [0.1, 0.1, 0.1],
-    "wing_wing": [0.9, 0.9, 0.9],
-    "bumper_bumper": [0.7, 0.7, 0.7]
-  },
+  "colorableMeshes": "body.003_Material.001",
   "bodyTransform": {
     "position": [0, 0.4, 0.0],
     "rotation": [0, 1.5708, 0],

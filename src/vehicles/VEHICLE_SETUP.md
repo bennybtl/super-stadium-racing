@@ -4,6 +4,18 @@ Vehicle definitions live in `src/vehicles/*.json`. The `params` block is merged 
 
 Suggested tuning ranges below are pragmatic starting points for arcade/off-road vehicles in this project, not hard validation limits.
 
+## Body Color
+
+If a vehicle's OBJ ships a `mtllib` (an accompanying `.mtl`), each group's baked `Kd` colour is parsed automatically (`VehicleLoader`) and used as that mesh's fixed colour — no per-group JSON entries needed.
+
+```json
+"colorableMeshes": ["body_obj_0"]
+```
+
+`colorableMeshes` lists OBJ group names (`grep '^g ' model.obj`) that should take the driver-selected colour instead of their baked `.mtl` colour — this is how the paintable body panel(s) opt into the player's chosen colour. A group with neither a `.mtl` entry nor a `colorableMeshes` listing also takes the driver-selected colour (the fallback), so a vehicle with no `.mtl` at all paints every mesh, same as before.
+
+`defaultColor` (`[r,g,b]`, 0..1) is the vehicle's baseline driver colour before a player picks one.
+
 ## Handling Knobs (drift feel)
 
 Drift behaviour is tuned through a `handling` block — **four** high-level knobs that

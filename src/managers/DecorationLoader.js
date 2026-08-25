@@ -33,8 +33,14 @@
  *   defaultScale    number   initial user scale for new instances (default 1)
  *   meshColors      { "<groupName>": [r,g,b] | "#rrggbb" }   per-mesh fixed
  *                   colours keyed by exact OBJ group name (like vehicles, see
- *                   `grep '^g ' model.obj`). Meshes not listed take the
- *                   user-chosen colour.
+ *                   `grep '^g ' model.obj`). Takes priority over a colour baked
+ *                   into the OBJ's .mtl (see colorableMeshes below). Meshes
+ *                   with neither take the user-chosen colour.
+ *   colorableMeshes string[] OBJ group names that should take the
+ *                   user-chosen colour even though the model's .mtl bakes in
+ *                   a colour for them. Only relevant when the OBJ has a
+ *                   `mtllib` — otherwise every mesh is already user-colourable
+ *                   by default. meshColors still overrides a listed mesh.
  *   meshTextures    { "<groupName>": "file.png" | { file, scale, uScale,
  *                   vScale, uOffset, vOffset } }   per-mesh texture applied
  *                   instead of a colour (takes priority over meshColors). The
@@ -48,6 +54,8 @@
  *   castsShadows    boolean  (default true)
  *   editable        { color, scale, heading }  which panel controls to show
  */
+
+import { parseMeshDefaultColors } from "../utils/mtl-parser.js";
 
 /**
  * Normalize a meshTextures entry to { file, uScale, vScale, uOffset, vOffset }.
@@ -86,6 +94,8 @@ export class DecorationLoader {
   async loadAllDecorations() {
     const modules = import.meta.glob('/src/decorations/*.json', { query: '?raw', import: 'default' });
     const objUrls = import.meta.glob('/src/decorations/*.obj', { query: '?url', import: 'default', eager: true });
+    const objText = import.meta.glob('/src/decorations/*.obj', { query: '?raw', import: 'default', eager: true });
+    const mtlText = import.meta.glob('/src/decorations/*.mtl', { query: '?raw', import: 'default', eager: true });
     const imgUrls = import.meta.glob('/src/decorations/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
     // Optional behaviour modules: /src/decorations/<id>.js (or def.controller).
     const controllers = import.meta.glob('/src/decorations/*.js', { eager: true });
@@ -97,6 +107,17 @@ export class DecorationLoader {
         const key = def.id ?? path.split('/').pop().replace('.json', '');
         if (def.modelFile) {
           def.modelUrl = objUrls[`/src/decorations/${def.modelFile}`] ?? null;
+          // If the OBJ references an .mtl (`mtllib …`), derive each group's
+          // baked diffuse colour as its default fixed colour. `colorableMeshes`
+          // in the JSON opts specific groups out of this, back to the shared
+          // user-chosen colour.
+          const obj = objText[`/src/decorations/${def.modelFile}`];
+          const mtlFile = obj?.match(/^mtllib\s+(\S+)/m)?.[1];
+          const mtl = mtlFile ? mtlText[`/src/decorations/${mtlFile}`] : null;
+          if (obj && mtl) {
+            const meshDefaultColors = parseMeshDefaultColors(obj, mtl);
+            if (Object.keys(meshDefaultColors).length) def.meshDefaultColors = meshDefaultColors;
+          }
         }
         if (def.imageFile) {
           def.imageUrl = imgUrls[`/src/decorations/${def.imageFile}`] ?? null;

@@ -119,9 +119,10 @@ function getBasePlayerColor() {
 }
 
 function colorForMesh(mesh, baseColor) {
-  const rawColorMap = props.vehicle?.meshColors ?? {};
-  const value = rawColorMap[String(mesh.name ?? '')];
-  if (value != null) return parseColor(value, baseColor);
+  const name = String(mesh.name ?? '');
+  if (props.vehicle?.colorableMeshes?.includes(name)) return baseColor.clone();
+  const baked = props.vehicle?.meshDefaultColors?.[name];
+  if (baked != null) return parseColor(baked, baseColor);
   return baseColor.clone();
 }
 

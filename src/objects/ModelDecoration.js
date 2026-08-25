@@ -7,26 +7,12 @@ import {
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import { basicColors } from "../constants.js";
+import { parseColorValue } from "../utils/mesh-color.js";
 
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
 const DEFAULT_COLOR = "white";
-
-/** Parse a mesh colour value: [r,g,b] (0..1) or a "#rrggbb"/"rrggbb" hex string. */
-function parseMeshColor(value) {
-  if (Array.isArray(value) && value.length === 3) {
-    return new Color3(value[0], value[1], value[2]);
-  }
-  if (typeof value === "string") {
-    const hex = value.trim().replace(/^#/, "");
-    if (/^[0-9A-Fa-f]{6}$/.test(hex)) {
-      const n = parseInt(hex, 16);
-      return new Color3(((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255);
-    }
-  }
-  return null;
-}
 
 /**
  * Whether a decoration instance should act as a truck collider: the feature's
@@ -153,15 +139,24 @@ export class ModelDecoration {
    * Pick the material for a source mesh, by exact OBJ group name:
    *   1. a `meshTextures` entry → textured material (needs UVs on the model),
    *   2. else a `meshColors` entry → fixed-colour material,
-   *   3. else the shared user-colour material.
+   *   3. else, unless the group is named in `colorableMeshes`, a colour baked
+   *      into the OBJ's .mtl (parsed by DecorationLoader into
+   *      `meshDefaultColors`) → fixed-colour material,
+   *   4. else the shared user-colour material.
    */
   _materialForMesh(name, scene, tag) {
     const tex = this.def.meshTextureUrls?.[name];
     if (tex) return this._texturedMaterial(name, tex, scene, tag);
 
     const value = this.def.meshColors?.[name];
-    const fixed = value != null ? parseMeshColor(value) : null;
+    const fixed = value != null ? parseColorValue(value) : null;
     if (fixed) return this._fixedMaterial(name, fixed, scene, tag);
+
+    if (!this.def.colorableMeshes?.includes(name)) {
+      const baked = this.def.meshDefaultColors?.[name];
+      const bakedFixed = baked != null ? parseColorValue(baked) : null;
+      if (bakedFixed) return this._fixedMaterial(name, bakedFixed, scene, tag);
+    }
 
     return this._colorMaterial;
   }

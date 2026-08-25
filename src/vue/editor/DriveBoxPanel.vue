@@ -57,7 +57,7 @@
         <span>{{ editor.driveBox.height.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0.5" max="20" step="0.5"
+        type="range" min="-10" max="20" step="0.5"
         :value="editor.driveBox.height"
         @input="editor.setFeatureProp('driveBox', 'height', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

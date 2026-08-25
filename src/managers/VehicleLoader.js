@@ -1,9 +1,16 @@
+import { parseMeshDefaultColors } from "../utils/mtl-parser.js";
+
 /**
  * VehicleLoader - Loads vehicle definitions from JSON files in /src/vehicles/
  *
  * Each JSON file defines one vehicle's identity and performance parameters.
  * The structure mirrors TrackLoader so the rest of the codebase can use
  * the same patterns (glob loading, keyed map, window exposure).
+ *
+ * Body colour: if the OBJ ships a `mtllib`, each group's baked Kd colour is
+ * parsed into `def.meshDefaultColors` and used as that mesh's fixed colour.
+ * `def.colorableMeshes` (OBJ group names) lists which meshes take the
+ * driver-selected colour instead — see TruckBody._meshColorFor.
  */
 export class VehicleLoader {
   constructor() {
@@ -21,6 +28,9 @@ export class VehicleLoader {
     const modules = import.meta.glob('/src/vehicles/*.json', { query: '?raw', import: 'default' });
     // Eagerly resolve OBJ URLs so Vite bundles them and we can look them up by filename
     const objUrls = import.meta.glob('/src/vehicles/*.obj', { query: '?url', import: 'default', eager: true });
+    // Raw OBJ/MTL text, to derive each mesh's baked-in default colour.
+    const objText = import.meta.glob('/src/vehicles/*.obj', { query: '?raw', import: 'default', eager: true });
+    const mtlText = import.meta.glob('/src/vehicles/*.mtl', { query: '?raw', import: 'default', eager: true });
     // Eagerly resolve image URLs (png/jpg)
     const imgUrls = import.meta.glob('/src/vehicles/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
 
@@ -32,6 +42,15 @@ export class VehicleLoader {
         // Resolve the OBJ URL from the vehicles folder
         if (def.modelFile) {
           def.modelUrl = objUrls[`/src/vehicles/${def.modelFile}`] ?? null;
+          // If the OBJ references an .mtl (`mtllib …`), derive each group's
+          // baked diffuse colour as its default fixed colour.
+          const obj = objText[`/src/vehicles/${def.modelFile}`];
+          const mtlFile = obj?.match(/^mtllib\s+(\S+)/m)?.[1];
+          const mtl = mtlFile ? mtlText[`/src/vehicles/${mtlFile}`] : null;
+          if (obj && mtl) {
+            const meshDefaultColors = parseMeshDefaultColors(obj, mtl);
+            if (Object.keys(meshDefaultColors).length) def.meshDefaultColors = meshDefaultColors;
+          }
         }
         // Resolve the image URL from the vehicles folder
         if (def.imageFile) {
@@ -70,7 +89,8 @@ export class VehicleLoader {
       imageUrl: this.vehicles.get(key)?.imageUrl ?? null,
       modelUrl: this.vehicles.get(key)?.modelUrl ?? null,
       defaultColor: this.vehicles.get(key)?.defaultColor ?? null,
-      meshColors: this.vehicles.get(key)?.meshColors ?? this.vehicles.get(key)?.meshColorMap ?? null,
+      meshDefaultColors: this.vehicles.get(key)?.meshDefaultColors ?? null,
+      colorableMeshes: this.vehicles.get(key)?.colorableMeshes ?? null,
       bodyTransform: this.vehicles.get(key)?.bodyTransform ?? null,
       wheels: this.vehicles.get(key)?.wheels ?? null,
     }));

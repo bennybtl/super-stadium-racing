@@ -39,6 +39,13 @@ Loading is handled by `src/managers/DecorationLoader.js`; each instance is built
     "trunk_obj_0": [0.28, 0.22, 0.16]
   },
 
+  // If the OBJ has a `mtllib` (an accompanying .mtl), every group's baked Kd
+  // colour becomes its default fixed colour automatically — no meshColors
+  // needed. List group names here to make those specific meshes take the
+  // user-chosen colour instead (e.g. a flag's cloth, not its pole).
+  // meshColors above still overrides a listed mesh.
+  "colorableMeshes": ["flag_obj_0"],
+
   // Per-mesh texture, keyed by exact OBJ group name. Image lives in this
   // folder. Takes priority over meshColors. Omit for no texture (there is no
   // default). NOTE: the model must have UV coordinates (grep '^vt ' model.obj)
@@ -147,8 +154,11 @@ Selecting a placed decoration opens the **Decoration** panel. Available edits:
 - Find your model's mesh group names with: `grep '^g ' myprop.obj`. Split a
   single joined mesh into separate groups in Blender via Edit Mode → **P** →
   *By Loose Parts*, then rename each object (the names become the `g` groups).
-- Materials in the OBJ are ignored (`SKIP_MATERIALS`); colour/texture come from
-  the JSON.
+- Babylon's own OBJ material import is disabled (`SKIP_MATERIALS`) — but if the
+  OBJ ships an .mtl, DecorationLoader parses its `Kd` colours itself and uses
+  them as each group's default fixed colour. Everything else about
+  colour/texture still comes from the JSON (`meshColors`, `meshTextures`,
+  `colorableMeshes`).
 - Placed instances are stored in the track as
   `{ "type": "model", "model": "myprop", "x", "z", "heading", "scale", "color" }`,
   plus `"mirrorX"` / `"mirrorZ"` booleans when mirrored.

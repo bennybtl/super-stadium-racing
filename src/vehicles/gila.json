@@ -4,9 +4,7 @@
   "engineAudio": "bac",
   "modelFile": "gila.obj",
   "defaultColor": [0.8, 0.2, 0.1],
-  "meshColors": {
-    "widnshield_Cube.004": [0.1, 0.1, 0.1]
-  },
+  "colorableMeshes": ["body.002_Material"],
   "bodyTransform": {
     "position": [0, 0.3, 0.0],
     "rotation": [0, 1.5708, 0],

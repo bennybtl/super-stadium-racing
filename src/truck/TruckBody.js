@@ -2,6 +2,7 @@ import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, Tr
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import truckTireUrl  from "../assets/models/truck-tire-v2.obj?url";
 import { basicColors } from "../constants";
+import { parseColorValue } from "../utils/mesh-color.js";
 
 // Skip MTL lookup — materials are applied programmatically
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
@@ -596,27 +597,18 @@ export class TruckBody {
     return mesh;
   }
 
+  /**
+   * A mesh named in the vehicleDef's `colorableMeshes` (OBJ group name) takes
+   * the driver-selected colour; otherwise a colour baked into the OBJ's .mtl
+   * (parsed by VehicleLoader into `meshDefaultColors`) is used; meshes with
+   * neither also take the driver-selected colour.
+   */
   _meshColorFor(mesh) {
-    const rawColorMap = this.vehicleDef?.meshColors ?? this.vehicleDef?.meshColorMap ?? {};
-    const value = rawColorMap?.[mesh.name];
-    if (value != null) return this._parseColor(value);
-    return this.colors.body;
-  }
-
-  _parseColor(value) {
-    if (Array.isArray(value) && value.length === 3) {
-      return new Color3(value[0], value[1], value[2]);
-    }
-    if (typeof value === 'string') {
-      const hex = value.trim().replace(/^#/, '');
-      if (/^[0-9A-Fa-f]{6}$/.test(hex)) {
-        const intValue = parseInt(hex, 16);
-        return new Color3(
-          ((intValue >> 16) & 0xff) / 255,
-          ((intValue >> 8) & 0xff) / 255,
-          (intValue & 0xff) / 255
-        );
-      }
+    if (this.vehicleDef?.colorableMeshes?.includes(mesh.name)) return this.colors.body;
+    const baked = this.vehicleDef?.meshDefaultColors?.[mesh.name];
+    if (baked != null) {
+      const color = parseColorValue(baked);
+      if (color) return color;
     }
     return this.colors.body;
   }

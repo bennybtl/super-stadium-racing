@@ -2,12 +2,9 @@
   "id": "baja",
   "name": "Baja",
   "engineAudio": "v8",
-  "modelFile": "baja2.obj",
+  "modelFile": "baja.obj",
   "defaultColor": [0.8, 0.2, 0.1],
-  "meshColors": {
-    "windows": [0,0,0],
-    "bars": [0.65, 0.65, 0.65]
-  },
+  "colorableMeshes": ["body.001_Material"],
   "bodyTransform": {
     "position": [0, 0.66, 0.0],
     "rotation": [0, 1.5708, 0],
@@ -27,11 +24,11 @@
   "params": {
     "maxSpeed": 39,
     "acceleration": 24,
-    "turnSpeed": 3.5,
+    "turnSpeed": 3.9,
     "idleAuthority": 0.25
   },
   "handling": {
-    "lateralBias": 0.38,
-    "driftEnter": 0.6
+    "lateralBias": 0.32,
+    "driftEnter": 0.5
   }
 }
