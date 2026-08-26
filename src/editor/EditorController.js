@@ -1247,7 +1247,6 @@ export class EditorController {
       [this.hillEditor, 'selected'],
       [this.squareHillEditor, 'selected'],
       [this.driveBoxEditor, 'selected'],
-      [this.terrainShapeEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
       [this.surfaceDecalEditor, 'selected'],
@@ -1284,6 +1283,18 @@ export class EditorController {
       if (meshMatches(zoneData.handle)) return true;
       if (zoneData.feature.shape === 'polygon' && this.actionZoneEditor._selectedPointIndex >= 0) {
         if (meshMatches(zoneData.pointHandles?.[this.actionZoneEditor._selectedPointIndex])) return true;
+      }
+    }
+
+    // Terrain shape: like the action zone above, a polygon's point handles are
+    // only "already selected" for the specific vertex currently active — any
+    // other point on the same polygon must fall through so clicking it can
+    // switch the active vertex instead of being swallowed as a no-op.
+    const tsData = this.terrainShapeEditor?.selected;
+    if (tsData) {
+      if (meshMatches(tsData.handle?.mesh)) return true;
+      if (tsData.feature.shape === 'polygon' && this.terrainShapeEditor._selectedPointIndex >= 0) {
+        if (meshMatches(tsData.pointHandles?.[this.terrainShapeEditor._selectedPointIndex])) return true;
       }
     }
 
@@ -1526,6 +1537,9 @@ export class EditorController {
         // Action zone center/point handles
         if (this._selectViaPointEditor(this.actionZoneEditor, clickedMesh)) return;
 
+        // Terrain shape center/point handles
+        if (this._selectViaPointEditor(this.terrainShapeEditor, clickedMesh)) return;
+
         // Start-position marker handle + its grid slot pads
         if (this._selectViaPointEditor(this.startPositionEditor, clickedMesh)) return;
 
@@ -1534,7 +1548,6 @@ export class EditorController {
           { editor: this.hillEditor },
           { editor: this.squareHillEditor },
           { editor: this.driveBoxEditor },
-          { editor: this.terrainShapeEditor },
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
@@ -1878,6 +1891,8 @@ export class EditorController {
   changeTerrainShapeBlendWidth(val) { this.terrainShapeEditor.changeBlendWidth(val); }
   changeTerrainShapeTerrainType(n) { this.terrainShapeEditor.changeTerrainType(n); }
   changeTerrainShapeRoughness(val) { this.terrainShapeEditor.changeRoughness(val); }
+  insertTerrainShapePoint()        { this.terrainShapeEditor.insertPoint(); }
+  deleteTerrainShapePoint()        { this.terrainShapeEditor.deletePoint(); }
 
   // ─── Obstacle Editing (delegated to ObstacleEditor) ─────────────────────
 

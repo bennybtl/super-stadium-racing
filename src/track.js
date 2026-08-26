@@ -492,6 +492,19 @@ export class Track {
             const ellipseDist = Math.sqrt((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd));
             if (ellipseDist >= 1) break;
             insideDist = (1 - ellipseDist) * Math.min(hw, hd);
+          } else if (feature.shape === 'polygon') {
+            const points = feature.points;
+            if (!points || points.length < 3) break;
+            let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+            for (const p of points) {
+              if (p.x < minX) minX = p.x;
+              if (p.x > maxX) maxX = p.x;
+              if (p.z < minZ) minZ = p.z;
+              if (p.z > maxZ) maxZ = p.z;
+            }
+            if (x < minX || x > maxX || z < minZ || z > maxZ) break;
+            if (!isPointInPolygon(x, z, points)) break;
+            insideDist = distToPolyline(x, z, points, true);
           } else {
             break;
           }
@@ -620,6 +633,25 @@ export class Track {
             // Standard ellipse formula inside bounds check
             const ellipseDist = Math.sqrt((localX * localX) / (hw * hw) + (localZ * localZ) / (hd * hd));
             const signedDistToEdge = (1 - ellipseDist) * Math.min(hw, hd);
+            if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
+              return this._resolveTerrainType(feature);
+            }
+          } else if (feature.shape === 'polygon') {
+            const points = feature.points;
+            if (!points || points.length < 3) break;
+            let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+            for (const p of points) {
+              if (p.x < minX) minX = p.x;
+              if (p.x > maxX) maxX = p.x;
+              if (p.z < minZ) minZ = p.z;
+              if (p.z > maxZ) maxZ = p.z;
+            }
+            // AABB early-out: dithered band reaches blendWidth past the polygon.
+            if (x < minX - blendWidth || x > maxX + blendWidth ||
+                z < minZ - blendWidth || z > maxZ + blendWidth) break;
+            const minDist = distToPolyline(x, z, points, true);
+            const inside = isPointInPolygon(x, z, points);
+            const signedDistToEdge = inside ? minDist : -minDist;
             if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
               return this._resolveTerrainType(feature);
             }

@@ -5,7 +5,7 @@
     @close="editor.featureAction('deselectTerrainShape')"
   >
     <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+    <div class="text-[10px] text-slate-400 mb-3">WASD to move{{ editor.terrainShape.shape === 'polygon' ? '' : ' · QE to rotate' }} · Del to delete{{ editor.terrainShape.shape === 'polygon' ? ' point/shape' : '' }}</div>
 
     <!-- Shape selector -->
     <div class="text-[12px] mb-1">Shape</div>
@@ -16,9 +16,11 @@
     >
       <option value="rect">Rectangle</option>
       <option value="circle">Ellipse</option>
+      <option value="polygon">Polygon</option>
     </select>
 
-    <!-- Geometry controls -->
+    <!-- Geometry controls (rect/ellipse) -->
+    <template v-if="editor.terrainShape.shape !== 'polygon'">
       <div class="flex justify-between mb-1 text-[12px]">
         <span>Width</span>
         <span>{{ editor.terrainShape.width.toFixed(1) }}</span>
@@ -51,6 +53,29 @@
         @input="editor.setFeatureProp('terrainShape', 'rotation', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
+    </template>
+
+    <!-- Polygon controls -->
+    <template v-else>
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Points</span>
+        <span>{{ editor.terrainShape.pointCount }}</span>
+      </div>
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Selected Point</span>
+        <span>{{ editor.terrainShape.selectedPointIndex >= 0 ? editor.terrainShape.selectedPointIndex + 1 : 'Center' }}</span>
+      </div>
+      <div class="flex gap-2 mb-3">
+        <button
+          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+          @click="editor.featureAction('deleteTerrainShapePoint')"
+        >Delete Point</button>
+        <button
+          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+          @click="editor.featureAction('insertTerrainShapePoint')"
+        >Insert Point</button>
+      </div>
+    </template>
     <TerrainTypeSelect
       :model-value="editor.terrainShape.terrainType"
       @update:modelValue="v => editor.setFeatureProp('terrainShape', 'terrainType', v)"

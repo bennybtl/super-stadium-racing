@@ -73,7 +73,7 @@ export const useEditorStore = defineStore('editor', () => {
     sideColor: 'terrain',
   });
 
-  // ── Terrain shape panel (rect + circle/ellipse) ──
+  // ── Terrain shape panel (rect + circle/ellipse + polygon) ──
   const terrainShape = reactive({
     shape: 'rect',
     width: 10,
@@ -82,6 +82,8 @@ export const useEditorStore = defineStore('editor', () => {
     blendWidth: 0,
     terrainType: 'mud',
     roughness: 0.15,
+    pointCount: 0,
+    selectedPointIndex: -1,
   });
 
   // ── Obstacle panel ──
