@@ -1,7 +1,7 @@
 # Blender v2.77 (sub 0) OBJ File: 'Low_Poly_Tree_004.blend'
 # www.blender.org
 mtllib Low_Poly_Tree_004.mtl
-o Low_Poly_Tree_004_Circle.001
+o trunk_obj_0
 v 0.000000 3.368239 -0.000000
 v 0.000000 8.816151 -0.000000
 v 0.531998 4.198845 -0.921448
@@ -72,6 +72,7 @@ f 21//3 22//3 27//3 28//3
 f 26//4 21//4 28//4 32//4
 f 24//5 25//5 31//5 30//5
 f 22//6 23//6 29//6 27//6
+g leaves_obj_0
 usemtl Low_Poly_Tree_004_Mat_02
 f 6//7 5//7 2//7
 f 12//8 11//8 2//8

@@ -1,0 +1,22 @@
+{
+  "id": "forest_rock_2",
+  "name": "Forest Rock 2",
+  "packId": "forest_rock",
+  "packName": "Rock",
+  "modelFile": "forest_rock_2.obj",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "meshTextures": {
+    "forest_rock_2_obj_0": "forest_atlas.png"
+  },
+  "colliderMeshes": [
+    "forest_rock_2_obj_0"
+  ],
+  "castsShadows": true,
+  "editable": {
+    "color": false,
+    "scale": true,
+    "heading": true
+  }
+}

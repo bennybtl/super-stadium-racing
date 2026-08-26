@@ -1,0 +1,19 @@
+{
+  "id": "forest_mushroom_3",
+  "name": "Forest Mushroom 3",
+  "packId": "forest_mushroom",
+  "packName": "Mushroom",
+  "modelFile": "forest_mushroom_3.obj",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "meshTextures": {
+    "forest_mushroom_3_obj_0": "forest_atlas.png"
+  },
+  "castsShadows": true,
+  "editable": {
+    "color": false,
+    "scale": true,
+    "heading": true
+  }
+}

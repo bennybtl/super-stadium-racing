@@ -1,0 +1,28 @@
+{
+  "id": "tree_9",
+  "name": "Tree 9",
+  "packId": "tree",
+  "packName": "Tree",
+  "modelFile": "tree_9.obj",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "defaultColor": "green",
+  "defaultScale": 1,
+  "meshColors": {
+    "trunk_obj_0": [
+      0.28,
+      0.22,
+      0.16
+    ]
+  },
+  "colliderMeshes": [
+    "trunk_obj_0"
+  ],
+  "castsShadows": true,
+  "editable": {
+    "color": true,
+    "scale": true,
+    "heading": true
+  }
+}

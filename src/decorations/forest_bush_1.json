@@ -1,0 +1,19 @@
+{
+  "id": "forest_bush_1",
+  "name": "Forest Bush 1",
+  "packId": "forest_bush",
+  "packName": "Bush",
+  "modelFile": "forest_bush_1.obj",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "meshTextures": {
+    "forest_bush_1_obj_0": "forest_atlas.png"
+  },
+  "castsShadows": true,
+  "editable": {
+    "color": false,
+    "scale": true,
+    "heading": true
+  }
+}

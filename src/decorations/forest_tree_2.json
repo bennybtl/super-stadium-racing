@@ -1,0 +1,22 @@
+{
+  "id": "forest_tree_2",
+  "name": "Forest Tree 2",
+  "packId": "forest_tree",
+  "packName": "Forest Tree",
+  "modelFile": "forest_tree_2.obj",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "meshTextures": {
+    "forest_tree_2_obj_0": "forest_atlas.png"
+  },
+  "colliderMeshes": [
+    "forest_tree_2_obj_0"
+  ],
+  "castsShadows": true,
+  "editable": {
+    "color": false,
+    "scale": true,
+    "heading": true
+  }
+}

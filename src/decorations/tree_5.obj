@@ -1,7 +1,7 @@
 # Blender v2.77 (sub 0) OBJ File: 'Low_Poly_Tree_002.blend'
 # www.blender.org
 mtllib Low_Poly_Tree_002.mtl
-o Low_Poly_Tree_002_Icosphere.001
+o trunk_obj_0
 v 1.312245 -0.272793 -0.215598
 v 0.252001 -0.272793 -1.300004
 v -1.106964 -0.272793 -0.626751
@@ -268,6 +268,7 @@ f 13//22 14//22 24//22 25//22
 f 14//23 15//23 23//23 24//23
 f 15//24 11//24 22//24 23//24
 f 11//25 12//25 26//25 22//25
+g leaves_obj_0
 usemtl Low_Poly_Tree_002_Mat_02
 f 44//26 43//26 32//26
 f 28//27 37//27 38//27

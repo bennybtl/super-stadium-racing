@@ -1,7 +1,7 @@
 # Blender v2.77 (sub 0) OBJ File: 'Low_Poly_Tree_006.blend'
 # www.blender.org
 mtllib Low_Poly_Tree_006.mtl
-o Low_Poly_Tree_006_Cylinder.001
+o leaves_obj_0
 v -0.000000 5.481270 -0.559047
 v -0.000000 6.454145 0.000000
 v 0.484149 5.481269 -0.279524
@@ -233,6 +233,7 @@ f 72//69 70//69 64//69 68//69
 f 69//70 65//70 71//70 73//70
 f 71//71 67//71 66//71 70//71
 f 73//72 71//72 70//72 72//72
+g trunk_obj_0
 usemtl Low_Poly_Tree_006_Mat_02
 f 63//73 74//73 75//73 62//73
 f 69//74 76//74 74//74 63//74
