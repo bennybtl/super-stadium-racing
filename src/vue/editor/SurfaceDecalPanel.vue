@@ -5,7 +5,7 @@
     @close="close"
   >
     <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">Drag to move · QE to rotate · Del to delete · Click terrain to stamp · Scroll to scale</div>
+    <div class="text-[10px] text-slate-400 mb-3">Drag to move{{ editing && s.shape === 'polyline' ? '' : ' · QE to rotate' }} · Del to delete{{ editing && s.shape === 'polyline' ? ' point/decal' : '' }} · Click terrain to stamp · Scroll to scale</div>
 
     <!-- Shape (stamp mode only — a placed decal keeps its shape) -->
     <template v-if="!editing">
@@ -51,36 +51,95 @@
 
     <hr class="border-t border-slate-700 my-4" />
 
-    <!-- Rotation -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Rotation</span>
-      <span>{{ s.angle }}°</span>
-    </div>
-    <input type="range" min="-180" max="180" step="1"
-      :value="s.angle"
-      @input="set('angle', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
+    <!-- Rotation — for a polyline this only orients the initial 2-point seed,
+         so it stops applying once the line is placed and edited by its points. -->
+    <template v-if="!editing || s.shape !== 'polyline'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Rotation</span>
+        <span>{{ s.angle }}°</span>
+      </div>
+      <input type="range" min="-180" max="180" step="1"
+        :value="s.angle"
+        @input="set('angle', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
 
-    <!-- Size -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Width</span>
-      <span>{{ s.width }}m</span>
-    </div>
-    <input type="range" min="0.5" max="30" step="0.5"
-      :value="s.width"
-      @input="set('width', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Depth</span>
-      <span>{{ s.depth }}m</span>
-    </div>
-    <input type="range" min="0.5" max="30" step="0.5"
-      :value="s.depth"
-      @input="set('depth', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-1 cursor-pointer"
-    />
+    <!-- Size — a polyline has no "Depth"; its length only seeds the initial
+         2-point line (a placed one is reshaped via its points instead). -->
+    <template v-if="!editing || s.shape !== 'polyline'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>{{ s.shape === 'polyline' ? 'Length' : 'Width' }}</span>
+        <span>{{ s.width }}m</span>
+      </div>
+      <input type="range" min="0.5" max="30" step="0.5"
+        :value="s.width"
+        @input="set('width', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
+    <template v-if="s.shape !== 'polyline'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Depth</span>
+        <span>{{ s.depth }}m</span>
+      </div>
+      <input type="range" min="0.5" max="30" step="0.5"
+        :value="s.depth"
+        @input="set('depth', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-1 cursor-pointer"
+      />
+    </template>
+
+    <!-- Thickness (polyline only — the drawn line's stroke width) -->
+    <template v-if="s.shape === 'polyline'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Thickness</span>
+        <span>{{ s.thickness.toFixed(1) }}m</span>
+      </div>
+      <input type="range" min="0.1" max="5" step="0.1"
+        :value="s.thickness"
+        @input="set('thickness', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
+
+    <!-- Polyline point editing (placed decal only) -->
+    <template v-if="editing && s.shape === 'polyline'">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Points</span>
+        <span>{{ s.pointCount }}</span>
+      </div>
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Selected Point</span>
+        <span>{{ s.selectedPointIndex >= 0 ? s.selectedPointIndex + 1 : 'Center' }}</span>
+      </div>
+      <template v-if="s.selectedPointIndex >= 0">
+        <div class="flex justify-between mb-1 text-[12px]">
+          <span>Corner Radius</span>
+          <span>{{ s.radius.toFixed(1) }}m</span>
+        </div>
+        <input type="range" min="0" max="30" step="0.5"
+          :value="s.radius"
+          :disabled="!s.canHaveRadius"
+          @input="set('radius', +$event.target.value)"
+          class="w-full accent-[var(--accent)] mb-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        />
+        <div v-if="!s.canHaveRadius" class="text-[10px] text-slate-500 mb-3">
+          Endpoints can't be rounded — needs a point on both sides.
+        </div>
+        <div v-else class="mb-3"></div>
+      </template>
+      <div class="flex gap-2 mb-3">
+        <button
+          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+          @click="editor.featureAction('deleteSurfaceDecalPoint')"
+        >Delete Point</button>
+        <button
+          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+          @click="editor.featureAction('insertSurfaceDecalPoint')"
+        >Insert Point</button>
+      </div>
+    </template>
 
     <hr class="border-t border-slate-700 my-4" />
 

@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import { DECAL_SHAPES, createDecalTexture } from "./decalShapes.js";
+import { DECAL_SHAPES, createDecalTexture, decalPolylineLocalOutline } from "./decalShapes.js";
 import { projectGroundDecal, makeDecalMaterial } from "./groundDecal.js";
 
 // World-units the decal mesh is raised off the terrain so it wins pointer picks
@@ -33,15 +33,17 @@ function wearSeed(x, z) {
  *   type:    "surfaceDecal",
  *   centerX: number,       // world X
  *   centerZ: number,       // world Z
- *   shape:   string,       // "arrow" | "chevron" | "line" | "oval" | "rect" | "triangle"
+ *   shape:   string,       // "arrow" | "chevron" | "line" | "oval" | "rect" | "triangle" | "polyline"
  *   count:   number,       // repeats, 1–10 (chevron only)
  *   outline: boolean,      // draw as outline instead of solid (oval/rect/triangle/text)
  *   text:    string,       // marking text (text shape only)
  *   color:   string,       // CSS color, default "white"
- *   width:   number,       // world units
- *   depth:   number,       // world units
- *   angle:   number,       // degrees, rotation around Y (up) axis
+ *   width:   number,       // world units (ignored for polyline — derived from points)
+ *   depth:   number,       // world units (ignored for polyline — derived from points)
+ *   angle:   number,       // degrees, rotation around Y (up) axis (ignored for polyline)
  *   opacity: number,       // 0–1, default 1
+ *   points:  Array<{x, z, radius}>, // polyline shape only — world-space, open, rounded corners
+ *   thickness: number,     // polyline shape only — stroke width in world units
  * }
  */
 export class SurfaceDecalManager {
@@ -105,6 +107,8 @@ export class SurfaceDecalManager {
       count  = 1,
       outline = false,
       text = '',
+      points,
+      thickness = 1,
     } = feature;
 
     if (!DECAL_SHAPES.includes(shape)) {
@@ -112,16 +116,36 @@ export class SurfaceDecalManager {
       return null;
     }
 
-    const terrainY = this._track.getHeightAt(centerX, centerZ);
+    // Polyline shape: the projector box and canvas path both derive from the
+    // (possibly-rounded) point list + stroke thickness rather than the stored
+    // width/depth/angle, which don't apply to a hand-drawn line.
+    let boxCenterX = centerX, boxCenterZ = centerZ, boxWidth = width, boxDepth = depth;
+    let boxAngle = -(angle * Math.PI) / 180;
+    let localPoints = null;
+    if (shape === 'polyline') {
+      if (!Array.isArray(points) || points.length < 2) {
+        console.warn('[SurfaceDecalManager] polyline decal missing points');
+        return null;
+      }
+      const outlineData = decalPolylineLocalOutline(points, thickness);
+      boxCenterX = outlineData.centerX;
+      boxCenterZ = outlineData.centerZ;
+      boxWidth = outlineData.width;
+      boxDepth = outlineData.depth;
+      boxAngle = 0;
+      localPoints = outlineData.localPoints;
+    }
 
-    const decal = projectGroundDecal(this._ground, `surfaceDecal_${centerX}_${centerZ}`, {
-      position: new Vector3(centerX, terrainY, centerZ),
-      width,
-      depth,
-      angle: -(angle * Math.PI) / 180,
+    const terrainY = this._track.getHeightAt(boxCenterX, boxCenterZ);
+
+    const decal = projectGroundDecal(this._ground, `surfaceDecal_${boxCenterX}_${boxCenterZ}`, {
+      position: new Vector3(boxCenterX, terrainY, boxCenterZ),
+      width: boxWidth,
+      depth: boxDepth,
+      angle: boxAngle,
     });
 
-    decal.material = this._getMaterial(shape, color, opacity, wearSeed(centerX, centerZ), count, outline, text, width, depth);
+    decal.material = this._getMaterial(shape, color, opacity, wearSeed(boxCenterX, boxCenterZ), count, outline, text, boxWidth, boxDepth, localPoints, thickness);
     decal.isPickable = true;
     decal.metadata = { ...(decal.metadata ?? {}), surfaceDecal: true };
     // Lift the baked mesh a hair off the terrain so pointer picks hit the decal
@@ -132,15 +156,20 @@ export class SurfaceDecalManager {
     return decal;
   }
 
-  _getMaterial(shape, color, opacity, seed, count, outline, text, width, depth) {
+  _getMaterial(shape, color, opacity, seed, count, outline, text, width, depth, localPoints = null, thickness = 1) {
     // Wear is baked per world size, so the footprint is part of the key. It is
     // rounded to whole units to keep the cache from growing per slider step.
     const worldWidth = Math.max(1, Math.round(width));
     const worldDepth = Math.max(1, Math.round(depth));
-    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}:${text}:${worldWidth}x${worldDepth}`;
+    // A polyline's path isn't captured by the enum key above, so its outline +
+    // thickness (rounded to keep the cache from growing per pixel of drag) join it.
+    const pointsKey = localPoints
+      ? `${localPoints.map(p => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}@${thickness.toFixed(1)}`
+      : '';
+    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}:${text}:${worldWidth}x${worldDepth}:${pointsKey}`;
     if (this._matCache.has(key)) return this._matCache.get(key);
 
-    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline, text, worldWidth, worldDepth });
+    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline, text, worldWidth, worldDepth, localPoints, thickness });
     const mat = makeDecalMaterial(this._scene, `surfaceDecalMat_${key}`, tex, opacity);
 
     this._matCache.set(key, mat);

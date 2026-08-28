@@ -12,6 +12,7 @@ export const LINE_COLOR_POLY_WALL   = basicColors.orange.diffuse;  // orange
 export const LINE_COLOR_POLY_HILL   = basicColors.green.diffuse;  // green
 export const LINE_COLOR_POLY_CURB   = basicColors.red.diffuse;  // red
 export const LINE_COLOR_TERRAIN_SHAPE = new Color3(0.76, 0.60, 0.42); // matches terrain-shape handle hue
+export const LINE_COLOR_SURFACE_DECAL = basicColors.white.diffuse; // matches decal handle hue
 
 /**
  * EditorMaterials — a lazily-populated registry of all editor gizmo materials.

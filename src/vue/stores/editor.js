@@ -481,7 +481,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ── Surface decal stamp ──
-  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, angle: 0, width: 4, depth: 4, opacity: 1 });
+  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, angle: 0, width: 4, depth: 4, opacity: 1, thickness: 1, pointCount: 0, selectedPointIndex: -1, canHaveRadius: false, radius: 0 });
 
 
   // ── Generic panel plumbing ──────────────────────────────────────────────

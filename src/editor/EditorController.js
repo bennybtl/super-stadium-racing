@@ -1249,7 +1249,6 @@ export class EditorController {
       [this.driveBoxEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
-      [this.surfaceDecalEditor, 'selected'],
       [this.decorationsEditor, '_selected'],
       [this.aiPathEditor, 'selected'],
       [this.terrainPathEditor, 'selected'],
@@ -1295,6 +1294,20 @@ export class EditorController {
       if (meshMatches(tsData.handle?.mesh)) return true;
       if (tsData.feature.shape === 'polygon' && this.terrainShapeEditor._selectedPointIndex >= 0) {
         if (meshMatches(tsData.pointHandles?.[this.terrainShapeEditor._selectedPointIndex])) return true;
+      }
+    }
+
+    // Surface decal: same "only the active vertex counts" rule, plus clicking
+    // the baked decal mesh itself (not just its gizmo handles) also counts.
+    const sdEntry = this.surfaceDecalEditor?.selected;
+    if (sdEntry) {
+      if (meshMatches(sdEntry.mesh)) return true;
+      const sdHandles = this.surfaceDecalEditor._handles.get(sdEntry);
+      if (sdHandles) {
+        if (meshMatches(sdHandles.handle?.mesh)) return true;
+        if (sdEntry.feature.shape === 'polyline' && this.surfaceDecalEditor._selectedPointIndex >= 0) {
+          if (meshMatches(sdHandles.pointHandles?.[this.surfaceDecalEditor._selectedPointIndex])) return true;
+        }
       }
     }
 
@@ -1540,6 +1553,9 @@ export class EditorController {
         // Terrain shape center/point handles
         if (this._selectViaPointEditor(this.terrainShapeEditor, clickedMesh)) return;
 
+        // Surface decal center/point handles (+ clicking the baked decal itself)
+        if (this._selectViaPointEditor(this.surfaceDecalEditor, clickedMesh)) return;
+
         // Start-position marker handle + its grid slot pads
         if (this._selectViaPointEditor(this.startPositionEditor, clickedMesh)) return;
 
@@ -1551,7 +1567,6 @@ export class EditorController {
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
-          { editor: this.surfaceDecalEditor },
         ];
 
         for (const handler of clickHandlers) {
@@ -2166,6 +2181,7 @@ export class EditorController {
   setSurfaceDecalOpacity(val) { this.surfaceDecalEditor.setOpacity(val); }
   setSurfaceDecalWidth(val) { this.surfaceDecalEditor.setWidth(val); }
   setSurfaceDecalDepth(val) { this.surfaceDecalEditor.setDepth(val); }
+  setSurfaceDecalThickness(val) { this.surfaceDecalEditor.setThickness(val); }
 
   // Editing a placed decal (selected via click). Shares the 'surfaceDecal'
   // panel slice with stamp mode; only selectedType distinguishes them.
@@ -2180,6 +2196,10 @@ export class EditorController {
   changeSurfaceDecalOutline(v) { this.surfaceDecalEditor.changeOutline(v); }
   changeSurfaceDecalColor(v)   { this.surfaceDecalEditor.changeColor(v); }
   changeSurfaceDecalText(v)    { this.surfaceDecalEditor.changeText(v); }
+  changeSurfaceDecalRadius(v)  { this.surfaceDecalEditor.changeRadius(v); }
+  changeSurfaceDecalThickness(v) { this.surfaceDecalEditor.changeThickness(v); }
+  insertSurfaceDecalPoint()    { this.surfaceDecalEditor.insertPoint(); }
+  deleteSurfaceDecalPoint()    { this.surfaceDecalEditor.deletePoint(); }
 
   // ── AI Path helper methods ───────────────────────────────────────────────
   openAiPath() {

@@ -1,5 +1,6 @@
 import { DynamicTexture } from "@babylonjs/core";
 import { basicColors } from "../constants";
+import { expandPolyline } from "../polyline-utils.js";
 /**
  * decalShapes — programmatically drawn surface-decal textures.
  *
@@ -12,7 +13,7 @@ import { basicColors } from "../constants";
  * decal's rotation angle maps intuitively to a compass-style heading.
  */
 
-export const DECAL_SHAPES = ['arrow', 'chevron', 'line', 'oval', 'rect', 'triangle', 'text'];
+export const DECAL_SHAPES = ['arrow', 'chevron', 'line', 'oval', 'rect', 'triangle', 'text', 'polyline'];
 
 /** Shapes whose look depends on the feature's `count` (repeat) property. */
 export const COUNTED_SHAPES = ['chevron'];
@@ -39,7 +40,7 @@ const STROKE_RATIO = 0.09;
 const clampCount = (n) => Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(n ?? MIN_COUNT)));
 
 /** Draw the named shape onto a 2D canvas context sized w×h. */
-export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false, text = '' } = {}) {
+export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false, text = '', localPoints = null, thickness = 1, worldWidth = 4, worldDepth = 4 } = {}) {
   const hexColor = basicColors[color]?.diffuse.toHexString() || '#FFFFFF';
 
   ctx.clearRect(0, 0, w, h);
@@ -66,6 +67,19 @@ export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, o
     case 'text':
       drawText(ctx, w, h, text, outline);
       break;
+    case 'polyline': {
+      // A single canvas stroke can't vary width per path direction, so pick
+      // one px-per-world-unit scale for the whole path. The box's narrower
+      // dimension is the one squeezed down toward the stroke's own thickness
+      // padding, so its scale is the finer of the two — using it is exact for
+      // an axis-aligned line (the common case: a straight or gently-curved
+      // line down the track) and errs toward "too thick" rather than "too
+      // thin" as the path tilts off-axis, same spirit as the minor stretch
+      // the single-segment `line` shape already accepts when width ≠ depth.
+      const pxPerUnit = Math.max(w / worldWidth, h / worldDepth);
+      drawPolyline(ctx, w, h, localPoints, thickness * pxPerUnit);
+      break;
+    }
     case 'arrow':
     default:
       drawArrow(ctx, w, h, hexColor);
@@ -190,6 +204,66 @@ function drawTriangle(ctx, w, h, outline) {
 }
 
 /**
+ * A user-drawn line traced through `localPoints` — an already-rounded, OPEN
+ * polyline in the feature's own local unit frame (see `decalPolylineLocalOutline`
+ * below), where ±1 is exactly the projector box edge (unlike `rect`/`oval`'s
+ * stylistic 6% margin: the box itself is derived from these same points, so
+ * drawing full-bleed keeps the painted marking lined up with where the user
+ * actually dragged each control point). `linePx` is the pre-computed stroke
+ * width in texture pixels.
+ */
+function drawPolyline(ctx, w, h, localPoints, linePx) {
+  if (!localPoints || localPoints.length < 2) return;
+  ctx.lineWidth = Math.max(1, linePx);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  localPoints.forEach((p, i) => {
+    const px = w / 2 + p.x * (w / 2);
+    const pz = h / 2 + p.z * (h / 2);
+    if (i === 0) ctx.moveTo(px, pz); else ctx.lineTo(px, pz);
+  });
+  ctx.stroke();
+}
+
+/**
+ * Derive a polyline decal's ground footprint + local draw path from its raw
+ * world-space control points (each an optional `{x, z, radius}`, same corner-
+ * rounding convention as polyWall/polyCurb/polyHill) and its stroke `thickness`.
+ *
+ * Corner rounding is expanded in world space (so `radius` clamps against real
+ * segment lengths, same as every other polyline feature; unlike those, this
+ * polyline is always open — a wall/curb-style `closed` toggle doesn't apply to
+ * a decal line), then the rounded path is normalized into the decal's local
+ * unit frame by a bounding box padded by half the stroke thickness on every
+ * side (so the stroke isn't clipped at the projector box edge) — this is the
+ * one function both the editor's gizmo/mesh math and the canvas draw call read
+ * from, so the baked decal always matches what was dragged.
+ */
+export function decalPolylineLocalOutline(points, thickness = 1) {
+  const expanded = expandPolyline(points, false);
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const p of expanded) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.z < minZ) minZ = p.z;
+    if (p.z > maxZ) maxZ = p.z;
+  }
+  const pad = Math.max(0, thickness) / 2;
+  minX -= pad; maxX += pad; minZ -= pad; maxZ += pad;
+  const centerX = (minX + maxX) / 2;
+  const centerZ = (minZ + maxZ) / 2;
+  const width = Math.max(0.1, maxX - minX);
+  const depth = Math.max(0.1, maxZ - minZ);
+  const halfW = width / 2;
+  const halfD = depth / 2;
+  return {
+    centerX, centerZ, width, depth,
+    localPoints: expanded.map(p => ({ x: (p.x - centerX) / halfW, z: (p.z - centerZ) / halfD })),
+  };
+}
+
+/**
  * Simple seeded PRNG (mulberry32) — returns a function yielding [0, 1) floats,
  * so a given seed always produces the same wear pattern.
  */
@@ -270,11 +344,11 @@ export function applyDecalWear(ctx, texW, texH, { seed = 0, worldWidth = 4, worl
  */
 export function createDecalTexture(scene, shape, {
   color = 'white', seed = 0, count = 1, outline = false, text = '',
-  worldWidth = 4, worldDepth = 4, size = TEX_SIZE,
+  worldWidth = 4, worldDepth = 4, size = TEX_SIZE, localPoints = null, thickness = 1,
 } = {}) {
   const tex = new DynamicTexture(`decalShape_${shape}`, { width: size, height: size }, scene);
   const ctx = tex.getContext();
-  drawDecalShape(ctx, shape, size, size, { color, count, outline, text });
+  drawDecalShape(ctx, shape, size, size, { color, count, outline, text, localPoints, thickness, worldWidth, worldDepth });
   applyDecalWear(ctx, size, size, { seed, worldWidth, worldDepth });
   tex.hasAlpha = true;
   tex.update();
