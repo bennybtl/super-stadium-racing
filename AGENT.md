@@ -270,10 +270,16 @@ Drivable elevated mesh with solid top/bottom/sides.
   "heights":   [2,2,2, 2,2,2, 2,2,2, 2,2,2, 2,2,2],
   "rotation":  0,
   "thickness": 0.5,
+  "smoothing": 0,
   "layerId":   1
 }
 ```
 - `heights` array is row-major (rows × cols), absolute world Y
+- `offsetsX` / `offsetsZ` (optional, row-major) — per-control-point in-plane nudge,
+  clamped to <½ cell; dragging a control sphere writes these (like `meshGrid`)
+- `smoothing` (0–1) — when > 0 the visual + drive mesh are densified and blended
+  toward a Catmull-Rom bicubic surface (same maths as `meshGrid` smoothing); the
+  control grid / editor handles are unchanged
 - Top face registered as a drive surface so raycasts land at correct height/slope
 - Uses Havok MESH collider for the top face; terrain seam meshes connect bridge edges to ground to prevent gaps
 

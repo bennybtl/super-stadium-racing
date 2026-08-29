@@ -9,7 +9,7 @@
   >
 
     <div class="text-[10px] text-slate-400 mb-3">
-      Click a control sphere to edit point height. Click center sphere to move mesh with WASD.
+      Click a control sphere to select it · scroll / ↑ ↓ / [ ] set height · drag or WASD moves it in the plane. Drag the center sphere to move the whole mesh.
     </div>
 
     <!-- Point Height -->
@@ -52,7 +52,7 @@
       <span>{{ editor.bridgeMesh.width }}</span>
     </div>
     <input
-      type="range" min="4" max="60" step="2"
+      type="range" min="4" max="200" step="2"
       :value="editor.bridgeMesh.width"
       @input="editor.bridgeMesh.width = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -64,7 +64,7 @@
       <span>{{ editor.bridgeMesh.depth }}</span>
     </div>
     <input
-      type="range" min="4" max="60" step="2"
+      type="range" min="4" max="200" step="2"
       :value="editor.bridgeMesh.depth"
       @input="editor.bridgeMesh.depth = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -130,6 +130,18 @@
       type="range" min="0.1" max="5" step="0.05"
       :value="editor.bridgeMesh.thickness"
       @input="editor.setBridgeMeshThickness(+$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
+    <!-- Smoothing (live) — rounds the deck between control points -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Smoothing</span>
+      <span>{{ editor.bridgeMesh.smoothing.toFixed(2) }}</span>
+    </div>
+    <input
+      type="range" min="0" max="1" step="0.05"
+      :value="editor.bridgeMesh.smoothing"
+      @input="editor.setFeatureProp('bridgeMesh', 'smoothing', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 

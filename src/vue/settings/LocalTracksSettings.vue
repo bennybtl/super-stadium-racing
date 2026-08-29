@@ -1,9 +1,9 @@
 <template>
   <div class="w-[min(90vw,480px)] mx-auto px-4 py-10 text-center">
-    <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">Remove Tracks</h2>
+    <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">Local Tracks</h2>
 
     <p v-if="tracks.length === 0" class="text-[#cbb] italic uppercase tracking-wide mb-8">
-      No removable tracks found.
+      No local tracks found.
     </p>
 
     <div v-else class="w-full flex flex-col gap-3 items-stretch mb-8">

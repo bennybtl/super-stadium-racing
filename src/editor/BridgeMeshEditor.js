@@ -100,6 +100,7 @@ export class BridgeMeshEditor {
       heights,
       rotation: 0,
       thickness: 0.4,
+      smoothing: 0,
       layerId: 1,
       level: 1,
     };
@@ -134,6 +135,9 @@ export class BridgeMeshEditor {
       centerX: feature.centerX + 5,
       centerZ: feature.centerZ + 5,
       heights: [...feature.heights],
+      // Break the shared array refs from the spread so edits don't bleed back.
+      offsetsX: feature.offsetsX ? [...feature.offsetsX] : undefined,
+      offsetsZ: feature.offsetsZ ? [...feature.offsetsZ] : undefined,
     };
     this.track.features.push(newFeature);
     this._addGizmosForFeature(newFeature);
@@ -190,6 +194,9 @@ export class BridgeMeshEditor {
     f.width  = newWidth;
     f.depth  = newDepth;
     f.heights = newH;
+    // Grid topology changed — per-point x/z offsets no longer map; drop them.
+    delete f.offsetsX;
+    delete f.offsetsZ;
 
     this._removeGizmosForFeature(f);
     this._addGizmosForFeature(f);
@@ -375,6 +382,9 @@ export class BridgeMeshEditor {
     this.deselect();
     this.selectedCenter = centerData;
     this.activeFeature = centerData.featureRef;
+    // Seed the shared drag anchor so a pointer-drag of the center handle moves
+    // from the feature's real position (mirrors HillEditor / SquareHillEditor).
+    this.ec._rawDragPos = { x: centerData.featureRef.centerX, z: centerData.featureRef.centerZ };
     centerData.mesh.material = this.highlightMat;
     this._updateVisibilityForFeature(centerData.featureRef);
     this._syncToStore(centerData.featureRef);
@@ -411,6 +421,7 @@ export class BridgeMeshEditor {
     this.selectedCenter.mesh.material = this.normalMat;
     const feature = this.selectedCenter.featureRef;
     this.selectedCenter = null;
+    this.ec._rawDragPos = null;
     if (feature) this._updateVisibilityForFeature(feature);
   }
 
@@ -441,6 +452,52 @@ export class BridgeMeshEditor {
     this._updateGizmoPositions();
     this._syncPointToStore();
     rebuild.bridgeMesh?.(f);
+  }
+
+  // ─── X/Z movement (drag; via EditorController.moveSelectedPoint) ────────────
+
+  /** Lazily create the per-point x/z offset arrays for a feature. */
+  _ensureOffsets(feature) {
+    const n = feature.cols * feature.rows;
+    if (!feature.offsetsX) feature.offsetsX = new Array(n).fill(0);
+    if (!feature.offsetsZ) feature.offsetsZ = new Array(n).fill(0);
+  }
+
+  /**
+   * Move the selected control point in the X/Z plane by a world-space delta.
+   * The delta is rotated into the mesh's local frame and stored as a per-point
+   * offset, clamped to just under half a cell so warped quads never fold.
+   * Returns the actual applied world delta so the camera can follow (mirrors
+   * MeshGridEditor.moveSelectedPoint).
+   */
+  moveSelectedPoint(dx, dz) {
+    if (!this.selectedPoint || !this.activeFeature) return { x: 0, z: 0 };
+    const { r, c, featureRef } = this.selectedPoint;
+    const f = featureRef;
+    this.ec.saveSnapshot(true);
+    this._ensureOffsets(f);
+
+    const rad = (f.rotation ?? 0) * Math.PI / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    const ldx =  dx * cos + dz * sin;
+    const ldz = -dx * sin + dz * cos;
+
+    const idx = r * f.cols + c;
+    const stepX = f.cols > 1 ? f.width / (f.cols - 1) : 0;
+    const stepZ = f.rows > 1 ? f.depth / (f.rows - 1) : 0;
+    const limX = stepX * 0.49, limZ = stepZ * 0.49;
+    const prevX = f.offsetsX[idx], prevZ = f.offsetsZ[idx];
+    const newX = Math.max(-limX, Math.min(limX, prevX + ldx));
+    const newZ = Math.max(-limZ, Math.min(limZ, prevZ + ldz));
+    f.offsetsX[idx] = newX;
+    f.offsetsZ[idx] = newZ;
+
+    this._updateGizmoPositions();
+    this._syncPointToStore();
+    rebuild.bridgeMesh?.(f);
+
+    const adx = newX - prevX, adz = newZ - prevZ;
+    return { x: adx * cos - adz * sin, z: adx * sin + adz * cos };
   }
 
   _onWheel(event) {
@@ -535,6 +592,7 @@ export class BridgeMeshEditor {
     s.bridgeMesh.depth     = feature.depth;
     s.bridgeMesh.rotation  = feature.rotation ?? 0;
     s.bridgeMesh.thickness = feature.thickness ?? 0.4;
+    s.bridgeMesh.smoothing = feature.smoothing ?? 0;
     s.bridgeMesh.layerId = feature.layerId ?? feature.level ?? 1;
     s.bridgeMesh.color     = feature.color ?? 'terrain';
     s.bridgeMesh.sideColor = feature.sideColor ?? feature.color ?? 'terrain';
@@ -598,8 +656,9 @@ export class BridgeMeshEditor {
     const halfD = depth / 2;
     const stepX = cols > 1 ? width / (cols - 1) : 0;
     const stepZ = rows > 1 ? depth / (rows - 1) : 0;
-    const localX = -halfW + c * stepX;
-    const localZ = -halfD + r * stepZ;
+    const idx = r * cols + c;
+    const localX = -halfW + c * stepX + (feature.offsetsX?.[idx] ?? 0);
+    const localZ = -halfD + r * stepZ + (feature.offsetsZ?.[idx] ?? 0);
     const rad = rotation * Math.PI / 180;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);

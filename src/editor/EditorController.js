@@ -503,6 +503,12 @@ export class EditorController {
       return this._createPointSelectionInteraction(this.meshGridEditor, 'moveSelectedPoint');
     }
 
+    // A selected bridge control point drags in the XZ plane; the center handle is
+    // covered by the `bridgeMeshEditor?.selected` (selectedCenter) branch above.
+    if (this.bridgeMeshEditor?.selectedPoint) {
+      return this._createPointSelectionInteraction(this.bridgeMeshEditor, 'moveSelectedPoint');
+    }
+
     return null;
   }
 
@@ -1265,6 +1271,8 @@ export class EditorController {
     if (selectedObjectMatches(this.polyWallEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyHillEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyCurbEditor?.selectedPoint)) return true;
+    if (selectedObjectMatches(this.bridgeMeshEditor?.selectedCenter)) return true;
+    if (selectedObjectMatches(this.bridgeMeshEditor?.selectedPoint)) return true;
 
     // Start-position marker: like the action zone below, only the sub-target
     // that is actually selected counts. findByMesh maps every one of its grid
@@ -2115,6 +2123,12 @@ export class EditorController {
     if (!this.bridgeMeshEditor?.activeFeature) return;
     this.saveSnapshot();
     this.bridgeMeshEditor.activeFeature.thickness = Math.max(0.1, v);
+    rebuild.bridgeMesh?.(this.bridgeMeshEditor.activeFeature);
+  }
+  changeBridgeMeshSmoothing(v) {
+    if (!this.bridgeMeshEditor?.activeFeature) return;
+    this.saveSnapshot(true);
+    this.bridgeMeshEditor.activeFeature.smoothing = Math.max(0, Math.min(1, v));
     rebuild.bridgeMesh?.(this.bridgeMeshEditor.activeFeature);
   }
   changeBridgeMeshLayerId(v) {

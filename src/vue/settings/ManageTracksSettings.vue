@@ -1,13 +1,13 @@
 <template>
   <LapRecordsSettings v-if="subScreen === 'lapRecords'" @back="subScreen = ''" />
-  <RemoveTracksSettings v-else-if="subScreen === 'removeTracks'" @back="subScreen = ''" />
+  <LocalTracksSettings v-else-if="subScreen === 'localTracks'" @back="subScreen = ''" />
 
   <div v-else class="w-[min(90vw,480px)] mx-auto px-12 py-10 text-center">
     <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">Manage Tracks</h2>
 
     <div class="w-full flex flex-col gap-5 items-stretch mb-8">
       <button class="menu-button px-10 py-4 text-2xl" @click="subScreen = 'lapRecords'">Lap Records</button>
-      <button class="menu-button px-10 py-4 text-2xl" @click="subScreen = 'removeTracks'">Remove Tracks</button>
+      <button class="menu-button px-10 py-4 text-2xl" @click="subScreen = 'localTracks'">Local Tracks</button>
       <button class="menu-button px-10 py-4 text-2xl" @click="onLoadTracks" :disabled="loading">
         {{ loading ? 'Loading…' : 'Load Track Pack' }}
       </button>
@@ -34,7 +34,7 @@
 <script setup>
 import { ref } from 'vue';
 import LapRecordsSettings from './LapRecordsSettings.vue';
-import RemoveTracksSettings from './RemoveTracksSettings.vue';
+import LocalTracksSettings from './LocalTracksSettings.vue';
 import { loadTrackPack } from '../../managers/TrackPackLoader.js';
 import { useMenuStore } from '../stores/menu.js';
 

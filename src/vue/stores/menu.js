@@ -16,7 +16,7 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedReverse = ref(false);
   const selectedVehicle = ref('baja');
   const selectedPlayerColor = ref(null);
-  // Current gameplay mode: null | 'practice' | 'singleRace'
+  // Current gameplay mode: null | 'practice' | 'single race'
   const mode = ref(null);
 
   // Direction of the next menu transition: 'forward' descends the menu stack,
@@ -73,8 +73,8 @@ export const useMenuStore = defineStore('menu', () => {
   function setSelectedAIDrivers(count) { if (!_bridge.value) return; _bridge.value.setSelectedAIDrivers(count); }
   function setSelectedAIVehicleType(key) { if (!_bridge.value) return; _bridge.value.setSelectedAIVehicleType(key); }
   function setSelectedReverse(val) { selectedReverse.value = !!val; if (_bridge.value) _bridge.value.selectedReverse = !!val; }
-  function showPitMenu(pitMode = 'singleRace') {
-    if (pitMode === 'singleRace') mode.value = 'singleRace';
+  function showPitMenu(pitMode = 'single race') {
+    if (pitMode === 'single race') mode.value = 'single race';
     _bridge.value?.showPitMenu(pitMode);
   }
 
@@ -107,8 +107,8 @@ export const useMenuStore = defineStore('menu', () => {
     upgrades.value = getUpgradeCatalog({ balance: 0, ignoreBalance: true });
   }
   function selectPlayerColor(key)  { selectedPlayerColor.value = key; if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
-  function startHotLapMode()          { mode.value = 'hotLap'; _bridge.value?.onStartHotLap(); }
-  function startSingleRace()        { mode.value = 'singleRace'; _bridge.value?.onStartSingleRace(); }
+  function startHotLapMode()          { mode.value = 'hot lap'; _bridge.value?.onStartHotLap(); }
+  function startSingleRace()        { mode.value = 'single race'; _bridge.value?.onStartSingleRace(); }
   function singleRaceExit()        { navDirection.value = 'back'; mode.value = null; singleRaceData.value = null; _bridge.value?.onExit(); }
   function setMode(nextMode)       { mode.value = nextMode; }
 

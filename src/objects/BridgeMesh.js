@@ -91,6 +91,8 @@ export class BridgeMesh {
       cols, rows,
       width, depth,
       heights,
+      offsetsX, offsetsZ,
+      smoothing = 0,
       rotation = 0,
       thickness = 0.4,
       level = 1,
@@ -98,6 +100,20 @@ export class BridgeMesh {
     } = feature;
     const resolvedLayerId = Number.isFinite(layerId) ? layerId : 1;
     const safeHeights = Array.isArray(heights) ? heights : new Array(cols * rows).fill(0);
+    const safeOffsetsX = Array.isArray(offsetsX) ? offsetsX : null;
+    const safeOffsetsZ = Array.isArray(offsetsZ) ? offsetsZ : null;
+
+    // Geometry grid: when smoothing is on, densify the control grid and blend
+    // toward a Catmull-Rom bicubic surface (same maths as the terrain meshGrid
+    // feature's `smoothing`). The visual slab AND the drive/physics mesh are both
+    // built from this so the truck sits on exactly what's drawn.
+    const geo = _resampleGridForGeometry({
+      cols, rows,
+      heights: safeHeights,
+      offsetsX: safeOffsetsX,
+      offsetsZ: safeOffsetsZ,
+      smoothing,
+    });
     const connectorEndpoints = _buildAutoBridgeMeshConnectorEndpoints({
       track,
       centerX,
@@ -121,6 +137,8 @@ export class BridgeMesh {
       width,
       depth,
       heights: safeHeights,
+      offsetsX: safeOffsetsX,
+      offsetsZ: safeOffsetsZ,
       rotation,
     };
 
@@ -232,11 +250,11 @@ export class BridgeMesh {
 
     // ── Visual mesh (top + bottom + sides) ───────────────────────────────────
     this._mesh = new Mesh(`bridge_mesh_${centerX}_${centerZ}`, scene);
-    const solidVD = _buildSolidVD(centerX, centerZ, cols, rows, width, depth, safeHeights, thickness, rotation);
+    const solidVD = _buildSolidVD(centerX, centerZ, geo.cols, geo.rows, width, depth, geo.heights, thickness, rotation, geo.offsetsX, geo.offsetsZ);
     solidVD.applyToMesh(this._mesh);
     if (this._sideMaterial) {
       // _buildSolidVD emits the top face first, then bottom + the four sides.
-      const topIndexCount = Math.max(0, (rows - 1) * (cols - 1) * 6);
+      const topIndexCount = Math.max(0, (geo.rows - 1) * (geo.cols - 1) * 6);
       const vertexCount = solidVD.positions.length / 3;
       this._multiMaterial = new MultiMaterial(`bmMulti_${centerX}_${centerZ}`, scene);
       this._multiMaterial.subMaterials = [this._material, this._sideMaterial];
@@ -270,13 +288,15 @@ export class BridgeMesh {
     const driveVD = _buildTopFaceVD(
       centerX,
       centerZ,
-      cols,
-      rows,
+      geo.cols,
+      geo.rows,
       width,
       depth,
-      safeHeights,
+      geo.heights,
       rotation,
-      DRIVE_COLLIDER_OVERLAP
+      DRIVE_COLLIDER_OVERLAP,
+      geo.offsetsX,
+      geo.offsetsZ
     );
     driveVD.applyToMesh(this._driveMesh);
     this._driveMesh.isVisible = true;
@@ -608,6 +628,100 @@ function _sampleBridgeHeightAtLocal({ cols, rows, width, depth, heights, localX,
 
 // ── Private mesh-building helpers ─────────────────────────────────────────────
 
+// How many sub-cells each control-grid cell is split into when smoothing > 0.
+// Kept modest: the drive mesh is a Havok MESH collider raycast every frame and
+// is excluded from the picking octree (see AGENT.md §3b), so tessellation is a
+// direct per-ray triangle cost.
+const _SMOOTH_SUBDIV = 3;
+
+/**
+ * Catmull-Rom 1D — interpolates p1→p2 with tangents from the neighbours. Passes
+ * through every control point, so smoothing rounds the surface *between* handles
+ * without pulling it off the heights the user set. Mirrors Track.getHeightAt's
+ * meshGrid `smoothing` maths.
+ */
+function _catmullRom(p0, p1, p2, p3, t) {
+  const t2 = t * t, t3 = t2 * t;
+  return 0.5 * (
+    2 * p1 +
+    (-p0 + p2) * t +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+  );
+}
+
+/**
+ * When `smoothing` is 0 (or the grid is degenerate) return the control grid
+ * untouched. Otherwise densify it `_SMOOTH_SUBDIV`× per axis and blend each new
+ * vertex's height from the raw bilinear value toward a bicubic Catmull-Rom
+ * surface by `smoothing`. Per-point X/Z offsets are carried across by plain
+ * bilinear interpolation so a warped quad stays warped.
+ */
+function _resampleGridForGeometry({ cols, rows, heights, offsetsX, offsetsZ, smoothing }) {
+  const s = Math.max(0, Math.min(1, smoothing ?? 0));
+  if (s <= 0 || cols < 2 || rows < 2) {
+    return { cols, rows, heights, offsetsX, offsetsZ };
+  }
+
+  const sub = _SMOOTH_SUBDIV;
+  const nCols = (cols - 1) * sub + 1;
+  const nRows = (rows - 1) * sub + 1;
+
+  const H = (r, c) => heights[
+    Math.max(0, Math.min(rows - 1, r)) * cols + Math.max(0, Math.min(cols - 1, c))
+  ] ?? 0;
+  const sampleOffset = (arr, r, c) => arr?.[
+    Math.max(0, Math.min(rows - 1, r)) * cols + Math.max(0, Math.min(cols - 1, c))
+  ] ?? 0;
+
+  const outH = new Array(nCols * nRows);
+  const outX = offsetsX ? new Array(nCols * nRows).fill(0) : null;
+  const outZ = offsetsZ ? new Array(nCols * nRows).fill(0) : null;
+
+  for (let r = 0; r < nRows; r++) {
+    const gr = r / sub;
+    const r0 = Math.max(0, Math.min(Math.floor(gr), rows - 2));
+    const tr = gr - r0;
+    for (let c = 0; c < nCols; c++) {
+      const gc = c / sub;
+      const c0 = Math.max(0, Math.min(Math.floor(gc), cols - 2));
+      const tc = gc - c0;
+
+      const bilinear =
+        H(r0, c0)     * (1 - tc) * (1 - tr) +
+        H(r0, c0 + 1) *      tc  * (1 - tr) +
+        H(r0 + 1, c0) * (1 - tc) *      tr  +
+        H(r0 + 1, c0 + 1) *  tc  *      tr;
+
+      const row0 = _catmullRom(H(r0 - 1, c0 - 1), H(r0 - 1, c0), H(r0 - 1, c0 + 1), H(r0 - 1, c0 + 2), tc);
+      const row1 = _catmullRom(H(r0,     c0 - 1), H(r0,     c0), H(r0,     c0 + 1), H(r0,     c0 + 2), tc);
+      const row2 = _catmullRom(H(r0 + 1, c0 - 1), H(r0 + 1, c0), H(r0 + 1, c0 + 1), H(r0 + 1, c0 + 2), tc);
+      const row3 = _catmullRom(H(r0 + 2, c0 - 1), H(r0 + 2, c0), H(r0 + 2, c0 + 1), H(r0 + 2, c0 + 2), tc);
+      const bicubic = _catmullRom(row0, row1, row2, row3, tr);
+
+      const idx = r * nCols + c;
+      outH[idx] = bilinear + (bicubic - bilinear) * s;
+
+      if (outX) {
+        outX[idx] =
+          sampleOffset(offsetsX, r0, c0)         * (1 - tc) * (1 - tr) +
+          sampleOffset(offsetsX, r0, c0 + 1)     *      tc  * (1 - tr) +
+          sampleOffset(offsetsX, r0 + 1, c0)     * (1 - tc) *      tr  +
+          sampleOffset(offsetsX, r0 + 1, c0 + 1) *      tc  *      tr;
+      }
+      if (outZ) {
+        outZ[idx] =
+          sampleOffset(offsetsZ, r0, c0)         * (1 - tc) * (1 - tr) +
+          sampleOffset(offsetsZ, r0, c0 + 1)     *      tc  * (1 - tr) +
+          sampleOffset(offsetsZ, r0 + 1, c0)     * (1 - tc) *      tr  +
+          sampleOffset(offsetsZ, r0 + 1, c0 + 1) *      tc  *      tr;
+      }
+    }
+  }
+
+  return { cols: nCols, rows: nRows, heights: outH, offsetsX: outX, offsetsZ: outZ };
+}
+
 function _rotateVector(x, z, rotationDeg = 0) {
   const rad = rotationDeg * Math.PI / 180;
   const cos = Math.cos(rad);
@@ -618,7 +732,7 @@ function _rotateVector(x, z, rotationDeg = 0) {
   };
 }
 
-function _gridPoints(centerX, centerZ, cols, rows, width, depth, rotationDeg = 0) {
+function _gridPoints(centerX, centerZ, cols, rows, width, depth, rotationDeg = 0, offsetsX = null, offsetsZ = null) {
   const halfW = width / 2;
   const halfD = depth / 2;
   const stepX = cols > 1 ? width / (cols - 1) : 0;
@@ -626,8 +740,9 @@ function _gridPoints(centerX, centerZ, cols, rows, width, depth, rotationDeg = 0
   const points = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const localX = -halfW + c * stepX;
-      const localZ = -halfD + r * stepZ;
+      const idx = r * cols + c;
+      const localX = -halfW + c * stepX + (offsetsX?.[idx] ?? 0);
+      const localZ = -halfD + r * stepZ + (offsetsZ?.[idx] ?? 0);
       const rotated = _rotateVector(localX, localZ, rotationDeg);
       points.push({
         x: centerX + rotated.x,
@@ -642,11 +757,11 @@ function _gridPoints(centerX, centerZ, cols, rows, width, depth, rotationDeg = 0
  * Build VertexData for the top face only.
  * Winding is chosen so ComputeNormals produces upward-facing normals.
  */
-function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights, rotation = 0, overlap = 0) {
+function _buildTopFaceVD(centerX, centerZ, cols, rows, width, depth, heights, rotation = 0, overlap = 0, offsetsX = null, offsetsZ = null) {
   const safeOverlap = Math.max(0, overlap);
   const expandedWidth = width + safeOverlap * 2;
   const expandedDepth = depth + safeOverlap * 2;
-  const grid = _gridPoints(centerX, centerZ, cols, rows, expandedWidth, expandedDepth, rotation);
+  const grid = _gridPoints(centerX, centerZ, cols, rows, expandedWidth, expandedDepth, rotation, offsetsX, offsetsZ);
 
   const positions = [];
   const uvs = [];
@@ -689,6 +804,8 @@ function _buildTerrainSeamVD({
   width,
   depth,
   heights,
+  offsetsX = null,
+  offsetsZ = null,
   rotation = 0,
   side,
 }) {
@@ -700,6 +817,8 @@ function _buildTerrainSeamVD({
     width,
     depth,
     heights,
+    offsetsX,
+    offsetsZ,
     rotation,
     side,
   });
@@ -767,10 +886,12 @@ function _getBridgeEdgePoints({
   width,
   depth,
   heights,
+  offsetsX = null,
+  offsetsZ = null,
   rotation,
   side,
 }) {
-  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation);
+  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation, offsetsX, offsetsZ);
   const points = [];
 
   if (side === 'north') {
@@ -830,8 +951,8 @@ function _getBridgeSideOutwardNormal(side, rotation = 0) {
 /**
  * Build VertexData for a solid slab: top face + bottom face + four sides.
  */
-function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thickness, rotation = 0) {
-  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation);
+function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thickness, rotation = 0, offsetsX = null, offsetsZ = null) {
+  const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation, offsetsX, offsetsZ);
   const n = cols * rows;
 
   const positions = [];

@@ -6,7 +6,7 @@
       @mousedown.self="editor.closeAddMenu()"
     >
       <div 
-        class="w-[min(780px,90vw)] max-h-[90vh] overflow-y-auto rounded-[1rem] p-4 shadow-xl shadow-black/80" 
+        class="w-[min(780px,90vw)] max-h-[90vh] overflow-y-auto rounded-[1rem] p-4 shadow-xl shadow-black/80 overflow-hidden" 
         :style="panelStyle"
         @mousedown.stop>
         <h2 class="mb-5 text-center text-xl font-bold uppercase tracking-[0.22em] text-white">Add Feature</h2>
@@ -35,44 +35,46 @@
 <script setup>
 import { useEditorStore } from '../store.js';
 
-import imgPolyWall    from '../assets/poly_wall.feature.png';
-import imgPolyHill    from '../assets/poly_hill.feature.png';
-import imgPolyCurb    from '../assets/poly_curb.feature.png';
-import imgRoundHill   from '../assets/round_hill.feature.png';
-import imgSquareHill  from '../assets/square_hill.feature.png';
-import imgCheckpoint  from '../assets/checkpoint.feature.png';
-import imgFlags       from '../assets/flags.feature.png';
-import imgTrackSign   from '../assets/track_sign.feature.png';
-import imgTerrain     from '../assets/terrain_region.feature.png';
-import imgMeshGrid    from '../assets/mesh_grid.feature.png';
-import imgObstacle    from '../assets/tire_stack.feature.png';
-import imgActionZone  from '../assets/action_zone.feature.png';
-import imgBridge      from '../assets/bridge.feature.png';
-import imgDriveBox    from '../assets/drive_box.feature.png';
-import imgAiPath      from '../assets/ai_path.feature.png';
-import imgDecal       from '../assets/decals.feature.png';
-import imgTerrainPath from '../assets/terrain_path.feature.png';
+import imgPolyWall      from '../assets/poly_wall.feature.png';
+import imgPolyHill      from '../assets/poly_hill.feature.png';
+import imgPolyCurb      from '../assets/poly_curb.feature.png';
+import imgRoundHill     from '../assets/round_hill.feature.png';
+import imgSquareHill    from '../assets/square_hill.feature.png';
+import imgCheckpoint    from '../assets/checkpoint.feature.png';
+import imgDecorations        from '../assets/decorations.feature.png';
+import imgTrackSign     from '../assets/track_sign.feature.png';
+import imgTerrain       from '../assets/terrain_region.feature.png';
+import imgMeshGrid      from '../assets/mesh_grid.feature.png';
+import imgObstacle      from '../assets/obstacle.feature.png';
+import imgActionZone    from '../assets/action_zone.feature.png';
+import imgBridgeMesh    from '../assets/bridge_mesh.feature.png';
+
+import imgDriveBox      from '../assets/drive_box.feature.png';
+import imgAiPath        from '../assets/ai_path.feature.png';
+import imgDecal         from '../assets/decals.feature.png';
+import imgTerrainPath   from '../assets/terrain_path.feature.png';
+import imgStartingGrid  from '../assets/starting_grid.feature.png';
 
 const editor = useEditorStore();
 
 const features = [
   { label: 'Checkpoint',       img: imgCheckpoint,    action: () => editor.featureAction('addCheckpoint')           },
-  { label: 'Start Position',                          action: () => editor.featureAction('addStartPositionEntity') },
+  { label: 'Starting Grid',    img: imgStartingGrid,  action: () => editor.featureAction('addStartPositionEntity')  },
   { label: 'Poly Wall',        img: imgPolyWall,      action: () => editor.featureAction('addPolyWallEntity')       },
   { label: 'Poly Curb',        img: imgPolyCurb,      action: () => editor.featureAction('addPolyCurbEntity')       },
   { label: 'Round Hill',       img: imgRoundHill,     action: () => editor.featureAction('addHillEntity')           },
   { label: 'Square Hill',      img: imgSquareHill,    action: () => editor.featureAction('addSquareHillEntity')     },
   { label: 'Poly Hill',        img: imgPolyHill,      action: () => editor.featureAction('addPolyHillEntity')       },
   { label: 'Mesh Grid',        img: imgMeshGrid,      action: () => editor.featureAction('addMeshGridEntity')       },
-  { label: 'Bridge Mesh',      img: imgBridge,        action: () => editor.featureAction('addBridgeMeshEntity')     },
+  { label: 'Bridge Mesh',      img: imgBridgeMesh,    action: () => editor.featureAction('addBridgeMeshEntity')     },
   { label: 'Drive Box',        img: imgDriveBox,      action: () => editor.featureAction('addDriveBoxEntity')       },
-  { label: 'Terrain Shape',   img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')         },
+  { label: 'Terrain Shape',    img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')        },
   { label: 'Obstacle',         img: imgObstacle,      action: () => editor.featureAction('addObstacleEntity')       },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.featureAction('addTrackSignEntity')      },
-  { label: 'Decoration',       img: imgFlags,         action: () => editor.featureAction('addDecorationEntity')     },
+  { label: 'Decoration',       img: imgDecorations,   action: () => editor.featureAction('addDecorationEntity')     },
   { label: 'Action Zone',      img: imgActionZone,    action: () => editor.featureAction('addActionZoneEntity')     },
   { label: 'AI Path',          img: imgAiPath,        action: () => editor.openAiPath()                             },
-  { label: 'Terrain Path',     img: imgTerrainPath,       action: () => editor.featureAction('addTerrainPathEntity')},
+  { label: 'Terrain Path',     img: imgTerrainPath,   action: () => editor.featureAction('addTerrainPathEntity')    },
   { label: 'Surface Decal',    img: imgDecal,         action: () => editor.featureAction('openSurfaceDecalStamp')   },
 ];
 

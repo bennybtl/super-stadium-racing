@@ -8,7 +8,7 @@
       class="fixed inset-0 z-[1000] font-sans overflow-hidden pointer-events-none"
       :class="store.liveBackdrop ? '' : 'bg-black'"
     >
-      <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-black/50"></div>
     </div>
   </Transition>
 
@@ -64,8 +64,8 @@
             <hr class="my-2 opacity-60">
           </template>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('practice')">Practice</button>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hotLap')">Hot Lap</button>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('singleRace')">Single Race</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hot lap')">Hot Lap</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('single race')">Single Race</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showChampionshipSetup()">Championship</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
@@ -180,7 +180,7 @@
       class="fixed inset-0 z-[1000] font-sans overflow-hidden pointer-events-none"
       :class="store.liveBackdrop ? '' : 'bg-black'"
     >
-      <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-black/50"></div>
     </div>
   </Transition>
 
@@ -192,7 +192,7 @@
   >
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
       <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
-
+        <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] mb-2">{{ store.pitData.pitMode }}</h2>
         <!-- ── Championship pit (between races) ── -->
         <template v-if="store.pitData.pitMode === 'championship'">
           <div class="mb-3 flex items-baseline justify-between">
@@ -259,10 +259,10 @@
           <div class="flex justify-center mb-6">
             <TrackLapRecords :trackKey="store.selectedTrack" />
           </div>
-          <div v-if="store.pitData.pitMode === 'singleRace'">
+          <div v-if="store.pitData.pitMode === 'single race'">
             <RaceConfig />
           </div>
-          <div v-else-if="store.pitData.pitMode === 'hotLap' || store.pitData.pitMode === 'practice'" class="flex justify-center">
+          <div v-else-if="store.pitData.pitMode === 'hot lap' || store.pitData.pitMode === 'practice'" class="flex justify-center">
             <ReverseToggle />
           </div>
         </div>
@@ -294,7 +294,7 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-if="store.pitData.pitMode === 'practice'" @click="store.startPracticeMode()">
             Start Practice
           </button>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-else-if="store.pitData.pitMode === 'hotLap'" @click="store.startHotLapMode()">
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-else-if="store.pitData.pitMode === 'hot lap'" @click="store.startHotLapMode()">
             Start Hot Lap
           </button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" v-else @click="store.startSingleRace()">
@@ -336,7 +336,7 @@ watch(() => store.pitData, (newVal, oldVal) => {
 // The pit overlay is a single panel with two setup steps; keying the slide on
 // the step makes stepping between them read like any other menu change.
 const pitScreenKey = computed(() =>
-  store.pitData?.pitMode === 'championship' ? 'championshipPit' : setupStep.value
+  store.pitData?.pitMode === 'championship' ? 'championship pit' : setupStep.value
 );
 
 const slideName = computed(() =>

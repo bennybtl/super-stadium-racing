@@ -22,8 +22,8 @@
     overflow-y: auto;
     overflow-x: hidden;
     border: 3px solid #101010;
-    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.65);
-    background-color: rgba(0, 0, 0, 0.45);
+    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.45);
+    background-color: transparent;
     background-blend-mode: multiply;
     -webkit-backdrop-filter: blur(10px) saturate(120%);
     backdrop-filter: blur(10px) saturate(120%);

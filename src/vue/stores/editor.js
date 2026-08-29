@@ -134,6 +134,7 @@ export const useEditorStore = defineStore('editor', () => {
     depth: 20,
     rotation: 0,
     thickness: 0.4,
+    smoothing: 0,
     layerId: 1,
     stepSize: 0.5,
     hasSelection: false,
