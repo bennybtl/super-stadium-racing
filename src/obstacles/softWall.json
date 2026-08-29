@@ -1,0 +1,13 @@
+{
+  "id": "softWall",
+  "name": "Soft Wall",
+  "modelFile": "softWall.obj",
+  "rotationX": -90,
+  "baseScale": 0.1,
+  "offsetY": 0,
+  "halfExtents": { "x": 1.1, "y": 0.85, "z": 3.2 },
+  "mass": 80,
+  "contactRadius": 3.2,
+  "linearDamping": 0.6,
+  "angularDamping": 0.4
+}

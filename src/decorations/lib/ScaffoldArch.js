@@ -1,10 +1,10 @@
 import {
   StandardMaterial,
   Color3,
-  Vector3,
   TransformNode,
 } from "@babylonjs/core";
 import { basicColors } from "../../constants.js";
+import { unitSizeOf } from "../../utils/mesh-bounds.js";
 import {
   ModelDecoration,
   applyColliderMetadata,
@@ -20,33 +20,6 @@ function clampUnits(v, fallback) {
   const n = Math.round(Number(v));
   if (!Number.isFinite(n)) return fallback;
   return Math.min(MAX_UNITS, Math.max(MIN_UNITS, n));
-}
-
-/**
- * Union bounding box of the loaded source meshes, in model space. Gives the
- * repeat pitch (one box) and the base offset so row 0 sits on the ground.
- */
-function unitSizeOf(meshes) {
-  let min = null;
-  let max = null;
-  for (const m of meshes) {
-    if (!m.getTotalVertices || m.getTotalVertices() === 0) continue;
-    const bb = m.getBoundingInfo?.().boundingBox;
-    if (!bb) continue;
-    if (!min) {
-      min = bb.minimum.clone();
-      max = bb.maximum.clone();
-    } else {
-      min = Vector3.Minimize(min, bb.minimum);
-      max = Vector3.Maximize(max, bb.maximum);
-    }
-  }
-  if (!min) return { x: 1, y: 1, minY: 0 };
-  return {
-    x: (max.x - min.x) || 1,
-    y: (max.y - min.y) || 1,
-    minY: min.y,
-  };
 }
 
 /**

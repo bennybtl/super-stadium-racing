@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, reactive, computed, shallowRef } from 'vue';
 import { DEFAULT_STRIPE_COLORS } from '../../objects/stripeColors.js';
 import { DEFAULT_SPARK_COLOR } from '../../objects/sparkColors.js';
-import { getObstacleSpec } from '../../objects/Obstacle.js';
+import { getObstacleSpec, clampObstacleCount, getDefaultMass } from '../../objects/Obstacle.js';
 import { DEFAULT_BORDER_WALL } from '../../objects/BorderWall.js';
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
@@ -91,15 +91,13 @@ export const useEditorStore = defineStore('editor', () => {
     type: 'barrel',
     scale: 1,
     rotation: 0,
+    count: 1,
     weight: 22,
     color: 'yellow',
     placementActive: false,
-    options: [
-      { value: 'barrel', label: 'Barrel' },
-      { value: 'hayBale', label: 'Hay Bale' },
-      { value: 'tireStack', label: 'Tire Stack' },
-      { value: 'softWall', label: 'Soft Wall' },
-    ],
+    // Type options come from window.obstacleLoader.getObstacleList() (see
+    // ObstaclePanel.vue) — obstacles are discovered from /src/obstacles/*.json,
+    // same pattern as decorations, so a new obstacle type needs no store edit.
     colorOptions: [
       { value: 'white', label: 'White' },
       { value: 'red', label: 'Red' },
@@ -476,8 +474,10 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ── Add entity actions ──
   function setObstacleType(val) {
+    const spec = getObstacleSpec(val);
     obstacle.type = val;
-    obstacle.weight = getObstacleSpec(val).mass;
+    obstacle.count = clampObstacleCount(spec.stack?.default, spec);
+    obstacle.weight = getDefaultMass(spec, obstacle.count);
     _bridge.value?.changeObstacleType?.(val);
   }
 

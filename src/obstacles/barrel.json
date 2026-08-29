@@ -1,0 +1,16 @@
+{
+  "id": "barrel",
+  "name": "Barrel",
+  "modelFile": "barrel.obj",
+  "rotationX": 0,
+  "baseScale": 0.5,
+  "offsetY": 0,
+  "colorableMeshes": [
+    "Cylinder_Material"
+  ],
+  "halfExtents": { "x": 0.45, "y": 0.55, "z": 0.45 },
+  "mass": 20,
+  "contactRadius": 0.5,
+  "linearDamping": 0.55,
+  "angularDamping": 0.35
+}

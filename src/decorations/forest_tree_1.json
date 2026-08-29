@@ -5,7 +5,7 @@
   "packName": "Forest Tree",
   "modelFile": "forest_tree_1.obj",
   "rotationX": 0,
-  "baseScale": 1,
+  "baseScale": 0.5,
   "offsetY": 0,
   "meshTextures": {
     "forest_tree_1_obj_0": "forest_atlas.png"

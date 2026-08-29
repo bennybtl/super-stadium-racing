@@ -1,0 +1,13 @@
+{
+  "id": "hayBale",
+  "name": "Hay Bale",
+  "modelFile": "hayBale.obj",
+  "rotationX": -90,
+  "baseScale": 0.1,
+  "offsetY": 0,
+  "halfExtents": { "x": 0.8, "y": 0.45, "z": 0.55 },
+  "mass": 30,
+  "contactRadius": 0.8,
+  "linearDamping": 0.7,
+  "angularDamping": 0.5
+}

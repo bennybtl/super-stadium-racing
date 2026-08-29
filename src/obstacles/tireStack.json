@@ -1,0 +1,17 @@
+{
+  "id": "tireStack",
+  "name": "Tire Stack",
+  "modelFile": "tire.obj",
+  "rotationX": 0,
+  "baseScale": 0.8,
+  "offsetY": 0,
+  "colorableMeshes": [
+    "tire_Material"
+  ],
+  "halfExtents": { "x": 0.5, "y": 0.15, "z": 0.5 },
+  "mass": 20,
+  "contactRadius": 0.5,
+  "linearDamping": 0.6,
+  "angularDamping": 0.4,
+  "stack": { "min": 1, "max": 8, "default": 4 }
+}

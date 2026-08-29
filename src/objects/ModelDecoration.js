@@ -1,13 +1,9 @@
 import {
-  StandardMaterial,
-  Color3,
-  Texture,
   TransformNode,
   SceneLoader,
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import { basicColors } from "../constants.js";
-import { parseColorValue } from "../utils/mesh-color.js";
+import { MeshMaterialResolver } from "../utils/mesh-materials.js";
 
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
@@ -87,17 +83,11 @@ export class ModelDecoration {
     this._pivot.position.y = def.offsetY ?? 0;
     this._pivot.scaling.setAll(def.baseScale ?? 1);
 
-    // Meshes not named in `meshColors` share this user-tinted material; each
-    // named mesh gets its own fixed material keyed by the group name.
-    this._colorMaterial = new StandardMaterial(`decoColorMat_${tag}`, scene);
-    this._colorMaterial.specularColor = new Color3(0.15, 0.15, 0.15);
-    this._colorMaterial.specularPower = 0;
-    this._applyColorToMaterial(this.color);
+    // Meshes not pinned by meshColors/meshTextures/baked-mtl share this
+    // user-tinted material; each pinned mesh gets its own fixed material.
+    this._matRes = new MeshMaterialResolver(def, scene, `deco_${tag}`);
+    this._matRes.setColor(this.color);
 
-    /** @type {Map<string, StandardMaterial>} group name → fixed material */
-    this._fixedMaterials = new Map();
-    /** @type {Map<string, StandardMaterial>} group name → textured material */
-    this._texturedMaterials = new Map();
     /** Clones of the meshes named in def.colliderMeshes. */
     this._colliderMeshes = [];
 
@@ -107,7 +97,7 @@ export class ModelDecoration {
         if (this.container.isDisposed()) return;
         for (const src of sourceMeshes) {
           // Decide from the SOURCE group name before cloning renames the mesh.
-          const material = this._materialForMesh(src.name, scene, tag);
+          const material = this._matRes.materialFor(src.name);
           const isCollider = !!def.colliderMeshes?.includes(src.name);
           const m = src.clone(`decoMesh_${tag}`, this._pivot);
           m.isVisible  = true;
@@ -133,72 +123,6 @@ export class ModelDecoration {
   setCollider(on) {
     this.feature.collider = !!on;
     this._applyCollider();
-  }
-
-  /**
-   * Pick the material for a source mesh, by exact OBJ group name:
-   *   1. a `meshTextures` entry → textured material (needs UVs on the model),
-   *   2. else a `meshColors` entry → fixed-colour material,
-   *   3. else, unless the group is named in `colorableMeshes`, a colour baked
-   *      into the OBJ's .mtl (parsed by DecorationLoader into
-   *      `meshDefaultColors`) → fixed-colour material,
-   *   4. else the shared user-colour material.
-   */
-  _materialForMesh(name, scene, tag) {
-    const tex = this.def.meshTextureUrls?.[name];
-    if (tex) return this._texturedMaterial(name, tex, scene, tag);
-
-    const value = this.def.meshColors?.[name];
-    const fixed = value != null ? parseColorValue(value) : null;
-    if (fixed) return this._fixedMaterial(name, fixed, scene, tag);
-
-    if (!this.def.colorableMeshes?.includes(name)) {
-      const baked = this.def.meshDefaultColors?.[name];
-      const bakedFixed = baked != null ? parseColorValue(baked) : null;
-      if (bakedFixed) return this._fixedMaterial(name, bakedFixed, scene, tag);
-    }
-
-    return this._colorMaterial;
-  }
-
-  _texturedMaterial(name, tex, scene, tag) {
-    let mat = this._texturedMaterials.get(name);
-    if (!mat) {
-      mat = new StandardMaterial(`decoTexMat_${name}_${tag}`, scene);
-      const texture = new Texture(tex.url, scene);
-      // Tile/pan the texture across the mesh's UVs (repeat wrap so scale > 1 tiles).
-      texture.wrapU = Texture.WRAP_ADDRESSMODE;
-      texture.wrapV = Texture.WRAP_ADDRESSMODE;
-      texture.uScale  = tex.uScale ?? 1;
-      texture.vScale  = tex.vScale ?? 1;
-      texture.uOffset = tex.uOffset ?? 0;
-      texture.vOffset = tex.vOffset ?? 0;
-      mat.diffuseTexture = texture;
-      // Opaque texture: render in the normal pass. Double-sided so faces show
-      // regardless of winding (no dependency on consistent normals).
-      mat.backFaceCulling = false;
-      mat.specularColor = new Color3(0.05, 0.05, 0.05);
-      mat.specularPower = 0;
-      this._texturedMaterials.set(name, mat);
-    }
-    return mat;
-  }
-
-  _fixedMaterial(name, color, scene, tag) {
-    let mat = this._fixedMaterials.get(name);
-    if (!mat) {
-      mat = new StandardMaterial(`decoFixedMat_${name}_${tag}`, scene);
-      mat.diffuseColor  = color;
-      mat.specularColor = new Color3(0.2, 0.2, 0.2);
-      mat.specularPower = 8;
-      this._fixedMaterials.set(name, mat);
-    }
-    return mat;
-  }
-
-  _applyColorToMaterial(colorName) {
-    const tint = basicColors[colorName] ?? basicColors[DEFAULT_COLOR];
-    this._colorMaterial.diffuseColor = tint.diffuse;
   }
 
   // ─── Editor helpers ─────────────────────────────────────────────────────────
@@ -250,20 +174,13 @@ export class ModelDecoration {
   setColor(color) {
     this.color = color;
     this.feature.color = color;
-    this._applyColorToMaterial(color);
+    this._matRes.setColor(color);
   }
 
   dispose() {
     for (const m of this._meshes) m.dispose();
     this._meshes = [];
-    this._colorMaterial?.dispose();
-    for (const mat of this._fixedMaterials.values()) mat.dispose();
-    this._fixedMaterials.clear();
-    for (const mat of this._texturedMaterials.values()) {
-      mat.diffuseTexture?.dispose();
-      mat.dispose();
-    }
-    this._texturedMaterials.clear();
+    this._matRes.dispose();
     this._pivot?.dispose();
     this.container.dispose();
   }

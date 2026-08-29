@@ -1936,6 +1936,9 @@ export class EditorController {
   changeObstacleScale(val) {
     this.obstacleEditor.changeScale(val);
   }
+  changeObstacleCount(val) {
+    this.obstacleEditor.changeCount(val);
+  }
   changeObstacleRotation(val) {
     this.obstacleEditor.changeRotation(val);
   }

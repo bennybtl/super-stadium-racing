@@ -1,7 +1,5 @@
 import {
   MeshBuilder,
-  StandardMaterial,
-  Color3,
   Vector3,
   PhysicsAggregate,
   PhysicsShapeType,
@@ -9,83 +7,35 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import { basicColors } from "../constants.js";
-import tireStackUrl from "../assets/models/tire-stack.obj?url";
-import barrelUrl from "../assets/models/barrel.obj?url";
-import hayBaleUrl from "../assets/models/hay-bale.obj?url";
-import softWallUrl from "../assets/models/soft-wall.obj?url";
+import { MeshMaterialResolver } from "../utils/mesh-materials.js";
+import { unitSizeOf } from "../utils/mesh-bounds.js";
 
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
 const DEFAULT_OBSTACLE_TYPE = "tireStack";
 
-const OBSTACLE_SPECS = {
-  tireStack: {
-    url: tireStackUrl,
-    halfExtents: { x: 0.62, y: 0.56, z: 0.62 },
-    mass: 40,
-    contactRadius: 0.62,
-    linearDamping: 0.6,
-    angularDamping: 0.4,
-    modelRotationX: -Math.PI / 2,
-    modelScale: 0.1,
-    modelOffsetY: 0,
-    diffuseColor: basicColors.white.diffuse,
-    specularColor: new Color3(0.3, 0.3, 0.3),
-    specularPower: 10,
-  },
-  barrel: {
-    url: barrelUrl,
-    halfExtents: { x: 0.45, y: 0.55, z: 0.45 },
-    mass: 20,
-    contactRadius: 0.5,
-    linearDamping: 0.55,
-    angularDamping: 0.35,
-    modelRotationX: -Math.PI / 2,
-    modelScale: 0.1,
-    modelOffsetY: 0,
-    diffuseColor: basicColors.white.diffuse,
-    specularColor: new Color3(0.3, 0.3, 0.3),
-    specularPower: 10,
-  },
-  hayBale: {
-    url: hayBaleUrl,
-    halfExtents: { x: 0.8, y: 0.45, z: 0.55 },
-    mass: 30,
-    contactRadius: 0.8,
-    linearDamping: 0.7,
-    angularDamping: 0.5,
-    modelRotationX: -Math.PI / 2,
-    modelScale: 0.1,
-    modelOffsetY: 0,
-    diffuseColor: basicColors.white.diffuse,
-    emissiveColor: basicColors.white.emissive,
-    specularColor: new Color3(0.3, 0.3, 0.3),
-    specularPower: 10,
-  },
-  softWall: {
-    url: softWallUrl,
-    halfExtents: { x: 1.1, y: 0.85, z: 3.2 },
-    mass: 80,
-    contactRadius: 3.2,
-    linearDamping: 0.6,
-    angularDamping: 0.4,
-    modelRotationX: -Math.PI / 2,
-    modelScale: 0.1,
-    modelOffsetY: 0,
-    diffuseColor: basicColors.white.diffuse,
-    specularColor: new Color3(0.3, 0.3, 0.3),
-    specularPower: 10,
-  },
-};
+/** The obstacle loader, exposed on window by main.js. */
+function getObstacleLoader() {
+  return typeof window !== "undefined" ? window.obstacleLoader : null;
+}
 
+/**
+ * Resolve any user-facing obstacle-type string to a loaded obstacle id.
+ * Definitions come from /src/obstacles/*.json (see ObstacleLoader) — adding a
+ * new obstacle needs no change here, it just becomes a valid `type`.
+ */
 function normalizeObstacleType(type) {
-  const raw = String(type ?? "").trim().toLowerCase();
-  if (raw === "barrel") return "barrel";
-  if (raw === "haybale" || raw === "hay-bale" || raw === "hay_bale") return "hayBale";
-  if (raw === "tirestack" || raw === "tire_stack" || raw === "tire-stack") return "tireStack";
-  if (raw === "softwall" || raw === "soft_wall" || raw === "soft-wall") return "softWall";
+  const loader = getObstacleLoader();
+  const raw = String(type ?? "").trim();
+  if (loader?.getObstacle(raw)) return raw;
+  // Legacy/loose forms (e.g. "tire-stack", "HayBale") still resolve.
+  const lower = raw.toLowerCase().replace(/[-_]/g, "");
+  if (loader) {
+    for (const id of loader.obstacleList) {
+      if (id.toLowerCase() === lower) return id;
+    }
+  }
   return DEFAULT_OBSTACLE_TYPE;
 }
 
@@ -98,9 +48,36 @@ function normalizeObstacleColor(color) {
   return "yellow";
 }
 
+/** The obstacle definition (JSON config) for a type, or the default type's. */
 function getObstacleSpec(type) {
+  const loader = getObstacleLoader();
   const key = normalizeObstacleType(type);
-  return OBSTACLE_SPECS[key] ?? OBSTACLE_SPECS[DEFAULT_OBSTACLE_TYPE];
+  return loader?.getObstacle(key) ?? loader?.getObstacle(DEFAULT_OBSTACLE_TYPE) ?? null;
+}
+
+/**
+ * Clamp a unit count for a stackable obstacle (one whose def declares
+ * `stack: { min, max, default }`, e.g. the tire pile — see modelFile in
+ * tireStack.json). Non-stackable obstacles always report a count of 1.
+ */
+function clampObstacleCount(value, spec) {
+  const stack = spec?.stack;
+  if (!stack) return 1;
+  const fallback = stack.default ?? stack.min ?? 1;
+  const n = Math.round(Number(value));
+  const safe = Number.isFinite(n) ? n : fallback;
+  return Math.min(stack.max ?? 8, Math.max(stack.min ?? 1, safe));
+}
+
+/**
+ * Default total mass for a spec at a given stack count. For a stackable
+ * obstacle, `spec.mass` is the mass of ONE unit (see tireStack.json) — the
+ * default weight scales with how many are piled up. Non-stackable obstacles
+ * just use `spec.mass` as-is.
+ */
+function getDefaultMass(spec, count = 1) {
+  if (!spec) return 1;
+  return spec.stack ? spec.mass * Math.max(1, count) : spec.mass;
 }
 
 /**
@@ -108,6 +85,12 @@ function getObstacleSpec(type) {
  *
  * Owns one invisible BOX physics body with visual meshes parented to
  * it. The whole group tumbles together when hit by a truck.
+ *
+ * Visuals and materials are driven entirely by a definition loaded from
+ * /src/obstacles/<id>.json (see ObstacleLoader) — same JSON-config pattern as
+ * decorations (/src/decorations/, ModelDecoration). A mesh named in the def's
+ * `meshColors`/`colorableMeshes`/baked-mtl keeps a fixed colour (e.g. a
+ * barrel's steel hoops); every other mesh takes the instance's paint colour.
  */
 export class Obstacle {
   /**
@@ -127,7 +110,8 @@ export class Obstacle {
     angle = 0,
     scale = 1,
     weightOverride = null,
-    color = 'yellow'
+    color = 'yellow',
+    count = null
   ) {
     this.scene = scene;
     this._loadedMeshes = [];
@@ -136,19 +120,25 @@ export class Obstacle {
     this.color = normalizeObstacleColor(color);
     const spec = getObstacleSpec(this.obstacleType);
     const safeScale = Math.max(0.05, Number(scale) || 1);
+    // For a stackable obstacle (spec.stack, e.g. the tire pile), halfExtents
+    // and mass in the def are for ONE unit — scale them up to the pile.
+    this.count = clampObstacleCount(count, spec);
+    const halfExtents = spec.stack
+      ? { x: spec.halfExtents.x, y: spec.halfExtents.y * this.count, z: spec.halfExtents.z }
+      : spec.halfExtents;
     const safeMass = (typeof weightOverride === 'number' && weightOverride > 0)
       ? weightOverride
-      : spec.mass;
+      : getDefaultMass(spec, this.count);
     this.radius = spec.contactRadius * safeScale;
     this.mass = safeMass;
 
-    const centerY = groundY + (spec.halfExtents.y * safeScale);
+    const centerY = groundY + (halfExtents.y * safeScale);
 
     // Invisible physics body used by all obstacle visuals.
     this.body = MeshBuilder.CreateBox(`tireStack_${x}_${z}`, {
-      width:  spec.halfExtents.x * 2 * safeScale,
-      height: spec.halfExtents.y * 2 * safeScale,
-      depth:  spec.halfExtents.z * 2 * safeScale,
+      width:  halfExtents.x * 2 * safeScale,
+      height: halfExtents.y * 2 * safeScale,
+      depth:  halfExtents.z * 2 * safeScale,
     }, scene);
     this.body.position   = new Vector3(x, centerY, z);
     this.body.rotation.y = angle;
@@ -167,19 +157,17 @@ export class Obstacle {
     this.aggregate.body.setAngularDamping(spec.angularDamping);
 
     // OBJ visual model parented to the physics body so it tumbles with it.
-    const tint = basicColors[this.color] ?? basicColors.yellow;
-    this._paintMat = new StandardMaterial(`obstacleMat_${x}_${z}`, scene);
-    this._paintMat.diffuseColor  = tint.diffuse;
-    this._paintMat.emissiveColor = new Color3(0.0, 0.0, 0.0);
-    this._paintMat.specularColor = new Color3(0.2, 0.2, 0.2);
-    this._paintMat.specularPower = 0;
+    // Meshes not pinned by the def (meshColors/colorableMeshes/baked-mtl)
+    // share this instance's paint colour.
+    this._matRes = new MeshMaterialResolver(spec, scene, `obstacle_${x}_${z}`);
+    this._matRes.setColor(this.color);
 
     // Pivot node: child of body, holds rotation correction so it tumbles with physics
     this._pivot = new TransformNode(`tireStackPivot_${x}_${z}`, scene);
     this._pivot.parent     = this.body;
-    this._pivot.position.y = (-spec.halfExtents.y + (spec.modelOffsetY ?? 0)) * safeScale;
-    this._pivot.rotation.x = spec.modelRotationX ?? 0;
-    this._pivot.scaling.setAll((spec.modelScale ?? 1) * safeScale);
+    this._pivot.position.y = (-halfExtents.y + (spec.offsetY ?? 0)) * safeScale;
+    this._pivot.rotation.x = (spec.rotationX ?? 0) * Math.PI / 180; // config is in degrees
+    this._pivot.scaling.setAll((spec.baseScale ?? 1) * safeScale);
 
     // Load once, clone per instance
     Obstacle._getSourceMeshes(scene, this.obstacleType)
@@ -189,14 +177,24 @@ export class Obstacle {
         // its _pivot is gone. Cloning onto a disposed parent leaves an orphan
         // mesh stranded at the world origin — bail instead.
         if (this._disposed) return;
-        for (const src of sourceMeshes) {
-          const m = src.clone(`tireStackMesh_${x}_${z}`, this._pivot);
-          m.isVisible  = true;
-          m.material   = this._paintMat;
-          m.isPickable = false;
-          shadows.addShadowCaster(m);
-          m.receiveShadows = true;
-          this._loadedMeshes.push(m);
+        // A stackable obstacle clones the unit `count` times, stacked along Y
+        // using the model's own bounding-box height as the repeat pitch (same
+        // technique as the decorations' scaffold arch) — unit 0 sits with its
+        // base at the pivot's local origin, each further unit directly above it.
+        const repeats = spec.stack ? this.count : 1;
+        const unit = spec.stack ? unitSizeOf(sourceMeshes) : null;
+        for (let i = 0; i < repeats; i++) {
+          const yOffset = unit ? i * unit.y - unit.minY : 0;
+          for (const src of sourceMeshes) {
+            const m = src.clone(`tireStackMesh_${x}_${z}_${i}`, this._pivot);
+            m.position.y = yOffset;
+            m.isVisible  = true;
+            m.material   = this._matRes.materialFor(src.name);
+            m.isPickable = false;
+            shadows.addShadowCaster(m);
+            m.receiveShadows = true;
+            this._loadedMeshes.push(m);
+          }
         }
       })
       .catch(err => console.warn(`[Obstacle] Failed to load obstacle '${this.obstacleType}':`, err));
@@ -210,7 +208,7 @@ export class Obstacle {
     this._disposed = true;
     this.aggregate.dispose();
     for (const m of this._loadedMeshes) m.dispose();
-    this._paintMat?.dispose();
+    this._matRes?.dispose();
     this._pivot?.dispose();
     this.body.dispose();
     this._loadedMeshes = [];
@@ -234,7 +232,7 @@ export class Obstacle {
       || cached.scene !== scene
       || cachedSceneDisposed;
     if (shouldReload) {
-      const url = spec.url;
+      const url = spec.modelUrl;
       const lastSlash = url.lastIndexOf('/');
       const rootUrl   = url.substring(0, lastSlash + 1);
       const fileName  = url.substring(lastSlash + 1);
@@ -259,4 +257,4 @@ export class Obstacle {
 
 }
 
-export { normalizeObstacleType, getObstacleSpec };
+export { normalizeObstacleType, getObstacleSpec, clampObstacleCount, getDefaultMass };

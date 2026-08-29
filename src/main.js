@@ -3,6 +3,7 @@ import { MenuManager } from "./managers/MenuManager.js";
 import { TrackLoader } from "./managers/TrackLoader.js";
 import { VehicleLoader } from "./managers/VehicleLoader.js";
 import { DecorationLoader } from "./managers/DecorationLoader.js";
+import { ObstacleLoader } from "./managers/ObstacleLoader.js";
 import { ModeController } from "./modes/ModeController.js";
 import { MenuMode } from "./modes/MenuMode.js";
 import { initializeSettingsStorage } from "./settingsStorage.js";
@@ -25,6 +26,9 @@ window.vehicleLoader = vehicleLoader;
 const decorationLoader = new DecorationLoader();
 window.decorationLoader = decorationLoader; // editor + managers read this to list/resolve decorations
 
+const obstacleLoader = new ObstacleLoader();
+window.obstacleLoader = obstacleLoader; // editor + managers read this to list/resolve obstacles
+
 const controller = new ModeController(engine, menuManager, trackLoader);
 menuManager.controller = controller;
 
@@ -34,6 +38,7 @@ Promise.all([
   trackLoader.loadAllTracks(),
   vehicleLoader.loadAllVehicles(),
   decorationLoader.loadAllDecorations(),
+  obstacleLoader.loadAllObstacles(),
 ]).then(() => {
   controller.switchTo(MenuMode);
 }).finally(() => {

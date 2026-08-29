@@ -15,8 +15,21 @@
       :value="editor.obstacle.type"
       @change="editor.setObstacleType($event.target.value)"
     >
-      <option v-for="opt in editor.obstacle.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      <option v-for="opt in obstacleTypes" :key="opt.id" :value="opt.id">{{ opt.name }}</option>
     </select>
+
+    <template v-if="currentSpec?.stack">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Tires</span>
+        <span>{{ editor.obstacle.count }}</span>
+      </div>
+      <input
+        type="range" :min="currentSpec.stack.min" :max="currentSpec.stack.max" step="1"
+        :value="editor.obstacle.count"
+        @input="editor.setFeatureProp('obstacle', 'count', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
 
     <div class="text-[12px] mb-1">Obstacle Color</div>
     <select
@@ -83,8 +96,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useEditorStore } from '../store.js';
 import EditorPanel from './EditorPanel.vue';
 
 const editor = useEditorStore();
+
+// Everything discovered in /src/obstacles/ (see ObstacleLoader), sorted by name.
+const obstacleTypes = computed(() =>
+  [...(window.obstacleLoader?.getObstacleList() ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+);
+
+// Full def for the selected type — used for its `stack` config (the tire
+// count slider only shows for a stackable obstacle, see tireStack.json).
+const currentSpec = computed(() => window.obstacleLoader?.getObstacle(editor.obstacle.type));
 </script>

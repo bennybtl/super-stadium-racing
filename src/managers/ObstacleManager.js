@@ -29,7 +29,7 @@ export class ObstacleManager {
     const rawScale = typeof feature.scale === 'number' ? feature.scale : 1;
     const scale = rawScale === 0.1 ? 1 : rawScale;
     const weight = typeof feature.weight === 'number' ? feature.weight : null;
-    const stack = new Obstacle(x, z, groundY, this.scene, this.shadows, obstacleType, angle, scale, weight, feature.color);
+    const stack = new Obstacle(x, z, groundY, this.scene, this.shadows, obstacleType, angle, scale, weight, feature.color, feature.count);
     this._stacks.push(stack);
   }
 
