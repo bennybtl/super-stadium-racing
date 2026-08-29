@@ -116,9 +116,12 @@ export class SurfaceDecalManager {
       return null;
     }
 
-    // Polyline shape: the projector box and canvas path both derive from the
-    // (possibly-rounded) point list + stroke thickness rather than the stored
-    // width/depth/angle, which don't apply to a hand-drawn line.
+    // Polyline shape: the projector box (position/size/angle) and canvas path
+    // both derive from the (possibly-rounded) point list + stroke thickness
+    // rather than the stored width/depth/angle, which don't apply to a
+    // hand-drawn line — decalPolylineLocalOutline picks the box's own angle
+    // (radians, CreateDecal's own convention — not `-(feature.angle*PI/180)`
+    // like every other shape below) to fit it tightly around the line.
     let boxCenterX = centerX, boxCenterZ = centerZ, boxWidth = width, boxDepth = depth;
     let boxAngle = -(angle * Math.PI) / 180;
     let localPoints = null;
@@ -132,7 +135,7 @@ export class SurfaceDecalManager {
       boxCenterZ = outlineData.centerZ;
       boxWidth = outlineData.width;
       boxDepth = outlineData.depth;
-      boxAngle = 0;
+      boxAngle = outlineData.angleRad;
       localPoints = outlineData.localPoints;
     }
 

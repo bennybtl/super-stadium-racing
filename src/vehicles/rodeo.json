@@ -4,6 +4,7 @@
   "engineAudio": "bac",
   "modelFile": "rodeo.obj",
   "defaultColor": [0.8, 0.2, 0.1],
+  "colorableMeshes": ["rodeo_Material.001"],
   "bodyTransform": {
     "position": [0, 0.3, 0.0],
     "rotation": [0, 1.5708, 0],
@@ -29,7 +30,7 @@
     "braking": 1.5,
     "turnSpeed": 4.7,
     "weightTransfer": 1.1,
-    "grip": 0.220,
+    "grip": 0.225,
     "idleAuthority": 0.52
   },
   "handling": {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
   "id": "slingshot_speedway",
-  "packId": "onroad_pack_2",
+  "packId": "onroad_pack_1",
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": false,

@@ -3,8 +3,6 @@ import {
   StandardMaterial,
   Engine,
   Vector3,
-  Color3,
-  HighlightLayer,
 } from "@babylonjs/core";
 import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, MIN_COUNT, MAX_COUNT, createDecalTexture, decalPolylineLocalOutline } from "../managers/decalShapes.js";
 import { DEFAULT_CORNER_RADIUS, expandPolyline } from "../polyline-utils.js";
@@ -12,7 +10,6 @@ import { GizmoHandle } from "./GizmoHandle.js";
 import { EditorMaterials, LINE_COLOR_SURFACE_DECAL } from "./EditorMaterials.js";
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
-const HIGHLIGHT_COLOR = new Color3(1, 0.85, 0.2); // amber selection outline
 const POLY_POINT_MIN = 2; // open polyline — a bare segment is valid
 
 // Babylon's CreateDecal (normal = +Y) bakes a −90° roll relative to a flat
@@ -62,7 +59,6 @@ export class SurfaceDecalEditor {
     // Selection/edit state — a { feature, mesh } entry owned by the manager.
     this.selected = null;
     this._selectedPointIndex = -1; // polyline: index into feature.points, -1 = whole-decal handle
-    this._highlight = null;   // HighlightLayer (lazy)
     this._handles = new Map(); // manager entry -> { handle: GizmoHandle, pointHandles: Mesh[], lineSystem: Mesh|null }
 
     this._boundPointerMove = this._onPointerMove.bind(this);
@@ -205,8 +201,6 @@ export class SurfaceDecalEditor {
     this._ghostTexCache.clear();
     this._ghostMat?.dispose();
     this._ghostMat = null;
-    this._highlight?.dispose();
-    this._highlight = null;
   }
 
   // ── Selection & editing of placed decals ──────────────────────────────────
@@ -283,13 +277,11 @@ export class SurfaceDecalEditor {
     }
 
     this._applyHandleVisualState(entry, true);
-    this._applyHighlight();
     this._showProperties();
   }
 
   deselect() {
     if (!this.selected) return;
-    this._clearHighlight();
     this._applyHandleVisualState(this.selected, false);
     this.selected = null;
     this._selectedPointIndex = -1;
@@ -309,28 +301,11 @@ export class SurfaceDecalEditor {
     }
   }
 
-  _applyHighlight() {
-    if (!this.selected?.mesh) return;
-    if (!this._highlight) {
-      this._highlight = new HighlightLayer('_surfaceDecalHL', this._scene);
-      this._highlight.innerGlow = false;
-    }
-    this._highlight.addMesh(this.selected.mesh, HIGHLIGHT_COLOR);
-  }
-
-  _clearHighlight() {
-    if (this._highlight && this.selected?.mesh) {
-      this._highlight.removeMesh(this.selected.mesh);
-    }
-  }
-
-  /** Rebuild the selected decal's baked mesh after a feature edit and re-highlight it. */
+  /** Rebuild the selected decal's baked mesh after a feature edit. */
   _rebuildSelected() {
     if (!this.selected) return;
-    this._clearHighlight();
     this._decalManager.rebuild(this.selected);
     this._syncHandles();
-    this._applyHighlight();
   }
 
   // ── Move / rotate (drag + Q/E, via EditorController selection interaction) ──
@@ -405,7 +380,6 @@ export class SurfaceDecalEditor {
     const { feature } = this.selected;
     const idx = this.editor.currentTrack.features.indexOf(feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
-    this._clearHighlight();
     this._decalManager.removeByFeature(feature);
     this.selected = null;
     this._selectedPointIndex = -1;
@@ -599,6 +573,9 @@ export class SurfaceDecalEditor {
       worldWidth = Math.max(1, Math.round(outlineData.width));
       worldDepth = Math.max(1, Math.round(outlineData.depth));
       localPoints = outlineData.localPoints;
+      // Same angle decalPolylineLocalOutline hands the real decal's projector
+      // box — reused here so the ghost plane rotates the identical way.
+      this._ghostAngleRad = outlineData.angleRad;
     }
     this._ghostBoxWidth = worldWidth;
     this._ghostBoxDepth = worldDepth;
@@ -644,12 +621,17 @@ export class SurfaceDecalEditor {
   _updateGhostTransform() {
     if (!this._ghost) return;
     if (this._shape === 'polyline') {
-      // The angle is already baked into the texture's line direction (matching
-      // how the real decal's box always sits at angle 0), so the plane itself
-      // only needs the baseline decal/plane-yaw correction, not `_angle` again.
+      // Box dims + angle both come from decalPolylineLocalOutline (computed in
+      // _updateGhostTexture) — the same values the real decal's projector box
+      // uses, so the ghost plane rotates/scales identically to the baked mesh.
       this._ghost.scaling.x  = this._ghostBoxWidth  ?? this._width;
       this._ghost.scaling.y  = this._ghostBoxDepth ?? this._depth;
-      this._ghost.rotation.y = (GHOST_ROTATION_OFFSET_DEG * Math.PI) / 180;
+      // Non-polyline shapes get here via rotation.y = (feature.angle + OFFSET)°
+      // where the real decal is built with CreateDecal angle = -(feature.angle)°;
+      // substituting that relationship for polyline's own CreateDecal angle
+      // (`_ghostAngleRad`, already in radians, no sign flip) gives this directly.
+      const angleRad = this._ghostAngleRad ?? (this._angle * Math.PI) / 180;
+      this._ghost.rotation.y = -angleRad + (GHOST_ROTATION_OFFSET_DEG * Math.PI) / 180;
       return;
     }
     this._ghost.scaling.x  = this._width;

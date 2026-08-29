@@ -347,7 +347,7 @@
         },
         {
           "x": -50,
-          "z": -50.5,
+          "z": -50,
           "radius": 9.5
         }
       ],
@@ -370,7 +370,7 @@
         },
         {
           "x": 49,
-          "z": -49,
+          "z": -49.5,
           "radius": 9
         },
         {
@@ -397,13 +397,13 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -50,
+          "x": -49.5,
           "z": 50.5,
           "radius": 10.5
         },
         {
           "x": -31,
-          "z": 50.5,
+          "z": 50,
           "radius": 11.5
         },
         {
@@ -441,12 +441,12 @@
         },
         {
           "x": 51,
-          "z": 48.5,
+          "z": 48,
           "radius": 9.5
         },
         {
-          "x": 33.5,
-          "z": 48.5,
+          "x": 33,
+          "z": 48,
           "radius": 8
         }
       ],
@@ -461,7 +461,7 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": 42.229575213236295,
+      "centerX": 40.729575213236295,
       "centerZ": -19.751352141716993,
       "shape": "chevron",
       "color": "white",
@@ -475,7 +475,7 @@
     {
       "type": "surfaceDecal",
       "centerX": -17.761457168661515,
-      "centerZ": -40.38830544474013,
+      "centerZ": -39.38830544474013,
       "shape": "chevron",
       "color": "white",
       "count": 5,
@@ -487,15 +487,15 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": 18.135808395564805,
-      "centerZ": 38.53215898111112,
+      "centerX": 17.135808395564805,
+      "centerZ": 37.53215898111112,
       "shape": "chevron",
       "color": "white",
       "count": 5,
       "outline": false,
       "width": 8,
       "depth": 13,
-      "angle": 269,
+      "angle": -93,
       "opacity": 0.85
     },
     {
@@ -559,9 +559,9 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 39.981669233218376,
-      "centerZ": -64.50926736592044,
-      "heading": 1.5707963267948966,
+      "centerX": 39.481669233218376,
+      "centerZ": -65.00926736592044,
+      "heading": 1.4707963267948965,
       "width": 20,
       "checkpointNumber": 4,
       "_altIndex": 0,
@@ -653,12 +653,12 @@
       "points": [
         {
           "x": -25.996484422552975,
-          "z": -75.21132673773342,
+          "z": -77.21132673773342,
           "radius": 10
         },
         {
           "x": -72.27345167133376,
-          "z": -74.22673609811534,
+          "z": -75.22673609811534,
           "radius": 20.5
         },
         {
@@ -920,8 +920,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 36.54119477856345,
-          "z": -80.76714271518871,
+          "x": 37.04119477856345,
+          "z": -81.26714271518871,
           "radius": 10
         },
         {
@@ -1103,14 +1103,14 @@
     {
       "type": "surfaceDecal",
       "centerX": -39.42904928327006,
-      "centerZ": 16.68771828939947,
+      "centerZ": 13.68771828939947,
       "shape": "chevron",
       "color": "white",
       "count": 5,
       "outline": false,
       "width": 8,
       "depth": 13,
-      "angle": 180,
+      "angle": 176,
       "opacity": 0.85
     },
     {
@@ -1153,8 +1153,8 @@
       "type": "hill",
       "centerX": 40.36954163641691,
       "centerZ": -41.80335029648791,
-      "radiusX": 14.5,
-      "radiusZ": 14,
+      "radiusX": 16,
+      "radiusZ": 15.5,
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -1166,7 +1166,7 @@
       "centerX": 42.33790826560509,
       "centerZ": 40.465485488965406,
       "radiusX": 16,
-      "radiusZ": 14.5,
+      "radiusZ": 16,
       "angle": 0,
       "height": 1.5,
       "waterLevelOffset": 0,
@@ -1294,7 +1294,9 @@
       "heading": -3.141592653589793,
       "columns": 5,
       "colSpacing": 3.5,
-      "rowSpacing": 7
+      "rowSpacing": 7,
+      "mode": "grid",
+      "poleIndex": 0
     },
     {
       "type": "model",
@@ -1303,7 +1305,7 @@
       "z": -64.79729192964442,
       "color": "yellow",
       "scale": 1.2,
-      "heading": 1.5707963267948966,
+      "heading": 1.4486232791552933,
       "width": 9,
       "height": 4,
       "collider": true

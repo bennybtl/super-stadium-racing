@@ -127,26 +127,11 @@
       ]
     },
     {
-      "type": "driveBox",
-      "centerX": 15.604074530614826,
-      "centerZ": 67.846295619061,
-      "width": 11.5,
-      "depth": 14,
-      "rotation": 0,
-      "solidBase": true,
-      "thickness": 0.4,
-      "layerId": 0,
-      "heightAtMin": 0,
-      "heightAtMax": 3.5,
-      "color": "tex:plywood",
-      "sideColor": "tex:plywood"
-    },
-    {
       "type": "polyWall",
       "points": [
         {
-          "x": -80,
-          "z": -7.9659598801478495,
+          "x": -73.28877053436099,
+          "z": -1.4868214698307298,
           "radius": 0
         },
         {
@@ -180,8 +165,8 @@
           "radius": 10.5
         },
         {
-          "x": 30.5,
-          "z": -14.46355172667434,
+          "x": 34.86106864681148,
+          "z": -14.63584800944821,
           "radius": 5
         },
         {
@@ -196,7 +181,7 @@
         },
         {
           "x": 21,
-          "z": 4.536448273325661,
+          "z": 0.03644827332566086,
           "radius": 5
         },
         {
@@ -345,8 +330,8 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -40.33508832460839,
-      "centerZ": -1.886931179731475,
+      "centerX": -40.83508832460839,
+      "centerZ": -2.3869311797314747,
       "heading": -0.5235987755982988,
       "width": 30,
       "checkpointNumber": 1,
@@ -618,10 +603,10 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -14.125601514801003,
-      "centerZ": -67.55178095732312,
-      "heading": -1.5707963267948966,
-      "width": 18.5,
+      "centerX": 66.6939130335265,
+      "centerZ": -35.13050526681813,
+      "heading": -3.141592653589793,
+      "width": 16.5,
       "checkpointNumber": 4,
       "_altIndex": 0,
       "_altCount": 1,
@@ -868,7 +853,7 @@
     {
       "type": "squareHill",
       "centerX": 40.789709248697136,
-      "centerZ": 30.64599617746071,
+      "centerZ": 29.64599617746071,
       "width": 16,
       "depth": 30.5,
       "angle": 36,
@@ -893,13 +878,13 @@
     },
     {
       "type": "squareHill",
-      "centerX": 29.247148774759204,
+      "centerX": 22.247148774759204,
       "centerZ": -67.2061494845811,
       "width": 14,
       "depth": 28,
       "angle": 0,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 5,
       "terrainType": null,
       "heightAtMin": 4,
       "heightAtMax": 0
@@ -928,8 +913,8 @@
           "radius": 10
         }
       ],
-      "height": 3,
-      "width": 9.5,
+      "height": 4.4,
+      "width": 21,
       "terrainType": null,
       "closed": false,
       "filled": false,
@@ -945,9 +930,9 @@
     },
     {
       "type": "hill",
-      "centerX": -3.8328091670832345,
+      "centerX": -6.8328091670832345,
       "centerZ": 21.406544234159124,
-      "radiusX": 6.5,
+      "radiusX": 10,
       "radiusZ": 14,
       "angle": 28,
       "height": -1,
@@ -958,7 +943,7 @@
     {
       "type": "squareHill",
       "centerX": 51.631257883237886,
-      "centerZ": 38.75336448789607,
+      "centerZ": 37.75336448789607,
       "width": 14,
       "depth": 30.5,
       "angle": 36,
@@ -971,7 +956,7 @@
     {
       "type": "squareHill",
       "centerX": 27.92602028268259,
-      "centerZ": 24.33007522357336,
+      "centerZ": 21.33007522357336,
       "width": 16,
       "depth": 30.5,
       "angle": 36,
@@ -984,7 +969,7 @@
     {
       "type": "squareHill",
       "centerX": 16.6718603746067,
-      "centerZ": 16.67421259576396,
+      "centerZ": 14.174212595763962,
       "width": 16,
       "depth": 30.5,
       "angle": 36,
@@ -993,6 +978,17 @@
       "transition": 7,
       "terrainType": "loose_dirt",
       "edgeShape": 0.8
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -14.125601514801003,
+      "centerZ": -67.55178095732312,
+      "heading": -1.5707963267948966,
+      "width": 18.5,
+      "checkpointNumber": 5,
+      "_altIndex": 0,
+      "_altCount": 1,
+      "passedBy": {}
     }
   ]
 }

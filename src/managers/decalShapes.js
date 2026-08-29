@@ -211,6 +211,15 @@ function drawTriangle(ctx, w, h, outline) {
  * drawing full-bleed keeps the painted marking lined up with where the user
  * actually dragged each control point). `linePx` is the pre-computed stroke
  * width in texture pixels.
+ *
+ * The V axis (localPoints' `.z`) is flipped going into canvas rows: confirmed
+ * by raycasting a live decal mesh and sampling its actual UV — a DynamicTexture
+ * uploads its 2D canvas (row 0 = top) so that UV.y = 0 lands at the texture's
+ * BOTTOM, independent of the `useOpenGLOrientationForUV` flag CreateDecal's own
+ * UV formula uses. Every other shape here draws a fixed, self-contained image
+ * ("pointing up") so this flip is invisible in them — GHOST_ROTATION_OFFSET_DEG
+ * already calibrates around it — but a polyline maps specific world points
+ * through, so getting the row direction right actually matters.
  */
 function drawPolyline(ctx, w, h, localPoints, linePx) {
   if (!localPoints || localPoints.length < 2) return;
@@ -220,7 +229,7 @@ function drawPolyline(ctx, w, h, localPoints, linePx) {
   ctx.beginPath();
   localPoints.forEach((p, i) => {
     const px = w / 2 + p.x * (w / 2);
-    const pz = h / 2 + p.z * (h / 2);
+    const pz = h / 2 - p.z * (h / 2);
     if (i === 0) ctx.moveTo(px, pz); else ctx.lineTo(px, pz);
   });
   ctx.stroke();
@@ -234,16 +243,38 @@ function drawPolyline(ctx, w, h, localPoints, linePx) {
  * Corner rounding is expanded in world space (so `radius` clamps against real
  * segment lengths, same as every other polyline feature; unlike those, this
  * polyline is always open — a wall/curb-style `closed` toggle doesn't apply to
- * a decal line), then the rounded path is normalized into the decal's local
- * unit frame by a bounding box padded by half the stroke thickness on every
- * side (so the stroke isn't clipped at the projector box edge) — this is the
- * one function both the editor's gizmo/mesh math and the canvas draw call read
- * from, so the baked decal always matches what was dragged.
+ * a decal line).
+ *
+ * CreateDecal's own decal-local frame (normal = +Y, `angle` = θ passed to it in
+ * radians) maps a world offset (wx, wz) to local (u, v) via — reverse-engineered
+ * from `@babylonjs/core`'s decalBuilder.js and confirmed numerically against it:
+ *   localX = −sin(θ)·wx + cos(θ)·wz     (→ U, divided by size.x)
+ *   localY = −cos(θ)·wx − sin(θ)·wz     (→ V, divided by size.y)
+ * This is NOT the same as rotating (wx, wz) by θ in the ordinary sense (an
+ * earlier version of this function assumed it was, and was consequently
+ * correct only at θ = 0/180° and increasingly wrong approaching 90°/270°).
+ * Picking θ so the line's own direction (first control point → last) lands
+ * purely along local Y packs a tight box (thin U, long V); its exact inverse
+ * then recovers the box's world-space center.
  */
 export function decalPolylineLocalOutline(points, thickness = 1) {
   const expanded = expandPolyline(points, false);
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  const ddx = last.x - first.x;
+  const ddz = last.z - first.z;
+  // Zeroes localX for direction (ddx, ddz): solving −sinθ·ddx + cosθ·ddz = 0.
+  const theta = (ddx === 0 && ddz === 0) ? 0 : Math.atan2(ddz, ddx);
+  const s = Math.sin(theta), c = Math.cos(theta);
+
+  const local = expanded.map(p => ({
+    x: -s * p.x + c * p.z, // localX / U
+    z: -c * p.x - s * p.z, // localY / V
+  }));
+
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-  for (const p of expanded) {
+  for (const p of local) {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.z < minZ) minZ = p.z;
@@ -251,15 +282,22 @@ export function decalPolylineLocalOutline(points, thickness = 1) {
   }
   const pad = Math.max(0, thickness) / 2;
   minX -= pad; maxX += pad; minZ -= pad; maxZ += pad;
-  const centerX = (minX + maxX) / 2;
-  const centerZ = (minZ + maxZ) / 2;
+  const localCenterX = (minX + maxX) / 2;
+  const localCenterZ = (minZ + maxZ) / 2;
   const width = Math.max(0.1, maxX - minX);
   const depth = Math.max(0.1, maxZ - minZ);
   const halfW = width / 2;
   const halfD = depth / 2;
+
+  // Exact inverse of the localX/localY formulas above (their matrix is
+  // orthogonal — det 1 — so the inverse is its transpose).
+  const centerX = -s * localCenterX - c * localCenterZ;
+  const centerZ = c * localCenterX - s * localCenterZ;
+
   return {
     centerX, centerZ, width, depth,
-    localPoints: expanded.map(p => ({ x: (p.x - centerX) / halfW, z: (p.z - centerZ) / halfD })),
+    angleRad: theta, // radians — CreateDecal's own `angle`, pass through unchanged (no sign flip)
+    localPoints: local.map(p => ({ x: (p.x - localCenterX) / halfW, z: (p.z - localCenterZ) / halfD })),
   };
 }
 
