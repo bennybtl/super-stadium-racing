@@ -6,27 +6,27 @@
       @mousedown.self="editor.closeAddMenu()"
     >
       <div 
-        class="w-[min(780px,90vw)] max-h-[90vh] overflow-y-auto rounded-[1rem] p-4 shadow-xl shadow-black/80 overflow-hidden" 
+        class="w-[min(1024px,90vw)] rounded-[1rem] p-4 shadow-xl shadow-black/80" 
         :style="panelStyle"
         @mousedown.stop>
         <h2 class="mb-5 text-center text-xl font-bold uppercase tracking-[0.22em] text-white">Add Feature</h2>
 
-        <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-4 overflow-y-auto max-h-[720px]">
           <button
             v-for="item in features"
             :key="item.label"
-            class="max-w-[180px] p-2 rounded-2xl transition border-2 border-transparent hover:border-amber-400 overflow-hidden"
+            class="p-2 rounded-2xl transition border-2 border-transparent hover:border-amber-400 overflow-hidden"
             @click="item.action(); editor.closeAddMenu()"
           >
-            <img v-if="item.img" :src="item.img" :alt="item.label" class="h-[75px] w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] rounded-xl overflow-hidden" />
+            <img v-if="item.img" :src="item.img" :alt="item.label" class="w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] rounded-xl overflow-hidden" />
             <div v-else class="h-[75px] w-full rounded-xl bg-white/5" />
             <span class="text-[11px] uppercase tracking-[0.05em] text-center text-white leading-5">{{ item.label }}</span>
           </button>
         </div>
 
-        <button class="menu-button pointer-events-auto px-10 py-4 text-2xl w-full text-center" @click="editor.closeAddMenu()">
+        <!-- <button class="menu-button pointer-events-auto px-10 py-4 text-2xl w-full text-center" @click="editor.closeAddMenu()">
           Cancel
-        </button>
+        </button> -->
       </div>
     </div>
   </Transition>

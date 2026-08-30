@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "id": "el_camino",
+  "id": "cross_country",
   "packId": "midwest_pack_1",
   "hidden": false,
   "dirtChunks": true,
@@ -11,8 +11,8 @@
     "height": 24,
     "color": "#808080"
   },
-  "name": "El Camino",
-  "image": "el_camino.jpg",
+  "name": "Cross Country",
+  "image": "cross_country.jpg",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "grass",
@@ -1590,7 +1590,7 @@
       "type": "trackSign",
       "x": -32.155760931807436,
       "z": 31.568419738365705,
-      "name": "Intercambiar`",
+      "name": "Cross X Country",
       "rotation": -0.03490658503988659,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
