@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "id": "zipper",
+  "id": "crossfire_canyon",
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
@@ -11,12 +11,12 @@
     "height": 24,
     "color": "#808080"
   },
-  "name": "Zipper",
-  "image": "zipper.jpg",
+  "name": "Crossfire Canyon",
+  "image": "crossfire_canyon.jpg",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
-  "borderTerrainType": "packed_dirt",
+  "borderTerrainType": "loose_dirt",
   "wear": {
     "enabled": true,
     "source": "aiPath",
@@ -252,8 +252,8 @@
       "radiusX": 10,
       "radiusZ": 10.5,
       "angle": 0,
-      "height": 5,
-      "waterLevelOffset": 2,
+      "height": 3.6,
+      "waterLevelOffset": 0,
       "terrainType": null
     },
     {
@@ -299,16 +299,16 @@
         },
         {
           "x": 77.24764480117575,
-          "z": 69.33872302670315,
+          "z": 67.33872302670315,
           "radius": 20.5
         },
         {
-          "x": -78.55189667670248,
-          "z": 70.6791169799002,
+          "x": -77.05189667670248,
+          "z": 66.1791169799002,
           "radius": 20.5
         },
         {
-          "x": -83.65122406457965,
+          "x": -81.15122406457965,
           "z": 52.49989757992121,
           "radius": 10
         }
@@ -378,12 +378,12 @@
         },
         {
           "x": -79.5,
-          "z": 72,
+          "z": 68.5,
           "radius": 15
         },
         {
           "x": -13.5,
-          "z": 71.5,
+          "z": 68,
           "radius": 10
         },
         {
@@ -398,12 +398,12 @@
         },
         {
           "x": 14,
-          "z": 71.5,
+          "z": 68,
           "radius": 10
         },
         {
           "x": 80,
-          "z": 71.5,
+          "z": 69,
           "radius": 15
         },
         {
@@ -433,17 +433,18 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 6,
+      "collisionHeight": 7,
       "thickness": 0.5,
       "friction": 0.05,
-      "closed": true
+      "closed": true,
+      "fence": true
     },
     {
       "type": "checkpoint",
       "centerX": -25.5,
       "centerZ": 34,
       "heading": -3.141592653589793,
-      "width": 21.5,
+      "width": 23,
       "checkpointNumber": 1,
       "_altIndex": 0,
       "_altCount": 1,
@@ -488,7 +489,7 @@
       "centerX": 26,
       "centerZ": 34,
       "heading": 0,
-      "width": 22,
+      "width": 23,
       "checkpointNumber": 2,
       "_altIndex": 0,
       "_altCount": 1,
@@ -499,7 +500,7 @@
       "centerX": 68,
       "centerZ": -2,
       "heading": -3.141592653589793,
-      "width": 15,
+      "width": 16,
       "checkpointNumber": 3,
       "_altIndex": 0,
       "_altCount": 1,
@@ -510,7 +511,7 @@
       "centerX": 24.5,
       "centerZ": -19,
       "heading": 0,
-      "width": 22,
+      "width": 23,
       "checkpointNumber": 4,
       "_altIndex": 0,
       "_altCount": 1,
@@ -521,7 +522,7 @@
       "centerX": -24.5,
       "centerZ": -19,
       "heading": -3.141592653589793,
-      "width": 22,
+      "width": 23.5,
       "checkpointNumber": 5,
       "_altIndex": 0,
       "_altCount": 1,
@@ -592,10 +593,10 @@
     },
     {
       "type": "squareHill",
-      "centerX": 24,
+      "centerX": 25,
       "centerZ": -38,
       "width": 18.5,
-      "depth": 34,
+      "depth": 28,
       "angle": 90,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -690,25 +691,10 @@
       "heightAtMax": 2.5
     },
     {
-      "type": "trackSign",
-      "x": -0.13455105049149152,
-      "z": -31.696754822640962,
-      "name": "ZIPPER",
-      "rotation": 0,
-      "contentType": "text",
-      "brandImage": "energizer-racing.png",
-      "background": "black",
-      "primaryColor": "red",
-      "scale": 1.55,
-      "heightOffset": 4,
-      "width": 10,
-      "logoScale": 1
-    },
-    {
       "type": "model",
       "model": "bannerString",
       "x": -66.75546445417051,
-      "z": 10.424159061175985,
+      "z": 8.924159061175985,
       "heading": 0,
       "width": 29,
       "poleHeight": 9
@@ -717,7 +703,7 @@
       "type": "model",
       "model": "bannerString",
       "x": -66.75546445417051,
-      "z": -11.075840938824014,
+      "z": -13.575840938824014,
       "heading": 0,
       "width": 29,
       "poleHeight": 9
@@ -726,7 +712,7 @@
       "type": "model",
       "model": "bannerString",
       "x": 66.60596909059495,
-      "z": -12.862428812113306,
+      "z": -9.862428812113306,
       "heading": 0,
       "width": 29,
       "poleHeight": 9
@@ -735,7 +721,7 @@
       "type": "model",
       "model": "bannerString",
       "x": 65.83278305017657,
-      "z": 6.331446146473917,
+      "z": 12.331446146473917,
       "heading": 0,
       "width": 29,
       "poleHeight": 9
@@ -890,24 +876,9 @@
     },
     {
       "type": "trackSign",
-      "x": 0.21691775199475893,
-      "z": -27.60498838013462,
-      "name": "ZIPPER",
-      "rotation": 0,
-      "contentType": "text",
-      "brandImage": "energizer-racing.png",
-      "background": "black",
-      "primaryColor": "gray",
-      "scale": 1.55,
-      "heightOffset": 4,
-      "width": 10,
-      "logoScale": 1
-    },
-    {
-      "type": "trackSign",
       "x": -0.02216947379511236,
       "z": -24.33198132131336,
-      "name": "ZIPPER",
+      "name": "Cross-Fire Canyon",
       "rotation": 0,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
@@ -1101,17 +1072,17 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -20.729252972797507,
-          "z": -62.29350514517301,
+          "x": -23.229252972797507,
+          "z": -62.79350514517301,
           "radius": 10
         },
         {
-          "x": 26.592566566618054,
+          "x": 28.592566566618054,
           "z": -62.331476116390974,
           "radius": 10
         },
         {
-          "x": 16.66182268405755,
+          "x": 19.16182268405755,
           "z": -45.384985925890916,
           "radius": 10
         },
@@ -1121,8 +1092,8 @@
           "radius": 10
         },
         {
-          "x": -16.01934020978506,
-          "z": -52.444919240653505,
+          "x": -18.51934020978506,
+          "z": -49.944919240653505,
           "radius": 10
         }
       ],
@@ -1177,7 +1148,7 @@
       "x": 49.73972722361748,
       "z": 0.13817312661588943,
       "name": "Track Name",
-      "rotation": 1.5184364492350666,
+      "rotation": 1.1693705988362009,
       "contentType": "brand",
       "brandImage": "energizer-racing.png",
       "background": "black",
@@ -1189,8 +1160,8 @@
     },
     {
       "type": "trackSign",
-      "x": 48.348106406065156,
-      "z": -41.06707238082679,
+      "x": 45.848106406065156,
+      "z": -46.56707238082679,
       "name": "Track Name",
       "rotation": 0.017453292519943295,
       "contentType": "brand",
@@ -1334,6 +1305,21 @@
           "z": -42.61835911070762
         }
       ]
+    },
+    {
+      "type": "trackSign",
+      "x": 45.848106406065156,
+      "z": -42.06707238082679,
+      "name": "Track Name",
+      "rotation": 0.017453292519943295,
+      "contentType": "brand",
+      "brandImage": "turbo-blend.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.75,
+      "heightOffset": 2.4,
+      "width": 7,
+      "logoScale": 1.15
     }
   ]
 }

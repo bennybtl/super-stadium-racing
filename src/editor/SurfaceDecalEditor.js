@@ -642,7 +642,14 @@ export class SurfaceDecalEditor {
   // ── Pointer move — move ghost to cursor ───────────────────────────────────
 
   _onPointerMove(pointerInfo) {
-    if (!this._ghost || !this.isOpen) return;
+    if (!this._ghost) return;
+    if (!this.isOpen) {
+      // Stamp mode was left without an explicit close() (e.g. selecting an
+      // existing decal switches selectedType away from 'surfaceDecal') — hide
+      // the ghost instead of leaving it frozen at its last position.
+      this._ghost.setEnabled(false);
+      return;
+    }
     const pick = this._scene.pick(this._scene.pointerX, this._scene.pointerY);
     if (pick?.hit && pick.pickedPoint) {
       const p = pick.pickedPoint;

@@ -15,10 +15,10 @@
           <button
             v-for="item in features"
             :key="item.label"
-            class="max-w-[180px] p-2 rounded-xl transition border-2 border-transparent hover:border-amber-400"
+            class="max-w-[180px] p-2 rounded-2xl transition border-2 border-transparent hover:border-amber-400 overflow-hidden"
             @click="item.action(); editor.closeAddMenu()"
           >
-            <img v-if="item.img" :src="item.img" :alt="item.label" class="h-[75px] w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
+            <img v-if="item.img" :src="item.img" :alt="item.label" class="h-[75px] w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] rounded-xl overflow-hidden" />
             <div v-else class="h-[75px] w-full rounded-xl bg-white/5" />
             <span class="text-[11px] uppercase tracking-[0.05em] text-center text-white leading-5">{{ item.label }}</span>
           </button>

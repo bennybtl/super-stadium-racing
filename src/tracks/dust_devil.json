@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "id": "knock_out",
+  "id": "dust_devil",
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": false,
@@ -11,8 +11,8 @@
     "height": 21,
     "color": "#808080"
   },
-  "name": "Knock Out",
-  "image": "knock_out.jpg",
+  "name": "Dust Devil",
+  "image": "dust_devil.jpg",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "loose_dirt",
@@ -1293,7 +1293,8 @@
       "angle": 1.413716694115407,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1303,7 +1304,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1313,22 +1315,23 @@
       "angle": 1.9547687622336491,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "trackSign",
       "x": 2.7742825911476636,
       "z": -53.63168207748069,
-      "name": "Knock Out",
+      "name": "  Dust Devil   ",
       "rotation": 0,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "logoScale": 1,
       "background": "black",
-      "primaryColor": "red",
-      "scale": 1.35,
+      "primaryColor": "white",
+      "scale": 1.6,
       "heightOffset": 0.8,
-      "width": 10
+      "width": 13
     },
     {
       "type": "trackSign",
@@ -1404,32 +1407,6 @@
       "scale": 1.35,
       "heightOffset": 0.8,
       "width": 10
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": -23.612968358569738,
-      "centerZ": -59.22366857387637,
-      "shape": "line",
-      "color": "white",
-      "count": 3,
-      "outline": false,
-      "width": 4,
-      "depth": 15,
-      "angle": 0,
-      "opacity": 1
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": 32.9985021656862,
-      "centerZ": -56.79944047603456,
-      "shape": "line",
-      "color": "white",
-      "count": 3,
-      "outline": false,
-      "width": 4,
-      "depth": 15,
-      "angle": 348,
-      "opacity": 1
     },
     {
       "type": "aiPath",
@@ -1546,8 +1523,8 @@
       "type": "actionZone",
       "zoneType": "pickupSpawn",
       "shape": "circle",
-      "x": 1.2092756474978907,
-      "z": -32.25379330040077,
+      "x": -5.388935397742766,
+      "z": -34.138375607691906,
       "radius": 11.5
     },
     {
@@ -1616,10 +1593,10 @@
     },
     {
       "type": "hill",
-      "centerX": -38.25367272029958,
-      "centerZ": -50.048553182603,
+      "centerX": -36.52615777910581,
+      "centerZ": -47.73466107336853,
       "radiusX": 10,
-      "radiusZ": 10,
+      "radiusZ": 7,
       "angle": 0,
       "height": 4,
       "waterLevelOffset": 0,
@@ -1704,6 +1681,77 @@
       "waterLevelOffset": 0,
       "terrainType": "loose_dirt",
       "edgeShape": 0.8
+    },
+    {
+      "type": "surfaceDecal",
+      "centerX": -14.670768786144418,
+      "centerZ": -56.15823260260074,
+      "shape": "polyline",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "width": 4,
+      "depth": 4,
+      "angle": 0,
+      "opacity": 1,
+      "points": [
+        {
+          "x": -50.02868381090535,
+          "z": -52.01959932717672
+        },
+        {
+          "x": -28.642989992651575,
+          "z": -58.70287527681357,
+          "radius": 22
+        },
+        {
+          "x": -20.59013268555031,
+          "z": -57.99228306490711,
+          "radius": 10
+        },
+        {
+          "x": 40.57873134452957,
+          "z": -55.91817274150558,
+          "radius": 10
+        }
+      ],
+      "thickness": 0.2
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 12.671918884400753,
+      "centerZ": -10.379391215360428,
+      "terrainType": "loose_dirt",
+      "roughness": 0,
+      "width": 25,
+      "depth": 29.5,
+      "rotation": 0,
+      "blendWidth": 16
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 47.95592949184629,
+      "centerZ": -61.132351099605614,
+      "terrainType": "loose_dirt",
+      "roughness": 0,
+      "width": 25,
+      "depth": 29.5,
+      "rotation": 0,
+      "blendWidth": 16
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -57.97510928318249,
+      "centerZ": -46.207961004837564,
+      "terrainType": "loose_dirt",
+      "roughness": 0,
+      "width": 25,
+      "depth": 29.5,
+      "rotation": 0,
+      "blendWidth": 16
     }
   ]
 }

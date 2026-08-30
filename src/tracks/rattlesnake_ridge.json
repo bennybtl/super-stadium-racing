@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "id": "rattler",
+  "id": "rattlesnake_ridge",
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
@@ -11,8 +11,8 @@
     "height": 24,
     "color": "#808080"
   },
-  "name": "Rattler",
-  "image": "rattler.jpg",
+  "name": "Rattlesnake Ridge",
+  "image": "rattlesnake_ridge.jpg",
   "width": 160,
   "depth": 200,
   "defaultTerrainType": "packed_dirt",
@@ -907,14 +907,14 @@
       "type": "trackSign",
       "x": 0.2271104985305552,
       "z": -74.16995570479052,
-      "name": "Rattler",
+      "name": "Rattlesnake Ridge",
       "rotation": 0,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "background": "black",
       "primaryColor": "red",
       "scale": 2,
-      "heightOffset": 0,
+      "heightOffset": 0.8,
       "width": 12,
       "logoScale": 1
     },
@@ -1324,9 +1324,10 @@
       "x": 55.523011664100885,
       "z": 86.8667748608357,
       "angle": 0,
-      "scale": 1,
-      "weight": 22,
-      "color": "yellow"
+      "scale": 1.3,
+      "weight": 20,
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1334,9 +1335,10 @@
       "x": 52.07674809099628,
       "z": 88.58624581018819,
       "angle": 0,
-      "scale": 1,
+      "scale": 1.3,
       "weight": 22,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1344,9 +1346,10 @@
       "x": 48.82063627980785,
       "z": 89.7042087202164,
       "angle": 0,
-      "scale": 1,
+      "scale": 1.3,
       "weight": 22,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "hill",
@@ -1469,32 +1472,35 @@
     {
       "type": "obstacle",
       "obstacleType": "tireStack",
-      "x": -48.972704572109414,
+      "x": -49.972704572109414,
       "z": -71.34827459162557,
       "angle": 0,
-      "scale": 2,
+      "scale": 1.3,
       "weight": 120,
-      "color": "yellow"
+      "color": "black",
+      "count": 4
     },
     {
       "type": "obstacle",
       "obstacleType": "tireStack",
-      "x": -46.346051397744816,
+      "x": -45.346051397744816,
       "z": -71.3717717959826,
       "angle": 0,
-      "scale": 2,
+      "scale": 1.3,
       "weight": 120,
-      "color": "yellow"
+      "color": "black",
+      "count": 4
     },
     {
       "type": "obstacle",
       "obstacleType": "tireStack",
       "x": -47.65072339954864,
-      "z": -73.26795437276625,
+      "z": -74.26795437276625,
       "angle": 0,
-      "scale": 2,
+      "scale": 1.3,
       "weight": 120,
-      "color": "yellow"
+      "color": "black",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -1502,29 +1508,32 @@
       "x": -52.69008850582369,
       "z": 63.11852398811,
       "angle": 0,
-      "scale": 2,
+      "scale": 1.3,
       "weight": 120,
-      "color": "yellow"
+      "color": "black",
+      "count": 4
     },
     {
       "type": "obstacle",
       "obstacleType": "tireStack",
-      "x": -48.7661087251203,
-      "z": 63.04098942672525,
+      "x": -48.2661087251203,
+      "z": 62.54098942672525,
       "angle": 0,
-      "scale": 2,
+      "scale": 1.3,
       "weight": 120,
-      "color": "yellow"
+      "color": "black",
+      "count": 4
     },
     {
       "type": "obstacle",
       "obstacleType": "tireStack",
       "x": -50.66934605189621,
-      "z": 65.77787720592703,
+      "z": 66.27787720592703,
       "angle": 0,
-      "scale": 2,
+      "scale": 1.3,
       "weight": 120,
-      "color": "yellow"
+      "color": "black",
+      "count": 4
     },
     {
       "type": "checkpoint",

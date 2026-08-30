@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "id": "crossover",
+  "id": "desert_doublecross",
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
@@ -11,8 +11,8 @@
     "height": 24,
     "color": "#808080"
   },
-  "name": "Cross-Over",
-  "image": "crossover.jpg",
+  "name": "Desert Doublecross",
+  "image": "desert_doublecross.jpg",
   "width": 160,
   "depth": 160,
   "defaultTerrainType": "packed_dirt",
@@ -450,7 +450,8 @@
       "width": 19.5,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "aiPath",
@@ -574,7 +575,7 @@
       "type": "trackSign",
       "x": 4.73354531854648,
       "z": -0.1152562859850263,
-      "name": "  Cross Over  ",
+      "name": "Desert Double-cross",
       "rotation": 0.5410520681182421,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
@@ -810,8 +811,8 @@
     },
     {
       "type": "tent",
-      "x": -48.953945017329985,
-      "z": -24.961856091774443,
+      "x": -58.708097793590284,
+      "z": -30.94159635816849,
       "heading": 0.47123889803846897,
       "scale": 1.5,
       "color": "red"

@@ -35,7 +35,7 @@
           :key="track.key"
           type="button"
           :data-track-key="track.key"
-          class="min-w-[160px] max-w-[180px] rounded-xl transition"
+          class="min-w-[160px] max-w-[180px] rounded-2xl transition"
           :class="track.key === modelValue ? ' border-2 border-amber-400' : ''"
           @click="selectTrack(track.key)"
         >

@@ -1,18 +1,18 @@
 {
   "schemaVersion": 3,
-  "id": "hightop",
+  "id": "mesa_madness",
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": false,
   "borderWall": {
     "enabled": true,
-    "thickness": 2,
-    "height": 8,
-    "color": "#8f0000"
+    "thickness": 3,
+    "height": 6,
+    "color": "#303030"
   },
-  "name": "High-Top",
-  "image": "hightop.jpg",
+  "name": "Mesa Madness",
+  "image": "mesa_madness.jpg",
   "width": 180,
   "depth": 160,
   "defaultTerrainType": "loose_dirt",
@@ -336,7 +336,7 @@
     },
     {
       "type": "squareHill",
-      "centerX": -33.09055280529437,
+      "centerX": -34.09055280529437,
       "centerZ": 12.459915693192478,
       "width": 35,
       "depth": 31.5,
@@ -430,7 +430,8 @@
       "width": 16,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "hill",
@@ -853,7 +854,7 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": -33.768806381389844,
+      "centerX": -34.768806381389844,
       "centerZ": 12.078204194512153,
       "shape": "chevron",
       "color": "white",
@@ -976,7 +977,7 @@
       "centerZ": 71.92773162557832,
       "width": 19.5,
       "depth": 13.5,
-      "angle": 0,
+      "angle": -180,
       "waterLevelOffset": 0,
       "transition": 4,
       "terrainType": null,
@@ -1155,11 +1156,11 @@
           "z": 11.23
         },
         {
-          "x": 51.8,
-          "z": 26.83
+          "x": 48.3,
+          "z": 23.83
         },
         {
-          "x": 41.99,
+          "x": 44.49,
           "z": 60
         },
         {
@@ -1196,7 +1197,7 @@
         },
         {
           "x": -75.08,
-          "z": -28.54
+          "z": -30.54
         },
         {
           "x": -82.46,
@@ -1204,7 +1205,7 @@
         },
         {
           "x": -69.62,
-          "z": -73.35
+          "z": -69.35
         },
         {
           "x": -4.781270133469663,
@@ -1312,7 +1313,7 @@
       ],
       "height": 4.6,
       "width": 12.5,
-      "terrainType": null,
+      "terrainType": "loose_dirt",
       "closed": false,
       "filled": false,
       "edgeShape": 0.8
@@ -1320,12 +1321,12 @@
     {
       "type": "model",
       "model": "flag",
-      "x": -3.5298909993918066,
-      "z": -67.91605980393935,
-      "color": "white",
+      "x": -4.529890999391807,
+      "z": -66.41605980393935,
+      "color": "red",
       "scale": 1,
       "height": 7.5,
-      "heading": 2.530727415391778
+      "heading": 0.6108652381980153
     },
     {
       "type": "model",
@@ -1353,7 +1354,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 22,
-      "color": "red"
+      "color": "red",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1363,7 +1365,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 22,
-      "color": "red"
+      "color": "red",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1373,7 +1376,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 22,
-      "color": "red"
+      "color": "red",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1383,7 +1387,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 22,
-      "color": "red"
+      "color": "red",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1393,7 +1398,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 22,
-      "color": "red"
+      "color": "red",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -1403,7 +1409,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 22,
-      "color": "red"
+      "color": "red",
+      "count": 1
     },
     {
       "type": "hill",
@@ -1484,12 +1491,13 @@
     {
       "type": "obstacle",
       "obstacleType": "barrel",
-      "x": 74.23664785982614,
-      "z": -8.4067838695767,
+      "x": 66.55951768914738,
+      "z": -1.3486024093034956,
       "angle": 0,
       "scale": 1,
       "weight": 22,
-      "color": "red"
+      "color": "red",
+      "count": 1
     },
     {
       "type": "hill",
@@ -1532,8 +1540,8 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": 62.95284866018672,
-      "centerZ": -8.932263739310386,
+      "centerX": 59.45284866018672,
+      "centerZ": -9.432263739310386,
       "shape": "arrow",
       "color": "white",
       "count": 3,
@@ -1545,8 +1553,8 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": 31.652901247462935,
-      "centerZ": -37.808535076028434,
+      "centerX": 29.152901247462935,
+      "centerZ": -35.808535076028434,
       "shape": "arrow",
       "color": "white",
       "count": 3,
@@ -1558,8 +1566,8 @@
     },
     {
       "type": "surfaceDecal",
-      "centerX": 40.299289926368935,
-      "centerZ": -20.310417572597146,
+      "centerX": 41.299289926368935,
+      "centerZ": -21.810417572597146,
       "shape": "arrow",
       "color": "white",
       "count": 3,
@@ -1573,13 +1581,13 @@
       "type": "trackSign",
       "x": 6.4161572654994705,
       "z": -5.211842485602688,
-      "name": "      High-Top     ",
+      "name": "   Mesa Madness   ",
       "rotation": 0,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "logoScale": 1,
       "background": "black",
-      "primaryColor": "red",
+      "primaryColor": "yellow",
       "scale": 1,
       "heightOffset": 9,
       "width": 29
@@ -1592,7 +1600,8 @@
       "width": 13,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1602,7 +1611,8 @@
       "width": 17,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1612,7 +1622,8 @@
       "width": 13.5,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -1622,7 +1633,18 @@
       "width": 20,
       "checkpointNumber": 5,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 17.87220466453059,
+      "z": 25.195210771029853,
+      "color": "red",
+      "scale": 1,
+      "height": 7.5,
+      "heading": 0.33161255787892263
     }
   ]
 }

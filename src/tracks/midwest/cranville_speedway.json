@@ -1134,53 +1134,6 @@
       "blendWidth": 3
     },
     {
-      "type": "model",
-      "model": "tree_1",
-      "x": -40.299797153570964,
-      "z": 65.16600579339334,
-      "color": "yellow",
-      "scale": 1
-    },
-    {
-      "type": "model",
-      "model": "tree_2",
-      "x": -39.299797153570964,
-      "z": 45.66600579339334,
-      "color": "yellow",
-      "scale": 1,
-      "heading": 1.7453292519943295
-    },
-    {
-      "type": "model",
-      "model": "tree_2",
-      "x": -27.658787233705468,
-      "z": 47.4550271880014,
-      "color": "yellow",
-      "scale": 0.9,
-      "heading": 2.6354471705114375,
-      "mirrorX": true
-    },
-    {
-      "type": "model",
-      "model": "tree_3",
-      "x": 18.76161171280465,
-      "z": 23.65993674125117,
-      "color": "yellow",
-      "scale": 0.9,
-      "heading": 2.6354471705114375,
-      "mirrorX": true
-    },
-    {
-      "type": "model",
-      "model": "tree_3",
-      "x": 46.76161171280465,
-      "z": -5.340063258748831,
-      "color": "yellow",
-      "scale": 0.9,
-      "heading": 2.6354471705114375,
-      "mirrorX": true
-    },
-    {
       "type": "trackSign",
       "x": -6.77247050035027,
       "z": -31.876552880081803,

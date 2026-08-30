@@ -517,7 +517,8 @@
       "width": 22.5,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "polyWall",
@@ -580,7 +581,8 @@
       "width": 22.5,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "obstacle",
@@ -590,7 +592,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -600,7 +603,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -610,7 +614,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -620,7 +625,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -630,7 +636,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -640,7 +647,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -650,7 +658,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -660,7 +669,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -670,7 +680,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -680,7 +691,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -690,7 +702,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -700,7 +713,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -710,7 +724,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -720,7 +735,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -730,7 +746,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -740,7 +757,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -750,7 +768,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -760,7 +779,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "checkpoint",
@@ -770,7 +790,8 @@
       "width": 21.5,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -780,7 +801,8 @@
       "width": 22.5,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "polyWall",
@@ -846,7 +868,8 @@
       "angle": -1.2740903539558606,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -856,7 +879,8 @@
       "angle": 1.7278759594743858,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -866,7 +890,8 @@
       "angle": 3.124139361069848,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "terrain",
@@ -932,7 +957,8 @@
       "angle": -2.3387411976724013,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -942,7 +968,8 @@
       "angle": -1.6406094968746698,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -952,7 +979,8 @@
       "angle": -1.6406094968746698,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "obstacle",
@@ -962,7 +990,8 @@
       "angle": -2.251474735072685,
       "scale": 1,
       "weight": 80,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 1
     },
     {
       "type": "flag",
@@ -1539,7 +1568,8 @@
       "width": 22.5,
       "checkpointNumber": 5,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "model",

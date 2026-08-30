@@ -4,21 +4,19 @@ import {
   Color3,
   Vector3,
   DynamicTexture,
-  SceneLoader,
   TransformNode,
 } from "@babylonjs/core";
-import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import barrelUrl from "../assets/models/barrel.obj?url";
 import { basicColors } from "../constants";
 import { projectGroundDecal, makeDecalMaterial } from "../managers/groundDecal.js";
 import { applyDecalWear } from "../managers/decalShapes.js";
-OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
-OBJFileLoader.SKIP_MATERIALS = true;
 
-const BARREL_COLOR    = basicColors.yellow.diffuse;
-const BARREL_ACTIVE   = new Color3(0.25, 1.0, 0.25);
-const BARREL_MODEL_SCALE = 0.1;
-const BARREL_PIVOT_Y = -0.55;
+// Gate posts are plain cylinders, same footprint/height as the old barrel
+// model — visible only for the active/next gate (see setActive); every other
+// gate shows nothing but its ground decal.
+const POST_COLOR     = new Color3(0.25, 1.0, 0.25);
+const POST_EMISSIVE  = new Color3(0.15, 0.45, 0.15);
+const POST_DIAMETER  = 1;
+const POST_HEIGHT    = 1.3;
 const HANDLE_HEIGHT = 2.5;
 const HANDLE_DIAMETER = 1.25;
 
@@ -66,21 +64,10 @@ export class Checkpoint {
 
   // ─── Public API ───────────────────────────────────────────────────────────
 
-  /** Highlight this checkpoint when it is the player's next target. */
+  /** Show this checkpoint's posts only when it is the player's next target. */
   setActive(isActive) {
-    const diffuse = isActive ? BARREL_ACTIVE : BARREL_COLOR;
-    const emissive = isActive
-      ? new Color3(0.15, 0.45, 0.15)
-      : Color3.Black();
-
-    if (this._barrel1Mat) {
-      this._barrel1Mat.diffuseColor = diffuse.clone();
-      this._barrel1Mat.emissiveColor = emissive.clone();
-    }
-    if (this._barrel2Mat) {
-      this._barrel2Mat.diffuseColor = diffuse.clone();
-      this._barrel2Mat.emissiveColor = emissive.clone();
-    }
+    if (this._barrel1Mesh) this._barrel1Mesh.isVisible = isActive;
+    if (this._barrel2Mesh) this._barrel2Mesh.isVisible = isActive;
   }
 
   /** Redraw the ground decal after a renumber or width change. */
@@ -160,30 +147,24 @@ export class Checkpoint {
     barrelRoot.parent   = this.container;
 
     const barrelMat = new StandardMaterial(`${name}Mat`, scene);
-    barrelMat.diffuseColor = BARREL_COLOR.clone();
-    barrelMat.emissiveColor = Color3.Black();
-    barrelMat.specularColor = new Color3(0.12, 0.08, 0.05);
+    barrelMat.diffuseColor = POST_COLOR.clone();
+    barrelMat.emissiveColor = POST_EMISSIVE.clone();
+    barrelMat.specularColor = new Color3(0.1, 0.1, 0.1);
 
-    const pivot = new TransformNode(`${name}Pivot`, scene);
-    pivot.parent = barrelRoot;
-    pivot.position.y = BARREL_PIVOT_Y * BARREL_MODEL_SCALE;
-    pivot.rotation.x = -Math.PI / 2;
-    pivot.scaling.setAll(BARREL_MODEL_SCALE);
+    const mesh = MeshBuilder.CreateCylinder(`${name}Mesh`, {
+      diameter: POST_DIAMETER,
+      height:   POST_HEIGHT,
+    }, scene);
+    mesh.parent = barrelRoot;
+    mesh.position.y = POST_HEIGHT / 2; // root sits at ground level; centre the post above it
+    mesh.material = barrelMat;
+    mesh.isVisible = false; // shown only for the active/next gate, see setActive
+    mesh.isPickable = false;
+    mesh.receiveShadows = true;
+    if (shadows) shadows.addShadowCaster(mesh);
 
-    Checkpoint._getSourceMeshes(scene).then(sourceMeshes => {
-      for (const src of sourceMeshes) {
-        const m = src.clone(`${name}Mesh`, pivot);
-        m.isVisible = true;
-        m.isPickable = true;
-        m.material = barrelMat;
-        m.receiveShadows = true;
-        m.metadata = { ...(m.metadata ?? {}), checkpointBarrel: true };
-        if (shadows) shadows.addShadowCaster(m);
-      }
-    }).catch(err => console.warn(`[Checkpoint] Failed to load barrel model:`, err));
-
-    if (name === "barrel1") this._barrel1Mat = barrelMat;
-    if (name === "barrel2") this._barrel2Mat = barrelMat;
+    if (name === "barrel1") { this._barrel1Mat = barrelMat; this._barrel1Mesh = mesh; }
+    if (name === "barrel2") { this._barrel2Mat = barrelMat; this._barrel2Mesh = mesh; }
 
     return barrelRoot;
   }
@@ -209,24 +190,6 @@ export class Checkpoint {
 
     this._handleMat = handleMat;
     return handle;
-  }
-
-  static _getSourceMeshes(scene) {
-    if (!Checkpoint._sourcePromise || Checkpoint._sourceScene !== scene) {
-      const lastSlash = barrelUrl.lastIndexOf('/');
-      const rootUrl = barrelUrl.substring(0, lastSlash + 1);
-      const fileName = barrelUrl.substring(lastSlash + 1);
-      Checkpoint._sourceScene = scene;
-      Checkpoint._sourcePromise = SceneLoader.ImportMeshAsync('', rootUrl, fileName, scene)
-        .then(result => {
-          for (const m of result.meshes) {
-            m.isVisible = false;
-            m.isPickable = false;
-          }
-          return result.meshes;
-        });
-    }
-    return Checkpoint._sourcePromise;
   }
 
   _createDecal(feature, isFinish, scene) {

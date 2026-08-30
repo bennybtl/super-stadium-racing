@@ -64,6 +64,7 @@ function clampObstacleCount(value, spec) {
   const stack = spec?.stack;
   if (!stack) return 1;
   const fallback = stack.default ?? stack.min ?? 1;
+  if (value === null || value === undefined || value === "") return fallback;
   const n = Math.round(Number(value));
   const safe = Number.isFinite(n) ? n : fallback;
   return Math.min(stack.max ?? 8, Math.max(stack.min ?? 1, safe));

@@ -1499,8 +1499,18 @@ export class EditorController {
         return;
       }
 
-      // Surface decal stamp mode: click to stamp.
+      // Surface decal stamp mode: click to stamp — unless the click actually
+      // landed on an already-placed decal (or its handle), in which case
+      // select it for editing instead. Without this, clicking an existing
+      // decal to grab and move it just stamped a duplicate on top of it,
+      // since stamp mode otherwise swallows every click before selection
+      // logic ever runs.
       if (this._editorStore?.selectedType === 'surfaceDecal') {
+        const existing = this.surfaceDecalEditor.findByMesh(pickResult.pickedMesh ?? null);
+        if (existing) {
+          this.surfaceDecalEditor.select(existing);
+          return;
+        }
         if (pickResult.hit && pickResult.pickedPoint) {
           this.surfaceDecalEditor.stamp(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
         }

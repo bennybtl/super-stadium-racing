@@ -1350,53 +1350,6 @@
       "heading": -1.5707963267948966
     },
     {
-      "type": "model",
-      "model": "tree_1",
-      "x": -77.39412837623053,
-      "z": -80,
-      "color": "gray",
-      "scale": 1,
-      "heading": 0
-    },
-    {
-      "type": "model",
-      "model": "tree_2",
-      "x": -80,
-      "z": -62,
-      "color": "gray",
-      "scale": 1,
-      "heading": 0
-    },
-    {
-      "type": "model",
-      "model": "tree_2",
-      "x": 76.7321369858642,
-      "z": -80,
-      "color": "gray",
-      "scale": 0.8,
-      "heading": 1.3264502315156905
-    },
-    {
-      "type": "model",
-      "model": "tree_3",
-      "x": 76.2321369858642,
-      "z": -40,
-      "color": "gray",
-      "scale": 0.8,
-      "heading": 1.3264502315156905
-    },
-    {
-      "type": "model",
-      "model": "tree_3",
-      "x": 80,
-      "z": -46.5,
-      "color": "gray",
-      "scale": 0.8,
-      "heading": 1.3264502315156905,
-      "mirrorZ": true,
-      "mirrorX": true
-    },
-    {
       "type": "polyWall",
       "points": [
         {

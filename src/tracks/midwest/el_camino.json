@@ -1766,32 +1766,6 @@
       "blendWidth": 6
     },
     {
-      "type": "model",
-      "model": "tree_1",
-      "x": 0.11279200723707117,
-      "z": -8.864364879313552,
-      "color": "yellow",
-      "scale": 0.7
-    },
-    {
-      "type": "model",
-      "model": "tree_1",
-      "x": -8.315086132452718,
-      "z": -13.968571806760476,
-      "color": "yellow",
-      "scale": 0.6,
-      "mirrorZ": true
-    },
-    {
-      "type": "model",
-      "model": "tree_3",
-      "x": 3.733774055301356,
-      "z": 35.196191679871305,
-      "color": "yellow",
-      "scale": 0.7,
-      "heading": 5.201081170943102
-    },
-    {
       "type": "terrain",
       "shape": "rect",
       "centerX": -69.63734667657937,

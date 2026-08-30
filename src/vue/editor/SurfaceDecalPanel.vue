@@ -5,7 +5,8 @@
     @close="close"
   >
     <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">Drag to move{{ editing && s.shape === 'polyline' ? '' : ' · QE to rotate' }} · Del to delete{{ editing && s.shape === 'polyline' ? ' point/decal' : '' }} · Click terrain to stamp · Scroll to scale</div>
+    <div v-if="editing" class="text-[10px] text-slate-400 mb-3">Drag to move{{ s.shape === 'polyline' ? '' : ' · QE to rotate' }} · Del to delete{{ s.shape === 'polyline' ? ' point/decal' : '' }} · Scroll to scale</div>
+    <div v-else class="text-[10px] text-slate-400 mb-3">Click terrain to stamp · Click a placed decal to edit it · QE to rotate · Scroll to scale</div>
 
     <!-- Shape (stamp mode only — a placed decal keeps its shape) -->
     <template v-if="!editing">
