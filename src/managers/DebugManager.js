@@ -1,4 +1,4 @@
-import { MeshBuilder, Vector3, Color3, StandardMaterial } from '@babylonjs/core';
+import { MeshBuilder, Mesh, VertexData, Vector3, Color3, StandardMaterial } from '@babylonjs/core';
 import { useDebugStore } from '../vue/store.js';
 import { DEFAULT_HANDLING, resolveHandling } from '../truck/DriftTuning.js';
 
@@ -40,6 +40,9 @@ export class DebugManager {
     this._truck        = null;  // current player truck (for the vehicle overlay)
     this._colliderDebugMat = null;
     this._colliderDebugState = new Map(); // mesh.uniqueId -> { mesh, box }
+    this._polylineColliderDebugState = new Map(); // mesh.uniqueId -> { mesh, viz }
+    this._truckBoxDebugMat = null;
+    this._truckBoxDebugState = new Map(); // mesh.uniqueId -> { mesh, box }
     this._bridgeDriveDebugEnabled = false;
     this._bridgeDriveDebugMat = null;
     this._bridgeDriveDebugState = new Map(); // mesh.uniqueId -> { mesh, isVisible, visibility, material }
@@ -253,8 +256,21 @@ export class DebugManager {
       saved.box?.dispose();
     }
     this._colliderDebugState.clear();
+
+    for (const saved of this._polylineColliderDebugState.values()) {
+      saved.viz?.dispose();
+    }
+    this._polylineColliderDebugState.clear();
+
     this._colliderDebugMat?.dispose();
     this._colliderDebugMat = null;
+
+    for (const saved of this._truckBoxDebugState.values()) {
+      saved.box?.dispose();
+    }
+    this._truckBoxDebugState.clear();
+    this._truckBoxDebugMat?.dispose();
+    this._truckBoxDebugMat = null;
 
     this._store.showBridgeDriveSurfaces = false;
     this._bridgeDriveDebugEnabled = false;
@@ -319,6 +335,154 @@ export class DebugManager {
       if (mesh && !mesh.isDisposed() && mesh.metadata?.truckCollider === true) continue;
       box?.dispose();
       this._colliderDebugState.delete(id);
+    }
+  }
+
+  /**
+   * Draw the solid a poly wall/curb actually collides against.
+   *
+   * These meshes carry no `truckCollider` box — StaticBodyCollisionManager
+   * resolves the truck against `metadata.polylineCollider`, an analytic thick
+   * centerline ribbon (xs/zs ± halfThick, botY..topY per sample) that is often
+   * fully buried inside the visible ribbon. This sweeps a translucent volume
+   * along that exact data so the collider is visible again in debug mode.
+   */
+  _updatePolylineColliderDebugMeshes() {
+    if (!this._scene) return;
+    this._ensureColliderDebugMaterial();
+
+    const meshes = this._scene.meshes.filter(mesh =>
+      mesh?.metadata?.polylineCollider != null &&
+      !mesh.isDisposed() &&
+      mesh.isEnabled()
+    );
+
+    for (const mesh of meshes) {
+      if (this._polylineColliderDebugState.has(mesh.uniqueId)) continue;
+      const viz = this._buildPolylineColliderViz(mesh.metadata.polylineCollider, mesh.uniqueId);
+      if (!viz) continue;
+      viz.material = this._colliderDebugMat;
+      viz.isPickable = false;
+      viz.doNotSerialize = true;
+      this._polylineColliderDebugState.set(mesh.uniqueId, { mesh, viz });
+    }
+
+    for (const [id, saved] of this._polylineColliderDebugState.entries()) {
+      const { mesh, viz } = saved;
+      if (mesh && !mesh.isDisposed() && mesh.metadata?.polylineCollider != null) continue;
+      viz?.dispose();
+      this._polylineColliderDebugState.delete(id);
+    }
+  }
+
+  /** Build a closed translucent tube along a polylineCollider's centerline. */
+  _buildPolylineColliderViz(c, uid) {
+    const xs = c.xs, zs = c.zs;
+    const n = xs?.length ?? 0;
+    if (n < 2) return null;
+    const halfThick = c.halfThick ?? 0.25;
+    const closed = c.closed === true;
+
+    // Per-sample outward normal (tangent rotated +90° in XZ).
+    const nx = new Array(n), nz = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const ip = closed ? (i - 1 + n) % n : Math.max(0, i - 1);
+      const iN = closed ? (i + 1) % n : Math.min(n - 1, i + 1);
+      let tx = xs[iN] - xs[ip], tz = zs[iN] - zs[ip];
+      const tl = Math.hypot(tx, tz) || 1;
+      nx[i] = -tz / tl;
+      nz[i] = tx / tl;
+    }
+
+    // 4 verts per sample: left/right rails at top and bottom.
+    const positions = [];
+    for (let i = 0; i < n; i++) {
+      const top = c.topY?.[i] ?? 0;
+      const bot = c.botY?.[i] ?? (top - 2);
+      const lx = xs[i] + nx[i] * halfThick, lz = zs[i] + nz[i] * halfThick;
+      const rx = xs[i] - nx[i] * halfThick, rz = zs[i] - nz[i] * halfThick;
+      positions.push(lx, top, lz,  rx, top, rz,  lx, bot, lz,  rx, bot, rz);
+    }
+
+    const indices = [];
+    const quad = (a, b, c2, d) => indices.push(a, b, c2, a, c2, d);
+    const segs = closed ? n : n - 1;
+    for (let i = 0; i < segs; i++) {
+      const a = i * 4, b = ((i + 1) % n) * 4;
+      quad(a + 0, a + 2, b + 2, b + 0); // left face
+      quad(a + 1, b + 1, b + 3, a + 3); // right face
+      quad(a + 0, b + 0, b + 1, a + 1); // top
+      quad(a + 2, a + 3, b + 3, b + 2); // bottom
+    }
+    if (!closed) {
+      const e = (n - 1) * 4;
+      quad(0, 1, 3, 2);           // start cap
+      quad(e + 1, e + 0, e + 2, e + 3); // end cap
+    }
+
+    const mesh = new Mesh(`dbgPolylineCollider_${uid}`, this._scene);
+    const vd = new VertexData();
+    vd.positions = positions;
+    vd.indices = indices;
+    const normals = [];
+    VertexData.ComputeNormals(positions, indices, normals);
+    vd.normals = normals;
+    vd.applyToMesh(mesh);
+    return mesh;
+  }
+
+  _ensureTruckBoxDebugMaterial() {
+    if (this._truckBoxDebugMat || !this._scene) return;
+    const mat = new StandardMaterial('dbgTruckPhysicsBoxMat', this._scene);
+    mat.diffuseColor = new Color3(0.15, 1.0, 0.4);
+    mat.emissiveColor = new Color3(0.1, 0.7, 0.3);
+    mat.alpha = 0.25;
+    mat.backFaceCulling = false;
+    this._truckBoxDebugMat = mat;
+  }
+
+  /**
+   * Overlay a translucent box on every truck's physics collider (player + AI).
+   *
+   * The collider is the invisible `truck` box mesh — narrower and shorter than
+   * the visual model (see Truck: the wheelbase/track are wider than the box).
+   * Parenting a matching box to it keeps the outline glued to the truck so the
+   * gap between what you see and what actually collides is obvious.
+   */
+  _updateTruckBoxDebugMeshes() {
+    if (!this._scene) return;
+    this._ensureTruckBoxDebugMaterial();
+
+    const boxes = this._scene.meshes.filter(mesh =>
+      mesh?.metadata?.truckPhysicsBox === true &&
+      !mesh.isDisposed()
+    );
+
+    for (const mesh of boxes) {
+      if (this._truckBoxDebugState.has(mesh.uniqueId)) continue;
+
+      const bb = mesh.getBoundingInfo().boundingBox;
+      const min = bb.minimum;
+      const max = bb.maximum;
+      const box = MeshBuilder.CreateBox(`dbgTruckBox_${mesh.uniqueId}`, {
+        width:  Math.max(1e-4, max.x - min.x),
+        height: Math.max(1e-4, max.y - min.y),
+        depth:  Math.max(1e-4, max.z - min.z),
+      }, this._scene);
+      box.parent = mesh;
+      box.position.set((min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2);
+      box.material = this._truckBoxDebugMat;
+      box.isPickable = false;
+      box.doNotSerialize = true;
+
+      this._truckBoxDebugState.set(mesh.uniqueId, { mesh, box });
+    }
+
+    for (const [id, saved] of this._truckBoxDebugState.entries()) {
+      const { mesh, box } = saved;
+      if (mesh && !mesh.isDisposed() && mesh.metadata?.truckPhysicsBox === true) continue;
+      box?.dispose();
+      this._truckBoxDebugState.delete(id);
     }
   }
 
@@ -399,6 +563,8 @@ export class DebugManager {
   updateCollisionDebugOnly() {
     if (!this._store.visible) return;
     this._updateCollisionDebugMeshes();
+    this._updatePolylineColliderDebugMeshes();
+    this._updateTruckBoxDebugMeshes();
     this._updateBridgeDriveDebugMeshes();
     this._updateTopologyDebugFields();
   }
@@ -475,24 +641,17 @@ export class DebugManager {
 
     // Keep collider visualisation in sync while debug is enabled.
     this._updateCollisionDebugMeshes();
+    this._updatePolylineColliderDebugMeshes();
+    this._updateTruckBoxDebugMeshes();
     this._updateBridgeDriveDebugMeshes();
     this._updateTopologyDebugFields();
 
     if (!debugInfo) return;
 
     // ---- 3-D visuals --------------------------------------------------------
-    if (truck && truck !== this._trackedTruck) {
-      if (this._trackedTruck) {
-        this._trackedTruck.mesh.isVisible = false;
-        this._trackedTruck.body?._visualRoot && (this._trackedTruck.body._visualRoot.isVisible = true);
-        this._trackedTruck.body?._wheelRoot && (this._trackedTruck.body._wheelRoot.isVisible = true);
-      }
-      truck.mesh.isVisible = true;
-      truck.mesh.showBoundingBox = false;
-      truck.body?._visualRoot && (truck.body._visualRoot.isVisible = false);
-      truck.body?._wheelRoot && (truck.body._wheelRoot.isVisible = false);
-      this._trackedTruck = truck;
-    }
+    // The translucent collider overlay (see _updateTruckBoxDebugMeshes) sits on
+    // top of the still-visible truck model, so nothing here swaps the puppet out.
+    if (truck) this._trackedTruck = truck;
 
     // Normal arrow — draws from truck centre in the direction of the floor normal.
     const normal = truck?.terrainPhysics?.floorNormal;

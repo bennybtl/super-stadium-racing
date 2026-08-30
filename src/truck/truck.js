@@ -234,6 +234,8 @@ export class Truck {
     // Force Euler rotation path. If a quaternion is present, Babylon ignores mesh.rotation.
     mesh.rotationQuaternion = null;
     mesh.isVisible = false;  // visual puppet replaces this
+    // Lets the debug overlay find every truck's collision box (player + AI).
+    mesh.metadata = { ...(mesh.metadata ?? {}), truckPhysicsBox: true };
     return mesh;
   }
 

@@ -11,9 +11,9 @@
     "scaling":  [1, 1, 1]
   },
   "physicsBox": {
-    "width": 1.5,
+    "width": 2.0,
     "height": 0.8,
-    "depth": 3.0
+    "depth": 3.8
   },
   "wheels": {
     "trackWidth": 2.4,
