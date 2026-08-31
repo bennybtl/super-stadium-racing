@@ -132,6 +132,14 @@ export class Obstacle {
       : getDefaultMass(spec, this.count);
     this.radius = spec.contactRadius * safeScale;
     this.mass = safeMass;
+    // World-space half-extents and yaw of the physics body — used by
+    // ObstacleManager's oriented truck-overlap test.
+    this.halfExtents = {
+      x: halfExtents.x * safeScale,
+      y: halfExtents.y * safeScale,
+      z: halfExtents.z * safeScale,
+    };
+    this.angle = angle;
 
     const centerY = groundY + (halfExtents.y * safeScale);
 

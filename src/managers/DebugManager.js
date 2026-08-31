@@ -442,12 +442,13 @@ export class DebugManager {
   }
 
   /**
-   * Overlay a translucent box on every truck's physics collider (player + AI).
+   * Overlay a translucent box on every truck's collision proxy (player + AI).
    *
-   * The collider is the invisible `truck` box mesh — narrower and shorter than
-   * the visual model (see Truck: the wheelbase/track are wider than the box).
-   * Parenting a matching box to it keeps the outline glued to the truck so the
-   * gap between what you see and what actually collides is obvious.
+   * Drawn from `metadata.chassisBox` — the box StaticBodyCollisionManager
+   * actually resolves against, whose bottom is lifted TRUCK_COLLISION_STEP_LIFT
+   * off the ride datum (top unchanged) so tyres roll up low lips. It is
+   * narrower and shorter than the visual model; parenting keeps it glued to the
+   * truck so the gap between what you see and what collides is obvious.
    */
   _updateTruckBoxDebugMeshes() {
     if (!this._scene) return;
@@ -464,13 +465,16 @@ export class DebugManager {
       const bb = mesh.getBoundingInfo().boundingBox;
       const min = bb.minimum;
       const max = bb.maximum;
+      const cb = mesh.metadata?.chassisBox;
+      const boxHeight = cb ? Math.max(1e-4, cb.halfHeight * 2) : Math.max(1e-4, max.y - min.y);
+      const boxCenterY = cb ? cb.offsetY : (min.y + max.y) / 2;
       const box = MeshBuilder.CreateBox(`dbgTruckBox_${mesh.uniqueId}`, {
         width:  Math.max(1e-4, max.x - min.x),
-        height: Math.max(1e-4, max.y - min.y),
+        height: boxHeight,
         depth:  Math.max(1e-4, max.z - min.z),
       }, this._scene);
       box.parent = mesh;
-      box.position.set((min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2);
+      box.position.set((min.x + max.x) / 2, boxCenterY, (min.z + max.z) / 2);
       box.material = this._truckBoxDebugMat;
       box.isPickable = false;
       box.doNotSerialize = true;

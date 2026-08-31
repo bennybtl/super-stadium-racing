@@ -220,7 +220,7 @@ const heightLabel = computed(() => (
 ));
 
 const heightRange = computed(() => (
-  editor.actionZone.fireworkMode === 'shell' ? { min: 8, max: 60 } : { min: 3, max: 25 }
+  editor.actionZone.fireworkMode === 'shell' ? { min: 12, max: 60 } : { min: 8, max: 40 }
 ));
 
 const modeHint = computed(() => ({

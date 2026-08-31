@@ -12,6 +12,17 @@ export const TRUCK_WIDTH = 3.0; // full box width (1.5)
 export const TRUCK_DEPTH = 4.0; // full box depth (3.0)
 export const TRUCK_RADIUS = Math.sqrt((TRUCK_WIDTH/2)**2 + (TRUCK_DEPTH/2)**2); // half-diagonal of 1.5×3.0 box, for collision purposes
 
+// How far to lift the *bottom* of the static/truck-truck collision box off the
+// truck's ride datum, keeping the box top fixed. The truck's flat box bottom
+// otherwise sits at ride height and catches on any lip taller than a few cm —
+// drive-box seams, curbs, low props — where the rounded tyres should just roll
+// up. The ride height (where the truck visually sits, TerrainPhysics) and the
+// visual model are unaffected; only the collision proxy moves.
+// 0 = legacy behaviour (box bottom at ride height). At 0.3 the climbable step
+// works out to ~0.38 m (wheel-radius scale) once the resolver's Minkowski
+// inflation is accounted for.
+export const TRUCK_COLLISION_STEP_LIFT = 0.3;
+
 // Groundedness is a 0..1 wheel-contact factor. Systems engage at increasing
 // contact along this ladder — kept here so the thresholds read consistently
 // across Controls, DriftPhysics, and TerrainPhysics instead of scattered literals.

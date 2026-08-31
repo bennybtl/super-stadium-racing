@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { Obstacle, normalizeObstacleType } from "../objects/Obstacle.js";
 import { TerrainQuery } from "./TerrainQuery.js";
-import { TRUCK_RADIUS } from "../constants.js";
+import { TRUCK_RADIUS, TRUCK_WIDTH, TRUCK_DEPTH, TRUCK_HALF_HEIGHT } from "../constants.js";
 /**
  * ObstacleManager — creates and manages movable obstacles on the track.
  *
@@ -47,10 +47,13 @@ export class ObstacleManager {
 
     for (const stack of this._stacks) {
       const sp = stack.position;
+      const he = stack.halfExtents ?? { x: stack.radius ?? 1, y: 1, z: stack.radius ?? 1 };
+      const obsAngle = stack.angle ?? stack.body?.rotation.y ?? 0;
 
-      // Cheap XZ reject before intersectsMesh, which refreshes world bounding
-      // info on both meshes. Nearly every pair fails this and costs 3 multiplies.
-      const rejectDist = (stack.radius ?? 1) + TRUCK_RADIUS;
+      // Cheap circle reject before the oriented test. Uses the obstacle's true
+      // half-diagonal so a long wall is never rejected while its end still
+      // overlaps the truck.
+      const rejectDist = Math.hypot(he.x, he.z) + TRUCK_RADIUS;
       const rejectDistSq = rejectDist * rejectDist;
 
       for (const truckData of trucks) {
@@ -63,7 +66,18 @@ export class ObstacleManager {
         const distSq = dx * dx + dz * dz;
         if (distSq > rejectDistSq) continue;
 
-        if (!stack.body.intersectsMesh(truck.mesh, false)) continue;
+        // Vertical overlap: obstacle body vs truck box.
+        const truckHalfY = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
+        if (Math.abs(sp.y - tp.y) > he.y + truckHalfY) continue;
+
+        // Oriented (OBB) XZ overlap. Replaces an AABB intersectsMesh test that
+        // over-reported by a couple of metres whenever either box was turned
+        // off-axis — the "hits the long side too early" on a rotated wall.
+        if (!this._obbOverlapXZ(
+          tp, truck.state.heading,
+          (truck.width ?? TRUCK_WIDTH) / 2, (truck.depth ?? TRUCK_DEPTH) / 2,
+          sp, obsAngle, he.x, he.z,
+        )) continue;
 
         const dist = Math.sqrt(distSq);
         if (dist < 0.01) continue;
@@ -94,6 +108,28 @@ export class ObstacleManager {
         vel.z *= (1 - slowFactor);
       }
     }
+  }
+
+  /**
+   * 2D oriented-box overlap in the XZ plane (separating-axis test). Box yaw
+   * follows the mesh.rotation.y convention trucks and obstacle bodies share:
+   * local +X (half hx) = (cos a, −sin a), local +Z (half hz) = (sin a, cos a).
+   */
+  _obbOverlapXZ(cA, angA, hxA, hzA, cB, angB, hxB, hzB) {
+    const axAx = Math.cos(angA), axAz = -Math.sin(angA);
+    const azAx = Math.sin(angA), azAz = Math.cos(angA);
+    const axBx = Math.cos(angB), axBz = -Math.sin(angB);
+    const azBx = Math.sin(angB), azBz = Math.cos(angB);
+    const dx = cB.x - cA.x, dz = cB.z - cA.z;
+
+    const axes = [[axAx, axAz], [azAx, azAz], [axBx, axBz], [azBx, azBz]];
+    for (const [lx, lz] of axes) {
+      const sep = Math.abs(dx * lx + dz * lz);
+      const rA = hxA * Math.abs(axAx * lx + axAz * lz) + hzA * Math.abs(azAx * lx + azAz * lz);
+      const rB = hxB * Math.abs(axBx * lx + axBz * lz) + hzB * Math.abs(azBx * lx + azBz * lz);
+      if (sep > rA + rB) return false;
+    }
+    return true;
   }
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────

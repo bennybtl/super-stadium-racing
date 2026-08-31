@@ -14,7 +14,7 @@ import { DriftPhysics } from "./DriftPhysics.js";
 import { DEFAULT_HANDLING, resolveHandling } from "./DriftTuning.js";
 import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
-import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH } from "../constants.js"; // used as fallback defaults only
+import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH, TRUCK_COLLISION_STEP_LIFT } from "../constants.js"; // used as fallback defaults only
 import { UPGRADES } from "../managers/UpgradeStorage.js";
 import { TERRAIN_TYPES } from "../terrain.js";
 
@@ -84,10 +84,23 @@ export class Truck {
     this.halfHeight = this.height / 2;
     // Half-diagonal of the XZ footprint — used by wall and tire-stack collision
     this.radius     = Math.sqrt((this.width / 2) ** 2 + (this.depth / 2) ** 2);
-    
+
+    // The box the chassis presents to static track geometry (walls excepted —
+    // those use the polyline path). Distinct from `halfHeight`, which stays the
+    // ride datum TerrainPhysics anchors to and the size truck-truck contact
+    // uses. STEP_LIFT raises this box's *bottom* off the ride datum so a truck
+    // rides up low lips/seams instead of the flat bottom catching; the box top
+    // is unchanged, and offsetY re-centres the now-shorter box.
+    this.chassisBox = {
+      halfHeight: this.halfHeight - TRUCK_COLLISION_STEP_LIFT / 2,
+      offsetY:    TRUCK_COLLISION_STEP_LIFT / 2,
+    };
+
     // Create mesh and physics
     this.mesh = this.createMesh();
     this.physics = this.createPhysics();
+    // Surface the chassis box on the mesh so the debug overlay can draw it.
+    this.mesh.metadata = { ...(this.mesh.metadata ?? {}), chassisBox: this.chassisBox };
     
     // Initialize state
     this.state = this.createState();

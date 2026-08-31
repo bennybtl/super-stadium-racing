@@ -1,6 +1,5 @@
 import { Matrix, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3 } from "@babylonjs/core";
 import { BridgeMesh } from "./BridgeMesh.js";
-import { TRUCK_HALF_HEIGHT } from "../constants.js";
 
 // Extra depth below the lowest terrain corner so a solid-base box never shows
 // a gap between its sides and the ground.
@@ -101,9 +100,9 @@ export function deriveDriveBoxGrid(feature, track) {
  * DriveBox — a parametric drivable box or wedge (ramps, boxes, thin flat
  * bridges). Internally composes a BridgeMesh built from a derived 2×2 grid,
  * inheriting its material, drive-surface registration, topology nodes, and
- * terrain seams — plus an invisible side collider (see _buildCollider) on boxes
- * tall enough to need one, so trucks bump off the faces instead of being lifted
- * onto the top by the floor raycast.
+ * terrain seams — plus an invisible side collider (see _buildCollider) matching
+ * the slab, so trucks bump off the faces instead of being lifted onto the top
+ * by the floor raycast.
  *
  * Feature format:
  *   {
@@ -142,28 +141,23 @@ export class DriveBox {
   }
 
   /**
-   * One oriented box collider for the sides, rolled about its local Z for a
+   * One oriented box collider matching the slab, rolled about its local Z for a
    * wedge (roll applies before yaw in Babylon's YawPitchRoll order) so it hugs
    * the ramp instead of walling off its bounding box.
    *
-   * Its top is inset TRUCK_HALF_HEIGHT below the drive surface, because
-   * StaticBodyCollisionManager inflates every collider by the truck's extents
-   * (Minkowski sum) before resolving. That inflation puts the effective wall top
-   * back at the drive surface exactly, which is what we want: a truck whose body
-   * sits at or above the top surface never collides, so arriving from a ramp or
-   * an adjoining box passes straight on, while anything genuinely below the top
-   * is blocked by the side faces.
-   *
-   * A slab thinner than TRUCK_HALF_HEIGHT gets no collider at all — there is no
-   * part of it a truck can be beside without also being under it. Those behave
-   * like a plain bridge deck: drive under freely, drive on top via the raycast.
+   * The collider spans the real slab — bottom to drive surface — with no inset.
+   * "A truck that has reached the deck passes; one below it is blocked" comes
+   * from the truck side now: StaticBodyCollisionManager resolves against the
+   * chassis box (TRUCK_COLLISION_STEP_LIFT), whose lifted bottom clears a
+   * surface the truck has climbed onto (or a low slab it can drive over) while
+   * still catching the faces of anything genuinely taller than a wheel.
    */
   _buildCollider(feature, derived, scene) {
     const { centerX, centerZ, width, depth, rotation = 0 } = feature;
     const { heights, thickness } = derived;
     const [h00, h01, h10, h11] = heights;
 
-    const colliderHeight = thickness - TRUCK_HALF_HEIGHT;
+    const colliderHeight = thickness;
     if (colliderHeight <= 0.05) return;
 
     // Read the finished top surface rather than the wedge rise alone, so the
@@ -175,7 +169,7 @@ export class DriveBox {
     // Babylon's rotation.y is the opposite sign of the _rotateVector convention.
     // Roll (about local Z) tilts the surface along local X; pitch (about local X)
     // tilts it along local Z — exact for either alone, a close approximation for
-    // the combination, which the TRUCK_HALF_HEIGHT inset absorbs.
+    // the combination (the chassis box's STEP_LIFT absorbs the small error).
     const yaw = -rotation * Math.PI / 180;
     const roll = Math.atan(gradX);
     const pitch = -Math.atan(gradZ);
@@ -193,14 +187,14 @@ export class DriveBox {
     box.isPickable = false;
     box.rotation.set(pitch, yaw, roll);
 
-    // Sit the box's top-center at the surface centroid, lowered by the inset.
+    // Sit the box's top-center at the surface centroid (the drive surface).
     const topOffset = Vector3.TransformNormal(
       new Vector3(0, colliderHeight / 2, 0),
       Matrix.RotationYawPitchRoll(yaw, pitch, roll)
     );
     box.position = new Vector3(
       centerX - topOffset.x,
-      centroidY - TRUCK_HALF_HEIGHT - topOffset.y,
+      centroidY - topOffset.y,
       centerZ - topOffset.z
     );
 

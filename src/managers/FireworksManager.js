@@ -1,5 +1,5 @@
 import { Vector3, Color4, ParticleSystem } from "@babylonjs/core";
-import { getSharedCloudTexture } from "../truck/ParticleEffects.js";
+import { getSharedStarTexture, getSharedFlameTexture } from "../truck/ParticleEffects.js";
 import { isPointInPolygon } from "../polyline-utils.js";
 import { FireworkLaunchers } from "../objects/FireworkLaunchers.js";
 import { resolveSparkColor, DEFAULT_SPARK_COLOR } from "../objects/sparkColors.js";
@@ -43,10 +43,14 @@ const SPARK_EMIT_RATE = 400;
 const SPARK_MAX_LIFETIME = 1.1;
 /** Gravity on fountain sparks (downward-positive) — reach is solved against it. */
 const SPARK_GRAVITY = 9;
-const FLAME_EMIT_RATE = 260;
-const FLAME_MAX_LIFETIME = 0.6;
-/** Same convention, negative: hot gas keeps climbing instead of falling. */
-const FLAME_GRAVITY = -1.5;
+const FLAME_EMIT_RATE = 420;
+const FLAME_MAX_LIFETIME = 1.5;
+/**
+ * Downward-positive, like the sparks. Most of the "shoots fast then slows as it
+ * rises" comes from the velocity gradient in _createFlameJet; this light gravity
+ * just curls the head over at the top like a real flame cannon.
+ */
+const FLAME_GRAVITY = 5;
 
 // =============================================================================
 
@@ -253,10 +257,9 @@ export class FireworksManager {
     if (!muzzles.length) return;
 
     const gravity = mode === 'flame' ? FLAME_GRAVITY : SPARK_GRAVITY;
-    // Flame climbs under negative gravity, so fall back to a plain speed for it.
-    const power = gravity > 0
-      ? Math.sqrt(2 * gravity * Math.max(1, reach))
-      : Math.max(10, reach * 1.55);
+    // Launch speed that decelerates to zero at `reach` under gravity alone. Flame
+    // gets a boost on top since its velocity gradient also scrubs speed as it climbs.
+    const power = Math.sqrt(2 * gravity * Math.max(1, reach)) * (mode === 'flame' ? 2.2 : 1);
 
     for (const muzzle of muzzles) {
       const jet = this._acquireJet(mode);
@@ -401,7 +404,7 @@ export class FireworksManager {
   _createTrail(index) {
     const emitter = new Vector3();
     const system = new ParticleSystem(`fwTrail${index}`, 260, this.scene);
-    system.particleTexture = getSharedCloudTexture(this.scene);
+    system.particleTexture = getSharedStarTexture(this.scene);
     system.emitter = emitter;
     system.minEmitBox = new Vector3(-0.15, -0.15, -0.15);
     system.maxEmitBox = new Vector3(0.15, 0.15, 0.15);
@@ -428,7 +431,7 @@ export class FireworksManager {
   _createSparkJet(index) {
     const emitter = new Vector3();
     const system = new ParticleSystem(`fwSparks${index}`, 500, this.scene);
-    system.particleTexture = getSharedCloudTexture(this.scene);
+    system.particleTexture = getSharedStarTexture(this.scene);
     system.emitter = emitter;
     system.minEmitBox = new Vector3(-0.1, 0, -0.1);
     system.maxEmitBox = new Vector3(0.1, 0, 0.1);
@@ -453,30 +456,40 @@ export class FireworksManager {
     return jet;
   }
 
-  /** Flame blast: a fat, short-lived column of fire that keeps rising as it fades. */
+  /** Flame cannon: a tall, narrow jet that fires fast, slows as it climbs, and billows at the top. */
   _createFlameJet(index) {
     const emitter = new Vector3();
-    const system = new ParticleSystem(`fwFlame${index}`, 420, this.scene);
-    system.particleTexture = getSharedCloudTexture(this.scene);
+    const system = new ParticleSystem(`fwFlame${index}`, 900, this.scene);
+    system.particleTexture = getSharedFlameTexture(this.scene);
     system.emitter = emitter;
-    system.minEmitBox = new Vector3(-0.2, 0, -0.2);
-    system.maxEmitBox = new Vector3(0.2, 0, 0.2);
+    // Tight base — the column stays skinny relative to how high it throws.
+    system.minEmitBox = new Vector3(-0.12, 0, -0.12);
+    system.maxEmitBox = new Vector3(0.12, 0, 0.12);
 
     system.color1 = new Color4(1.0, 0.85, 0.35, 0.9);
     system.color2 = new Color4(1.0, 0.35, 0.05, 0.8);
     system.colorDead = new Color4(0.35, 0.06, 0.0, 0);
 
-    system.minSize = 1.0;
-    system.maxSize = 3.0;
-    system.minLifeTime = 0.22;
+    system.minSize = 0.5;
+    system.maxSize = 1.3;
+    system.minLifeTime = 0.45;
     system.maxLifeTime = FLAME_MAX_LIFETIME;
+    // Small and dense at the muzzle, ballooning into a soft head as it burns out.
+    system.addSizeGradient(0.0, 0.35);
+    system.addSizeGradient(0.35, 1.0);
+    system.addSizeGradient(1.0, 2.6);
+    // The launch speed decays to a crawl over each particle's life — this is what
+    // makes the jet shoot then hang in the air near the top.
+    system.addVelocityGradient(0.0, 1.0);
+    system.addVelocityGradient(0.25, 0.55);
+    system.addVelocityGradient(1.0, 0.08);
 
     system.emitRate = 0;
     system.blendMode = ParticleSystem.BLENDMODE_ADD;
-    // Negative gravity: the column keeps climbing and widening as it burns out.
     system.gravity = new Vector3(0, -FLAME_GRAVITY, 0);
-    system.direction1 = new Vector3(-0.35, 1, -0.35);
-    system.direction2 = new Vector3(0.35, 1, 0.35);
+    // Narrow upward cone keeps the jet columnar instead of spraying into a fan.
+    system.direction1 = new Vector3(-0.1, 1, -0.1);
+    system.direction2 = new Vector3(0.1, 1, 0.1);
     system.minAngularSpeed = 0;
     system.maxAngularSpeed = Math.PI;
     system.updateSpeed = 0.012;
@@ -488,7 +501,7 @@ export class FireworksManager {
   _createBurst(index) {
     const emitter = new Vector3();
     const system = new ParticleSystem(`fwBurst${index}`, BURST_PARTICLES + 40, this.scene);
-    system.particleTexture = getSharedCloudTexture(this.scene);
+    system.particleTexture = getSharedStarTexture(this.scene);
     system.emitter = emitter;
     // A zero-range sphere emitter puts every particle on one shell and sends it
     // straight outward — the radial pop a firework needs.

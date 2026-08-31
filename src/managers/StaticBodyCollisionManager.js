@@ -26,6 +26,8 @@ export class StaticBodyCollisionManager {
     this._closestHit = { cx: 0, cz: 0, i: 0, j: 0, t: 0, distSq: 0 };
     this._frame = { frictionApplied: false };
     this._normal = new Vector3();
+    this._proxyCur = new Vector3();
+    this._proxyPrev = new Vector3();
   }
 
   dispose() {
@@ -159,14 +161,22 @@ export class StaticBodyCollisionManager {
     const world = mesh.computeWorldMatrix(true);
     world.invertToRef(this._invWorld);
 
-    const curLocal = Vector3.TransformCoordinates(truck.mesh.position, this._invWorld);
-    const prevLocal = Vector3.TransformCoordinates(prevPos, this._invWorld);
+    // Resolve against the collision proxy, not the pose: its bottom is lifted
+    // TRUCK_COLLISION_STEP_LIFT off the ride datum (box top unchanged), so a
+    // truck rides up a low lip/seam instead of the flat bottom catching it.
+    const offsetY = truck.chassisBox?.offsetY ?? 0;
+    const halfHeight = truck.chassisBox?.halfHeight ?? truck.halfHeight ?? TRUCK_HALF_HEIGHT;
+    this._proxyCur.copyFrom(truck.mesh.position);
+    this._proxyCur.y += offsetY;
+    this._proxyPrev.copyFrom(prevPos);
+    this._proxyPrev.y += offsetY;
+
+    const curLocal = Vector3.TransformCoordinates(this._proxyCur, this._invWorld);
+    const prevLocal = Vector3.TransformCoordinates(this._proxyPrev, this._invWorld);
 
     const bb = mesh.getBoundingInfo().boundingBox;
     const min = bb.minimum;
     const max = bb.maximum;
-
-    const halfHeight = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
 
     // Inflate the collider by the truck's oriented half-extents projected onto
     // each collider axis (Minkowski sum), not by its circumradius. Using the
@@ -267,6 +277,7 @@ export class StaticBodyCollisionManager {
       return;
     }
 
+    // Still in proxy space (pose + offsetY) — un-shifted at the writeback below.
     const newWorld = Vector3.TransformCoordinates(curLocal, world);
 
     // Ceiling guard: if underside resolution would push the truck below the
@@ -275,7 +286,9 @@ export class StaticBodyCollisionManager {
     if (axis === "y" && sign < 0) {
       const floorY = truck.terrainPhysics?.lastFloorY;
       if (Number.isFinite(floorY)) {
-        const minCenterY = floorY + halfHeight + SKIN;
+        // proxy-space floor = ride datum + the same offsetY the proxy carries.
+        const rideAnchor = truck.halfHeight ?? TRUCK_HALF_HEIGHT;
+        const minCenterY = floorY + rideAnchor + offsetY + SKIN;
         if (newWorld.y < minCenterY) {
           newWorld.x = prevPos.x;
           newWorld.z = prevPos.z;
@@ -288,6 +301,7 @@ export class StaticBodyCollisionManager {
       }
     }
 
+    newWorld.y -= offsetY;
     truck.mesh.position.copyFrom(newWorld);
 
     if (mesh.metadata?.truckColliderDebug) {

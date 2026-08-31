@@ -3,15 +3,39 @@ import { TERRAIN_TYPES } from "../terrain.js";
 import { SPLASH_MIN_DEPTH, DEEP_SPLASH_DEPTH } from "../constants.js";
 
 import cloudTextureUrl from "../assets/cloud.png";
+import starTextureUrl from "../assets/star.png";
+import flameTextureUrl from "../assets/flame.png";
 const CLOUD_TEXTURE_URL = cloudTextureUrl;
+const STAR_TEXTURE_URL = starTextureUrl;
+const FLAME_TEXTURE_URL = flameTextureUrl;
 
 const CLOUD_TEXTURES = new WeakMap();
+const STAR_TEXTURES = new WeakMap();
+const FLAME_TEXTURES = new WeakMap();
 
 export function getSharedCloudTexture(scene) {
   let texture = CLOUD_TEXTURES.get(scene);
   if (!texture) {
     texture = new Texture(CLOUD_TEXTURE_URL, scene);
     CLOUD_TEXTURES.set(scene, texture);
+  }
+  return texture;
+}
+
+export function getSharedStarTexture(scene) {
+  let texture = STAR_TEXTURES.get(scene);
+  if (!texture) {
+    texture = new Texture(STAR_TEXTURE_URL, scene);
+    STAR_TEXTURES.set(scene, texture);
+  }
+  return texture;
+}
+
+export function getSharedFlameTexture(scene) {
+  let texture = FLAME_TEXTURES.get(scene);
+  if (!texture) {
+    texture = new Texture(FLAME_TEXTURE_URL, scene);
+    FLAME_TEXTURES.set(scene, texture);
   }
   return texture;
 }
