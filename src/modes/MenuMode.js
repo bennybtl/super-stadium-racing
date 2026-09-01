@@ -29,6 +29,9 @@ const NO_INPUT = Object.freeze({ forward: false, back: false, left: false, right
  *   onStartEditor → goToEditor
  */
 export class MenuMode extends DriveMode {
+  // Behind the menus this builds the attract-mode demo race, not a "Menu".
+  static loadingMessage = 'Loading…';
+
   constructor(controller) {
     super(controller);
   }

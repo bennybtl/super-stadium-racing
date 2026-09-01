@@ -40,8 +40,11 @@ Promise.all([
   decorationLoader.loadAllDecorations(),
   obstacleLoader.loadAllObstacles(),
 ]).then(() => {
-  controller.switchTo(MenuMode);
-}).finally(() => {
+  // switchTo runs its own showLoading/hideLoading around the demo-race build,
+  // so the loading modal stays up until MenuMode's backdrop is actually ready.
+  return controller.switchTo(MenuMode);
+}).catch((err) => {
+  console.error(err);
   menuManager.hideLoading();
 });
 

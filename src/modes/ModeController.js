@@ -52,9 +52,11 @@ export class ModeController {
    * mode and start rendering its scene (if it returns one).
    */
   async switchTo(ModeClass, config = {}) {
+    // A mode can set a static `loadingMessage` to override the name-derived one
+    // (e.g. MenuMode builds the attract-race, which isn't a "Menu").
     const modeName = ModeClass?.name ?? 'Mode';
     const loadingLabel = modeName.replace(/Mode$/, '') || 'Scene';
-    this.menuManager.showLoading(`Loading ${loadingLabel}…`);
+    this.menuManager.showLoading(ModeClass?.loadingMessage ?? `Loading ${loadingLabel}…`);
     // Nothing is rendering while the next scene builds, so menus sit on black
     // rather than the outgoing mode's stale last frame.
     this.menuManager.setLiveBackdrop(false);

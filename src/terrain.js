@@ -22,7 +22,7 @@ export const TERRAIN_TYPES = {
     name: "packed_dirt",
     gripMultiplier: 2.0,    // Baseline
     color: TERRAIN_COLORS.packed_dirt,
-    dustIntensity: 0.15,     // Compacted — light haze
+    dustIntensity: 0.25,     // Compacted — light haze
     diffuseTexture: 'textures/packed_dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.5,
@@ -36,7 +36,7 @@ export const TERRAIN_TYPES = {
     name: "loamy_dirt",
     gripMultiplier: 0.75,    // Slides much more
     color: TERRAIN_COLORS.loamy_dirt,
-    dustIntensity: 0.3,      // Loose soil — kicks up readily
+    dustIntensity: 0.35,      // Loose soil — kicks up readily
     roosterTail: 1.0,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/loamy-soil.texture.png',
     diffuseTextureWorldUnitsPerTile: 40,
@@ -51,7 +51,7 @@ export const TERRAIN_TYPES = {
     name: "loose_dirt",
     gripMultiplier: 1.5,    // Slides more
     color: TERRAIN_COLORS.loose_dirt,
-    dustIntensity: 0.3,      // Loose — kicks up readily
+    dustIntensity: 0.35,      // Loose — kicks up readily
     roosterTail: 0.9,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/dirt.texture.png',
     diffuseTextureWorldUnitsPerTile: 30,
@@ -82,6 +82,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.water,
     smokeColor: new Color3(0.8, 0.9, 1.0), // Light blue smoke
     dustIntensity: 0,        // Uses the water-splash spray instead
+    roosterTail: 0.5,        // Tires throw a rooster tail under throttle
     dragMultiplier: 6.0,     // Very high drag
     roughness: 0,            // Smooth surface — drag is the hazard
     // diffuseTexture: 'textures/water.texture.jpg',

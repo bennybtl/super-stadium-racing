@@ -5,13 +5,17 @@ import { SPLASH_MIN_DEPTH, DEEP_SPLASH_DEPTH } from "../constants.js";
 import cloudTextureUrl from "../assets/cloud.png";
 import starTextureUrl from "../assets/star.png";
 import flameTextureUrl from "../assets/flame.png";
+import waterTextureUrl from "../assets/water-spray.png";
+
 const CLOUD_TEXTURE_URL = cloudTextureUrl;
 const STAR_TEXTURE_URL = starTextureUrl;
 const FLAME_TEXTURE_URL = flameTextureUrl;
+const WATER_TEXTURE_URL = waterTextureUrl;
 
 const CLOUD_TEXTURES = new WeakMap();
 const STAR_TEXTURES = new WeakMap();
 const FLAME_TEXTURES = new WeakMap();
+const WATER_TEXTURES = new WeakMap();
 
 export function getSharedCloudTexture(scene) {
   let texture = CLOUD_TEXTURES.get(scene);
@@ -36,6 +40,15 @@ export function getSharedFlameTexture(scene) {
   if (!texture) {
     texture = new Texture(FLAME_TEXTURE_URL, scene);
     FLAME_TEXTURES.set(scene, texture);
+  }
+  return texture;
+}
+
+export function getSharedWaterTexture(scene) {
+  let texture = WATER_TEXTURES.get(scene);
+  if (!texture) {
+    texture = new Texture(WATER_TEXTURE_URL, scene);
+    WATER_TEXTURES.set(scene, texture);
   }
   return texture;
 }
@@ -77,6 +90,7 @@ const EMITTER_SPECS = {
   },
   // Water spray off the rear sides while wading.
   splash: {
+    texture: "water",
     paired: true, sideCenter: 1.15, capacity: 180, renderingGroupId: 1,
     emitBox: { min: [-0.28, 0.45, -2.9], max: [0.28, 0.9, -1.1] },
     color: { c1: [0.8, 0.9, 1.0, 0.6], c2: [0.6, 0.8, 0.9, 0.4], dead: [0.4, 0.6, 0.8, 0] },
@@ -95,6 +109,7 @@ const EMITTER_SPECS = {
   },
   // Big white burst pulses when churning through deep water.
   deep: {
+    texture: "water",
     paired: true, sideCenter: 1.35, capacity: 380, renderingGroupId: 1,
     emitBox: { min: [-0.42, 0.55, -2.9], max: [0.42, 1.2, -1.1] },
     color: { c1: [1.0, 1.0, 1.0, 0.95], c2: [1.0, 1.0, 1.0, 0.65], dead: [1.0, 1.0, 1.0, 0] },
@@ -159,7 +174,9 @@ export class ParticleEffects {
    */
   _buildEmitter(name, spec, sideSign = 0) {
     const ps = new ParticleSystem(name, Math.round(spec.capacity * this._qualityScale), this.scene);
-    ps.particleTexture = getSharedCloudTexture(this.scene);
+    ps.particleTexture = spec.texture === "water"
+      ? getSharedWaterTexture(this.scene)
+      : getSharedCloudTexture(this.scene);
     ps.emitter = spec.worldEmitter ? Vector3.Zero() : this.mesh;
 
     const cx = (spec.sideCenter ?? 0) * sideSign;
