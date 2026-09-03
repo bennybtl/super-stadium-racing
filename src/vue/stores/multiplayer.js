@@ -28,7 +28,7 @@ export const useMultiplayerStore = defineStore('multiplayer', () => {
   // read on demand, since its `players` map isn't itself reactive.
   const roomPlayers = ref([]);
   const isHost = ref(false);
-  const settings = ref({ trackKey: null, reverse: false });
+  const settings = ref({ trackKey: null, reverse: false, laps: 3 });
 
   function syncRoom() {
     roomPlayers.value = Array.from(multiplayerClient.players.values());
@@ -62,7 +62,7 @@ export const useMultiplayerStore = defineStore('multiplayer', () => {
   }
 
   /** @returns {Promise<boolean>} true on success */
-  async function createLobby({ name, trackKey, maxClients, vehicleKey, colorKey }) {
+  async function createLobby({ name, trackKey, maxClients, vehicleKey, colorKey, laps }) {
     busy.value = true;
     error.value = null;
     try {
@@ -70,6 +70,7 @@ export const useMultiplayerStore = defineStore('multiplayer', () => {
         name: name?.trim() || `${playerName.value}'s Lobby`,
         trackKey,
         maxClients,
+        laps,
         playerName: playerName.value,
         colorKey,
         vehicleKey,
@@ -122,7 +123,7 @@ export const useMultiplayerStore = defineStore('multiplayer', () => {
     multiplayerClient.leave();
     roomPlayers.value = [];
     isHost.value = false;
-    settings.value = { trackKey: null, reverse: false };
+    settings.value = { trackKey: null, reverse: false, laps: 3 };
   }
 
   return {

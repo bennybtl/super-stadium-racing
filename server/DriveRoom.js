@@ -24,7 +24,14 @@ export class DriveRoom extends Room {
     this.settings = {
       trackKey: options.trackKey || null,
       reverse: !!options.reverse,
+      laps: Number.isFinite(options.laps) ? options.laps : 3,
     };
+    // Race progress — only exists once started. Each client tracks its own
+    // checkpoint/lap progress locally (same client-side logic as RaceMode)
+    // and self-reports lap/finish events here; this room is the single
+    // arbiter of finish order and the "everyone's done" results trigger.
+    // sessionId -> { lap, finished, totalTimeMs, fastestLapMs }
+    this.race = null;
 
     this.setMetadata({
       name: options.name || "Lobby",
@@ -54,6 +61,7 @@ export class DriveRoom extends Room {
       if (this.started || client.sessionId !== this.hostId || !data) return;
       if (typeof data.trackKey === "string") this.settings.trackKey = data.trackKey;
       if (typeof data.reverse === "boolean") this.settings.reverse = data.reverse;
+      if (Number.isFinite(data.laps)) this.settings.laps = data.laps;
       this.setMetadata({ ...this.metadata, trackKey: this.settings.trackKey });
       this.broadcast("settings", this.settings);
     });
@@ -74,8 +82,69 @@ export class DriveRoom extends Room {
       if (this.started || client.sessionId !== this.hostId) return;
       this.started = true;
       this.lock();
-      this.broadcast("start", { trackKey: this.settings.trackKey, reverse: this.settings.reverse });
+      this.race = new Map();
+      for (const id of this.players.keys()) {
+        this.race.set(id, { lap: 0, finished: false, totalTimeMs: null, fastestLapMs: null });
+      }
+      this.broadcast("start", {
+        trackKey: this.settings.trackKey,
+        reverse: this.settings.reverse,
+        laps: this.settings.laps,
+      });
     });
+
+    // Self-reported by each client as its own local checkpoint/lap tracking
+    // (same logic RaceMode uses) completes a lap. Relayed so everyone can show
+    // a shared standings HUD; this room never runs checkpoint geometry itself.
+    this.onMessage("lapCompleted", (client, data) => {
+      const progress = this.race?.get(client.sessionId);
+      if (!progress || progress.finished || !data) return;
+      progress.lap = data.lap;
+      this.broadcast("raceProgress", { id: client.sessionId, lap: data.lap }, { except: client });
+    });
+
+    this.onMessage("finished", (client, data) => {
+      const progress = this.race?.get(client.sessionId);
+      if (!progress || progress.finished) return;
+      progress.finished = true;
+      progress.totalTimeMs = data?.totalTimeMs ?? null;
+      progress.fastestLapMs = data?.fastestLapMs ?? null;
+      progress.finishPosition = this._nextFinishPosition();
+      this.broadcast("playerFinished", {
+        id: client.sessionId,
+        finishPosition: progress.finishPosition,
+        totalTimeMs: progress.totalTimeMs,
+        fastestLapMs: progress.fastestLapMs,
+      });
+      this._checkRaceOver();
+    });
+  }
+
+  _nextFinishPosition() {
+    let count = 0;
+    for (const p of this.race.values()) if (p.finished) count++;
+    return count;
+  }
+
+  /** Fire "raceOver" once every currently-connected player has finished. A
+   *  player who leaves mid-race is dropped from `this.players` (see onLeave),
+   *  so they stop counting toward "everyone" without blocking the rest. */
+  _checkRaceOver() {
+    if (!this.race) return;
+    for (const id of this.players.keys()) {
+      if (!this.race.get(id)?.finished) return;
+    }
+    const rows = Array.from(this.race.entries())
+      .filter(([id]) => this.players.has(id))
+      .sort((a, b) => a[1].finishPosition - b[1].finishPosition)
+      .map(([id, progress]) => ({
+        id,
+        name: this.players.get(id)?.name ?? "Racer",
+        finishPosition: progress.finishPosition,
+        totalTimeMs: progress.totalTimeMs,
+        fastestLapMs: progress.fastestLapMs,
+      }));
+    this.broadcast("raceOver", { rows });
   }
 
   onJoin(client, options = {}) {
@@ -104,6 +173,8 @@ export class DriveRoom extends Room {
   onLeave(client) {
     this.players.delete(client.sessionId);
     this.broadcast("playerLeft", { id: client.sessionId });
+    // The player who left may have been the only one still racing.
+    if (this.race) this._checkRaceOver();
   }
 
   onDispose() {

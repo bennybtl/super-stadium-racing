@@ -20,10 +20,19 @@
           >
             <i class="bi mr-1" :class="mp.settings.reverse ? 'bi-check-square-fill' : 'bi-square-fill'"></i> Reverse
           </button>
+          <select
+            :value="mp.settings.laps"
+            class="rounded-[8px] border-2 border-[#444] bg-[#181818] px-3 py-2 text-white pointer-events-auto"
+            @change="mp.updateSettings({ laps: Number($event.target.value) })"
+          >
+            <option v-for="n in [1, 3, 5, 10]" :key="n" :value="n">{{ n }} Lap{{ n > 1 ? 's' : '' }}</option>
+          </select>
         </div>
       </template>
       <template v-else>
-        <div class="text-sm text-white">{{ trackName }}<span v-if="mp.settings.reverse"> (Reverse)</span></div>
+        <div class="text-sm text-white">
+          {{ trackName }}<span v-if="mp.settings.reverse"> (Reverse)</span> · {{ mp.settings.laps }} Lap{{ mp.settings.laps > 1 ? 's' : '' }}
+        </div>
       </template>
     </div>
 
@@ -99,12 +108,13 @@ function onColorChange(key) {
 // Fires for every client in the room once the host starts — including the
 // host itself, so there's a single code path into MultiplayerMode regardless
 // of who triggered it.
-function onRaceStart({ trackKey, reverse }) {
+function onRaceStart({ trackKey, reverse, laps }) {
   store.startMultiplayer({
     trackKey,
     vehicleKey: store.selectedVehicle,
     playerColorKey: store.selectedPlayerColor,
     reverse: !!reverse,
+    laps: laps || 3,
   });
 }
 

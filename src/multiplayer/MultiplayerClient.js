@@ -33,10 +33,13 @@ export class MultiplayerClient {
     this.selfId = null;
     this.hostId = null;
     // Host-editable pre-start room settings (track choice, direction).
-    this.settings = { trackKey: null, reverse: false };
+    this.settings = { trackKey: null, reverse: false, laps: 3 };
     // sessionId -> { id, name, colorKey, vehicleKey, x, y, z, heading, vx, vy, vz }
     this.players = new Map();
-    this._listeners = { init: [], join: [], leave: [], state: [], start: [], settings: [], update: [] };
+    this._listeners = {
+      init: [], join: [], leave: [], state: [], start: [], settings: [], update: [],
+      raceProgress: [], playerFinished: [], raceOver: [],
+    };
   }
 
   on(event, cb) {
@@ -79,9 +82,9 @@ export class MultiplayerClient {
     }));
   }
 
-  async createLobby({ name, trackKey, maxClients = 8, playerName, colorKey, vehicleKey }) {
+  async createLobby({ name, trackKey, maxClients = 8, laps, playerName, colorKey, vehicleKey }) {
     this.room = await this.client.create(ROOM_NAME, {
-      name, trackKey, maxClients,
+      name, trackKey, maxClients, laps,
       hostName: playerName, playerName, colorKey, vehicleKey,
     });
     this._wireRoom();
@@ -100,7 +103,7 @@ export class MultiplayerClient {
     room.onMessage("init", (data) => {
       this.selfId = data.selfId;
       this.hostId = data.hostId ?? null;
-      this.settings = data.settings ?? { trackKey: null, reverse: false };
+      this.settings = data.settings ?? { trackKey: null, reverse: false, laps: 3 };
       this.players.clear();
       for (const p of data.players ?? []) this.players.set(p.id, p);
       this._emit("init", data);
@@ -139,6 +142,11 @@ export class MultiplayerClient {
       this._emit("state", data);
     });
 
+    // Race progress relay — see reportLap()/reportFinished().
+    room.onMessage("raceProgress", (data) => this._emit("raceProgress", data));
+    room.onMessage("playerFinished", (data) => this._emit("playerFinished", data));
+    room.onMessage("raceOver", (data) => this._emit("raceOver", data));
+
     room.onError((code, message) => {
       console.error("[Multiplayer] room error", code, message);
     });
@@ -147,7 +155,7 @@ export class MultiplayerClient {
       this.room = null;
       this.selfId = null;
       this.hostId = null;
-      this.settings = { trackKey: null, reverse: false };
+      this.settings = { trackKey: null, reverse: false, laps: 3 };
       this.players.clear();
     });
   }
@@ -173,12 +181,23 @@ export class MultiplayerClient {
     this.room?.send("start");
   }
 
+  /** This client's own checkpoint/lap tracking (local physics, same logic as
+   *  RaceMode) completed a lap — relayed so others' standings HUD updates. */
+  reportLap({ lap, lapTimeMs }) {
+    this.room?.send("lapCompleted", { lap, lapTimeMs });
+  }
+
+  /** This client finished all laps. */
+  reportFinished({ totalTimeMs, fastestLapMs }) {
+    this.room?.send("finished", { totalTimeMs, fastestLapMs });
+  }
+
   leave() {
     this.room?.leave();
     this.room = null;
     this.selfId = null;
     this.hostId = null;
-    this.settings = { trackKey: null, reverse: false };
+    this.settings = { trackKey: null, reverse: false, laps: 3 };
     this.players.clear();
   }
 }
