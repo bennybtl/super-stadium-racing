@@ -631,3 +631,15 @@ Place assets and config in `src/vehicles/`. `VehicleLoader.js` discovers vehicle
 - **Dev:** `npm run dev` — Vite HMR dev server
 - **Build:** `npm run build` — Vite bundle then `build:optimize` script (WAV→OGG, PNG recompression, WEBP conversion, asset URL rewriting)
 - **Deploy:** GitHub Pages via `.github/workflows/deploy-pages.yml`; `VITE_BASE_PATH` auto-configured for user/project sites
+
+## Testing
+- **`npm test`** — Vitest unit suite (`test/*.test.js`), pure-logic modules only: grid math, polyline math, championship scoring, upgrade economy, colour parsing. No Babylon scene, no DOM.
+- **`npm run check:panels` / `check:surface` / `check:walls` / `check:terrain` / `check:water`** — static/headless checks over editor panel bindings, surface topology, walls, and track data. (`check:water` and `check:terrain` currently fail on `main` — see `CLEANUP.md`.)
+- Rendering, physics, and editor interaction are verified by running the app.
+
+## Docs
+- `AGENT.md` (this file) — architecture reference.
+- `README.md` — quick start.
+- `CLEANUP.md` — maintainability review + tier'd refactor plan.
+- `docs/` — design/plan docs (`MULTIPLAYER.md`, `TERRAIN_REFACTOR.md`, `CHAMPIONSHIP_MODE.md`).
+- Scoped docs live next to their code: `src/ai/ARCHITECTURE.md`, `src/vue/MENUS.md`, `src/vehicles/VEHICLE_SETUP.md`, `src/obstacles/OBSTACLE_SETUP.md`, `src/decorations/DECORATION_SETUP.md`, `src/shaders/ground-shader.md`.
