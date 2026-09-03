@@ -3,6 +3,7 @@ import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/OBJ';
 import truckTireUrl from '../assets/models/truck-tire-v2.obj?url';
 import { basicColors } from '../constants';
+import { parseColorValue } from '../utils/mesh-color.js';
 
 // Shared vehicle-model loader for the Vue Babylon previews (TruckSelection's
 // spinner and the race-results podium). Loads the body OBJ plus four wheels
@@ -16,52 +17,19 @@ function splitUrl(url) {
   return { rootUrl: url.slice(0, idx + 1), fileName: url.slice(idx + 1) };
 }
 
-/**
- * Coerce a colour in any of the shapes the vehicle data uses (hex string,
- * [r,g,b] 0..1, { r,g,b }, { diffuse:{r,g,b} }, Color3) into a Color3.
- */
-export function parseColor(value, fallback) {
-  if (value instanceof Color3) return value.clone();
-
-  if (Array.isArray(value) && value.length === 3) {
-    return new Color3(value[0], value[1], value[2]);
-  }
-
-  if (typeof value === 'string') {
-    const normalized = value.replace('#', '').trim();
-    if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
-      const packed = parseInt(normalized, 16);
-      return new Color3(
-        ((packed >> 16) & 0xff) / 255,
-        ((packed >> 8) & 0xff) / 255,
-        (packed & 0xff) / 255,
-      );
-    }
-  }
-
-  if (value && typeof value === 'object') {
-    if (value.diffuse && value.diffuse.r != null) {
-      return new Color3(value.diffuse.r, value.diffuse.g, value.diffuse.b);
-    }
-    if (value.r != null) return new Color3(value.r, value.g, value.b);
-  }
-
-  return fallback.clone();
-}
-
 function basePlayerColor(vehicle, colorValue) {
   const defaultColor = vehicle?.defaultColor;
   const fallback = Array.isArray(defaultColor) && defaultColor.length === 3
     ? new Color3(defaultColor[0], defaultColor[1], defaultColor[2])
     : new Color3(0.8, 0.2, 0.1);
-  return parseColor(colorValue, fallback);
+  return parseColorValue(colorValue) ?? fallback.clone();
 }
 
 function colorForMesh(vehicle, mesh, baseColor) {
   const name = String(mesh.name ?? '');
   if (vehicle?.colorableMeshes?.includes(name)) return baseColor.clone();
   const baked = vehicle?.meshDefaultColors?.[name];
-  if (baked != null) return parseColor(baked, baseColor);
+  if (baked != null) return parseColorValue(baked) ?? baseColor.clone();
   return baseColor.clone();
 }
 
@@ -215,7 +183,7 @@ export function fitCameraToMeshes(camera, meshes) {
  * @param {object} vehicle  VehicleLoader definition (needs modelUrl; may carry
  *   bodyTransform, wheels, colorableMeshes, meshDefaultColors, defaultColor).
  * @param {object} [opts]
- * @param {*} [opts.colorValue]  driver colour in any parseColor shape; falls
+ * @param {*} [opts.colorValue]  driver colour in any parseColorValue shape; falls
  *   back to the vehicle's defaultColor.
  * @param {() => boolean} [opts.isStale]  polled after each await; when it turns
  *   true the partial load is disposed and the call resolves to null.

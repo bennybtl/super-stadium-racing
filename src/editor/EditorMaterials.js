@@ -1,5 +1,6 @@
 import { StandardMaterial, Color3 } from "@babylonjs/core";
 import { basicColors } from "../constants";
+import { parseColorValue } from "../utils/mesh-color.js";
 
 export { Color3 };
 
@@ -29,12 +30,7 @@ export const LINE_COLOR_SURFACE_DECAL = basicColors.white.diffuse; // matches de
  * zone types only require edits in this one file.
  */
 
-function toColor3(value) {
-  if (!value) return null;
-  if (value instanceof Color3) return value;
-  if (Array.isArray(value) && value.length >= 3) return new Color3(value[0], value[1], value[2]);
-  return null;
-}
+const toColor3 = parseColorValue;
 
 function makeMat(name, scene, { diffuse, emissive, alpha, backFaceCulling, specular } = {}) {
   const mat = new StandardMaterial(name, scene);

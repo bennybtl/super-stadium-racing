@@ -88,11 +88,6 @@ export function startGridLayoutSlot(feature, layoutIndex) {
   return { x, z, heading: feature?.heading ?? 0 };
 }
 
-/** Every laid-out slot, in layout order — what the editor draws. */
-export function startGridLayout(feature, count = MAX_GRID_SLOTS) {
-  return Array.from({ length: count }, (_, i) => startGridLayoutSlot(feature, i));
-}
-
 /**
  * Where the truck starting `raceIndex`-th goes (0 = pole). Fields larger than
  * the laid-out slots keep extending the grid pattern behind them.
