@@ -1,6 +1,9 @@
 import { Room } from "@colyseus/core";
 
 const DEFAULT_MAX_CLIENTS = 8;
+// Grace period after the first finisher before stragglers are forced to DNF
+// and the race ends anyway — mirrors RaceMode.js's single-player DNF_GRACE_MS.
+const DNF_GRACE_MS = 45_000;
 
 /**
  * DriveRoom — a thin relay, not an authoritative simulation.
@@ -32,6 +35,8 @@ export class DriveRoom extends Room {
     // arbiter of finish order and the "everyone's done" results trigger.
     // sessionId -> { lap, finished, totalTimeMs, fastestLapMs }
     this.race = null;
+    this._raceOverFired = false;
+    this._dnfTimer = null;
 
     this.setMetadata({
       name: options.name || "Lobby",
@@ -68,6 +73,7 @@ export class DriveRoom extends Room {
 
     // Any player may update their own truck/color while waiting (no upgrades yet).
     this.onMessage("updateProfile", (client, data) => {
+      if (this.started) return;
       const player = this.players.get(client.sessionId);
       if (!player || !data) return;
       if (typeof data.vehicleKey === "string") player.vehicleKey = data.vehicleKey;
@@ -83,8 +89,10 @@ export class DriveRoom extends Room {
       this.started = true;
       this.lock();
       this.race = new Map();
-      for (const id of this.players.keys()) {
-        this.race.set(id, { lap: 0, finished: false, totalTimeMs: null, fastestLapMs: null });
+      for (const [id, player] of this.players) {
+        // Captured now, not looked up later — a player who finishes and then
+        // disconnects must still show up correctly in the final results.
+        this.race.set(id, { name: player.name, lap: 0, finished: false, totalTimeMs: null, fastestLapMs: null });
       }
       this.broadcast("start", {
         trackKey: this.settings.trackKey,
@@ -116,8 +124,30 @@ export class DriveRoom extends Room {
         totalTimeMs: progress.totalTimeMs,
         fastestLapMs: progress.fastestLapMs,
       });
+
+      // First finisher starts the DNF clock for anyone still out there —
+      // without this, one stuck/AFK racer would hang the race forever.
+      if (this._dnfTimer === null && this.players.size > 1) {
+        this._dnfTimer = setTimeout(() => this._forceDnf(), DNF_GRACE_MS);
+      }
+
       this._checkRaceOver();
     });
+  }
+
+  /** Grace period elapsed since the first finish — force every still-connected,
+   *  still-unfinished racer to a DNF result (null time) and end the race. */
+  _forceDnf() {
+    this._dnfTimer = null;
+    if (!this.race || this._raceOverFired) return;
+    for (const [id, progress] of this.race) {
+      if (progress.finished || !this.players.has(id)) continue;
+      progress.finished = true;
+      progress.totalTimeMs = null;
+      progress.fastestLapMs = null;
+      progress.finishPosition = this._nextFinishPosition();
+    }
+    this._checkRaceOver();
   }
 
   _nextFinishPosition() {
@@ -128,18 +158,29 @@ export class DriveRoom extends Room {
 
   /** Fire "raceOver" once every currently-connected player has finished. A
    *  player who leaves mid-race is dropped from `this.players` (see onLeave),
-   *  so they stop counting toward "everyone" without blocking the rest. */
+   *  so they stop counting toward "everyone" without blocking the rest.
+   *
+   *  The results themselves are built from `this.race` (everyone who was in
+   *  the race at start), filtered to who actually finished — not from who's
+   *  still connected. Someone who finishes and then disconnects (closes the
+   *  tab right after crossing the line, a common case) keeps their result;
+   *  only racers who left without ever finishing are correctly absent. */
   _checkRaceOver() {
-    if (!this.race) return;
+    if (!this.race || this._raceOverFired) return;
     for (const id of this.players.keys()) {
       if (!this.race.get(id)?.finished) return;
     }
+    this._raceOverFired = true;
+    if (this._dnfTimer !== null) {
+      clearTimeout(this._dnfTimer);
+      this._dnfTimer = null;
+    }
     const rows = Array.from(this.race.entries())
-      .filter(([id]) => this.players.has(id))
+      .filter(([, progress]) => progress.finished)
       .sort((a, b) => a[1].finishPosition - b[1].finishPosition)
       .map(([id, progress]) => ({
         id,
-        name: this.players.get(id)?.name ?? "Racer",
+        name: progress.name,
         finishPosition: progress.finishPosition,
         totalTimeMs: progress.totalTimeMs,
         fastestLapMs: progress.fastestLapMs,
@@ -155,7 +196,10 @@ export class DriveRoom extends Room {
       name: (options.playerName || "Racer").slice(0, 24),
       colorKey: options.colorKey || null,
       vehicleKey: options.vehicleKey || "baja",
-      x: 0, y: 0, z: 0, heading: 0,
+      // null (not 0) until a real "state" message arrives — a client-side
+      // Number.isFinite check on this uses it to tell "no real position
+      // reported yet" apart from "legitimately at world origin".
+      x: null, y: null, z: null, heading: 0,
       vx: 0, vy: 0, vz: 0,
     };
     this.players.set(client.sessionId, player);
@@ -178,6 +222,7 @@ export class DriveRoom extends Room {
   }
 
   onDispose() {
+    if (this._dnfTimer !== null) clearTimeout(this._dnfTimer);
     this.players.clear();
   }
 }

@@ -114,7 +114,7 @@ function onRaceStart({ trackKey, reverse, laps }) {
     vehicleKey: store.selectedVehicle,
     playerColorKey: store.selectedPlayerColor,
     reverse: !!reverse,
-    laps: laps || 3,
+    laps: laps ?? 3,
   });
 }
 

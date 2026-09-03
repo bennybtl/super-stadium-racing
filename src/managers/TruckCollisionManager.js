@@ -1,4 +1,5 @@
 import { TRUCK_DEPTH, TRUCK_HALF_HEIGHT, TRUCK_RADIUS, TRUCK_WIDTH } from "../constants.js";
+import { orientedSupport } from "../truck/collision-math.js";
 
 const RESTITUTION = 0.35; // 0 = perfectly inelastic, 1 = perfectly elastic
 const FRICTION = 0.075;    // fraction of tangential speed bled off on impact
@@ -123,8 +124,8 @@ export class TruckCollisionManager {
     const dirZ = dz / dist;
 
     const collisionDist =
-      this._orientedSupport(tA, dirX, dirZ) +
-      this._orientedSupport(tB, dirX, dirZ) +
+      orientedSupport(tA.state.heading, tA.width ?? TRUCK_WIDTH, tA.depth ?? TRUCK_DEPTH, dirX, dirZ) +
+      orientedSupport(tB.state.heading, tB.width ?? TRUCK_WIDTH, tB.depth ?? TRUCK_DEPTH, dirX, dirZ) +
       HORIZONTAL_SKIN;
     const overlapXZ = collisionDist - distXZ;
     if (overlapXZ <= 0) return null;
@@ -153,23 +154,6 @@ export class TruckCollisionManager {
     }
 
     return { axis: "xz", overlapXZ, nx: dirX, nz: dirZ };
-  }
-
-  /**
-   * Distance from a truck's centre to its box edge along a given world-space
-   * unit direction — i.e. how far that truck's oriented footprint extends
-   * toward the other truck, not its (larger, orientation-independent)
-   * circumradius.
-   */
-  _orientedSupport(truck, dirX, dirZ) {
-    const heading = truck.state.heading;
-    const fwdX = Math.sin(heading), fwdZ = Math.cos(heading);
-    const rightX = Math.cos(heading), rightZ = -Math.sin(heading);
-    const localX = dirX * rightX + dirZ * rightZ;
-    const localZ = dirX * fwdX + dirZ * fwdZ;
-    const halfWidth = (truck.width ?? TRUCK_WIDTH) / 2;
-    const halfDepth = (truck.depth ?? TRUCK_DEPTH) / 2;
-    return halfWidth * Math.abs(localX) + halfDepth * Math.abs(localZ);
   }
 
   _resolve(tA, tB, dt) {

@@ -8,10 +8,11 @@ import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManag
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { DriveMode } from "./DriveMode.js";
-import { basicColors, TRUCK_HALF_HEIGHT } from "../constants.js";
+import { basicColors, TRUCK_HALF_HEIGHT, TRUCK_WIDTH, TRUCK_HEIGHT, TRUCK_DEPTH } from "../constants.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 import { multiplayerClient } from "../multiplayer/MultiplayerClient.js";
 import { RemotePuppet } from "../multiplayer/RemotePuppet.js";
+import { RemoteTruckCollision } from "../multiplayer/RemoteTruckCollision.js";
 
 // Outbound truck-state broadcast rate. Faster than this just spends bandwidth
 // on updates RemotePuppet's smoothing (CHASE_RATE) would mostly discard.
@@ -28,9 +29,16 @@ const NETWORK_SEND_INTERVAL = 1 / 15;
  * raceProgress/playerFinished/raceOver events. Other players are rendered as
  * RemotePuppets driven by position broadcasts, same as before.
  *
+ * Truck-vs-truck collision (RemoteTruckCollision) only ever moves the LOCAL
+ * truck — a puppet's position is network-driven, so pushing it locally would
+ * just be overwritten by the next broadcast. Every client resolves the same
+ * overlap from its own side, which approximates a shared bounce; see that
+ * class's doc for the tradeoffs.
+ *
  * Deliberately left out for this first pass (candidates for later iteration):
- * truck-vs-truck collision between players, a DNF timer for stragglers,
- * telemetry/ghosts, the checkpoint-arrow pointer and floating pickup text.
+ * telemetry/ghosts, the checkpoint-arrow pointer, and floating pickup text.
+ * A DNF timer *is* in place (server/DriveRoom.js's DNF_GRACE_MS) for a racer
+ * who never finishes once someone else has.
  */
 export class MultiplayerMode extends DriveMode {
   constructor(controller) {
@@ -46,7 +54,7 @@ export class MultiplayerMode extends DriveMode {
 
   async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false, laps = 3 }) {
     const { engine, menuManager } = this.controller;
-    const totalLaps = laps || 3;
+    const totalLaps = laps ?? 3;
 
     const {
       scene,
@@ -108,24 +116,36 @@ export class MultiplayerMode extends DriveMode {
     this.respawnTruck(playerTruck, spawn0.pos, spawn0.heading);
     checkpointManager.updatePlayerCheckpointHighlight(gameState.lastCheckpointPassed);
 
-    // -- Standings (for the shared truck-status HUD) --
-    // id -> { name, colorKey, lap, finished }
-    const standings = new Map();
-    const addStanding = (id, name, colorKey) => standings.set(id, { name, colorKey, lap: 0, finished: false });
-    addStanding(playerId, multiplayerClient.players.get(playerId)?.name ?? 'You', playerColorKey);
-    multiplayerClient.players.forEach((p, id) => {
-      if (id !== playerId) addStanding(id, p.name, p.colorKey);
+    // -- Race progress (for the shared truck-status HUD) --
+    // Only the two fields that don't already live anywhere else — name and
+    // colorKey stay sourced live from multiplayerClient.players (the roster
+    // is already the single source of truth for identity) rather than being
+    // copied in here too.
+    // id -> { lap, finished }
+    const raceProgress = new Map();
+    raceProgress.set(playerId, { lap: 0, finished: false });
+    multiplayerClient.players.forEach((_p, id) => {
+      if (id !== playerId) raceProgress.set(id, { lap: 0, finished: false });
     });
 
     // -- Remote players: visual-only puppets driven by network state --
+    const remoteTruckCollision = new RemoteTruckCollision();
     const spawnPuppet = (player) => {
       if (!player || player.id === playerId) return;
       if (this._remotePuppets.has(player.id)) return;
       const remoteVehicleDef = window.vehicleLoader?.getVehicle(player.vehicleKey) ?? vehicleDef;
+      // Each vehicle can define its own physicsBox (see truck/truck.js) — use
+      // the remote player's actual vehicle dims, not the local truck's, so
+      // collision distances against them are right.
+      const box = remoteVehicleDef?.physicsBox ?? {};
       const puppet = new RemotePuppet(scene, shadows, {
         vehicleDef: remoteVehicleDef,
         colorKey: player.colorKey,
-        dims: { width: playerTruck.width, height: playerTruck.height, depth: playerTruck.depth },
+        dims: {
+          width:  box.width  ?? TRUCK_WIDTH,
+          height: box.height ?? TRUCK_HEIGHT,
+          depth:  box.depth  ?? TRUCK_DEPTH,
+        },
       });
       if (Number.isFinite(player.x)) puppet.setTarget(player.x, player.y, player.z, player.heading ?? 0);
       this._remotePuppets.set(player.id, puppet);
@@ -138,22 +158,26 @@ export class MultiplayerMode extends DriveMode {
     uiManager.showRaceStatusPanel();
     uiManager.updateLaps(0, totalLaps);
 
+    // Own colorKey is the param passed into setup(); everyone else's comes
+    // live from the roster (multiplayerClient.players), which is already
+    // kept current by MultiplayerClient's own message handlers.
     const colorFor = (id) => {
-      const colorKey = standings.get(id)?.colorKey;
+      const colorKey = id === playerId ? playerColorKey : multiplayerClient.players.get(id)?.colorKey;
       return (colorKey ? basicColors[colorKey]?.diffuse : null) ?? basicColors.gray.diffuse;
     };
+    const nameFor = (id) => (id === playerId ? 'You' : multiplayerClient.players.get(id)?.name) ?? 'Racer';
     const syncTruckStatus = () => {
       uiManager.updateTruckStatus(
-        Array.from(standings.entries()).map(([id, s]) => ({
+        Array.from(raceProgress.entries()).map(([id, progress]) => ({
           id,
-          name: s.name,
+          name: nameFor(id),
           isPlayer: id === playerId,
           color: colorFor(id),
-          lap: s.lap,
+          lap: progress.lap,
           totalLaps,
           boosts: id === playerId ? gameState.boostCount : 0,
           boostActive: id === playerId ? playerTruck.state.boostActive : false,
-          finished: s.finished,
+          finished: progress.finished,
         })),
         totalLaps
       );
@@ -167,13 +191,13 @@ export class MultiplayerMode extends DriveMode {
     // -- Network events --
     const onJoin = (player) => {
       spawnPuppet(player);
-      if (!standings.has(player.id)) addStanding(player.id, player.name, player.colorKey);
+      if (!raceProgress.has(player.id)) raceProgress.set(player.id, { lap: 0, finished: false });
       syncTruckStatus();
     };
     const onLeave = (id) => {
       this._remotePuppets.get(id)?.dispose();
       this._remotePuppets.delete(id);
-      standings.delete(id);
+      raceProgress.delete(id);
       syncTruckStatus();
     };
     const onState = (data) => {
@@ -182,15 +206,15 @@ export class MultiplayerMode extends DriveMode {
       else spawnPuppet(multiplayerClient.players.get(data.id));
     };
     const onRaceProgress = ({ id, lap }) => {
-      const s = standings.get(id);
-      if (!s) return;
-      s.lap = lap;
+      const progress = raceProgress.get(id);
+      if (!progress) return;
+      progress.lap = lap;
       syncTruckStatus();
     };
     const onPlayerFinished = ({ id }) => {
-      const s = standings.get(id);
-      if (!s) return;
-      s.finished = true;
+      const progress = raceProgress.get(id);
+      if (!progress) return;
+      progress.finished = true;
       syncTruckStatus();
     };
     const onRaceOver = ({ rows }) => {
@@ -365,6 +389,10 @@ export class MultiplayerMode extends DriveMode {
           : inputManager.getMovementInput()
       ));
 
+      frameProfiler.measure('collision.remoteTrucks.pre', () =>
+        remoteTruckCollision.preUpdate(playerTruck, this._remotePuppets.values(), dt)
+      );
+
       // Finished truck coasts to a stop under its own drag (zero input).
       const truckInput = gameState.raceFinished ? { forward: false, back: false, left: false, right: false } : input;
       const debugInfo = frameProfiler.measure(
@@ -389,6 +417,9 @@ export class MultiplayerMode extends DriveMode {
       else uiManager.showOutOfBoundsCountdown(oobRemaining);
 
       frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
+      frameProfiler.measure('collision.remoteTrucks', () =>
+        remoteTruckCollision.update(playerTruck, this._remotePuppets.values())
+      );
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
@@ -461,7 +492,7 @@ export class MultiplayerMode extends DriveMode {
         uiManager.updateLaps(lapCount, totalLaps);
         uiManager.updateCheckpoints(0);
 
-        const mine = standings.get(playerId);
+        const mine = raceProgress.get(playerId);
         if (mine) mine.lap = lapCount;
         syncTruckStatus();
         multiplayerClient.reportLap({ lap: lapCount, lapTimeMs: lapTime });

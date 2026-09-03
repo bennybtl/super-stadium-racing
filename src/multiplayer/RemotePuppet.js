@@ -22,10 +22,17 @@ export class RemotePuppet {
   constructor(scene, shadows, { dims = null, vehicleDef = null, colorKey = null } = {}) {
     this.scene = scene;
 
+    // Public, read-only footprint — mirrors Truck's own width/depth/halfHeight
+    // so collision code (RemoteTruckCollision) can treat both the same way.
+    this.width  = dims?.width  ?? TRUCK_WIDTH;
+    this.height = dims?.height ?? TRUCK_HEIGHT;
+    this.depth  = dims?.depth  ?? TRUCK_DEPTH;
+    this.halfHeight = this.height / 2;
+
     this._root = MeshBuilder.CreateBox("mpRoot", {
-      width:  dims?.width  ?? TRUCK_WIDTH,
-      height: dims?.height ?? TRUCK_HEIGHT,
-      depth:  dims?.depth  ?? TRUCK_DEPTH,
+      width:  this.width,
+      height: this.height,
+      depth:  this.depth,
     }, scene);
     this._root.isVisible = false;
     this._root.isPickable = false;
@@ -39,6 +46,26 @@ export class RemotePuppet {
     this._target = new Vector3();
     this._targetHeading = 0;
     this._hasTarget = false;
+  }
+
+  /** Current interpolated (as-drawn) position — what collision should read,
+   *  not the raw network target, so response matches what's on screen. */
+  get position() {
+    return this._root.position;
+  }
+
+  get heading() {
+    return this._root.rotation.y;
+  }
+
+  /** Synthesized from interpolated motion — see update(). Good enough for a
+   *  relative-velocity bounce feel; not a physically authoritative velocity. */
+  get velocity() {
+    return this._state.velocity;
+  }
+
+  get hasTarget() {
+    return this._hasTarget;
   }
 
   /** Latest known world position/heading for this player. */
