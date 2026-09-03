@@ -132,6 +132,15 @@ export class RaceMode extends DriveMode {
       // Show the post-race results screen.
       const finishedIds = new Set(finishOrder.map(td => td.id));
       const dnfTrucks   = trucks.filter(td => !finishedIds.has(td.id));
+      // Vehicle key + driver colour ride along so the results podium can render
+      // each finisher's actual truck. Colour is serialised to a plain [r,g,b].
+      const identityOf = (td) => {
+        const c = td.truck?.diffuseColor;
+        return {
+          vehicleKey: td.truck?.vehicleDef?.id ?? null,
+          color:      c ? [c.r, c.g, c.b] : null,
+        };
+      };
       const rows = [
         ...finishOrder.map((td, idx) => ({
           id:              td.id,
@@ -141,6 +150,7 @@ export class RaceMode extends DriveMode {
           totalRaceTimeMs: td.gameState.totalRaceTime,
           fastestLapMs:    td.gameState.fastestLap,
           dnf:             false,
+          ...identityOf(td),
         })),
         ...dnfTrucks.map((td, idx) => ({
           id:              td.id,
@@ -150,6 +160,7 @@ export class RaceMode extends DriveMode {
           totalRaceTimeMs: null,
           fastestLapMs:    null,
           dnf:             true,
+          ...identityOf(td),
         })),
       ];
       // In a championship, hand the finish order (ids, winner first) back to the
@@ -162,6 +173,10 @@ export class RaceMode extends DriveMode {
         );
         championship.onRaceComplete(rows.map(r => r.id), { trackKey, rows, remainingNitro, moneyCollected });
       } else {
+        // The results screen is its own view — clear the race HUD and stop
+        // rendering the frozen race scene behind it until the mode tears down.
+        uiManager.hideAll();
+        this.controller.engine.stopRenderLoop();
         menuManager.showSingleRaceResults({ trackKey, rows });
       }
     };
