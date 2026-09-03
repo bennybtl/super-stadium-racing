@@ -120,17 +120,17 @@ Both build a drive scene, call `setupAIDrivers`, spin up the **identical** good/
 
 ## Tier 3 — housekeeping
 
-### 3.1 Add a thin unit-test net (do this *before* Tier 2)
-There is no test framework — only `build:raw` + 5 ad-hoc `check:*.mjs` scripts + manual visual testing. That's fine for rendering code, but the **pure-logic hotspots are cheap to lock down** and would de-risk every refactor above:
+### 3.1 Add a thin unit-test net (do this *before* Tier 2) — STARTED
+`vitest` added (dev-only), `npm test` / `npm run test:watch`, config in `vitest.config.js` (node env, `test/**/*.test.js`). **48 tests across 6 files**, covering the pure-logic hotspots:
 
-- `ChampionshipStorage`: `applyRaceResult`, `standings`, `awardRace`, score persistence
-- `UpgradeStorage`: `applyPurchase` math
-- `start-grid.js`: `layoutIndexFor` / `startGridLayoutSlot`
-- `polyline-utils.js`, `math-utils.js`
-- `loadVehicleModel` color parsing (post-1.2)
-- the editor snapshot round-trip (`_serializeSnapshot` → `_applySnapshot`)
+- `test/math-utils.test.js` — clamp / clamp01 / lerp / smoothstep
+- `test/polyline-utils.test.js` — `isPointInPolygon`, `distToPolyline`, `expandPolyline`
+- `test/start-grid.test.js` — `layoutIndexFor`↔`raceIndexFor` inverse, `resolvePoleIndex` clamp, `gridSlotXZ` geometry + heading, custom/fallback slots
+- `test/championship-storage.test.js` — `awardRace` table, `applyRaceResult` (scoring, immutability, advance), `standings` sort+tiebreak, `createChampionship` seeding
+- `test/upgrade-storage.test.js` — `applyPurchase` (cost/maxLevel gating, nitro ceiling, immutability), `getUpgradeCatalog` affordability
+- `test/mesh-color.test.js` — every `parseColorValue` input shape + null cases
 
-Add `vitest` (dev-only, no runtime cost), aim for ~20 focused tests, not coverage targets.
+_Not yet covered:_ the editor snapshot round-trip (`_serializeSnapshot` → `_applySnapshot`) — needs a track fixture; add alongside 2.1/2.2. The `localStorage`-backed load/save functions are left out (would need a jsdom env or a stub) — their pure cores are tested.
 
 While here: **`npm run check:water` currently crashes** (`Node.js v24.11.1` stack dump, not an assertion failure) and **`check:terrain` reports "8 track(s) failed"** — both on a clean `main`, unrelated to any recent change. Either they've rotted or they're flagging real track-data drift; worth a look since a check that doesn't run is worse than no check.
 
