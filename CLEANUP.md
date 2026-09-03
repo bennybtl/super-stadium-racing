@@ -128,11 +128,13 @@ After 2.4 pulls the shared loop into `DriveMode`, extract the mode-specific chun
 
 ### 2.4 De-dupe the race-sim core shared by `RaceMode`, `MenuMode`, `MultiplayerMode` — IN PROGRESS
 
-**Done (branch `cleanup/tier-1`, commit `c543efd`):**
-- `DriveMode.makeAIDriverFactory()` — the good/ok/bad ladder, was duplicated Race↔Menu
-- `DriveMode.runCountdownSequence()` — the 3-2-1-GO timeout choreography, was duplicated Race↔Multiplayer; `_countdownTimeouts` lifecycle moved to `DriveMode`
+**Done (branch `cleanup/tier-1`):**
+- `c543efd` — `DriveMode.makeAIDriverFactory()` (good/ok/bad ladder, was dup Race↔Menu) + `DriveMode.runCountdownSequence()` (3-2-1-GO choreography, was dup Race↔Multiplayer; `_countdownTimeouts` lifecycle moved up)
+- `1441cce` — `DriveMode.installRaceFrameLoop()`: the frame envelope (onAfterRender pipeline-span/endFrame; onBeforeRender hidden-bail, dt clamp, beginFrame, photo-mode camera, menu bail, 20Hz HUD-timer throttle, countdown-gated input). Modes pass `isMenuUp` / `isCountdownActive` / `getRaceStartMs` closures + an `onFrame(dt, input)` body. Body kept at old indent — `git diff -w` shows the real delta (~−50 real lines per mode).
 
-**Still to do (the big piece):** the per-frame loop. `RaceMode`'s `scene.onBeforeRenderObservable` handler (~180 lines) and `MultiplayerMode`'s (~150) share the skeleton: photo-mode/menu-active early-outs, `getClampedDeltaTime`, `frameProfiler.beginFrame`, timer-UI throttle, `truck.update` per truck, `applySlowZones`/`applySpeedBoostZones`/`updateFireworkZones`, `updateOutOfBoundsCountdown` per truck, `debugManager.update`, `syncTruckStatus` throttle, `endFrame`. They diverge on: collision authority (local physics vs server reconciliation), telemetry, position labels, checkpoint arrow, DNF. **Plan:** a `DriveMode.runFrame(ctx, { onTrucks, onPostPhysics })`-style template method, or a `RaceLoop` collaborator holding the throttle state. Needs a checkpoint-loop test first (§3.1). Do `MultiplayerMode.setup()` / `RaceMode.setup()` decomposition (§2.3) in the same pass.
+**Still to do:**
+- **Zone + OOB block** (small, safe, all 3 modes incl. Menu): `applySlowZones` / `applySpeedBoostZones` / `updateFireworkZones` + the per-truck `updateOutOfBoundsCountdown` loop → one `DriveMode.applyEnvironment(trucks, zones, dt, { onOobTimeout, onOobRemaining })`.
+- **`RaceMode.setup()` / `MultiplayerMode.setup()` decomposition** (§2.3): the bodies are still ~700 / ~400 lines. Extract finish/DNF tracking (`RaceFinishTracker`), reset/respawn, the checkpoint-lap handler. Bigger; do it against the now-shared envelope. A headless checkpoint-lap test would help but the loop is scene-bound — most value comes from careful diff review + in-game.
 
 _original plan below:_
 
