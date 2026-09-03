@@ -11,7 +11,20 @@ Before the list of problems, the things that are working:
 - **`src/ai/` is the model to copy** — one coordinator (`AIDriver`) delegating to focused controllers in `ai/controllers/`, with its own `ARCHITECTURE.md`. Every other subsystem should aspire to this shape.
 - **`src/modes/` hierarchy is sound** — `BaseMode → DriveMode → {Race,Practice,HotLap,Menu}Mode`, with shared drive helpers already hoisted into `DriveMode`.
 
-The opportunities below are about **the editor subsystem's size, one god-function in `RaceMode`, and directory hygiene** — not rot.
+The opportunities below are about **the editor subsystem's size, god-functions in the mode classes, and directory hygiene** — not rot.
+
+---
+
+## Addendum — multiplayer landed (2026-09-03)
+
+The `multiplayer` branch merged into the base after this review. ~2,900 new lines: `server/` (colyseus room, ~280 lines), `src/multiplayer/` (client + remote-puppet + remote collision, ~440 lines), `src/modes/MultiplayerMode.js` (548 lines), `src/vue/Multiplayer*.vue` + a store, `web/` static-server Dockerfile.
+
+What this changes about the plan:
+
+- **§2.3 / §2.4 got bigger and more valuable.** `MultiplayerMode.setup()` is a **464-line single closure** — the same god-function shape as `RaceMode.setup()` (855). There are now **three** modes (`Race`, `Menu`, `Multiplayer`) that each reimplement "build a drive scene → spawn field → grid spawns → per-frame checkpoint/lap loop → countdown → syncTruckStatus". Extracting that shared race-sim core (into `DriveMode` or a `RaceLoop` collaborator) now deduplicates ~2,000 lines across three files instead of two. **This is the single highest-leverage refactor in the codebase now.**
+- **Good sign:** whoever wrote multiplayer factored proactively — `src/truck/collision-math.js` (`orientedSupport`) is a clean shared extraction between `TruckCollisionManager` and `RemoteTruckCollision`.
+- **New:** `server/` is a second mini-app (Express + colyseus) with no tests and its own Dockerfile. Out of scope here, but note it exists.
+- The rebase that brought multiplayer under the cleanup commits **dropped `package-lock.json`** — restored in `4d1cc92` (it's required by `server/Dockerfile`'s `npm ci` and by any fresh checkout; @colyseus/* deps publish `workspace:` specs that only resolve from a committed lock).
 
 ---
 
@@ -104,21 +117,24 @@ Conservative estimate: 15–25% off ~5000 lines of editor code, and new entity t
 
 **Risk:** medium. High duplication = high payoff, but touches every editor file. Gate on tests.
 
-### 2.3 Break up `RaceMode.setup()` (855-line function)
-`RaceMode.setup()` is one function with **11 nested closures** (`triggerRaceEnd`, `handleDNF`, `syncTruckStatus`, `respawnToLastCheckpoint`, `startCountdown`, `resetGame`, `getAIDriver`, …) all closing over `trucks`, `finishOrder`, `dnfTimer`, etc. It's the hardest file in the repo to modify safely.
+### 2.3 Break up the mode god-functions
+`RaceMode.setup()` is **855 lines / 11 nested closures** (`triggerRaceEnd`, `handleDNF`, `syncTruckStatus`, `respawnToLastCheckpoint`, `startCountdown`, `resetGame`, `getAIDriver`, …) closing over `trucks`, `finishOrder`, `dnfTimer`. `MultiplayerMode.setup()` is **464 lines** in the same shape. These are the two hardest files in the repo to modify safely.
 
-Extract the cohesive chunks to methods or small collaborators:
+After 2.4 pulls the shared loop into `DriveMode`, extract the mode-specific chunks to methods / small collaborators:
 - **finish/DNF tracking** → `RaceFinishTracker` (owns `finishOrder`, `dnfTimer`, `triggerRaceEnd`, `handleDNF`, results-row assembly)
-- **countdown** → method (`startCountdown` + its timeouts)
-- **reset/respawn** → methods (`resetGame`, `respawnToLastCheckpoint`)
-- **AI driver factory** (`getAIDriver` good/ok/bad ladder) → shared helper — see 2.4
+- **countdown**, **reset/respawn** → methods
 
-**Risk:** medium.
+**Risk:** medium. Do it right after 2.4, against the shared base.
 
-### 2.4 De-dupe the AI-race setup shared by `RaceMode` and `MenuMode`
-Both build a drive scene, call `setupAIDrivers`, spin up the **identical** good/ok/bad driver ladder, make a grid spawner, and run a per-frame truck-update loop. The `getAIDriver` ladder is copy-pasted (`RaceMode.js:214` ≈ `MenuMode.js:234`). Hoist the driver factory + the per-frame truck update into `DriveMode` (where the grid spawner and zone helpers already live). `MenuMode` becomes "a race with no player and no HUD".
+### 2.4 De-dupe the race-sim core shared by `RaceMode`, `MenuMode`, `MultiplayerMode`
+All three build a drive scene, make a grid spawner, run a per-frame checkpoint/lap + `syncTruckStatus` loop, and drive a countdown; Race and Menu also spin up the **identical** good/ok/bad AI-driver ladder (`RaceMode.js:214` ≈ `MenuMode.js:234`). Hoist a `RaceLoop` / shared methods into `DriveMode` (where the grid spawner and zone helpers already live):
+- `MenuMode` = race loop with no player, no HUD, no lap limit
+- `RaceMode` = race loop + player + finish/DNF + results
+- `MultiplayerMode` = race loop + player + network puppets, server-authoritative
 
-**Risk:** low–medium.
+Do 2.4 first (defines the shared surface), then 2.3 becomes "move `RaceMode`'s extras onto the shared base". `MultiplayerMode.setup()` (464-line closure) gets the same treatment in the same pass.
+
+**Risk:** medium. This is the biggest structural win now that three modes share the shape — the test net (§3.1) covers the grid/scoring math it touches; add a checkpoint-loop test before starting.
 
 ---
 
@@ -163,8 +179,9 @@ Move persistence → `src/persistence/`, the lowercase render helpers → `src/u
 
 ## Suggested order
 
-1. **3.1** (tests) — the safety net everything else leans on
-2. **1.1, 1.2, 1.3** — quick wins, immediately less code
-3. **3.2, 3.3, 3.4** — mechanical moves, do in dedicated commits
-4. **2.4 → 2.3** — RaceMode/MenuMode
-5. **2.1 → 2.2** — the editor, the biggest lift, last
+1. ~~**3.1** (tests)~~ — done (48 tests); add a checkpoint-loop test before step 4
+2. ~~**1.2, 1.3**~~ — done · ~~**3.4** doc moves~~ — done (AGENT.md prose refresh still open)
+3. **2.4 → 2.3** — the shared race-sim core across Race/Menu/Multiplayer. **Highest leverage now** (~2,000 lines of near-duplicate across 3 modes). Test net is in place.
+4. **2.1 → 2.2** — the editor split; 1.1's forwarder collapse rides along with 2.2's entity registry
+5. **3.2, 3.3** — the `managers/` + `src/track/` dir reorgs. **Do these last** — pure import churn that will conflict hard with `night-race` / `terrain-refactor` until those land.
+6. **AGENT.md** content refresh — its own pass, after the structure settles
