@@ -338,48 +338,16 @@ export class MultiplayerMode extends DriveMode {
     };
 
     this.setupVisibilityHandler(scene, trucks);
-    let frameRenderStartMs = 0;
-    const timerUiIntervalMs = 50; // HUD shows MM:SS.cc; no need to push every frame
-    let timerUiElapsedMs = 0;
 
-    scene.onAfterRenderObservable.add(() => {
-      if (frameRenderStartMs > 0) {
-        frameProfiler.addDuration('render.pipeline', performance.now() - frameRenderStartMs);
-        frameRenderStartMs = 0;
-      }
-      frameProfiler.endFrame();
-    });
-
-    scene.onBeforeRenderObservable.add(() => {
-      if (document.hidden) return;
-
-      const dt = this.getClampedDeltaTime(engine, 0.05);
-      frameProfiler.beginFrame(dt);
-      if (this._photoModeActive) {
-        const input = frameProfiler.measure('input.photo', () => inputManager.getMovementInput());
-        frameProfiler.measure('camera.photoMove', () => this.cameraController.moveFreeCamera(input, dt));
-        frameProfiler.measure('camera.photoUpdate', () => this.cameraController.update());
-        frameRenderStartMs = performance.now();
-        return;
-      }
-      if (menuManager.isPaused) {
-        frameRenderStartMs = performance.now();
-        return;
-      }
-
-      if (raceStarted && raceStartTime !== null) {
-        timerUiElapsedMs += dt * 1000;
-        if (timerUiElapsedMs >= timerUiIntervalMs) {
-          timerUiElapsedMs = 0;
-          frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartTime));
-        }
-      }
-
-      const input = frameProfiler.measure('input', () => (
-        countdownActive
-          ? { forward: false, back: false, left: false, right: false }
-          : inputManager.getMovementInput()
-      ));
+    // installRaceFrameLoop owns the frame envelope (dt clamp, profiler frame,
+    // photo mode, menu bail, HUD-timer throttle) and hands us (dt, input). The
+    // body below keeps its indentation to keep this diff readable.
+    this.installRaceFrameLoop({
+      engine, scene, uiManager, inputManager,
+      isMenuUp: () => menuManager.isPaused,
+      isCountdownActive: () => countdownActive,
+      getRaceStartMs: () => (raceStarted && raceStartTime !== null ? raceStartTime : null),
+      onFrame: (dt, input) => {
 
       frameProfiler.measure('collision.remoteTrucks.pre', () =>
         remoteTruckCollision.preUpdate(playerTruck, this._remotePuppets.values(), dt)
@@ -500,7 +468,8 @@ export class MultiplayerMode extends DriveMode {
       });
 
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
-      frameRenderStartMs = performance.now();
+
+      }, // end onFrame
     });
 
     cameraController.update(playerTruck.mesh.position, playerTruck.state.heading);

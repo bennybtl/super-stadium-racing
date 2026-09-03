@@ -152,6 +152,82 @@ export class DriveMode extends BaseMode {
   }
 
   /**
+   * Wire the per-frame plumbing every player-driven racing mode shares onto
+   * `scene`. RaceMode and MultiplayerMode differ in what happens each tick
+   * (local physics + AI + DNF vs. server reconciliation + puppets) but agree on
+   * the frame envelope:
+   *
+   *   onAfterRender  → record the render-pipeline span, close the profiler frame
+   *   onBeforeRender → bail while the tab is hidden; clamp dt + open the profiler
+   *                    frame; in photo mode fly the free camera and stop; while a
+   *                    menu is up, stop; throttle the HUD race timer to ~20Hz;
+   *                    then hand `(dt, input)` to `onFrame` for the mode body.
+   *
+   * `input` is the movement stick, forced to neutral while the countdown runs.
+   * Everything downstream — collisions, checkpoints, HUD, camera — is the mode's.
+   *
+   * @param {object} o
+   * @param {import('@babylonjs/core').Engine}  o.engine
+   * @param {import('@babylonjs/core').Scene}   o.scene
+   * @param {object}   o.uiManager
+   * @param {object}   o.inputManager
+   * @param {() => boolean}      o.isMenuUp           pause/menu overlay is showing
+   * @param {() => boolean}      o.isCountdownActive  pre-race 3-2-1 is running
+   * @param {() => (number|null)} o.getRaceStartMs    Date.now() basis for the HUD
+   *                                                  timer, or null before the start
+   * @param {(dt: number, input: object) => void} o.onFrame
+   */
+  installRaceFrameLoop({ engine, scene, uiManager, inputManager, isMenuUp, isCountdownActive, getRaceStartMs, onFrame }) {
+    const NEUTRAL = Object.freeze({ forward: false, back: false, left: false, right: false });
+    const TIMER_UI_INTERVAL_MS = 50; // HUD reads MM:SS.cc; 20Hz is finer than the glyphs
+    let timerUiElapsedMs = 0;
+    let frameRenderStartMs = 0;
+
+    scene.onAfterRenderObservable.add(() => {
+      if (frameRenderStartMs > 0) {
+        this.frameProfiler.addDuration('render.pipeline', performance.now() - frameRenderStartMs);
+        frameRenderStartMs = 0;
+      }
+      this.frameProfiler.endFrame();
+    });
+
+    scene.onBeforeRenderObservable.add(() => {
+      if (document.hidden) return;
+
+      const dt = this.getClampedDeltaTime(engine, 0.05);
+      this.frameProfiler.beginFrame(dt);
+
+      if (this._photoModeActive) {
+        const input = this.frameProfiler.measure('input.photo', () => inputManager.getMovementInput());
+        this.frameProfiler.measure('camera.photoMove', () => this.cameraController.moveFreeCamera(input, dt));
+        this.frameProfiler.measure('camera.photoUpdate', () => this.cameraController.update());
+        frameRenderStartMs = performance.now();
+        return;
+      }
+      if (isMenuUp()) {
+        frameRenderStartMs = performance.now();
+        return;
+      }
+
+      const raceStartMs = getRaceStartMs();
+      if (raceStartMs != null) {
+        timerUiElapsedMs += dt * 1000;
+        if (timerUiElapsedMs >= TIMER_UI_INTERVAL_MS) {
+          timerUiElapsedMs = 0;
+          this.frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartMs));
+        }
+      }
+
+      const input = this.frameProfiler.measure('input', () =>
+        isCountdownActive() ? NEUTRAL : inputManager.getMovementInput()
+      );
+
+      onFrame(dt, input);
+      frameRenderStartMs = performance.now();
+    });
+  }
+
+  /**
    * The AI-skill factory shared by RaceMode (the real field) and MenuMode (the
    * attract demo). Outside a championship, skill cycles good → ok → bad by field
    * index so the pack spreads out and trades places; inside one, each AI keeps

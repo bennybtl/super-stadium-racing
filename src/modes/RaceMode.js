@@ -537,57 +537,23 @@ export class RaceMode extends DriveMode {
     const fireworkZones = this.getFireworkZones(currentTrack);
     const truckStatusUiIntervalMs = 200;
     const aiGripSampleIntervalMs = 100;
-    // The HUD shows MM:SS.cc, so 20Hz is finer than the readout — pushing a new
-    // value every frame re-renders the Vue component 60×/sec for nothing.
-    const timerUiIntervalMs = 50;
     let truckStatusUiElapsedMs = 0;
     let aiGripSampleElapsedMs = 0;
-    let timerUiElapsedMs = 0;
 
     // Setup visibility handler to prevent physics accumulation
     this.setupVisibilityHandler(scene, trucks);
-    let frameRenderStartMs = 0;
 
-    scene.onAfterRenderObservable.add(() => {
-      if (frameRenderStartMs > 0) {
-        frameProfiler.addDuration('render.pipeline', performance.now() - frameRenderStartMs);
-        frameRenderStartMs = 0;
-      }
-      frameProfiler.endFrame();
-    });
-
-    // -- Game loop --
-    scene.onBeforeRenderObservable.add(() => {
-      if (document.hidden) return;
-
-      // Use 50ms cap for race mode (more generous than default 20ms)
-      const dt = this.getClampedDeltaTime(engine, 0.05);
-      frameProfiler.beginFrame(dt);
-      if (this._photoModeActive) {
-        const input = frameProfiler.measure('input.photo', () => this.inputManager.getMovementInput());
-        frameProfiler.measure('camera.photoMove', () => this.cameraController.moveFreeCamera(input, dt));
-        frameProfiler.measure('camera.photoUpdate', () => this.cameraController.update());
-        frameRenderStartMs = performance.now();
-        return;
-      }
-      if (menuManager.isMenuActive()) {
-        frameRenderStartMs = performance.now();
-        return;
-      }
-
-      if (raceStarted && raceStartTime !== null) {
-        timerUiElapsedMs += dt * 1000;
-        if (timerUiElapsedMs >= timerUiIntervalMs) {
-          timerUiElapsedMs = 0;
-          frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartTime));
-        }
-      }
-
-      const input = frameProfiler.measure('input', () => (
-        countdownActive
-          ? { forward: false, back: false, left: false, right: false }
-          : this.inputManager.getMovementInput()
-      ));
+    // -- Game loop -- installRaceFrameLoop owns the frame envelope (dt clamp,
+    // profiler frame, photo mode, menu bail, HUD-timer throttle) and hands us
+    // (dt, input) for the race body below. The body keeps its indentation to
+    // keep this diff readable — `git diff -w` shows the real change.
+    this.installRaceFrameLoop({
+      engine, scene, uiManager,
+      inputManager: this.inputManager,
+      isMenuUp: () => menuManager.isMenuActive(),
+      isCountdownActive: () => countdownActive,
+      getRaceStartMs: () => (raceStarted && raceStartTime !== null ? raceStartTime : null),
+      onFrame: (dt, input) => {
 
       frameProfiler.measure('collision.truck.pre', () => truckCollisionManager.preUpdate(trucks, dt));
 
@@ -863,7 +829,8 @@ export class RaceMode extends DriveMode {
       });
 
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt));
-      frameRenderStartMs = performance.now();
+
+      }, // end onFrame
     });
 
     // Start the pre-race countdown
