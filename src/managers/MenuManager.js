@@ -57,6 +57,18 @@ export class MenuManager {
     this._store.screen = 'editorTrackSelect';
   }
 
+  showMultiplayerLobby() {
+    this.currentMenu = 'multiplayer';
+    this._refreshTrackList();
+    this._refreshVehicleList();
+    this._store.screen = 'multiplayer';
+  }
+
+  showMultiplayerRoom() {
+    this.currentMenu = 'multiplayerRoom';
+    this._store.screen = 'multiplayerRoom';
+  }
+
   showEditorMenu() {
     this.currentMenu = 'editorPause';
     this.isPaused = true;
@@ -247,6 +259,7 @@ export class MenuManager {
   onPurchaseUpgrade(_id) {}
   onStartSingleRace()    {}
   onStartHotLap()        {}
+  onStartMultiplayer(_config) {}
   onShowChampionshipSetup() { this.showChampionshipSetup(); }
   onStartChampionship()     {}
   onContinueChampionship()  {}

@@ -4,6 +4,7 @@ import { EditorMode } from "./EditorMode.js";
 import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
 import { HotLapMode } from "./HotLapMode.js";
+import { MultiplayerMode } from "./MultiplayerMode.js";
 import { incrementUpgradeLevel, getUpgradeCatalog, applyPurchase } from "../managers/UpgradeStorage.js";
 import { basicColors } from "../constants.js";
 import { AI_SKILL_PRESETS } from "../ai/AIDriver.js";
@@ -401,6 +402,10 @@ export class ModeController {
 
   goToHotLap(config) {
     return this.switchTo(HotLapMode, config);
+  }
+
+  goToMultiplayer(config) {
+    return this.switchTo(MultiplayerMode, config);
   }
 
   goToTest(config) {

@@ -67,6 +67,7 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hot lap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('single race')">Single Race</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showChampionshipSetup()">Championship</button>
+          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showMultiplayerLobby()">Multiplayer</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
@@ -135,6 +136,16 @@
         <!-- ── Settings ── -->
         <template v-else-if="store.screen === 'settings'">
           <SettingsMenu @back="store.back('start')" />
+        </template>
+
+        <!-- ── Multiplayer lobby ── -->
+        <template v-else-if="store.screen === 'multiplayer'">
+          <MultiplayerLobby />
+        </template>
+
+        <!-- ── Multiplayer waiting room ── -->
+        <template v-else-if="store.screen === 'multiplayerRoom'">
+          <MultiplayerRoom />
         </template>
 
         <!-- ── Championship setup ── -->
@@ -330,6 +341,8 @@ import ReverseToggle from './ReverseToggle.vue';
 import TrackLapRecords from './TrackLapRecords.vue';
 import TruckSetup from './TruckSetup.vue';
 import RacePodium3D from './RacePodium3D.vue';
+import MultiplayerLobby from './MultiplayerLobby.vue';
+import MultiplayerRoom from './MultiplayerRoom.vue';
 
 const store = useMenuStore();
 

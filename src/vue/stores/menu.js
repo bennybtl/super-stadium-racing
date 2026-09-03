@@ -83,6 +83,13 @@ export const useMenuStore = defineStore('menu', () => {
     _bridge.value?.onStartPractice();
   }
 
+  function showMultiplayerLobby() { _bridge.value?.showMultiplayerLobby(); }
+  function showMultiplayerRoom() { _bridge.value?.showMultiplayerRoom(); }
+  function startMultiplayer(config) {
+    mode.value = 'multiplayer';
+    _bridge.value?.onStartMultiplayer(config);
+  }
+
   function resume()       { navDirection.value = 'back'; _bridge.value?.onResume(); }
   function reset()        { navDirection.value = 'back'; _bridge.value?.onReset(); }
   function exit()         { navDirection.value = 'back'; _bridge.value?.onExit(); }
@@ -138,6 +145,7 @@ export const useMenuStore = defineStore('menu', () => {
     showEditorTrackSelect,
     startEditor,
     selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, setSelectedAIVehicleType, showPitMenu, startPracticeMode,
+    showMultiplayerLobby, showMultiplayerRoom, startMultiplayer,
     setSelectedReverse,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,

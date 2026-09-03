@@ -128,6 +128,13 @@ export class MenuMode extends DriveMode {
       });
     };
 
+    menuManager.onStartMultiplayer = (config) => {
+      menuManager.gameStarted = true;
+      menuManager._store.pitData = null;
+      menuManager.hideMenu();
+      this.controller.goToMultiplayer(config);
+    };
+
     menuManager.onStartEditor = () => {
       menuManager.editorMode = true;
       menuManager.hideMenu();
