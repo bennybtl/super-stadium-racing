@@ -26,15 +26,15 @@
   "params": {
     "maxSpeed": 30,
     "maxReverseSpeed": -12,
-    "acceleration": 20,
+    "acceleration": 21,
     "braking": 1.5,
-    "turnSpeed": 4.7,
+    "turnSpeed": 4.65,
     "weightTransfer": 1.1,
-    "grip": 0.225,
+    "grip": 0.285,
     "idleAuthority": 0.52
   },
   "handling": {
-    "lateralBias": -0.4
+    "lateralBias": 0.4
   },
   "suspensionTravel": 0.9
 }
