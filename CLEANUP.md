@@ -126,7 +126,16 @@ After 2.4 pulls the shared loop into `DriveMode`, extract the mode-specific chun
 
 **Risk:** medium. Do it right after 2.4, against the shared base.
 
-### 2.4 De-dupe the race-sim core shared by `RaceMode`, `MenuMode`, `MultiplayerMode`
+### 2.4 De-dupe the race-sim core shared by `RaceMode`, `MenuMode`, `MultiplayerMode` — IN PROGRESS
+
+**Done (branch `cleanup/tier-1`, commit `c543efd`):**
+- `DriveMode.makeAIDriverFactory()` — the good/ok/bad ladder, was duplicated Race↔Menu
+- `DriveMode.runCountdownSequence()` — the 3-2-1-GO timeout choreography, was duplicated Race↔Multiplayer; `_countdownTimeouts` lifecycle moved to `DriveMode`
+
+**Still to do (the big piece):** the per-frame loop. `RaceMode`'s `scene.onBeforeRenderObservable` handler (~180 lines) and `MultiplayerMode`'s (~150) share the skeleton: photo-mode/menu-active early-outs, `getClampedDeltaTime`, `frameProfiler.beginFrame`, timer-UI throttle, `truck.update` per truck, `applySlowZones`/`applySpeedBoostZones`/`updateFireworkZones`, `updateOutOfBoundsCountdown` per truck, `debugManager.update`, `syncTruckStatus` throttle, `endFrame`. They diverge on: collision authority (local physics vs server reconciliation), telemetry, position labels, checkpoint arrow, DNF. **Plan:** a `DriveMode.runFrame(ctx, { onTrucks, onPostPhysics })`-style template method, or a `RaceLoop` collaborator holding the throttle state. Needs a checkpoint-loop test first (§3.1). Do `MultiplayerMode.setup()` / `RaceMode.setup()` decomposition (§2.3) in the same pass.
+
+_original plan below:_
+
 All three build a drive scene, make a grid spawner, run a per-frame checkpoint/lap + `syncTruckStatus` loop, and drive a countdown; Race and Menu also spin up the **identical** good/ok/bad AI-driver ladder (`RaceMode.js:214` ≈ `MenuMode.js:234`). Hoist a `RaceLoop` / shared methods into `DriveMode` (where the grid spawner and zone helpers already live):
 - `MenuMode` = race loop with no player, no HUD, no lap limit
 - `RaceMode` = race loop + player + finish/DNF + results
