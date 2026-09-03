@@ -371,14 +371,20 @@ export class ModeController {
 
   /** Standings as display rows (rank, name, points, winnings, isPlayer). */
   _standingsRows() {
-    return standings(this.championship.drivers).map((d, i) => ({
-      rank:     i + 1,
-      id:       d.id,
-      name:     d.name,
-      isPlayer: d.isPlayer,
-      points:   d.points,
-      winnings: d.winnings,
-    }));
+    return standings(this.championship.drivers).map((d, i) => {
+      const c = basicColors[d.colorKey]?.diffuse;
+      return {
+        rank:       i + 1,
+        id:         d.id,
+        name:       d.name,
+        isPlayer:   d.isPlayer,
+        points:     d.points,
+        winnings:   d.winnings,
+        // Vehicle identity so the podium view can render each driver's truck.
+        vehicleKey: d.vehicleKey ?? null,
+        color:      c ? [c.r, c.g, c.b] : null,
+      };
+    });
   }
 
   goToRace(config) {

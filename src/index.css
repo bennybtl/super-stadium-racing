@@ -7,7 +7,12 @@
     min-height: 100%;
   }
   body {
-    @apply bg-black overflow-hidden font-sans;
+    @apply overflow-hidden font-sans;
+    /* Tiled backdrop sits behind the render canvas; shows through wherever the
+       demo scene isn't drawn (while it loads or if it fails to build). */
+    background-color: #000;
+    background-image: url('./assets/logo-background.png');
+    background-repeat: repeat;
   }
   #vue-app {
     @apply pointer-events-none;

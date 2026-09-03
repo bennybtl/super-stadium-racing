@@ -6,7 +6,7 @@
     <div
       v-if="store.screen"
       class="fixed inset-0 z-[1000] font-sans overflow-hidden pointer-events-none"
-      :class="store.liveBackdrop ? '' : 'bg-black'"
+      :style="store.liveBackdrop ? null : backdropStyle"
     >
       <div class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-black/50"></div>
     </div>
@@ -178,7 +178,7 @@
     <div
       v-if="store.pitData"
       class="fixed inset-0 z-[1000] font-sans overflow-hidden pointer-events-none"
-      :class="store.liveBackdrop ? '' : 'bg-black'"
+      :style="store.liveBackdrop ? null : backdropStyle"
     >
       <div class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-black/50"></div>
     </div>
@@ -202,6 +202,11 @@
             <div class="text-sm uppercase italic tracking-[0.14em] text-slate-300">
               Next Track: <span class="text-white">{{ store.pitData.trackName }}</span>
             </div>
+          </div>
+
+          <!-- Podium for the race that just finished -->
+          <div v-if="champPodiumEntries.length" class="mb-4 h-[30vh] max-h-[420px] min-h-[260px] w-full">
+            <RacePodium3D :entries="champPodiumEntries" />
           </div>
 
           <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.4fr]">
@@ -324,8 +329,22 @@ import RaceConfig from './RaceConfig.vue';
 import ReverseToggle from './ReverseToggle.vue';
 import TrackLapRecords from './TrackLapRecords.vue';
 import TruckSetup from './TruckSetup.vue';
+import RacePodium3D from './RacePodium3D.vue';
 
 const store = useMenuStore();
+
+// Top 3 of the race that just finished, for the between-races championship pit.
+const champPodiumEntries = computed(() => {
+  const rows = store.pitData?.lastResults ?? [];
+  const finishers = rows.filter((r) => !r.dnf);
+  const source = finishers.length ? finishers : rows;
+  return source.slice(0, 3).map((r) => ({
+    position: r.finishPosition,
+    name: r.name,
+    vehicleKey: r.vehicleKey ?? null,
+    color: r.color ?? null,
+  }));
+});
 const showSafariWarning = isSafari();
 const setupStep = ref('selectTruck');
 // Each fresh pit-menu visit should start at vehicle selection, not wherever
@@ -409,6 +428,14 @@ const panelStyle = {
   backgroundImage: `url(${new URL('../assets/checker-black.png', import.meta.url).href})`,
   backgroundRepeat: 'repeat',
   backgroundSize: '220px 220px',
+};
+
+// Shown behind the menus whenever the demo race isn't live (loading or failed) —
+// a tiled backdrop instead of plain black.
+const backdropStyle = {
+  backgroundColor: '#000',
+  backgroundImage: `url(${new URL('../assets/logo-background.png', import.meta.url).href})`,
+  backgroundRepeat: 'repeat',
 };
 
 const drivingBindings = computed(() => loadControlsSettings().driving);

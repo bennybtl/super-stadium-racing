@@ -163,6 +163,12 @@ export class RaceMode extends DriveMode {
           ...identityOf(td),
         })),
       ];
+      // The post-race screen (single-race results or the championship pit) is
+      // its own view — clear the race HUD and stop rendering the frozen race
+      // scene behind it until this mode tears down.
+      uiManager.hideAll();
+      this.controller.engine.stopRenderLoop();
+
       // In a championship, hand the finish order (ids, winner first) back to the
       // cup orchestrator, which awards points/purse and drives the standings →
       // pit → next-race flow in place of the single-race results screen.
@@ -173,10 +179,6 @@ export class RaceMode extends DriveMode {
         );
         championship.onRaceComplete(rows.map(r => r.id), { trackKey, rows, remainingNitro, moneyCollected });
       } else {
-        // The results screen is its own view — clear the race HUD and stop
-        // rendering the frozen race scene behind it until the mode tears down.
-        uiManager.hideAll();
-        this.controller.engine.stopRenderLoop();
         menuManager.showSingleRaceResults({ trackKey, rows });
       }
     };
