@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full max-w-xl">
+  <div class="w-full max-w-xl self-center">
     <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] mb-4 text-center">Lobby</h2>
 
     <div class="rounded-[10px] border-2 border-[#444] bg-[#101010]/80 p-3 mb-4">

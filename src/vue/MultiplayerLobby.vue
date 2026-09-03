@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full max-w-xl">
+  <div class="w-full max-w-xl self-center">
     <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] mb-4 text-center">Multiplayer</h2>
 
     <div class="flex flex-row items-center gap-3 mb-4 justify-center">
@@ -60,26 +60,18 @@
           maxlength="32"
           :placeholder="`${mp.playerName}'s Lobby`"
         />
-        <div class="flex flex-row gap-2">
-          <select
-            v-model="createTrackKey"
-            class="flex-grow rounded-[8px] border-2 border-[#444] bg-[#181818] px-3 py-2 text-white pointer-events-auto"
-          >
-            <option v-for="t in store.trackList" :key="t.key" :value="t.key">{{ t.name }}</option>
-          </select>
-          <select
-            v-model.number="maxClients"
-            class="rounded-[8px] border-2 border-[#444] bg-[#181818] px-3 py-2 text-white pointer-events-auto"
-          >
-            <option :value="2">2 players</option>
-            <option :value="4">4 players</option>
-            <option :value="6">6 players</option>
-            <option :value="8">8 players</option>
-          </select>
-        </div>
+        <select
+          v-model.number="maxClients"
+          class="rounded-[8px] border-2 border-[#444] bg-[#181818] px-3 py-2 text-white pointer-events-auto"
+        >
+          <option :value="2">2 players</option>
+          <option :value="4">4 players</option>
+          <option :value="6">6 players</option>
+          <option :value="8">8 players</option>
+        </select>
         <button
           class="menu-button pointer-events-auto px-10 py-3 text-xl disabled:opacity-40"
-          :disabled="mp.busy || !createTrackKey"
+          :disabled="mp.busy"
           @click="handleCreate"
         >
           {{ mp.busy ? 'Creating…' : 'Create Lobby' }}
@@ -99,7 +91,6 @@ const store = useMenuStore();
 const mp = useMultiplayerStore();
 
 const lobbyName = ref('');
-const createTrackKey = ref(store.selectedTrack);
 const maxClients = ref(8);
 
 function trackName(key) {
@@ -115,10 +106,13 @@ async function handleJoin(lobby) {
 }
 
 async function handleCreate() {
-  if (!createTrackKey.value) return;
+  // Track is chosen in the waiting room (the host can change it any time
+  // before starting) — this is just a starting default for room creation.
+  const trackKey = store.selectedTrack || store.trackList[0]?.key;
+  if (!trackKey) return;
   const ok = await mp.createLobby({
     name: lobbyName.value,
-    trackKey: createTrackKey.value,
+    trackKey,
     maxClients: maxClients.value,
     vehicleKey: store.selectedVehicle,
     colorKey: store.selectedPlayerColor,
@@ -128,9 +122,6 @@ async function handleCreate() {
 
 let refreshTimer = null;
 onMounted(() => {
-  if (!createTrackKey.value && store.trackList.length > 0) {
-    createTrackKey.value = store.trackList[0].key;
-  }
   mp.refreshLobbies();
   refreshTimer = setInterval(() => mp.refreshLobbies(), 5000);
 });
