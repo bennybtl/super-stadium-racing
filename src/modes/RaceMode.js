@@ -1,6 +1,5 @@
 import { Vector3, MeshBuilder, StandardMaterial, Color3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
-import { AIDriver, AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
 import { UIManager } from "../managers/UIManager.js";
@@ -32,7 +31,6 @@ export class RaceMode extends DriveMode {
   constructor(controller) {
     super(controller);
     this.inputManager = null;
-    this._countdownTimeouts = [];
     this._dnfTimer = null;
     this.debugManager = null;
     this.audioManager = null;
@@ -219,25 +217,9 @@ export class RaceMode extends DriveMode {
     // ── AI drivers ───────────────────────────────────────────────────────────
     const getAIName  = championship?.aiNames ? (i) => championship.aiNames[i] : (i) => `AI ${i + 1}`;
     const getAIId    = (i) => `ai${i + 1}`;
-    const getAISkill = (_i) => ({});
-    const getAIDriver = (i) => {
-      // In a championship, each AI keeps the skill preset persisted in its roster
-      // entry; outside a cup, cycle good/ok/bad by grid slot as before.
-      let driver;
-      if (championship?.aiSkills) {
-        const preset = AI_SKILL_PRESETS[championship.aiSkills[i]] ?? AI_SKILL_PRESETS.ok;
-        driver = new AIDriver(currentTrack, checkpointManager, wallManager, scene, preset);
-      } else {
-        const slot = i % 3;
-        if (slot === 0) driver = AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
-        else if (slot === 1) driver = AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
-        else driver = AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
-      }
-      // So path baking can scale corner-speed targets by the track's actual
-      // painted terrain grip instead of assuming packed dirt everywhere.
-      driver.setTerrainManager(terrainManager);
-      return driver;
-    };
+    const getAIDriver = this.makeAIDriverFactory({
+      currentTrack, checkpointManager, wallManager, scene, terrainManager, championship,
+    });
 
     // In a championship, AI colour/vehicle come from the persisted roster so a
     // given AI keeps its identity race to race (indexed by ai order).
@@ -447,8 +429,6 @@ export class RaceMode extends DriveMode {
 
     // -- Countdown --
     const startCountdown = () => {
-      this._countdownTimeouts.forEach(clearTimeout);
-      this._countdownTimeouts = [];
       countdownActive = true;
       aiDrivers.forEach(d => { d.paused = true; });
 
@@ -460,11 +440,7 @@ export class RaceMode extends DriveMode {
         this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
       });
 
-      uiManager.showCountdown('3');
-      this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('2'), 1000));
-      this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('1'), 2000));
-      this._countdownTimeouts.push(setTimeout(() => {
-        uiManager.showCountdown('GO!');
+      this.runCountdownSequence(uiManager, () => {
         countdownActive = false;
         aiDrivers.forEach(d => { d.paused = false; });
         if (maxCheckpointNumber === 0 && !raceStarted) {
@@ -473,8 +449,7 @@ export class RaceMode extends DriveMode {
           trucks.forEach(t => t.lapStartTime = Date.now());
           uiManager.showRaceTimer();
         }
-      }, 3000));
-      this._countdownTimeouts.push(setTimeout(() => uiManager.hideCountdown(), 3800));
+      });
     };
 
     // -- Full race reset --
@@ -899,8 +874,6 @@ export class RaceMode extends DriveMode {
   }
 
   teardown() {
-    this._countdownTimeouts.forEach(clearTimeout);
-    this._countdownTimeouts = [];
     if (this._dnfTimer) { clearTimeout(this._dnfTimer); this._dnfTimer = null; }
     if (this.positionLabels) {
       this.positionLabels.dispose();

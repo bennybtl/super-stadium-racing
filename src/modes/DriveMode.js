@@ -2,6 +2,7 @@ import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
 import { isPointInPolygon } from "../polyline-utils.js";
 import { gridSlotXZ, startGridSlot, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../start-grid.js";
+import { AIDriver, AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";
 import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
@@ -23,6 +24,26 @@ export class DriveMode extends BaseMode {
     this.cameraController = null;
     this._photoModeActive = false;
     this.frameProfiler = null;
+    // Pending 3-2-1-GO timeouts, tracked so teardown / a restart cancels them.
+    this._countdownTimeouts = [];
+  }
+
+  /**
+   * The shared 3-2-1-GO choreography: shows each digit on the HUD one second
+   * apart, calls `onGo` when "GO!" appears (t=3s), and clears the banner at
+   * t=3.8s. Callers own everything mode-specific — freezing the field,
+   * re-snapping the grid, the `countdownActive` flag — and call this for the
+   * timing.
+   */
+  runCountdownSequence(uiManager, onGo) {
+    this._countdownTimeouts.forEach(clearTimeout);
+    this._countdownTimeouts = [
+      setTimeout(() => uiManager.showCountdown('2'), 1000),
+      setTimeout(() => uiManager.showCountdown('1'), 2000),
+      setTimeout(() => { uiManager.showCountdown('GO!'); onGo?.(); }, 3000),
+      setTimeout(() => uiManager.hideCountdown(), 3800),
+    ];
+    uiManager.showCountdown('3');
   }
 
   /**
@@ -101,6 +122,9 @@ export class DriveMode extends BaseMode {
   }
 
   teardown() {
+    this._countdownTimeouts.forEach(clearTimeout);
+    this._countdownTimeouts = [];
+
     if (this.inputManager) {
       this.inputManager.dispose();
       this.inputManager = null;
@@ -125,6 +149,32 @@ export class DriveMode extends BaseMode {
       this._fireworksManager = null;
     }
     super.teardown();
+  }
+
+  /**
+   * The AI-skill factory shared by RaceMode (the real field) and MenuMode (the
+   * attract demo). Outside a championship, skill cycles good → ok → bad by field
+   * index so the pack spreads out and trades places; inside one, each AI keeps
+   * the preset persisted on its roster entry. Every driver is handed the terrain
+   * manager so path baking can scale corner-speed targets by real surface grip.
+   *
+   * Returns a `(index) => AIDriver` suitable for `setupAIDrivers({ getAIDriver })`.
+   */
+  makeAIDriverFactory({ currentTrack, checkpointManager, wallManager, scene, terrainManager, championship = null }) {
+    return (i) => {
+      let driver;
+      if (championship?.aiSkills) {
+        const preset = AI_SKILL_PRESETS[championship.aiSkills[i]] ?? AI_SKILL_PRESETS.ok;
+        driver = new AIDriver(currentTrack, checkpointManager, wallManager, scene, preset);
+      } else {
+        const slot = i % 3;
+        if (slot === 0) driver = AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
+        else if (slot === 1) driver = AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
+        else driver = AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
+      }
+      driver.setTerrainManager(terrainManager);
+      return driver;
+    };
   }
 
   /**

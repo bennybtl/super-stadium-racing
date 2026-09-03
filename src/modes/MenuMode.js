@@ -1,6 +1,5 @@
 import { Scene, Color4, FreeCamera, Vector3 } from "@babylonjs/core";
 import { DriveMode } from "./DriveMode.js";
-import { AIDriver } from "../ai/AIDriver.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { generateDriverNames } from "../ai/driverNames.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
@@ -235,15 +234,9 @@ export class MenuMode extends DriveMode {
       getAIId:   (i) => `demo${i + 1}`,
       // Mixed skills so the field spreads out and trades places instead of
       // running as a train.
-      getAIDriver: (i) => {
-        const slot = i % 3;
-        let driver;
-        if (slot === 0) driver = AIDriver.createGoodDriver(currentTrack, checkpointManager, wallManager, scene);
-        else if (slot === 1) driver = AIDriver.createOkDriver(currentTrack, checkpointManager, wallManager, scene);
-        else driver = AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
-        driver.setTerrainManager(terrainManager);
-        return driver;
-      },
+      getAIDriver: this.makeAIDriverFactory({
+        currentTrack, checkpointManager, wallManager, scene, terrainManager,
+      }),
       // No player, so the field fills the grid from pole.
       getAIGridSlot: (i) => i,
       aiVehicleKey: 'random',

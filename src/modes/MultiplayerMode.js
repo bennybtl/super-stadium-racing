@@ -49,7 +49,6 @@ export class MultiplayerMode extends DriveMode {
     this._remotePuppets = new Map(); // sessionId -> RemotePuppet
     this._sendAccumulator = 0;
     this._netUnsubscribers = [];
-    this._countdownTimeouts = [];
   }
 
   async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false, laps = 3 }) {
@@ -324,16 +323,10 @@ export class MultiplayerMode extends DriveMode {
     let lapStartTime = null;
 
     const startCountdown = () => {
-      this._countdownTimeouts.forEach(clearTimeout);
-      this._countdownTimeouts = [];
       countdownActive = true;
       this.respawnTruck(playerTruck, spawn0.pos, spawn0.heading, staticBodyCollisionManager);
 
-      uiManager.showCountdown('3');
-      this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('2'), 1000));
-      this._countdownTimeouts.push(setTimeout(() => uiManager.showCountdown('1'), 2000));
-      this._countdownTimeouts.push(setTimeout(() => {
-        uiManager.showCountdown('GO!');
+      this.runCountdownSequence(uiManager, () => {
         countdownActive = false;
         if (maxCheckpointNumber === 0 && !raceStarted) {
           raceStarted = true;
@@ -341,8 +334,7 @@ export class MultiplayerMode extends DriveMode {
           lapStartTime = Date.now();
           uiManager.showRaceTimer();
         }
-      }, 3000));
-      this._countdownTimeouts.push(setTimeout(() => uiManager.hideCountdown(), 3800));
+      });
     };
 
     this.setupVisibilityHandler(scene, trucks);
@@ -518,8 +510,6 @@ export class MultiplayerMode extends DriveMode {
   }
 
   teardown() {
-    this._countdownTimeouts.forEach(clearTimeout);
-    this._countdownTimeouts = [];
     this._netUnsubscribers.forEach(fn => fn());
     this._netUnsubscribers = [];
     this._remotePuppets.forEach(puppet => puppet.dispose());
