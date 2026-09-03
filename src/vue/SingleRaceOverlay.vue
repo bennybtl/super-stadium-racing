@@ -11,12 +11,9 @@
       class="fixed inset-0 z-[1101] flex items-center justify-center overflow-hidden font-sans pointer-events-none"
     >
       <div class="menu-panel px-10 py-8 pointer-events-auto" :style="panelStyle" @mousedown.stop>
-        <h2 class="text-center text-sm uppercase italic tracking-[0.28em] text-[#ff6b6b]">Race Results</h2>
-        <p class="mb-4 text-center text-xs uppercase italic tracking-[0.18em] text-slate-400">
-          {{ store.singleRaceData.trackKey }}
-        </p>
+        <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] mb-2 text-center">Race Results</h2>
 
-        <div class="mx-auto h-[52vh] max-h-[560px] min-h-[340px] w-full">
+        <div class="mx-auto h-[36vh] max-h-[560px] min-h-[340px] w-full">
           <RacePodium3D :entries="podiumEntries" />
         </div>
 

@@ -55,13 +55,16 @@ let resizeObserver = null;
 let loadToken = 0;
 
 // Blocks are laid out 2 – 1 – 3: winner centre and tallest.
-const BLOCK = { w: 2.9, d: 2.6 };
+const BLOCK = { w: 3, d: 3.2 };
 const SLOTS = {
   1: { x: 0.0, h: 1.75, medal: [0.85, 0.64, 0.13] },
-  2: { x: -3.05, h: 1.15, medal: [0.75, 0.78, 0.82] },
-  3: { x: 3.05, h: 0.7, medal: [0.68, 0.42, 0.2] },
+  2: { x: -4.05, h: 1.15, medal: [0.75, 0.78, 0.82] },
+  3: { x: 4.05, h: 0.7, medal: [0.68, 0.42, 0.2] },
 };
 const TRUCK_SCALE = 0.78;
+// Push the 2nd/3rd labels outward from centre (label anchors only — blocks and
+// trucks stay put). 1 = under the block, >1 = further out.
+const LABEL_X_SPREAD = 1.75;
 
 function ordinal(n) {
   return n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
@@ -102,7 +105,8 @@ async function buildTrucks() {
     const holder = new TransformNode(`truckHolder_${entry.position}`, scene);
     holder.parent = podiumRoot;
     holder.position.set(slot.x, slot.h, 0);
-    holder.rotation.y = Math.PI; // face the camera
+    // Face the camera, with a small random yaw jitter so the row isn't uniform.
+    holder.rotation.y = Math.PI + (Math.random() * 2 - 1) * (10 * Math.PI / 180);
     holder.scaling.setAll(TRUCK_SCALE);
     models.push({ dispose: () => holder.dispose(false, true) });
 
@@ -168,8 +172,9 @@ function updateLabels() {
   for (const entry of props.entries.slice(0, 3)) {
     const slot = SLOTS[entry.position];
     if (!slot) continue;
-    // Anchor below the block's front-bottom edge so the label clears the podium.
-    const anchor = new Vector3(slot.x, -0.55, BLOCK.d / 2 + 0.02);
+    // Anchor just below each block's front-bottom edge so the labels sit in a
+    // row under the podium.
+    const anchor = new Vector3(slot.x * LABEL_X_SPREAD, -3, BLOCK.d / 3 + 0.15);
     const p = Vector3.Project(
       anchor,
       Matrix.Identity(),
@@ -193,8 +198,8 @@ onMounted(() => {
   scene = new Scene(engine);
   scene.clearColor = new Color4(0, 0, 0, 0);
 
-  camera = new ArcRotateCamera('podiumCamera', -Math.PI / 2, 1.12, 7.6, new Vector3(0, 1.0, 0), scene);
-  camera.fov = 0.95;
+  camera = new ArcRotateCamera('podiumCamera', -Math.PI / 2, 1.12, 6.0, new Vector3(0, 1.1, 0), scene);
+  camera.fov = 0.9;
 
   const hemi = new HemisphericLight('podiumHemi', new Vector3(0, 1, 0), scene);
   hemi.intensity = 0.95;
