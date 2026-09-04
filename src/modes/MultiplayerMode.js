@@ -244,40 +244,15 @@ export class MultiplayerMode extends DriveMode {
     ];
 
     // -- Respawn to last checkpoint (used for both the R-key reset and OOB) --
-    const respawnToLastCheckpoint = () => {
-      if (!hasStarted) {
-        this.respawnTruck(playerTruck, spawn0.pos, spawn0.heading, staticBodyCollisionManager);
-        return;
-      }
-      const lastCpNum = gameState.lastCheckpointPassed;
-      let cpFeature;
-      if (lastCpNum > 0) {
-        const gates = checkpointManager.checkpointMeshes
-          .map(cp => cp.feature)
-          .filter(f => f.checkpointNumber === lastCpNum);
-        const px = playerTruck.mesh.position.x;
-        const pz = playerTruck.mesh.position.z;
-        cpFeature = gates.reduce((best, g) => {
-          if (!best) return g;
-          const bd = (best.centerX - px) ** 2 + (best.centerZ - pz) ** 2;
-          const gd = (g.centerX - px) ** 2 + (g.centerZ - pz) ** 2;
-          return gd < bd ? g : best;
-        }, null);
-      } else {
-        cpFeature = this.getStartFinishCheckpoint(checkpointManager) ?? startFinishCp;
-      }
-      if (cpFeature) {
-        const y = currentTrack.getHeightAt(cpFeature.centerX, cpFeature.centerZ) + TRUCK_HALF_HEIGHT;
-        this.respawnTruck(
-          playerTruck,
-          new Vector3(cpFeature.centerX, y, cpFeature.centerZ),
-          cpFeature.heading,
-          staticBodyCollisionManager
-        );
-      } else {
-        this.respawnTruck(playerTruck, spawn0.pos, spawn0.heading, staticBodyCollisionManager);
-      }
-    };
+    const respawnToLastCheckpoint = () => this.respawnAtLastCheckpoint(playerTruck, {
+      lastCheckpointNumber: gameState.lastCheckpointPassed,
+      hasStarted,
+      checkpointManager,
+      track: currentTrack,
+      staticBodyCollisionManager,
+      fallbackCheckpoint: startFinishCp,
+      fallbackSpawn: () => spawn0,
+    });
 
     // -- Input --
     this.cameraController = cameraController;
@@ -360,9 +335,7 @@ export class MultiplayerMode extends DriveMode {
         () => playerTruck.update(truckInput, dt, terrainManager, currentTrack, true, null, frameProfiler)
       );
 
-      frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
-      frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
-      frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
+      this.applyZoneEffects(scene, currentTrack, trucks, { slowZones, speedBoostZones, fireworkZones }, dt, frameProfiler);
 
       const oobRemaining = frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
         truckId: playerId,

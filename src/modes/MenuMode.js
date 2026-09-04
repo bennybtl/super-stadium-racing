@@ -316,9 +316,7 @@ export class MenuMode extends DriveMode {
       trucks.forEach(td => td.truck.update(NO_INPUT, dt, terrainManager, currentTrack, false, focusPos, null));
 
       staticBodyCollisionManager.update(trucks, dt);
-      this.applySlowZones(trucks, slowZones);
-      this.applySpeedBoostZones(trucks, speedBoostZones);
-      this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt);
+      this.applyZoneEffects(scene, currentTrack, trucks, { slowZones, speedBoostZones, fireworkZones }, dt);
 
       trucks.forEach(td => this.updateOutOfBoundsCountdown({
         truckId: td.id,

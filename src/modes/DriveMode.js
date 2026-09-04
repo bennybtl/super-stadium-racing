@@ -228,6 +228,74 @@ export class DriveMode extends BaseMode {
   }
 
   /**
+   * Apply the three per-frame action-zone effects — slow zones, speed-boost
+   * pads, firework triggers — to `trucks`. Pass `profiler` to time each pass
+   * under its `zones.*` label (MenuMode runs unprofiled).
+   */
+  applyZoneEffects(scene, track, trucks, { slowZones, speedBoostZones, fireworkZones }, dt, profiler = null) {
+    const run = (label, fn) => (profiler ? profiler.measure(label, fn) : fn());
+    run('zones.slow', () => this.applySlowZones(trucks, slowZones));
+    run('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
+    run('zones.fireworks', () => this.updateFireworkZones(scene, track, trucks, fireworkZones, dt));
+  }
+
+  /**
+   * Teleport `truck` back to the last checkpoint it physically cleared: the
+   * nearest gate carrying `lastCheckpointNumber` (so an alternative branch lands
+   * on the gate the truck actually took), the start/finish line before the
+   * first checkpoint, or `fallbackSpawn()` when the truck hasn't started or
+   * nothing resolves. Gates come from the CheckpointManager, not raw track
+   * features, so reverse races (flipped headings, renumbered sequence) work.
+   * respawnTruck's notifyTeleport flushes the collision manager's stale prevPos.
+   *
+   * @param {object} truck  a Truck instance
+   * @param {object} o
+   * @param {number}   o.lastCheckpointNumber
+   * @param {boolean}  o.hasStarted
+   * @param {object}   o.checkpointManager
+   * @param {object}   o.track                     (for getHeightAt)
+   * @param {object}   o.staticBodyCollisionManager
+   * @param {object}   [o.fallbackCheckpoint]      used when no gate is numbered
+   * @param {() => { pos: import('@babylonjs/core').Vector3, heading: number }} o.fallbackSpawn
+   */
+  respawnAtLastCheckpoint(truck, {
+    lastCheckpointNumber, hasStarted, checkpointManager, track,
+    staticBodyCollisionManager, fallbackCheckpoint = null, fallbackSpawn,
+  }) {
+    const toSpawn = () => {
+      const { pos, heading } = fallbackSpawn();
+      this.respawnTruck(truck, pos, heading, staticBodyCollisionManager);
+    };
+    if (!hasStarted) return toSpawn();
+
+    let cpFeature;
+    if (lastCheckpointNumber > 0) {
+      const gates = checkpointManager.checkpointMeshes
+        .map(cp => cp.feature)
+        .filter(f => f.checkpointNumber === lastCheckpointNumber);
+      const px = truck.mesh.position.x;
+      const pz = truck.mesh.position.z;
+      cpFeature = gates.reduce((best, g) => {
+        if (!best) return g;
+        const bd = (best.centerX - px) ** 2 + (best.centerZ - pz) ** 2;
+        const gd = (g.centerX - px) ** 2 + (g.centerZ - pz) ** 2;
+        return gd < bd ? g : best;
+      }, null);
+    } else {
+      cpFeature = this.getStartFinishCheckpoint(checkpointManager) ?? fallbackCheckpoint;
+    }
+
+    if (!cpFeature) return toSpawn();
+    const y = track.getHeightAt(cpFeature.centerX, cpFeature.centerZ) + TRUCK_HALF_HEIGHT;
+    this.respawnTruck(
+      truck,
+      new Vector3(cpFeature.centerX, y, cpFeature.centerZ),
+      cpFeature.heading,
+      staticBodyCollisionManager,
+    );
+  }
+
+  /**
    * The AI-skill factory shared by RaceMode (the real field) and MenuMode (the
    * attract demo). Outside a championship, skill cycles good → ok → bad by field
    * index so the pack spreads out and trades places; inside one, each AI keeps

@@ -85,9 +85,6 @@ export class RaceMode extends DriveMode {
       startFinishCp,
     } = this.getStartFinishInfo(currentTrack);
 
-    const resolveGridAnchorCheckpoint = () =>
-      this.getStartFinishCheckpoint(checkpointManager) ?? startFinishCp;
-
     const getGridSpawn = this.makeGridSpawner(currentTrack, checkpointManager, startFinishCp);
 
     // -- Race state --
@@ -362,46 +359,15 @@ export class RaceMode extends DriveMode {
     // -- Respawn --
     // Teleport a truck to the center of the last checkpoint it physically passed.
     // Falls back to the player's grid spawn if the race hasn't started yet.
-    const respawnToLastCheckpoint = (truckData) => {
-      if (!truckData.hasStarted) {
-        const { pos, heading } = getGridSpawn(truckData.gridSlot ?? (truckData.isPlayer ? 0 : 1));
-        this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
-        return;
-      }
-      const lastCpNum = truckData.gameState.lastCheckpointPassed;
-      // Resolve gates from the manager, not the raw track features: in reverse
-      // races the manager holds copies with flipped headings and renumbered
-      // sequence, while the originals keep their forward numbering. When the step
-      // has alternatives, respawn at the gate nearest the truck (the branch it took).
-      let cpFeature;
-      if (lastCpNum > 0) {
-        const gates = checkpointManager.checkpointMeshes
-          .map(cp => cp.feature)
-          .filter(f => f.checkpointNumber === lastCpNum);
-        const px = truckData.truck.mesh.position.x;
-        const pz = truckData.truck.mesh.position.z;
-        cpFeature = gates.reduce((best, g) => {
-          if (!best) return g;
-          const bd = (best.centerX - px) ** 2 + (best.centerZ - pz) ** 2;
-          const gd = (g.centerX - px) ** 2 + (g.centerZ - pz) ** 2;
-          return gd < bd ? g : best;
-        }, null);
-      } else {
-        cpFeature = resolveGridAnchorCheckpoint();
-      }
-      if (cpFeature) {
-        const y = currentTrack.getHeightAt(cpFeature.centerX, cpFeature.centerZ) + TRUCK_HALF_HEIGHT;
-        this.respawnTruck(
-          truckData.truck,
-          new Vector3(cpFeature.centerX, y, cpFeature.centerZ),
-          cpFeature.heading,
-          staticBodyCollisionManager
-        );
-      } else {
-        const { pos, heading } = getGridSpawn(truckData.gridSlot ?? (truckData.isPlayer ? 0 : 1));
-        this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
-      }
-    };
+    const respawnToLastCheckpoint = (truckData) => this.respawnAtLastCheckpoint(truckData.truck, {
+      lastCheckpointNumber: truckData.gameState.lastCheckpointPassed,
+      hasStarted: truckData.hasStarted,
+      checkpointManager,
+      track: currentTrack,
+      staticBodyCollisionManager,
+      fallbackCheckpoint: startFinishCp,
+      fallbackSpawn: () => getGridSpawn(truckData.gridSlot ?? (truckData.isPlayer ? 0 : 1)),
+    });
 
     this.inputManager.onReset(() => respawnToLastCheckpoint(playerTruckData));
 
@@ -580,9 +546,7 @@ export class RaceMode extends DriveMode {
 
       frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
 
-      frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
-      frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
-      frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
+      this.applyZoneEffects(scene, currentTrack, trucks, { slowZones, speedBoostZones, fireworkZones }, dt, frameProfiler);
 
       frameProfiler.measure('zones.oob', () => trucks.forEach((truckData) => {
         const oobRemaining = this.updateOutOfBoundsCountdown({
