@@ -160,7 +160,7 @@ function makeChunkMesh(name, scene, rng, size, polyType, material) {
  * caller can dispose them, or null when nothing was generated.
  *
  * @param {import('@babylonjs/core').Scene} scene
- * @param {import('../track.js').Track} track
+ * @param {import('../world/track.js').Track} track
  * @param {object} [options]
  */
 export function scatterDirtChunks(scene, track, options = {}) {

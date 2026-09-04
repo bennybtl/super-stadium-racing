@@ -194,7 +194,20 @@ Move persistence → `src/persistence/`, the lowercase render helpers → `src/u
 **Risk:** low (pure moves), but a big import-path churn — script it, one commit.
 
 ### 3.3 Cluster the terrain/track modules out of `src/` root
-14 modules sit at `src/` top level. The terrain/track cluster — `terrain.js`, `terrain-utils.js`, `terrain-blend-utils.js`, `track.js`, `feature-geometry.js`, `polyline-utils.js`, `surface-textures.js` — belongs in `src/track/` (mirrors the existing `src/truck/`, `src/ai/`). Leaves root for genuine entry-point/config files (`main.js`, `constants.js`, `settingsStorage.js`, `browserSupport.js`).
+
+**Done — `src/world/`.** `track.js`, `terrain.js`, `terrain-utils.js`,
+`terrain-blend-utils.js`, `feature-geometry.js`, `surface-textures.js` moved
+into `src/world/` (the static world model — layout + terrain). Named `world/`,
+not `track/`, to avoid one-letter-off confusion with `src/tracks/` (the track
+JSON data). ~22 files re-pathed; `scripts/*.mjs` too. build / test (56) /
+check:panels,surface,walls green; check:terrain / check:water fail exactly as
+before (stale goldens / a missing `king_of_the_hill.json` — pre-existing,
+§3.1).
+
+**Still loose at root:** `math-utils.js`, `polyline-utils.js`, `start-grid.js`,
+`browserSupport.js` → `src/utils/` (exists). Cleaner but higher import churn
+(`polyline-utils` ~13 importers, `math-utils` ~9). `decorations-registry.js` →
+`src/decorations/`. `main.js` / `constants.js` / `settingsStorage.js` stay.
 
 ### 3.4 Documentation hygiene — PARTLY DONE
 - **Root `.md` sprawl** — DONE. `TERRAIN_REFACTOR.md` / `CHAMPIONSHIP_MODE.md` / `MULTIPLAYER.md` moved to `docs/`. Root now holds `README.md`, `AGENT.md`, `CLEANUP.md`. Scoped docs (`src/ai/ARCHITECTURE.md`, `src/vue/MENUS.md`, …) deliberately left next to their code. AGENT.md gained `## Testing` + `## Docs` sections.

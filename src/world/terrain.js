@@ -1,5 +1,5 @@
 import { Color3 } from "@babylonjs/core";
-import { TERRAIN_COLORS } from "./constants";
+import { TERRAIN_COLORS } from "../constants";
 
 // Terrain types with their properties
 export const TERRAIN_TYPES = {

@@ -7,10 +7,10 @@
  */
 
 import { RawTexture, RawTexture2DArray, Texture, MaterialPluginBase, StandardMaterial, Color3, Constants } from "@babylonjs/core";
-import { TERRAIN_TYPES } from "../terrain.js";
-import { _smoothstep, _getTerrainSlopeDegAt as _getTerrainSlopeDeg } from "../terrain-utils.js";
-import { bakeAiPathWear } from "../terrain-utils.js";
-import { resampleWrapped } from "../terrain-blend-utils.js";
+import { TERRAIN_TYPES } from "../world/terrain.js";
+import { _smoothstep, _getTerrainSlopeDegAt as _getTerrainSlopeDeg } from "../world/terrain-utils.js";
+import { bakeAiPathWear } from "../world/terrain-utils.js";
+import { resampleWrapped } from "../world/terrain-blend-utils.js";
 
 const _terrainTypeList = Object.values(TERRAIN_TYPES);
 const _terrainTypeIndexByName = new Map(_terrainTypeList.map((terrainType, index) => [terrainType?.name, index]));

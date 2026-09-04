@@ -2,7 +2,7 @@ import { Vector3, MeshBuilder } from '@babylonjs/core';
 import rebuild from './editor-rebuild.js';
 import { GizmoHandle } from './GizmoHandle.js';
 import { EditorMaterials, LINE_COLOR_TERRAIN_SHAPE } from './EditorMaterials.js';
-import { TERRAIN_TYPES } from '../terrain.js';
+import { TERRAIN_TYPES } from '../world/terrain.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 const POLY_POINT_MIN = 3;

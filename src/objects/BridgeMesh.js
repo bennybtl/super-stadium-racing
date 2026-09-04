@@ -1,7 +1,7 @@
 import { Mesh, VertexData, StandardMaterial, MultiMaterial, SubMesh, Color3, PhysicsAggregate, PhysicsShapeType, Texture } from "@babylonjs/core";
-import { TERRAIN_TYPES } from "../terrain.js";
-import { _lerp, _clamp } from "../terrain-utils.js";
-import { resolveSurfaceTexture, surfaceTextureUrl } from "../surface-textures.js";
+import { TERRAIN_TYPES } from "../world/terrain.js";
+import { _lerp, _clamp } from "../world/terrain-utils.js";
+import { resolveSurfaceTexture, surfaceTextureUrl } from "../world/surface-textures.js";
 
 const _bridgeTextureModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
 const _bridgeNormalModules = import.meta.glob('../assets/normals/*', { eager: true, query: '?url', import: 'default' });

@@ -7,7 +7,7 @@ import rebuild, { reset as resetRebuild } from "../editor/editor-rebuild.js";
 import {
   updateTerrainIdTexture,
   applySteepGrassTerrainRemap,
-} from "../terrain-utils.js";
+} from "../world/terrain-utils.js";
 
 /**
  * EditorMode – track editing interface.

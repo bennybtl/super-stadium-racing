@@ -17,8 +17,8 @@ import {
   RawTexture,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
-import { TerrainManager, TERRAIN_TYPES } from "../terrain.js";
-import { Track } from "../track.js";
+import { TerrainManager, TERRAIN_TYPES } from "../world/terrain.js";
+import { Track } from "../world/track.js";
 import { CameraController } from "../managers/CameraController.js";
 import { CheckpointManager } from "../managers/CheckpointManager.js";
 import { WallManager } from "../managers/WallManager.js";
@@ -43,7 +43,7 @@ import {
   buildTerrainTypePropertyTexturePixelData,
   applySteepGrassTerrainRemap,
   applySteepWaterTerrainRemap,
-} from "../terrain-utils.js";
+} from "../world/terrain-utils.js";
 import { loadDisplaySettings } from "../settingsStorage.js";
 
 /**

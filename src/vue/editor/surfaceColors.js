@@ -1,4 +1,4 @@
-import { SURFACE_TEXTURES, surfaceTextureUrl } from '../../surface-textures.js';
+import { SURFACE_TEXTURES, surfaceTextureUrl } from '../../world/surface-textures.js';
 
 /**
  * Palette for drivable-mesh surface colors (driveBox, bridgeMesh).

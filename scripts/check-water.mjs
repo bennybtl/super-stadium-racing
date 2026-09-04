@@ -37,12 +37,12 @@ const bundlePath = join(cacheDir, 'water-bundle.mjs');
 
 const { writeFileSync } = await import('node:fs');
 writeFileSync(entry, `
-export { Track } from ${JSON.stringify(join(root, 'src', 'track.js'))};
-export { featureFootprint } from ${JSON.stringify(join(root, 'src', 'feature-geometry.js'))};
-export { resampleWrapped } from ${JSON.stringify(join(root, 'src', 'terrain-blend-utils.js'))};
+export { Track } from ${JSON.stringify(join(root, 'src', 'world', 'track.js'))};
+export { featureFootprint } from ${JSON.stringify(join(root, 'src', 'world', 'feature-geometry.js'))};
+export { resampleWrapped } from ${JSON.stringify(join(root, 'src', 'world', 'terrain-blend-utils.js'))};
 export * from ${JSON.stringify(join(root, 'src', 'objects', 'water-field.js'))};
 export { DEEP_SPLASH_DEPTH } from ${JSON.stringify(join(root, 'src', 'constants.js'))};
-export { traceAiPathWearStamps, WEAR_WATER_FADE_END } from ${JSON.stringify(join(root, 'src', 'terrain-utils.js'))};
+export { traceAiPathWearStamps, WEAR_WATER_FADE_END } from ${JSON.stringify(join(root, 'src', 'world', 'terrain-utils.js'))};
 `);
 
 await esbuild.build({

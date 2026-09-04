@@ -16,7 +16,7 @@ import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
 import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH, TRUCK_COLLISION_STEP_LIFT } from "../constants.js"; // used as fallback defaults only
 import { UPGRADES } from "../managers/UpgradeStorage.js";
-import { TERRAIN_TYPES } from "../terrain.js";
+import { TERRAIN_TYPES } from "../world/terrain.js";
 
 // --- AI terrain-sampling LOD -------------------------------------------------
 // AI trucks only need the expensive multi-probe floor sampling near bridges,

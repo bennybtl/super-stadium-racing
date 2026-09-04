@@ -1,4 +1,4 @@
-import { EXAMPLE_TRACKS } from '../src/track.js';
+import { EXAMPLE_TRACKS } from '../src/world/track.js';
 import { writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';

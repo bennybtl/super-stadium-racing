@@ -1,4 +1,4 @@
-import { featureFootprint } from "../feature-geometry.js";
+import { featureFootprint } from "../world/feature-geometry.js";
 
 /**
  * Water geometry: levels, bodies, and the height field they are cut from.

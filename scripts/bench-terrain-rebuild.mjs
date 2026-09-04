@@ -23,7 +23,7 @@ const cacheDir = join(root, 'node_modules', '.cache', 'bench-terrain');
 mkdirSync(cacheDir, { recursive: true });
 const bundlePath = join(cacheDir, 'track-bundle.mjs');
 await esbuild.build({
-  entryPoints: [join(root, 'src', 'track.js')],
+  entryPoints: [join(root, 'src', 'world', 'track.js')],
   bundle: true,
   format: 'esm',
   platform: 'node',

@@ -43,13 +43,14 @@ offroad/
     ├── math-utils.js                # clamp / lerp / smoothstep (dependency-free)
     ├── polyline-utils.js            # expandPolyline (rounded corners), point-in-polygon, dist-to-polyline
     ├── start-grid.js                # starting-grid layout ↔ race-index math (shared: editor + spawner)
-    ├── feature-geometry.js          # feature footprint / bounds helpers
-    ├── track.js                     # Track class: features[], getHeightAt / getTerrainTypeAt, serialization
-    ├── terrain.js                   # TerrainManager: grid of surface types, TERRAIN_TYPES table
-    ├── terrain-utils.js             # terrain mesh generation, AI-path wear tracing
-    ├── terrain-blend-utils.js       # multi-level surface blend helpers
-    ├── surface-textures.js          # procedural per-surface texture generation
     ├── decorations-registry.js      # decoration id → config/controller lookup
+    ├── world/                       # the static world model — track layout + terrain
+    │   ├── track.js                 #   Track class: features[], getHeightAt / getTerrainTypeAt, serialization
+    │   ├── terrain.js               #   TerrainManager: grid of surface types, TERRAIN_TYPES table
+    │   ├── terrain-utils.js         #   terrain mesh generation, AI-path wear tracing
+    │   ├── terrain-blend-utils.js   #   multi-level surface blend helpers
+    │   ├── feature-geometry.js      #   feature footprint / bounds helpers
+    │   └── surface-textures.js      #   procedural per-surface texture generation
     ├── ai/
     │   ├── AIDriver.js              # coordinator: owns the controllers below, per-tick update
     │   ├── setupAIDrivers.js        # spawn N AI trucks + drivers, wire cross-awareness
@@ -199,7 +200,7 @@ scoring + persistence core (unit-tested).
 
 ---
 
-## Track System (`track.js`)
+## Track System (`world/track.js`)
 
 Tracks are a composable `features[]` array, loaded from JSON in `src/tracks/`
 (shipped) or `localStorage` (`tracks.custom.<id>`, via `TrackStore` /
@@ -232,7 +233,7 @@ outOfBounds / fireworks), `normalMapDecal` / surface decal.
 
 ---
 
-## Terrain System (`terrain.js`)
+## Terrain System (`world/terrain.js`)
 
 Grid of surface-type cells; `TerrainManager(gridSize, cellSize, worldW, worldD)`
 (square by default, non-square tracks supported). `getTerrainAt(position)` snaps

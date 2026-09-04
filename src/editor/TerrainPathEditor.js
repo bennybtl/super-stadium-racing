@@ -9,7 +9,7 @@ function debounce(fn, delay = 100) {
 }
 import { Vector3, MeshBuilder, Color3, Color4 } from "@babylonjs/core";
 import { EditorMaterials, RESTING_ALPHA, SELECTED_ALPHA } from './EditorMaterials.js';
-import { TERRAIN_TYPES } from '../terrain.js';
+import { TERRAIN_TYPES } from '../world/terrain.js';
 import { expandPolyline } from '../polyline-utils.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 

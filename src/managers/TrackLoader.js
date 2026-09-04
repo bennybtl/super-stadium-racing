@@ -1,5 +1,5 @@
 import { zipSync, strToU8 } from 'fflate';
-import { Track } from '../track.js';
+import { Track } from '../world/track.js';
 import {
   getImageBlob, getImageUrl, getTrackJson, hasTrackJson, openTrackStore,
   removeTrackJson, setTrackJson, storedTrackKeys,

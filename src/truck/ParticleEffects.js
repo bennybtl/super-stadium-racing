@@ -1,5 +1,5 @@
 import { Vector3, ParticleSystem, Texture, Color4 } from "@babylonjs/core";
-import { TERRAIN_TYPES } from "../terrain.js";
+import { TERRAIN_TYPES } from "../world/terrain.js";
 import { SPLASH_MIN_DEPTH, DEEP_SPLASH_DEPTH } from "../constants.js";
 
 import cloudTextureUrl from "../assets/cloud.png";

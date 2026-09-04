@@ -1,9 +1,9 @@
 import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
-import { TERRAIN_TYPES } from "../terrain.js";
+import { TERRAIN_TYPES } from "../world/terrain.js";
 import { gizmoY } from './gizmo-height.js';
-import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../feature-geometry.js';
+import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../world/feature-geometry.js';
 
 /**
  * HillEditor – encapsulates all round-hill editing logic that was previously

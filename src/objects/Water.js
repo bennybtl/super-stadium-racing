@@ -199,7 +199,7 @@ function createWaterFoamRibbon(name, contour, y, sgn, widths, scene) {
  * shoreline. Meshes are named with the `water_` prefix, which is how the editor
  * finds and disposes them.
  *
- * @param {import('../track.js').Track} currentTrack
+ * @param {import('../world/track.js').Track} currentTrack
  * @param {BABYLON.Scene} scene
  */
 export function buildWaterBodies(currentTrack, scene) {

@@ -1,4 +1,4 @@
-import { TERRAIN_TYPES } from "../../terrain.js";
+import { TERRAIN_TYPES } from "../../world/terrain.js";
 
 // Corner-speed grip constants below were tuned against the default terrain
 // (packed dirt) with no terrain awareness at all, so its gripMultiplier is

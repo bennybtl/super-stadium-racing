@@ -1,5 +1,5 @@
 import { TERRAIN_TYPES } from "./terrain.js";
-import { expandPolyline, isPointInPolygon, distToPolyline } from "./polyline-utils.js";
+import { expandPolyline, isPointInPolygon, distToPolyline } from "../polyline-utils.js";
 import {
   getHillEllipseParams,
   getSquareHillParams,
@@ -10,7 +10,7 @@ import {
   getEdgeShape,
 } from "./feature-geometry.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
-import { DEFAULT_BORDER_WALL } from "./objects/BorderWall.js";
+import { DEFAULT_BORDER_WALL } from "../objects/BorderWall.js";
 
 const TRACK_SCHEMA_VERSION = 3;
 

@@ -1,9 +1,9 @@
 import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
-import { TERRAIN_TYPES } from "../terrain.js";
+import { TERRAIN_TYPES } from "../world/terrain.js";
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
-import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../feature-geometry.js';
+import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../world/feature-geometry.js';
 import { DEFAULT_CORNER_RADIUS } from '../polyline-utils.js';
 
 /**
