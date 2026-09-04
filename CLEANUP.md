@@ -128,13 +128,16 @@ After 2.4 pulls the shared loop into `DriveMode`, extract the mode-specific chun
 
 ### 2.4 De-dupe the race-sim core shared by `RaceMode`, `MenuMode`, `MultiplayerMode` — IN PROGRESS
 
-**Done (branch `cleanup/tier-1`):**
+**Done (branch `cleanup/tier-1`) — the shared-core dedup:**
 - `c543efd` — `DriveMode.makeAIDriverFactory()` (good/ok/bad ladder, was dup Race↔Menu) + `DriveMode.runCountdownSequence()` (3-2-1-GO choreography, was dup Race↔Multiplayer; `_countdownTimeouts` lifecycle moved up)
-- `1441cce` — `DriveMode.installRaceFrameLoop()`: the frame envelope (onAfterRender pipeline-span/endFrame; onBeforeRender hidden-bail, dt clamp, beginFrame, photo-mode camera, menu bail, 20Hz HUD-timer throttle, countdown-gated input). Modes pass `isMenuUp` / `isCountdownActive` / `getRaceStartMs` closures + an `onFrame(dt, input)` body. Body kept at old indent — `git diff -w` shows the real delta (~−50 real lines per mode).
+- `1441cce` — `DriveMode.installRaceFrameLoop()`: the frame envelope (onAfterRender pipeline-span/endFrame; onBeforeRender hidden-bail, dt clamp, beginFrame, photo-mode camera, menu bail, 20Hz HUD-timer throttle, countdown-gated input). Modes pass `isMenuUp` / `isCountdownActive` / `getRaceStartMs` closures + an `onFrame(dt, input)` body.
+- `4020cc8` — `DriveMode.respawnAtLastCheckpoint()` (the ~35-line last-gate teleport, was near-identical Race↔Multiplayer) + `DriveMode.applyZoneEffects()` (slow/boost/firework trio, all 3 modes).
 
-**Still to do:**
-- **Zone + OOB block** (small, safe, all 3 modes incl. Menu): `applySlowZones` / `applySpeedBoostZones` / `updateFireworkZones` + the per-truck `updateOutOfBoundsCountdown` loop → one `DriveMode.applyEnvironment(trucks, zones, dt, { onOobTimeout, onOobRemaining })`.
-- **`RaceMode.setup()` / `MultiplayerMode.setup()` decomposition** (§2.3): the bodies are still ~700 / ~400 lines. Extract finish/DNF tracking (`RaceFinishTracker`), reset/respawn, the checkpoint-lap handler. Bigger; do it against the now-shared envelope. A headless checkpoint-lap test would help but the loop is scene-bound — most value comes from careful diff review + in-game.
+Cumulative: `DriveMode` +~300 (six shared helpers), `RaceMode` −~210, `MultiplayerMode` −~130, `MenuMode` −~25 — one implementation each instead of 2–3.
+
+**In-game verification still open:** photo mode / pause on the frame envelope; OOB respawn (drive off-track, wait the timer) on `respawnAtLastCheckpoint`; anything multiplayer.
+
+**Left — this is now §2.3, not dedup:** `RaceMode.setup()` is still ~640 lines, `MultiplayerMode.setup()` ~330. The remaining bulk is mode-specific glue: the checkpoint-lap handler (~130 lines in RaceMode), finish/DNF tracking, `resetGame`. Extract a `RaceFinishTracker` (owns `finishOrder`/`dnfTimer`/`triggerRaceEnd`/`handleDNF`/results assembly) and pull the closures to methods. Scene-bound, so verification is diff-review + play. Do after the current slices are confirmed in-game.
 
 _original plan below:_
 
