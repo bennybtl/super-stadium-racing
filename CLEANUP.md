@@ -85,18 +85,23 @@ _Not done:_ the ad-hoc `[c.r,c.g,c.b]` serialization and `toCssColor` in `RaceHU
 
 ## Tier 2 — structural, worth doing
 
-### 2.1 Split `EditorController.js` (2622 → ~4 files)
-It currently owns: entity dispatch, **camera orbit/pan/zoom**, **pointer routing + gizmo drag**, **keybindings**, **undo/redo + snapshot serialization**, panel sync. Three of those are self-contained and liftable without touching entity code:
+### 2.1 Split `EditorController.js` — PARTLY DONE, rest not worth it
 
-| New module | What moves | Approx. lines |
-|---|---|---|
-| `EditorHistory` | `_undoStack`/`_redoStack`, `saveSnapshot`, `_serializeSnapshot`, `_applySnapshot`, `undo`, `redo` | ~180 |
-| `EditorCamera` | `_orbitState`, `_beginOrbit`, `_updateOrbit`, `_handleWheelZoom`, `resetCamera`, `_lockGroundPointUnderCursor`, `viewCenterXZ`, `_groundXZ*` | ~220 |
-| `EditorInput` | `handleKeyDown`/`handleKeyUp`, `handlePointerEvent`/`handlePointerDown`, repeating-key state, gizmo-drag begin | ~450 |
+**Done (`974632a`):** `EditorHistory` — the undo/redo stacks + debounce, with
+`serialize`/`restore` injected as callbacks. 8 unit tests. `deactivate()` now
+resets it (was leaking a pending debounced snapshot). ~20 lines out of
+EditorController; the value is the testable stack logic, not the LOC.
 
-Leaves `EditorController` as a ~1200-line coordinator wiring those + the entity editors together. Each piece becomes testable in isolation.
-
-**Risk:** medium — lots of shared `this` state to thread through. Do 2.1 *after* 3.x (tests) if going this far.
+**The rest (`EditorCamera` / `EditorInput`) — investigated, not worth doing.**
+`_serializeSnapshot` (12 lines) and `_applySnapshot` (90 lines) can't leave —
+they touch `currentTrack`, every `this.xxxEditor`, `deselectAll`, the rebuild
+registry, three panel-sync helpers. `handleKeyDown` / `handlePointerDown` are
+*dispatchers* — `this.closeAiPath()`, `this._getActiveSelectionInteraction()`,
+`this.deselectAll()`, `this.undo()` — so an `EditorInput` would just hold a
+back-reference to the whole controller and call `this.controller.x()` for
+everything. The file gets shorter; the coupling doesn't move. Same for the
+camera helpers, which share `_groundXZUnderPointer` / `_pointerWorldXZ` with the
+placement code. **Leave EditorController as one file.**
 
 ### 2.2 A minimal base for the entity editors
 `src/editor/` has **10 entity editors, 370–835 lines each** (`CheckpointEditor`, `HillEditor`, `ObstacleEditor`, `PolyWallEditor`, `SquareHillEditor`, …), **none sharing a base class**. Every one re-implements: selection state + `deselectOthers`, `findByMesh` registration, `showProperties`/`hideProperties` panel sync, `deleteSelected`/`duplicateSelected` (snapshot → mutate features → rebuild → re-sync), gizmo-height refresh, `createMaterials`/`dispose`.
@@ -113,9 +118,18 @@ class EntityEditor {
 }
 ```
 
-Conservative estimate: 15–25% off ~5000 lines of editor code, and new entity types start from a working skeleton.
+Revised estimate after looking closely: **~5–10% off** (not 15–25%) plus real
+consistency wins — the shared skeleton per method is only ~5 lines
+(`saveSnapshot` → `features.indexOf` + `splice` → `selected = null`), and the
+per-entity parts (visual disposal, `rebuildTerrain` vs not, `this.meshes` vs
+not, `hideProperties` vs `_hideProperties`) genuinely differ. Worth doing for
+the skeleton-for-new-editors and to kill the naming drift, plus it's the natural
+home for 1.1's forwarder collapse (a `{ key → editor }` registry the base
+populates).
 
-**Risk:** medium. High duplication = high payoff, but touches every editor file. Gate on tests.
+**Risk:** medium, and it's **slow** — 10+ files, one at a time, each needing a
+click-through of that entity type in the editor afterward (`check:panels` only
+covers bindings, not behaviour). Not a single-session job.
 
 ### 2.3 Break up the mode god-functions
 `RaceMode.setup()` is **855 lines / 11 nested closures** (`triggerRaceEnd`, `handleDNF`, `syncTruckStatus`, `respawnToLastCheckpoint`, `startCountdown`, `resetGame`, `getAIDriver`, …) closing over `trucks`, `finishOrder`, `dnfTimer`. `MultiplayerMode.setup()` is **464 lines** in the same shape. These are the two hardest files in the repo to modify safely.
