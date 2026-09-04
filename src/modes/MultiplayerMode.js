@@ -322,6 +322,9 @@ export class MultiplayerMode extends DriveMode {
       isMenuUp: () => menuManager.isPaused,
       isCountdownActive: () => countdownActive,
       getRaceStartMs: () => (raceStarted && raceStartTime !== null ? raceStartTime : null),
+      // A live server race doesn't stop when this client opens the pause menu or
+      // photo mode — keep the HUD clock honest with the real elapsed time.
+      runTimerWhilePaused: true,
       onFrame: (dt, input) => {
 
       frameProfiler.measure('collision.remoteTrucks.pre', () =>

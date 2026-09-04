@@ -175,13 +175,27 @@ export class DriveMode extends BaseMode {
    * @param {() => boolean}      o.isCountdownActive  pre-race 3-2-1 is running
    * @param {() => (number|null)} o.getRaceStartMs    Date.now() basis for the HUD
    *                                                  timer, or null before the start
+   * @param {boolean} [o.runTimerWhilePaused=false]   keep ticking the HUD timer
+   *   while a menu/photo mode holds the sim. Single-player leaves this off (the
+   *   race is genuinely suspended); multiplayer sets it, since the server keeps
+   *   the race running whether or not this client is looking.
    * @param {(dt: number, input: object) => void} o.onFrame
    */
-  installRaceFrameLoop({ engine, scene, uiManager, inputManager, isMenuUp, isCountdownActive, getRaceStartMs, onFrame }) {
+  installRaceFrameLoop({ engine, scene, uiManager, inputManager, isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused = false, onFrame }) {
     const NEUTRAL = Object.freeze({ forward: false, back: false, left: false, right: false });
     const TIMER_UI_INTERVAL_MS = 50; // HUD reads MM:SS.cc; 20Hz is finer than the glyphs
     let timerUiElapsedMs = 0;
     let frameRenderStartMs = 0;
+
+    const tickHudTimer = (dt) => {
+      const raceStartMs = getRaceStartMs();
+      if (raceStartMs == null) return;
+      timerUiElapsedMs += dt * 1000;
+      if (timerUiElapsedMs >= TIMER_UI_INTERVAL_MS) {
+        timerUiElapsedMs = 0;
+        this.frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartMs));
+      }
+    };
 
     scene.onAfterRenderObservable.add(() => {
       if (frameRenderStartMs > 0) {
@@ -201,22 +215,17 @@ export class DriveMode extends BaseMode {
         const input = this.frameProfiler.measure('input.photo', () => inputManager.getMovementInput());
         this.frameProfiler.measure('camera.photoMove', () => this.cameraController.moveFreeCamera(input, dt));
         this.frameProfiler.measure('camera.photoUpdate', () => this.cameraController.update());
+        if (runTimerWhilePaused) tickHudTimer(dt);
         frameRenderStartMs = performance.now();
         return;
       }
       if (isMenuUp()) {
+        if (runTimerWhilePaused) tickHudTimer(dt);
         frameRenderStartMs = performance.now();
         return;
       }
 
-      const raceStartMs = getRaceStartMs();
-      if (raceStartMs != null) {
-        timerUiElapsedMs += dt * 1000;
-        if (timerUiElapsedMs >= TIMER_UI_INTERVAL_MS) {
-          timerUiElapsedMs = 0;
-          this.frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartMs));
-        }
-      }
+      tickHudTimer(dt);
 
       const input = this.frameProfiler.measure('input', () =>
         isCountdownActive() ? NEUTRAL : inputManager.getMovementInput()
