@@ -1,5 +1,5 @@
 import { TerrainQuery } from "./TerrainQuery.js";
-import { createDecoration, defForFeature, isModelFeature } from "../decorations-registry.js";
+import { createDecoration, defForFeature, isModelFeature } from "../decorations/decorations-registry.js";
 
 /**
  * DecorationManager — creates and manages decoration features at race time.

@@ -25,7 +25,7 @@ import { WallManager } from "../managers/WallManager.js";
 import { ObstacleManager } from "../managers/ObstacleManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { DecorationManager } from "../managers/DecorationManager.js";
-import { isModelFeature } from "../decorations-registry.js";
+import { isModelFeature } from "../decorations/decorations-registry.js";
 import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";

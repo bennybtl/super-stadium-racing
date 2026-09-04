@@ -12,7 +12,7 @@
  * Also hosts the shared decoration factory and the property/control plumbing
  * used by both the runtime manager and the editor.
  */
-import { ModelDecoration } from "./objects/ModelDecoration.js";
+import { ModelDecoration } from "../objects/ModelDecoration.js";
 
 /** The decoration loader, exposed on window by main.js. */
 export function getDecorationLoader() {

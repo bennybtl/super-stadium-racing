@@ -8,7 +8,7 @@ import {
   controlsFor,
   readDecorationProp,
   applyDecorationProp,
-} from "../decorations-registry.js";
+} from "../decorations/decorations-registry.js";
 import { gizmoY } from './gizmo-height.js';
 
 // Assumed prop height for decorations that don't report their own topY, so the

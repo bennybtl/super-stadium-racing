@@ -210,10 +210,11 @@ before (stale goldens / a missing `king_of_the_hill.json` — pre-existing,
 dependency-free so no internal fixes. build / test (56) / check:panels,surface,walls
 green.
 
-**`src/` root now:** `main.js`, `constants.js`, `settingsStorage.js`,
-`decorations-registry.js`. `decorations-registry.js` → `src/decorations/` (fits
-with `bannerString.js` / `flag.js` / `scaffold.js` already there) is the last
-loose end; `main` / `constants` / `settingsStorage` stay.
+**`decorations-registry.js` → `src/decorations/`** — done (next to the
+`flag.js` / `bannerString.js` / `scaffold.js` controllers).
+
+**`src/` root is now 3 files:** `main.js` (entry), `constants.js` (universal),
+`settingsStorage.js` (app config). Done.
 
 ### 3.4 Documentation hygiene — PARTLY DONE
 - **Root `.md` sprawl** — DONE. `TERRAIN_REFACTOR.md` / `CHAMPIONSHIP_MODE.md` / `MULTIPLAYER.md` moved to `docs/`. Root now holds `README.md`, `AGENT.md`, `CLEANUP.md`. Scoped docs (`src/ai/ARCHITECTURE.md`, `src/vue/MENUS.md`, …) deliberately left next to their code. AGENT.md gained `## Testing` + `## Docs` sections.

@@ -39,7 +39,6 @@ offroad/
     ├── main.js                      # entry: engine, loaders, ModeController bootstrap
     ├── constants.js                 # truck dims, colours, shared physics constants
     ├── settingsStorage.js           # controls/audio/display/gameplay localStorage
-    ├── decorations-registry.js      # decoration id → config/controller lookup
     ├── utils/                       # dependency-free helpers
     │   ├── math-utils.js            #   clamp / lerp / smoothstep
     │   ├── polyline-utils.js        #   expandPolyline (rounded corners), point-in-polygon, dist-to-polyline
@@ -120,7 +119,8 @@ offroad/
     ├── tracks/                      # shipped track JSON + preview images
     ├── vehicles/                    # vehicle JSON + OBJ/MTL (VEHICLE_SETUP.md)
     ├── obstacles/                   # obstacle JSON + OBJ (OBSTACLE_SETUP.md)
-    ├── decorations/                 # decoration assets + configs; lib/ = shared geometry classes
+    ├── decorations/                 # decoration assets + configs; decorations-registry.js (id→controller);
+    │                                  *.js controllers (flag / bannerString / scaffold); lib/ = geometry classes
     └── vue/
         ├── main.js                  # Vue app bootstrap
         ├── store.js                 # barrel re-exporting the 5 Pinia stores in stores/
