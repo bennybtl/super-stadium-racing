@@ -1,5 +1,6 @@
 import { Vector3, PointerEventTypes, Tools } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
+import { EditorHistory } from './EditorHistory.js';
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { MeshGridEditor } from "./MeshGridEditor.js";
 import { PolyWallEditor } from "./PolyWallEditor.js";
@@ -126,10 +127,13 @@ export class EditorController {
     // scheduleGizmoHeightRefresh) — a slider drag fires rebuilds every tick.
     this._gizmoHeightRefreshTimer = null;
 
-    // Undo / redo stacks (each entry is a JSON string of editable track state)
-    this._undoStack = [];
-    this._redoStack = [];
-    this._snapshotDebounceTimer = null;
+    // Undo / redo — the stacks + debounce live in EditorHistory; this controller
+    // still owns what a snapshot is (_serializeSnapshot) and how one is restored
+    // (_applySnapshot, which rebuilds every gizmo).
+    this._history = new EditorHistory({
+      serialize: () => this._serializeSnapshot(),
+      restore: (snap) => this._applySnapshot(snap),
+    });
 
     // Bind event handlers
     this.boundKeyDown = this.handleKeyDown.bind(this);
@@ -225,6 +229,7 @@ export class EditorController {
     this._mouseDrag = null;
     clearTimeout(this._gizmoHeightRefreshTimer);
     this._gizmoHeightRefreshTimer = null;
+    this._history.reset();
 
     // Reset key states
     Object.keys(this.keys).forEach(key => this.keys[key] = false);
@@ -261,22 +266,7 @@ export class EditorController {
    * so we don't flood the stack — a snapshot is only committed after 400ms of silence.
    */
   saveSnapshot(debounce = false) {
-    const commit = () => {
-    const snap = this._serializeSnapshot();
-      // Don't push a duplicate of the current top
-      if (this._undoStack.length && this._undoStack[this._undoStack.length - 1] === snap) return;
-      this._undoStack.push(snap);
-      if (this._undoStack.length > 50) this._undoStack.shift();
-      this._redoStack = [];
-    };
-
-    if (!debounce) {
-      clearTimeout(this._snapshotDebounceTimer);
-      commit();
-    } else {
-      clearTimeout(this._snapshotDebounceTimer);
-      this._snapshotDebounceTimer = setTimeout(commit, 400);
-    }
+    this._history.save(debounce);
   }
 
   _serializeSnapshot() {
@@ -658,17 +648,13 @@ export class EditorController {
   }
 
   undo() {
-    if (this._undoStack.length === 0) return;
-    this._redoStack.push(this._serializeSnapshot());
-    this._applySnapshot(this._undoStack.pop());
-    console.debug('[Undo] stack remaining:', this._undoStack.length);
+    this._history.undo();
+    console.debug('[Undo] stack remaining:', this._history.undoDepth);
   }
 
   redo() {
-    if (this._redoStack.length === 0) return;
-    this._undoStack.push(this._serializeSnapshot());
-    this._applySnapshot(this._redoStack.pop());
-    console.debug('[Redo] stack remaining:', this._redoStack.length);
+    this._history.redo();
+    console.debug('[Redo] stack remaining:', this._history.undoDepth);
   }
 
   handleKeyDown(event) {
