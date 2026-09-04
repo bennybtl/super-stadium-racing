@@ -1,645 +1,473 @@
 # Offroad Racing Game — Agent Documentation
 
+> Architecture reference. Last full pass: 2026-09. When a detail here disagrees
+> with the code, trust the code and fix this file.
+
 ## Project Overview
-An isometric offroad racing game built with Babylon.js and Havok Physics. Features arcade-style truck physics, terrain effects, AI drivers, checkpoints, lap tracking, a track editor, and a full Vue-based menu/HUD. Inspired by classic Super Off-Road.
+An isometric offroad racing game — arcade truck physics, terrain effects, AI
+drivers, checkpoints/laps, a full in-game track editor, single-race +
+championship + hot-lap + practice modes, and (new) online multiplayer. Vue 3
+drives all menus/HUD; the 3D world is Babylon.js + Havok.
 
 ## Technology Stack
-- **Babylon.js 8** — 3D rendering engine
-- **Havok Physics 1.3** — WASM-based physics (MESH for terrain/bridges, BOX for trucks/walls)
-- **Vue 3 + Pinia** — Reactive UI layer (menus, editor panels, HUD, store)
-- **Vite 6** — Build tool and dev server
-- **ES Modules** — Vanilla JS everywhere except Vue components
-- **Tailwind CSS** — Utility CSS for UI components
+- **Babylon.js 8** — rendering
+- **Havok Physics 1.3** — WASM physics (MESH colliders for terrain/bridges/walls, BOX for trucks)
+- **Vue 3 + Pinia** — reactive UI (menus, editor panels, HUD)
+- **Vite 6** — build + dev server
+- **colyseus 0.16** — authoritative multiplayer server (`server/`), `colyseus.js` client
+- **Tailwind CSS** — utility CSS in Vue components
+- **ES Modules**, vanilla JS everywhere except `.vue` files
+- **Vitest** — unit tests for the pure-logic modules (`test/`)
+
+---
 
 ## File Structure
 
 ```
 offroad/
 ├── index.html
-├── package.json
-├── vite.config.js
-├── track-packs/                     # Importable track-pack zips/folders (not built)
+├── server/                          # colyseus multiplayer server (its own mini-app)
+│   ├── index.js                     #   express + colyseus bootstrap
+│   ├── DriveRoom.js                 #   per-race room: roster, state broadcast, lap/finish reports
+│   └── Dockerfile
+├── web/                             # static-site container for the built client
+├── docs/                            # design/plan docs (MULTIPLAYER, TERRAIN_REFACTOR, CHAMPIONSHIP_MODE)
+├── scripts/                         # build + headless check scripts (check-*.mjs, optimizeDistAssets)
+├── test/                            # Vitest suites (pure logic only)
+├── track-packs/                     # importable track-pack zips (not built)
 └── src/
-    ├── main.js                      # Game entry point, Babylon scene setup, mode bootstrap
-    ├── track.js                     # Track class: feature definitions, height/terrain queries, serialization
-    ├── terrain.js                   # Grid-based terrain with surface types and physics modifiers
-    ├── terrain-utils.js             # Terrain mesh generation and blending
-    ├── terrain-blend-utils.js       # Multi-level surface blending helpers
-    ├── polyline-utils.js            # Polyline expansion and bezier interpolation
-    ├── constants.js                 # Game constants (truck dimensions, colors, physics params)
-    ├── settingsStorage.js           # localStorage persistence
+    ├── main.js                      # entry: engine, loaders, ModeController bootstrap
+    ├── constants.js                 # truck dims, colours, shared physics constants
+    ├── settingsStorage.js           # controls/audio/display/gameplay localStorage
+    ├── browserSupport.js            # Safari/WebGL capability warning
+    ├── math-utils.js                # clamp / lerp / smoothstep (dependency-free)
+    ├── polyline-utils.js            # expandPolyline (rounded corners), point-in-polygon, dist-to-polyline
+    ├── start-grid.js                # starting-grid layout ↔ race-index math (shared: editor + spawner)
+    ├── feature-geometry.js          # feature footprint / bounds helpers
+    ├── track.js                     # Track class: features[], getHeightAt / getTerrainTypeAt, serialization
+    ├── terrain.js                   # TerrainManager: grid of surface types, TERRAIN_TYPES table
+    ├── terrain-utils.js             # terrain mesh generation, AI-path wear tracing
+    ├── terrain-blend-utils.js       # multi-level surface blend helpers
+    ├── surface-textures.js          # procedural per-surface texture generation
+    ├── decorations-registry.js      # decoration id → config/controller lookup
     ├── ai/
-    │   ├── AIDriver.js              # A* pathfinding, skill config, stuck detection, respawn
-    │   └── setupAIDrivers.js        # AI driver instantiation helper
-    ├── decorations/                 # Prop assets + configs; top-level *.js are controllers
-    │   └── lib/                     # Geometry classes shared by decoration controllers
-    ├── editor/                      # Track editor subsystem (one file per entity type)
-    │   ├── EditorController.js      # Main editor coordinator (~78KB): input, undo/redo, entity delegation
-    │   ├── EditorMaterials.js       # Shared material definitions for editor visualization
-    │   ├── ActionZoneEditor.js
-    │   ├── AiPathEditor.js
-    │   ├── BridgeMeshEditor.js
-    │   ├── CheckpointEditor.js
-    │   ├── DecorationsEditor.js
-    │   ├── HillEditor.js
-    │   ├── MeshGridEditor.js
-    │   ├── NormalMapDecalEditor.js
-    │   ├── ObstacleEditor.js
-    │   ├── PolyCurbEditor.js
-    │   ├── PolyHillEditor.js
-    │   ├── PolyWallEditor.js
-    │   ├── SquareHillEditor.js
-    │   ├── StartPositionEditor.js
-    │   ├── SurfaceDecalEditor.js
-    │   ├── TerrainPathEditor.js
-    │   ├── TerrainShapeEditor.js
-    │   └── TrackSignEditor.js
-    ├── managers/
-    │   ├── AudioManager.js          # Music/SFX management
-    │   ├── BannerStringManager.js   # Decorative banner strings between poles
-    │   ├── BridgeMeshManager.js     # BridgeMesh lifecycle (create/dispose/physics)
-    │   ├── CameraController.js      # Isometric camera with lerp follow and zoom
-    │   ├── CheckpointManager.js     # Gate detection, lap counting, sequential enforcement
-    │   ├── DebugManager.js          # Debug overlay: telemetry, frame stats
-    │   ├── DriveSurfaceManager.js   # Central registry for all drivable surfaces
-    │   ├── EngineAudio.js           # Engine sound RPM mapping
-    │   ├── FlagManager.js           # Flag rendering + truck collision (spring physics)
-    │   ├── FrameProfiler.js         # Per-frame performance monitoring
-    │   ├── GameState.js             # Race state machine (waiting, countdown, racing, finished)
-    │   ├── InputManager.js          # Keyboard input
-    │   ├── MenuManager.js           # Main menu UI coordination
-    │   ├── ObstacleManager.js       # Tire stacks and cones (movable physics objects)
-    │   ├── PickupManager.js         # Item pickups (boosts, repairs)
-    │   ├── StaticBodyCollisionManager.js  # Truck-to-static mesh collision handling
-    │   ├── SteepSlopeColliderManager.js   # Invisible colliders on steep terrain faces
-    │   ├── SurfaceDecalManager.js   # Normal-map decals on terrain
-    │   ├── SurfaceRegistry.js       # Canonical surface registry with surfaceId/level/role metadata
-    │   ├── SurfaceTopologyGraph.js  # Multi-level surface connectivity graph for AI/recovery
-    │   ├── TelemetryPlayer.js       # Replay recorded telemetry
-    │   ├── TelemetryRecorder.js     # Record truck telemetry for replay
-    │   ├── TerrainQuery.js          # Layered raycast + cross-pattern sampler for floor detection
-    │   ├── TrackLoader.js           # JSON track loading from src/tracks/
-    │   ├── TrackSignManager.js      # Track name sign rendering
-    │   ├── TruckAudioController.js  # Per-truck audio: engine, collision, pickups
-    │   ├── TruckCollisionManager.js # Truck-to-truck collision detection and response
-    │   ├── UIManager.js             # HUD elements
-    │   ├── UpgradeStorage.js        # Vehicle upgrade system with localStorage
-    │   ├── VehicleLoader.js         # Vehicle definition loading from src/vehicles/
-    │   └── WallManager.js           # Wall/barrier physics meshes
+    │   ├── AIDriver.js              # coordinator: owns the controllers below, per-tick update
+    │   ├── setupAIDrivers.js        # spawn N AI trucks + drivers, wire cross-awareness
+    │   ├── driverNames.js           # random driver-name generator (championship rosters)
+    │   ├── RubberBand.js            # per-frame catch-up multiplier stepping
+    │   ├── ARCHITECTURE.md          # ← read this before touching AI
+    │   └── controllers/            # AIPathPlanner, AISteering, AIThrottle, AIBoost,
+    │                                 AIStuckRecovery, AISpawnRecovery, AICheckpointGuidance, AIDebugRenderer
+    ├── multiplayer/
+    │   ├── MultiplayerClient.js     # colyseus.js wrapper: join/leave, roster, state send, lap/finish reports
+    │   ├── RemotePuppet.js          # visual-only truck for other players (interpolated from network state)
+    │   └── RemoteTruckCollision.js  # local player ↔ remote-puppet push-apart (shares collision-math.js)
     ├── modes/
-    │   ├── ModeController.js        # Orchestrates switching between game modes
-    │   ├── BaseMode.js              # Abstract base: visibility handling, physics reset, respawn
-    │   ├── DriveMode.js             # Base class for gameplay modes (shared scene setup)
-    │   ├── SceneBuilder.js          # Shared scene construction: ground, lights, managers, physics
-    │   ├── EditorMode.js
-    │   ├── MenuMode.js              # Menu callbacks + attract-mode demo race behind the menus
-    │   ├── PracticeMode.js
-    │   ├── RaceMode.js              # Full race: lap tracking, AI drivers, timing, UI
-    │   └── TestMode.js
-    ├── objects/                     # Visual + physics track entities
-    │   ├── BannerString.js          # Decorative rope/banner between poles
-    │   ├── BridgeMesh.js            # Multi-level drivable bridge/overpass mesh
-    │   ├── Checkpoint.js            # Race gate with terrain-aware barrel heights
-    │   ├── Flag.js                  # Decorative flag with spring-damper bend physics
-    │   ├── Hill.js                  # Legacy circular Gaussian hill
-    │   ├── Obstacle.js              # Tire stacks, cones, barrels
-    │   ├── Pickup.js                # Item collectibles
-    │   ├── PolyCurb.js              # Polyline-based curb
-    │   ├── PolyWall.js              # Polyline-based wall mesh
-    │   └── TrackSign.js             # Track name sign with DynamicTexture
-    ├── tracks/                      # Shipped track JSON + preview images
+    │   ├── ModeController.js        # owns the render loop; switchTo(ModeClass); championship orchestration
+    │   ├── BaseMode.js              # visibility handler, respawnTruck (teleport + collision flush)
+    │   ├── DriveMode.js             # shared for every driving mode — see §Modes
+    │   ├── SceneBuilder.js          # buildScene(): ground, lights, physics, all the per-track managers
+    │   ├── MenuMode.js              # menu callbacks + the attract-mode demo race behind the menus
+    │   ├── RaceMode.js              # single race / championship race: field, laps, timing, finish/DNF, results
+    │   ├── MultiplayerMode.js       # networked race: local player + remote puppets, server-authoritative
+    │   ├── PracticeMode.js          # free drive, one truck
+    │   ├── HotLapMode.js            # solo time attack + ghost
+    │   ├── EditorMode.js            # hosts EditorController
+    │   └── TestMode.js              # physics sandbox
+    ├── editor/                      # one sub-editor per entity type + EditorController coordinator
+    │   ├── EditorController.js      #   ~2600 lines: camera/orbit, pointer routing, keybinds, undo/redo,
+    │   │                            #   entity dispatch. CLEANUP.md §2.1/§2.2 tracks splitting this.
+    │   ├── EditorMaterials.js       #   shared gizmo materials/colours
+    │   ├── editor-rebuild.js        #   in-place rebuild registry (rebuild.terrainGrid?.() etc.)
+    │   ├── GizmoHandle.js / gizmo-height.js
+    │   └── {ActionZone,AiPath,BridgeMesh,Checkpoint,Decorations,DriveBox,Hill,MeshGrid,Obstacle,
+    │        PolyCurb,PolyHill,PolyWall,SquareHill,StartPosition,SurfaceDecal,TerrainPath,
+    │        TerrainShape,TrackSign}Editor.js
+    ├── managers/                    # scene-object lifecycle owners + persistence + small render helpers
+    │   ├── SceneBuilder-wired managers: CheckpointManager, WallManager, ObstacleManager,
+    │   │   DecorationManager, PickupManager, BridgeMeshManager, TrackSignManager,
+    │   │   SurfaceDecalManager, StaticBodyCollisionManager, SteepSlopeColliderManager,
+    │   │   DriveSurfaceManager, SurfaceRegistry, SurfaceTopologyGraph, TerrainQuery
+    │   ├── race-time: GameState, CheckpointArrow, RacePositionLabels, FloatingTextManager,
+    │   │   FireworksManager, TruckCollisionManager, CameraController, UIManager, InputManager,
+    │   │   DebugManager, FrameProfiler
+    │   ├── audio: AudioManager, EngineAudio, TruckAudioController
+    │   ├── ghost/hotlap: GhostRecorder, GhostPlayer, HotLapTracker
+    │   ├── telemetry: TelemetryRecorder, TelemetryPlayer
+    │   ├── persistence: TrackLoader, TrackStore, TrackPackLoader, VehicleLoader, DecorationLoader,
+    │   │   ObstacleLoader, UpgradeStorage, ChampionshipStorage, HotLapStorage
+    │   └── render helpers (lowercase): billboardText.js, decalShapes.js, groundDecal.js
+    ├── objects/                     # visual + physics track entities
+    │   ├── BridgeMesh.js, Checkpoint.js, Obstacle.js, Pickup.js, PolyWall.js, PolyCurb.js,
+    │   │   TrackSign.js, DriveBox.js, Water.js / water-field.js, BorderWall.js, Outskirts.js,
+    │   │   DirtChunks.js, FireworkLaunchers.js, ModelDecoration.js
+    │   └── poly-ribbon.js, sparkColors.js, stripeColors.js
     ├── truck/
-    │   ├── index.js                 # Re-exports Truck class
-    │   ├── truck.js                 # Truck class — coordinates all subsystems
-    │   ├── Controls.js              # Steering, acceleration, boost logic
-    │   ├── DriftPhysics.js          # Grip, slip angle, drag
-    │   ├── ParticleEffects.js       # Drift smoke, water splash, nitro burst
-    │   ├── TerrainPhysics.js        # Gravity, suspension spring, slope orientation
-    │   └── TruckBody.js             # Visual puppet: OBJ body + procedural wheels
-    ├── vehicles/                    # Vehicle model assets and configs
+    │   ├── truck.js                 # Truck class — coordinates the subsystems below
+    │   ├── Controls.js              # steering, acceleration, boost
+    │   ├── DriftPhysics.js / DriftTuning.js   # grip, slip, drag + the 4 high-level drift knobs
+    │   ├── TerrainPhysics.js        # gravity, suspension spring, slope orientation, depenetration
+    │   ├── TruckBody.js             # visual puppet: vehicleDef.modelUrl OBJ + procedural wheels
+    │   ├── ParticleEffects.js       # drift / rooster / splash / mud / deep-water / nitro emitters
+    │   ├── TireMarks.js             # rubber-stripe trail mesh
+    │   ├── collision-math.js        # orientedSupport() — shared truck-shape math (single-player + MP)
+    │   └── surface-math.js          # motion-onto-tangent vector helpers
+    ├── shaders/
+    │   └── ground-shader.js (+ .md) # custom terrain-blend material plugin
+    ├── utils/                       # mesh-bounds, mesh-color (parseColorValue), mesh-materials, mtl-parser
+    ├── tracks/                      # shipped track JSON + preview images
+    ├── vehicles/                    # vehicle JSON + OBJ/MTL (VEHICLE_SETUP.md)
+    ├── obstacles/                   # obstacle JSON + OBJ (OBSTACLE_SETUP.md)
+    ├── decorations/                 # decoration assets + configs; lib/ = shared geometry classes
     └── vue/
         ├── main.js                  # Vue app bootstrap
-        ├── store.js                 # Pinia state store (~47KB): all reactive game/editor state
-        ├── AppShell.vue             # Root container mounting all UI panels
-        ├── DebugPanel.vue           # Performance metrics overlay
-        ├── MenuOverlay.vue          # Main menu
-        ├── RaceHUD.vue              # Race status: time, lap, position
-        ├── LoadingOverlay.vue       # Asset loading indicator
-        ├── RaceConfig.vue           # Race configuration panel
-        ├── TruckSelection.vue       # Vehicle picker
-        ├── TruckSetup.vue           # Upgrade/setup screen
-        └── editor/                  # Editor UI panels
-            ├── AddEntityMenu.vue
-            ├── BridgeMeshPanel.vue
-            ├── CheckpointPanel.vue
-            ├── EditorPanel.vue      # Draggable panel base component
-            ├── EditorStatusBar.vue
-            ├── FlagPanel.vue
-            ├── HillPanel.vue
-            ├── NormalMapDecalPanel.vue
-            ├── ObstaclePanel.vue
-            ├── PickupPanel.vue
-            ├── PolyCurbPanel.vue
-            ├── PolyHillPanel.vue
-            ├── PolyWallPanel.vue
-            ├── SquareHillPanel.vue
-            ├── TerrainCirclePanel.vue
-            ├── TerrainShapePanel.vue
-            ├── TerrainRectPanel.vue
-            └── TrackSignPanel.vue
+        ├── store.js                 # barrel re-exporting the 5 Pinia stores in stores/
+        ├── stores/                  # menu.js, race.js, editor.js, debug.js, multiplayer.js
+        ├── AppShell.vue             # root; mounts every overlay/panel (each self-gates)
+        ├── MenuOverlay.vue          # title / main menu / pit / pause / settings / championship setup
+        ├── RaceHUD.vue              # timer, lap, per-truck status, countdown, OOB warning
+        ├── SingleRaceOverlay.vue    # post-race results + RacePodium3D
+        ├── ChampionshipPodium.vue   # cup-complete standings + RacePodium3D
+        ├── RacePodium3D.vue         # Babylon mini-scene: top-3 trucks on a podium (shared loadVehicleModel.js)
+        ├── Modal.vue                # reusable dimmed-backdrop modal shell
+        ├── LoadingOverlay.vue       # spinning-wheel loading modal
+        ├── Multiplayer{Lobby,Room}.vue
+        ├── settings/                # Controls/Sound/Display/Gameplay/LapRecords/ManageTracks/LocalTracks
+        └── editor/                  # one *Panel.vue per entity + AddEntityMenu, EditorStatusBar, EditorPanel
 ```
 
 ---
 
-## Core Systems
+## Modes
 
-### 1. Track System (`track.js`)
-Defines terrain layouts using a composable `features[]` array. Tracks are loaded from JSON in `src/tracks/` or built programmatically.
+`ModeController` owns the engine render loop and swaps modes via
+`switchTo(ModeClass, config)` (tears down the old mode, builds the new scene,
+starts rendering). `BaseMode` → `DriveMode` → the concrete driving modes.
 
-**Feature Types:**
-- `hill` — circular Gaussian hill
-- `squareHill` — flat-topped rectangle with cosine transition skirt; negative height = pit
-- `slopedRect` — rectangle sloping along X or Z; supports `transition` cosine falloff
-- `polyHill` — triangular-profile hill extruded along a polyline with optional rounded corners
-- `meshGrid` — arbitrary height field defined by a grid of control points
-- `terrainRect` / `terrainCircle` — areas with specific terrain types (mud, water, etc.)
-- `checkpoint` — racing gate with optional sequential numbering
-- `polyWall` — wall defined by an array of `{x, z}` points
-- `polyCurb` — low polyline curb
-- `obstacle` — tire stack, cone, or barrel
-- `pickup` — item collectible (boost, repair)
-- `flag` — decorative flag with spring-damper bend physics
-- `trackSign` — track name sign with DynamicTexture
-- `startPosition` — optional starting-grid marker; overrides the default two-wide grid behind the finish line. Slots come from a generated grid (`mode: 'grid'` — columns + spacings) or hand-placed `positions` (`mode: 'custom'`), and `poleIndex` names the slot the field's leader starts on. Layout-index vs race-index math is shared with the race spawner in `src/start-grid.js`
-- `bridgeMesh` — drivable elevated surface (see §Multi-Level Surfaces)
-- `normalMapDecal` — normal-map decal on terrain surface
+**`DriveMode`** carries everything the driving modes share:
+- `buildDriveScene(trackKey)` → `SceneBuilder.buildScene` + border-wall fade
+- `getStartFinishInfo` / `makeGridSpawner` — grid spawns from a `startPosition`
+  marker or stacked rows behind the finish gate (`start-grid.js` math)
+- action-zone helpers: `getSlowZones` / `getSpeedBoostZones` / `getFireworkZones`
+  / `getOutOfBoundsZones`, `applyZoneEffects`, `updateOutOfBoundsCountdown`
+- `makeAIDriverFactory` — the good/ok/bad skill ladder (Race + Menu)
+- `runCountdownSequence` — the 3-2-1-GO choreography (Race + Multiplayer)
+- `installRaceFrameLoop({ isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused, onFrame })`
+  — the per-frame envelope (dt clamp, profiler frame, photo-mode camera, menu
+  bail, HUD-timer throttle). Each mode supplies the `onFrame(dt, input)` body.
+- `respawnAtLastCheckpoint(truck, { … })` — teleport back to the last cleared gate
+- frame profiler + photo mode + fireworks lifecycle
 
-**Key Methods:**
-- `getHeightAt(x, z)` — additive sum of all elevation features at a world point
-- `getTerrainTypeAt(x, z)` — returns the terrain type of the topmost matching feature
+`CLEANUP.md §2.4` records this dedup; `§2.3` is the remaining `RaceMode.setup()` /
+`MultiplayerMode.setup()` decomposition (still large single functions).
 
-**`squareHill` math:**
-```
-edgeDx = max(0, |lx| - halfWidth)
-edgeDz = max(0, |lz| - halfDepth)
-dist = sqrt(edgeDx² + edgeDz²)
-t = clamp(dist / transition, 0, 1)
-height = feature.height * (cos(t * π) + 1) / 2
-```
+**`RaceMode`** — the field (player + AI), lap/checkpoint tracking, race timer,
+finish order + DNF grace timer, rubber-band, telemetry, position labels,
+checkpoint arrow. On finish: `menuManager.showSingleRaceResults` (single race)
+or `championship.onRaceComplete` (cup). Results rows carry `vehicleKey` + `color`
+so the podium can render each finisher's truck.
 
-**`polyHill` math:**
-- Expand control points with rounded corners using arc segments per `radius`
-- Find minimum distance from query point to expanded polyline
-- If `dist < width/2`: `height = feature.height * (1 - dist / halfWidth)`
+**`MultiplayerMode`** — one locally-simulated player truck + `RemotePuppet`s
+interpolated from server state. The client runs checkpoints/laps for its own
+player only and reports lap/finish to the server; the server owns the roster and
+race order. `runTimerWhilePaused: true` — a live server race doesn't stop for
+this client's pause menu.
 
-**Adding a New Track Feature:**
-1. Add `add___()` method to `Track` class with a feature object pushed to `this.features`
-2. Add `case` to `getHeightAt()` if it changes elevation
-3. Add `case` to `getTerrainTypeAt()` if it changes terrain type
-4. Add rendering in `SceneBuilder.js`
-5. Add `XxxEditor.js`, `XxxManager.js`, `XxxPanel.vue`
-6. Wire into `EditorController` (activate/deactivate, `_applySnapshot`, pointer pick, `deselectAll`, bridge methods)
-7. Add to `store.js` and `AppShell.vue` / `AddEntityMenu.vue`
+**`MenuMode`** — builds the attract-mode demo (a random track, AI-only field,
+endless resultless race) that the menus sit on top of; falls back to a blank
+scene + the static title art if it can't build.
+
+**`HotLapMode`** — solo time attack with a `GhostPlayer` replay of your best lap.
 
 ---
 
-### 2. Terrain System (`terrain.js`)
-Grid-based terrain that applies physics and visual modifiers.
+## Championship (cup) mode
 
-**Terrain Types:**
-| Name | Grip | Drag |
-|------|------|------|
-| `ASPHALT` | 3.5× | 1.0× |
-| `PACKED_DIRT` | 2.0× | 1.0× |
-| `LOOSE_DIRT` | 0.5× | 1.2× |
-| `MUD` | 0.15× | 2.9× |
-| `WATER` | 0.3× | 6.0× |
+`ModeController` orchestrates; `managers/ChampionshipStorage.js` is the pure
+scoring + persistence core (unit-tested).
 
-**Grid System:**
-- 160×160 world units, 2×2 cell size → 80×80 grid cells
-- `getTerrainAt(position)` snaps to nearest cell center with `Math.round()`
-- Ground mesh and terrain grid must both be 160×160 — mismatching breaks physics and texture alignment
-
-**Visual Texture:**
-- `DynamicTexture` drawn per-cell from terrain color
-- Per-pixel brightness noise (±9 units) for a matte dirt look
-- `specularColor = (0,0,0)`, `specularPower = 0` — no shine
+- `createChampionship({ initials, calendar, drivers })` — fixed calendar, fixed
+  roster (player + AI), each driver seeded to stock: 0 points, $0, 5 nitro
+- `applyRaceResult(state, finishOrderIds)` — award points + purse by position
+  (`awardRace`), advance `currentRaceIndex`; returns a new state (immutable)
+- `standings(drivers)` — points desc, cumulative winnings as tiebreak
+- Between races: pit screen (standings + wallet + upgrades); AI auto-shop
+  (`_runAIPurchasing` — top up nitro, then random affordable stat upgrades)
+- Cup complete → `showChampionshipPodium` (final standings + `RacePodium3D`) and
+  `saveChampionshipScore` to the results board
+- `money` is spendable (drops on upgrade buys); `winnings` is monotonic
 
 ---
 
-### 3. Multi-Level Surface System
-Multi-level drivable surfaces (bridges, overpasses) are implemented via three cooperating systems:
+## Track System (`track.js`)
 
-**`SurfaceRegistry` (`managers/SurfaceRegistry.js`)**
-Canonical registry for all gameplay-relevant world surfaces.
-- Each mesh gets a unique `surfaceId`, `surfaceType`, `level`, `surfaceRole` (`"drive"` or `"boundary"`) via `mesh.metadata`
-- Legacy fields `isTerrain` and `isDriveSurface` are still set for backward compatibility
-- `registerSurface(mesh, options)` — assign id, set metadata, store record
+Tracks are a composable `features[]` array, loaded from JSON in `src/tracks/`
+(shipped) or `localStorage` (`tracks.custom.<id>`, via `TrackStore` /
+`TrackLoader`), or built programmatically.
 
-**`DriveSurfaceManager` (`managers/DriveSurfaceManager.js`)**
-Central entry point for registering and querying drivable surfaces. Wraps `SurfaceRegistry`.
-- `register(mesh, options)` — register drive surface (sets `role: "drive"`); also builds a picking octree on large meshes (see §3b)
-- `registerBoundary(mesh, options)` — register boundary (wall/barrier)
-- `getAll()` — returns all drivable meshes
+**Feature types:** `hill`, `squareHill`, `slopedRect`, `polyHill`, `meshGrid`,
+`terrainRect` / `terrainCircle`, `terrainPath` (terrain painted along a
+polyline), `checkpoint`, `polyWall`, `polyCurb`, `driveBox` (drivable
+box/wedge), `bridgeMesh` (elevated drive surface), `obstacle`, `pickup`,
+`decoration`, `trackSign`, `startPosition`, `actionZone` (slowZone / speedBoost /
+outOfBounds / fireworks), `normalMapDecal` / surface decal.
 
-**`TerrainQuery` (`managers/TerrainQuery.js`)**
-Hybrid raycast + cross-pattern normal sampler for robust multi-level floor detection.
-- **Primary ray**: downward from truck position, filtered to `isDriveSurface` meshes
-- **Upward fallback**: fires when truck Y has penetrated the mesh (steep slope edge case)
-- **Cross-pattern sampling**: 4 short height probes (±0.5m in X and Z) to compute a smooth averaged normal — avoids jitter from per-triangle normals on vertex-displaced meshes
-- Maintains `_lastResolvedSurface` for continuity hints (helps stay on bridge deck vs. ground when layers overlap)
-- Result: `{ hit: bool, y: number, normal: Vector3, surfaceId, level }`
+**Key methods:** `getHeightAt(x,z)` (additive sum of elevation features),
+`getTerrainTypeAt(x,z)` (topmost matching terrain feature).
 
-**`SurfaceTopologyGraph` (`managers/SurfaceTopologyGraph.js`)**
-Graph of surface connectivity for AI routing and recovery.
-- Nodes = surfaces by `surfaceId`
-- Edges = connectors between surfaces (bridge entry/exit ramps)
-- Used by BridgeMesh to wire up connector endpoints at creation time
+**`squareHill` skirt:** `t = clamp(edgeDist / transition, 0, 1)`,
+`height = feature.height * (cos(tπ) + 1) / 2`.
 
-**`BridgeMesh` (`objects/BridgeMesh.js`)**
-Drivable elevated mesh with solid top/bottom/sides.
-```json
-{
-  "type":      "bridgeMesh",
-  "centerX":   0,
-  "centerZ":   0,
-  "width":     10,
-  "depth":     20,
-  "cols":      3,
-  "rows":      5,
-  "heights":   [2,2,2, 2,2,2, 2,2,2, 2,2,2, 2,2,2],
-  "rotation":  0,
-  "thickness": 0.5,
-  "smoothing": 0,
-  "layerId":   1
-}
-```
-- `heights` array is row-major (rows × cols), absolute world Y
-- `offsetsX` / `offsetsZ` (optional, row-major) — per-control-point in-plane nudge,
-  clamped to <½ cell; dragging a control sphere writes these (like `meshGrid`)
-- `smoothing` (0–1) — when > 0 the visual + drive mesh are densified and blended
-  toward a Catmull-Rom bicubic surface (same maths as `meshGrid` smoothing); the
-  control grid / editor handles are unchanged
-- Top face registered as a drive surface so raycasts land at correct height/slope
-- Uses Havok MESH collider for the top face; terrain seam meshes connect bridge edges to ground to prevent gaps
+**`polyHill`:** expand control points with rounded-corner arcs, then
+`height = feature.height * (1 - dist / halfWidth)` inside `width/2` of the line.
+
+### Adding a track feature
+1. `add___()` on `Track` (push to `this.features`); `case` in `getHeightAt` /
+   `getTerrainTypeAt` as needed
+2. render in `SceneBuilder.js` (usually via a new `XxxManager`)
+3. `XxxEditor.js` + `XxxPanel.vue`, wire into `EditorController`
+   (activate/deactivate, `_applySnapshot`, pointer pick, the
+   `_getSelectedFeatureActions` table) and `AddEntityMenu.vue`
+4. add panel state to the editor store; `npm run check:panels` verifies bindings
 
 ---
 
-### 3b. Terrain Raycast Performance (drive-surface picking)
-Terrain physics and AI floor detection fire **many downward raycasts per truck per
-frame** (multi-probe sampling + cross-pattern normal sampling, each resolved
-through `DriveSurfaceManager`/`TerrainQuery` via `scene.multiPickWithRay`). This
-cost scales linearly with the number of trucks (AI count) and is the dominant
-factor in frame time when many AI drivers are present.
+## Terrain System (`terrain.js`)
 
-**Picking acceleration:** `DriveSurfaceManager.register()` calls
-`_enablePickingAcceleration(mesh)` on every drive surface. For meshes above ~512
-triangles (the ground, ~8k tris) it (1) `mesh.subdivide(n)` partitions the single
-submesh into `n` submeshes (~128 tris each), and (2) `mesh.createOrUpdateSubmeshesOctree(32, 2)`
-builds a submesh octree so candidate-gathering is sub-linear. Each downward ray
-then tests only the triangles beneath its XZ instead of the whole mesh.
+Grid of surface-type cells; `TerrainManager(gridSize, cellSize, worldW, worldD)`
+(square by default, non-square tracks supported). `getTerrainAt(position)` snaps
+to the nearest cell centre.
 
-> **Note:** the terrain-surface picking itself is correct; do NOT replace
-> `multiPickWithRay` with a single `pickWithRay` in `_castRayToSurface` (a
-> "single-pick fast path" was tried and reverted — see §Single-pick below).
+**`TERRAIN_TYPES`** (grip × / drag ×): `ASPHALT` 3.8 / 0.3 · `PACKED_DIRT`
+2.0 / 0.5 (baseline) · `LOAMY_DIRT` 0.75 / 1.1 · `LOOSE_DIRT` 1.5 / 0.7 ·
+`MUD` 0.15 / 2.9 · `WATER` 0.3 / 6.0 · `ROCKY` 1.0 / 0.8 · `GRASS` 0.15 / 1.2.
+Each type also carries `color`, `smokeColor`, `dustIntensity`, `roosterTail`.
 
-Only static, ground-level surfaces are accelerated — bridge decks and seams are
-excluded (`level > 0` / `surfaceType` starting with `bridge`): they are built from
-the coarse control-point grid (~16–32 triangles) so they already pick in
-microseconds, and they are dynamic (rebuilt on edit). Small meshes are also caught
-by the `triCount < 512` guard.
+Visual: procedural per-surface `DynamicTexture` (`surface-textures.js`) plus the
+custom terrain-blend material (`shaders/ground-shader.js`, documented in its
+`.md`) — blends between painted regions, bakes AI-path wear ruts.
 
-**AI terrain-sampling LOD (multi-probe gated to bridges):** AI trucks no longer
-run the expensive multi-probe floor sampling every frame. `Truck.update()` enables
-`forceMultiProbe` only when the truck is on an elevated surface
-(`floorSurface.surfaceLevel > 0`) or within `AI_BRIDGE_MULTIPROBE_RADIUS` of a
-bridge deck (`DriveSurfaceManager.hasElevatedSurfaceNear`), with a
-`AI_BRIDGE_MULTIPROBE_STICKY_S` hysteresis timer so it stays on through approaches
-and exits. On flat tracks the elevated-surface list is empty, so the proximity
-check returns instantly and AI use the cheap single-probe `heightAtFast` path.
-AI also sample full normals at `AI_NORMAL_SAMPLE_INTERVAL` (1/30 s) instead of
-every frame — except near bridges, where `TerrainPhysics` forces every-frame
-normals so ramp slope stays accurate. Player trucks are unchanged (continuous
-multi-probe + every-frame normals).
-
-**Required side-effect import:** `createOrUpdateSubmeshesOctree` and the picking
-octree scene component are tree-shaken out of `@babylonjs/core` by default.
-`DriveSurfaceManager.js` imports `@babylonjs/core/Culling/Octrees/octreeSceneComponent.js`
-for its side effects — without it the method is `undefined` and acceleration
-silently no-ops. The prototype method lazily registers the scene component on
-first use, so no scene-level setup is needed.
-
-**Reading the FPS overlay (`vue/AppShell.vue`):** the top-right counter shows
-`<avg> (min <worst>)`. The average is a 500 ms, vsync-capped, rounded frame
-*count* — it reads a steady 60 even through hitches and **cannot reveal stutter**.
-The `min` value is `1000 / longest-frame-ms` within the same window, so a single
-long frame surfaces there (e.g. `60 (min 32)`) and is colored amber below ~50 /
-red below ~30. Use **min**, not the average, to judge hitches; the `FrameProfiler`
-console report (`maxFrameMs` + per-section `truck.terrainPhysics`) localizes them.
-
-**Center-sample reuse:** `TerrainPhysics.update()` resolves the truck's centre
-floor once per frame (`centerFloorY`) and reuses it for the multi-probe lift
-comparison and the suspension downhill passes (`_updateSuspension` no longer
-re-queries the centre XZ). The normal-sampling `castDown` still issues its own
-centre query — it needs the precise hit + cross-pattern normal there, and merging
-it would flip the multi-probe-lift / castDown precedence the bridge handling
-relies on, so that one duplicate is left intentionally.
-
-**Single-pick — TRIED AND REVERTED (do not re-add).** A "fast path" once made
-`_castRayToSurface` use a single `pickWithRay` when no elevated surfaces exist.
-`pickWithRay` returns only the *nearest* triangle; on a steep hill that nearest
-triangle can be a near-vertical sliver that fails the `_isHitAllowed` normal
-filter, so the whole query returns null → stale floor → the truck tunnels
-through ("drive underground, emerge when the slope eases"). `multiPickWithRay`
-keeps every hit and selects the nearest *valid* one, so it always resolves the
-surface. Always use the multi-pick path; the single pick is only the empty
-fallback.
-
-**AI occupancy grid:** `AIDriver.isBlocked` no longer scans every wall/curb
-segment per call. Segments are static during a race, so they are rasterized once
-(lazily) into a cached `Uint8Array` grid (`_ensureBlockedGrid`); subsequent
-queries — many per AI tick from steering/boost probes — are O(1) lookups.
-`invalidateBlockedGrid()` drops the cache if walls change.
-
-**AI terrain LOD:** AI trucks farther than `AI_TERRAIN_LOW_DETAIL_DIST` (75m)
-from the player run `TerrainPhysics` in `lowDetail` mode (sparser normal
-samples via `LOW_DETAIL_NORMAL_SAMPLE_INTERVAL`, no depenetration pass, cheap
-suspension). The gate lives in `Truck.update` next to the bridge multi-probe
-logic and is suppressed while multi-probe is forced, so deck/ramp traversal
-always gets the full pass. Measure with the `FrameProfiler`
-(`truck.terrainPhysics` label is already instrumented).
+### Adding a terrain type
+Add to `TERRAIN_TYPES` (grip, drag, color, smokeColor). Paint via
+`terrainRect` / `terrainCircle` / `terrainPath`, or set as a hill's
+`terrainType`.
 
 ---
 
-### 4. Truck Physics (modular, in `src/truck/`)
-The `Truck` class coordinates four subsystems updated each frame:
+## Multi-Level Surfaces (bridges / overpasses)
 
-**`TerrainPhysics.js`** — vertical physics
-- Spring-based terrain collision: `springStrength: 150`, `damping: 7`
-- Returns `{ groundedness, penetration }` each frame
-- Multi-probe floor sampling: several points around the truck's footprint are all queried via `TerrainQuery` for robust detection on edges
-- `penetration > -0.3` gates terrain effects (use this, not `groundedness > 0` which never fully zeros)
-- **Downhill tracking**: `DOWNHILL` config object at file top holds all tuning knobs:
-  - Pass 1 (`followMaxGap`, `followHeightDrop`, …) — injects fake suspension compression when slightly airborne on a downward slope
-  - Pass 2 (`boostMaxGap`, `boostGroundedness`, …) — clamps `groundedness` to a minimum so the truck retains steering through descents
-- **Slope-tunnelling depenetration** (`_applyDepenetration`): when penetration exceeds `SPRING.depenetrationMinDepth`, checks the travel-direction slope; if it reads downhill past `tunnelingSlope` the truck has tunnelled through a face, so it's eased back to the surface (`depenetrationSpeed`) and horizontal speed is bled. A legitimate uphill climb is left alone.
+- **`SurfaceRegistry`** — every gameplay surface gets `mesh.metadata` with
+  `surfaceId`, `surfaceType`, `level`, `surfaceRole` (`drive` | `boundary`).
+- **`DriveSurfaceManager`** — register/query drive surfaces; builds a submesh
+  octree on large static meshes for fast downward picks (see below).
+- **`TerrainQuery`** — hybrid raycast + cross-pattern normal sampler. Downward
+  ray filtered to drive surfaces, upward fallback on penetration, 4 short probes
+  for a smooth averaged normal, `_lastResolvedSurface` continuity hint so the
+  truck stays on the deck vs. the ground under it.
+- **`SurfaceTopologyGraph`** — surface connectivity for AI routing / recovery.
+- **`BridgeMesh`** — solid elevated mesh; `heights[]` row-major absolute Y,
+  optional `offsetsX/Z` per control point, `smoothing` (Catmull-Rom densify),
+  Havok MESH collider, terrain seams to the ground.
 
-  **Terrain-collision robustness — TODO (deferred, in priority order).** Note: the prior "underground" bug was NOT a physics-correction problem — it was the single-pick floor-resolution regression (see §3b). These remain as hardening for fast/low-fps edge cases:
-  1. **Swept floor sampling** — march prev→current XZ in ≤cell steps and ride over the max height on the path, so geometry can't be skipped between frames (matters at low fps / very high speed; the per-frame center sample already covers normal speed).
-  2. **Slope-limiting** — project out into-slope velocity when entering a face steeper than climbable, so over-steep faces decelerate the truck at the base (wall-like) instead of being plowed into.
-  3. **Footprint sampling** — sample at the truck's front/corners (max), so the front catches a rising face before the centre is underground.
-  4. **Sub-stepping** — split the physics update into smaller steps on fast frames so a feature can't be jumped.
-  5. **Havok CCD contact** (heaviest) — hand truck-vs-terrain contact to the physics engine with continuous collision detection instead of the custom spring/raycast model.
+### Drive-surface picking performance
+Terrain physics + AI floor detection fire many downward `multiPickWithRay`s per
+truck per frame; cost scales with AI count.
+- `DriveSurfaceManager.register()` subdivides + octrees meshes > ~512 tris (the
+  ground). Requires the side-effect import
+  `@babylonjs/core/Culling/Octrees/octreeSceneComponent.js` — without it the
+  octree method is `undefined` and acceleration silently no-ops.
+- Bridge decks/seams are excluded (coarse + dynamic).
+- AI multi-probe floor sampling is gated to elevated surfaces / bridge proximity
+  (`hasElevatedSurfaceNear` + a sticky timer); flat tracks use the cheap
+  single-probe `heightAtFast` path. AI normals sample at ~1/30 s except near
+  bridges. AI beyond `AI_TERRAIN_LOW_DETAIL_DIST` (75 m) run `TerrainPhysics` in
+  `lowDetail`.
+- **Do not** replace `multiPickWithRay` with a single `pickWithRay` in
+  `_castRayToSurface` — tried and reverted; a single pick returns only the
+  nearest triangle, which on a steep face is a vertical sliver that fails the
+  normal filter → null floor → truck tunnels through.
 
-**`DriftPhysics.js`** — horizontal traction
-- `applyGripAndDrift(speed, forward, groundedness)` — early-returns when `groundedness <= 0`
-- `applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness)` — uses `coastingMultiplier = 0.02`, `drag = 1.0` when airborne
+### FPS overlay (`AppShell.vue`)
+`<avg> (min <worst>)`. The average is a vsync-capped frame *count* over 500 ms —
+reads a steady 60 through hitches. Judge stutter by **min** (`1000 / longest
+frame`), amber < 50 / red < 30. The `FrameProfiler` console report localizes.
 
-**`Controls.js`** — steering and acceleration
-- Steering inverts when `fwdSpeed < 0` so the truck turns naturally in reverse
-- Boost: `boostActive`, `boostTimer`, `boostCount` (max 5), `boostDuration: 3.0s`, `boostAccelMult: 2.5×`, `boostSpeedMult: 1.8×`
+---
 
-**`TruckBody.js`** — visual puppet
-- Loads `offroad-truck-v3.obj` via `SceneLoader.ImportMeshAsync`; box fallback on failure
-- Two `TransformNode` roots parented to the physics box:
-  - `_visualRoot` — body/chassis gets **partial** terrain correction (allows suspension bounce)
-  - `_wheelRoot` — wheels get **full** terrain correction (always above ground)
-- Animates steering angle, suspension compression, roll
+## Truck Physics (`src/truck/`)
 
-**Key State (on `truck.state`):**
-- `heading` — direction truck faces (radians); 0 = +Z north
-- `velocity` — world-space movement vector (can diverge from heading = drift)
-- `slipAngle` — angle between heading and velocity direction
-- `boostActive` / `boostTimer` / `boostCount`
+`Truck` coordinates four subsystems per frame:
 
-**Airborne terrain gating (`truck/truck.js`):**
+- **`TerrainPhysics`** — vertical. Spring terrain collision
+  (`springStrength 150`, `damping 7`), returns `{ groundedness, penetration }`.
+  Multi-probe footprint sampling. `penetration > -0.3` gates terrain effects (use
+  this, not `groundedness > 0`, which never fully zeros). `DOWNHILL` config at
+  file top: pass 1 fakes suspension when slightly airborne downhill, pass 2
+  floors `groundedness` so steering survives descents. `_applyDepenetration`:
+  on deep penetration reading downhill past `tunnelingSlope`, eases the truck
+  back to the surface and bleeds horizontal speed (uphill climbs left alone).
+- **`DriftPhysics`** / **`DriftTuning`** — horizontal traction. `DriftTuning`'s
+  four knobs are the only intended drift interface; they expand into the raw
+  grip/slip/drag params.
+- **`Controls`** — steering (inverts below `fwdSpeed < 0` for natural reverse),
+  acceleration, boost (`boostCount` max 5, `boostDuration 3.0s`,
+  `boostAccelMult 2.5`, `boostSpeedMult 1.8`).
+- **`TruckBody`** — visual puppet. Loads `vehicleDef.modelUrl` (from
+  `VehicleLoader`) via `SceneLoader.ImportMeshAsync`, box fallback. `_visualRoot`
+  (partial terrain correction, allows bounce) + `_wheelRoot` (full correction).
+  Wheels are instanced from `assets/models/truck-tire-v2.obj`.
+
+**`truck.state`:** `heading` (rad, 0 = +Z), `velocity` (world, diverges from
+heading = drift), `slipAngle`, `boostActive/Timer/Count`,
+`speedBoostActive/Timer/…`, `slowZoneActive`, `rubberBandSpeedMult`.
+
+---
+
+## Particle Effects (`truck/ParticleEffects.js`)
+
+Six emitter kinds, declared as `EMITTER_SPECS` and built by `_buildEmitter`:
+`drift` (terrain-tinted cruise/drift smoke), `rooster` (paired rear-tire dirt
+under throttle), `splash` (water spray, uses `water-spray.png`), `mud`,
+`deep` (deep-water burst), `nitro` (world-space burst on boost rising edge).
+Terrain-tinted emitters recolour from `terrain.smokeColor` on surface change.
+
+---
+
+## AI Driver (`ai/AIDriver.js`)
+
+**Read `src/ai/ARCHITECTURE.md` first.** `AIDriver` is a thin coordinator that
+delegates to focused controllers in `ai/controllers/`: path planning
+(`AIPathPlanner`), analog steering (`AISteeringController` — velocity/trajectory
+referenced, not binary), throttle + corner-speed taper (`AIThrottleController`),
+boost (`AIBoostController`), stuck / spawn recovery, checkpoint guidance, debug
+rendering. Skill presets `AI_SKILL_PRESETS` = `good` / `ok` / `bad`; outside a
+championship the field cycles through them by index
+(`DriveMode.makeAIDriverFactory`).
+
+Perf: `isBlocked` uses a cached rasterized occupancy grid (not per-segment
+scans); `invalidateBlockedGrid()` on wall changes. Terrain LOD as above.
+
+---
+
+## Vehicle Upgrades (`managers/UpgradeStorage.js`)
+
+`UPGRADES` = topSpeed / acceleration / tires / suspension / nitro. `applyPurchase`
+(pure, unit-tested) gates on cost + `maxLevel` (6; nitro is a 0-99 consumable
+count). Single-race upgrades are free (`getUpgradeCatalog({ ignoreBalance: true })`)
+and global; a **championship** driver spends a real per-cup wallet
+(`ChampionshipStorage`). Shown on the pit screen (`TruckSetup.vue`), applied to
+truck stats at spawn.
+
+---
+
+## Checkpoint / lap system (`managers/CheckpointManager.js`)
+
+Gate detection: perpendicular dist < `width/2`, forward dist < 2 u, velocity·
+forward > 0. Numbered checkpoints enforce order; `lastCheckpointPassed` blocks
+double-triggers. Alternative gates share a checkpoint *step*. Reverse races
+rebuild the manager with flipped headings + renumbered sequence — always resolve
+gates from `checkpointManager.checkpointMeshes`, not raw track features. Barrels
+sample terrain height at their own position for a local Y offset.
+
+---
+
+## Editor (`src/editor/`)
+
+`EditorController` (~2600 lines) coordinates: camera orbit/pan/zoom, pointer
+picking + gizmo drag, keybindings (WASD nudge, Delete, Ctrl+Z/Y), a 50-deep
+undo/redo snapshot stack, and dispatch to one sub-editor per entity type. Vue
+panels in `src/vue/editor/` self-gate on `editor.selectedType`.
+
+**Panel ↔ editor dispatch** (validated by `scripts/check-panel-bindings.mjs`):
+- `editor.setFeatureProp('hill', 'radiusX', v)` → store mirrors `hill.radiusX`,
+  then `EditorController.changeHillRadiusX(v)` → `this.hillEditor.changeRadiusX(v)`
+- `editor.featureAction('deleteSelectedHill')` → `EditorController.deleteSelectedHill()`
+
+**Vue reactivity:** each sub-editor's `_syncStoreToFeature(feature, selectedIdx)`
+sets **individual** store props — never replace the reactive object:
 ```js
-const isGrounded = penetration > -0.3;
-if (terrainManager && isGrounded) { /* apply terrain modifiers */ }
+store.polyHill.height = feature.height;   // ✓
+store.polyHill = { height: … };           // ✗ breaks reactivity
 ```
+Rebuild methods run **immediately** (not deferred) for live slider feedback.
+Full-scene `rebuild` reloads the track from `localStorage` — refresh in place for
+unsaved edits (`editor-rebuild.js`).
+
+`EditorController.handleKeyDown` bails when `event.target` is an input/textarea
+so typing in fields doesn't trigger shortcuts.
 
 ---
 
-### 5. Particle Effects (`truck/ParticleEffects.js`)
-Three independent `ParticleSystem` instances per truck:
+## Camera (`managers/CameraController.js`)
 
-**Drift smoke** — `emitRate = driftIntensity * 300`; color from `DRIFT_COLORS` map:
-| Terrain | Color |
-|---------|-------|
-| `packed_dirt` | Dusty brown |
-| `loose_dirt` | Lighter tan |
-| `mud` | Dark brown |
-| `asphalt` | Grey |
-| `water` | Blue-white |
-
-**Water splash** — `emitRate = speed * 80` when `isInWater && isGrounded && speed > 1`
-
-**Nitro burst** — fires once on rising edge of `state.boostActive`; emitter is a **fixed world-space `Vector3`** snapped to truck rear at fire time (particles don't follow the truck)
+Isometric, base offset `(0, 28, -20)`, lerp follow (0.08), zoom `-` / `=`
+(0.5×–2.0×). `P` toggles a free "photo mode" camera (WASD + `+`/`-`).
 
 ---
 
-### 6. AI Driver (`ai/AIDriver.js`)
-A* pathfinding on 160×160 / 2-unit-resolution grid.
+## Coordinate system
 
-**Skill Config (`AI_SKILL_PRESETS`):**
-```js
-// Exported presets: good / ok / bad
-new AIDriver(track, checkpointManager, wallManager, scene, AI_SKILL_PRESETS.good);
-```
-| Preset | lookAheadDistance | maxSpeed | steeringPrecision |
-|--------|-------------------|----------|-------------------|
-| good | 20 | 0.8 | 1.0 |
-| ok | 15 | 0.65 | 0.85 |
-| bad | 12 | 0.5 | 0.7 |
-
-**Pathfinding:**
-- Grid cells blocked if they overlap wall segments (2-unit safety margin)
-- A* with 8-directional movement (diagonal cost = 1.414)
-- On checkpoint pass: use exit point 10u ahead as A* start, prepend 4 blend waypoints for smooth curve through gate
-
-**Stuck detection (two systems):**
-1. No-throttle timer — coasting/reversing 3+ seconds → respawn
-2. Position timer — moved <1 unit in 3s → respawn
-
-**Respawn (`_findClearPosition`):** walk back along path → radial sweep (16 directions, 2–12u) → stay put
-
----
-
-### 7. Vehicle Upgrades (`managers/UpgradeStorage.js`)
-Vehicle upgrade system; persists per-vehicle upgrade levels to localStorage. Shown
-in the Pit screen (`TruckSetup.vue`); applied to truck stats at spawn. (Season mode
-was removed; upgrades are currently free — `getUpgradeCatalog({ ignoreBalance: true })`.)
-
----
-
-### 8. Checkpoint System (`managers/CheckpointManager.js`)
-- Gate detection: perpendicular distance < `width/2`, forward distance < 2u, velocity dot forward > 0
-- Numbered checkpoints enforce sequential order; `lastCheckpointPassed` prevents double-triggers
-- **Terrain-aware barrels:** each barrel samples terrain height at its own world position, converting height diff to a local Y offset
-
----
-
-### 9. Audio System
-Three cooperating classes:
-- **`AudioManager`** — music and global SFX (loaded on first user interaction)
-- **`EngineAudio`** — engine sound with RPM-to-pitch mapping
-- **`TruckAudioController`** — per-truck wrapper: engine, collision impact, pickup sounds
-
----
-
-### 10. Track Editor System
-In-game track editor for creating and modifying track features visually.
-
-**Architecture:**
-- `src/editor/EditorController.js` — main coordinator: input (WASD, Delete, Ctrl+Z/Y), pointer picking, undo/redo stack, delegates to sub-editors
-- One sub-editor per entity type in `src/editor/`
-- Vue 3 panels in `src/vue/editor/` — self-gate on `store.selectedType`
-- Pinia store (`src/vue/store.js`) — reactive bridge between panels and editor tools
-
-**Text input focus:**
-`EditorController.handleKeyDown` bails early when `event.target` is an `<input>` or `<textarea>` — typing in fields never triggers WASD/Delete/undo.
-
-**Vue Reactivity Pattern:**
-Each tool has a `_syncStoreToFeature(feature, selectedIdx)` that updates **individual** store properties — NOT replacing the whole reactive object:
-```js
-// CORRECT ✓
-store.polyHill.height = feature.height;
-store.polyHill.width = feature.width;
-
-// WRONG ✗ — breaks reactivity
-store.polyHill = { height: feature.height, width: feature.width };
-```
-
-**Property Update Flow:**
-1. User drags slider in Vue panel
-2. Store action updates reactive property: `polyHill.height = val`
-3. Store action calls bridge method: `_bridge.value?.changePolyHillHeight(val)`
-4. Bridge calls tool method: `this.polyHillTool.setHeight(val)`
-5. Tool updates feature and rebuilds visual: `this._rebuildHill(feature)`
-
-Rebuild methods must be called **immediately** (not deferred) for real-time slider feedback.
-
----
-
-### 11. Flag System
-**Feature format:** `{ "type": "flag", "x": 10, "z": 20, "color": "red" }`
-
-**Runtime:** `FlagManager` + `Flag` — spring-damper bend physics (`SPRING_K = 26`, `DAMPING = 1.5`, `MAX_BEND ≈ 50°`). Pivot at base. Bend impulse proportional to truck speed.
-
-**Editor:** `FlagEditor` owns placement/mutation directly.
-
----
-
-### 12. Camera (`managers/CameraController.js`)
-- Fixed isometric offset: `(0, 28, -20)`
-- Lerp follows truck (factor 0.08)
-- Zoom: `-` / `=` keys, range 0.5×–2.0×
-
----
-
-## Coordinate System
-- Origin at track centre; **+X = East, +Z = North, +Y = Up**
-- `heading`: 0 = facing +Z (north), π/2 = facing +X (east)
-- Steering: `heading -= turnSpeed` turns left, `+= turnSpeed` turns right
-
----
-
-## Key Game Loop Flow
-
-1. `Controls.updateBoost(deltaTime)` — decrement boost timer
-2. `TerrainPhysics.update()` → `{ groundedness, penetration }` (via `TerrainQuery`)
-3. Terrain modifiers gated on `penetration > -0.3`
-4. `Controls.updateSteering()` / `updateAcceleration()`
-5. `DriftPhysics.applyDrag()` / `applyGripAndDrift()`
-6. Position update — X/Z from velocity, Y from `TerrainPhysics`
-7. `DriftPhysics.updateRoll()` — visual lean
-8. `ParticleEffects.update()` — drift, splash, nitro
-9. `CheckpointManager` — gate detection, lap logic
-10. `CameraController` — lerp camera
+Origin at track centre. **+X East, +Z North, +Y Up.** `heading` 0 = +Z,
+π/2 = +X. `heading -= turn` left, `+= turn` right.
 
 ---
 
 ## Controls
-| Key | Action |
-|-----|--------|
-| W / ↑ | Forward |
-| S / ↓ | Back / Brake |
-| A / ← | Turn Left |
-| D / → | Turn Right |
-| Space | Nitro boost |
-| - | Zoom out |
-| = | Zoom in |
+
+| Key | Action | | Key | Action |
+|---|---|---|---|---|
+| W / ↑ | Forward | | R | Reset to last checkpoint |
+| S / ↓ | Brake / reverse | | C | Cycle camera |
+| A / ← | Turn left | | P | Photo mode |
+| D / → | Turn right | | ESC | Pause menu |
+| Space | Nitro | | \\ | Debug panel |
+| - / = | Zoom | | | (remap in Settings → Controls) |
 
 ---
 
-## Common Gotchas
+## Common gotchas
 
-**Terrain modifiers applying in the air:**
-Use `penetration > -0.3` (direct geometry), NOT `groundedness > 0` (lerped, never fully zeros).
-
-**Particles following the truck when they shouldn't:**
-Setting `emitter = this.mesh` makes already-emitted particles move with the mesh. Use a fixed `Vector3` emitter for world-space effects (e.g. nitro burst).
-
-**AI steering inverted when reversing:**
-Physics inverts steering when `fwdSpeed < 0`. AI must check actual `fwdSpeed`, not its own `shouldReverse` intent.
-
-**A* routing backward through a checkpoint:**
-If A* starts from the truck's position AT the checkpoint, it routes to the approach side of the next one — backward. Fix: use the exit point (10u ahead) as the A* start.
-
-**NaN vertex positions crashing Havok:**
-Missing required JSON fields (e.g. `depth`, `transition`) make height calculations return `NaN`, poisoning mesh vertices. Always add defensive `?? fallback` values.
-
-**Terrain texture/physics misalignment:**
-Both must sample at cell centers with `+ 0.5` offset. Ground mesh and grid must both be 160×160.
-
-**Editor UI not updating during slider drag:**
-Update individual reactive store properties — never replace the whole reactive object (see §Vue Reactivity Pattern above).
-
-**Radius changes not applying immediately:**
-Property setters in editor tools should call `_rebuildHill(feature)` (or equivalent) immediately, not `_rebuildDeferred`.
-
-**TerrainQuery returning wrong surface when layers overlap:**
-Feed the `_lastResolvedSurface` continuity hint back each frame so the query prefers to stay on the current surface when raycasts are ambiguous between bridge deck and ground below.
+- **Terrain effects in the air** — gate on `penetration > -0.3`, not `groundedness`.
+- **Particles trailing the truck** — a mesh `emitter` drags emitted particles;
+  use a fixed `Vector3` for world-space bursts (nitro).
+- **AI steering in reverse** — physics inverts steering below `fwdSpeed < 0`; AI
+  must read actual `fwdSpeed`, not intent.
+- **NaN vertices crashing Havok** — missing JSON fields (`depth`, `transition`)
+  make heights `NaN` and poison the mesh; always `?? fallback`.
+- **Teleporting a truck** — use `respawnTruck` / `respawnAtLastCheckpoint`
+  (teleport + `notifyTeleport`), or `StaticBodyCollisionManager` snaps it back to
+  its stale previous position.
+- **Editor slider not updating** — set individual reactive props, never replace
+  the object.
+- **`TerrainQuery` picking the wrong layer** — feed `_lastResolvedSurface` back
+  each frame.
+- **Reverse-race respawns** — resolve gates from the CheckpointManager, not
+  `track.features`.
 
 ---
 
-## Adding New Features
+## Build / test / run
 
-### New terrain type
-1. Add to `TERRAIN_TYPES` in `terrain.js` with `gripMultiplier`, `dragMultiplier`, `color`
-2. Add to `DRIFT_COLORS` in `ParticleEffects.js` for correct drift smoke color
-3. Use via `addTerrainRect()` or `addTerrainCircle()` in a track definition
-
-### New track feature
-1. Add `add___()` method to `Track` class (push to `this.features`)
-2. Add `case` to `getHeightAt()` for elevation
-3. Add `case` to `getTerrainTypeAt()` for terrain type override
-4. Add rendering in `SceneBuilder.js`
-5. Add `XxxEditor.js` in `src/editor/`, `XxxManager.js` in `src/managers/`, `XxxPanel.vue` in `src/vue/editor/`
-6. Wire into `EditorController` (activate/deactivate, `_applySnapshot`, pointer pick, `deselectAll`, bridge methods)
-7. Add to `store.js`, `AppShell.vue`, `AddEntityMenu.vue`
-
-### New track (JSON)
-Place a `.json` file in `src/tracks/` with `name` and `features[]`. Feature objects mirror the parameters of the corresponding `add___()` method.
-
-### New vehicle
-Place assets and config in `src/vehicles/`. `VehicleLoader.js` discovers vehicles from that directory.
+- **Dev:** `npm run dev` (`host: true` — LAN-reachable for multiplayer testing)
+- **Server:** `npm run server` (colyseus, `server/index.js`)
+- **Build:** `npm run build` → `build:raw` (vite) + `build:optimize` (WAV→OGG,
+  PNG/WEBP recompression, asset URL rewriting). `npm run build:raw` alone is the
+  fast compile check.
+- **Test:** `npm test` — Vitest, pure-logic only (grid math, polyline,
+  championship scoring, upgrade economy, colour parsing). No scene, no DOM.
+- **Headless checks:** `npm run check:panels` (editor bindings, keep green) ·
+  `check:surface` · `check:walls` · `check:terrain` / `check:water` (both
+  currently failing on `main` — see `CLEANUP.md §3.1`).
+- Rendering / physics / editor interaction: run the app.
+- **Deploy:** GitHub Pages (`.github/workflows/deploy-pages.yml`); `web/` +
+  `server/` Dockerfiles for the multiplayer stack.
 
 ---
-
-## Build & Deployment
-- **Dev:** `npm run dev` — Vite HMR dev server
-- **Build:** `npm run build` — Vite bundle then `build:optimize` script (WAV→OGG, PNG recompression, WEBP conversion, asset URL rewriting)
-- **Deploy:** GitHub Pages via `.github/workflows/deploy-pages.yml`; `VITE_BASE_PATH` auto-configured for user/project sites
-
-## Testing
-- **`npm test`** — Vitest unit suite (`test/*.test.js`), pure-logic modules only: grid math, polyline math, championship scoring, upgrade economy, colour parsing. No Babylon scene, no DOM.
-- **`npm run check:panels` / `check:surface` / `check:walls` / `check:terrain` / `check:water`** — static/headless checks over editor panel bindings, surface topology, walls, and track data. (`check:water` and `check:terrain` currently fail on `main` — see `CLEANUP.md`.)
-- Rendering, physics, and editor interaction are verified by running the app.
 
 ## Docs
-- `AGENT.md` (this file) — architecture reference.
-- `README.md` — quick start.
-- `CLEANUP.md` — maintainability review + tier'd refactor plan.
-- `docs/` — design/plan docs (`MULTIPLAYER.md`, `TERRAIN_REFACTOR.md`, `CHAMPIONSHIP_MODE.md`).
-- Scoped docs live next to their code: `src/ai/ARCHITECTURE.md`, `src/vue/MENUS.md`, `src/vehicles/VEHICLE_SETUP.md`, `src/obstacles/OBSTACLE_SETUP.md`, `src/decorations/DECORATION_SETUP.md`, `src/shaders/ground-shader.md`.
+
+`README.md` (quick start) · `CLEANUP.md` (maintainability review + refactor
+plan, live) · `docs/` (design: MULTIPLAYER, TERRAIN_REFACTOR, CHAMPIONSHIP_MODE).
+Scoped, next to their code: `src/ai/ARCHITECTURE.md`, `src/vue/MENUS.md`,
+`src/shaders/ground-shader.md`, `src/vehicles/VEHICLE_SETUP.md`,
+`src/obstacles/OBSTACLE_SETUP.md`, `src/decorations/DECORATION_SETUP.md`.

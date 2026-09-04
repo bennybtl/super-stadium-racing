@@ -34,7 +34,7 @@ What this changes about the plan:
 > - 1.2, 1.3 — done
 > - 1.1 — deferred into 2.2 (see note under it)
 > - 3.1 (tests) — started: vitest + 48 tests
-> - 3.4 (docs) — root `.md` sprawl fixed; AGENT.md content refresh still open
+> - 3.4 (docs) — done (root `.md` sprawl + AGENT.md content refresh)
 
 ### 1.1 Collapse `EditorController` prop/action forwarders (~200 lines) — DEFERRED
 
@@ -184,7 +184,7 @@ Move persistence → `src/persistence/`, the lowercase render helpers → `src/u
 
 ### 3.4 Documentation hygiene — PARTLY DONE
 - **Root `.md` sprawl** — DONE. `TERRAIN_REFACTOR.md` / `CHAMPIONSHIP_MODE.md` / `MULTIPLAYER.md` moved to `docs/`. Root now holds `README.md`, `AGENT.md`, `CLEANUP.md`. Scoped docs (`src/ai/ARCHITECTURE.md`, `src/vue/MENUS.md`, …) deliberately left next to their code. AGENT.md gained `## Testing` + `## Docs` sections.
-- **`AGENT.md` content refresh** — STILL TODO. 160+ files changed since its last real edit; the file-structure list is roughly right but the prose in `## Core Systems` needs a walk-through against current code, and it can shrink from 633 lines. Do this as its own pass (not mixed into a refactor commit).
+- **`AGENT.md` content refresh** — DONE. Full pass: file structure rebuilt against the real tree (multiplayer / modes / championship / all the missing managers + objects + vue files), prose errors fixed (Flag→decorations, upgrades economy, AI controllers, 8 terrain types, TruckBody via VehicleLoader, 6 particle emitters), added Modes / Championship / Multiplayer sections, trimmed the deferred-TODO lists. 646 → 473 lines.
 
 ### 3.5 Logging
 114 `console.*` calls, mostly `console.debug`. Either route through a tiny `debug(namespace)` helper with a runtime toggle, or strip `console.debug` in the Vite production build. Low priority.
