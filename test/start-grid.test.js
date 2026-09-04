@@ -7,7 +7,7 @@ import {
   startGridLayoutSlot,
   startGridSlot,
   MAX_GRID_SLOTS,
-} from "../src/start-grid.js";
+} from "../src/utils/start-grid.js";
 
 describe("layoutIndexFor / raceIndexFor", () => {
   it("are inverses for every slot at a few pole positions", () => {

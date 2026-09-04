@@ -4,7 +4,7 @@ import {
   distToPolyline,
   distSqToPolyline,
   isPointInPolygon,
-} from "../src/polyline-utils.js";
+} from "../src/utils/polyline-utils.js";
 
 const square = [
   { x: 0, z: 0 },

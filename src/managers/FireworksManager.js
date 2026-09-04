@@ -1,6 +1,6 @@
 import { Vector3, Color4, ParticleSystem } from "@babylonjs/core";
 import { getSharedStarTexture, getSharedFlameTexture } from "../truck/ParticleEffects.js";
-import { isPointInPolygon } from "../polyline-utils.js";
+import { isPointInPolygon } from "../utils/polyline-utils.js";
 import { FireworkLaunchers } from "../objects/FireworkLaunchers.js";
 import { resolveSparkColor, DEFAULT_SPARK_COLOR } from "../objects/sparkColors.js";
 

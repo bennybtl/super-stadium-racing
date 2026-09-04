@@ -1,7 +1,7 @@
 import { useDebugStore } from "../vue/store.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { DEFAULT_HANDLING, resolveHandling } from "../truck/DriftTuning.js";
-import { clamp } from "../math-utils.js";
+import { clamp } from "../utils/math-utils.js";
 import { AIBoostController, DEFAULT_BOOST_CONFIG } from "./controllers/AIBoostController.js";
 import { AIStuckRecoveryController, DEFAULT_STUCK_CONFIG } from "./controllers/AIStuckRecoveryController.js";
 import { AIPathPlanner } from "./controllers/AIPathPlanner.js";

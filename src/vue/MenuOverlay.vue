@@ -329,7 +329,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useMenuStore } from './store.js';
 import { basicColors } from '../constants.js';
 import { loadControlsSettings } from '../settingsStorage.js';
-import { isSafari } from '../browserSupport.js';
+import { isSafari } from '../utils/browserSupport.js';
 
 import ConfirmDialog from './ConfirmDialog.vue';
 import SettingsMenu from './SettingsMenu.vue';

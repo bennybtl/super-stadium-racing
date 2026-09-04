@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
-import { isPointInPolygon } from "../polyline-utils.js";
-import { gridSlotXZ, startGridSlot, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../start-grid.js";
+import { isPointInPolygon } from "../utils/polyline-utils.js";
+import { gridSlotXZ, startGridSlot, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../utils/start-grid.js";
 import { AIDriver, AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";

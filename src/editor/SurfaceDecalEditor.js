@@ -5,7 +5,7 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, MIN_COUNT, MAX_COUNT, createDecalTexture, decalPolylineLocalOutline } from "../managers/decalShapes.js";
-import { DEFAULT_CORNER_RADIUS, expandPolyline } from "../polyline-utils.js";
+import { DEFAULT_CORNER_RADIUS, expandPolyline } from "../utils/polyline-utils.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 import { EditorMaterials, LINE_COLOR_SURFACE_DECAL } from "./EditorMaterials.js";
 import { gizmoY, gizmoLineY } from './gizmo-height.js';

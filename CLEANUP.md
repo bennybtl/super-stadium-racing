@@ -204,10 +204,16 @@ check:panels,surface,walls green; check:terrain / check:water fail exactly as
 before (stale goldens / a missing `king_of_the_hill.json` — pre-existing,
 §3.1).
 
-**Still loose at root:** `math-utils.js`, `polyline-utils.js`, `start-grid.js`,
-`browserSupport.js` → `src/utils/` (exists). Cleaner but higher import churn
-(`polyline-utils` ~13 importers, `math-utils` ~9). `decorations-registry.js` →
-`src/decorations/`. `main.js` / `constants.js` / `settingsStorage.js` stay.
+**Also done — `src/utils/`.** `math-utils.js`, `polyline-utils.js`,
+`start-grid.js`, `browserSupport.js` moved in next to `mesh-*` / `mtl-parser`.
+25 files re-pathed (incl. the `test/*.test.js` imports). All 4 are
+dependency-free so no internal fixes. build / test (56) / check:panels,surface,walls
+green.
+
+**`src/` root now:** `main.js`, `constants.js`, `settingsStorage.js`,
+`decorations-registry.js`. `decorations-registry.js` → `src/decorations/` (fits
+with `bannerString.js` / `flag.js` / `scaffold.js` already there) is the last
+loose end; `main` / `constants` / `settingsStorage` stay.
 
 ### 3.4 Documentation hygiene — PARTLY DONE
 - **Root `.md` sprawl** — DONE. `TERRAIN_REFACTOR.md` / `CHAMPIONSHIP_MODE.md` / `MULTIPLAYER.md` moved to `docs/`. Root now holds `README.md`, `AGENT.md`, `CLEANUP.md`. Scoped docs (`src/ai/ARCHITECTURE.md`, `src/vue/MENUS.md`, …) deliberately left next to their code. AGENT.md gained `## Testing` + `## Docs` sections.

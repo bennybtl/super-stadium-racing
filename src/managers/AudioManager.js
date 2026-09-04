@@ -1,7 +1,7 @@
 import { CreateAudioEngineAsync } from "@babylonjs/core/AudioV2/webAudio/webAudioEngine";
 import { CreateSoundAsync } from "@babylonjs/core/AudioV2/abstractAudio/audioEngineV2";
 import { loadAudioSettings } from "../settingsStorage.js";
-import { clamp01 } from "../math-utils.js";
+import { clamp01 } from "../utils/math-utils.js";
 
 const SOUND_CATEGORY = {
   ENGINE: "engine",

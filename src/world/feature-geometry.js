@@ -1,4 +1,4 @@
-import { expandPolyline, isPointInPolygon } from "../polyline-utils.js";
+import { expandPolyline, isPointInPolygon } from "../utils/polyline-utils.js";
 
 /**
  * Where a feature reaches: the parameters that set its extent, and the exact

@@ -39,11 +39,13 @@ offroad/
     ├── main.js                      # entry: engine, loaders, ModeController bootstrap
     ├── constants.js                 # truck dims, colours, shared physics constants
     ├── settingsStorage.js           # controls/audio/display/gameplay localStorage
-    ├── browserSupport.js            # Safari/WebGL capability warning
-    ├── math-utils.js                # clamp / lerp / smoothstep (dependency-free)
-    ├── polyline-utils.js            # expandPolyline (rounded corners), point-in-polygon, dist-to-polyline
-    ├── start-grid.js                # starting-grid layout ↔ race-index math (shared: editor + spawner)
     ├── decorations-registry.js      # decoration id → config/controller lookup
+    ├── utils/                       # dependency-free helpers
+    │   ├── math-utils.js            #   clamp / lerp / smoothstep
+    │   ├── polyline-utils.js        #   expandPolyline (rounded corners), point-in-polygon, dist-to-polyline
+    │   ├── start-grid.js            #   starting-grid layout ↔ race-index math (shared: editor + spawner)
+    │   ├── browserSupport.js        #   Safari/WebGL capability warning
+    │   └── mesh-bounds / mesh-color (parseColorValue) / mesh-materials / mtl-parser
     ├── world/                       # the static world model — track layout + terrain
     │   ├── track.js                 #   Track class: features[], getHeightAt / getTerrainTypeAt, serialization
     │   ├── terrain.js               #   TerrainManager: grid of surface types, TERRAIN_TYPES table
@@ -115,7 +117,6 @@ offroad/
     │   └── surface-math.js          # motion-onto-tangent vector helpers
     ├── shaders/
     │   └── ground-shader.js (+ .md) # custom terrain-blend material plugin
-    ├── utils/                       # mesh-bounds, mesh-color (parseColorValue), mesh-materials, mtl-parser
     ├── tracks/                      # shipped track JSON + preview images
     ├── vehicles/                    # vehicle JSON + OBJ/MTL (VEHICLE_SETUP.md)
     ├── obstacles/                   # obstacle JSON + OBJ (OBSTACLE_SETUP.md)

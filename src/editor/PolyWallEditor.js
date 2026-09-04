@@ -3,7 +3,7 @@ import rebuild from './editor-rebuild.js';
 import { EditorMaterials, LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
 import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
-import { DEFAULT_CORNER_RADIUS } from '../polyline-utils.js';
+import { DEFAULT_CORNER_RADIUS } from '../utils/polyline-utils.js';
 
 /**
  * Editor – place and edit polyWall features in the track editor.

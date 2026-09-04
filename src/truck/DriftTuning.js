@@ -12,7 +12,7 @@
 // All four at their neutral values (0.5 / 0.5 / 0 / 0.5) reproduce the historical
 // runtime defaults closely, so an undefined `handling` block yields sane mid feel.
 
-import { clamp, clamp01, lerp } from "../math-utils.js";
+import { clamp, clamp01, lerp } from "../utils/math-utils.js";
 
 const clampBias = (v) => clamp(v, -1, 1);
 

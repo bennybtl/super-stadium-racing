@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import { projectOnPlane } from "./surface-math.js";
 import { GROUNDEDNESS } from "../constants.js";
-import { lerp, smoothstep } from "../math-utils.js";
+import { lerp, smoothstep } from "../utils/math-utils.js";
 
 const UP = new Vector3(0, 1, 0);
 

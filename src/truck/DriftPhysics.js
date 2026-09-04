@@ -1,6 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
 import { tangentBasis } from "./surface-math.js";
-import { smoothstep } from "../math-utils.js";
+import { smoothstep } from "../utils/math-utils.js";
 
 // ─── Grip / drift ────────────────────────────────────────────────────────────
 //

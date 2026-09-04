@@ -10,7 +10,7 @@ import {
   raceIndexFor,
   DEFAULT_START_GRID,
   MAX_GRID_SLOTS,
-} from "../start-grid.js";
+} from "../utils/start-grid.js";
 
 /**
  * Ghost pads float a truck's body height off the ground rather than hugging it.

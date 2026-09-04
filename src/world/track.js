@@ -1,5 +1,5 @@
 import { TERRAIN_TYPES } from "./terrain.js";
-import { expandPolyline, isPointInPolygon, distToPolyline } from "../polyline-utils.js";
+import { expandPolyline, isPointInPolygon, distToPolyline } from "../utils/polyline-utils.js";
 import {
   getHillEllipseParams,
   getSquareHillParams,

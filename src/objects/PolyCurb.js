@@ -1,5 +1,5 @@
 import { PhysicsAggregate, PhysicsShapeType } from "@babylonjs/core";
-import { expandPolyline } from "../polyline-utils.js";
+import { expandPolyline } from "../utils/polyline-utils.js";
 import { resolveStripeColors } from "./stripeColors.js";
 import {
   RibbonHeightSampler,

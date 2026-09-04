@@ -3,9 +3,9 @@
  */
 
 import { TERRAIN_TYPES } from "./terrain.js";
-import { expandPolyline } from "../polyline-utils.js";
+import { expandPolyline } from "../utils/polyline-utils.js";
 import { createWaterDepthSampler } from "../objects/water-field.js";
-import { clamp, lerp, smoothstep } from "../math-utils.js";
+import { clamp, lerp, smoothstep } from "../utils/math-utils.js";
 
 const TERRAIN_TYPE_LIST = Object.values(TERRAIN_TYPES);
 // Keyed by name rather than object identity: a terrain-region feature with a

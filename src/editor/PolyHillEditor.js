@@ -4,7 +4,7 @@ import { EditorMaterials, LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../world/terrain.js";
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../world/feature-geometry.js';
-import { DEFAULT_CORNER_RADIUS } from '../polyline-utils.js';
+import { DEFAULT_CORNER_RADIUS } from '../utils/polyline-utils.js';
 
 /**
  * PolyHillEditor – place and edit polyHill features in the track editor.

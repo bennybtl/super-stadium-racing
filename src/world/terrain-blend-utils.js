@@ -1,4 +1,4 @@
-import { clamp01 } from "../math-utils.js";
+import { clamp01 } from "../utils/math-utils.js";
 
 function stableNoise(x, z) {
   const qx = Math.floor(x);

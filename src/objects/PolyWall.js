@@ -10,8 +10,8 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import chainlinkTextureUrl from "../assets/textures/chainlink.texture.png?url";
-import { expandPolyline } from "../polyline-utils.js";
-import { clamp01 } from "../math-utils.js";
+import { expandPolyline } from "../utils/polyline-utils.js";
+import { clamp01 } from "../utils/math-utils.js";
 import { resolveStripeColors } from "./stripeColors.js";
 import {
   RibbonHeightSampler,

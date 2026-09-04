@@ -8,7 +8,7 @@ import { parseColorValue } from "../utils/mesh-color.js";
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
-import { clamp } from "../math-utils.js";
+import { clamp } from "../utils/math-utils.js";
 
 /**
  * Sprung-mass body dynamics — one coherent model for all visual body motion.

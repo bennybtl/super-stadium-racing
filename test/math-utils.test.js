@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clamp, clamp01, lerp, smoothstep } from "../src/math-utils.js";
+import { clamp, clamp01, lerp, smoothstep } from "../src/utils/math-utils.js";
 
 describe("clamp", () => {
   it("bounds to [min, max]", () => {
