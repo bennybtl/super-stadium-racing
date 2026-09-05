@@ -314,7 +314,7 @@ export class StartPositionEditor {
     s.startPosition.poleIndex    = pole;
     s.startPosition.selectedSlot = this._selectedSlot;
     // 1-based so the panel can say "starts 3rd" instead of leaking the index.
-    s.startPosition.slotOrder    = this._selectedSlot >= 0 ? raceIndexFor(this._selectedSlot, pole) + 1 : 0;
+    s.startPosition.slotOrder    = this._selectedSlot >= 0 ? raceIndexFor(this._selectedSlot, pole, f.columns) + 1 : 0;
     s.startPosition.slotRotation = this._selectedSlot >= 0
       ? Math.round((startGridLayoutSlot(f, this._selectedSlot).heading ?? 0) * (180 / Math.PI))
       : 0;

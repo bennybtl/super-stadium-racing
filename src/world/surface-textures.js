@@ -22,11 +22,11 @@ export const SURFACE_TEXTURES = {
   },
 };
 
-const _textureModules = import.meta.glob('./assets/textures/*', { eager: true, query: '?url', import: 'default' });
+const _textureModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
 
 const _textureUrls = {};
 for (const [path, url] of Object.entries(_textureModules)) {
-  _textureUrls[path.replace('./assets/', '')] = url;
+  _textureUrls[path.replace('../assets/', '')] = url;
   _textureUrls[path.split('/').at(-1)] = url;
 }
 

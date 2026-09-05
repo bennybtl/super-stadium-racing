@@ -62,16 +62,54 @@ export function resolvePoleIndex(feature, count = MAX_GRID_SLOTS) {
   return Math.min(Math.max(pole, 0), Math.max(0, count - 1));
 }
 
+/**
+ * Race order as layout indices, pole first: same row as pole (nearest column
+ * first), then the next row out, and so on — so the field fans out from
+ * wherever pole sits instead of always sweeping the layout from index 0
+ * (which used to strand P2 clear across the row whenever pole wasn't already
+ * on the left). `columns` defaults to 1, which degenerates to fanning out row
+ * by row — the right thing for a single-column layout or a hand-placed
+ * custom one, where there's no real column grouping to key off.
+ *
+ * Generates more terms than anyone will ask for (real fields top out at
+ * MAX_GRID_SLOTS) rather than solving for an exact count, so the two lookup
+ * functions below can both just index into it.
+ */
+function raceOrder(poleIndex, columns) {
+  const cols = Math.max(1, Math.round(columns ?? 1));
+  const poleRow = Math.floor(poleIndex / cols);
+  const poleCol = poleIndex % cols;
+  const rows = poleRow + MAX_GRID_SLOTS + 1;
+
+  const rest = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const idx = row * cols + col;
+      if (idx !== poleIndex) rest.push(idx);
+    }
+  }
+  rest.sort((a, b) => {
+    const rowA = Math.floor(a / cols), colA = a % cols;
+    const rowB = Math.floor(b / cols), colB = b % cols;
+    const byRow = Math.abs(rowA - poleRow) - Math.abs(rowB - poleRow);
+    if (byRow !== 0) return byRow;
+    const byCol = Math.abs(colA - poleCol) - Math.abs(colB - poleCol);
+    if (byCol !== 0) return byCol;
+    // Equidistant on both counts (mirrored either side of pole): earlier row,
+    // then lower column, so the order is at least deterministic.
+    return rowA !== rowB ? rowA - rowB : colA - colB;
+  });
+  return [poleIndex, ...rest];
+}
+
 /** Race index (0 = pole) → layout index. Inverse of raceIndexFor. */
-export function layoutIndexFor(raceIndex, poleIndex = 0) {
-  if (raceIndex === 0) return poleIndex;
-  return raceIndex <= poleIndex ? raceIndex - 1 : raceIndex;
+export function layoutIndexFor(raceIndex, poleIndex = 0, columns = 1) {
+  return raceOrder(poleIndex, columns)[raceIndex];
 }
 
 /** Layout index → race index (0 = pole). Inverse of layoutIndexFor. */
-export function raceIndexFor(layoutIndex, poleIndex = 0) {
-  if (layoutIndex === poleIndex) return 0;
-  return layoutIndex < poleIndex ? layoutIndex + 1 : layoutIndex;
+export function raceIndexFor(layoutIndex, poleIndex = 0, columns = 1) {
+  return raceOrder(poleIndex, columns).indexOf(layoutIndex);
 }
 
 /**
@@ -94,5 +132,6 @@ export function startGridLayoutSlot(feature, layoutIndex) {
  */
 export function startGridSlot(feature, raceIndex) {
   const pole = resolvePoleIndex(feature);
-  return startGridLayoutSlot(feature, layoutIndexFor(raceIndex, pole));
+  const columns = feature?.columns ?? DEFAULT_START_GRID.columns;
+  return startGridLayoutSlot(feature, layoutIndexFor(raceIndex, pole, columns));
 }
