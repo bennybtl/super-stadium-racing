@@ -1,12 +1,12 @@
 <template>
   <EditorPanel
     v-if="mode"
-    :title="editing ? 'Edit Decal' : 'Surface Decals'"
+    :title="editing ? 'Edit Decal' : 'Place Decal'"
     @close="close"
   >
     <!-- Hint -->
-    <div v-if="editing" class="text-[10px] text-slate-400 mb-3">Drag to move{{ s.shape === 'polyline' ? '' : ' · QE to rotate' }} · Del to delete{{ s.shape === 'polyline' ? ' point/decal' : '' }} · Scroll to scale</div>
-    <div v-else class="text-[10px] text-slate-400 mb-3">Click terrain to stamp · Click a placed decal to edit it · QE to rotate · Scroll to scale</div>
+    <div v-if="editing" class="text-[10px] text-slate-400 mb-3">Drag to move{{ s.shape === 'polyline' ? '' : ' · QE to rotate' }} · Del to delete{{ s.shape === 'polyline' ? ' point/decal' : '' }} · Duplicate for another</div>
+    <div v-else class="text-[10px] text-slate-400 mb-3">Pick a shape, then click the terrain to place it — you'll edit it right after.</div>
 
     <!-- Shape (stamp mode only — a placed decal keeps its shape) -->
     <template v-if="!editing">

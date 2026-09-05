@@ -695,6 +695,8 @@ export class SurfaceDecalEditor {
 
   /**
    * Called by EditorController.handlePointerDown when selectedType === 'surfaceDecal'.
+   * Places one decal, then leaves placement mode and selects it for editing —
+   * the stamp settings persist as the starting point for the next new decal.
    */
   stamp(x, z) {
     if (!this._decalManager || !this._track) return;
@@ -721,8 +723,13 @@ export class SurfaceDecalEditor {
 
     this.editor.saveSnapshot();
     this._track.features.push(feature);
-    this._decalManager.createDecal(feature);
+    const mesh = this._decalManager.createDecal(feature);
     this._syncHandles();
+
+    // Leave placement mode and edit the decal we just placed.
+    this.close();
+    const entry = this._decalManager.findByMesh(mesh);
+    if (entry) this.select(entry);
   }
 
   // ── Keyboard ───────────────────────────────────────────────────────────────

@@ -93,10 +93,12 @@ export class WallDecalEditor {
       }
     }
 
+    const visible = this.editor.gizmosVisible !== false;
     for (const entry of entries) {
       let handle = this._handles.get(entry);
       if (!handle) {
         handle = new GizmoHandle(this._scene, "decal");
+        handle.setVisible(visible); // respect the global toggle for fresh handles
         this._handles.set(entry, handle);
       }
       const p = entry.feature.position ?? [0, 0, 0];
@@ -307,6 +309,7 @@ export class WallDecalEditor {
    * Called by EditorController when selectedType === 'wallDecal' and the click
    * didn't land on an already-placed decal. Does its own pick so it can also
    * reach surfaces the shared editor pick skips (non-pickable poly-wall ribbons).
+   * Places one decal, then leaves placement mode and selects it for editing.
    */
   stamp() {
     if (!this._decalManager) return;
@@ -334,8 +337,13 @@ export class WallDecalEditor {
 
     this.editor.saveSnapshot();
     this._track.features.push(feature);
-    this._decalManager.createDecal(feature);
+    const mesh = this._decalManager.createDecal(feature);
     this._syncHandles();
+
+    // Leave placement mode and edit the decal we just placed.
+    this.close();
+    const entry = this._decalManager.findByMesh(mesh);
+    if (entry) this.select(entry);
   }
 
   /** Pointer pick restricted to decal-target surfaces. */

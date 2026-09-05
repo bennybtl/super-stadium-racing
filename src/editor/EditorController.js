@@ -2606,7 +2606,7 @@ export class EditorController {
     // Editors whose features carry a GizmoHandle sphere.
     for (const ed of [this.terrainShapeEditor, this.trackSignEditor,
                       this.decorationsEditor, this.surfaceDecalEditor,
-                      this.startPositionEditor]) {
+                      this.wallDecalEditor, this.startPositionEditor]) {
       ed?.setHandlesVisible?.(visible);
     }
 

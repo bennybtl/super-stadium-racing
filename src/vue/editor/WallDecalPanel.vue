@@ -1,12 +1,12 @@
 <template>
   <EditorPanel
     v-if="mode"
-    :title="editing ? 'Edit Wall Decal' : 'Wall Decals'"
+    :title="editing ? 'Edit Wall Decal' : 'Place Wall Decal'"
     @close="close"
   >
     <!-- Hint -->
-    <div v-if="editing" class="text-[10px] text-slate-400 mb-3">Drag to slide along the surface · QE to roll · Del to delete · Scroll to scale</div>
-    <div v-else class="text-[10px] text-slate-400 mb-3">Click a wall to stamp · Click a placed decal to edit it · QE to roll · Scroll to scale</div>
+    <div v-if="editing" class="text-[10px] text-slate-400 mb-3">Drag to slide along the surface · QE to roll · Del to delete · Duplicate for another</div>
+    <div v-else class="text-[10px] text-slate-400 mb-3">Pick a shape, then click a wall to place it — you'll edit it right after.</div>
 
     <!-- Shape (stamp mode only — a placed decal keeps its shape) -->
     <template v-if="!editing">
