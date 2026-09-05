@@ -52,6 +52,7 @@ import imgBridgeMesh    from '../assets/bridge_mesh.feature.png';
 import imgDriveBox      from '../assets/drive_box.feature.png';
 import imgAiPath        from '../assets/ai_path.feature.png';
 import imgDecal         from '../assets/decals.feature.png';
+import imgWallDecal         from '../assets/wall_decal.feature.png';
 import imgTerrainPath   from '../assets/terrain_path.feature.png';
 import imgStartingGrid  from '../assets/starting_grid.feature.png';
 
@@ -76,6 +77,7 @@ const features = [
   { label: 'AI Path',          img: imgAiPath,        action: () => editor.openAiPath()                             },
   { label: 'Terrain Path',     img: imgTerrainPath,   action: () => editor.featureAction('addTerrainPathEntity')    },
   { label: 'Surface Decal',    img: imgDecal,         action: () => editor.featureAction('openSurfaceDecalStamp')   },
+  { label: 'Wall Decal',       img: imgWallDecal,     action: () => editor.featureAction('openWallDecalStamp')  },
 ];
 
 const panelStyle = {

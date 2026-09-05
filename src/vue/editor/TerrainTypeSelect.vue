@@ -16,7 +16,8 @@
     <option value="water">Water</option>
     <option value="rocky">Rocky</option>
     <option value="grass">Grass</option>
-  </select>
+    <option value="weedy_grass">Weedy Grass</option>
+</select>
 </template>
 
 <script setup>

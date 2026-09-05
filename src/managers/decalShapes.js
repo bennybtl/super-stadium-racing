@@ -1,6 +1,7 @@
 import { DynamicTexture } from "@babylonjs/core";
-import { basicColors } from "../constants";
+import { basicColors, TRACK_SIGN_BRANDS } from "../constants";
 import { expandPolyline } from "../utils/polyline-utils.js";
+import { loadBrandImage } from "../utils/brand-images.js";
 /**
  * decalShapes — programmatically drawn surface-decal textures.
  *
@@ -13,7 +14,11 @@ import { expandPolyline } from "../utils/polyline-utils.js";
  * decal's rotation angle maps intuitively to a compass-style heading.
  */
 
-export const DECAL_SHAPES = ['arrow', 'chevron', 'line', 'oval', 'rect', 'triangle', 'text', 'polyline'];
+export const DECAL_SHAPES = ['arrow', 'chevron', 'line', 'oval', 'rect', 'triangle', 'text', 'brand', 'polyline'];
+
+/** The sponsor logos a "brand" decal can stamp (shared with track signs). */
+export const DECAL_BRANDS = TRACK_SIGN_BRANDS;
+export const DEFAULT_BRAND = TRACK_SIGN_BRANDS[0].value;
 
 /** Shapes whose look depends on the feature's `count` (repeat) property. */
 export const COUNTED_SHAPES = ['chevron'];
@@ -383,12 +388,40 @@ export function applyDecalWear(ctx, texW, texH, { seed = 0, worldWidth = 4, worl
 export function createDecalTexture(scene, shape, {
   color = 'white', seed = 0, count = 1, outline = false, text = '',
   worldWidth = 4, worldDepth = 4, size = TEX_SIZE, localPoints = null, thickness = 1,
+  brand = DEFAULT_BRAND,
 } = {}) {
   const tex = new DynamicTexture(`decalShape_${shape}`, { width: size, height: size }, scene);
+  tex.hasAlpha = true;
+
+  // Brand logos load asynchronously, so the texture starts blank and repaints
+  // itself once the image decodes. No wear pass — it would eat into the logo.
+  if (shape === 'brand') {
+    const ctx = tex.getContext();
+    ctx.clearRect(0, 0, size, size);
+    tex.update();
+    _paintBrandTexture(tex, size, brand);
+    return tex;
+  }
+
   const ctx = tex.getContext();
   drawDecalShape(ctx, shape, size, size, { color, count, outline, text, localPoints, thickness, worldWidth, worldDepth });
   applyDecalWear(ctx, size, size, { seed, worldWidth, worldDepth });
-  tex.hasAlpha = true;
   tex.update();
   return tex;
+}
+
+/** Load `brand` and draw it contain-fit + centred into an already-created texture. */
+function _paintBrandTexture(tex, size, brand) {
+  const ctx = tex.getContext();
+  loadBrandImage(brand).then((img) => {
+    if (tex.isDisposed?.()) return;
+    ctx.clearRect(0, 0, size, size);
+    if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    }
+    tex.update();
+  });
 }

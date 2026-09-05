@@ -1,23 +1,40 @@
 import { MeshBuilder, StandardMaterial, Vector3, Engine } from "@babylonjs/core";
 
 /**
- * groundDecal — shared helpers for projecting a canvas/DynamicTexture onto the
- * ground as a flat marking. Used by both the checkpoint gate decals
- * (Checkpoint.js) and the programmatic surface decals (SurfaceDecalManager.js).
+ * groundDecal — shared helpers for projecting a canvas/DynamicTexture onto a
+ * mesh as a flat marking. Used by the checkpoint gate decals (Checkpoint.js),
+ * the programmatic ground decals (SurfaceDecalManager.js) and the wall decals
+ * (WallDecalManager.js).
  *
- * These two features differ in what they draw and how they cache, but they
- * share the same projection call and the same "self-lit decal" material recipe
- * — centralised here so the tricky material flags can't drift between them.
+ * These features differ in what they draw and how they cache, but they share
+ * the same projection call and the same "self-lit decal" material recipe —
+ * centralised here so the tricky material flags can't drift between them.
  */
 
 const PROJECTION_DEPTH = 10; // how far the decal box projects along the normal
 
-/** Project a decal quad onto `ground` at a world position, rotated `angle` (radians) about +Y. */
+/**
+ * Project a decal quad onto `target` at a world position, oriented by a surface
+ * `normal`, and rotated `angle` (radians) about that normal. `projectionDepth`
+ * is how far the projector box extends along the normal — keep it below the
+ * target's thickness so the decal doesn't punch through to the far face.
+ */
+export function projectSurfaceDecal(target, name, { position, normal, width, height, angle, projectionDepth = PROJECTION_DEPTH }) {
+  return MeshBuilder.CreateDecal(name, target, {
+    position,
+    normal,
+    size: new Vector3(width, height, projectionDepth),
+    angle,
+  });
+}
+
+/** Project a decal flat onto `ground` at a world position, rotated `angle` (radians) about +Y. */
 export function projectGroundDecal(ground, name, { position, width, depth, angle }) {
-  return MeshBuilder.CreateDecal(name, ground, {
+  return projectSurfaceDecal(ground, name, {
     position,
     normal: Vector3.Up(),
-    size: new Vector3(width, depth, PROJECTION_DEPTH),
+    width,
+    height: depth,
     angle,
   });
 }

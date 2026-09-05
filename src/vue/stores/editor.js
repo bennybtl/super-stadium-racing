@@ -169,6 +169,7 @@ export const useEditorStore = defineStore('editor', () => {
     edgeShape: 1.75,
     closed: false,
     filled: false,
+    endTaper: false,
     waterLevelOffset: 2,
     canHaveWater: false,
   });
@@ -269,6 +270,7 @@ export const useEditorStore = defineStore('editor', () => {
     hidden: true,
     packId: '',
     dirtChunks: true,
+    grassBlades: true,
     oobDeadSpace: false,
   });
   const trackBorderWall = reactive({ ...DEFAULT_BORDER_WALL });
@@ -373,6 +375,10 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackDirtChunks(enabled) {
     trackSettings.dirtChunks = !!enabled;
     _bridge.value?.changeTrackDirtChunks?.(!!enabled);
+  }
+  function setTrackGrassBlades(enabled) {
+    trackSettings.grassBlades = !!enabled;
+    _bridge.value?.changeTrackGrassBlades?.(!!enabled);
   }
   function setTrackOobDeadSpace(enabled) {
     trackSettings.oobDeadSpace = !!enabled;
@@ -482,7 +488,10 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ── Surface decal stamp ──
-  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, angle: 0, width: 4, depth: 4, opacity: 1, thickness: 1, pointCount: 0, selectedPointIndex: -1, canHaveRadius: false, radius: 0 });
+  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, brand: '', brands: [], hasBrand: false, angle: 0, width: 4, depth: 4, linkScale: true, opacity: 1, thickness: 1, pointCount: 0, selectedPointIndex: -1, canHaveRadius: false, radius: 0 });
+
+  // ── Wall decal stamp ──
+  const wallDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, brand: '', brands: [], hasBrand: false, roll: 0, width: 4, height: 4, linkScale: true, opacity: 1 });
 
 
   // ── Generic panel plumbing ──────────────────────────────────────────────
@@ -497,7 +506,7 @@ export const useEditorStore = defineStore('editor', () => {
   const _panels = {
     checkpoint, hill, squareHill, driveBox, terrainShape, obstacle,
     meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign, startPosition,
-    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal,
+    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal, wallDecal,
   };
   function setFeatureProp(panelKey, prop, val) {
     const panel = _panels[panelKey];
@@ -533,7 +542,7 @@ export const useEditorStore = defineStore('editor', () => {
     actionZone,
     setActionZoneType, polyCurb,
     trackSettingsOpen, trackSettings,
-    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackOobDeadSpace, setTrackWidth, setTrackDepth,
+    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackGrassBlades, setTrackOobDeadSpace, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
     trackBorderWall, setTrackBorderWall,
@@ -546,7 +555,7 @@ export const useEditorStore = defineStore('editor', () => {
     aiPathWear,
     aiPathBranch, aiPathBranches,
     editMainAiPath, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, terrainPath,
-    surfaceDecal,
+    surfaceDecal, wallDecal,
     setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     applyMeshGridSettings, setBridgeMeshPointHeight, setBridgeMeshThickness, setBridgeMeshLayerId,

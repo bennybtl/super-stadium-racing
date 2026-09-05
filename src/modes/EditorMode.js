@@ -49,6 +49,7 @@ export class EditorMode extends BaseMode {
       bridgeMeshManager,
       steepSlopeColliderManager,
       surfaceDecalManager,
+      wallDecalManager,
       driveSurfaceManager,
     } = await buildScene(engine, trackLoader, trackKey);
 
@@ -82,6 +83,7 @@ export class EditorMode extends BaseMode {
     editorController.setShadows(shadows);
     editorController.activate(currentTrack, checkpointManager, menuManager);
     editorController.setSurfaceDecalManager(surfaceDecalManager);
+    editorController.setWallDecalManager(wallDecalManager);
     this.editorController = editorController;
 
     // -- Editor globals (used by editor tool UI) --

@@ -20,7 +20,9 @@ import { BridgeMeshEditor } from './BridgeMeshEditor.js';
 import { AiPathEditor } from './AiPathEditor.js';
 import { TerrainPathEditor } from './TerrainPathEditor.js';
 import { SurfaceDecalEditor } from './SurfaceDecalEditor.js';
+import { WallDecalEditor } from './WallDecalEditor.js';
 import { scatterDirtChunks } from '../objects/DirtChunks.js';
+import { scatterGrassBlades } from '../objects/GrassBlades.js';
 import { buildBorderWalls, resolveBorderWall } from '../objects/BorderWall.js';
 import { buildOutskirts, OUTSKIRTS_MATERIAL_NAME } from '../objects/Outskirts.js';
 import { useEditorStore } from '../vue/store.js';
@@ -97,6 +99,7 @@ export class EditorController {
     this.aiPathEditor = new AiPathEditor(this);
     this.terrainPathEditor = new TerrainPathEditor(this);        // terrain-painted paths
     this.surfaceDecalEditor = new SurfaceDecalEditor(this);
+    this.wallDecalEditor = new WallDecalEditor(this);          // decals on walls / arbitrary surfaces
 
     // Uniform-lifecycle list (activation order). checkpointEditor stays
     // outside: its gizmos belong to CheckpointManager, so it has no activate.
@@ -118,6 +121,7 @@ export class EditorController {
       this.aiPathEditor,
       this.terrainPathEditor,
       this.surfaceDecalEditor,
+      this.wallDecalEditor,
     ];
 
     this._rawDragPos = null;
@@ -292,6 +296,7 @@ export class EditorController {
     this._editorStore.trackSettings.hidden = this.currentTrack.hidden ?? true;
     this._editorStore.trackSettings.packId = this.currentTrack.packId ?? '';
     this._editorStore.trackSettings.dirtChunks = this.currentTrack.dirtChunks ?? true;
+    this._editorStore.trackSettings.grassBlades = this.currentTrack.grassBlades ?? true;
     this._editorStore.trackSettings.oobDeadSpace = this.currentTrack.oobDeadSpace ?? false;
     Object.assign(this._editorStore.trackBorderWall, resolveBorderWall(this.currentTrack));
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
@@ -460,6 +465,10 @@ export class EditorController {
       return this._createVectorSelectionInteraction(this.surfaceDecalEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
+    if (this.wallDecalEditor.selected) {
+      return this._createVectorSelectionInteraction(this.wallDecalEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
     if (this.actionZoneEditor.selected) {
       // Q/E turns a firework zone's mortar cans; other zone types ignore it.
       return this._createVectorSelectionInteraction(this.actionZoneEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
@@ -519,6 +528,7 @@ export class EditorController {
       { selected: () => this.trackSignEditor.selected, duplicate: () => this.trackSignEditor.duplicateSelected(), delete: () => this.trackSignEditor.deleteSelected() },
       { selected: () => this.startPositionEditor.selected, delete: () => this.startPositionEditor.deleteSelected() },
       { selected: () => this.surfaceDecalEditor.selected, duplicate: () => this.surfaceDecalEditor.duplicateSelected(), delete: () => this.surfaceDecalEditor.deleteSelected() },
+      { selected: () => this.wallDecalEditor.selected, duplicate: () => this.wallDecalEditor.duplicateSelected(), delete: () => this.wallDecalEditor.deleteSelected() },
       { selected: () => this.actionZoneEditor.selected, duplicate: () => this.actionZoneEditor.duplicateSelected(), delete: () => this.actionZoneEditor.deleteSelected() },
       { selected: () => this.aiPathEditor?.selected, delete: () => this.aiPathEditor?.deleteSelected?.() },
       { selected: () => this.terrainPathEditor?.selected, delete: () => this.terrainPathEditor?.deleteSelected?.() },
@@ -563,8 +573,9 @@ export class EditorController {
     for (const editor of this.subEditors) {
       editor.clearMeshes?.();
     }
-    // Surface decal meshes are owned by the manager, not a sub-editor.
+    // Surface / wall decal meshes are owned by their managers, not a sub-editor.
     this.surfaceDecalManager?.clearAll();
+    this.wallDecalManager?.clearAll();
 
     // Restore editable track state
     const parsed = JSON.parse(snap);
@@ -616,6 +627,7 @@ export class EditorController {
         else if (feature.type === 'startPosition') this.startPositionEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
         else if (feature.type === 'surfaceDecal') this.surfaceDecalManager?.createDecal(feature);
+        else if (feature.type === 'wallDecal') this.wallDecalManager?.createDecal(feature);
       }
       // Restore AI path waypoint gizmos
       this.aiPathEditor.onSnapshotRestored(this.currentTrack);
@@ -668,6 +680,12 @@ export class EditorController {
     if (event.key === 'Escape') {
       if (this._editorStore?.selectedType === 'surfaceDecal') {
         this.closeSurfaceDecalStamp();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (this._editorStore?.selectedType === 'wallDecal') {
+        this.closeWallDecalStamp();
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -778,6 +796,10 @@ export class EditorController {
 
     // Intercept Q/E for surface decal rotation before camera rotation
     if (this.surfaceDecalEditor?.onKeyDown(event)) {
+      event.preventDefault();
+      return;
+    }
+    if (this.wallDecalEditor?.onKeyDown(event)) {
       event.preventDefault();
       return;
     }
@@ -1305,6 +1327,12 @@ export class EditorController {
       }
     }
 
+    const wdEntry = this.wallDecalEditor?.selected;
+    if (wdEntry) {
+      if (meshMatches(wdEntry.mesh)) return true;
+      if (meshMatches(this.wallDecalEditor._handles.get(wdEntry)?.mesh)) return true;
+    }
+
     return false;
   }
 
@@ -1503,6 +1531,18 @@ export class EditorController {
         return;
       }
 
+      // Wall decal stamp mode: same "click a placed decal to edit it, otherwise
+      // stamp" split, but the stamp only lands on a decal-target surface.
+      if (this._editorStore?.selectedType === 'wallDecal') {
+        const existing = this.wallDecalEditor.findByMesh(pickResult.pickedMesh ?? null);
+        if (existing) {
+          this.wallDecalEditor.select(existing);
+          return;
+        }
+        this.wallDecalEditor.stamp();
+        return;
+      }
+
       // Panel-open editing modes (aiPath / terrainPath / polyWall / polyCurb).
       // Each consumes its own gestures: right-click terrain adds a point/waypoint,
       // clicking one of its own handles (re)selects it. Anything the mode does NOT
@@ -1559,6 +1599,9 @@ export class EditorController {
 
         // Surface decal center/point handles (+ clicking the baked decal itself)
         if (this._selectViaPointEditor(this.surfaceDecalEditor, clickedMesh)) return;
+
+        // Wall decal gizmo handle (+ clicking the baked decal itself)
+        if (this._selectViaPointEditor(this.wallDecalEditor, clickedMesh)) return;
 
         // Start-position marker handle + its grid slot pads
         if (this._selectViaPointEditor(this.startPositionEditor, clickedMesh)) return;
@@ -1791,6 +1834,14 @@ export class EditorController {
     this._refreshDirtChunks();
   }
 
+  changeTrackGrassBlades(enabled) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.grassBlades = !!enabled;
+    this._syncTrackSettingsPanel();
+    this._refreshGrassBlades();
+  }
+
   changeTrackOobDeadSpace(enabled) {
     if (!this.currentTrack) return;
     this.saveSnapshot(true);
@@ -1835,6 +1886,23 @@ export class EditorController {
     }
     if (this.currentTrack.dirtChunks !== false) {
       scatterDirtChunks(this.scene, this.currentTrack);
+    }
+  }
+
+  /** Dispose any existing grass-blade meshes/material and regenerate if enabled.
+   *  In place, so the toggle is instant. Async (the OBJ load), fire-and-forget. */
+  _refreshGrassBlades() {
+    if (!this.scene) return;
+    for (const mesh of this.scene.meshes.slice()) {
+      if (typeof mesh?.name === 'string' && mesh.name.startsWith('grassBlade_')) mesh.dispose();
+    }
+    for (const mat of this.scene.materials.slice()) {
+      if (mat?.name === 'grassBladeMat') mat.dispose();
+    }
+    if (this.currentTrack.grassBlades !== false) {
+      scatterGrassBlades(this.scene, this.currentTrack).catch((err) =>
+        console.warn('[GrassBlades] scatter failed:', err),
+      );
     }
   }
 
@@ -2008,6 +2076,7 @@ export class EditorController {
   changePolyHillWaterLevelOffset(val) { this.polyHillEditor.setWaterLevelOffset(val); }
   changePolyHillClosed(val)     { this.polyHillEditor.setClosed(val); }
   changePolyHillFilled(val)     { this.polyHillEditor.setFilled(val); }
+  changePolyHillEndTaper(val)   { this.polyHillEditor.setEndTaper(val); }
   insertPolyHillPoint()         { this.polyHillEditor.insertPointAfter(); }
   deletePolyHillPoint()         { this.polyHillEditor.deleteSelectedPoint(); }
   deletePolyHill()              { this.polyHillEditor.deletePolyHill(); }
@@ -2190,10 +2259,12 @@ export class EditorController {
   setSurfaceDecalOutline(val) { this.surfaceDecalEditor.setOutline(val); }
   setSurfaceDecalColor(val) { this.surfaceDecalEditor.setColor(val); }
   setSurfaceDecalText(val) { this.surfaceDecalEditor.setText(val); }
+  setSurfaceDecalBrand(val) { this.surfaceDecalEditor.setBrand(val); }
   setSurfaceDecalAngle(val) { this.surfaceDecalEditor.setAngle(val); }
   setSurfaceDecalOpacity(val) { this.surfaceDecalEditor.setOpacity(val); }
   setSurfaceDecalWidth(val) { this.surfaceDecalEditor.setWidth(val); }
   setSurfaceDecalDepth(val) { this.surfaceDecalEditor.setDepth(val); }
+  setSurfaceDecalLinkScale(val) { this.surfaceDecalEditor.setLinkScale(val); }
   setSurfaceDecalThickness(val) { this.surfaceDecalEditor.setThickness(val); }
 
   // Editing a placed decal (selected via click). Shares the 'surfaceDecal'
@@ -2203,16 +2274,55 @@ export class EditorController {
   duplicateSelectedSurfaceDecal()  { this.surfaceDecalEditor.duplicateSelected(); }
   changeSurfaceDecalWidth(v)   { this.surfaceDecalEditor.changeWidth(v); }
   changeSurfaceDecalDepth(v)   { this.surfaceDecalEditor.changeDepth(v); }
+  changeSurfaceDecalLinkScale(v) { this.surfaceDecalEditor.setLinkScale(v); }
   changeSurfaceDecalAngle(v)   { this.surfaceDecalEditor.changeAngle(v); }
   changeSurfaceDecalOpacity(v) { this.surfaceDecalEditor.changeOpacity(v); }
   changeSurfaceDecalCount(v)   { this.surfaceDecalEditor.changeCount(v); }
   changeSurfaceDecalOutline(v) { this.surfaceDecalEditor.changeOutline(v); }
   changeSurfaceDecalColor(v)   { this.surfaceDecalEditor.changeColor(v); }
   changeSurfaceDecalText(v)    { this.surfaceDecalEditor.changeText(v); }
+  changeSurfaceDecalBrand(v)   { this.surfaceDecalEditor.changeBrand(v); }
   changeSurfaceDecalRadius(v)  { this.surfaceDecalEditor.changeRadius(v); }
   changeSurfaceDecalThickness(v) { this.surfaceDecalEditor.changeThickness(v); }
   insertSurfaceDecalPoint()    { this.surfaceDecalEditor.insertPoint(); }
   deleteSurfaceDecalPoint()    { this.surfaceDecalEditor.deletePoint(); }
+
+  // ── Wall Decal helper methods ────────────────────────────────────────────
+  setWallDecalManager(manager) {
+    this.wallDecalManager = manager;
+    this.wallDecalEditor.setDecalManager(manager);
+  }
+
+  openWallDecalStamp()  { this.wallDecalEditor.open(); }
+  closeWallDecalStamp() { this.wallDecalEditor.close(); }
+
+  setWallDecalShape(val)   { this.wallDecalEditor.setShape(val); }
+  setWallDecalCount(val)   { this.wallDecalEditor.setCount(val); }
+  setWallDecalOutline(val) { this.wallDecalEditor.setOutline(val); }
+  setWallDecalColor(val)   { this.wallDecalEditor.setColor(val); }
+  setWallDecalText(val)    { this.wallDecalEditor.setText(val); }
+  setWallDecalBrand(val)   { this.wallDecalEditor.setBrand(val); }
+  setWallDecalRoll(val)    { this.wallDecalEditor.setRoll(val); }
+  setWallDecalOpacity(val) { this.wallDecalEditor.setOpacity(val); }
+  setWallDecalWidth(val)   { this.wallDecalEditor.setWidth(val); }
+  setWallDecalHeight(val)  { this.wallDecalEditor.setHeight(val); }
+  setWallDecalLinkScale(val) { this.wallDecalEditor.setLinkScale(val); }
+
+  // Editing a placed wall decal — shares the 'wallDecal' slice; selectedType
+  // ('wallDecal' vs 'wallDecalEdit') distinguishes stamp from edit.
+  deselectWallDecal()             { this.wallDecalEditor.deselect(); }
+  deleteSelectedWallDecal()       { this.wallDecalEditor.deleteSelected(); }
+  duplicateSelectedWallDecal()    { this.wallDecalEditor.duplicateSelected(); }
+  changeWallDecalWidth(v)   { this.wallDecalEditor.changeWidth(v); }
+  changeWallDecalHeight(v)  { this.wallDecalEditor.changeHeight(v); }
+  changeWallDecalLinkScale(v) { this.wallDecalEditor.setLinkScale(v); }
+  changeWallDecalRoll(v)    { this.wallDecalEditor.changeRoll(v); }
+  changeWallDecalOpacity(v) { this.wallDecalEditor.changeOpacity(v); }
+  changeWallDecalCount(v)   { this.wallDecalEditor.changeCount(v); }
+  changeWallDecalOutline(v) { this.wallDecalEditor.changeOutline(v); }
+  changeWallDecalColor(v)   { this.wallDecalEditor.changeColor(v); }
+  changeWallDecalText(v)    { this.wallDecalEditor.changeText(v); }
+  changeWallDecalBrand(v)   { this.wallDecalEditor.changeBrand(v); }
 
   // ── AI Path helper methods ───────────────────────────────────────────────
   openAiPath() {

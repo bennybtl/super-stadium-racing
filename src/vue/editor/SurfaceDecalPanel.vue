@@ -33,6 +33,17 @@
       />
     </template>
 
+    <template v-if="s.hasBrand">
+      <div class="text-slate-400 text-[11px] mb-2 mt-3 uppercase tracking-widest">Brand</div>
+      <select
+        class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+        :value="s.brand"
+        @change="set('brand', $event.target.value)"
+      >
+        <option v-for="b in s.brands" :key="b.value" :value="b.value">{{ b.label }}</option>
+      </select>
+    </template>
+
     <label v-if="s.hasOutline" class="flex items-center justify-between text-[12px] text-slate-200" :class="{ 'mt-3': !editing }">
       <span>Outline</span>
       <input type="checkbox" :checked="s.outline" @change="set('outline', $event.target.checked)" />
@@ -66,11 +77,17 @@
       />
     </template>
 
+    <!-- Uniform scale toggle (not for polyline — it only has a length) -->
+    <label v-if="s.shape !== 'polyline'" class="flex items-center justify-between text-[12px] text-slate-200 mb-2">
+      <span>Uniform scale</span>
+      <input type="checkbox" :checked="s.linkScale" @change="set('linkScale', $event.target.checked)" />
+    </label>
+
     <!-- Size — a polyline has no "Depth"; its length only seeds the initial
          2-point line (a placed one is reshaped via its points instead). -->
     <template v-if="!editing || s.shape !== 'polyline'">
       <div class="flex justify-between mb-1 text-[12px]">
-        <span>{{ s.shape === 'polyline' ? 'Length' : 'Width' }}</span>
+        <span>{{ s.shape === 'polyline' ? 'Length' : (s.linkScale ? 'Scale' : 'Width') }}</span>
         <span>{{ s.width }}m</span>
       </div>
       <input type="range" min="0.5" max="30" step="0.5"
@@ -79,7 +96,7 @@
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
-    <template v-if="s.shape !== 'polyline'">
+    <template v-if="s.shape !== 'polyline' && !s.linkScale">
       <div class="flex justify-between mb-1 text-[12px]">
         <span>Depth</span>
         <span>{{ s.depth }}m</span>

@@ -283,7 +283,7 @@ export class PolyWall {
       step,
       retain: Math.max(0, Math.min(1, 1 - friction)),
     };
-    mesh.metadata = { ...(mesh.metadata ?? {}), polylineCollider: this.collider };
+    mesh.metadata = { ...(mesh.metadata ?? {}), polylineCollider: this.collider, decalTarget: true };
 
     return mesh;
   }

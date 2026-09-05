@@ -107,6 +107,7 @@ export class SurfaceDecalManager {
       count  = 1,
       outline = false,
       text = '',
+      brand = '',
       points,
       thickness = 1,
     } = feature;
@@ -148,7 +149,7 @@ export class SurfaceDecalManager {
       angle: boxAngle,
     });
 
-    decal.material = this._getMaterial(shape, color, opacity, wearSeed(boxCenterX, boxCenterZ), count, outline, text, boxWidth, boxDepth, localPoints, thickness);
+    decal.material = this._getMaterial(shape, color, opacity, wearSeed(boxCenterX, boxCenterZ), count, outline, text, boxWidth, boxDepth, localPoints, thickness, brand);
     decal.isPickable = true;
     decal.metadata = { ...(decal.metadata ?? {}), surfaceDecal: true };
     // Lift the baked mesh a hair off the terrain so pointer picks hit the decal
@@ -159,7 +160,7 @@ export class SurfaceDecalManager {
     return decal;
   }
 
-  _getMaterial(shape, color, opacity, seed, count, outline, text, width, depth, localPoints = null, thickness = 1) {
+  _getMaterial(shape, color, opacity, seed, count, outline, text, width, depth, localPoints = null, thickness = 1, brand = '') {
     // Wear is baked per world size, so the footprint is part of the key. It is
     // rounded to whole units to keep the cache from growing per slider step.
     const worldWidth = Math.max(1, Math.round(width));
@@ -169,10 +170,11 @@ export class SurfaceDecalManager {
     const pointsKey = localPoints
       ? `${localPoints.map(p => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}@${thickness.toFixed(1)}`
       : '';
-    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}:${text}:${worldWidth}x${worldDepth}:${pointsKey}`;
+    const brandKey = shape === 'brand' ? brand : '';
+    const key = `${shape}:${color}:${opacity}:${seed}:${count}:${outline}:${text}:${brandKey}:${worldWidth}x${worldDepth}:${pointsKey}`;
     if (this._matCache.has(key)) return this._matCache.get(key);
 
-    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline, text, worldWidth, worldDepth, localPoints, thickness });
+    const tex = createDecalTexture(this._scene, shape, { color, seed, count, outline, text, brand, worldWidth, worldDepth, localPoints, thickness });
     const mat = makeDecalMaterial(this._scene, `surfaceDecalMat_${key}`, tex, opacity);
 
     this._matCache.set(key, mat);

@@ -7,6 +7,7 @@ import {
 } from "@babylonjs/core";
 
 import { basicColors } from "../constants.js";
+import { loadBrandImage as _loadBrandImage } from "../utils/brand-images.js";
 
 const BASE_BANNER_W = 10;
 const BANNER_H = 2.2;
@@ -19,28 +20,6 @@ const MAX_BANNER_W = 40;
 
 const TEX_W = 1024;
 const TEX_H = 256;
-
-const _brandImageCache = new Map();
-
-function _loadBrandImage(filename) {
-  const key = filename || '';
-  if (_brandImageCache.has(key)) return _brandImageCache.get(key);
-
-  const p = new Promise((resolve) => {
-    if (!filename) {
-      resolve(null);
-      return;
-    }
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = new URL(`../assets/brands/${filename}`, import.meta.url).href;
-  });
-
-  _brandImageCache.set(key, p);
-  return p;
-}
 
 export class TrackSign {
   /**

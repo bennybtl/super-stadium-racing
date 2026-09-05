@@ -97,6 +97,19 @@
       />
     </div>
 
+    <!-- End Taper toggle — open hills only: fade the ends down to the ground -->
+    <template v-if="!editor.polyHill.closed">
+      <div class="flex justify-between mb-3 text-[12px]">
+        <span>End Taper</span>
+        <input
+          type="checkbox"
+          :checked="editor.polyHill.endTaper"
+          @change="editor.setFeatureProp('polyHill', 'endTaper', $event.target.checked)"
+          class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+        />
+      </div>
+    </template>
+
     <!-- Filled toggle -->
      <template v-if="editor.polyHill.closed">
       <div class="flex justify-between mb-3 text-[12px]">

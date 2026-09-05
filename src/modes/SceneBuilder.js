@@ -32,9 +32,11 @@ import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
+import { WallDecalManager } from "../managers/WallDecalManager.js";
 import { buildWaterBodies } from "../objects/Water.js";
 import { createWaterDepthSampler } from "../objects/water-field.js";
 import { scatterDirtChunks } from "../objects/DirtChunks.js";
+import { scatterGrassBlades } from "../objects/GrassBlades.js";
 import { buildBorderWalls } from "../objects/BorderWall.js";
 import { buildOutskirts, OUTSKIRTS_MATERIAL_NAME } from "../objects/Outskirts.js";
 import {
@@ -477,6 +479,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     }
   );
   const surfaceDecalManager = new SurfaceDecalManager(scene, currentTrack, ground);
+  const wallDecalManager = new WallDecalManager(scene, currentTrack);
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
     sampleStep: 3,
@@ -515,6 +518,12 @@ export async function buildScene(engine, trackLoader, trackKey) {
     }
   }
 
+  // Wall decals project onto surfaces built above (perimeter + poly walls), so
+  // they run after the feature loop rather than inside it.
+  for (const feature of currentTrack.features) {
+    if (feature.type === "wallDecal") wallDecalManager.createDecal(feature);
+  }
+
   // Water is built per *body*, not per feature — overlapping water features share
   // one surface — so it runs once over the whole track rather than in the loop.
   buildWaterBodies(currentTrack, scene);
@@ -527,6 +536,14 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Disabled per-track for on-road / paved tracks.
   if (currentTrack.dirtChunks !== false) {
     scatterDirtChunks(scene, currentTrack);
+  }
+
+  // Procedural grass-blade scatter — same idea, but only over grass terrain.
+  // Fire-and-forget: the OBJ load is async and nothing downstream depends on it.
+  if (currentTrack.grassBlades !== false) {
+    scatterGrassBlades(scene, currentTrack).catch((err) =>
+      console.warn("[GrassBlades] scatter failed:", err),
+    );
   }
 
   return {
@@ -554,6 +571,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     bridgeMeshManager,
     steepSlopeColliderManager,
     surfaceDecalManager,
+    wallDecalManager,
     driveSurfaceManager,
     surfaceTopologyGraph,
   };

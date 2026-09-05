@@ -33,6 +33,7 @@
     <AiPathPanel />
     <TerrainPathPanel />
     <SurfaceDecalPanel />
+    <WallDecalPanel />
     <AddEntityMenu />
     <EditorStatusBar />
   </div>
@@ -66,6 +67,7 @@ import BridgeMeshPanel    from './editor/BridgeMeshPanel.vue';
 import AiPathPanel        from './editor/AiPathPanel.vue';
 import TerrainPathPanel   from './editor/TerrainPathPanel.vue';
 import SurfaceDecalPanel  from './editor/SurfaceDecalPanel.vue';
+import WallDecalPanel     from './editor/WallDecalPanel.vue';
 import AddEntityMenu      from './editor/AddEntityMenu.vue';
 import EditorStatusBar    from './editor/EditorStatusBar.vue';
 

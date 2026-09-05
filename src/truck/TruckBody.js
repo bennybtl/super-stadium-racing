@@ -35,6 +35,26 @@ const BODY_DYN = {
 };
 
 /**
+ * Chassis-attitude contribution from the four wheel contact heights.
+ *
+ * The accel-driven pitch/roll targets above never look at the ground, and the
+ * physics-box terrain tilt (TerrainPhysics) reads a single ground normal at the
+ * truck centre — so terrain that's uneven *under* the truck but doesn't swing
+ * that centre normal (small bumps, ruts, a rock under one wheel) leaves the body
+ * dead level while it heaves straight up. The front/rear and left/right deltas
+ * of the already-sampled wheel positions are exactly that missing differential;
+ * added into the pitch/roll spring targets they make the body rock over rough
+ * ground. Gain < 1 keeps it arcade — even a hard one-wheel hit only leans the
+ * body part way, and the springs turn it into a settle, not a 1:1 shake. On flat
+ * ground and uniform slopes the four deltas are ~0, so this never double-counts
+ * the box tilt.
+ */
+const CONTACT_ATTITUDE = {
+  pitchGain: 0.55,
+  rollGain:  0.50,
+};
+
+/**
  * Landing bounce. The accel-driven heaveTarget above can't catch a landing on
  * its own: the impact is a ~1-frame velocity kill (a one-frame target barely
  * moves an underdamped spring). So on the airborne→grounded transition we kick
@@ -128,6 +148,12 @@ export class TruckBody {
       { id: "RL", x:  rearHalfTrack,  z: rearAxle,  isFront: false, scale: rearScale  },
       { id: "RR", x: -rearHalfTrack,  z: rearAxle,  isFront: false, scale: rearScale  },
     ];
+
+    // Lever arms for the contact-plane attitude (see CONTACT_ATTITUDE): axle
+    // separation and the front-track width the sampled wheel-height deltas are
+    // divided by to get pitch / roll angles.
+    this._contactWheelbase = Math.max(0.1, frontAxle - rearAxle);
+    this._contactTrack     = Math.max(0.1, frontHalfTrack + rearHalfTrack);
 
 
     // Sprung-mass node: carries the body's heave/pitch/roll relative to the
@@ -500,12 +526,29 @@ export class TruckBody {
     const H = BODY_DYN.heave, P = BODY_DYN.pitch, R = BODY_DYN.roll;
     // Per-vehicle suspension travel scales how far each DOF can deflect.
     const s = this._suspensionTravel;
+
+    // Contact-plane attitude from the four sampled wheel heights (already in
+    // wheel-root local space, so no heading math). Front wheels riding higher
+    // than rear → nose up (negative rotation.x); right wheels higher than left
+    // → body leans left (positive rotation.z) — both matching the sign
+    // conventions of the accel targets and the box terrain tilt.
+    let contactPitch = 0, contactRoll = 0;
+    if (this._hasWheelSamples) {
+      const wy = this._sampledWheelBaseY;
+      const frontAvg = (wy[0] + wy[1]) * 0.5;
+      const rearAvg  = (wy[2] + wy[3]) * 0.5;
+      const leftAvg  = (wy[0] + wy[2]) * 0.5;
+      const rightAvg = (wy[1] + wy[3]) * 0.5;
+      contactPitch = -(frontAvg - rearAvg) / this._contactWheelbase;
+      contactRoll  =  (rightAvg - leftAvg) / this._contactTrack;
+    }
+
     // Sign: chassis thrown up (landing) → body squats down; braking (fwd accel
     // negative) → nose dives (+x); cornering → body leans out of the turn
     // (roll follows +rightAccel; the others follow -accel).
     const heaveTarget = g * clamp(-H.gain * ay,        -H.max * s, H.max * s);
-    const pitchTarget = g * clamp(-P.gain * fwdAccel,  -P.max * s, P.max * s);
-    const rollTarget  = g * clamp(R.gain * rightAccel, -R.max * s, R.max * s);
+    const pitchTarget = g * clamp(-P.gain * fwdAccel  + CONTACT_ATTITUDE.pitchGain * contactPitch, -P.max * s, P.max * s);
+    const rollTarget  = g * clamp(R.gain * rightAccel + CONTACT_ATTITUDE.rollGain  * contactRoll,  -R.max * s, R.max * s);
 
     // Landing bounce: while there's a real gap under the truck, track the
     // deepest downward speed. Then kick the heave spring the instant that fall

@@ -116,15 +116,30 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.15,     // Slippery, especially when wet
     color: TERRAIN_COLORS.grass, // Green grass
     dustIntensity: 0.12,     // Light clippings/haze
-    diffuseTexture: 'textures/grass.texture.png',
+    diffuseTexture: 'textures/grass.texture.jpg',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 1.2,     // Slightly slows down
     roughness: 0.3,          // Slightly rough — soft impacts
-    normalMap: 'normals/grass.normal.jpg',
-    normalMapIntensity: 1.5, // Strong grass surface detail
+    // normalMap: 'normals/grass.normal.jpg',
+    // normalMapIntensity: 1.5, // Strong grass surface detail
     specular: 0.14,          // Matte grass
   },
+  WEEDYGRASS: {
+    name: "weedy_grass",
+    gripMultiplier: 1.00,     // Not as slick as grass.
+    color: TERRAIN_COLORS.loose_dirt,
+    dustIntensity: 0.25,     // Light clippings/haze
+    roosterTail: 0.5,        // Tires throw a rooster tail under throttle
+    diffuseTexture: 'textures/grass_2.texture.jpg',
+    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureOpacity: 0.9,
+    dustIntensity: 0.35,      // Loose — kicks up readily
+    dragMultiplier: 1.1,     // Slightly slows down
+    roughness: 0.3,          // Slightly rough — soft impacts
+    specular: 0.14,          // Matte grass
+  },
+
 };
 
 export class TerrainManager {

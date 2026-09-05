@@ -178,6 +178,74 @@ export function distToPolyline(x, z, points, closed = false) {
 }
 
 /**
+ * Fraction of the first / last segment given over to the end taper. The ramp
+ * runs from the end node inward this far; the remaining stub next to the
+ * second-to-last node, plus everything past it, is full-height plateau. 0.7
+ * (taper starts 30% out from the second-to-last node) drops the ends well
+ * before the tips while keeping a flat centre.
+ */
+const END_TAPER_SEGMENT_FRACTION = 0.7;
+
+/**
+ * End-taper coordinate for an OPEN polyline: 0 through the middle, ramping to 1
+ * at each end node. The ramp spans the outer END_TAPER_SEGMENT_FRACTION of the
+ * first (or last) segment, so a feature keyed off this fades to nothing at the
+ * tips while keeping a flat centre — a two-node polyline gets a rounded top and
+ * tapered ends instead of running flat to a hard end. Measured along the nearest
+ * point's arc-length position, so it tracks the polyline regardless of approach
+ * angle. When the two ramps would overlap (short polyline, large fraction) they
+ * meet halfway and the plateau collapses to a point.
+ *
+ * Returns 0 for polylines with fewer than two points (nothing to taper).
+ */
+export function polylineEndTaper(x, z, points) {
+  const n = points?.length ?? 0;
+  if (n < 2) return 0;
+
+  let total = 0;
+  let bestSq = Infinity;
+  let bestAlong = 0;
+  let firstLen = 0;
+  let lastLen = 0;
+
+  for (let i = 0; i < n - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const dx = p2.x - p1.x;
+    const dz = p2.z - p1.z;
+    const len2 = dx * dx + dz * dz;
+    const segLen = Math.sqrt(len2);
+    if (i === 0) firstLen = segLen;
+    if (i === n - 2) lastLen = segLen;
+
+    let t = len2 < 1e-8 ? 0 : ((x - p1.x) * dx + (z - p1.z) * dz) / len2;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const ex = x - (p1.x + t * dx);
+    const ez = z - (p1.z + t * dz);
+    const dSq = ex * ex + ez * ez;
+    if (dSq < bestSq) {
+      bestSq = dSq;
+      bestAlong = total + t * segLen;
+    }
+    total += segLen;
+  }
+
+  let upEnd = firstLen * END_TAPER_SEGMENT_FRACTION;
+  let downStart = total - lastLen * END_TAPER_SEGMENT_FRACTION;
+  if (upEnd > downStart) {
+    upEnd = downStart = (upEnd + downStart) / 2;
+  }
+  if (bestAlong <= upEnd) {
+    return upEnd > 1e-6 ? 1 - bestAlong / upEnd : 0;
+  }
+  if (bestAlong >= downStart) {
+    const span = total - downStart;
+    return span > 1e-6 ? (bestAlong - downStart) / span : 0;
+  }
+  return 0;
+}
+
+/**
  * Ray-casting point-in-polygon test over an XZ point list.
  *
  * The `|| 1e-8` guards a horizontal edge, where zj - zi is zero and the

@@ -4,7 +4,7 @@ import {
   Engine,
   Vector3,
 } from "@babylonjs/core";
-import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, MIN_COUNT, MAX_COUNT, createDecalTexture, decalPolylineLocalOutline } from "../managers/decalShapes.js";
+import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, DECAL_BRANDS, DEFAULT_BRAND, MIN_COUNT, MAX_COUNT, createDecalTexture, decalPolylineLocalOutline } from "../managers/decalShapes.js";
 import { DEFAULT_CORNER_RADIUS, expandPolyline } from "../utils/polyline-utils.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 import { EditorMaterials, LINE_COLOR_SURFACE_DECAL } from "./EditorMaterials.js";
@@ -19,6 +19,10 @@ const GHOST_ROTATION_OFFSET_DEG = -90;
 
 // Normalize degrees into [-180, 180) — decal rotation is signed.
 const norm180 = (deg) => ((deg % 360) + 540) % 360 - 180;
+
+const SIZE_MIN = 0.5;
+const SIZE_MAX = 30;
+const clampSize = (v) => Math.max(SIZE_MIN, Math.min(SIZE_MAX, v));
 
 /**
  * SurfaceDecalEditor — stamp-mode editor for placing programmatic surface decals.
@@ -47,9 +51,13 @@ export class SurfaceDecalEditor {
     this._count = 3;
     this._outline = false;
     this._text = 'TEXT';
+    this._brand = DEFAULT_BRAND;
     this._angle = 0;
     this._width = 4;
     this._depth = 4;
+    // When true, width/depth resize together (aspect preserved); the panel
+    // collapses to one "Scale" slider. Not applied to the polyline shape.
+    this._linkScale = true;
     this._opacity = 1;
     this._thickness = 1; // polyline shape only — stroke width in world units
 
@@ -469,19 +477,36 @@ export class SurfaceDecalEditor {
 
   // ── Property edits (from the edit panel) ──────────────────────────────────
 
-  changeWidth(val)   { this._changeProp('width', val); }
-  changeDepth(val)   { this._changeProp('depth', val); }
+  changeWidth(val)   { this._changeSize('width', val); }
+  changeDepth(val)   { this._changeSize('depth', val); }
   changeAngle(val)   { this._changeProp('angle', norm180(val)); }
   changeOpacity(val) { this._changeProp('opacity', val); }
   changeCount(val)   { this._changeProp('count', Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(val)))); }
   changeOutline(val) { this._changeProp('outline', !!val); }
   changeColor(val)   { if (DECAL_COLORS.includes(val)) this._changeProp('color', val); }
   changeText(val)    { this._changeProp('text', String(val ?? '')); }
+  changeBrand(val)   { this._changeProp('brand', val); }
 
   _changeProp(prop, val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature[prop] = val;
+    this._rebuildSelected();
+  }
+
+  /** Resize a placed decal. In linked mode the other dimension scales with it
+   *  (aspect preserved); never linked for the polyline shape. */
+  _changeSize(dim, val) {
+    if (!this.selected) return;
+    val = clampSize(val);
+    this.editor.saveSnapshot(true);
+    const f = this.selected.feature;
+    const other = dim === 'width' ? 'depth' : 'width';
+    if (this._linkScale && f.shape !== 'polyline') {
+      const factor = val / ((f[dim] ?? 4) || val);
+      f[other] = clampSize((f[other] ?? 4) * factor);
+    }
+    f[dim] = val;
     this._rebuildSelected();
   }
 
@@ -513,9 +538,13 @@ export class SurfaceDecalEditor {
     s.colors     = DECAL_COLORS;
     s.text       = f.text ?? '';
     s.hasText    = TEXT_SHAPES.includes(s.shape);
+    s.brand      = f.brand ?? DEFAULT_BRAND;
+    s.brands     = DECAL_BRANDS;
+    s.hasBrand   = s.shape === 'brand';
     s.angle   = Math.round(f.angle ?? 0);
     s.width   = +(f.width ?? 4).toFixed(1);
     s.depth   = +(f.depth ?? 4).toFixed(1);
+    s.linkScale = this._linkScale;
     s.opacity = +(f.opacity ?? 1).toFixed(2);
     s.thickness = +(f.thickness ?? 1).toFixed(1);
     s.pointCount = s.shape === 'polyline' ? (f.points?.length ?? 0) : 0;
@@ -582,13 +611,15 @@ export class SurfaceDecalEditor {
     const pointsKey = localPoints
       ? `${localPoints.map(p => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}@${this._thickness.toFixed(1)}`
       : '';
-    const key = `${this._shape}:${this._count}:${this._outline}:${this._color}:${this._text}:${worldWidth}x${worldDepth}:${pointsKey}`;
+    const brandKey = this._shape === 'brand' ? this._brand : '';
+    const key = `${this._shape}:${this._count}:${this._outline}:${this._color}:${this._text}:${brandKey}:${worldWidth}x${worldDepth}:${pointsKey}`;
     if (!this._ghostTexCache.has(key)) {
       this._ghostTexCache.set(key, createDecalTexture(this._scene, this._shape, {
         color: this._color,
         count: this._count,
         outline: this._outline,
         text: this._text,
+        brand: this._brand,
         worldWidth,
         worldDepth,
         localPoints,
@@ -676,6 +707,7 @@ export class SurfaceDecalEditor {
       color:   this._color,
       count:   this._count,
       outline: this._outline,
+      brand:   this._brand,
       width:   this._width,
       depth:   this._depth,
       angle:   this._angle,
@@ -714,9 +746,16 @@ export class SurfaceDecalEditor {
   _onWheel(event) {
     if (!this.isOpen) return;
     event.preventDefault();
-    const delta = event.deltaY > 0 ? -0.5 : 0.5;
-    this._width  = Math.max(0.5, this._width  + delta);
-    this._depth  = Math.max(0.5, this._depth  + delta);
+    if (this._linkScale && this._shape !== 'polyline') {
+      // Multiplicative so the aspect ratio holds through the zoom.
+      const factor = event.deltaY > 0 ? 1 / 1.1 : 1.1;
+      this._width = clampSize(this._width * factor);
+      this._depth = clampSize(this._depth * factor);
+    } else {
+      const delta = event.deltaY > 0 ? -0.5 : 0.5;
+      this._width  = clampSize(this._width  + delta);
+      this._depth  = clampSize(this._depth  + delta);
+    }
     this._updateGhostTexture();
     this._updateGhostTransform();
     this._syncStore();
@@ -754,6 +793,13 @@ export class SurfaceDecalEditor {
     this._syncStore();
   }
 
+  setBrand(val) {
+    if (val === this._brand) return;
+    this._brand = val;
+    this._updateGhostTexture();
+    this._syncStore();
+  }
+
   setOutline(val) {
     const next = !!val;
     if (next === this._outline) return;
@@ -777,15 +823,27 @@ export class SurfaceDecalEditor {
     this._syncStore();
   }
 
-  setWidth(val) {
-    this._width = val;
-    this._updateGhostTexture();
-    this._updateGhostTransform();
+  setLinkScale(val) {
+    this._linkScale = !!val;
     this._syncStore();
   }
 
-  setDepth(val) {
-    this._depth = val;
+  setWidth(val) { this._applySize('width', val); }
+  setDepth(val) { this._applySize('depth', val); }
+
+  /** Stamp-mode resize; in linked mode the other dimension tracks the change. */
+  _applySize(dim, val) {
+    val = clampSize(val);
+    if (this._linkScale && this._shape !== 'polyline') {
+      const cur = dim === 'width' ? this._width : this._depth;
+      const factor = val / (cur || val);
+      if (dim === 'width') { this._width = val; this._depth = clampSize(this._depth * factor); }
+      else { this._depth = val; this._width = clampSize(this._width * factor); }
+    } else if (dim === 'width') {
+      this._width = val;
+    } else {
+      this._depth = val;
+    }
     this._updateGhostTexture();
     this._updateGhostTransform();
     this._syncStore();
@@ -821,9 +879,13 @@ export class SurfaceDecalEditor {
     s.colors = DECAL_COLORS;
     s.text = this._text;
     s.hasText = TEXT_SHAPES.includes(this._shape);
+    s.brand = this._brand;
+    s.brands = DECAL_BRANDS;
+    s.hasBrand = this._shape === 'brand';
     s.angle = Math.round(this._angle);
     s.width = +this._width.toFixed(1);
     s.depth = +this._depth.toFixed(1);
+    s.linkScale = this._linkScale;
     s.opacity = +this._opacity.toFixed(2);
     s.thickness = +this._thickness.toFixed(1);
     // No point/radius selection exists until a polyline decal is actually placed.

@@ -1,12 +1,16 @@
 import {
   MeshBuilder,
   StandardMaterial,
+  MultiMaterial,
+  SubMesh,
   Color3,
   Vector3,
   Texture,
   PhysicsAggregate,
   PhysicsShapeType,
 } from "@babylonjs/core";
+import concreteSideUrl from "../assets/textures/concrete_2.texture.png?url";
+import concreteTopUrl from "../assets/textures/concrete_3.texture.png?url";
 
 /**
  * BorderWall - the four grey boxes that seal the track perimeter.
@@ -24,8 +28,12 @@ export const DEFAULT_BORDER_WALL = {
   // Height ABOVE the track surface. 12 matches what the original fixed wall
   // showed: a 24-tall box centred on y = 0, half of it buried.
   height: 12,
-  color: "#808080",
 };
+
+// World metres per concrete-texture repeat, on both the side and top faces.
+const TEXTURE_TILE_METERS = 6;
+// Local path to the shared normal map, kept alongside the concrete diffuse.
+const WALL_NORMAL_URL = new URL("../assets/normals/8648-normal.jpg", import.meta.url).href;
 
 // Gap between the editable track area and the wall's inner face. Matches
 // GROUND_BORDER in track.js so the wall sits at the edge of the ground mesh.
@@ -46,7 +54,6 @@ export function resolveBorderWall(track) {
     enabled: raw.enabled !== false,
     thickness: clamp(raw.thickness, 0.5, 20, DEFAULT_BORDER_WALL.thickness),
     height: clamp(raw.height, 1, 40, DEFAULT_BORDER_WALL.height),
-    color: typeof raw.color === "string" ? raw.color : DEFAULT_BORDER_WALL.color,
   };
 }
 
@@ -61,8 +68,12 @@ export function disposeBorderWalls(scene) {
   for (const name of WALL_NAMES) {
     const mesh = scene.getMeshByName(name);
     if (!mesh) continue;
-    mesh.material?.dispose(true, true);
+    const mat = mesh.material;
     mesh.dispose();
+    // MultiMaterial.dispose() leaves its sub-materials (and their textures)
+    // behind, so free those explicitly.
+    for (const sub of mat?.subMaterials ?? []) sub?.dispose(true, true);
+    mat?.dispose(true, true);
   }
 }
 
@@ -89,49 +100,88 @@ export function buildBorderWalls(scene, track, wallManager = null) {
   const spanX = trackWidth + WALL_INSET * 2 + t * 2;
   const spanZ = trackDepth + WALL_INSET * 2;
 
+  const wallHeight = settings.height + WALL_SKIRT;
+
   const create = (name, x, z, width, depth) => {
+    // Build every wall long-axis along local X and rotate the vertical
+    // (east/west) ones 90°, so all four share one box UV layout — tiling the
+    // side texture the same way regardless of orientation. (Building them
+    // axis-aligned instead maps U to Y on the ±X faces and streaks the
+    // texture.)
+    const vertical = depth > width;
+    const longSpan = vertical ? depth : width;
+    const shortSpan = vertical ? width : depth;
+
     const wall = MeshBuilder.CreateBox(
       name,
-      { width, height: settings.height + WALL_SKIRT, depth },
+      { width: longSpan, height: wallHeight, depth: shortSpan },
       scene
     );
     // Base pinned at -WALL_SKIRT, top at `height` above the track: adjusting the
     // height only moves the top.
     wall.position = new Vector3(x, settings.height / 2 - WALL_SKIRT / 2, z);
+    if (vertical) wall.rotation.y = Math.PI / 2;
     wall.metadata = {
       ...(wall.metadata ?? {}),
       truckCollider: true,
       truckColliderFriction: 0.9,
+      decalTarget: true, // wall decals project onto these
     };
 
-    const mat = new StandardMaterial(name + "Mat", scene);
-    mat.diffuseColor = Color3.FromHexString(settings.color);
-    mat.specularColor = new Color3(0.1, 0.1, 0.1);
-    mat.bumpTexture = new Texture(new URL("../assets/normals/8648-normal.jpg", import.meta.url).href, scene);
-    mat.bumpTexture.level = 0.7;
-    mat.invertNormalMapY = true;
+    // Concrete: `concrete_2` on the four sides, `concrete_3` on the top, tiled
+    // to a fixed world scale so long and short walls read the same. Faces of a
+    // Babylon box run [front, back, right, left] then top then bottom, six
+    // indices each — so the sides are indices 0..23, the top 24..29.
+    const makeConcrete = (suffix, diffuseUrl, uScale, vScale) => {
+      const m = new StandardMaterial(name + suffix, scene);
+      m.specularColor = new Color3(0.08, 0.08, 0.08);
+      const diffuse = new Texture(diffuseUrl, scene);
+      diffuse.uScale = uScale;
+      diffuse.vScale = vScale;
+      m.diffuseTexture = diffuse;
+      const bump = new Texture(WALL_NORMAL_URL, scene);
+      bump.uScale = uScale;
+      bump.vScale = vScale;
+      bump.level = 0.7;
+      m.bumpTexture = bump;
+      m.invertNormalMapY = true;
+      return m;
+    };
+    // Side faces (box ±Z): U runs the long axis, V runs the height.
+    const sideMat = makeConcrete(
+      "SideMat",
+      concreteSideUrl,
+      longSpan / TEXTURE_TILE_METERS,
+      wallHeight / TEXTURE_TILE_METERS,
+    );
+    // Top face (box +Y): Babylon maps U → box depth (the thickness) and
+    // V → box width (the long axis) — the reverse of the side faces.
+    const topMat = makeConcrete(
+      "TopMat",
+      concreteTopUrl,
+      shortSpan / TEXTURE_TILE_METERS,
+      longSpan / TEXTURE_TILE_METERS,
+    );
+
+    const vertexCount = wall.getTotalVertices();
+    wall.subMeshes = [];
+    new SubMesh(0, 0, vertexCount, 0, 24, wall);  // 4 sides
+    new SubMesh(1, 0, vertexCount, 24, 6, wall);  // top (+Y)
+    new SubMesh(2, 0, vertexCount, 30, 6, wall);  // bottom (buried)
+
+    const mat = new MultiMaterial(name + "Mat", scene);
+    mat.subMaterials = [sideMat, topMat, sideMat];
     wall.material = mat;
 
     new PhysicsAggregate(wall, PhysicsShapeType.BOX, { mass: 0 }, scene);
 
     // Also add to wallManager so they show up on the track editor grid and can be optionally hidden
-    let heading, halfLength, halfThick;
-    if (width > depth) {
-      heading = 0;
-      halfLength = width / 2;
-      halfThick = depth / 2;
-    } else {
-      heading = Math.PI / 2;
-      halfLength = depth / 2;
-      halfThick = width / 2;
-    }
-
     wallManager?._walls.push({
       segments: [{
         position: { x, z },
-        heading,
-        halfLength,
-        halfThick,
+        heading: vertical ? Math.PI / 2 : 0,
+        halfLength: longSpan / 2,
+        halfThick: shortSpan / 2,
         friction: 0.1,
       }],
       dispose() {},   // no Babylon meshes — required by WallManager.dispose()

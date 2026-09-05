@@ -131,6 +131,18 @@
         </label>
         <div class="mt-2 text-[10px] text-slate-400">Scatters procedural dirt debris along walls and off the racing line.</div>
       </div>
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+          :checked="editor.trackSettings.grassBlades"
+          @change="editor.setTrackGrassBlades($event.target.checked)"
+        />
+        <span class="text-[13px] text-white">Grass Blades</span>
+        </label>
+        <div class="mt-2 text-[10px] text-slate-400">Scatters procedural grass tufts along walls and off the racing line, over grass terrain only.</div>
+      </div>
     </div>
     <hr class="border-t border-slate-700 my-4" />
 
@@ -175,16 +187,6 @@
         @input="editor.setTrackBorderWall('height', +$event.target.value)"
         class="w-full accent-[var(--accent)] cursor-pointer"
       />
-
-      <div class="mt-3 flex items-center justify-between text-[12px]">
-        <span>Color</span>
-        <input
-          type="color"
-          class="h-7 w-14 cursor-pointer rounded border border-slate-700 bg-slate-800"
-          :value="editor.trackBorderWall.color"
-          @input="editor.setTrackBorderWall('color', $event.target.value)"
-        />
-      </div>
     </template>
 
     <hr class="border-t border-slate-700 my-2" />

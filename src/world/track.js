@@ -1,5 +1,5 @@
 import { TERRAIN_TYPES } from "./terrain.js";
-import { expandPolyline, isPointInPolygon, distToPolyline } from "../utils/polyline-utils.js";
+import { expandPolyline, isPointInPolygon, distToPolyline, polylineEndTaper } from "../utils/polyline-utils.js";
 import {
   getHillEllipseParams,
   getSquareHillParams,
@@ -151,6 +151,9 @@ export class Track {
     // Procedural dirt-chunk scatter (off-road dressing). On by default; turn off
     // for on-road / paved tracks.
     this.dirtChunks = true;
+    // Procedural grass-blade scatter — the same dressing, but only over grass
+    // terrain. On by default; a no-op on tracks with no grass.
+    this.grassBlades = true;
     // When true, driving off the track perimeter into the surrounding dead space
     // triggers the out-of-bounds countdown/respawn (in addition to any explicit
     // out-of-bounds zones). Off by default.
@@ -456,7 +459,14 @@ export class Track {
             // Original behavior: distance-based falloff from centerline
             const minDist = distToPolyline(x, z, expandedPoints, closed);
             if (minDist < halfWidth) {
-              totalHeight += height * edgeFalloff(minDist / halfWidth, getEdgeShape(feature));
+              let contribution = edgeFalloff(minDist / halfWidth, getEdgeShape(feature));
+              // Open + endTaper: fade to the ground toward each end node, with
+              // the ramp starting at the midpoint of the end segments — so a
+              // two-node poly hill reads as a mound, not a flat-topped ridge.
+              if (feature.endTaper && !closed) {
+                contribution *= edgeFalloff(polylineEndTaper(x, z, points), getEdgeShape(feature));
+              }
+              totalHeight += height * contribution;
             }
           }
           break;
@@ -897,6 +907,7 @@ export class Track {
       packId: this.packId,
       hidden: this.hidden,
       dirtChunks: this.dirtChunks,
+      grassBlades: this.grassBlades,
       oobDeadSpace: this.oobDeadSpace,
       borderWall: { ...DEFAULT_BORDER_WALL, ...(this.borderWall ?? {}) },
       name: this.name,
@@ -922,6 +933,7 @@ export class Track {
     track.packId = data.packId ?? track.packId;
     track.hidden = data.hidden ?? track.hidden;
     track.dirtChunks = data.dirtChunks ?? track.dirtChunks;
+    track.grassBlades = data.grassBlades ?? track.grassBlades;
     track.oobDeadSpace = data.oobDeadSpace ?? track.oobDeadSpace;
     // Tracks saved before the perimeter-wall options existed fall back to the
     // defaults, which reproduce the original grey wall.

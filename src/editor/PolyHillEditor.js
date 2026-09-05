@@ -90,6 +90,7 @@ export class PolyHillEditor {
       terrainType: null,
       closed: false,
       filled: false,
+      endTaper: false,
     };
 
     this.ec.saveSnapshot();
@@ -457,6 +458,15 @@ export class PolyHillEditor {
     this._rebuildHill(this._activeHill.feature);
   }
 
+  /** Open hills only: fade the ends down to the ground (see polylineEndTaper). */
+  setEndTaper(endTaper) {
+    if (!this._activeHill) return;
+    this.ec.saveSnapshot(true);
+    this._activeHill.feature.endTaper = endTaper;
+    this._syncStoreToFeature(this._activeHill.feature, this.selectedPoint?.idx ?? null);
+    this._rebuildHill(this._activeHill.feature);
+  }
+
   deletePolyHill() {
     if (!this._activeHill) return;
     clearTimeout(this._rebuildTimer);
@@ -501,6 +511,7 @@ export class PolyHillEditor {
     store.polyHill.edgeShape = feature.edgeShape ?? EDGE_SHAPE_DEFAULT;
     store.polyHill.closed = feature.closed ?? false;
     store.polyHill.filled = feature.filled ?? false;
+    store.polyHill.endTaper = feature.endTaper ?? false;
     // Water level (only meaningful for a closed, filled, water-type depression).
     store.polyHill.waterLevelOffset = feature.waterLevelOffset ?? 2;
     store.polyHill.canHaveWater = !!feature.closed && !!feature.filled
