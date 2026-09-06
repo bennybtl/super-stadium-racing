@@ -487,11 +487,8 @@ export const useEditorStore = defineStore('editor', () => {
     _bridge.value?.changeObstacleType?.(val);
   }
 
-  // ── Surface decal stamp ──
-  const surfaceDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, brand: '', brands: [], hasBrand: false, angle: 0, width: 4, depth: 4, linkScale: true, opacity: 1, thickness: 1, pointCount: 0, selectedPointIndex: -1, canHaveRadius: false, radius: 0 });
-
-  // ── Wall decal stamp ──
-  const wallDecal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, brand: '', brands: [], hasBrand: false, roll: 0, width: 4, height: 4, linkScale: true, opacity: 1 });
+  // ── Decal stamp / edit (one panel, any surface) ──
+  const decal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, brand: '', brands: [], hasBrand: false, rotation: 0, width: 4, height: 4, linkScale: true, opacity: 1, thickness: 1, pointCount: 0, selectedPointIndex: -1, canHaveRadius: false, radius: 0 });
 
 
   // ── Generic panel plumbing ──────────────────────────────────────────────
@@ -506,7 +503,7 @@ export const useEditorStore = defineStore('editor', () => {
   const _panels = {
     checkpoint, hill, squareHill, driveBox, terrainShape, obstacle,
     meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign, startPosition,
-    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, surfaceDecal, wallDecal,
+    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, decal,
   };
   function setFeatureProp(panelKey, prop, val) {
     const panel = _panels[panelKey];
@@ -555,7 +552,7 @@ export const useEditorStore = defineStore('editor', () => {
     aiPathWear,
     aiPathBranch, aiPathBranches,
     editMainAiPath, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, terrainPath,
-    surfaceDecal, wallDecal,
+    decal,
     setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     applyMeshGridSettings, setBridgeMeshPointHeight, setBridgeMeshThickness, setBridgeMeshLayerId,

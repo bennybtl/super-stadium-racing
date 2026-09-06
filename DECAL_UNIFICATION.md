@@ -1,6 +1,6 @@
 # Decal system unification — phased plan
 
-**Status:** Phases 0 + 1 done (2026-09-06). Phases 2–3 pending.
+**Status:** Phases 0 + 1 + 2 done (2026-09-06), Phase 2 pending in-app QA. Phase 3 pending.
 
 ## Why
 
@@ -143,7 +143,26 @@ projections bit-identical to the old managers'.
 
 ---
 
-## Phase 2 — Codemod + editor merge + one feature type
+## Phase 2 — Codemod + editor merge + one feature type  ✅ DONE (2026-09-06, pending in-app QA)
+
+**Landed:** `scripts/migrate-decals.mjs` rewrote 92 decals in 17 files
+(`src/tracks/**` + `track-packs/**`) to `type:"decal"`; `SurfaceDecalEditor` →
+`DecalEditor` (absorbs `WallDecalEditor`, deleted) — one ghost that orients to
+the surface under the cursor (`decalStableU` for the U axis, `GHOST_V` flip
+constant), flat decals drag on the XZ plane / wall decals re-pick the surface,
+polyline gated to flat surfaces; `SurfaceDecalPanel` → `DecalPanel` (absorbs
+`WallDecalPanel`); `editor.js` one `decal` slice; `EditorController` one
+`decalEditor` + `setDecal*`/`changeDecal*`; `AddEntityMenu` one "Decal";
+`DecalManager._decalParams` dropped its legacy branches (feature is `decal`
+only), `entries` (no more surface/wall split). `_rotation` maps to
+`feature.rotation` directly (stable frame) — the old SurfaceDecal slider
+direction is reversed for new edits, consistent with walls now.
+
+**Needs eyeballing:** ghost alignment vs the stamped decal on ground / deck /
+wall / ramp (flip `GHOST_V` if V is upside-down); drag feel on walls vs flat;
+the 10 migrated wall-decal rotations; polyline place + point-edit.
+
+---
 
 ### Migration codemod  *(one-off, no runtime layer)*
 

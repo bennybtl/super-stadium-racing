@@ -962,81 +962,129 @@
       "branches": []
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 33.77387738459947,
-      "centerZ": -72.62183166957797,
+      "type": "decal",
+      "position": [
+        33.77387738459947,
+        0,
+        -72.62183166957797
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -155,
+      "width": 4,
+      "height": 13.5,
       "shape": "line",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 13.5,
-      "angle": 155,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 23.102380785568407,
-      "centerZ": -52.8845069149135,
+      "type": "decal",
+      "position": [
+        23.102380785568407,
+        0,
+        -52.8845069149135
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -156,
+      "width": 4,
+      "height": 12,
       "shape": "line",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 12,
-      "angle": 156,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 41.26385834092385,
-      "centerZ": -23.139322958224298,
+      "type": "decal",
+      "position": [
+        41.26385834092385,
+        0,
+        -23.139322958224298
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -92,
+      "width": 4,
+      "height": 14,
       "shape": "line",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 14,
-      "angle": 92,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 59.64874813765923,
-      "centerZ": -22.849486632094127,
+      "type": "decal",
+      "position": [
+        59.64874813765923,
+        0,
+        -22.849486632094127
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -89,
+      "width": 4,
+      "height": 13,
       "shape": "line",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 13,
-      "angle": 89,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -29.078340177724417,
-      "centerZ": 23.721975383858307,
-      "shape": "line",
-      "color": "white",
-      "count": 3,
-      "outline": false,
+      "type": "decal",
+      "position": [
+        -29.078340177724417,
+        0,
+        23.721975383858307
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -86,
       "width": 5,
-      "depth": 16,
-      "angle": 86,
-      "opacity": 1
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": -40.069667188557254,
-      "centerZ": 23.865758388741,
+      "height": 16,
       "shape": "line",
       "color": "white",
       "count": 3,
       "outline": false,
+      "opacity": 1
+    },
+    {
+      "type": "decal",
+      "position": [
+        -40.069667188557254,
+        0,
+        23.865758388741
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -95,
       "width": 4,
-      "depth": 16,
-      "angle": 95,
+      "height": 16,
+      "shape": "line",
+      "color": "white",
+      "count": 3,
+      "outline": false,
       "opacity": 1
     },
     {

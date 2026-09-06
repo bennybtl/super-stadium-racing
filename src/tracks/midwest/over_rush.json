@@ -1139,31 +1139,47 @@
       "radius": 9.5
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -27.541247965398547,
-      "centerZ": -3.560239963658212,
+      "type": "decal",
+      "position": [
+        -27.541247965398547,
+        0,
+        -3.560239963658212
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -134,
+      "width": 6,
+      "height": 16,
       "shape": "chevron",
       "color": "white",
       "count": 7,
       "outline": false,
       "brand": "energizer-racing.png",
-      "width": 6,
-      "depth": 16,
-      "angle": 134,
       "opacity": 0.6
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -8.150218313161167,
-      "centerZ": -17.137477697256053,
+      "type": "decal",
+      "position": [
+        -8.150218313161167,
+        0,
+        -17.137477697256053
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 50,
+      "width": 6,
+      "height": 16,
       "shape": "chevron",
       "color": "white",
       "count": 7,
       "outline": false,
       "brand": "energizer-racing.png",
-      "width": 6,
-      "depth": 16,
-      "angle": -50,
       "opacity": 0.65
     },
     {
@@ -1255,31 +1271,47 @@
       "collider": false
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 1.9896175814120038,
-      "centerZ": -69.02597619114485,
+      "type": "decal",
+      "position": [
+        1.9896175814120038,
+        0,
+        -69.02597619114485
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 0,
+      "width": 4,
+      "height": 4,
       "shape": "triangle",
       "color": "white",
       "count": 3,
       "outline": false,
       "brand": "energizer-racing.png",
-      "width": 4,
-      "depth": 4,
-      "angle": 0,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -34.010382418587994,
-      "centerZ": -68.02597619114485,
+      "type": "decal",
+      "position": [
+        -34.010382418587994,
+        0,
+        -68.02597619114485
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 0,
+      "width": 4,
+      "height": 4,
       "shape": "triangle",
       "color": "white",
       "count": 3,
       "outline": false,
       "brand": "energizer-racing.png",
-      "width": 4,
-      "depth": 4,
-      "angle": 0,
       "opacity": 1
     },
     {

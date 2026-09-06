@@ -3,8 +3,10 @@ import {
   StandardMaterial,
   Engine,
   Vector3,
+  Quaternion,
 } from "@babylonjs/core";
 import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, DECAL_BRANDS, DEFAULT_BRAND, MIN_COUNT, MAX_COUNT, createDecalTexture, decalPolylineLocalOutline } from "../managers/decalShapes.js";
+import { decalStableU } from "../managers/groundDecal.js";
 import { DEFAULT_CORNER_RADIUS, expandPolyline } from "../utils/polyline-utils.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 import { EditorMaterials, LINE_COLOR_SURFACE_DECAL } from "./EditorMaterials.js";
@@ -12,10 +14,9 @@ import { gizmoY, gizmoLineY, deckTopY } from './gizmo-height.js';
 
 const POLY_POINT_MIN = 2; // open polyline — a bare segment is valid
 
-// Babylon's CreateDecal (normal = +Y) bakes a −90° roll relative to a flat
-// plane's yaw, so the ghost plane needs the same offset to visually match the
-// stamped decal at every angle.
-const GHOST_ROTATION_OFFSET_DEG = -90;
+// A surface with normal.y above this is "flat" (ground / bridge deck): the
+// polyline shape and the XZ-plane drag only apply there.
+const FLAT_NORMAL_Y = 0.7;
 
 // Normalize degrees into [-180, 180) — decal rotation is signed.
 const norm180 = (deg) => ((deg % 360) + 540) % 360 - 180;
@@ -23,18 +24,23 @@ const norm180 = (deg) => ((deg % 360) + 540) % 360 - 180;
 const SIZE_MIN = 0.5;
 const SIZE_MAX = 30;
 const clampSize = (v) => Math.max(SIZE_MIN, Math.min(SIZE_MAX, v));
+const DEG = Math.PI / 180;
 
 /**
- * SurfaceDecalEditor — stamp-mode editor for placing programmatic surface decals.
+ * DecalEditor — stamp-mode editor for programmatic decals on any surface
+ * (ground, bridge deck, wall, ramp). Feature shape:
+ *   { type:"decal", position:[x,y,z], normal:[x,y,z], rotation:<deg>, shape, … }
+ * `rotation` is about the surface normal in groundDecal's stable frame.
  *
  * Controls:
- *   - Mouse move   : ghost preview follows terrain cursor
- *   - Click        : stamp the current decal at cursor position
+ *   - Mouse move   : ghost preview follows the cursor, orienting to the surface
+ *   - Click        : stamp the current decal where the ghost sits
  *   - Q / E        : rotate by 15° increments
  *   - Mouse wheel  : scale up / down
- *   - Panel controls: select shape, adjust size, opacity, and rotation
+ *   - Drag a placed decal : flat → slide on the XZ plane; wall → re-pick the
+ *                           surface (slides around corners)
  */
-export class SurfaceDecalEditor {
+export class DecalEditor {
   constructor(editor) {
     this.editor = editor;
     this._scene = null;
@@ -52,9 +58,9 @@ export class SurfaceDecalEditor {
     this._outline = false;
     this._text = 'TEXT';
     this._brand = DEFAULT_BRAND;
-    this._angle = 0;
+    this._rotation = 0;
     this._width = 4;
-    this._depth = 4;
+    this._height = 4;
     // When true, width/depth resize together (aspect preserved); the panel
     // collapses to one "Scale" slider. Not applied to the polyline shape.
     this._linkScale = true;
@@ -102,8 +108,23 @@ export class SurfaceDecalEditor {
       : gizmoY(this._track, x, z, top);
   }
 
+  // ── Feature shape helpers ({ position:[x,y,z], normal:[x,y,z], rotation }) ──
+  _fx(f) { return f.position?.[0] ?? 0; }
+  _fy(f) { return f.position?.[1] ?? 0; }
+  _fz(f) { return f.position?.[2] ?? 0; }
+  _isFlat(f) { const n = f.normal; return !Array.isArray(n) || Math.abs(n[1] ?? 1) > FLAT_NORMAL_Y; }
+  _setXZ(f, x, z) { f.position = [x, f.position?.[1] ?? 0, z]; }
+
+  /** Where the gizmo handle sits: flat decals ride the surface, walls sit at the point. */
+  _handlePos(f) {
+    if (this._isFlat(f)) {
+      return { x: this._fx(f), y: this._handleY(this._fx(f), this._fz(f)), z: this._fz(f) };
+    }
+    return { x: this._fx(f), y: this._fy(f), z: this._fz(f) };
+  }
+
   _syncHandles() {
-    const entries = this._decalManager?.surfaceEntries;
+    const entries = this._decalManager?.entries;
     if (!entries || !this._scene || !this._track) return;
 
     for (const [entry, h] of this._handles) {
@@ -121,8 +142,8 @@ export class SurfaceDecalEditor {
         h = { handle: new GizmoHandle(this._scene, 'decal'), pointHandles: [], lineSystem: null };
         this._handles.set(entry, h);
       }
-      const { centerX, centerZ } = entry.feature;
-      h.handle.setPosition(centerX, this._handleY(centerX, centerZ), centerZ);
+      const hp = this._handlePos(entry.feature);
+      h.handle.setPosition(hp.x, hp.y, hp.z);
       h.handle.setSelected(entry === this.selected);
 
       if (entry.feature.shape === 'polyline') {
@@ -181,12 +202,12 @@ export class SurfaceDecalEditor {
     return { x: sx / points.length, z: sz / points.length };
   }
 
-  /** Open the stamp panel — called from EditorController.openSurfaceDecalStamp(). */
+  /** Open the stamp panel — called from EditorController.openDecalStamp(). */
   open() {
     this._createGhost();
     this._scene.getEngine().getRenderingCanvas()?.addEventListener('wheel', this._boundWheel, { passive: false });
     if (this.editor._editorStore) {
-      this.editor._editorStore.selectedType = 'surfaceDecal';
+      this.editor._editorStore.selectedType = 'decal';
       this._syncStore();
     }
   }
@@ -201,7 +222,7 @@ export class SurfaceDecalEditor {
   }
 
   get isOpen() {
-    return this.editor._editorStore?.selectedType === 'surfaceDecal';
+    return this.editor._editorStore?.selectedType === 'decal';
   }
 
   dispose() {
@@ -240,7 +261,7 @@ export class SurfaceDecalEditor {
 
   findByMesh(mesh) {
     // Self-heal if the manager rebuilt its entries behind our back.
-    if (this._handles.size !== (this._decalManager?.surfaceEntries?.length ?? 0)) this._syncHandles();
+    if (this._handles.size !== (this._decalManager?.entries?.length ?? 0)) this._syncHandles();
     for (const [entry, h] of this._handles) {
       if (h.handle.mesh === mesh) { entry._pendingPointIndex = -1; return entry; }
       const idx = h.pointHandles.indexOf(mesh);
@@ -289,7 +310,7 @@ export class SurfaceDecalEditor {
       const pt = feature.points[this._selectedPointIndex];
       this.editor._rawDragPos = { x: pt.x, z: pt.z };
     } else {
-      this.editor._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+      this.editor._rawDragPos = { x: this._fx(feature), z: this._fz(feature) };
     }
 
     this._applyHandleVisualState(entry, true);
@@ -328,14 +349,44 @@ export class SurfaceDecalEditor {
 
   move(movement) {
     if (!this.selected || (movement.x === 0 && movement.z === 0)) return new Vector3(0, 0, 0);
-    this.editor.saveSnapshot(true);
     const { feature } = this.selected;
+
+    // Non-polyline decals follow whatever surface is under the cursor, so a decal
+    // can be dragged between faces in either direction — ground → wall, wall →
+    // ground, onto a ramp. A wall/ramp hit snaps straight to the pick (the XZ
+    // delta means nothing off-horizontal); a flat hit while the decal is
+    // currently a wall decal flips it back to flat, then falls through to the
+    // XZ-plane drag below. (Polyline decals are flat-only — skip all this.)
+    if (feature.shape !== 'polyline') {
+      const hit = this._pickTargetSurface();
+      const hitFlat = hit && Math.abs(hit.normal.y) > FLAT_NORMAL_Y;
+      if (hit && !hitFlat) {
+        this.editor.saveSnapshot(true);
+        const [px, py, pz] = feature.position ?? [0, 0, 0];
+        feature.position = [hit.point.x, hit.point.y, hit.point.z];
+        feature.normal = [hit.normal.x, hit.normal.y, hit.normal.z];
+        this._rebuildSelected();
+        return new Vector3(feature.position[0] - px, feature.position[1] - py, feature.position[2] - pz);
+      }
+      if (hit && hitFlat && !this._isFlat(feature)) {
+        this.editor.saveSnapshot(true);
+        feature.normal = [0, 1, 0];
+        feature.position = [hit.point.x, hit.point.y, hit.point.z];
+        this.editor._rawDragPos = { x: hit.point.x, z: hit.point.z };
+        this._rebuildSelected();
+      } else if (!this._isFlat(feature)) {
+        // Wall decal, cursor off any target surface — leave it put.
+        return new Vector3(0, 0, 0);
+      }
+    }
+
+    this.editor.saveSnapshot(true);
     const isPolyPoint = feature.shape === 'polyline' && this._selectedPointIndex >= 0;
 
     if (!this.editor._rawDragPos) {
       this.editor._rawDragPos = isPolyPoint
         ? { x: feature.points[this._selectedPointIndex].x, z: feature.points[this._selectedPointIndex].z }
-        : { x: feature.centerX, z: feature.centerZ };
+        : { x: this._fx(feature), z: this._fz(feature) };
     }
     this.editor._rawDragPos.x += movement.x;
     this.editor._rawDragPos.z += movement.z;
@@ -346,18 +397,16 @@ export class SurfaceDecalEditor {
       pt.x = this.editor._snap(this.editor._rawDragPos.x);
       pt.z = this.editor._snap(this.editor._rawDragPos.z);
       const c = this._polylineCenter(feature.points);
-      feature.centerX = c.x;
-      feature.centerZ = c.z;
+      this._setXZ(feature, c.x, c.z);
       this._rebuildSelected();
       return new Vector3(pt.x - prevX, 0, pt.z - prevZ);
     }
 
-    const prevX = feature.centerX, prevZ = feature.centerZ;
+    const prevX = this._fx(feature), prevZ = this._fz(feature);
     const nextX = this.editor._snap(this.editor._rawDragPos.x);
     const nextZ = this.editor._snap(this.editor._rawDragPos.z);
     const dx = nextX - prevX, dz = nextZ - prevZ;
-    feature.centerX = nextX;
-    feature.centerZ = nextZ;
+    this._setXZ(feature, nextX, nextZ);
     if (feature.shape === 'polyline') {
       feature.points = feature.points.map(p => ({ ...p, x: p.x + dx, z: p.z + dz }));
     }
@@ -368,7 +417,7 @@ export class SurfaceDecalEditor {
   rotate(deltaRad) {
     if (!this.selected || this.selected.feature.shape === 'polyline') return;
     const f = this.selected.feature;
-    f.angle = norm180((f.angle ?? 0) + deltaRad * 180 / Math.PI);
+    f.rotation = norm180((f.rotation ?? 0) + deltaRad * 180 / Math.PI);
     this._rebuildSelected();
     this._syncEditPanel();
   }
@@ -379,9 +428,14 @@ export class SurfaceDecalEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot();
     const src = this.selected.feature;
-    const newFeature = { ...src, centerX: src.centerX + 3, centerZ: src.centerZ + 3 };
+    const flat = this._isFlat(src);
+    const off = flat ? [3, 0, 3] : (Math.abs(src.normal?.[0] ?? 0) > 0.7 ? [0, 0, 3] : [3, 0, 0]);
+    const newFeature = {
+      ...src,
+      position: [this._fx(src) + off[0], this._fy(src) + off[1], this._fz(src) + off[2]],
+    };
     if (src.shape === 'polyline' && Array.isArray(src.points)) {
-      newFeature.points = src.points.map(p => ({ ...p, x: p.x + 3, z: p.z + 3 }));
+      newFeature.points = src.points.map(p => ({ ...p, x: p.x + off[0], z: p.z + off[2] }));
     }
     this.editor.currentTrack.features.push(newFeature);
     const mesh = this._decalManager.createDecal(newFeature);
@@ -435,8 +489,7 @@ export class SurfaceDecalEditor {
     this.editor._rawDragPos = { x: next.x, z: next.z };
 
     const c = this._polylineCenter(feature.points);
-    feature.centerX = c.x;
-    feature.centerZ = c.z;
+    this._setXZ(feature, c.x, c.z);
 
     this._rebuildSelected();
     this._syncEditPanel();
@@ -453,14 +506,13 @@ export class SurfaceDecalEditor {
     this._selectedPointIndex = Math.min(this._selectedPointIndex, feature.points.length - 1);
 
     const c = this._polylineCenter(feature.points);
-    feature.centerX = c.x;
-    feature.centerZ = c.z;
+    this._setXZ(feature, c.x, c.z);
 
     if (this._selectedPointIndex >= 0) {
       const pt = feature.points[this._selectedPointIndex];
       this.editor._rawDragPos = { x: pt.x, z: pt.z };
     } else {
-      this.editor._rawDragPos = { x: feature.centerX, z: feature.centerZ };
+      this.editor._rawDragPos = { x: this._fx(feature), z: this._fz(feature) };
     }
 
     this._rebuildSelected();
@@ -486,8 +538,8 @@ export class SurfaceDecalEditor {
   // ── Property edits (from the edit panel) ──────────────────────────────────
 
   changeWidth(val)   { this._changeSize('width', val); }
-  changeDepth(val)   { this._changeSize('depth', val); }
-  changeAngle(val)   { this._changeProp('angle', norm180(val)); }
+  changeHeight(val)   { this._changeSize('height', val); }
+  changeRotation(val)   { this._changeProp('rotation', norm180(val)); }
   changeOpacity(val) { this._changeProp('opacity', val); }
   changeCount(val)   { this._changeProp('count', Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(val)))); }
   changeOutline(val) { this._changeProp('outline', !!val); }
@@ -509,7 +561,7 @@ export class SurfaceDecalEditor {
     val = clampSize(val);
     this.editor.saveSnapshot(true);
     const f = this.selected.feature;
-    const other = dim === 'width' ? 'depth' : 'width';
+    const other = dim === 'width' ? 'height' : 'width';
     if (this._linkScale && f.shape !== 'polyline') {
       const factor = val / ((f[dim] ?? 4) || val);
       f[other] = clampSize((f[other] ?? 4) * factor);
@@ -523,17 +575,17 @@ export class SurfaceDecalEditor {
   _showProperties() {
     const s = this.editor._editorStore;
     if (!s || !this.selected) return;
-    s.selectedType = 'surfaceDecalEdit';
+    s.selectedType = 'decalEdit';
     this._syncEditPanel();
   }
 
   _hideProperties() {
-    if (this.editor._editorStore?.selectedType === 'surfaceDecalEdit')
+    if (this.editor._editorStore?.selectedType === 'decalEdit')
       this.editor._editorStore.selectedType = null;
   }
 
   _syncEditPanel() {
-    const s = this.editor._editorStore?.surfaceDecal;
+    const s = this.editor._editorStore?.decal;
     if (!s || !this.selected) return;
     const f = this.selected.feature;
     s.shape    = f.shape ?? 'arrow';
@@ -549,9 +601,9 @@ export class SurfaceDecalEditor {
     s.brand      = f.brand ?? DEFAULT_BRAND;
     s.brands     = DECAL_BRANDS;
     s.hasBrand   = s.shape === 'brand';
-    s.angle   = Math.round(f.angle ?? 0);
+    s.rotation   = Math.round(f.rotation ?? 0);
     s.width   = +(f.width ?? 4).toFixed(1);
-    s.depth   = +(f.depth ?? 4).toFixed(1);
+    s.height   = +(f.height ?? 4).toFixed(1);
     s.linkScale = this._linkScale;
     s.opacity = +(f.opacity ?? 1).toFixed(2);
     s.thickness = +(f.thickness ?? 1).toFixed(1);
@@ -567,7 +619,7 @@ export class SurfaceDecalEditor {
   _createGhost() {
     if (this._ghost) return;
 
-    this._ghostMat = new StandardMaterial('_surfaceDecalGhostMat', this._scene);
+    this._ghostMat = new StandardMaterial('_decalGhostMat', this._scene);
     this._ghostMat.alphaMode  = Engine.ALPHA_COMBINE;
     this._ghostMat.backFaceCulling = false;
     this._ghostMat.disableLighting = true;
@@ -576,11 +628,13 @@ export class SurfaceDecalEditor {
     this._ghostMat.alpha      = this._opacity;
     this._updateGhostTexture();
 
-    // Flat plane — 1×1, scaled to width×depth
-    this._ghost = MeshBuilder.CreatePlane('_surfaceDecalGhost', { size: 1 }, this._scene);
-    this._ghost.rotation.x = Math.PI / 2;
+    // 1×1 plane, scaled to width×height and oriented to the surface under the
+    // cursor via a quaternion (see _updateGhostTransform).
+    this._ghost = MeshBuilder.CreatePlane('_decalGhost', { size: 1 }, this._scene);
+    this._ghost.rotationQuaternion = Quaternion.Identity();
     this._ghost.isPickable  = false;
     this._ghost.material    = this._ghostMat;
+    this._ghostNormal = new Vector3(0, 1, 0);
     this._updateGhostTransform();
     this._ghost.setEnabled(false);
 
@@ -602,10 +656,10 @@ export class SurfaceDecalEditor {
     // isn't captured by that footprint alone, so its default outline (the same
     // one stamp() would seed) + thickness join the key too.
     let worldWidth = Math.max(1, Math.round(this._width));
-    let worldDepth = Math.max(1, Math.round(this._depth));
+    let worldDepth = Math.max(1, Math.round(this._height));
     let localPoints = null;
     if (this._shape === 'polyline') {
-      const pts = this._defaultPolylinePoints(0, 0, this._angle, this._width);
+      const pts = this._defaultPolylinePoints(0, 0, this._rotation, this._width);
       const outlineData = decalPolylineLocalOutline(pts, this._thickness);
       worldWidth = Math.max(1, Math.round(outlineData.width));
       worldDepth = Math.max(1, Math.round(outlineData.depth));
@@ -615,7 +669,7 @@ export class SurfaceDecalEditor {
       this._ghostAngleRad = outlineData.angleRad;
     }
     this._ghostBoxWidth = worldWidth;
-    this._ghostBoxDepth = worldDepth;
+    this._ghostBoxHeight = worldDepth;
     const pointsKey = localPoints
       ? `${localPoints.map(p => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}@${this._thickness.toFixed(1)}`
       : '';
@@ -659,73 +713,91 @@ export class SurfaceDecalEditor {
 
   _updateGhostTransform() {
     if (!this._ghost) return;
-    if (this._shape === 'polyline') {
-      // Box dims + angle both come from decalPolylineLocalOutline (computed in
-      // _updateGhostTexture) — the same values the real decal's projector box
-      // uses, so the ghost plane rotates/scales identically to the baked mesh.
-      this._ghost.scaling.x  = this._ghostBoxWidth  ?? this._width;
-      this._ghost.scaling.y  = this._ghostBoxDepth ?? this._depth;
-      // Non-polyline shapes get here via rotation.y = (feature.angle + OFFSET)°
-      // where the real decal is built with CreateDecal angle = -(feature.angle)°;
-      // substituting that relationship for polyline's own CreateDecal angle
-      // (`_ghostAngleRad`, already in radians, no sign flip) gives this directly.
-      const angleRad = this._ghostAngleRad ?? (this._angle * Math.PI) / 180;
-      this._ghost.rotation.y = -angleRad + (GHOST_ROTATION_OFFSET_DEG * Math.PI) / 180;
-      return;
-    }
-    this._ghost.scaling.x  = this._width;
-    this._ghost.scaling.y  = this._depth;
-    this._ghost.rotation.y = ((this._angle + GHOST_ROTATION_OFFSET_DEG) * Math.PI) / 180;
+    const n = this._ghostNormal;
+    const poly = this._shape === 'polyline';
+    // Polyline's box dims + rotation come from decalPolylineLocalOutline (same
+    // values the baked decal's projector box uses); other shapes use w/h + the
+    // rotation slider directly.
+    this._ghost.scaling.x = poly ? (this._ghostBoxWidth ?? this._width) : this._width;
+    this._ghost.scaling.y = poly ? (this._ghostBoxHeight ?? this._height) : this._height;
+    const rotRad = poly ? (this._ghostAngleRad ?? this._rotation * DEG) : this._rotation * DEG;
+
+    // Align the plane so local +X → the decal's U axis and +Y → its texture-V
+    // axis, matching what projectDecal bakes. The decal's frame (U, V, U×V) is
+    // left-handed w.r.t. the surface normal (U×V = -n), so feed
+    // RotationQuaternionFromAxisToRef the proper basis (u, v, u×v) — passing n
+    // as the third axis gives an improper basis and a bogus rotation (90° off on
+    // the ground, wrong on ramps / ±X walls; only ±Z walls happen to survive it).
+    const u = decalStableU(n, rotRad);
+    const v = Vector3.Cross(u, n);
+    Quaternion.RotationQuaternionFromAxisToRef(u, v, Vector3.Cross(u, v), this._ghost.rotationQuaternion);
   }
 
-  // ── Pointer move — move ghost to cursor ───────────────────────────────────
+  // ── Surface pick (ghost + stamp + wall drag) ─────────────────────────────
 
-  _onPointerMove(pointerInfo) {
+  /** Pointer pick restricted to decal-target surfaces (+ the ground). */
+  _pickTargetSurface() {
+    const pick = this._scene.pick(
+      this._scene.pointerX, this._scene.pointerY,
+      (m) => m?.isEnabled?.() && (m.metadata?.decalTarget === true || m.metadata?.surfaceDecalTarget === true),
+    );
+    if (!pick?.hit || !pick.pickedPoint) return null;
+    const normal = pick.getNormal(true) ?? Vector3.Up();
+    return { point: pick.pickedPoint, normal, mesh: pick.pickedMesh };
+  }
+
+  // ── Pointer move — ghost follows the cursor, orients to the surface ───────
+
+  _onPointerMove() {
     if (!this._ghost) return;
     if (!this.isOpen) {
-      // Stamp mode was left without an explicit close() (e.g. selecting an
-      // existing decal switches selectedType away from 'surfaceDecal') — hide
-      // the ghost instead of leaving it frozen at its last position.
       this._ghost.setEnabled(false);
       return;
     }
-    const pick = this._scene.pick(this._scene.pointerX, this._scene.pointerY);
-    if (pick?.hit && pick.pickedPoint) {
-      const p = pick.pickedPoint;
-      this._ghost.position.set(p.x, p.y + 0.05, p.z);
-      this._ghost.setEnabled(true);
-    } else {
+    const hit = this._pickTargetSurface();
+    // Polyline only makes sense on a roughly-flat surface.
+    if (!hit || (this._shape === 'polyline' && Math.abs(hit.normal.y) < FLAT_NORMAL_Y)) {
       this._ghost.setEnabled(false);
+      return;
     }
+    this._ghostNormal = hit.normal.normalizeToNew();
+    this._ghostHit = hit;
+    this._ghost.position.copyFrom(hit.point).addInPlace(this._ghostNormal.scale(0.05));
+    this._updateGhostTransform();
+    this._ghost.setEnabled(true);
   }
 
   // ── Stamp on click ────────────────────────────────────────────────────────
 
   /**
-   * Called by EditorController.handlePointerDown when selectedType === 'surfaceDecal'.
-   * Places one decal, then leaves placement mode and selects it for editing —
-   * the stamp settings persist as the starting point for the next new decal.
+   * Called by EditorController.handlePointerDown when selectedType === 'decal'.
+   * Places one decal where the ghost sits, then drops into edit mode — the stamp
+   * settings persist as the starting point for the next new decal.
    */
-  stamp(x, z) {
+  stamp() {
     if (!this._decalManager || !this._track) return;
+    const hit = this._ghostHit ?? this._pickTargetSurface();
+    if (!hit) return;
+    const n = hit.normal.normalizeToNew();
+    if (this._shape === 'polyline' && Math.abs(n.y) < FLAT_NORMAL_Y) return;
 
     const feature = {
-      type:    'surfaceDecal',
-      centerX: x,
-      centerZ: z,
-      shape:   this._shape,
-      color:   this._color,
-      count:   this._count,
-      outline: this._outline,
-      brand:   this._brand,
-      width:   this._width,
-      depth:   this._depth,
-      angle:   this._angle,
-      opacity: this._opacity,
+      type:     'decal',
+      position: [hit.point.x, hit.point.y, hit.point.z],
+      normal:   [n.x, n.y, n.z],
+      rotation: this._rotation,
+      shape:    this._shape,
+      color:    this._color,
+      count:    this._count,
+      outline:  this._outline,
+      brand:    this._brand,
+      width:    this._width,
+      height:   this._height,
+      opacity:  this._opacity,
     };
 
     if (this._shape === 'polyline') {
-      feature.points = this._defaultPolylinePoints(x, z, this._angle, this._width);
+      feature.points = this._defaultPolylinePoints(hit.point.x, hit.point.z, this._rotation, this._width);
       feature.thickness = this._thickness;
     }
 
@@ -746,11 +818,11 @@ export class SurfaceDecalEditor {
     if (!this.isOpen) return false;
     const key = event.key.toLowerCase();
     if (key === 'q') {
-      this.setAngle(this._angle - 15);
+      this.setRotation(this._rotation - 15);
       return true;
     }
     if (key === 'e') {
-      this.setAngle(this._angle + 15);
+      this.setRotation(this._rotation + 15);
       return true;
     }
     return false;
@@ -765,11 +837,11 @@ export class SurfaceDecalEditor {
       // Multiplicative so the aspect ratio holds through the zoom.
       const factor = event.deltaY > 0 ? 1 / 1.1 : 1.1;
       this._width = clampSize(this._width * factor);
-      this._depth = clampSize(this._depth * factor);
+      this._height = clampSize(this._height * factor);
     } else {
       const delta = event.deltaY > 0 ? -0.5 : 0.5;
       this._width  = clampSize(this._width  + delta);
-      this._depth  = clampSize(this._depth  + delta);
+      this._height  = clampSize(this._height  + delta);
     }
     this._updateGhostTexture();
     this._updateGhostTransform();
@@ -823,8 +895,8 @@ export class SurfaceDecalEditor {
     this._syncStore();
   }
 
-  setAngle(val) {
-    this._angle = norm180(val);
+  setRotation(val) {
+    this._rotation = norm180(val);
     // Polyline bakes angle into the seeded points' texture, not just the
     // plane's rotation, so its ghost texture needs regenerating too.
     if (this._shape === 'polyline') this._updateGhostTexture();
@@ -844,20 +916,20 @@ export class SurfaceDecalEditor {
   }
 
   setWidth(val) { this._applySize('width', val); }
-  setDepth(val) { this._applySize('depth', val); }
+  setHeight(val) { this._applySize('height', val); }
 
   /** Stamp-mode resize; in linked mode the other dimension tracks the change. */
   _applySize(dim, val) {
     val = clampSize(val);
     if (this._linkScale && this._shape !== 'polyline') {
-      const cur = dim === 'width' ? this._width : this._depth;
+      const cur = dim === 'width' ? this._width : this._height;
       const factor = val / (cur || val);
-      if (dim === 'width') { this._width = val; this._depth = clampSize(this._depth * factor); }
-      else { this._depth = val; this._width = clampSize(this._width * factor); }
+      if (dim === 'width') { this._width = val; this._height = clampSize(this._height * factor); }
+      else { this._height = val; this._width = clampSize(this._width * factor); }
     } else if (dim === 'width') {
       this._width = val;
     } else {
-      this._depth = val;
+      this._height = val;
     }
     this._updateGhostTexture();
     this._updateGhostTransform();
@@ -866,7 +938,7 @@ export class SurfaceDecalEditor {
 
   setSize(width, depth) {
     this._width = width;
-    this._depth = depth;
+    this._height = depth;
     this._updateGhostTexture();
     this._updateGhostTransform();
     this._syncStore();
@@ -882,7 +954,7 @@ export class SurfaceDecalEditor {
   // ── Store sync ────────────────────────────────────────────────────────────
 
   _syncStore() {
-    const s = this.editor._editorStore?.surfaceDecal;
+    const s = this.editor._editorStore?.decal;
     if (!s) return;
     s.shape  = this._shape;
     s.shapes = DECAL_SHAPES;
@@ -897,9 +969,9 @@ export class SurfaceDecalEditor {
     s.brand = this._brand;
     s.brands = DECAL_BRANDS;
     s.hasBrand = this._shape === 'brand';
-    s.angle = Math.round(this._angle);
+    s.rotation = Math.round(this._rotation);
     s.width = +this._width.toFixed(1);
-    s.depth = +this._depth.toFixed(1);
+    s.height = +this._height.toFixed(1);
     s.linkScale = this._linkScale;
     s.opacity = +this._opacity.toFixed(2);
     s.thickness = +this._thickness.toFixed(1);

@@ -534,7 +534,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (isModelFeature(feature)) {
       decorationManager.createDecoration(feature);
-    } else if (feature.type === "surfaceDecal" || (feature.type === "decal" && decalManager.isFlatFeature(feature))) {
+    } else if (feature.type === "decal" && decalManager.isFlatFeature(feature)) {
       decalManager.createDecal(feature);
     }
   }
@@ -542,7 +542,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // Wall-ish decals project onto surfaces built above (perimeter + poly walls),
   // so they run after the feature loop rather than inside it.
   for (const feature of currentTrack.features) {
-    if (feature.type === "wallDecal" || (feature.type === "decal" && !decalManager.isFlatFeature(feature))) {
+    if (feature.type === "decal" && !decalManager.isFlatFeature(feature)) {
       decalManager.createDecal(feature);
     }
   }

@@ -799,29 +799,45 @@
       "color": "yellow"
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -35.562810634647995,
-      "centerZ": 56.20335518101421,
+      "type": "decal",
+      "position": [
+        -35.562810634647995,
+        0,
+        56.20335518101421
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 127,
+      "width": 6,
+      "height": 6.5,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 6,
-      "depth": 6.5,
-      "angle": -127,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 38.945660055712956,
-      "centerZ": 53.902824826828805,
+      "type": "decal",
+      "position": [
+        38.945660055712956,
+        0,
+        53.902824826828805
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 161,
+      "width": 6.5,
+      "height": 7,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 6.5,
-      "depth": 7,
-      "angle": -161,
       "opacity": 1
     },
     {

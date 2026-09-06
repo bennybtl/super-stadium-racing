@@ -6,7 +6,7 @@
   >
     <!-- Hint -->
     <div v-if="editing" class="text-[10px] text-slate-400 mb-3">Drag to move{{ s.shape === 'polyline' ? '' : ' · QE to rotate' }} · Del to delete{{ s.shape === 'polyline' ? ' point/decal' : '' }} · Duplicate for another</div>
-    <div v-else class="text-[10px] text-slate-400 mb-3">Pick a shape, then click the terrain to place it — you'll edit it right after.</div>
+    <div v-else class="text-[10px] text-slate-400 mb-3">Pick a shape, then click any surface — ground, deck, wall — to place it. You'll edit it right after.</div>
 
     <!-- Shape (stamp mode only — a placed decal keeps its shape) -->
     <template v-if="!editing">
@@ -68,11 +68,11 @@
     <template v-if="!editing || s.shape !== 'polyline'">
       <div class="flex justify-between mb-1 text-[12px]">
         <span>Rotation</span>
-        <span>{{ s.angle }}°</span>
+        <span>{{ s.rotation }}°</span>
       </div>
       <input type="range" min="-180" max="180" step="1"
-        :value="s.angle"
-        @input="set('angle', +$event.target.value)"
+        :value="s.rotation"
+        @input="set('rotation', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
       />
     </template>
@@ -83,7 +83,7 @@
       <input type="checkbox" :checked="s.linkScale" @change="set('linkScale', $event.target.checked)" />
     </label>
 
-    <!-- Size — a polyline has no "Depth"; its length only seeds the initial
+    <!-- Size — a polyline has no "Height"; its length only seeds the initial
          2-point line (a placed one is reshaped via its points instead). -->
     <template v-if="!editing || s.shape !== 'polyline'">
       <div class="flex justify-between mb-1 text-[12px]">
@@ -98,12 +98,12 @@
     </template>
     <template v-if="s.shape !== 'polyline' && !s.linkScale">
       <div class="flex justify-between mb-1 text-[12px]">
-        <span>Depth</span>
-        <span>{{ s.depth }}m</span>
+        <span>Height</span>
+        <span>{{ s.height }}m</span>
       </div>
       <input type="range" min="0.5" max="30" step="0.5"
-        :value="s.depth"
-        @input="set('depth', +$event.target.value)"
+        :value="s.height"
+        @input="set('height', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-1 cursor-pointer"
       />
     </template>
@@ -150,11 +150,11 @@
       <div class="flex gap-2 mb-3">
         <button
           class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-          @click="editor.featureAction('deleteSurfaceDecalPoint')"
+          @click="editor.featureAction('deleteDecalPoint')"
         >Delete Point</button>
         <button
           class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-          @click="editor.featureAction('insertSurfaceDecalPoint')"
+          @click="editor.featureAction('insertDecalPoint')"
         >Insert Point</button>
       </div>
     </template>
@@ -191,11 +191,11 @@
     <div v-if="editing" class="flex gap-2 mb-3">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.featureAction('deleteSelectedSurfaceDecal')"
+        @click="editor.featureAction('deleteSelectedDecal')"
       >Delete Decal</button>
       <button
         class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.featureAction('duplicateSelectedSurfaceDecal')"
+        @click="editor.featureAction('duplicateSelectedDecal')"
       >Duplicate Decal</button>
     </div>
 
@@ -209,24 +209,23 @@ import EditorPanel from './EditorPanel.vue';
 
 const editor = useEditorStore();
 
-// One panel for both placing new decals ('surfaceDecal') and editing a placed
-// one ('surfaceDecalEdit'). Same controls; only the plumbing differs.
-const mode = computed(() =>
-  editor.selectedType === 'surfaceDecal' || editor.selectedType === 'surfaceDecalEdit');
-const editing = computed(() => editor.selectedType === 'surfaceDecalEdit');
-// Both modes share the one `surfaceDecal` slice; each repopulates it on entry
+// One panel: placing ('decal') and editing ('decalEdit') a decal on any
+// surface. Both modes share the `decal` slice; each repopulates it on entry
 // (stamp from the editor's pending settings, edit from the selected feature).
-const s = computed(() => editor.surfaceDecal);
+const mode = computed(() =>
+  editor.selectedType === 'decal' || editor.selectedType === 'decalEdit');
+const editing = computed(() => editor.selectedType === 'decalEdit');
+const s = computed(() => editor.decal);
 
 const cap = (p) => p.charAt(0).toUpperCase() + p.slice(1);
 
 function set(prop, val) {
-  if (editing.value) editor.setFeatureProp('surfaceDecal', prop, val);
-  else editor.featureAction('setSurfaceDecal' + cap(prop), val);
+  if (editing.value) editor.setFeatureProp('decal', prop, val);
+  else editor.featureAction('setDecal' + cap(prop), val);
 }
 
 function close() {
-  editor.featureAction(editing.value ? 'deselectSurfaceDecal' : 'closeSurfaceDecalStamp');
+  editor.featureAction(editing.value ? 'deselectDecal' : 'closeDecalStamp');
 }
 
 function formatLabel(type) {

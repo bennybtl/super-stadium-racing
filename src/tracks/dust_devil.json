@@ -1683,16 +1683,22 @@
       "edgeShape": 0.8
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -14.670768786144418,
-      "centerZ": -56.15823260260074,
+      "type": "decal",
+      "position": [
+        -14.671,
+        0,
+        -56.158
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 0,
       "shape": "polyline",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 4,
-      "angle": 0,
       "opacity": 1,
       "points": [
         {

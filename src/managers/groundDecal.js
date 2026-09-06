@@ -75,6 +75,22 @@ export function decalStableAngle(normal, rotationRad = 0) {
 }
 
 /**
+ * The world-space U axis (texture "right") a decal projected by `projectDecal`
+ * with this `normal` / `rotationRad` ends up with — i.e. `DECAL_REF_AXIS`
+ * projected onto the surface, rotated by `rotationRad` about the normal. The
+ * editor's ghost preview aligns to this so it matches the baked decal.
+ */
+export function decalStableU(normal, rotationRad = 0) {
+  const n = normal.normalizeToNew();
+  let ref = DECAL_REF_AXIS;
+  if (Math.abs(Vector3.Dot(n, ref)) > DECAL_REF_POLE) ref = DECAL_REF_FALLBACK;
+  const refU = ref.subtract(n.scale(Vector3.Dot(n, ref)));
+  refU.normalize();
+  const refV = Vector3.Cross(refU, n);
+  return refU.scale(Math.cos(rotationRad)).add(refV.scale(Math.sin(rotationRad)));
+}
+
+/**
  * Project a decal onto `target` at a world position, oriented by the surface
  * `normal` and rotated `rotationRad` about it in the stable tangent frame (see
  * decalStableAngle). This is the primitive; `projectSurfaceDecal` /

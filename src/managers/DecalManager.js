@@ -1,6 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
 import { DECAL_SHAPES, createDecalTexture, decalPolylineLocalOutline } from "./decalShapes.js";
-import { projectDecal, makeDecalMaterial, resolveDecalTarget, decalStableAngle } from "./groundDecal.js";
+import { projectDecal, makeDecalMaterial, resolveDecalTarget } from "./groundDecal.js";
 
 const DEG = Math.PI / 180;
 
@@ -38,26 +38,20 @@ function wearSeed(x, y, z) {
 
 /**
  * DecalManager — one manager for every programmatic decal, whatever surface it
- * sits on (ground, bridge deck, wall, …). Merges the former SurfaceDecalManager
- * and WallDecalManager, which were line-identical apart from projection.
+ * sits on (ground, bridge deck, wall, ramp).
  *
  * Decals are canvas-backed DynamicTextures (decalShapes.js) projected via
  * Babylon's CreateDecal and given the shared self-lit material (groundDecal.js).
  * CreateDecal bakes its geometry, so any move / rotate / resize rebuilds the
- * mesh (see `rebuild`). A `{ feature, mesh }` entry per decal lets the editors
+ * mesh (see `rebuild`). A `{ feature, mesh }` entry per decal lets DecalEditor
  * map a picked mesh back to its feature.
  *
- * Feature shapes accepted (normalised by `_decalParams`):
- *
+ * Feature shape:
  *   { type:"decal", position:[x,y,z], normal:[x,y,z], rotation:<deg>, shape, … }
- *     — the target form. `rotation` is about the surface normal in the stable
- *     frame (see groundDecal.decalStableAngle). `position` is a hint; the build
- *     re-snaps it to the live surface.
- *
- *   { type:"surfaceDecal", centerX, centerZ, angle:<deg>, depth, points, … }
- *   { type:"wallDecal", position:[x,y,z], normal:[x,y,z], roll:<deg>, height, … }
- *     — legacy forms, converted on read so the projected result is bit-identical
- *     to the old managers'. Removed once the track codemod runs (Phase 2).
+ * `rotation` is about the surface normal in the stable frame (see
+ * groundDecal.decalStableAngle). `position` is a hint; the build re-snaps it to
+ * the live surface. Polyline shape carries `points:[{x,z,radius}]` + `thickness`
+ * and only applies to flat surfaces.
  */
 export class DecalManager {
   constructor(scene, track, ground) {
@@ -68,22 +62,11 @@ export class DecalManager {
     this._matCache = new Map();
   }
 
-  /** Live { feature, mesh } entries — read-only view for the editors' handles. */
+  /** Live { feature, mesh } entries — read-only view for DecalEditor's handles. */
   get entries() { return this._entries; }
 
-  /** Entries the SurfaceDecalEditor owns (ground / deck decals). */
-  get surfaceEntries() {
-    return this._entries.filter((e) => this.isFlatFeature(e.feature));
-  }
-
-  /** Entries the WallDecalEditor owns (wall / arbitrary-surface decals). */
-  get wallEntries() {
-    return this._entries.filter((e) => !this.isFlatFeature(e.feature));
-  }
-
+  /** True when the decal sits on a roughly-horizontal surface (ground / deck). */
   isFlatFeature(feature) {
-    if (feature.type === "surfaceDecal") return true;
-    if (feature.type === "wallDecal") return false;
     const n = feature.normal;
     return !Array.isArray(n) || Math.abs(n[1] ?? 1) > FLAT_NORMAL_Y;
   }
@@ -132,16 +115,17 @@ export class DecalManager {
   // ─── Feature normalisation ────────────────────────────────────────────────
 
   /**
-   * Normalise any accepted feature shape to the internal form. `rotationRad` is
-   * expressed so `projectDecal(rotationRad)` reproduces the old managers' raw
-   * `CreateDecal` angle (via decalStableAngle's exact additivity).
-   *
+   * Normalise a `decal` feature to the internal build form.
    * @returns {object|null}
    */
   _decalParams(feature) {
     const shape = feature.shape ?? "arrow";
     if (!DECAL_SHAPES.includes(shape)) {
       console.warn(`[DecalManager] unknown decal shape: "${shape}"`);
+      return null;
+    }
+    if (!Array.isArray(feature.position)) {
+      console.warn("[DecalManager] decal missing position", feature);
       return null;
     }
 
@@ -158,44 +142,6 @@ export class DecalManager {
       points: feature.points ?? null,
     };
 
-    if (feature.type === "surfaceDecal") {
-      return {
-        ...common,
-        position: new Vector3(feature.centerX ?? 0, 0, feature.centerZ ?? 0),
-        normal: Vector3.Up(),
-        height: feature.depth ?? 4,
-        // old: CreateDecal angle = -(angleDeg·π/180); decalStableAngle(up,0)===0.
-        rotationRad: -((feature.angle ?? 0) * DEG),
-      };
-    }
-
-    if (feature.type === "wallDecal") {
-      if (!Array.isArray(feature.position) || !Array.isArray(feature.normal)) {
-        console.warn("[DecalManager] wallDecal missing position/normal", feature);
-        return null;
-      }
-      if (shape === "polyline") {
-        console.warn("[DecalManager] polyline not supported on walls");
-        return null;
-      }
-      const normal = Vector3.FromArray(feature.normal);
-      if (normal.lengthSquared() < 1e-6) return null;
-      normal.normalize();
-      return {
-        ...common,
-        position: Vector3.FromArray(feature.position),
-        normal,
-        height: feature.height ?? 4,
-        // old: CreateDecal angle = roll·π/180.
-        rotationRad: (feature.roll ?? 0) * DEG - decalStableAngle(normal, 0),
-      };
-    }
-
-    // Target form: { position, normal, rotation }
-    if (!Array.isArray(feature.position)) {
-      console.warn("[DecalManager] decal missing position", feature);
-      return null;
-    }
     const normal = Array.isArray(feature.normal) ? Vector3.FromArray(feature.normal) : Vector3.Up();
     if (normal.lengthSquared() < 1e-6) return null;
     normal.normalize();

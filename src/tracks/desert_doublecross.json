@@ -1176,7 +1176,7 @@
       "flatTop": 0.75
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -60.7415692831848,
         7.6251403780673,
@@ -1187,19 +1187,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 18,
+      "height": 18,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "energizer-racing.png",
-      "width": 18,
-      "height": 18,
       "opacity": 1
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -37.92329786002963,
         8.512743291779103,
@@ -1210,19 +1210,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 17,
+      "height": 17.000000000000007,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "phoenix-auto.png",
-      "width": 17,
-      "height": 17.000000000000007,
       "opacity": 1
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         6.058221551309284,
         8.197818319715154,
@@ -1233,19 +1233,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 17,
+      "height": 17,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "phoenix-auto.png",
-      "width": 17,
-      "height": 17,
       "opacity": 1
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -17.264656563558546,
         7.379409964509392,
@@ -1256,15 +1256,15 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 16,
+      "height": 16,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "energizer-racing.png",
-      "width": 16,
-      "height": 16,
       "opacity": 1
     },
     {

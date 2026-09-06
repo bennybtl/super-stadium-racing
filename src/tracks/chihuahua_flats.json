@@ -1032,16 +1032,24 @@
       "radius": 15
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -67.42152824267859,
-      "centerZ": -18.340742134421095,
+      "type": "decal",
+      "position": [
+        -67.42152824267859,
+        0,
+        -18.340742134421095
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -38,
+      "width": 3.5,
+      "height": 11,
       "shape": "rect",
       "color": "red",
       "count": 3,
       "outline": false,
-      "width": 3.5,
-      "depth": 11,
-      "angle": 38,
       "opacity": 1
     },
     {
@@ -1393,42 +1401,66 @@
       "radius": 9
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -14.964006109505121,
-      "centerZ": 7.215898516212491,
+      "type": "decal",
+      "position": [
+        -14.964006109505121,
+        0,
+        7.215898516212491
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -30,
+      "width": 4,
+      "height": 4,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 4,
-      "angle": 30,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -7.798465104932907,
-      "centerZ": 1.1506173633749768,
+      "type": "decal",
+      "position": [
+        -7.798465104932907,
+        0,
+        1.1506173633749768
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -55,
+      "width": 4,
+      "height": 4,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 4,
-      "angle": 55,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -6.026600306520017,
-      "centerZ": -8.740002277369136,
+      "type": "decal",
+      "position": [
+        -6.026600306520017,
+        0,
+        -8.740002277369136
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -94,
+      "width": 4,
+      "height": 4,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4,
-      "depth": 4,
-      "angle": 94,
       "opacity": 1
     },
     {
@@ -1474,99 +1506,155 @@
       "heading": -1.5707963267948966
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -45.43375064781432,
-      "centerZ": -77.66028761938452,
-      "shape": "text",
-      "color": "white",
-      "count": 3,
-      "outline": false,
+      "type": "decal",
+      "position": [
+        -45.43375064781432,
+        0,
+        -77.66028761938452
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -90,
       "width": 22.5,
-      "depth": 15.5,
-      "angle": 90,
-      "opacity": 0.65,
-      "text": "CHIHUAHUA"
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": -36.171584026937566,
-      "centerZ": -81.23457384833024,
+      "height": 15.5,
       "shape": "text",
       "color": "white",
       "count": 3,
       "outline": false,
+      "text": "CHIHUAHUA",
+      "opacity": 0.65
+    },
+    {
+      "type": "decal",
+      "position": [
+        -36.171584026937566,
+        0,
+        -81.23457384833024
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -90,
       "width": 27.5,
-      "depth": 20.5,
-      "angle": 90,
-      "opacity": 0.75,
-      "text": "FLATS RACEWAY"
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": 79.06461149640286,
-      "centerZ": 54.738229604454496,
+      "height": 20.5,
       "shape": "text",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 13,
-      "depth": 10.5,
-      "angle": 94,
-      "opacity": 1,
-      "text": "3"
+      "text": "FLATS RACEWAY",
+      "opacity": 0.75
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -90.77389059811357,
-      "centerZ": 38.41587417631413,
+      "type": "decal",
+      "position": [
+        79.06461149640286,
+        0,
+        54.738229604454496
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -94,
+      "width": 13,
+      "height": 10.5,
       "shape": "text",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 13,
-      "depth": 10.5,
-      "angle": 94,
-      "opacity": 1,
-      "text": "2"
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": -73.01135123630078,
-      "centerZ": -57.21128202731501,
-      "shape": "text",
-      "color": "white",
-      "count": 3,
-      "outline": false,
-      "width": 13,
-      "depth": 10.5,
-      "angle": 94,
-      "opacity": 1,
-      "text": "1"
-    },
-    {
-      "type": "surfaceDecal",
-      "centerX": -2.876361860525428,
-      "centerZ": -84.33354400104852,
-      "shape": "triangle",
-      "color": "white",
-      "count": 3,
-      "outline": false,
-      "width": 4.5,
-      "depth": 2,
-      "angle": 2,
+      "text": "3",
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -2.584905154489361,
-      "centerZ": -72.85118011298724,
+      "type": "decal",
+      "position": [
+        -90.77389059811357,
+        0,
+        38.41587417631413
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -94,
+      "width": 13,
+      "height": 10.5,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "2",
+      "opacity": 1
+    },
+    {
+      "type": "decal",
+      "position": [
+        -73.01135123630078,
+        0,
+        -57.21128202731501
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -94,
+      "width": 13,
+      "height": 10.5,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "1",
+      "opacity": 1
+    },
+    {
+      "type": "decal",
+      "position": [
+        -2.876361860525428,
+        0,
+        -84.33354400104852
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -2,
+      "width": 4.5,
+      "height": 2,
       "shape": "triangle",
       "color": "white",
       "count": 3,
       "outline": false,
+      "opacity": 1
+    },
+    {
+      "type": "decal",
+      "position": [
+        -2.584905154489361,
+        0,
+        -72.85118011298724
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -2,
       "width": 4.5,
-      "depth": 2,
-      "angle": 2,
+      "height": 2,
+      "shape": "triangle",
+      "color": "white",
+      "count": 3,
+      "outline": false,
       "opacity": 1
     },
     {
@@ -1581,18 +1669,26 @@
       "poleIndex": 5
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 82.97042207198356,
-      "centerZ": -34.5351332531161,
+      "type": "decal",
+      "position": [
+        82.97042207198356,
+        0,
+        -34.5351332531161
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -35,
+      "width": 13,
+      "height": 10.5,
       "shape": "text",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 13,
-      "depth": 10.5,
-      "angle": 35,
-      "opacity": 1,
-      "text": "4"
+      "text": "4",
+      "opacity": 1
     },
     {
       "type": "model",
@@ -1646,16 +1742,24 @@
       "heading": 0
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 72.70914594975225,
-      "centerZ": -48.06103649224956,
+      "type": "decal",
+      "position": [
+        72.70914594975225,
+        0,
+        -48.06103649224956
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -40,
+      "width": 3.5,
+      "height": 30,
       "shape": "line",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 3.5,
-      "depth": 30,
-      "angle": 40,
       "opacity": 1
     },
     {
@@ -1683,16 +1787,24 @@
       "width": 19.5
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 4.245430909655756,
-      "centerZ": -56.65256866013863,
+      "type": "decal",
+      "position": [
+        4.245430909655756,
+        0,
+        -56.65256866013863
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 0,
+      "width": 9,
+      "height": 17.5,
       "shape": "rect",
       "color": "black",
       "count": 3,
       "outline": false,
-      "width": 9,
-      "depth": 17.5,
-      "angle": 0,
       "opacity": 0.6
     },
     {
@@ -1895,7 +2007,7 @@
       "heading": 1.7278759594743862
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -74.13670639293272,
         4.9195844488897364,
@@ -1906,19 +2018,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 30,
+      "height": 30,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "roll-fast.png",
-      "width": 30,
-      "height": 30,
       "opacity": 0.9
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -86.23238209925485,
         5.666475317246892,
@@ -1929,19 +2041,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 30,
+      "height": 30,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "roll-fast.png",
-      "width": 30,
-      "height": 30,
       "opacity": 1
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -40.30383832358282,
         5.744830651391169,
@@ -1952,19 +2064,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 30,
+      "height": 30,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "roll-fast.png",
-      "width": 30,
-      "height": 30,
       "opacity": 1
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -74.13670639293272,
         4.9195844488897364,
@@ -1975,19 +2087,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 30,
+      "height": 30,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "roll-fast.png",
-      "width": 30,
-      "height": 30,
       "opacity": 0.9
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -7.665372291568135,
         4.635760688759049,
@@ -1998,19 +2110,19 @@
         0,
         -1
       ],
-      "roll": 0,
+      "rotation": 0,
+      "width": 30,
+      "height": 30,
       "shape": "brand",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "roll-fast.png",
-      "width": 30,
-      "height": 30,
       "opacity": 0.95
     },
     {
-      "type": "wallDecal",
+      "type": "decal",
       "position": [
         -21.44448115952727,
         2.269024581941764,
@@ -2021,15 +2133,15 @@
         0,
         -0.9994640147296725
       ],
-      "roll": -91,
+      "rotation": -91,
+      "width": 7,
+      "height": 7,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
       "text": "TEXT",
       "brand": "energizer-racing.png",
-      "width": 7,
-      "height": 7,
       "opacity": 1
     },
     {

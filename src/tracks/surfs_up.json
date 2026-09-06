@@ -1055,42 +1055,66 @@
       "radius": 8.5
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 67.88687339913469,
-      "centerZ": -42.074725840154244,
+      "type": "decal",
+      "position": [
+        67.88687339913469,
+        0,
+        -42.074725840154244
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -101,
+      "width": 7,
+      "height": 7,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 7,
-      "depth": 7,
-      "angle": 101,
       "opacity": 0.65
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -61.21968021360539,
-      "centerZ": -0.5034045008290349,
+      "type": "decal",
+      "position": [
+        -61.21968021360539,
+        0,
+        -0.5034045008290349
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 67,
+      "width": 7,
+      "height": 7,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 7,
-      "depth": 7,
-      "angle": 293,
       "opacity": 0.55
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 38.319821608497755,
-      "centerZ": 42.41467949505241,
+      "type": "decal",
+      "position": [
+        38.319821608497755,
+        0,
+        42.41467949505241
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -34,
+      "width": 7,
+      "height": 7,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 7,
-      "depth": 7,
-      "angle": 34,
       "opacity": 0.55
     },
     {
@@ -1162,16 +1186,24 @@
       "edgeShape": 0.8
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 35.21668888104785,
-      "centerZ": -76.91395054879769,
+      "type": "decal",
+      "position": [
+        35.21668888104785,
+        0,
+        -76.91395054879769
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -144,
+      "width": 7,
+      "height": 7,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 7,
-      "depth": 7,
-      "angle": 144,
       "opacity": 0.65
     },
     {

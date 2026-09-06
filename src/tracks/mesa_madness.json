@@ -841,29 +841,45 @@
       "fence": false
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 4.830554800789734,
-      "centerZ": -26.676905855529597,
+      "type": "decal",
+      "position": [
+        4.830554800789734,
+        0,
+        -26.676905855529597
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -90,
+      "width": 5.5,
+      "height": 6.5,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 5.5,
-      "depth": 6.5,
-      "angle": 90,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -34.768806381389844,
-      "centerZ": 12.078204194512153,
+      "type": "decal",
+      "position": [
+        -34.768806381389844,
+        0,
+        12.078204194512153
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -180,
+      "width": 5.5,
+      "height": 6.5,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 5.5,
-      "depth": 6.5,
-      "angle": -180,
       "opacity": 1
     },
     {
@@ -1096,29 +1112,45 @@
       ]
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 4.830554800789734,
-      "centerZ": -0.676905855529597,
+      "type": "decal",
+      "position": [
+        4.830554800789734,
+        0,
+        -0.676905855529597
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -90,
+      "width": 5.5,
+      "height": 6.5,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 5.5,
-      "depth": 6.5,
-      "angle": 90,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -9.268806381389844,
-      "centerZ": 13.578204194512153,
+      "type": "decal",
+      "position": [
+        -9.268806381389844,
+        0,
+        13.578204194512153
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -180,
+      "width": 5.5,
+      "height": 6.5,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 5.5,
-      "depth": 6.5,
-      "angle": -180,
       "opacity": 1
     },
     {
@@ -1540,42 +1572,66 @@
       "flatTop": 0.8
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 59.45284866018672,
-      "centerZ": -9.432263739310386,
+      "type": "decal",
+      "position": [
+        59.45284866018672,
+        0,
+        -9.432263739310386
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 24,
+      "width": 5.5,
+      "height": 5.5,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 5.5,
-      "depth": 5.5,
-      "angle": -24,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 29.152901247462935,
-      "centerZ": -35.808535076028434,
+      "type": "decal",
+      "position": [
+        29.152901247462935,
+        0,
+        -35.808535076028434
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 36,
+      "width": 5.5,
+      "height": 5.5,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 5.5,
-      "depth": 5.5,
-      "angle": -36,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 41.299289926368935,
-      "centerZ": -21.810417572597146,
+      "type": "decal",
+      "position": [
+        41.299289926368935,
+        0,
+        -21.810417572597146
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 55,
+      "width": 5.5,
+      "height": 5.5,
       "shape": "arrow",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 5.5,
-      "depth": 5.5,
-      "angle": -55,
       "opacity": 1
     },
     {
@@ -1831,19 +1887,27 @@
       "blendWidth": 4
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -38.56765145719563,
-      "centerZ": 47.838803959554994,
+      "type": "decal",
+      "position": [
+        -38.56765145719563,
+        0,
+        47.838803959554994
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -92,
+      "width": 30,
+      "height": 30,
       "shape": "text",
       "color": "white",
       "count": 3,
       "outline": false,
+      "text": "MESA MADNESS",
       "brand": "energizer-racing.png",
-      "width": 30,
-      "depth": 30,
-      "angle": 92,
-      "opacity": 0.55,
-      "text": "MESA MADNESS"
+      "opacity": 0.55
     }
   ]
 }

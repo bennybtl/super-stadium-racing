@@ -1401,29 +1401,45 @@
       "scale": 0.7
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -57.8946895802102,
-      "centerZ": -55.48529899612919,
+      "type": "decal",
+      "position": [
+        -57.8946895802102,
+        0,
+        -55.48529899612919
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -42,
+      "width": 7,
+      "height": 14.5,
       "shape": "chevron",
       "color": "white",
       "count": 6,
       "outline": false,
-      "width": 7,
-      "depth": 14.5,
-      "angle": 42,
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 144.74442405499178,
-      "centerZ": 30.604796351456343,
+      "type": "decal",
+      "position": [
+        144.74442405499178,
+        0,
+        30.604796351456343
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 89,
+      "width": 7,
+      "height": 14.5,
       "shape": "chevron",
       "color": "white",
       "count": 6,
       "outline": false,
-      "width": 7,
-      "depth": 14.5,
-      "angle": -89,
       "opacity": 1
     },
     {

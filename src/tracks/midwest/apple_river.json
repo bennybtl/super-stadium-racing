@@ -620,29 +620,45 @@
       ]
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -66.80147293462029,
-      "centerZ": -39.542496616813665,
+      "type": "decal",
+      "position": [
+        -66.80147293462029,
+        0,
+        -39.542496616813665
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -110,
+      "width": 5,
+      "height": 7.5,
       "shape": "chevron",
       "color": "white",
       "count": 5,
       "outline": false,
-      "width": 5,
-      "depth": 7.5,
-      "angle": 110,
       "opacity": 0.8
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 66.80521776609602,
-      "centerZ": -35.184988610205714,
+      "type": "decal",
+      "position": [
+        66.80521776609602,
+        0,
+        -35.184988610205714
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 75,
+      "width": 4,
+      "height": 8,
       "shape": "chevron",
       "color": "white",
       "count": 4,
       "outline": false,
-      "width": 4,
-      "depth": 8,
-      "angle": 285,
       "opacity": 1
     },
     {
@@ -839,16 +855,24 @@
       "edgeShape": 1.15
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 17.01718849682508,
-      "centerZ": -71.10260741385086,
+      "type": "decal",
+      "position": [
+        17.01718849682508,
+        0,
+        -71.10260741385086
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 0,
+      "width": 6,
+      "height": 7.5,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 6,
-      "depth": 7.5,
-      "angle": 0,
       "opacity": 0.55
     },
     {
@@ -953,16 +977,24 @@
       "heightAtMax": 4.5
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -4.920418434576862,
-      "centerZ": 58.568044946117084,
+      "type": "decal",
+      "position": [
+        -4.920418434576862,
+        0,
+        58.568044946117084
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": -172,
+      "width": 6,
+      "height": 7.5,
       "shape": "chevron",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 6,
-      "depth": 7.5,
-      "angle": 172,
       "opacity": 0.55
     },
     {

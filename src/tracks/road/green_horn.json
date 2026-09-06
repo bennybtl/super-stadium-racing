@@ -939,16 +939,24 @@
       ]
     },
     {
-      "type": "surfaceDecal",
-      "centerX": 24.916811460760005,
-      "centerZ": -73.93156558959406,
+      "type": "decal",
+      "position": [
+        24.916811460760005,
+        0,
+        -73.93156558959406
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 60,
+      "width": 4.5,
+      "height": 11.5,
       "shape": "line",
       "color": "white",
       "count": 3,
       "outline": false,
-      "width": 4.5,
-      "depth": 11.5,
-      "angle": -60,
       "opacity": 1
     },
     {
