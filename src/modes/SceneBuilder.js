@@ -31,8 +31,7 @@ import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
-import { SurfaceDecalManager } from "../managers/SurfaceDecalManager.js";
-import { WallDecalManager } from "../managers/WallDecalManager.js";
+import { DecalManager } from "../managers/DecalManager.js";
 import { buildWaterBodies } from "../objects/Water.js";
 import { createWaterDepthSampler } from "../objects/water-field.js";
 import { scatterDirtChunks } from "../objects/DirtChunks.js";
@@ -436,7 +435,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainWaterOverlayTexture: waterDepthOverlayTex,
     terrainWearOverlayTexture: terrainWearOverlayTex,
     terrainDetailTexture: terrainDetailTex,
-    surfaceDecalTarget: true, // SurfaceDecalManager projects onto this by downward ray
+    surfaceDecalTarget: true, // DecalManager projects flat decals onto this by downward ray
   };
   // The ground receives shadows (object/wall/hill shadows land on it) but is
   // NOT a shadow caster: a large flat caster self-shadows under the single
@@ -501,8 +500,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
       terrainWorldHalfDepth: groundDepth / 2,
     }
   );
-  const surfaceDecalManager = new SurfaceDecalManager(scene, currentTrack, ground);
-  const wallDecalManager = new WallDecalManager(scene, currentTrack);
+  const decalManager = new DecalManager(scene, currentTrack, ground);
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
     sampleStep: 3,
@@ -536,15 +534,17 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (isModelFeature(feature)) {
       decorationManager.createDecoration(feature);
-    } else if (feature.type === "surfaceDecal") {
-      surfaceDecalManager.createDecal(feature);
+    } else if (feature.type === "surfaceDecal" || (feature.type === "decal" && decalManager.isFlatFeature(feature))) {
+      decalManager.createDecal(feature);
     }
   }
 
-  // Wall decals project onto surfaces built above (perimeter + poly walls), so
-  // they run after the feature loop rather than inside it.
+  // Wall-ish decals project onto surfaces built above (perimeter + poly walls),
+  // so they run after the feature loop rather than inside it.
   for (const feature of currentTrack.features) {
-    if (feature.type === "wallDecal") wallDecalManager.createDecal(feature);
+    if (feature.type === "wallDecal" || (feature.type === "decal" && !decalManager.isFlatFeature(feature))) {
+      decalManager.createDecal(feature);
+    }
   }
 
   // Water is built per *body*, not per feature — overlapping water features share
@@ -594,8 +594,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     pickupManager,
     bridgeMeshManager,
     steepSlopeColliderManager,
-    surfaceDecalManager,
-    wallDecalManager,
+    decalManager,
     driveSurfaceManager,
     surfaceTopologyGraph,
   };

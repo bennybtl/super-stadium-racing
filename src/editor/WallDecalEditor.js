@@ -58,7 +58,7 @@ export class WallDecalEditor {
     // collapses to one "Scale" slider.
     this._linkScale = true;
 
-    // Live WallDecalManager, set by EditorController.setWallDecalManager.
+    // Live DecalManager, set by EditorController.setDecalManager.
     this._decalManager = null;
 
     // Selection — a { feature, mesh } entry owned by the manager.
@@ -83,7 +83,7 @@ export class WallDecalEditor {
 
   /** Reconcile one gizmo handle per manager entry. */
   _syncHandles() {
-    const entries = this._decalManager?.entries;
+    const entries = this._decalManager?.wallEntries;
     if (!entries || !this._scene) return;
 
     for (const [entry, handle] of this._handles) {
@@ -152,7 +152,7 @@ export class WallDecalEditor {
   // ── Selection ─────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
-    if (this._handles.size !== (this._decalManager?.entries?.length ?? 0)) {
+    if (this._handles.size !== (this._decalManager?.wallEntries?.length ?? 0)) {
       this._syncHandles();
     }
     for (const [entry, handle] of this._handles) {

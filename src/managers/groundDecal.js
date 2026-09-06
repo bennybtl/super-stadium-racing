@@ -2,14 +2,13 @@ import { MeshBuilder, StandardMaterial, Matrix, Vector3, Engine, Ray } from "@ba
 
 /**
  * groundDecal — shared helpers for projecting a canvas/DynamicTexture onto a
- * mesh as a flat marking. Used by the checkpoint gate decals (Checkpoint.js),
- * the programmatic ground decals (SurfaceDecalManager.js) and the wall decals
- * (WallDecalManager.js).
+ * mesh as a flat marking. Used by the checkpoint gate decals (Checkpoint.js) and
+ * the programmatic decals (DecalManager.js).
  *
- * These features differ in what they draw and how they cache, but they share
- * the same projection call, the same "self-lit decal" material recipe, and the
- * same "which mesh do I project onto" raycast — centralised here so the tricky
- * flags can't drift between them.
+ * Those differ in what they draw and how they cache, but share the same
+ * projection call, the same "self-lit decal" material recipe, and the same
+ * "which mesh do I project onto" raycast — centralised here so the tricky flags
+ * can't drift between them.
  */
 
 const PROJECTION_DEPTH = 10; // how far the decal box projects along the normal
@@ -93,10 +92,9 @@ export function projectDecal(target, name, { position, normal, rotationRad = 0, 
 
 /**
  * Resolve the mesh a decal should project onto: the first `metadata[tag]` mesh a
- * ray hits. Both decal subsystems re-resolve this at build time so a decal
- * follows its surface through a rebuild — SurfaceDecalManager casts straight
- * down (`surfaceDecalTarget`, long reach), WallDecalManager casts back along the
- * decal's own normal (`decalTarget`, short reach).
+ * ray hits. Re-resolved at build time so a decal follows its surface through a
+ * rebuild — DecalManager casts straight down (`surfaceDecalTarget`, long reach)
+ * for a flat decal, else back along `-normal` (`decalTarget`, short reach).
  *
  * The predicate matches on the metadata tag alone — target meshes are commonly
  * `isPickable = false`, and passing a predicate to pickWithRay bypasses that

@@ -61,7 +61,7 @@ export class SurfaceDecalEditor {
     this._opacity = 1;
     this._thickness = 1; // polyline shape only — stroke width in world units
 
-    // Reference to the live SurfaceDecalManager set by EditorMode
+    // Reference to the live DecalManager, set by EditorController.setDecalManager
     this._decalManager = null;
 
     // Selection/edit state — a { feature, mesh } entry owned by the manager.
@@ -81,7 +81,7 @@ export class SurfaceDecalEditor {
     this._syncHandles();
   }
 
-  /** Called by EditorMode after SceneBuilder creates SurfaceDecalManager. */
+  /** Wired by EditorController.setDecalManager. */
   setDecalManager(manager) {
     this._decalManager = manager;
     this._syncHandles();
@@ -103,7 +103,7 @@ export class SurfaceDecalEditor {
   }
 
   _syncHandles() {
-    const entries = this._decalManager?.entries;
+    const entries = this._decalManager?.surfaceEntries;
     if (!entries || !this._scene || !this._track) return;
 
     for (const [entry, h] of this._handles) {
@@ -240,7 +240,7 @@ export class SurfaceDecalEditor {
 
   findByMesh(mesh) {
     // Self-heal if the manager rebuilt its entries behind our back.
-    if (this._handles.size !== (this._decalManager?.entries?.length ?? 0)) this._syncHandles();
+    if (this._handles.size !== (this._decalManager?.surfaceEntries?.length ?? 0)) this._syncHandles();
     for (const [entry, h] of this._handles) {
       if (h.handle.mesh === mesh) { entry._pendingPointIndex = -1; return entry; }
       const idx = h.pointHandles.indexOf(mesh);
@@ -598,7 +598,7 @@ export class SurfaceDecalEditor {
   _updateGhostTexture() {
     if (!this._ghostMat) return;
     // Wear is baked per world size, so the footprint is part of the key
-    // (rounded, matching SurfaceDecalManager._getMaterial). A polyline's path
+    // (rounded, matching DecalManager._getMaterial). A polyline's path
     // isn't captured by that footprint alone, so its default outline (the same
     // one stamp() would seed) + thickness join the key too.
     let worldWidth = Math.max(1, Math.round(this._width));

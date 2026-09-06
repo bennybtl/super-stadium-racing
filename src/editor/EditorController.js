@@ -573,9 +573,8 @@ export class EditorController {
     for (const editor of this.subEditors) {
       editor.clearMeshes?.();
     }
-    // Surface / wall decal meshes are owned by their managers, not a sub-editor.
-    this.surfaceDecalManager?.clearAll();
-    this.wallDecalManager?.clearAll();
+    // Decal meshes are owned by the DecalManager, not a sub-editor.
+    this.decalManager?.clearAll();
 
     // Restore editable track state
     const parsed = JSON.parse(snap);
@@ -626,8 +625,7 @@ export class EditorController {
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'startPosition') this.startPositionEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
-        else if (feature.type === 'surfaceDecal') this.surfaceDecalManager?.createDecal(feature);
-        else if (feature.type === 'wallDecal') this.wallDecalManager?.createDecal(feature);
+        else if (feature.type === 'surfaceDecal' || feature.type === 'wallDecal' || feature.type === 'decal') this.decalManager?.createDecal(feature);
       }
       // Restore AI path waypoint gizmos
       this.aiPathEditor.onSnapshotRestored(this.currentTrack);
@@ -2236,9 +2234,11 @@ export class EditorController {
   }
 
   // ── Surface Decal helper methods ──────────────────────────────────────────
-  setSurfaceDecalManager(manager) {
-    this.surfaceDecalManager = manager;
+  /** One DecalManager backs both decal editors (see DecalManager). */
+  setDecalManager(manager) {
+    this.decalManager = manager;
     this.surfaceDecalEditor.setDecalManager(manager);
+    this.wallDecalEditor.setDecalManager(manager);
   }
 
   /** Provide the scene's shadow generator so editor decorations can cast shadows. */
@@ -2288,10 +2288,6 @@ export class EditorController {
   deleteSurfaceDecalPoint()    { this.surfaceDecalEditor.deletePoint(); }
 
   // ── Wall Decal helper methods ────────────────────────────────────────────
-  setWallDecalManager(manager) {
-    this.wallDecalManager = manager;
-    this.wallDecalEditor.setDecalManager(manager);
-  }
 
   openWallDecalStamp()  { this.wallDecalEditor.open(); }
   closeWallDecalStamp() { this.wallDecalEditor.close(); }

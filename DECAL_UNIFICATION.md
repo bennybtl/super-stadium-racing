@@ -1,6 +1,6 @@
 # Decal system unification — phased plan
 
-**Status:** Phase 0 done (2026-09-06). Phases 1–3 pending.
+**Status:** Phases 0 + 1 done (2026-09-06). Phases 2–3 pending.
 
 ## Why
 
@@ -102,28 +102,50 @@ schema change.
 
 ---
 
-## Phase 1 — Unified schema + manager  *(~2–3 days; behind the scenes)*
+## Phase 1 — Unified manager  ✅ DONE (2026-09-06)
 
-- New `DecalManager` (merge of the two). Feature `{ type: "decal", position,
-  normal, rotation, ... }`.
-- Build: re-resolve the target each time via `resolveDecalTarget` (ray from
-  `position + normal*reach` along `-normal`), snap `position` to the hit point,
-  project with `projectDecal`.
-- Projection depth by target: thin slab (deck / wall / drive box) → shallow box
-  nudged along the normal so it doesn't print the far face; ground → deep default.
-  Read an optional `mesh.metadata.decalProjectionDepth`, else pick by tag.
-- Run the migration codemod (section below), then delete `surfaceDecal` /
-  `wallDecal` from the loader.
-- Optional sequencing aid: point both existing editors at the new feature shape
-  first (they keep their own UX, just emit `decal`) so the schema + manager land
-  without also rewriting ~1400 lines of editor in the same step. Not needed for
-  safety — there's no other user — but keeps the diffs small.
+*(manager-only; no data or editor changes)*
 
-**Ships:** identical behavior, one feature type, one manager, old feature types
-gone.
-**Risk:** migration correctness (the angle conversion again) — regression harness.
+Split out of the original Phase 1: the manager merge is genuinely low-risk and
+lands alone. The codemod + editor merge + one-feature-type moved to Phase 2
+(they're coupled — the codemod turns every decal into `type:"decal"`, which the
+editors must understand the same day, and the editors are ~1400 lines).
 
-### Migration  *(one-off codemod, no runtime layer)*
+- New `DecalManager` subsuming `SurfaceDecalManager` + `WallDecalManager` (their
+  non-`_buildMesh` code was ~line-identical). One `_decalParams(feature)`
+  normalises `surfaceDecal` | `wallDecal` | `decal` → `{ position, normal,
+  rotationRad, shape, width, height, … }`; the rotation conversion uses Phase 0's
+  additive `decalStableAngle` so it reproduces the old `CreateDecal` calls
+  bit-for-bit (`surfaceDecal`: `rotationRad = -(angle·π/180)`; `wallDecal`:
+  `rotationRad = roll·π/180 − decalStableAngle(normal, 0)`).
+- `_buildMesh` merges the two projection paths: target via `resolveDecalTarget`
+  (downward long-reach for `|normal.y| > 0.7`, else back-along-`-normal`
+  short-reach), then box params — ground → deep box on the surface; deck (flat,
+  not ground) → shallow lifted box; wall → shallow box along the normal.
+- `SceneBuilder` / `EditorMode` / `EditorController` wire the one manager; both
+  editors point their `_decalManager` at it and read `surfaceEntries` /
+  `wallEntries` (type-filtered getters) in place of `entries`.
+- Delete `SurfaceDecalManager.js`, `WallDecalManager.js`.
+
+**Ships:** one manager, identical behavior, feature shapes + editors untouched.
+**Risk:** low — the rotation conversion is Phase 0 math already verified; the
+`_buildMesh` merge is a reshuffle of working code.
+
+**Landed:** `src/managers/DecalManager.js` (new); `SurfaceDecalManager.js` +
+`WallDecalManager.js` deleted; `SceneBuilder` / `EditorMode` build & wire one
+`decalManager`; `EditorController.setDecalManager` feeds both decal editors;
+each editor reads `surfaceEntries` / `wallEntries`. `groundDecal.js`
+`projectGroundDecal` / `projectSurfaceDecal` kept (checkpoint decals + the
+manager's legacy path use them). Test `test/decal-manager.test.js` (param
+normalisation + partitioning); `npm run build:raw` + `vitest` (72) green.
+`decalStableAngle`'s additivity makes the legacy `surfaceDecal` / `wallDecal`
+projections bit-identical to the old managers'.
+
+---
+
+## Phase 2 — Codemod + editor merge + one feature type
+
+### Migration codemod  *(one-off, no runtime layer)*
 
 Counts at time of writing: **122 `surfaceDecal` + 10 `wallDecal`**, across:
 
@@ -131,24 +153,22 @@ Counts at time of writing: **122 `surfaceDecal` + 10 `wallDecal`**, across:
 - `track-packs/**` — non-bundled tracks. Also migrate.
 - ~~`public/tracks/`~~ (worktree) — dead location, ignore.
 
-A node script rewrites those JSONs in place, then the loader's
-`surfaceDecal` / `wallDecal` handling is deleted outright. Run once → review the
-git diff → hand-fix any visually-off rotations in the editor.
+A node script rewrites those JSONs in place; then `DecalManager._decalParams`
+drops its `surfaceDecal` / `wallDecal` branches and the old type strings leave
+the editors. Run once → review the git diff → hand-fix any visually-off rotations.
 
 Conversions are trivial because `position` is a *hint* the build re-snaps to the
 live surface — no terrain-height computation:
 
 - `surfaceDecal` → `{ type:"decal", position:[centerX, 0, centerZ],
-  normal:[0,1,0], rotation: <angle via the Phase 0 frame>, ...rest }`
-  (`y:0` is corrected on first load).
-- `wallDecal` → rename `roll` → `rotation`; `position` / `normal` unchanged.
+  normal:[0,1,0], rotation: -angle, ...rest }` (Phase 0: `decalStableAngle(up,0)
+  === 0`, so it's exactly `-angle`; `y:0` corrected on first load).
+- `wallDecal` → `rotation = roll - decalStableAngle(normal, 0)·180/π` (per-decal,
+  the offset varies with wall facing); `position` / `normal` unchanged.
 
-The only non-trivial part is the `angle → rotation` conversion — the script
-imports the Phase 0 helper rather than reimplementing it.
+The script imports Phase 0's `decalStableAngle` rather than reimplementing it.
 
----
-
-## Phase 2 — Merge editors + panel  *(~3–4 days; the payoff)*
+### Editor merge  *(the payoff)*
 
 - One `DecalEditor`, one `DecalPanel.vue`. Delete the two old pairs once parity is
   confirmed.
@@ -164,14 +184,14 @@ imports the Phase 0 helper rather than reimplementing it.
 - **Polyline:** panel gates it to near-flat placement surfaces
   (`normal·up > threshold`); drawn on the XZ plane and projected down as today.
 
-**Ships:** "click almost anywhere, place a decal" — ground, decks, walls, ramps,
-hillsides.
-**Risk:** drag / rotate feel regressions; polyline behaviour near the
-flat/non-flat boundary.
+**Phase 2 ships:** one feature type, one manager, one editor — "click almost
+anywhere, place a decal" (ground, decks, walls, ramps, hillsides).
+**Risk:** the codemod's angle conversion; drag / rotate feel regressions;
+polyline near the flat/non-flat boundary.
 
 ---
 
-## Phase 3 — Attach to movable objects  *(~2–3 days; the feature that justifies it)*
+## Phase 3 — Attach to movable objects  *(the feature that justifies it)*
 
 Decals on decoration meshes (tent, rocks) and obstacles (barrels, tire stacks),
 plus drive-box faces.
