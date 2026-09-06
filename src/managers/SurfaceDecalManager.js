@@ -1,10 +1,21 @@
 import { Vector3 } from "@babylonjs/core";
 import { DECAL_SHAPES, createDecalTexture, decalPolylineLocalOutline } from "./decalShapes.js";
-import { projectGroundDecal, makeDecalMaterial } from "./groundDecal.js";
+import { projectGroundDecal, makeDecalMaterial, resolveDecalTarget } from "./groundDecal.js";
 
 // World-units the decal mesh is raised off the terrain so it wins pointer picks
 // over the ground. Kept tiny so the marking still reads as flush with the surface.
 const PICK_LIFT = 0.15;
+
+// Downward target-resolution ray: cast from well above anything and reach far
+// enough to clear the deepest valley.
+const TARGET_RAY_TOP = 1000;
+const TARGET_RAY_REACH = TARGET_RAY_TOP + 400;
+
+// Projector box for a decal on a bridge deck: shallow (the slab is thin), and
+// its centre is lifted so the box bottom clears the deck's underside. Tolerates
+// deck slope up to ~MARGIN of drop across the decal's downhill half.
+const DECK_PROJECTION_DEPTH = 4;
+const DECK_PROJECTION_MARGIN = 0.3;
 
 // Number of distinct wear patterns. Decals pick one from their position so
 // neighbours don't share identical noise, while the material/texture cache
@@ -58,6 +69,27 @@ export class SurfaceDecalManager {
 
   /** Live { feature, mesh } entries — read-only view for the editor's gizmo handles. */
   get entries() { return this._entries; }
+
+  /**
+   * The surface a decal at (x, z) should project onto: the topmost
+   * `metadata.surfaceDecalTarget` mesh a downward ray hits — the ground, or a
+   * bridge deck where one spans that point. Re-resolved on every build so a
+   * decal follows its deck through a rebuild (like WallDecalManager's target).
+   * Falls back to the ground mesh at the analytic height on a miss.
+   *
+   * @returns {{ mesh: import("@babylonjs/core").AbstractMesh, y: number }}
+   */
+  _resolveTarget(x, z) {
+    const hit = resolveDecalTarget(this._scene, {
+      origin: new Vector3(x, TARGET_RAY_TOP, z),
+      direction: Vector3.Down(),
+      reach: TARGET_RAY_REACH,
+      tag: "surfaceDecalTarget",
+    });
+    return hit
+      ? { mesh: hit.mesh, y: hit.point.y }
+      : { mesh: this._ground, y: this._track.getHeightAt(x, z) };
+  }
 
   createDecal(feature) {
     const mesh = this._buildMesh(feature);
@@ -140,13 +172,20 @@ export class SurfaceDecalManager {
       localPoints = outlineData.localPoints;
     }
 
-    const terrainY = this._track.getHeightAt(boxCenterX, boxCenterZ);
+    const { mesh: target, y: surfaceY } = this._resolveTarget(boxCenterX, boxCenterZ);
+    const onGround = target === this._ground;
+    // On the (single-faced, heavily displaced) ground the default deep projector
+    // box is right. A bridge deck is a thin slab: use a shallow box nudged up so
+    // the decal lands only on the deck top, not its underside.
+    const projectionDepth = onGround ? undefined : DECK_PROJECTION_DEPTH;
+    const posY = onGround ? surfaceY : surfaceY + DECK_PROJECTION_DEPTH / 2 - DECK_PROJECTION_MARGIN;
 
-    const decal = projectGroundDecal(this._ground, `surfaceDecal_${boxCenterX}_${boxCenterZ}`, {
-      position: new Vector3(boxCenterX, terrainY, boxCenterZ),
+    const decal = projectGroundDecal(target, `surfaceDecal_${boxCenterX}_${boxCenterZ}`, {
+      position: new Vector3(boxCenterX, posY, boxCenterZ),
       width: boxWidth,
       depth: boxDepth,
       angle: boxAngle,
+      projectionDepth,
     });
 
     decal.material = this._getMaterial(shape, color, opacity, wearSeed(boxCenterX, boxCenterZ), count, outline, text, boxWidth, boxDepth, localPoints, thickness, brand);

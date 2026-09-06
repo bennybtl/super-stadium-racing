@@ -436,6 +436,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainWaterOverlayTexture: waterDepthOverlayTex,
     terrainWearOverlayTexture: terrainWearOverlayTex,
     terrainDetailTexture: terrainDetailTex,
+    surfaceDecalTarget: true, // SurfaceDecalManager projects onto this by downward ray
   };
   // The ground receives shadows (object/wall/hill shadows land on it) but is
   // NOT a shadow caster: a large flat caster self-shadows under the single

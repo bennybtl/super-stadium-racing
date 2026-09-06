@@ -270,6 +270,9 @@ export class BridgeMesh {
       this._mesh.material = this._material;
     }
     this._mesh.isPickable = false;
+    // Surface decals resolve their projection target with a downward ray for
+    // `surfaceDecalTarget` meshes, so a decal stamped over the deck lands on it.
+    this._mesh.metadata = { ...(this._mesh.metadata ?? {}), surfaceDecalTarget: true };
     // Casts onto the ground, but does NOT receive — the same tradeoff the terrain
     // makes (see SceneBuilder, "the ground receives shadows but is NOT a caster").
     // The shadow generator is a blurred exponential cube map on the one stadium

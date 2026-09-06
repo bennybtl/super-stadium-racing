@@ -8,7 +8,7 @@ import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS
 import { DEFAULT_CORNER_RADIUS, expandPolyline } from "../utils/polyline-utils.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 import { EditorMaterials, LINE_COLOR_SURFACE_DECAL } from "./EditorMaterials.js";
-import { gizmoY, gizmoLineY } from './gizmo-height.js';
+import { gizmoY, gizmoLineY, deckTopY } from './gizmo-height.js';
 
 const POLY_POINT_MIN = 2; // open polyline — a bare segment is valid
 
@@ -94,6 +94,14 @@ export class SurfaceDecalEditor {
    * missing / drop orphaned / reposition) rather than created once alongside
    * a visual.
    */
+  /** Handle Y at (x, z), riding a bridge deck when a decal sits on one. */
+  _handleY(x, z, lineClearance = false) {
+    const top = deckTopY(this.editor?.terrainQuery, x, z);
+    return lineClearance
+      ? gizmoLineY(this._track, x, z, top)
+      : gizmoY(this._track, x, z, top);
+  }
+
   _syncHandles() {
     const entries = this._decalManager?.entries;
     if (!entries || !this._scene || !this._track) return;
@@ -114,7 +122,7 @@ export class SurfaceDecalEditor {
         this._handles.set(entry, h);
       }
       const { centerX, centerZ } = entry.feature;
-      h.handle.setPosition(centerX, gizmoY(this._track, centerX, centerZ), centerZ);
+      h.handle.setPosition(centerX, this._handleY(centerX, centerZ), centerZ);
       h.handle.setSelected(entry === this.selected);
 
       if (entry.feature.shape === 'polyline') {
@@ -147,7 +155,7 @@ export class SurfaceDecalEditor {
     const isSelectedEntry = entry === this.selected;
     for (let i = 0; i < points.length; i++) {
       const pt = points[i];
-      h.pointHandles[i].position.set(pt.x, gizmoY(this._track, pt.x, pt.z), pt.z);
+      h.pointHandles[i].position.set(pt.x, this._handleY(pt.x, pt.z), pt.z);
       const isActive = isSelectedEntry && i === this._selectedPointIndex;
       h.pointHandles[i].material = isActive ? mats.selected : mats.handle;
     }
@@ -159,7 +167,7 @@ export class SurfaceDecalEditor {
   _buildPolylineLine(points) {
     if (!points || points.length < POLY_POINT_MIN) return null;
     const expanded = expandPolyline(points, false);
-    const linePoints = expanded.map(p => new Vector3(p.x, gizmoLineY(this._track, p.x, p.z), p.z));
+    const linePoints = expanded.map(p => new Vector3(p.x, this._handleY(p.x, p.z, true), p.z));
     const ls = MeshBuilder.CreateLineSystem('sdPolyLine', { lines: [linePoints] }, this._scene);
     ls.color = LINE_COLOR_SURFACE_DECAL;
     ls.isPickable = false;

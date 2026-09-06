@@ -1,6 +1,6 @@
-import { Vector3, Ray } from "@babylonjs/core";
+import { Vector3 } from "@babylonjs/core";
 import { DECAL_SHAPES, createDecalTexture } from "./decalShapes.js";
-import { projectSurfaceDecal, makeDecalMaterial } from "./groundDecal.js";
+import { projectSurfaceDecal, makeDecalMaterial, resolveDecalTarget } from "./groundDecal.js";
 
 // How far the decal is lifted off the wall along its normal so it wins pointer
 // picks over the wall behind it. Small enough to still read as flush.
@@ -99,13 +99,12 @@ export class WallDecalManager {
    * every build so a decal survives its wall being rebuilt.
    */
   _resolveTarget(position, normal) {
-    const origin = position.add(normal.scale(TARGET_RAY_REACH * 0.5));
-    const ray = new Ray(origin, normal.scale(-1), TARGET_RAY_REACH);
-    const hit = this._scene.pickWithRay(
-      ray,
-      (m) => m?.isEnabled?.() && m.metadata?.decalTarget === true,
-    );
-    return hit?.hit ? hit.pickedMesh : null;
+    return resolveDecalTarget(this._scene, {
+      origin: position.add(normal.scale(TARGET_RAY_REACH * 0.5)),
+      direction: normal.scale(-1),
+      reach: TARGET_RAY_REACH,
+      tag: "decalTarget",
+    })?.mesh ?? null;
   }
 
   _buildMesh(feature) {
