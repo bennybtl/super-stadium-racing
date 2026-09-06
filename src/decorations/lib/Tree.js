@@ -1,148 +1,190 @@
-import * as BABYLON from '@babylonjs/core';
+import { MeshBuilder, Mesh, Matrix, Vector3, VertexBuffer } from "@babylonjs/core";
+import { makeRng, hashSeed } from "../../objects/scatter-utils.js";
+
+/**
+ * ProceduralTree — deterministic low-poly tree geometry.
+ *
+ * This is NOT a scene object. `buildMasters()` returns three merged meshes
+ * (trunk / branches / foliage), each a single draw call, hidden and ready to be
+ * hardware-instanced with `createInstance()`. tree.js caches one set of masters
+ * per variant, so a forest of identical trees costs three draw calls total, not
+ * three per tree.
+ *
+ * Structure: a trunk, then 1–4 primary branches (seeded) splaying from its top,
+ * each optionally forking into twigs, and each ending in ONE distinct foliage
+ * blob sized to cover that branch's tip cloud. So a 3-branch tree reads as three
+ * separate leaf masses on three limbs, not a random pile of overlapping spheres.
+ *
+ * Every part bakes its accumulated transform straight into its vertices (no
+ * TransformNode hierarchy) so Mesh.MergeMeshes just concatenates, then the whole
+ * tree is flat-shaded once for crisp isometric facets. Given the same options it
+ * always produces the same tree — required for tracks that reload identically.
+ */
+
+export const TREE_DEFAULTS = {
+  trunkHeight: 3.0,
+  trunkRadius: 0.4,
+  radialSegments: 6, // trunk/branch cylinder sides — keep low-poly
+  maxDepth: 3,       // trunk(1) → primary branch(2) → twig(3) → tip
+  seed: 1,
+};
+
+const TAPER = 0.62;        // each tier's radius vs its parent
+const MIN_PRIMARIES = 1;
+const MAX_PRIMARIES = 4;
+
+// Foliage blobs are CreatePolyhedron (not CreateIcoSphere — that one duplicates
+// every corner per face no matter what `flat` says, so jittering it tears the
+// facets apart). CreatePolyhedron with flat:false gives genuinely SHARED
+// vertices; jitter each once, merge, then convertToFlatShadedMesh puts the hard
+// low-poly facets back. Same trap DirtChunks hit.
+const FOLIAGE_POLY = 3; // Babylon polyhedron type 3 = icosahedron (20 faces)
+
+/** Radially scale each shared vertex by a random factor for a lumpy blob. */
+function jitter(mesh, rand) {
+  const pos = mesh.getVerticesData(VertexBuffer.PositionKind);
+  for (let i = 0; i < pos.length; i += 3) {
+    const j = 0.72 + rand() * 0.56; // 0.72 .. 1.28, radial → stays blob-shaped
+    pos[i]     *= j;
+    pos[i + 1] *= j;
+    pos[i + 2] *= j;
+  }
+  mesh.updateVerticesData(VertexBuffer.PositionKind, pos);
+}
+
+/**
+ * One jittered foliage polyhedron centred at (x,y,z). `sx/sy/sz` are the
+ * per-axis radii, so a canopy can be squat and wide or tall and narrow. Only
+ * spun about Y (plus a tiny wobble) so a flat blob stays flat.
+ */
+function foliageBlob(name, x, y, z, sx, sy, sz, rand, scene) {
+  const m = MeshBuilder.CreatePolyhedron(name, {
+    type: FOLIAGE_POLY, sizeX: sx, sizeY: sy, sizeZ: sz, flat: false,
+  }, scene);
+  jitter(m, rand);
+  m.bakeTransformIntoVertices(
+    Matrix.RotationY(rand() * Math.PI * 2)
+      .multiply(Matrix.RotationX((rand() - 0.5) * 0.3))
+      .multiply(Matrix.Translation(x, y, z)),
+  );
+  return m;
+}
+
+/** Tapered cylinder with its pivot moved to the base, then baked into `frame`. */
+function branchSegment(name, baseR, topR, height, frame, segments, scene) {
+  const seg = MeshBuilder.CreateCylinder(name, {
+    height, diameterTop: topR * 2, diameterBottom: baseR * 2, tessellation: segments,
+  }, scene);
+  seg.bakeTransformIntoVertices(Matrix.Translation(0, height / 2, 0).multiply(frame));
+  return seg;
+}
+
+/** Merge one group's parts into a single hidden, instanceable master mesh. */
+function mergeMaster(name, parts, scene) {
+  if (!parts.length) return null;
+  const merged = Mesh.MergeMeshes(parts, true, true, undefined, false, false);
+  if (!merged) return null;
+  merged.name = name;
+  merged.convertToFlatShadedMesh();
+  merged.isVisible = false;      // instances still render; this only hides the source
+  merged.isPickable = false;
+  merged.freezeWorldMatrix();
+  return merged;
+}
 
 export class ProceduralTree {
-    constructor(scene, options = {}) {
-        this.scene = scene;
+  /**
+   * @returns {{ trunk: Mesh|null, branch: Mesh|null, leaf: Mesh|null, height: number }}
+   *          Masters are parented to nothing and left at the origin. Caller owns
+   *          disposal (see tree.js refcount).
+   */
+  static buildMasters(scene, options = {}) {
+    const o = { ...TREE_DEFAULTS, ...options };
+    const rand = makeRng(hashSeed(String(o.seed)));
 
-        this.options = {
-            trunkHeight: options.trunkHeight || 4.0,
-            trunkRadius: options.trunkRadius || 0.5,
-            radialSegments: options.radialSegments || 6, // Low poly count
-            maxDepth: options.maxDepth || 3,            // Level of recursive branches
-            seed: options.seed || Math.random(),
-            trunkColor: options.trunkColor || new BABYLON.Color3(0.35, 0.24, 0.16),
-            foliageColor: options.foliageColor || new BABYLON.Color3(0.24, 0.44, 0.23),
-            ...options
-        };
+    const trunkParts = [];
+    const branchParts = [];
+    const leafParts = [];
+    let idx = 0;
 
-        this.mainGroup = new BABYLON.TransformNode("tree_root", this.scene);
+    // Grow one branch subtree from `frame`, collecting its terminal tips.
+    const growBranch = (frame, depth, radius, height, tips) => {
+      const nextRadius = radius * TAPER;
+      branchParts.push(branchSegment(`b${idx++}`, radius, nextRadius, height, frame, o.radialSegments, scene));
 
-        // Core Materials
-        this.woodMaterial = new BABYLON.StandardMaterial("wood_mat", this.scene);
-        this.woodMaterial.diffuseColor = this.options.trunkColor;
-        this.woodMaterial.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+      const tipFrame = Matrix.Translation(0, height, 0).multiply(frame);
+      if (depth >= o.maxDepth) {
+        tips.push(tipFrame.getTranslation());
+        return;
+      }
+      const twigs = rand() < 0.35 ? 1 : 2;
+      for (let i = 0; i < twigs; i++) {
+        const spread = 0.25 + rand() * 0.4;
+        const spin = i * (Math.PI * 2 / twigs) + rand() * 0.7;
+        const childFrame = Matrix.RotationZ(spread)
+          .multiply(Matrix.RotationY(spin))
+          .multiply(tipFrame);
+        growBranch(childFrame, depth + 1, nextRadius, height * (0.55 + rand() * 0.2), tips);
+      }
+    };
 
-        this.leafMaterial = new BABYLON.StandardMaterial("leaf_mat", this.scene);
-        this.leafMaterial.diffuseColor = this.options.foliageColor;
-        this.leafMaterial.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+    // ── Per-tree character (all seeded) ──────────────────────────────────────
+    // A handful of random dials so no two seeds share a silhouette: overall
+    // height, a slight lean, how far the primaries splay (columnar → umbrella),
+    // and how squat vs tall the canopy blobs are.
+    const trunkH   = o.trunkHeight * (0.7 + rand() * 0.9);   // 0.7 .. 1.6 ×
+    const trunkR   = o.trunkRadius * (0.85 + rand() * 0.4);
+    const lean     = rand() * 0.13;                          // radians off vertical
+    const leanDir  = rand() * Math.PI * 2;
+    const umbrella = 0.15 + rand() * 0.8;                    // primary splay
+    const canopyFlat = 0.7 + rand() * 0.65;                  // <1 wide/squat, >1 tall
 
-        // Keep track of random state using the constructor seed
-        this.rngSeed = this.options.seed;
+    const rootFrame = Matrix.RotationZ(lean).multiply(Matrix.RotationY(leanDir));
 
-        this.generate();
+    // ── Trunk ────────────────────────────────────────────────────────────────
+    const trunkNextR = trunkR * TAPER;
+    trunkParts.push(branchSegment("trunk", trunkR, trunkNextR, trunkH, rootFrame, o.radialSegments, scene));
+
+    // ── 1–4 primary branches, one distinct foliage blob each ──────────────────
+    const primaries = MIN_PRIMARIES + Math.floor(rand() * (MAX_PRIMARIES - MIN_PRIMARIES + 1));
+    let height = trunkH;
+
+    for (let i = 0; i < primaries; i++) {
+      // Attach staggered up the top half of the trunk → blobs sit at different
+      // levels instead of all bursting from one point.
+      const attachY = trunkH * (0.55 + 0.45 * ((i + rand() * 0.6) / primaries));
+      // A lone primary stands nearly straight; multiples splay by `umbrella`.
+      const spread = primaries === 1 ? rand() * 0.2 : umbrella * (0.55 + rand() * 0.7);
+      const spin = i * (Math.PI * 2 / primaries) + rand() * 0.6;
+      const primaryFrame = Matrix.RotationZ(spread)
+        .multiply(Matrix.RotationY(spin))
+        .multiply(Matrix.Translation(0, attachY, 0))
+        .multiply(rootFrame);
+      const primaryHeight = trunkH * (0.35 + rand() * 0.55);
+
+      const tips = [];
+      growBranch(primaryFrame, 2, trunkNextR, primaryHeight, tips);
+
+      // One blob covering this branch's tip cloud.
+      const c = new Vector3(0, 0, 0);
+      for (const t of tips) c.addInPlace(t);
+      c.scaleInPlace(1 / tips.length);
+      let r = 0;
+      for (const t of tips) r = Math.max(r, Vector3.Distance(t, c));
+      const base = Math.max(r * 1.15 + trunkR * 3, trunkH * 0.5);
+      const sx = base * (0.9 + rand() * 0.35);
+      const sz = base * (0.9 + rand() * 0.35);
+      const sy = base * canopyFlat * (0.85 + rand() * 0.3);
+
+      leafParts.push(foliageBlob(`k${idx++}`, c.x, c.y, c.z, sx, sy, sz, rand, scene));
+      height = Math.max(height, c.y + sy);
     }
 
-    // Deterministic pseudo-random helper
-    random() {
-        let x = Math.sin(this.rngSeed++) * 10000;
-        return x - Math.floor(x);
-    }
-
-    // Creates an angular, tapered branch mesh segment
-    createBranchSegment(name, baseRadius, topRadius, height) {
-        const branchMesh = BABYLON.MeshBuilder.CreateCylinder(name, {
-            height: height,
-            diameterTop: topRadius * 2,
-            diameterBottom: baseRadius * 2,
-            tessellation: this.options.radialSegments,
-            subdivisions: 1
-        }, this.scene);
-
-        branchMesh.material = this.woodMaterial;
-        branchMesh.convertToFlatShadedMesh();
-
-        // Shift Babylon pivot point to the bottom base of the cylinder (makes joint rotation simple)
-        branchMesh.bakeTransformIntoVertices(BABYLON.Matrix.Translation(0, height / 2, 0));
-
-        return branchMesh;
-    }
-
-    // Creates a low-poly foliage cluster chunk
-    createFoliageCluster(name, radius) {
-        // Icosahedron with detail = 1 generates beautiful geometric facets
-        const leafMesh = BABYLON.MeshBuilder.CreateIcosahedron(name, {
-            radius: radius,
-            flat: true,
-            subdivisions: 1
-        }, this.scene);
-
-        leafMesh.material = this.leafMaterial;
-
-        // Jitter vertices around slightly to randomize the leaf canopy shape
-        const positions = leafMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-        for (let i = 0; i < positions.length; i += 3) {
-            positions[i]     += (this.random() - 0.5) * (radius * 0.2); // X
-            positions[i + 1] += (this.random() - 0.5) * (radius * 0.2); // Y
-            positions[i + 2] += (this.random() - 0.5) * (radius * 0.2); // Z
-        }
-        leafMesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
-        
-        // Recompute normals to maintain crisp lighting across modified low-poly edges
-        leafMesh.convertToFlatShadedMesh();
-
-        return leafMesh;
-    }
-
-    // Recursive function to branch out the tree matrix
-    growBranch(parentNode, depth, currentRadius, currentHeight) {
-        if (depth > this.options.maxDepth) {
-            // Cap the branch off with a terminal leaf canopy
-            const leafCluster = this.createFoliageCluster(`leaf_cap_d${depth}`, currentRadius * 5.0);
-            leafCluster.parent = parentNode;
-            leafCluster.position.y = currentHeight;
-            return;
-        }
-
-        // 1. Generate structural wood branch
-        const nextRadius = currentRadius * 0.65; // Taper the next limbs down
-        const branchMesh = this.createBranchSegment(`branch_d${depth}`, currentRadius, nextRadius, currentHeight);
-        branchMesh.parent = parentNode;
-
-        // 2. Decorate lower tiers with loose, lateral side foliage masses for an oak/maple feel
-        if (depth >= 2 && this.random() > 0.4) {
-            const sideLeaves = this.createFoliageCluster(`side_leaves_d${depth}`, currentRadius * 3.5);
-            sideLeaves.parent = branchMesh;
-            sideLeaves.position.set(0, currentHeight * 0.5, 0);
-        }
-
-        // 3. Sprout split branching child nodes
-        const branchCount = (depth === 1) ? 3 : 2; // Split heavily at the base trunk layer
-        
-        for (let i = 0; i < branchCount; i++) {
-            const branchJoint = new BABYLON.TransformNode(`joint_d${depth}_i${i}`, this.scene);
-            branchJoint.parent = branchMesh;
-            
-            // Set joint position at the absolute tip of the current parent branch
-            branchJoint.position.y = currentHeight;
-
-            // Mathematical angles mapping out natural tree spread structures
-            const spreadAngle = 0.4 + (this.random() * 0.35); // Tilt outward
-            const spinAngle = (i * (Math.PI * 2 / branchCount)) + (this.random() * 0.5); // Spin around center axis
-
-            branchJoint.rotation.z = spreadAngle;
-            branchJoint.rotation.y = spinAngle;
-
-            // Recurse down another step into the grid layout
-            const nextHeight = currentHeight * (0.65 + this.random() * 0.2);
-            this.growBranch(branchJoint, depth + 1, nextRadius, nextHeight);
-        }
-    }
-
-    generate() {
-        // Create an explicit base anchor wrapper inside the root container
-        const treeBaseNode = new BABYLON.TransformNode("base_node", this.scene);
-        treeBaseNode.parent = this.mainGroup;
-
-        // Fire off initial recursive generation loop (Depth = 1 is the main base trunk)
-        this.growBranch(
-            treeBaseNode,
-            1,
-            this.options.trunkRadius,
-            this.options.trunkHeight
-        );
-    }
-
-    getMesh() {
-        return this.mainGroup;
-    }
+    return {
+      trunk: mergeMaster(`treeTrunk_${o.seed}`, trunkParts, scene),
+      branch: mergeMaster(`treeBranch_${o.seed}`, branchParts, scene),
+      leaf: mergeMaster(`treeLeaf_${o.seed}`, leafParts, scene),
+      height,
+    };
+  }
 }

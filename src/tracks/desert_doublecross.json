@@ -4,12 +4,12 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
+  "grassBlades": true,
   "oobDeadSpace": false,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 24,
-    "color": "#808080"
+    "height": 16
   },
   "name": "Desert Doublecross",
   "image": "desert_doublecross.jpg",
@@ -1174,6 +1174,177 @@
       "blendWidth": 4,
       "edgeShape": 0.8,
       "flatTop": 0.75
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -60.7415692831848,
+        7.6251403780673,
+        90
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "energizer-racing.png",
+      "width": 18,
+      "height": 18,
+      "opacity": 1
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -37.92329786002963,
+        8.512743291779103,
+        90
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "phoenix-auto.png",
+      "width": 17,
+      "height": 17.000000000000007,
+      "opacity": 1
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        6.058221551309284,
+        8.197818319715154,
+        90
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "phoenix-auto.png",
+      "width": 17,
+      "height": 17,
+      "opacity": 1
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -17.264656563558546,
+        7.379409964509392,
+        90
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "energizer-racing.png",
+      "width": 16,
+      "height": 16,
+      "opacity": 1
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -74.65190240085813,
+      "centerZ": -71.46910807965543,
+      "terrainType": "loose_dirt",
+      "roughness": 1,
+      "width": 30.5,
+      "depth": 28.5,
+      "rotation": 0,
+      "blendWidth": 3.5
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": -55.26018717660989,
+      "z": -59.732435499966165
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_3",
+      "x": -52.26018717660989,
+      "z": -63.232435499966165
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -76.63960620968221,
+      "z": -76.54425735490493,
+      "color": "green",
+      "scale": 1,
+      "seed": 1,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -70.9762690936268,
+      "z": -70.83591202559563,
+      "color": "green",
+      "scale": 1.3,
+      "seed": 7,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.8797932657906435
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -78.67859698131954,
+      "z": -61.52962972641173,
+      "color": "green",
+      "scale": 2.2,
+      "seed": 16,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.8797932657906435
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -78.67859698131954,
+      "z": -50.02962972641173,
+      "color": "green",
+      "scale": 2.2,
+      "seed": 23,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.8797932657906435
     }
   ]
 }

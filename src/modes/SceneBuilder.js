@@ -42,6 +42,7 @@ import { buildOutskirts, OUTSKIRTS_MATERIAL_NAME } from "../objects/Outskirts.js
 import {
   buildTerrainIdTexturePixelData,
   buildTerrainWearOverlayPixelData,
+  buildBridgeDeckWearOverlayPixelData,
   buildTerrainTypePropertyTexturePixelData,
   applySteepGrassTerrainRemap,
   applySteepWaterTerrainRemap,
@@ -325,6 +326,23 @@ export async function buildScene(engine, trackLoader, trackKey) {
   terrainWearOverlayTex.wrapV = Texture.CLAMP_ADDRESSMODE;
   terrainWearOverlayTex.gammaSpace = false;
 
+  // Deck-only wear (racing line where it's ON a bridge deck). Bridge deck
+  // materials sample this instead of the terrain overlay, so a path running
+  // under a deck doesn't smear its ruts onto the deck above.
+  const bridgeDeckWearOverlayData = buildBridgeDeckWearOverlayPixelData(currentTrack, texSize, groundWidth, groundDepth);
+  const bridgeDeckWearOverlayTex = RawTexture.CreateRGBATexture(
+    bridgeDeckWearOverlayData.data,
+    bridgeDeckWearOverlayData.width,
+    bridgeDeckWearOverlayData.height,
+    scene,
+    false,
+    false,
+    Texture.BILINEAR_SAMPLINGMODE
+  );
+  bridgeDeckWearOverlayTex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  bridgeDeckWearOverlayTex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  bridgeDeckWearOverlayTex.gammaSpace = false;
+
   // Per-type detail textures, tiled in world space by the shader. Static across
   // tracks and never rebaked — unlike the overlays above, its resolution does not
   // depend on the track's size.
@@ -346,6 +364,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
     if (opts?.wear ?? true) {
       const wearOverlayData = buildTerrainWearOverlayPixelData(currentTrack, texSize, groundWidth, groundDepth);
       terrainWearOverlayTex.update(wearOverlayData.data);
+      bridgeDeckWearOverlayTex.update(
+        buildBridgeDeckWearOverlayPixelData(currentTrack, texSize, groundWidth, groundDepth).data
+      );
     }
     if (opts?.overlays ?? true) {
       updateWaterDepthOverlayTexture(waterDepthOverlayTex, terrainManager, groundWidth, groundDepth);
@@ -470,6 +491,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
       terrainPropertyTexture: terrainPropertyTex,
       terrainWaterOverlayTexture: waterDepthOverlayTex,
       terrainWearOverlayTexture: terrainWearOverlayTex,
+      terrainDeckWearOverlayTexture: bridgeDeckWearOverlayTex,
       terrainDetailTexture: terrainDetailTex,
       terrainDetailNormalTexture: terrainDetailNormalTex,
       terrainTypeCount: terrainTypePropertyData.width,
@@ -560,6 +582,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     terrainIdTex,
     terrainPropertyTex,
     terrainWearOverlayTex,
+    bridgeDeckWearOverlayTex,
     pixelsPerCell,
     compositeNormalMap,
     checkpointManager,

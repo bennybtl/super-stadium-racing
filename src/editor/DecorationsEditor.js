@@ -262,6 +262,16 @@ export class DecorationsEditor {
     if (def?.defaultScale != null) feature.scale = def.defaultScale;
     Object.assign(feature, def?.featureDefaults ?? {});
 
+    // Roll a value for any range control the controller flags `random: true`
+    // (e.g. a tree's Variant), so freshly placed copies differ. The result is
+    // frozen into the feature/JSON from here on — reloads stay deterministic.
+    for (const [prop, ctl] of Object.entries(controlsFor(def, feature))) {
+      if (!ctl?.random || ctl.type !== 'range') continue;
+      const lo = Math.ceil(ctl.min ?? 0);
+      const hi = Math.floor(ctl.max ?? 1);
+      feature[prop] = lo + Math.floor(Math.random() * (hi - lo + 1));
+    }
+
     if (src.heading != null) feature.heading = src.heading;
     if (src.color != null && feature.color !== undefined) feature.color = src.color;
     if (src.scale != null && feature.scale !== undefined) feature.scale = src.scale;

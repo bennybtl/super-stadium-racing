@@ -1,0 +1,23 @@
+{
+  "id": "tree",
+  "name": "Tree (procedural)",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "defaultColor": "green",
+  "defaultScale": 1,
+  "woodColor": "brown",
+  "leafColor": "green",
+  "colliderMeshes": ["trunk"],
+  "colliderFriction": 0.9,
+  "castsShadows": true,
+  "featureDefaults": {
+    "seed": 1,
+    "trunkHeight": 4,
+    "trunkRadius": 0.5,
+    "maxDepth": 3,
+    "radialSegments": 6,
+    "collider": false
+  },
+  "editable": { "color": true, "scale": true, "heading": true }
+}

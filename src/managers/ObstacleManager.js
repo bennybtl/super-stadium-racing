@@ -96,6 +96,8 @@ export class ObstacleManager {
         if (approach <= 0) continue; // already separating
 
         // ── Kick the stack ──────────────────────────────────────────────
+        // Release it from its pinned pose first, then launch it.
+        stack.activate();
         const impulseMag = approach * IMPULSE_SCALE;
         stack.aggregate.body.applyImpulse(
           new Vector3(nx * impulseMag, impulseMag * 0.25, nz * impulseMag),

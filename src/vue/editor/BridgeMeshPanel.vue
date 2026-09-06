@@ -9,7 +9,7 @@
   >
 
     <div class="text-[10px] text-slate-400 mb-3">
-      Click a control sphere to select it · scroll / ↑ ↓ / [ ] set height · drag or WASD moves it in the plane. Drag the center sphere to move the whole mesh.
+      Click a control sphere to select it · scroll / ↑ ↓ / [ ] set height · drag or WASD moves it in the plane.
     </div>
 
     <!-- Point Height -->

@@ -3,6 +3,7 @@ import {
   Vector3,
   PhysicsAggregate,
   PhysicsShapeType,
+  PhysicsMotionType,
   SceneLoader,
   TransformNode,
 } from "@babylonjs/core";
@@ -165,6 +166,13 @@ export class Obstacle {
     this.aggregate.body.setLinearDamping(spec.linearDamping);
     this.aggregate.body.setAngularDamping(spec.angularDamping);
 
+    // Start pinned: a static body holds its placed pose on any slope and never
+    // creeps. The first truck hit flips it to live physics (see `activate()`,
+    // called from ObstacleManager). A race reset rebuilds obstacles from the
+    // track features, so they return to the pinned pose.
+    this._active = false;
+    this.aggregate.body.setMotionType(PhysicsMotionType.STATIC);
+
     // OBJ visual model parented to the physics body so it tumbles with it.
     // Meshes not pinned by the def (meshColors/colorableMeshes/baked-mtl)
     // share this instance's paint colour.
@@ -211,6 +219,20 @@ export class Obstacle {
 
   get position() {
     return this.body.position;
+  }
+
+  /**
+   * Release the obstacle from its pinned (static) state into live physics.
+   * Idempotent — called the first time a truck kicks it. Re-asserts mass in
+   * case the motion-type change cleared Havok's stored mass properties, so the
+   * following impulse produces the expected launch.
+   */
+  activate() {
+    if (this._active || this._disposed) return;
+    this._active = true;
+    const body = this.aggregate.body;
+    body.setMotionType(PhysicsMotionType.DYNAMIC);
+    body.setMassProperties({ mass: this.mass });
   }
 
   dispose() {

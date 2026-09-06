@@ -198,7 +198,11 @@ export class BridgeMesh {
           terrainBlendConfig.terrainIdTexture,
           terrainBlendConfig.terrainPropertyTexture,
           terrainBlendConfig.terrainWaterOverlayTexture,
-          terrainBlendConfig.terrainWearOverlayTexture,
+          // Deck-only wear: the racing line's wear where it's ON a deck, not the
+          // ground-level wear of paths passing underneath (that's what the main
+          // terrainWearOverlay would print through). See terrain-utils' bake.
+          terrainBlendConfig.terrainDeckWearOverlayTexture
+            ?? terrainBlendConfig.terrainWearOverlayTexture,
           terrainBlendConfig.terrainDetailTexture,
           terrainBlendConfig.terrainTypeCount,
           terrainBlendConfig.terrainCellCount,

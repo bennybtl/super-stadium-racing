@@ -275,6 +275,53 @@ export function buildTerrainTypePropertyTexturePixelData() {
   return { width, height, data, normalMapNames };
 }
 
+/**
+ * Bridge decks, each with a bilinear world-Y sampler over its control grid.
+ * `heightAt(x, z)` returns the deck surface height at a world point, or null
+ * when the point is outside the deck footprint. Used to tell whether a wear
+ * stamp belongs on a deck (racing line crosses it) or on the ground below.
+ */
+function _collectBridgeDecks(track) {
+  const feats = track?.features;
+  if (!Array.isArray(feats)) return [];
+  const decks = [];
+  for (const f of feats) {
+    if (f?.type !== 'bridgeMesh') continue;
+    const cols = Math.max(2, f.cols | 0);
+    const rows = Math.max(2, f.rows | 0);
+    const heights = Array.isArray(f.heights) ? f.heights : null;
+    if (!heights || heights.length < cols * rows) continue;
+    const w = Math.max(0.1, f.width);
+    const d = Math.max(0.1, f.depth ?? f.width);
+    const ang = (f.rotation ?? 0) * Math.PI / 180;
+    const cos = Math.cos(ang), sin = Math.sin(ang);
+    const cx = f.centerX, cz = f.centerZ;
+    const halfW = w / 2, halfD = d / 2;
+    decks.push({
+      heightAt(x, z) {
+        const dx = x - cx, dz = z - cz;
+        const lx =  dx * cos + dz * sin;   // world → deck-local (yaw inverse)
+        const lz = -dx * sin + dz * cos;
+        if (lx < -halfW || lx > halfW || lz < -halfD || lz > halfD) return null;
+        const u = ((lx + halfW) / w) * (cols - 1);
+        const v = ((lz + halfD) / d) * (rows - 1);
+        const c0 = clamp(Math.floor(u), 0, cols - 1), c1 = Math.min(c0 + 1, cols - 1);
+        const r0 = clamp(Math.floor(v), 0, rows - 1), r1 = Math.min(r0 + 1, rows - 1);
+        const fu = u - c0, fv = v - r0;
+        const h0 = heights[r0 * cols + c0] * (1 - fu) + heights[r0 * cols + c1] * fu;
+        const h1 = heights[r1 * cols + c0] * (1 - fu) + heights[r1 * cols + c1] * fu;
+        return h0 * (1 - fv) + h1 * fv;
+      },
+    });
+  }
+  return decks;
+}
+
+// deck height within this of the ground at the point where the path first
+// enters a deck footprint ⇒ a ramp foot (the line climbs onto the deck).
+// Higher ⇒ the deck is passing overhead and the line stays on the ground.
+const WEAR_DECK_RAMP_CLEARANCE = 1.25;
+
 // Deterministically trace the AI-path wear lanes into stamp descriptors. Both the
 // colour overlay (buildTerrainWearOverlayPixelData) and the rut normal-map pass
 // (createCompositeNormalMap) consume the SAME stamps — seeded identically — so the
@@ -306,6 +353,34 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
   const sampleSpacing = clamp(wear.width * 0.2, 0.5, 1.0);
   const samples = _sampleClosedPath(smoothedPoints, sampleSpacing);
   if (samples.length < 3) return { width, height, edgeSoftness: 1, stamps };
+
+  // Per-sample: which bridge deck the racing line is ON here (-1 = ground).
+  // Walk the loop tracking elevation continuity — the line only counts as
+  // "on the deck" once it enters a deck footprint at a ramp foot (deck height
+  // ≈ ground). A run that first appears mid-footprint is passing underneath.
+  // Two laps so a run straddling sample 0 still resolves (the path is closed).
+  const sampleOnDeck = new Int8Array(samples.length).fill(-1);
+  const decks = _collectBridgeDecks(track);
+  if (decks.length > 0 && decks.length < 128) {
+    let onDeck = -1;
+    for (let pass = 0; pass < 2; pass++) {
+      for (let k = 0; k < samples.length; k++) {
+        const s = samples[k];
+        let inDeck = -1;
+        let deckY = 0;
+        for (let di = 0; di < decks.length; di++) {
+          const dy = decks[di].heightAt(s.x, s.z);
+          if (dy != null) { inDeck = di; deckY = dy; break; }
+        }
+        if (inDeck === -1) {
+          onDeck = -1;
+        } else if (onDeck !== inDeck) {
+          onDeck = (deckY - track.getHeightAt(s.x, s.z)) <= WEAR_DECK_RAMP_CLEARANCE ? inDeck : -1;
+        }
+        if (pass === 1) sampleOnDeck[k] = onDeck;
+      }
+    }
+  }
 
   const rng = _createSeededRandom(wear.seed);
   const waterDepthAt = createWaterDepthSampler(track);
@@ -390,6 +465,10 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
     lane.presenceFn = makePresenceFn();
   }
 
+  // Set per sample before its lanes are stamped; recorded on each stamp so the
+  // bake can route deck stamps to a separate overlay (see bakeAiPathWear).
+  let currentOnDeck = -1;
+
   const stamp = (centerX, centerZ, tangentX, tangentZ, lane) => {
     const normalX = -tangentZ;
     const normalZ = tangentX;
@@ -403,10 +482,12 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
       sx, sy, tangentX, tangentZ, normalX, normalZ,
       radiusX: lane.radiusX, radiusY: lane.radiusY,
       alpha: lane.alpha, lighten: lane.lighten,
+      onDeck: currentOnDeck,
     });
   };
 
   for (let i = 0; i < samples.length; i++) {
+    currentOnDeck = sampleOnDeck[i];
     const prev = samples[(i - 1 + samples.length) % samples.length];
     const curr = samples[i];
     const next = samples[(i + 1) % samples.length];
@@ -546,6 +627,9 @@ const RUT_OPACITY  = 0.85; // how strongly ruts override the underlying normals
 
 let _wearBakeCache = null;
 let _rutLayerBuffer = null;
+let _wearDeckAccumBuffer = null;
+let _wearTerrainOverlayOut = null;
+let _wearDeckOverlayOut = null;
 
 /**
  * Rasterize the AI-path wear once into both layers that consume it: the colour
@@ -605,14 +689,19 @@ export function bakeAiPathWear(track, textureSize = 2048, worldWidth = 160, worl
     digest = (digest * 31 + Math.round(s.radiusY * 64)) | 0;
     digest = (digest * 31 + Math.round(s.tangentX * 4096)) | 0;
     digest = (digest * 31 + Math.round(s.normalX * 4096)) | 0;
-    digest = (digest * 31 + (s.lighten ? 1 : 0) + (rutEligible[i] ? 2 : 0)) | 0;
+    digest = (digest * 31 + (s.lighten ? 1 : 0) + (rutEligible[i] ? 2 : 0) + ((s.onDeck ?? -1) + 1) * 4) | 0;
   }
   if (_wearBakeCache?.digest === digest) return _wearBakeCache.result;
 
   // R: lighten, G: darken (B/A unused). Stamps accumulate, so the reused
-  // scratch buffer must start from zero.
+  // scratch buffer must start from zero. Two overlays: `overlay` is the
+  // ground-level wear (terrain samples it), `deckAccum` is only the stamps
+  // where the racing line runs ON a bridge deck (the deck material samples
+  // that instead, so a path passing UNDER a deck doesn't print onto it).
   const overlay = _wearAccumBuffer = _getScratchBuffer(_wearAccumBuffer, width * height * 4);
   overlay.fill(0);
+  const deckAccum = _wearDeckAccumBuffer = _getScratchBuffer(_wearDeckAccumBuffer, width * height * 4);
+  deckAccum.fill(0);
   // Premultiplied RGB + coverage, so overlapping stamps compose the same way
   // they did when each was drawn straight onto the canvas.
   const rut = _rutLayerBuffer = _getScratchBuffer(_rutLayerBuffer, width * height * 4, Float32Array);
@@ -621,14 +710,18 @@ export function bakeAiPathWear(track, textureSize = 2048, worldWidth = 160, worl
   for (let i = 0; i < stamps.length; i++) {
     const stamp = stamps[i];
     const lighten = stamp.lighten;
-    const ruts = rutEligible[i];
+    const onDeck = (stamp.onDeck ?? -1) !== -1;
+    const target = onDeck ? deckAccum : overlay;
+    // Bridge decks build their own tiled bump map, not the terrain composite,
+    // so deck stamps contribute colour only — never rut relief.
+    const ruts = !onDeck && rutEligible[i];
 
     forEachStampPixel(stamp, width, height, edgeSoftness, (x, y, weight, acrossNorm) => {
       const base = (y * width + x) * 4;
 
       const contribution = Math.round(weight * 255);
-      if (lighten) overlay[base] = Math.min(255, overlay[base] + contribution);
-      else overlay[base + 1] = Math.min(255, overlay[base + 1] + contribution);
+      if (lighten) target[base] = Math.min(255, target[base] + contribution);
+      else target[base + 1] = Math.min(255, target[base + 1] + contribution);
 
       if (!ruts) return;
       // Groove cross-section: no tilt at the centre, walls tilt toward the
@@ -651,12 +744,26 @@ export function bakeAiPathWear(track, textureSize = 2048, worldWidth = 160, worl
   }
 
   const pixelsPerUnit = (pixelsPerUnitX + pixelsPerUnitZ) * 0.5;
+  const blurRadius = Math.max(1, pixelsPerUnit * 0.12);
+  // `_blurAlpha` returns a shared scratch buffer, so a second call clobbers the
+  // first — copy each blurred overlay into its own persistent buffer.
+  const terrainBlur = _blurAlpha(overlay, width, height, blurRadius);
+  _wearTerrainOverlayOut = _getScratchBuffer(_wearTerrainOverlayOut, terrainBlur.length);
+  _wearTerrainOverlayOut.set(terrainBlur);
+  // deckAccum is all-zero unless the racing line actually runs on a deck —
+  // skip the blur pass entirely on the common (no-bridge) path.
+  const anyDeck = stamps.some((s) => (s.onDeck ?? -1) !== -1);
+  const deckBlur = anyDeck ? _blurAlpha(deckAccum, width, height, blurRadius) : deckAccum;
+  _wearDeckOverlayOut = _getScratchBuffer(_wearDeckOverlayOut, deckBlur.length);
+  _wearDeckOverlayOut.set(deckBlur);
+
   const result = {
     width,
     height,
-    overlay: _blurAlpha(overlay, width, height, Math.max(1, pixelsPerUnit * 0.12)),
+    overlay: _wearTerrainOverlayOut,
+    deckOverlay: _wearDeckOverlayOut,
     rut,
-    hasRuts: rutEligible.some(Boolean) && stamps.length > 0,
+    hasRuts: stamps.some((s, i) => rutEligible[i] && (s.onDeck ?? -1) === -1),
   };
   _wearBakeCache = { digest, result };
   return result;
@@ -669,5 +776,16 @@ export function bakeAiPathWear(track, textureSize = 2048, worldWidth = 160, worl
 export function buildTerrainWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
   const { width, height, overlay } = bakeAiPathWear(track, textureSize, worldWidth, worldDepth);
   return { width, height, data: overlay };
+}
+
+/**
+ * The deck-only wear colour overlay — the stamps where the racing line runs on
+ * a bridge deck, with the ground-level stamps removed. Bridge deck materials
+ * sample this in place of the terrain overlay so wear from a path passing
+ * *under* a deck doesn't print onto it. Shares the cached bake.
+ */
+export function buildBridgeDeckWearOverlayPixelData(track, textureSize = 2048, worldWidth = 160, worldDepth = worldWidth) {
+  const { width, height, deckOverlay } = bakeAiPathWear(track, textureSize, worldWidth, worldDepth);
+  return { width, height, data: deckOverlay };
 }
 

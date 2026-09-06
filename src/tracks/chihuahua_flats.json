@@ -4,12 +4,12 @@
   "packId": null,
   "hidden": false,
   "dirtChunks": true,
+  "grassBlades": true,
   "oobDeadSpace": false,
   "borderWall": {
     "enabled": true,
-    "thickness": 2,
-    "height": 24,
-    "color": "#808080"
+    "thickness": 3,
+    "height": 12
   },
   "name": "Chihuahua Flats",
   "image": "chihuahua_flats.jpg",
@@ -452,13 +452,18 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 89.08925577903292,
-          "z": -88.35364195212318,
+          "x": 89.62300435135205,
+          "z": -89.61927681012455,
           "radius": 10
         },
         {
-          "x": 110.53256215240381,
-          "z": -67.6029966957653,
+          "x": 108.34422293369909,
+          "z": -77.9839362102296,
+          "radius": 10
+        },
+        {
+          "x": 119.84305439867593,
+          "z": -59.82393070523595,
           "radius": 10
         },
         {
@@ -472,8 +477,8 @@
           "radius": 16
         },
         {
-          "x": 94.96854601605187,
-          "z": 8.692341337175314,
+          "x": 89.80137007923325,
+          "z": 12.094472083638657,
           "radius": 10
         }
       ],
@@ -482,7 +487,8 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 0.85
+      "edgeShape": 0.85,
+      "endTaper": true
     },
     {
       "type": "hill",
@@ -511,7 +517,7 @@
     {
       "type": "squareHill",
       "centerX": 31.480887743944887,
-      "centerZ": 2.4693755644124664,
+      "centerZ": 4.469375564412466,
       "width": 18,
       "depth": 31.5,
       "angle": 74,
@@ -693,8 +699,8 @@
           "smoothing": 0
         }
       ],
-      "height": 2,
-      "collisionHeight": 7,
+      "height": 5.5,
+      "collisionHeight": 5.5,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": true,
@@ -706,8 +712,8 @@
       "type": "polyWall",
       "points": [
         {
-          "x": 99.22,
-          "z": 14.51,
+          "x": 100.22,
+          "z": 15.01,
           "radius": 6.5
         },
         {
@@ -732,7 +738,7 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 2,
+      "collisionHeight": 4,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": true,
@@ -744,8 +750,8 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 96.99146300780639,
-          "z": 13.814504969880389,
+          "x": 91.20217462601089,
+          "z": 10.233241252678894,
           "radius": 10
         },
         {
@@ -769,14 +775,15 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 1
+      "edgeShape": 1,
+      "endTaper": true
     },
     {
       "type": "polyWall",
       "points": [
         {
-          "x": 83.44,
-          "z": -89.12,
+          "x": 87.44,
+          "z": -88.62,
           "radius": 0
         },
         {
@@ -1066,7 +1073,7 @@
     {
       "type": "squareHill",
       "centerX": 84.79567299296386,
-      "centerZ": -72.69307233441702,
+      "centerZ": -73.69307233441702,
       "width": 21,
       "depth": 20.5,
       "angle": 19,
@@ -1113,14 +1120,14 @@
       "background": "white",
       "primaryColor": "red",
       "scale": 2.2,
-      "heightOffset": 0,
+      "heightOffset": 0.4,
       "width": 10,
       "logoScale": 1.25
     },
     {
       "type": "trackSign",
-      "x": 60.12766960761601,
-      "z": 50.3436398498235,
+      "x": 61.5650437584483,
+      "z": 53.500215403898835,
       "name": "Track Name",
       "rotation": 0.05235987755982989,
       "contentType": "brand",
@@ -1128,7 +1135,7 @@
       "background": "white",
       "primaryColor": "red",
       "scale": 2.2,
-      "heightOffset": 0,
+      "heightOffset": 0.6,
       "width": 10,
       "logoScale": 1.25
     },
@@ -1425,19 +1432,6 @@
       "opacity": 1
     },
     {
-      "type": "surfaceDecal",
-      "centerX": -22.710180826853563,
-      "centerZ": -19.57592737937346,
-      "shape": "arrow",
-      "color": "white",
-      "count": 3,
-      "outline": false,
-      "width": 4,
-      "depth": 4,
-      "angle": 170,
-      "opacity": 1
-    },
-    {
       "type": "hill",
       "centerX": -57.881009634554005,
       "centerZ": -14.042493807940524,
@@ -1484,13 +1478,13 @@
       "centerX": -45.43375064781432,
       "centerZ": -77.66028761938452,
       "shape": "text",
-      "color": "red",
+      "color": "white",
       "count": 3,
       "outline": false,
       "width": 22.5,
       "depth": 15.5,
       "angle": 90,
-      "opacity": 0.8,
+      "opacity": 0.65,
       "text": "CHIHUAHUA"
     },
     {
@@ -1498,7 +1492,7 @@
       "centerX": -36.171584026937566,
       "centerZ": -81.23457384833024,
       "shape": "text",
-      "color": "red",
+      "color": "white",
       "count": 3,
       "outline": false,
       "width": 27.5,
@@ -1700,6 +1694,383 @@
       "depth": 17.5,
       "angle": 0,
       "opacity": 0.6
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -121.7137157959859,
+      "z": -20.98179063339279,
+      "color": "green",
+      "scale": 1,
+      "seed": 7,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -116.94559330767834,
+      "z": -22.662511381828708,
+      "color": "green",
+      "scale": 1,
+      "seed": 18,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -124.44559330767834,
+      "z": -14.162511381828708,
+      "color": "green",
+      "scale": 1.4,
+      "seed": 25,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -122.09364515571417,
+      "z": -24.012972933602715,
+      "color": "green",
+      "scale": 1,
+      "seed": 6,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "outOfBounds",
+      "shape": "polygon",
+      "x": 63.80216461752831,
+      "z": 0.5880406397997078,
+      "radius": 15,
+      "points": [
+        {
+          "x": 34.029057924807894,
+          "z": -24.138835876499762
+        },
+        {
+          "x": 36.89617100672513,
+          "z": -25.315820608300946
+        },
+        {
+          "x": 64.35892120024651,
+          "z": -0.009164693742739871
+        },
+        {
+          "x": 88.21678405853197,
+          "z": 5.093693245473087
+        },
+        {
+          "x": 95.62214153755406,
+          "z": 11.786815656179147
+        },
+        {
+          "x": 73.46018728762795,
+          "z": 17.162454806684387
+        },
+        {
+          "x": 54.03188930720466,
+          "z": 19.537141948804788
+        }
+      ]
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -125.40304946511172,
+      "z": 73.97492116767967,
+      "color": "green",
+      "scale": 1,
+      "seed": 18,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -116.14416194912407,
+      "z": 79.3744206767662,
+      "color": "green",
+      "scale": 1.5,
+      "seed": 29,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -123.64416194912407,
+      "z": 82.3744206767662,
+      "color": "green",
+      "scale": 2.3,
+      "seed": 36,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.1868238913561442
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -119.64416194912407,
+      "z": 85.3744206767662,
+      "color": "green",
+      "scale": 1,
+      "seed": 9,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.1868238913561442
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -103.52662839973281,
+      "z": -19.25312922382888,
+      "color": "green",
+      "scale": 1,
+      "seed": 6,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 124.71181810861394,
+      "z": 15.917695742313867,
+      "color": "green",
+      "scale": 1,
+      "seed": 23,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.7278759594743862
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 117.7603067827108,
+      "z": 14.617367853506124,
+      "color": "green",
+      "scale": 1.7,
+      "seed": 3,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 0.8901179185171081
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 124.72750231238864,
+      "z": 6.892763584997994,
+      "color": "green",
+      "scale": 1,
+      "seed": 21,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.7278759594743862
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -74.13670639293272,
+        4.9195844488897364,
+        100
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "roll-fast.png",
+      "width": 30,
+      "height": 30,
+      "opacity": 0.9
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -86.23238209925485,
+        5.666475317246892,
+        103
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "roll-fast.png",
+      "width": 30,
+      "height": 30,
+      "opacity": 1
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -40.30383832358282,
+        5.744830651391169,
+        103.00000000000001
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "roll-fast.png",
+      "width": 30,
+      "height": 30,
+      "opacity": 1
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -74.13670639293272,
+        4.9195844488897364,
+        103
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "roll-fast.png",
+      "width": 30,
+      "height": 30,
+      "opacity": 0.9
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -7.665372291568135,
+        4.635760688759049,
+        100
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "roll": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "roll-fast.png",
+      "width": 30,
+      "height": 30,
+      "opacity": 0.95
+    },
+    {
+      "type": "wallDecal",
+      "position": [
+        -21.44448115952727,
+        2.269024581941764,
+        -10.580925427290826
+      ],
+      "normal": [
+        -0.032736573743220004,
+        0,
+        -0.9994640147296725
+      ],
+      "roll": -91,
+      "shape": "arrow",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "text": "TEXT",
+      "brand": "energizer-racing.png",
+      "width": 7,
+      "height": 7,
+      "opacity": 1
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 21.78308067703962,
+      "z": -58.93368606750178,
+      "color": "green",
+      "scale": 1,
+      "seed": 11,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 26.146171888126336,
+      "z": -54.98748054549596,
+      "color": "green",
+      "scale": 0.8,
+      "seed": 38,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": 18.499769519589393,
+      "z": -53.78107309701337
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": 13.999769519589393,
+      "z": -50.78107309701337,
+      "heading": 0.8203047484373349,
+      "scale": 0.7
     }
   ]
 }

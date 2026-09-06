@@ -1,0 +1,21 @@
+{
+  "id": "cactus",
+  "name": "Cactus (procedural)",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "defaultColor": "green",
+  "defaultScale": 1,
+  "bodyColor": "green",
+  "colliderMeshes": ["trunk"],
+  "colliderFriction": 0.9,
+  "castsShadows": true,
+  "featureDefaults": {
+    "seed": 1,
+    "trunkHeight": 3.2,
+    "trunkRadius": 0.42,
+    "ribs": 8,
+    "collider": false
+  },
+  "editable": { "color": true, "scale": true, "heading": true }
+}
