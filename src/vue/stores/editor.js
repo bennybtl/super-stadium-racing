@@ -333,6 +333,7 @@ export const useEditorStore = defineStore('editor', () => {
     blendWidth: 0,
     cornerRadius: 0,
     closed: false,
+    roughness: 0,
     terrainType: 'mud',
   });
 

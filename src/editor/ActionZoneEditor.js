@@ -3,6 +3,7 @@ import { EditorMaterials } from './EditorMaterials.js';
 import { FireworkLaunchers } from '../objects/FireworkLaunchers.js';
 import { DEFAULT_SPARK_COLOR } from '../objects/sparkColors.js';
 import { FireworksManager } from '../managers/FireworksManager.js';
+import { polylineCentroid } from '../utils/polyline-utils.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 /** Height of the zone cylinder gizmo in world units. */
@@ -215,7 +216,7 @@ export class ActionZoneEditor {
           { x: cx - r * 0.85, z: cz + r },
         ];
       }
-      const c = this._getPolygonCenter(feature.points);
+      const c = polylineCentroid(feature.points);
       feature.x = c.x;
       feature.z = c.z;
       feature.radius = feature.radius ?? 15;
@@ -255,7 +256,7 @@ export class ActionZoneEditor {
     const { feature } = zoneData;
     const mats = this._getMaterialsForZoneType(feature.zoneType);
 
-    const center = this._getPolygonCenter(feature.points);
+    const center = polylineCentroid(feature.points);
     const handle = MeshBuilder.CreateSphere('azPolyHandle', { diameter: 1.7, segments: 10 }, this.scene);
     handle.position = new Vector3(center.x, gizmoY(this.track, center.x, center.z), center.z);
     handle.material = mats.handle;
@@ -371,17 +372,6 @@ export class ActionZoneEditor {
     else zoneData.launchers = new FireworkLaunchers(zoneData.feature, this.track, this.scene, { editorTint: true });
   }
 
-  _getPolygonCenter(points) {
-    if (!points?.length) return { x: 0, z: 0 };
-    let sx = 0;
-    let sz = 0;
-    for (const p of points) {
-      sx += p.x;
-      sz += p.z;
-    }
-    return { x: sx / points.length, z: sz / points.length };
-  }
-
   // ── Lookup ────────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
@@ -469,7 +459,7 @@ export class ActionZoneEditor {
       pt.x = e._snap(e._rawDragPos.x, 'x');
       pt.z = e._snap(e._rawDragPos.z, 'z');
 
-      const c = this._getPolygonCenter(feature.points);
+      const c = polylineCentroid(feature.points);
       feature.x = c.x;
       feature.z = c.z;
 
@@ -585,7 +575,7 @@ export class ActionZoneEditor {
     this._selectedPointIndex = fromIdx + 1;
     this.editor._rawDragPos = { x: next.x, z: next.z };
 
-    const c = this._getPolygonCenter(feature.points);
+    const c = polylineCentroid(feature.points);
     feature.x = c.x;
     feature.z = c.z;
 
@@ -603,7 +593,7 @@ export class ActionZoneEditor {
     feature.points.splice(this._selectedPointIndex, 1);
     this._selectedPointIndex = Math.min(this._selectedPointIndex, feature.points.length - 1);
 
-    const c = this._getPolygonCenter(feature.points);
+    const c = polylineCentroid(feature.points);
     feature.x = c.x;
     feature.z = c.z;
 
@@ -770,7 +760,7 @@ export class ActionZoneEditor {
       this.editor._rawDragPos = { x: cx, z: cz };
     } else {
       const pts = feature.points ?? [];
-      const c = this._getPolygonCenter(pts);
+      const c = polylineCentroid(pts);
       let avgDist = 15;
       if (pts.length) {
         let sum = 0;

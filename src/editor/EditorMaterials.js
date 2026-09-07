@@ -9,9 +9,9 @@ export { Color3 };
 // Centralised here so every colour in the editor lives in one file.
 
 export const LINE_COLOR_MESH_GRID   = basicColors.teal.diffuse; // teal
-export const LINE_COLOR_POLY_WALL   = basicColors.orange.diffuse;  // orange
+export const LINE_COLOR_POLY_WALL   = basicColors.teal.diffuse;  // teal (matches polyCurb)
 export const LINE_COLOR_POLY_HILL   = basicColors.green.diffuse;  // green
-export const LINE_COLOR_POLY_CURB   = basicColors.red.diffuse;  // red
+export const LINE_COLOR_POLY_CURB   = basicColors.teal.diffuse;  // teal (matches its nodes + polyWall)
 export const LINE_COLOR_TERRAIN_SHAPE = new Color3(0.76, 0.60, 0.42); // matches terrain-shape handle hue
 export const LINE_COLOR_SURFACE_DECAL = basicColors.white.diffuse; // matches decal handle hue
 
@@ -100,11 +100,11 @@ export class EditorMaterials {
   // ── Shared ────────────────────────────────────────────────────────────────
 
   // Selected-node highlights for the polyline editors. Each keeps its editor's
-  // hue (wall = red, hill = green, curb = teal) and goes solid + lit, matching
+  // hue (wall = teal, hill = green, curb = teal) and goes solid + lit, matching
   // the shared "selected = same colour, solid" convention (previously all yellow).
   get polyWallNodeSelected() {
     return this._get('polyWallNodeSelected', s => makeSelectedMat('edPolyWallNodeSel', s, {
-      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
+      diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive,
     }));
   }
 
@@ -172,20 +172,6 @@ export class EditorMaterials {
     return this._get('aiWaypointBranchSel', s => makeSelectedMat('edAiWaypointBranchSel', s, AI_WAYPOINT_BRANCH));
   }
 
-  // ── Terrain Path ──────────────────────────────────────────────────────────
-
-  /**
-   * Clone template for terrain-path waypoints. Each waypoint clones this and
-   * re-tints it with its feature's terrain colour, so the green here is only a
-   * fallback — what matters is the shared alpha/specular baseline.
-   */
-  get terrainPathWaypoint() {
-    return this._get('terrainPathWaypoint', s => makeMat('edTerrainPathWpt', s, {
-      diffuse: [0.2, 0.8, 0.4], emissive: [0.1, 0.3, 0.15],
-      specular: [0, 0, 0], alpha: RESTING_ALPHA,
-    }));
-  }
-
   // ── Mesh Grid ─────────────────────────────────────────────────────────────
 
   /** Teal grid-node sphere. */
@@ -236,19 +222,21 @@ export class EditorMaterials {
   }
 
   // ── Poly Wall ─────────────────────────────────────────────────────────────
+  // Teal, matching polyCurb — the two tools behave the same and the shared hue
+  // keeps the editor palette simple.
 
-  /** Orange node sphere (inactive wall). */
+  /** Teal node sphere (inactive wall). */
   get polyWallNode() {
     return this._get('polyWallNode', s => makeMat('edPolyWallNode', s, {
-      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
+      diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive,
       alpha: RESTING_ALPHA,
     }));
   }
 
-  /** Bright orange node sphere (active wall). */
+  /** Bright teal node sphere (active wall). */
   get polyWallNodeActive() {
     return this._get('polyWallNodeActive', s => makeMat('edPolyWallNodeActive', s, {
-      diffuse: basicColors.red.diffuse, emissive: basicColors.red.emissive,
+      diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive,
       alpha: 0.90,
     }));
   }

@@ -472,6 +472,31 @@ export class Track {
           break;
         }
 
+        case "terrainPath": {
+          // Roughness breaks up the painted corridor the same way a `terrain`
+          // region does (see below): procedural jitter that fades in from the
+          // strip edge over `blendWidth` so it never creases against the
+          // surrounding ground. Flat paint (no roughness) adds no height.
+          const roughness = feature.roughness;
+          if (!roughness) break;
+          const pts = feature.points;
+          if (!pts || pts.length < 2) break;
+          const halfWidth = (feature.width ?? 8) / 2;
+          const margin = Math.max(1, feature.blendWidth ?? 0);
+          const closed = feature.closed ?? false;
+          const cornerRadius = feature.cornerRadius ?? 0;
+          const exp = this._getExpandedPolyline(
+            feature, pts, closed, cornerRadius > 0.1 ? cornerRadius : null
+          );
+          if (x < exp.minX - halfWidth || x > exp.maxX + halfWidth ||
+              z < exp.minZ - halfWidth || z > exp.maxZ + halfWidth) break;
+          const minDist = distToPolyline(x, z, exp.points, closed);
+          if (!Number.isFinite(minDist) || minDist >= halfWidth) break;
+          const mask = Math.max(0, Math.min(1, (halfWidth - minDist) / margin));
+          totalHeight += ROUGHNESS_NOISE(x, z) * ROUGHNESS_JITTER_AMPLITUDE * roughness * mask;
+          break;
+        }
+
         case "terrain": {
           // Roughness adds the same procedural breakup as the outside border
           // (see ROUGHNESS_NOISE below), fading in from the shape's edge so it
@@ -874,6 +899,20 @@ export class Track {
         return {
           minX: feature.centerX - r, maxX: feature.centerX + r,
           minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
+        };
+      }
+      case "terrainPath": {
+        if (!feature.roughness) return { minX: 0, maxX: 0, minZ: 0, maxZ: 0 }; // flat paint — no height
+        const { points, closed = false } = feature;
+        if (!points || points.length < 2) return { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
+        const halfWidth = (feature.width ?? 8) / 2;
+        const cornerRadius = feature.cornerRadius ?? 0;
+        const exp = this._getExpandedPolyline(
+          feature, points, closed, cornerRadius > 0.1 ? cornerRadius : null
+        );
+        return {
+          minX: exp.minX - halfWidth, maxX: exp.maxX + halfWidth,
+          minZ: exp.minZ - halfWidth, maxZ: exp.maxZ + halfWidth,
         };
       }
       default:

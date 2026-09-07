@@ -1,4 +1,4 @@
-import rebuild from './editor-rebuild.js';
+import rebuild, { REBUILD_DEBOUNCE_MS } from './editor-rebuild.js';
 // Debounce helper (simple, per-instance)
 function debounce(fn, delay = 100) {
   let timer = null;
@@ -8,7 +8,7 @@ function debounce(fn, delay = 100) {
   };
 }
 import { Vector3, MeshBuilder, Color3, Color4 } from "@babylonjs/core";
-import { EditorMaterials, RESTING_ALPHA, SELECTED_ALPHA } from './EditorMaterials.js';
+import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../world/terrain.js';
 import { expandPolyline } from '../utils/polyline-utils.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
@@ -31,9 +31,12 @@ const FALLBACK_COLOR = new Color3(0.5, 0.5, 0.5);
  */
 export class TerrainPathEditor {
     _debouncedTerrainRebuild = debounce(() => {
+      // Re-sample ground heights for the active feature — a no-op cost when it
+      // carries no roughness, but the corridor's jitter rides on the mesh.
+      if (this.activeFeature) rebuild.terrain?.(this.activeFeature);
       rebuild.terrainGrid?.();
       rebuild.terrainTexture?.(false, { wear: false });
-    }, 300);
+    }, REBUILD_DEBOUNCE_MS);
   constructor(editor) {
     this.editor = editor;
     /** @type {{ feature: object, pointIndex: number, mesh: BABYLON.Mesh }[]} */
@@ -44,8 +47,10 @@ export class TerrainPathEditor {
     /** @type {Map<object, BABYLON.Mesh>} feature → line mesh */
     this.lineMeshes = new Map();
 
-    // Clone template for waypoint materials; each handle owns a tinted clone.
-    this.material = null;
+    // Shared { handle, selected } gizmo material pair — same light-brown look as
+    // the TerrainShapeEditor handles. The terrain-type tint lives on the
+    // connecting line instead (see _rebuildLineForFeature).
+    this.mats = null;
   }
 
   get scene() { return this.editor.scene; }
@@ -53,28 +58,13 @@ export class TerrainPathEditor {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   activate(scene, track) {
-    this.material = EditorMaterials.for(scene).terrainPathWaypoint;
+    this.mats = EditorMaterials.for(scene).handleMaterials('terrain');
     this._buildFromTrack(track);
   }
 
-  /**
-   * Apply the resting / selected look to a waypoint's own (terrain-tinted)
-   * material. The tint itself never changes — selection is the shared alpha
-   * jump to solid plus a brighter emissive, matching every other gizmo. This
-   * used to brighten diffuseColor instead, which read as a colour change.
-   */
+  /** Swap a waypoint between the shared resting / selected gizmo materials. */
   _applyHandleState(handle, selected) {
-    const col = this._colorForFeature(handle.feature);
-    const mat = handle.mesh.material;
-    mat.diffuseColor  = col;
-    mat.emissiveColor = selected
-      ? new Color3(
-          Math.min(1, col.r * 0.4 + 0.25),
-          Math.min(1, col.g * 0.4 + 0.25),
-          Math.min(1, col.b * 0.4 + 0.25),
-        )
-      : col.scale(0.4);
-    mat.alpha = selected ? SELECTED_ALPHA : RESTING_ALPHA;
+    handle.mesh.material = selected ? this.mats.selected : this.mats.handle;
   }
 
   dispose() {
@@ -126,13 +116,11 @@ export class TerrainPathEditor {
     const mesh = MeshBuilder.CreateSphere(`tpWpt_${index}_${Date.now()}`, { diameter: 1.4, segments: 6 }, this.scene);
     mesh.position  = new Vector3(pt.x, y, pt.z);
 
-    // Each waypoint owns a clone so it can carry its feature's terrain tint.
-    const mat = this.material.clone('tpWptMat_' + Date.now());
-    mesh.material  = mat;
+    mesh.material  = this.mats.handle;
     mesh.isPickable = true;
     mesh._tpIndex   = index;
 
-    const handle = { feature, pointIndex: index, mesh, mat };
+    const handle = { feature, pointIndex: index, mesh };
     this._applyHandleState(handle, false);
     this.handles.push(handle);
     return handle;
@@ -221,7 +209,7 @@ export class TerrainPathEditor {
       x: handle.feature.points[handle.pointIndex].x,
       z: handle.feature.points[handle.pointIndex].z,
     };
-    this._showProperties();
+    this.syncPanel();
   }
 
   deselect() {
@@ -402,7 +390,7 @@ export class TerrainPathEditor {
     this._rebuildLineForFeature(feature);
     this.activeFeature = feature;
     this._scheduleTerrainRebuild();
-    this._showProperties();
+    this.syncPanel();
   }
 
   /** Toggle whether the path forms a closed loop. */
@@ -438,7 +426,9 @@ export class TerrainPathEditor {
 
   // ── Properties panel ─────────────────────────────────────────────────────
 
-  _showProperties() {
+  /** Mirror the active feature's props into the panel store. Also the controller's
+   *  post-create sync — the single source of truth for the terrainPath panel. */
+  syncPanel() {
     const s = this.editor._editorStore;
     if (!s || !this.activeFeature) return;
     const f = this.activeFeature;
@@ -446,6 +436,7 @@ export class TerrainPathEditor {
     s.terrainPath.blendWidth   = f.blendWidth ?? 0;
     s.terrainPath.cornerRadius = f.cornerRadius ?? 0;
     s.terrainPath.closed       = f.closed ?? false;
+    s.terrainPath.roughness    = f.roughness ?? 0;
     s.terrainPath.terrainType  = f.terrainType?.name ?? 'mud';
     s.selectedType = 'terrainPath';
   }
@@ -479,14 +470,20 @@ export class TerrainPathEditor {
     this._scheduleTerrainRebuild();
   }
 
+  changeRoughness(val) {
+    if (!this.activeFeature) return;
+    this.editor.saveSnapshot(true);
+    this.activeFeature.roughness = Math.max(0, Math.min(1, val));
+    this._scheduleTerrainRebuild();
+  }
+
   changeTerrainType(name) {
     if (!this.activeFeature) return;
     this.editor.saveSnapshot();
     const entry = Object.values(TERRAIN_TYPES).find(t => t.name === name);
     this.activeFeature.terrainType = entry || null;
-    // Refresh handle colors
-    this._rebuildHandlesForFeature(this.activeFeature);
-    this._rebuildLineForFeature(this.activeFeature);
+    this._rebuildLineForFeature(this.activeFeature); // re-tint the connecting line
+
     this._scheduleTerrainRebuild();
   }
 

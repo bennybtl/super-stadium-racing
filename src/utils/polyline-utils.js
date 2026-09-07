@@ -246,6 +246,17 @@ export function polylineEndTaper(x, z, points) {
 }
 
 /**
+ * Arithmetic mean of an XZ point list — the "center" a polyline/polygon feature
+ * editor drags by and stores as its centroid. Empty list → origin.
+ */
+export function polylineCentroid(points) {
+  if (!points?.length) return { x: 0, z: 0 };
+  let sx = 0, sz = 0;
+  for (const p of points) { sx += p.x; sz += p.z; }
+  return { x: sx / points.length, z: sz / points.length };
+}
+
+/**
  * Ray-casting point-in-polygon test over an XZ point list.
  *
  * The `|| 1e-8` guards a horizontal edge, where zj - zi is zero and the

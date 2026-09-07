@@ -698,6 +698,12 @@ export class EditorController {
         event.stopPropagation();
         return;
       }
+      if (this._editorStore?.selectedType === 'polyHill') {
+        this.closePolyHill();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (this._editorStore?.selectedType === 'obstacle') {
         this.closeObstacle();
         event.preventDefault();
@@ -1536,18 +1542,13 @@ export class EditorController {
           if (this._selectViaPointEditor(this.bridgeMeshEditor, bmSphere ?? clickedMesh)) return;
         }
 
-        // Poly wall control points
-        if (this._selectViaPointEditor(this.polyWallEditor, clickedMesh)) return;
-
-        // Poly hill control points. Dedicated pick limited to the hill's own
-        // spheres so the pickable ground mesh can't occlude the handles.
-        if (this.polyHillEditor) {
-          const phSphere = this.polyHillEditor.pickControlPoint();
-          if (this._selectViaPointEditor(this.polyHillEditor, phSphere ?? clickedMesh)) return;
+        // Poly wall / hill / curb control points. Each uses a dedicated pick
+        // limited to its own spheres so the pickable ground mesh can't occlude
+        // a half-buried handle.
+        for (const ed of [this.polyWallEditor, this.polyHillEditor, this.polyCurbEditor]) {
+          if (!ed) continue;
+          if (this._selectViaPointEditor(ed, ed.pickControlPoint() ?? clickedMesh)) return;
         }
-
-        // Poly curb control points
-        if (this._selectViaPointEditor(this.polyCurbEditor, clickedMesh)) return;
 
         // Action zone center/point handles
         if (this._selectViaPointEditor(this.actionZoneEditor, clickedMesh)) return;
@@ -2036,7 +2037,12 @@ export class EditorController {
   deletePolyHillPoint()         { this.polyHillEditor.deleteSelectedPoint(); }
   deletePolyHill()              { this.polyHillEditor.deletePolyHill(); }
   duplicatePolyHill()           { this.polyHillEditor.duplicatePolyHill(); }
-  deselectPolyHill()            { this.polyHillEditor.deselectPoint(); }
+  deselectPolyHill()            { this.closePolyHill(); }
+  /** polyHill has no point-placement mode, so closing the panel just ends the edit. */
+  closePolyHill() {
+    this.polyHillEditor.deselect();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
 
   // ── Track Sign Vue bridge methods ──
   addStartPositionEntity()          { this.startPositionEditor.addEntity(); }
@@ -2288,7 +2294,7 @@ export class EditorController {
     this.terrainPathEditor.createNewPath();
     if (this._editorStore) this._editorStore.selectedType = 'terrainPath';
     this.hideAddMenu();
-    this._syncTerrainPathPanel();
+    this.terrainPathEditor.syncPanel();
   }
   deleteTerrainPathWaypoint()   { this.terrainPathEditor.deleteSelected(); }
   insertTerrainPathWaypoint()   { this.terrainPathEditor.insertAfterSelected(); }
@@ -2298,18 +2304,8 @@ export class EditorController {
   changeTerrainPathBlendWidth(val)     { this.terrainPathEditor.changeBlendWidth(val); }
   changeTerrainPathCornerRadius(val)   { this.terrainPathEditor.changeCornerRadius(val); }
   changeTerrainPathClosed(val)         { this.terrainPathEditor.setClosed(val); }
+  changeTerrainPathRoughness(val)      { this.terrainPathEditor.changeRoughness(val); }
   changeTerrainPathTerrainType(name)   { this.terrainPathEditor.changeTerrainType(name); }
-
-  _syncTerrainPathPanel() {
-    const s = this._editorStore;
-    if (!s || !this.terrainPathEditor.activeFeature) return;
-    const f = this.terrainPathEditor.activeFeature;
-    s.terrainPath.width        = f.width ?? 8;
-    s.terrainPath.blendWidth   = f.blendWidth ?? 0;
-    s.terrainPath.cornerRadius = f.cornerRadius ?? 0;
-    s.terrainPath.closed       = f.closed ?? false;
-    s.terrainPath.terrainType  = f.terrainType?.name ?? 'mud';
-  }
 
   /**
    * Dispose of the controller
@@ -2551,32 +2547,10 @@ export class EditorController {
       }
     }
 
-    if (this.polyWallEditor) {
-      for (const wg of this.polyWallEditor._wallGizmos || []) {
-        for (const m of wg.pointMeshes || []) {
-          if (m) m.isVisible = visible;
-        }
-        if (wg.lineSystem) wg.lineSystem.isVisible = visible;
-      }
-    }
-
-    if (this.polyHillEditor) {
-      for (const hg of this.polyHillEditor._hillGizmos || []) {
-        for (const m of hg.pointMeshes || []) {
-          if (m) m.isVisible = visible;
-        }
-        if (hg.lineSystem) hg.lineSystem.isVisible = visible;
-      }
-    }
-
-    if (this.polyCurbEditor) {
-      for (const cg of this.polyCurbEditor._curbGizmos || []) {
-        for (const m of cg.pointMeshes || []) {
-          if (m) m.isVisible = visible;
-        }
-        if (cg.lineSystem) cg.lineSystem.isVisible = visible;
-      }
-    }
+    // polyWall / polyHill / polyCurb share PolyPointEditor's handle pooling.
+    this.polyWallEditor?.setHandlesVisible?.(visible);
+    this.polyHillEditor?.setHandlesVisible?.(visible);
+    this.polyCurbEditor?.setHandlesVisible?.(visible);
 
     if (this.aiPathEditor) {
       for (const h of this.aiPathEditor.handles || []) {

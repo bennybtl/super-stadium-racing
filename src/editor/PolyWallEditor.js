@@ -1,522 +1,118 @@
-import { Vector3, MeshBuilder } from "@babylonjs/core";
 import rebuild from './editor-rebuild.js';
-import { EditorMaterials, LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
+import { LINE_COLOR_POLY_WALL } from './EditorMaterials.js';
 import { resolveStripeColorNames, normalizeStripeColors } from '../objects/stripeColors.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
-import { DEFAULT_CORNER_RADIUS } from '../utils/polyline-utils.js';
+import { PolyPointEditor } from './PolyPointEditor.js';
 
-/**
- * Editor – place and edit polyWall features in the track editor.
- *
- * Each control point is represented by a pickable sphere. Clicking a sphere
- * selects it; WASD moves it (via EditorController camera logic delegation) or
- * it can be dragged. The panel lets the user:
- *   • insert a point after the selected one
- *   • delete the selected point (minimum 2 kept)
- *   • set global wall height & thickness
- *   • close the panel (gizmos stay visible)
- *
- * Multiple polyWall features can exist; each gets its own PolyWallTool instance.
- * This tool manages ONE feature at a time (the "active" one). Clicking a gizmo
- * from a different feature switches focus.
- */
-// How far past the track perimeter poly-wall points may be dragged, matching the
-// dead-space band that surrounds the track (ground mesh = track + 20, i.e. +10 per
-// side; border walls sit ~1 unit beyond that). Lets walls be built in the dead space.
-const DEAD_SPACE_REACH = 10;
 // Gap the fence tubing fills when it is switched on and the collision height is
 // still level with (or barely above) the wall top.
 const DEFAULT_FENCE_HEIGHT = 2.5;
-export class PolyWallEditor {
-  constructor(editorController) {
-    this.ec    = editorController;
-    this.scene = null;
-    this.track = null;
 
-    // All poly wall gizmo sets, keyed by feature
-    this._wallGizmos = []; // [{ feature, pointMeshes, lineSystem }]
-    this._activeWall = null; // one entry from _wallGizmos
-
-    this.selectedPoint = null; // { wallGizmo, idx, mesh }
-
-    // Materials
-    this.normalMat    = null;
-    this.activeMat    = null;  // active-wall (not selected) points
-    this.highlightMat = null;
-  }
-
-  // ─── Lifecycle ────────────────────────────────────────────────────────────
-
-  activate(scene, track) {
-    this.scene = scene;
-    this.track = track;
-
-    const m = EditorMaterials.for(scene);
-    this.normalMat    = m.polyWallNode;         // inactive wall — faint
-    this.activeMat    = m.polyWallNodeActive;   // active wall — solid
-    this.highlightMat = m.polyWallNodeSelected; // selected node — solid + lit
-
-    // Build gizmos for any polyWalls already in the track
-    for (const f of track.features) {
-      if (f.type === 'polyWall') this._createWallGizmos(f);
-    }
-  }
-
-  deactivate() {
-    clearTimeout(this._rebuildTimer);
-    this._rebuildTimer = null;
-    this._destroyAllGizmos();
-    this.deselectPoint();
-    this._activeWall = null;
-    this.normalMat    = null;
-    this.activeMat    = null;
-    this.highlightMat = null;
-    this.scene = null;
-    this.track = null;
-  }
-
-  // ─── Adding a new poly wall ───────────────────────────────────────────────
-
-  /**
-   * Create an empty poly wall and enter placement mode. The user then
-   * right-clicks the terrain to drop control points one at a time (mirrors the
-   * AI Path / Terrain Path flow). Opening the panel (selectedType = 'polyWall')
-   * is what activates the right-click-to-add branch in EditorController.
-   */
-  addPolyWallFeature() {
-    const feature = {
-      type:      'polyWall',
-      points:    [],
-      height:          2,
-      collisionHeight: 2,
-      thickness:       0.5,
-      friction:        0.05,
-      closed:          false,
-      fence:           false,
-    };
-
-    this.ec.saveSnapshot();
-    this.track.features.push(feature);
-    const wg = this._createWallGizmos(feature);
-    this._setActiveWall(wg);
-    this._syncStoreToFeature(feature);
-    this._rebuildWall(feature);
-  }
-
-  /**
-   * Append a control point at (x, z) to the active wall and select it.
-   * Called from EditorController while in poly-wall placement mode.
-   */
-  addPoint(x, z) {
-    if (!this._activeWall) return;
-    this.ec.saveSnapshot();
-    const wg = this._activeWall;
-    wg.feature.points.push({
-      x: parseFloat(x.toFixed(2)),
-      z: parseFloat(z.toFixed(2)),
-      radius: DEFAULT_CORNER_RADIUS,
+/**
+ * PolyWallEditor — place and edit polyWall features. Control-point machinery
+ * (gizmos, drag+snap, insert/delete, duplicate, snapshot restore) lives in
+ * PolyPointEditor; this class adds the wall-specific geometry datum, rebuild
+ * calls, and the panel property setters.
+ *
+ * Created empty: the user right-clicks terrain to drop points (see
+ * EditorController's polyWall placement branch).
+ */
+export class PolyWallEditor extends PolyPointEditor {
+  constructor(ec) {
+    super(ec, {
+      featureType: 'polyWall',
+      lineColor: LINE_COLOR_POLY_WALL,
+      materials: { normal: 'polyWallNode', active: 'polyWallNodeActive', selected: 'polyWallNodeSelected' },
+      spherePrefix: 'pwPt_',
+      linePrefix: 'pwLines_',
     });
-    this._refreshWallGizmos(wg);
-    this.selectPoint(wg, wg.feature.points.length - 1);
-    this._rebuildWall(wg.feature);
   }
 
-  // ─── Gizmo management ─────────────────────────────────────────────────────
-
-  _createWallGizmos(feature) {
-    const pointMeshes = feature.points.map((pt, idx) =>
-      this._createPointSphere(feature, idx)
-    );
-    const lineSystem = this._buildLineSystem(feature);
-    const wg = { feature, pointMeshes, lineSystem };
-    this._wallGizmos.push(wg);
-    return wg;
+  _newFeature() {
+    return {
+      type: 'polyWall',
+      points: [],
+      height: 2,
+      collisionHeight: 2,
+      thickness: 0.5,
+      friction: 0.05,
+      closed: false,
+      fence: false,
+    };
   }
 
-  _destroyWallGizmos(wg) {
-    for (const m of wg.pointMeshes) m.dispose();
-    wg.pointMeshes = [];
-    if (wg.lineSystem) { wg.lineSystem.dispose(); wg.lineSystem = null; }
-    const idx = this._wallGizmos.indexOf(wg);
-    if (idx > -1) this._wallGizmos.splice(idx, 1);
-    if (this._activeWall === wg) this._activeWall = null;
-  }
-
-  _destroyAllGizmos() {
-    clearTimeout(this._rebuildTimer);
-    this._rebuildTimer = null;
-    for (const wg of [...this._wallGizmos]) this._destroyWallGizmos(wg);
-    this._wallGizmos = [];
-  }
-
-  /** Y for a control-point handle: clear of both the terrain and the wall top. */
-  _pointY(feature, pt) {
-    return gizmoY(this.track, pt.x, pt.z, this._wallTopY(feature, pt));
-  }
-
-  /** World Y of the wall's top edge over (pt.x, pt.z). */
+  /** World Y of the wall's top edge over (pt.x, pt.z) — the handle/line datum. */
   _wallTopY(feature, pt) {
     return (this.track?.getHeightAt(pt.x, pt.z) ?? 0) + (feature?.height || 0);
   }
+  _pointY(feature, pt) { return gizmoY(this.track, pt.x, pt.z, this._wallTopY(feature, pt)); }
+  _lineY(feature, pt) { return gizmoLineY(this.track, pt.x, pt.z, this._wallTopY(feature, pt)); }
 
-  _createPointSphere(feature, idx) {
-    const pt = feature.points[idx];
-    const mesh = MeshBuilder.CreateSphere(`pwPt_${idx}_${Date.now()}`, {
-      diameter: 1.4,
-      segments: 6,
-    }, this.scene);
-    mesh.position  = new Vector3(pt.x, this._pointY(feature, pt), pt.z);
-    mesh.material  = this._activeWall?.feature === feature ? this.activeMat : this.normalMat;
-    mesh.isPickable = true;
-    return mesh;
+  _rebuildGeometry(feature) {
+    rebuild.terrainGrid?.();            // keep the terrain-type grid in sync
+    rebuild.polyWall?.(feature ?? null); // null → full rebuild
   }
 
-  _buildLineSystem(feature) {
-    if (!feature.points || feature.points.length < 2) return null;
-
-    // Draw the polyline
-    const ctrlPts = feature.points.map(pt => {
-      const y = gizmoLineY(this.track, pt.x, pt.z, this._wallTopY(feature, pt));
-      return new Vector3(pt.x, y, pt.z);
-    });
-
-    const lines = [ctrlPts];
-    const ls = MeshBuilder.CreateLineSystem(`pwLines_${Date.now()}`, { lines }, this.scene);
-    ls.color      = LINE_COLOR_POLY_WALL;
-    ls.isPickable = false;
-    return ls;
+  _syncStoreExtra(s, feature, idx) {
+    s.maxRadius = this._maxRadiusFor(feature, idx);
+    s.smoothing = idx !== null ? (feature.points[idx]?.smoothing ?? 1) : 1;
+    s.height = feature.height ?? 2;
+    s.collisionHeight = feature.collisionHeight ?? feature.height ?? 2;
+    s.thickness = feature.thickness ?? 0.5;
+    s.closed = feature.closed ?? false;
+    s.fence = feature.fence ?? false;
+    s.colors = resolveStripeColorNames(feature);
   }
 
-  _refreshWallGizmos(wg) {
-    // Rebuild point meshes to match current point count
-    for (const m of wg.pointMeshes) m.dispose();
-    wg.pointMeshes = wg.feature.points.map((_, idx) => {
-      const m = this._createPointSphere(wg.feature, idx);
-      // Re-apply correct material
-      if (this._activeWall === wg) {
-        m.material = this.activeMat;
-      }
-      if (this.selectedPoint && this.selectedPoint.wg === wg && this.selectedPoint.idx === idx) {
-        m.material = this.highlightMat;
-      }
-      return m;
-    });
-    if (wg.lineSystem) { wg.lineSystem.dispose(); wg.lineSystem = null; }
-    wg.lineSystem = this._buildLineSystem(wg.feature);
-  }
+  // ── Public API expected by EditorController ──────────────────────────────
 
-  /** Re-sample every wall's gizmo heights after a terrain rebuild. */
-  refreshGizmoHeights() {
-    for (const wg of this._wallGizmos) this._updatePointPositions(wg);
-  }
+  addPolyWallFeature() { this._addFeature(); }
+  insertPolyWallPoint() { this.insertPointAfterSelected(); }
+  deletePolyWall() { this.deleteActiveFeature(); }
+  duplicatePolyWall() { this.duplicateActiveFeature(); }
 
-  _updatePointPositions(wg, { rebuildLines = true } = {}) {
-    const { feature, pointMeshes } = wg;
-    for (let i = 0; i < pointMeshes.length; i++) {
-      const pt = feature.points[i];
-      if (!pt) continue;
-      pointMeshes[i].position.set(pt.x, this._pointY(feature, pt), pt.z);
-    }
-    if (rebuildLines) {
-      if (wg.lineSystem) { wg.lineSystem.dispose(); wg.lineSystem = null; }
-      wg.lineSystem = this._buildLineSystem(feature);
-    }
-  }
+  // ── Panel property setters ───────────────────────────────────────────────
 
-  /**
-   * Debounced rebuild of the line system preview + physics wall.
-   * Called during continuous movement so we don't thrash WebGL every frame.
-   */
-  _rebuildDeferred(wg, delayMs = 120) {
-    clearTimeout(this._rebuildTimer);
-    this._rebuildTimer = setTimeout(() => {
-      this._rebuildTimer = null;
-      if (!this.scene) return; // tool was deactivated
-      if (!this._wallGizmos.includes(wg)) return; // wall was deleted while timer was pending
-      if (wg.lineSystem) { wg.lineSystem.dispose(); wg.lineSystem = null; }
-      wg.lineSystem = this._buildLineSystem(wg.feature);
-      this._rebuildWall(wg.feature);
-    }, delayMs);
-  }
-
-  _setActiveWall(wg) {
-    // Dim the previously active wall
-    if (this._activeWall && this._activeWall !== wg) {
-      for (const m of this._activeWall.pointMeshes) m.material = this.normalMat;
-    }
-    this._activeWall = wg;
-    if (wg) {
-      for (const m of wg.pointMeshes) m.material = this.activeMat;
-    }
-  }
-
-  // ─── Selection ────────────────────────────────────────────────────────────
-
-  selectPoint(wg, idx) {
-    this.deselectPoint();
-    this._setActiveWall(wg);
-    const mesh = wg.pointMeshes[idx];
-    this.selectedPoint = { wg, idx, mesh };
-    mesh.material = this.highlightMat;
-    this._syncStoreToFeature(wg.feature, idx);
-  }
-
-  /**
-   * Uniform sub-editor interface (EditorController.deselectAll / switch-away).
-   * Fully deactivates: deselects the point AND reverts the active wall's points
-   * to the dim/normal material, so switching to another feature returns these
-   * gizmos to transparent instead of leaving them stuck solid.
-   */
-  deselect() { this.deselectPoint(); this.deactivate(); }
-
-  /** Revert the active wall's points to the transparent/normal material. */
-  deactivate() { this._setActiveWall(null); }
-
-  deselectPoint() {
-    if (this.selectedPoint) {
-      const { wg, idx, mesh } = this.selectedPoint;
-      // Restore material (active or normal depending on whether wall is still active)
-      mesh.material = this._activeWall === wg ? this.activeMat : this.normalMat;
-      this.selectedPoint = null;
-    }
-    this._rawDrag = null;  // clear stale drag origin so next selection starts fresh
-    // NB: intentionally does NOT clear selectedType — placement mode stays active
-    // (panel open) after deselecting a point, so the user can keep right-clicking
-    // to add more points. The mode is exited explicitly via closePolyWall
-    // (panel X / Esc) or deleteActiveWall.
-  }
-
-  // ─── Point movement (called from EditorController.update) ─────────────────
-
-  /**
-   * Move the selected point by (dx, dz). Returns the actual delta so the
-   * camera can pan to follow, mirroring the pattern used for hills etc.
-   */
-  moveSelectedPoint(dx, dz) {
-    if (!this.selectedPoint) return { x: 0, z: 0 };
-    this.ec.saveSnapshot(true);
-    const { wg, idx } = this.selectedPoint;
-    const pt = wg.feature.points[idx];
-
-    // Support raw drag + snap
-    if (!this._rawDrag) this._rawDrag = { x: pt.x, z: pt.z };
-    this._rawDrag.x += dx;
-    this._rawDrag.z += dz;
-    const prevX = pt.x, prevZ = pt.z;
-    pt.x = this.ec._snap(this._rawDrag.x, 'x', DEAD_SPACE_REACH);
-    pt.z = this.ec._snap(this._rawDrag.z, 'z', DEAD_SPACE_REACH);
-
-    // Update sphere positions only — no line system or physics rebuild every frame.
-    this._updatePointPositions(wg, { rebuildLines: false });
-    // Defer the expensive line + physics rebuild until movement pauses.
-    this._rebuildDeferred(wg);
-    return { x: pt.x - prevX, z: pt.z - prevZ };
-  }
-
-  beginDrag() {
-    if (!this.selectedPoint) return;
-    const { wg, idx } = this.selectedPoint;
-    const pt = wg.feature.points[idx];
-    this._rawDrag = { x: pt.x, z: pt.z };
-  }
-
-  endDrag() {
-    this._rawDrag = null;
-    // Flush any pending deferred rebuild immediately now that movement has stopped.
-    if (this._rebuildTimer && this.selectedPoint) {
-      clearTimeout(this._rebuildTimer);
-      this._rebuildTimer = null;
-      const { wg } = this.selectedPoint;
-      if (wg.lineSystem) { wg.lineSystem.dispose(); wg.lineSystem = null; }
-      wg.lineSystem = this._buildLineSystem(wg.feature);
-      this._rebuildWall(wg.feature);
-    }
-  }
-
-  // ─── Pointer / key delegation ──────────────────────────────────────────────
-
-  /**
-   * Returns true if this tool consumed the click.
-   */
-  onPointerDown(pickedMesh) {
-    for (const wg of this._wallGizmos) {
-      for (let idx = 0; idx < wg.pointMeshes.length; idx++) {
-        if (pickedMesh === wg.pointMeshes[idx]) {
-          if (this.selectedPoint && this.selectedPoint.wg === wg && this.selectedPoint.idx === idx) {
-            return true;
-          }
-          this.selectPoint(wg, idx);
-          return true;
-        }
-      }
-    }
-    // Missed all control points: keep the current selection. A terrain click no
-    // longer deselects; EditorController treats the miss as a camera-pan candidate.
-    return false;
-  }
-
-  // ─── Wall operations ──────────────────────────────────────────────────────
-
-  _rebuildWall(feature) {
-    rebuild.terrainGrid?.(); // keep terrain type grid in sync
-    // Signal WallManager to rebuild this wall — EditorController exposes this
-    rebuild.polyWall?.(feature);
-  }
-
-  insertPointAfterSelected() {
-    if (!this.selectedPoint) return;
-    const { wg, idx } = this.selectedPoint;
-    const pts = wg.feature.points;
-    const p1  = pts[idx];
-    const p2  = pts[Math.min(idx + 1, pts.length - 1)];
-    const newPt = {
-      x: (p1.x + p2.x) / 2,
-      z: (p1.z + p2.z) / 2,
-      radius: DEFAULT_CORNER_RADIUS,
-    };
-    this.ec.saveSnapshot();
-    pts.splice(idx + 1, 0, newPt);
-    this._refreshWallGizmos(wg);
-    this.selectPoint(wg, idx + 1);
-    this._rebuildWall(wg.feature);
-  }
-
-  deleteSelectedPoint() {
-    if (!this.selectedPoint) return;
-    const { wg, idx } = this.selectedPoint;
-    if (wg.feature.points.length <= 2) return; // keep minimum
-    this.ec.saveSnapshot();
-    wg.feature.points.splice(idx, 1);
-    this.deselectPoint();
-    this._refreshWallGizmos(wg);
-    // Select nearest remaining point
-    const newIdx = Math.min(idx, wg.feature.points.length - 1);
-    this.selectPoint(wg, newIdx);
-    this._rebuildWall(wg.feature);
-  }
-
-  deleteActiveWall() {
-    if (!this._activeWall) return;
-    this.ec.saveSnapshot();
-    clearTimeout(this._rebuildTimer);
-    this._rebuildTimer = null;
-    const wg = this._activeWall;
-    const fi = this.track.features.indexOf(wg.feature);
-    if (fi > -1) this.track.features.splice(fi, 1);
-    this.deselectPoint();
-    this._destroyWallGizmos(wg);
-    this._activeWall = null;
-    if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
-    rebuild.polyWall?.(null); // signal full rebuild
-  }
-
-  /**
-   * Remove the active wall if it has no points — called on close so opening the
-   * tool then exiting without placing anything doesn't leave litter in the
-   * track. No snapshot: creation already pushed one capturing the pre-create
-   * state, so undo stays consistent.
-   */
-  discardActiveIfEmpty() {
-    const wg = this._activeWall;
-    if (!wg || wg.feature.points.length > 0) return false;
-    const fi = this.track.features.indexOf(wg.feature);
-    if (fi > -1) this.track.features.splice(fi, 1);
-    this._destroyWallGizmos(wg); // clears _activeWall; empty gizmo arrays dispose cleanly
-    return true;
-  }
-
-  // ─── Called after undo / redo ─────────────────────────────────────────────
-
-  onSnapshotRestored() {
-    this._destroyAllGizmos();
-    this.deselectPoint();
-    this._activeWall = null;
-    for (const f of this.track.features) {
-      if (f.type === 'polyWall') this._createWallGizmos(f);
-    }
-    if (this.ec._editorStore) this.ec._editorStore.selectedType = null;
-  }
-
-  // ─── Vue Store Sync ───────────────────────────────────────────────────────
-
-  _syncStoreToFeature(feature, selectedIdx = null) {
-    const store = this.ec._editorStore;
-    if (!store) return;
-    store.selectedType = 'polyWall';
-    store.polyWall.hasSelection = selectedIdx !== null;
-    // First and last points can't have radius in open polywalls (need both incoming and outgoing segments)
-    // But in closed polywalls, all points can have radius
-    const isClosed = feature.closed ?? false;
-    const canHaveRadius = selectedIdx !== null && (
-      isClosed || (selectedIdx > 0 && selectedIdx < feature.points.length - 1)
-    );
-    store.polyWall.canHaveRadius = canHaveRadius;
-    store.polyWall.radius = selectedIdx !== null ? (feature.points[selectedIdx].radius ?? 0) : 0;
-    // Smoothing is per-node and applies to any point (incl. endpoints).
-    store.polyWall.smoothing = selectedIdx !== null ? (feature.points[selectedIdx].smoothing ?? 1) : 1;
-    // Compute the effective max radius for this point (mirrors expandPolyline's 0.49 clamp)
-    if (canHaveRadius && selectedIdx !== null) {
-      const pts = feature.points;
-      const n = pts.length;
-      const prevIdx = isClosed ? (selectedIdx - 1 + n) % n : selectedIdx - 1;
-      const nextIdx = isClosed ? (selectedIdx + 1) % n : selectedIdx + 1;
-      const p0 = pts[prevIdx], p1 = pts[selectedIdx], p2 = pts[nextIdx];
-      const len1 = Math.sqrt((p1.x-p0.x)**2 + (p1.z-p0.z)**2);
-      const len2 = Math.sqrt((p2.x-p1.x)**2 + (p2.z-p1.z)**2);
-      store.polyWall.maxRadius = Math.min(len1, len2) * 0.49;
-    } else {
-      store.polyWall.maxRadius = Infinity;
-    }
-    store.polyWall.height = feature.height ?? 2;
-    store.polyWall.collisionHeight = feature.collisionHeight ?? feature.height ?? 2;
-    store.polyWall.thickness = feature.thickness ?? 0.5;
-    store.polyWall.closed = feature.closed ?? false;
-    store.polyWall.fence = feature.fence ?? false;
-    store.polyWall.colors = resolveStripeColorNames(feature);
-  }
-
-  // Called by EditorController (bridge from Vue store actions)
   changePolyWallRadius(val) {
     if (!this.selectedPoint) return;
     this.ec.saveSnapshot(true);
-    this.selectedPoint.wg.feature.points[this.selectedPoint.idx].radius = val;
-    this._updatePointPositions(this.selectedPoint.wg);
-    this._rebuildWall(this.selectedPoint.wg.feature);
+    this.selectedPoint.gz.feature.points[this.selectedPoint.idx].radius = val;
+    this._updatePositions(this.selectedPoint.gz);
+    this._rebuildNow(this.selectedPoint.gz.feature);
   }
 
   changePolyWallSmoothing(val) {
     if (!this.selectedPoint) return;
     this.ec.saveSnapshot(true);
-    this.selectedPoint.wg.feature.points[this.selectedPoint.idx].smoothing = val;
-    // Smoothing only affects the ribbon's top profile — no gizmo move needed.
-    this._rebuildWall(this.selectedPoint.wg.feature);
+    this.selectedPoint.gz.feature.points[this.selectedPoint.idx].smoothing = val;
+    this._rebuildNow(this.selectedPoint.gz.feature); // top-profile only, no gizmo move
   }
 
   changePolyWallHeight(val) {
-    if (!this._activeWall) return;
-    const feature = this._activeWall.feature;
+    if (!this._active) return;
+    const feature = this._active.feature;
     const prevHeight = Number(feature.height ?? 2);
-    const prevCollisionHeight = Number(feature.collisionHeight ?? prevHeight);
+    const prevCollision = Number(feature.collisionHeight ?? prevHeight);
     this.ec.saveSnapshot(true);
     feature.height = Number(val);
-    if (feature.collisionHeight === undefined || Math.abs(prevCollisionHeight - prevHeight) < 1e-6) {
+    if (feature.collisionHeight === undefined || Math.abs(prevCollision - prevHeight) < 1e-6) {
       feature.collisionHeight = Number(val);
     }
-    this._rebuildWall(feature);
+    this._rebuildNow(feature);
   }
 
   changePolyWallCollisionHeight(val) {
-    if (!this._activeWall) return;
+    if (!this._active) return;
     this.ec.saveSnapshot(true);
-    this._activeWall.feature.collisionHeight = Number(val);
-    this._rebuildWall(this._activeWall.feature);
+    this._active.feature.collisionHeight = Number(val);
+    this._rebuildNow(this._active.feature);
   }
 
   changePolyWallThickness(val) {
-    if (!this._activeWall) return;
+    if (!this._active) return;
     this.ec.saveSnapshot(true);
-    this._activeWall.feature.thickness = val;
-    this._rebuildWall(this._activeWall.feature);
+    this._active.feature.thickness = val;
+    this._rebuildNow(this._active.feature);
   }
 
   /**
@@ -526,8 +122,8 @@ export class PolyWallEditor {
    * discover the coupling.
    */
   changePolyWallFence(val) {
-    if (!this._activeWall) return;
-    const feature = this._activeWall.feature;
+    if (!this._active) return;
+    const feature = this._active.feature;
     this.ec.saveSnapshot(true);
     feature.fence = !!val;
     if (feature.fence) {
@@ -537,44 +133,24 @@ export class PolyWallEditor {
         feature.collisionHeight = height + DEFAULT_FENCE_HEIGHT;
       }
     }
-    this._syncStoreToFeature(feature, this.selectedPoint?.idx ?? null);
-    this._rebuildWall(feature);
+    this._syncStore(feature, this.selectedPoint?.idx ?? null);
+    this._rebuildNow(feature);
   }
 
   changePolyWallClosed(val) {
-    if (!this._activeWall) return;
+    if (!this._active) return;
     this.ec.saveSnapshot(true);
-    this._activeWall.feature.closed = val;
-    this._rebuildWall(this._activeWall.feature);
+    this._active.feature.closed = val;
+    this._rebuildNow(this._active.feature);
   }
 
   /** Set the wall's stripe colours (1–3 palette names). */
   changePolyWallColors(colors) {
-    if (!this._activeWall) return;
+    if (!this._active) return;
     this.ec.saveSnapshot(true);
-    const feature = this._activeWall.feature;
+    const feature = this._active.feature;
     feature.colors = normalizeStripeColors(colors);
-    this._syncStoreToFeature(feature, this.selectedPoint?.idx ?? null);
-    this._rebuildWall(feature);
-  }
-
-  insertPolyWallPoint() { this.insertPointAfterSelected(); }
-  deletePolyWallPoint() { this.deleteSelectedPoint(); }
-  deletePolyWall()      { this.deleteActiveWall(); }
-  deselectPolyWall()    { this.deselectPoint(); }
-
-  duplicatePolyWall() {
-    if (!this._activeWall) return;
-    this.ec.saveSnapshot();
-    const src = this._activeWall.feature;
-    const feature = {
-      ...src,
-      points: src.points.map(p => ({ ...p, x: p.x + 5, z: p.z + 5 })),
-    };
-    this.track.features.push(feature);
-    const wg = this._createWallGizmos(feature);
-    this._setActiveWall(wg);
-    this._syncStoreToFeature(feature);
-    this._rebuildWall(feature);
+    this._syncStore(feature, this.selectedPoint?.idx ?? null);
+    this._rebuildNow(feature);
   }
 }

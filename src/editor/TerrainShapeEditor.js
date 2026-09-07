@@ -1,8 +1,9 @@
 import { Vector3, MeshBuilder } from '@babylonjs/core';
-import rebuild from './editor-rebuild.js';
+import rebuild, { REBUILD_DEBOUNCE_MS } from './editor-rebuild.js';
 import { GizmoHandle } from './GizmoHandle.js';
 import { EditorMaterials, LINE_COLOR_TERRAIN_SHAPE } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from '../world/terrain.js';
+import { polylineCentroid } from '../utils/polyline-utils.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 
 const POLY_POINT_MIN = 3;
@@ -42,17 +43,6 @@ export class TerrainShapeEditor {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  _polygonCenter(points) {
-    if (!points?.length) return { x: 0, z: 0 };
-    let sx = 0;
-    let sz = 0;
-    for (const p of points) {
-      sx += p.x;
-      sz += p.z;
-    }
-    return { x: sx / points.length, z: sz / points.length };
-  }
-
   /** Ensure a polygon feature has a valid point list + up-to-date centroid. */
   _normaliseFeature(feature) {
     if (feature.shape !== 'polygon') return;
@@ -68,7 +58,7 @@ export class TerrainShapeEditor {
         { x: cx - hw, z: cz + hd },
       ];
     }
-    const c = this._polygonCenter(feature.points);
+    const c = polylineCentroid(feature.points);
     feature.centerX = c.x;
     feature.centerZ = c.z;
   }
@@ -269,7 +259,7 @@ export class TerrainShapeEditor {
     this._terrainGridRebuildTimer = setTimeout(() => {
       this._terrainGridRebuildTimer = null;
       rebuild.terrainGrid?.();
-    }, 50);
+    }, REBUILD_DEBOUNCE_MS);
   }
 
   _flushTerrainGridRebuild() {
@@ -310,7 +300,7 @@ export class TerrainShapeEditor {
       pt.x = nextX;
       pt.z = nextZ;
 
-      const c = this._polygonCenter(feature.points);
+      const c = polylineCentroid(feature.points);
       feature.centerX = c.x;
       feature.centerZ = c.z;
 
@@ -444,7 +434,7 @@ export class TerrainShapeEditor {
       this.editor._rawDragPos = { x: cx, z: cz };
     } else {
       const pts = feature.points ?? [];
-      const c = this._polygonCenter(pts);
+      const c = polylineCentroid(pts);
       feature.centerX = c.x;
       feature.centerZ = c.z;
       if (pts.length) {
@@ -490,7 +480,7 @@ export class TerrainShapeEditor {
     this._selectedPointIndex = fromIdx + 1;
     this.editor._rawDragPos = { x: next.x, z: next.z };
 
-    const c = this._polygonCenter(feature.points);
+    const c = polylineCentroid(feature.points);
     feature.centerX = c.x;
     feature.centerZ = c.z;
 
@@ -509,7 +499,7 @@ export class TerrainShapeEditor {
     feature.points.splice(this._selectedPointIndex, 1);
     this._selectedPointIndex = Math.min(this._selectedPointIndex, feature.points.length - 1);
 
-    const c = this._polygonCenter(feature.points);
+    const c = polylineCentroid(feature.points);
     feature.centerX = c.x;
     feature.centerZ = c.z;
 
