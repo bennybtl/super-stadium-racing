@@ -2,13 +2,13 @@ import { Flag, COLLISION_RADIUS, POLE_HEIGHT } from "./lib/Flag.js";
 import { TRUCK_RADIUS } from "../constants.js";
 
 /** Lateral speed (m/s) → impulse magnitude applied to the pole. */
-const BEND_IMPULSE_SCALE = 1.2;
+const BEND_IMPULSE_SCALE = 2.5;
 
 /**
  * Flag decoration controller.
  *
- * Procedural (no OBJ): builds its own pole + banner, simulates an inverted
- * pendulum each frame, and gets kicked by passing trucks. Editable props:
+ * Procedural (no OBJ): builds its own pole + banner, simulates a flexible
+ * cantilever pole each frame, and gets kicked by passing trucks. Editable props:
  * colour, heading (spin about the pole), scale, and pole height.
  */
 export default {
@@ -28,7 +28,7 @@ export default {
     );
   },
 
-  /** Per-frame: truck collision impulses, then advance the spring-damper. */
+  /** Per-frame: truck collision impulses, then advance the bending modes. */
   update(flag, { dt, trucks }) {
     if (!dt || dt <= 0) return;
     const CONTACT_DIST = TRUCK_RADIUS + COLLISION_RADIUS;
@@ -50,8 +50,13 @@ export default {
       const approach = vel.x * nx + vel.z * nz;
       if (approach <= 0) continue;
 
+      // Contact height above the flag's base drives which bending modes get
+      // excited: a low bumper hit bends the pole near the base and whips the
+      // top, a hit part-way up (truck airborne over the flag) sways it instead.
+      const hitHeight = Math.max(0.2, tp.y - flag.groundY);
+
       const impulse = approach * BEND_IMPULSE_SCALE;
-      flag.applyBendImpulse(nx * impulse, nz * impulse);
+      flag.applyBendImpulse(nx * impulse, nz * impulse, hitHeight);
     }
 
     flag.update(dt);
