@@ -344,6 +344,16 @@ export class ParticleEffects {
     if (isInWater && isSplashGrounded && speed > 1) {
       const rate = speed * 80 * effectiveScale;
       for (const p of this.splashParticles) p.emitRate = rate;
+      // Disturb the wake field on the same gate that sprays: this is the one
+      // place per frame that already knows the truck is in water and how fast.
+      // The field only covers real water bodies, so a truck on ground merely
+      // *painted* water (which `isInWater` also accepts) stamps outside it and
+      // is ignored. Not scaled by effectiveScale — that is a distance-based
+      // particle budget, and a wake left by an AI truck across the map should
+      // still be there when the camera comes round to it.
+      this.scene?.metadata?.wakeField?.stamp(
+        this.mesh.position.x, this.mesh.position.z, speed
+      );
     } else {
       for (const p of this.splashParticles) p.emitRate = 0;
     }

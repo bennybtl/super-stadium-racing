@@ -12,6 +12,7 @@ import {
   foamTiling,
   FOAM_NOMINAL_WIDTH,
 } from "./water-field.js";
+import { attachWaterSurfacePlugin } from "../shaders/water-shader.js";
 
 /**
  * Water meshes: the Babylon half of the water build. All of the geometry
@@ -88,8 +89,34 @@ function getWaterMaterial(scene) {
   mat.specularColor = new Color3(0.8, 0.9, 1.0);
   mat.specularPower = 34;
   mat.backFaceCulling = false;
+  // Surface animation (see WATER_REACTIVE.md). Attaches once per scene with the
+  // material, so every body shares one compiled effect.
+  attachWaterSurfacePlugin(mat);
   _waterMaterials.set(scene, mat);
   return mat;
+}
+
+const _foamTextures = new WeakMap();
+
+/**
+ * The shoreline swirl mask, one per scene. Exported because the wake ribbon
+ * (WakeRibbon.js) wants the same froth so the two read as one material.
+ * Callers must not mutate its offsets — it is shared; clone it if you need your
+ * own scroll.
+ *
+ * @param {BABYLON.Scene} scene
+ * @returns {import('@babylonjs/core').Texture|null}
+ */
+export function getSharedFoamTexture(scene) {
+  if (!FOAM_TEXTURE_URL) return null;
+  const cached = _foamTextures.get(scene);
+  if (cached) return cached;
+
+  const tex = new Texture(FOAM_TEXTURE_URL, scene);
+  tex.wrapU = Texture.WRAP_ADDRESSMODE;
+  tex.wrapV = Texture.WRAP_ADDRESSMODE;
+  _foamTextures.set(scene, tex);
+  return tex;
 }
 
 function getFoamMaterial(scene) {
@@ -104,12 +131,8 @@ function getFoamMaterial(scene) {
 
   // The swirl mask multiplies into the band's own gradient: the alpha channel
   // carries the froth, the vertex alpha carries shore-to-open-water falloff.
-  if (FOAM_TEXTURE_URL) {
-    const tex = new Texture(FOAM_TEXTURE_URL, scene);
-    tex.wrapU = Texture.WRAP_ADDRESSMODE;
-    tex.wrapV = Texture.WRAP_ADDRESSMODE;
-    mat.opacityTexture = tex;
-  }
+  const foam = getSharedFoamTexture(scene);
+  if (foam) mat.opacityTexture = foam;
 
   _foamMaterials.set(scene, mat);
   return mat;

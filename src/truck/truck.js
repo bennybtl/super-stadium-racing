@@ -8,6 +8,7 @@ import {
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
 import { TireMarks } from "./TireMarks.js";
+import { WakeRibbon } from "./WakeRibbon.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { DriftPhysics } from "./DriftPhysics.js";
@@ -15,6 +16,7 @@ import { DEFAULT_HANDLING, resolveHandling } from "./DriftTuning.js";
 import { Controls } from "./Controls.js";
 import { TruckBody } from "./TruckBody.js";
 import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH, TRUCK_COLLISION_STEP_LIFT } from "../constants.js"; // used as fallback defaults only
+import { SPLASH_MIN_DEPTH } from "../constants.js";
 import { UPGRADES } from "../managers/UpgradeStorage.js";
 import { TERRAIN_TYPES } from "../world/terrain.js";
 
@@ -188,6 +190,9 @@ export class Truck {
       halfTrack: rearWheels.halfTrack,
       rearOffset: -rearWheels.axleZ,
     });
+    // The wake V, laid from the same rear point as the marks — a wake trails
+    // from where the truck displaces water, not from its centre.
+    this.wakeRibbon = new WakeRibbon(scene, { rearOffset: -rearWheels.axleZ });
   }
 
   setAudioController(audioController) {
@@ -643,6 +648,27 @@ export class Truck {
           heading: this.state.heading,
           strength: canMark ? Math.max(driftMark, brakeMark) : 0,
           color: markColor,
+          sampleY: this._surfaceSampler,
+        });
+      });
+
+      // Wake V. Gated like the splash spray in ParticleEffects rather than like
+      // tire marks: wading keeps groundedness low (~0.3) because the suspension
+      // extends over the submerged bed, so the strict grounded test used above
+      // would suppress the wake exactly when the truck is deepest. `terrain` is
+      // non-null only on the painted ground, which is what keeps a truck jumping
+      // over a lake — or crossing a bridge above one — from drawing a wake.
+      profile('truck.wakeRibbon', () => {
+        const waterDepth = terrain
+          ? (this.scene?.metadata?.waterDepthAt?.(this.mesh.position.x, this.mesh.position.z) ?? 0)
+          : 0;
+        this.wakeRibbon.update({
+          position: this.mesh.position,
+          heading: this.state.heading,
+          speed: hSpeed,
+          dt: particleDt,
+          wading: waterDepth > SPLASH_MIN_DEPTH && groundedness > 0.1 && hSpeed > 1,
+          waterDepth,
           sampleY: this._surfaceSampler,
         });
       });

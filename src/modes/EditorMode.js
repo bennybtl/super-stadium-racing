@@ -223,9 +223,13 @@ export class EditorMode extends BaseMode {
       }
       const { buildWaterBodies } = await import('../objects/Water.js');
       const { createWaterDepthSampler } = await import('../objects/water-field.js');
+      const { createWakeField } = await import('../managers/WakeFieldManager.js');
       buildWaterBodies(currentTrack, scene);
       // Keep the shared depth query in step with the surfaces it describes.
       scene.metadata.waterDepthAt = createWaterDepthSampler(currentTrack);
+      // Same for the wake field: its bounds come from the bodies that just moved.
+      // It disposes the previous one, so this does not stack up observers.
+      createWakeField(currentTrack, scene);
     };
     let _rebuildWaterTimer = null;
     rebuild.water = (immediate = false) => {
