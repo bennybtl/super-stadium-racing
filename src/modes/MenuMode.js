@@ -219,8 +219,12 @@ export class MenuMode extends DriveMode {
 
     // Shadow cost matters less with nothing to chase, and the menus sit on top;
     // halve the refresh rate as races do.
-    const shadowMap = shadows?.getShadowMap?.();
-    if (shadowMap) shadowMap.refreshRate = 2;
+    if (shadows?.setRefreshRate) {
+      shadows.setRefreshRate(2);
+    } else {
+      const shadowMap = shadows?.getShadowMap?.();
+      if (shadowMap) shadowMap.refreshRate = 2;
+    }
 
     const names = generateDriverNames(DEMO_AI_COUNT);
     const { aiTruckDataList: trucks, aiDrivers } = setupAIDrivers({

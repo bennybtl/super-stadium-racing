@@ -23,7 +23,12 @@ import {
 // ── Ribbon visual tuning (tweak these by eye) ────────────────────────────────
 const SAMPLE_STEP = 2; // centerline resample spacing (world units)
 const SMOOTH_WINDOW = 18; // top-edge smoothing window (world units); larger = flatter top
-const SKIRT_DEPTH = 2; // how far the ribbon base is buried below raw terrain
+// How far the ribbon base is sunk below the terrain it meets. Kept small on
+// purpose: the terrain is NOT a shadow occluder, so any caster geometry that
+// dips below the surface is still lit in the shadow map and throws a phantom
+// shadow back toward the key light (a point below the receiver plane projects
+// its shadow to the light-facing side). We sink just enough to hide the seam.
+const BASE_EMBED = 0.3;
 const STRIPE_LEN = 4; // colour stripe length along the wall (world units)
 const END_CAP_ANGLE = 60; // open-end rake angle off horizontal (deg); 90 = vertical
 
@@ -222,7 +227,15 @@ export class PolyWall {
       rbx[i] = rx[i];
       rbz[i] = rz[i];
       topY[i] = smooth[i] + visualHeight;
-      botY[i] = raw[i] - (onBridge[i] ? 0.15 : SKIRT_DEPTH);
+      // Follow the terrain at the wall's OWN edges (not just the centerline) so
+      // the base tucks a hair under the surface on both sides of a cross-slope
+      // instead of needing a deep skirt that would leak a phantom shadow.
+      const edgeGround = Math.min(
+        raw[i],
+        this._sampler.sample(track, lx[i], lz[i]),
+        this._sampler.sample(track, rx[i], rz[i]),
+      );
+      botY[i] = edgeGround - (onBridge[i] ? 0.15 : BASE_EMBED);
     }
 
     // Splay the open-polyline end caps: push the base outward along the wall so
@@ -277,7 +290,10 @@ export class PolyWall {
       xs,
       zs,
       topY: smooth.map((h) => h + collisionHeight),
-      botY,
+      // The visual base only tucks ~BASE_EMBED under the surface now; the
+      // collision floor stays well below grade so a truck on a downhill slope
+      // beside the wall can't drop under the vertical gate and pass through.
+      botY: raw.map((h) => h - 2),
       halfThick,
       closed,
       step,

@@ -153,7 +153,10 @@ export function buildStripedRibbon({
       normals.push(...nrm);
       colors.push(col[0], col[1], col[2], 1);
     }
-    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    // Wound so the front face is the side the quad's `nrm` points to (verts are
+    // listed CCW around that normal). backFaceCulling then shows the outward
+    // surfaces and hides the buried interior.
+    indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
   };
 
   const bandCount = closed ? n : n - 1;
@@ -174,17 +177,21 @@ export function buildStripedRibbon({
     const Ri_b = [rbx[i], botY[i], rbz[i]], Ri_t = [rx[i], topY[i], rz[i]];
     const Rj_b = [rbx[j], botY[j], rbz[j]], Rj_t = [rx[j], topY[j], rz[j]];
 
-    // Outer (left) face — faces +n
-    pushQuad(Li_b, Li_t, Lj_t, Lj_b, [anx, 0, anz], col);
-    // Inner (right) face — faces −n
-    pushQuad(Ri_b, Rj_b, Rj_t, Ri_t, [-anx, 0, -anz], col);
-    // Top face
-    pushQuad(Li_t, Ri_t, Rj_t, Lj_t, [0, 1, 0], col);
+    // A closed box cross-section (top / inner / bottom / outer), every face wound
+    // outward and consistently so the ribbon is a genuine single-sided solid —
+    // it then casts one clean shadow silhouette at any light angle (the old open
+    // double-sided shell dropped a second, offset shadow from its top edge).
+    pushQuad(Li_t, Lj_t, Rj_t, Ri_t, [0, 1, 0], col);            // top
+    pushQuad(Ri_t, Rj_t, Rj_b, Ri_b, [-anx, 0, -anz], col);      // inner (right)
+    pushQuad(Ri_b, Rj_b, Lj_b, Li_b, [0, -1, 0], col);           // bottom (buried)
+    pushQuad(Li_b, Lj_b, Lj_t, Li_t, [anx, 0, anz], col);        // outer (left)
   }
 
-  // End caps for an open polyline. Winding is cosmetic — backFaceCulling is off.
+  // End caps for an open polyline — wound outward (away from the ribbon body) so
+  // the closed solid stays single-sided all the way to its tips.
   if (!closed) {
     const capCol = stripes[0];
+    // Start cap faces −tangent.
     pushQuad(
       [lbx[0], botY[0], lbz[0]],
       [lx[0], topY[0], lz[0]],
@@ -193,12 +200,13 @@ export function buildStripedRibbon({
       [-nz[0], 0, nx[0]],
       capCol,
     );
+    // End cap faces +tangent — reversed winding vs the start cap.
     const e = n - 1;
     pushQuad(
-      [lbx[e], botY[e], lbz[e]],
-      [lx[e], topY[e], lz[e]],
-      [rx[e], topY[e], rz[e]],
       [rbx[e], botY[e], rbz[e]],
+      [rx[e], topY[e], rz[e]],
+      [lx[e], topY[e], lz[e]],
+      [lbx[e], botY[e], lbz[e]],
       [nz[e], 0, -nx[e]],
       capCol,
     );
@@ -215,7 +223,9 @@ export function buildStripedRibbon({
   const mat = new StandardMaterial(`${name}Mat`, scene);
   mat.diffuseColor = new Color3(1, 1, 1); // let vertex colours drive the surface
   mat.specularColor = new Color3(0.2, 0.2, 0.2);
-  mat.backFaceCulling = false;
+  // The ribbon is now a closed, outward-wound solid — cull back faces so it
+  // casts one clean shadow (a double-sided caster drops a second, offset one).
+  mat.backFaceCulling = true;
   mesh.material = mat;
   mesh.useVertexColors = true;
   mesh.isPickable = false;

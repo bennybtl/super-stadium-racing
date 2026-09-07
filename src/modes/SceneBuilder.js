@@ -4,7 +4,6 @@ import {
   Vector3,
   HemisphericLight,
   PointLight,
-  ShadowGenerator,
   MeshBuilder,
   StandardMaterial,
   Color3,
@@ -47,6 +46,7 @@ import {
   applySteepWaterTerrainRemap,
 } from "../world/terrain-utils.js";
 import { loadDisplaySettings } from "../settingsStorage.js";
+import { ShadowCasterGroup } from "./ShadowCasterGroup.js";
 
 /**
  * Builds the shared Babylon scene used by both RaceMode and EditorMode:
@@ -123,9 +123,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
     : Math.max(2, Math.ceil(terrainSize / terrainResolutionTarget));
 
   // -- Stadium lights --
-  // 4 point lights at the corners of the track, elevated like stadium floodlights.
+  // 4 point lights arranged in a square, elevated like stadium floodlights.
+  // Inset from the track edge (not at the far corners) so the key light strikes
+  // the play area at a steeper angle and fill is more even across it.
   const _lightHeight = 60;
-  const _lightSpread = terrainSize * 0.55;
+  const _lightSpread = maxTrackDim * 0.30;
   const _stadiumPositions = [
     new Vector3(-_lightSpread, _lightHeight, -_lightSpread),
     new Vector3( _lightSpread, _lightHeight, -_lightSpread),
@@ -151,12 +153,21 @@ export async function buildScene(engine, trackLoader, trackKey) {
   _centerFloodLight.specular = new Color3(1.0, 0.98, 1.0);
   _centerFloodLight.setEnabled(false);
 
-  // One light casts shadows (cube-map ShadowGenerator).
-  const shadows = new ShadowGenerator(1024, _stadiumLights[0]);
-  shadows.useBlurExponentialShadowMap = true;
-  shadows.blurKernel = 16;
-  shadows.bias = 0.005;
-  shadows.normalBias = 0.02;
+  // Shadow-casting lights: the primary key (corner 0) always, plus the opposite
+  // corner (light 2) on the "high" tier for a two-key stadium look. Both cube
+  // maps are built now; the secondary sits parked (its light's shadowEnabled
+  // off) until applyDisplaySettings calls setActiveCount(2), so it's ~free on
+  // the lower tiers. Every caster is registered with both via the group.
+  const shadows = ShadowCasterGroup.create([_stadiumLights[0], _stadiumLights[2]], { mapSize: 1024 });
+  shadows.configure({ bias: 0.005, normalBias: 0.02 });
+  // NOTE: forceBackFacesOnly is deliberately OFF. It was tried to kill the
+  // "double shadow" from double-sided caster materials, but under this single
+  // *point* light it renders each solid's FAR side into the cube depth map, and
+  // the heavy ESM blur then smears that far-face depth back under the caster —
+  // reading as a second shadow lobe pointing the "wrong" way. The real fix is to
+  // make every caster a single-sided, outward-wound closed solid (poly-ribbon
+  // walls/curbs and the bridge/driveBox slab all are now), so a plain front-face
+  // shadow pass yields one clean silhouette.
 
   const applyDisplaySettings = (settings) => {
     const shadowDetail = settings?.shadow ?? 'medium';
@@ -167,6 +178,10 @@ export async function buildScene(engine, trackLoader, trackKey) {
       lightCount === 2 ? [0, 2] :
       [0, 1, 2, 3];
 
+    // Two shadow-casting keys (opposite corners 0 and 2) only on 'high', and
+    // only when both of those corners are actually lit.
+    const twoKeys = shadowDetail === 'high' && lightCount >= 2;
+
     if (lightCount === 1) {
       _centerFloodLight.setEnabled(true);
       _stadiumLights.forEach((light, index) => {
@@ -176,51 +191,45 @@ export async function buildScene(engine, trackLoader, trackKey) {
       });
     } else {
       _centerFloodLight.setEnabled(false);
-      // Rebalance toward the shadow-casting light (index 0): when it dominates
-      // the illumination, occluding it removes a large fraction of the light, so
-      // shadows read dark — while the dimmer fill lights keep the rest of the
-      // scene lit. Net brightness stays close to the old flat setup, but shadow
-      // contrast roughly doubles (no global dimming).
-      const casterIntensity = 1.7;
+      // Rebalance toward the shadow-casting light(s): occluding a key light then
+      // removes a large slice of the illumination, so its shadow reads dark,
+      // while the dimmer fill lights keep the rest of the scene lit. With two
+      // keys each carries less of the total, so the per-key boost is smaller.
+      const keyIndices = twoKeys ? [0, 2] : [0];
+      const casterIntensity = twoKeys ? 1.35 : 1.7;
       const fillIntensity   = lightCount === 2 ? 0.6 : 0.5;
       _stadiumLights.forEach((light, index) => {
         light.setEnabled(enabledLightIndices.includes(index));
-        light.intensity = index === 0 ? casterIntensity : fillIntensity;
+        light.intensity = keyIndices.includes(index) ? casterIntensity : fillIntensity;
       });
     }
 
-    const shadowCasterLight = _stadiumLights[0];
-    const shadowMap = shadows.getShadowMap?.();
-    if (!shadowCasterLight || !shadowMap) return;
-
-    const shadowsEnabled = shadowDetail !== 'off' && shadowCasterLight.isEnabled();
-    shadowCasterLight.shadowEnabled = shadowsEnabled;
-
-    if (!shadowsEnabled) {
-      // Keep map updates cheap when shadows are disabled.
-      shadowMap.refreshRate = 0;
-      return;
-    }
+    const shadowsEnabled = shadowDetail !== 'off' && _stadiumLights[0].isEnabled();
+    const wantCasters = !shadowsEnabled
+      ? 0
+      : (twoKeys && _stadiumLights[2].isEnabled() ? 2 : 1);
+    shadows.setActiveCount(wantCasters);
+    if (wantCasters === 0) return;
 
     if (shadowDetail === 'low') {
-      shadows.useBlurExponentialShadowMap = false;
-      shadows.usePoissonSampling = true;
-      shadows.blurKernel = 4;
-      shadowMap.refreshRate = 2;
+      shadows.configure({
+        useBlurExponentialShadowMap: false,
+        usePoissonSampling: true,
+        blurKernel: 4,
+        refreshRate: 2,
+      });
       return;
     }
 
-    shadows.usePoissonSampling = false;
-    shadows.useBlurExponentialShadowMap = true;
-    if (shadowDetail === 'high') {
-      shadows.blurKernel = 24;
-      shadowMap.refreshRate = 1;
-      return;
-    }
-
-    // Medium
-    shadows.blurKernel = 16;
-    shadowMap.refreshRate = 2;
+    shadows.configure({
+      useBlurExponentialShadowMap: true,
+      usePoissonSampling: false,
+      blurKernel: shadowDetail === 'high' ? 24 : 16,
+      // Single key on 'high' keeps its every-frame update; with two maps, drop
+      // both to every-other-frame so the added cost is ~half a map, not a whole
+      // one. (True odd/even frame stagger would need manual RTT control.)
+      refreshRate: shadowDetail === 'high' && wantCasters < 2 ? 1 : 2,
+    });
   };
 
   applyDisplaySettings(loadDisplaySettings());

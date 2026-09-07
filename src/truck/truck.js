@@ -173,7 +173,9 @@ export class Truck {
     this.body = new TruckBody(this.mesh, scene, shadows, {
       body:   this.diffuseColor,
     }, vehicleDef ?? null, {
-      disableDynamicShadows: !!this.driver,
+      // AI trucks (driver set) cast shadows per the "AI Truck Shadows" display
+      // setting; the player truck always casts.
+      aiTruck: !!this.driver,
     });
 
     // Built after the body so the marks can take the real rear-wheel placement

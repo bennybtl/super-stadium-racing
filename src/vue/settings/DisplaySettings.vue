@@ -27,6 +27,13 @@
           <option :value="false">Off</option>
         </select>
       </div>
+      <div class="flex items-center gap-6">
+        <div class="grow min-w-[140px] text-right text-xl font-bold italic uppercase text-white pr-4">AI Truck Shadows</div>
+        <select v-model="aiTruckShadows" class="w-[180px] shrink-0 px-6 py-2 rounded-md border border-[#333] bg-[#222] text-white text-lg font-bold uppercase italic tracking-wider outline-none transition-colors focus:border-[#ffd400]">
+          <option :value="true">On</option>
+          <option :value="false">Off</option>
+        </select>
+      </div>
     </div>
 
     <hr class="my-4 opacity-60">
@@ -43,12 +50,14 @@ const displaySettings = loadDisplaySettings();
 const shadow = ref(displaySettings.shadow);
 const lights = ref(displaySettings.lights);
 const checkpointArrow = ref(displaySettings.checkpointArrow);
+const aiTruckShadows = ref(displaySettings.aiTruckShadows);
 
-watch([shadow, lights, checkpointArrow], () => {
+watch([shadow, lights, checkpointArrow, aiTruckShadows], () => {
   saveDisplaySettings({
     shadow: shadow.value,
     lights: lights.value,
     checkpointArrow: checkpointArrow.value,
+    aiTruckShadows: aiTruckShadows.value,
   });
 });
 </script>

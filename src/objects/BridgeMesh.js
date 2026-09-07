@@ -48,6 +48,14 @@ function _lerpColor(colorA, colorB, t) {
 }
 
 const DRIVE_COLLIDER_OVERLAP = 0.35;
+
+// The slab's underside is pulled up to sit just below the terrain wherever it
+// would otherwise sink beneath it (a tilted "drive box" ramp, or a slab flat on
+// grade). The terrain is not a shadow occluder, so any caster geometry below
+// the surface is still lit in the shadow map and throws a phantom shadow back
+// toward the key light. An elevated bridge keeps its full nominal thickness.
+const BRIDGE_UNDERGRADE_EMBED = 0.3;
+const BRIDGE_MIN_SLAB = 0.1; // never thin the slab below this (keeps it solid)
 const TERRAIN_SEAM_MIN_LENGTH = 0.75;
 const TERRAIN_SEAM_MAX_LENGTH = 3.0;
 const TERRAIN_SEAM_SLOPE_LENGTH_SCALE = 1.5;
@@ -241,7 +249,10 @@ export class BridgeMesh {
         material.bumpTexture = bumpTexture;
         material.bumpTexture.level = (terrainType.normalMapIntensity ?? 1) * 0.6;
       }
-      material.backFaceCulling = false;
+      // The slab is a closed, outward-wound solid (_buildSolidVD), so cull back
+      // faces — a double-sided caster drops a second, offset shadow under the
+      // single point light.
+      material.backFaceCulling = true;
       return material;
     };
 
@@ -254,7 +265,7 @@ export class BridgeMesh {
 
     // ── Visual mesh (top + bottom + sides) ───────────────────────────────────
     this._mesh = new Mesh(`bridge_mesh_${centerX}_${centerZ}`, scene);
-    const solidVD = _buildSolidVD(centerX, centerZ, geo.cols, geo.rows, width, depth, geo.heights, thickness, rotation, geo.offsetsX, geo.offsetsZ);
+    const solidVD = _buildSolidVD(centerX, centerZ, geo.cols, geo.rows, width, depth, geo.heights, thickness, rotation, geo.offsetsX, geo.offsetsZ, track);
     solidVD.applyToMesh(this._mesh);
     if (this._sideMaterial) {
       // _buildSolidVD emits the top face first, then bottom + the four sides.
@@ -958,13 +969,24 @@ function _getBridgeSideOutwardNormal(side, rotation = 0) {
 /**
  * Build VertexData for a solid slab: top face + bottom face + four sides.
  */
-function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thickness, rotation = 0, offsetsX = null, offsetsZ = null) {
+function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thickness, rotation = 0, offsetsX = null, offsetsZ = null, track = null) {
   const grid = _gridPoints(centerX, centerZ, cols, rows, width, depth, rotation, offsetsX, offsetsZ);
   const n = cols * rows;
 
   const positions = [];
   const uvs = [];
   const indices = [];
+
+  // Underside Y for a grid vertex: nominally `top - thickness`, but pulled up to
+  // ~terrain level where the slab would otherwise dip below the (non-occluding)
+  // ground and leak a phantom shadow. Never rises above `top - BRIDGE_MIN_SLAB`.
+  const bottomAt = (idx) => {
+    const top = heights[idx] ?? 0;
+    const nominal = top - thickness;
+    const terrainY = track?.getHeightAt?.(grid[idx].x, grid[idx].z);
+    if (!Number.isFinite(terrainY)) return nominal;
+    return Math.min(top - BRIDGE_MIN_SLAB, Math.max(nominal, terrainY - BRIDGE_UNDERGRADE_EMBED));
+  };
 
   // Top vertices (indices 0 .. n-1)
   for (let r = 0; r < rows; r++) {
@@ -979,7 +1001,7 @@ function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thic
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const p = grid[r * cols + c];
-      positions.push(p.x, (heights[r * cols + c] ?? 0) - thickness, p.z);
+      positions.push(p.x, bottomAt(r * cols + c), p.z);
       uvs.push(c / Math.max(cols - 1, 1), r / Math.max(rows - 1, 1));
     }
   }
@@ -1030,9 +1052,10 @@ function _buildSolidVD(centerX, centerZ, cols, rows, width, depth, heights, thic
     for (const { r, c, u } of edge) {
       const p = grid[r * cols + c];
       const topY = heights[r * cols + c] ?? 0;
+      const botYv = bottomAt(r * cols + c);
       positions.push(p.x, topY, p.z);
       uvs.push(u, 0);
-      positions.push(p.x, topY - thickness, p.z);
+      positions.push(p.x, botYv, p.z);
       uvs.push(u, sideV);
     }
     for (let i = 0; i < edge.length - 1; i++) {

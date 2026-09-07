@@ -60,10 +60,12 @@ export class RaceMode extends DriveMode {
 
     this.scene = scene;
     const frameProfiler = this.initFrameProfiler('RaceMode');
-    const shadowMap = shadows?.getShadowMap?.();
-    if (shadowMap) {
-      // Update shadows every other frame to reduce render cost in races.
-      shadowMap.refreshRate = 2;
+    // Update shadows every other frame to reduce render cost in races.
+    if (shadows?.setRefreshRate) {
+      shadows.setRefreshRate(2);
+    } else {
+      const shadowMap = shadows?.getShadowMap?.();
+      if (shadowMap) shadowMap.refreshRate = 2;
     }
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;

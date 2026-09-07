@@ -9,6 +9,12 @@ OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
 OBJFileLoader.SKIP_MATERIALS = true;
 
 import { clamp } from "../utils/math-utils.js";
+import { loadDisplaySettings } from "../settingsStorage.js";
+
+/** Whether AI trucks should cast real (cube-map) shadows, per display settings. */
+function _aiTruckShadowsEnabled() {
+  return loadDisplaySettings().aiTruckShadows !== false;
+}
 
 /**
  * Sprung-mass body dynamics — one coherent model for all visual body motion.
@@ -104,6 +110,18 @@ export class TruckBody {
     this._ghost = options?.ghost === true;
     this._ghostAlpha = options?.ghostAlpha ?? 0.6;
     if (this._ghost) this._disableDynamicShadows = true;
+
+    // AI trucks cast real shadows only when the "AI Truck Shadows" display
+    // setting is on (it's a perf lever); the player truck always casts. A
+    // forced-off truck (ghost / hot-lap) never casts regardless. `_castShadows`
+    // is the live flag `_styleMesh` reads; it follows the setting at runtime.
+    this._aiTruck = options?.aiTruck === true;
+    this._castShadows = !this._disableDynamicShadows
+      && (!this._aiTruck || _aiTruckShadowsEnabled());
+    if (this._aiTruck && !this._disableDynamicShadows) {
+      this._onDisplaySettingsChanged = () => this._setCastShadows(_aiTruckShadowsEnabled());
+      window.addEventListener('offroad:display-settings-changed', this._onDisplaySettingsChanged);
+    }
     this.vehicleDef = vehicleDef;
     this._parentHalfHeight = parent.getBoundingInfo()?.boundingBox?.extendSize?.y ?? 0.4;
 
@@ -672,14 +690,32 @@ export class TruckBody {
     mesh.material     = mat;
     mesh.receiveShadows = !this._disableDynamicShadows && !this._ghost;
     if (this._ghost) mesh.isPickable = false;
-    if (!this._disableDynamicShadows) {
+    if (this._castShadows) {
       this.shadows?.addShadowCaster(mesh);
+    }
+  }
+
+  /**
+   * Toggle whether this truck's parts are registered as shadow casters. Used
+   * live by the "AI Truck Shadows" display setting; parts load async, so this
+   * also updates `_castShadows` for parts built later.
+   */
+  _setCastShadows(on) {
+    if (!!on === this._castShadows) return;
+    this._castShadows = !!on;
+    for (const mesh of this._parts) {
+      if (this._castShadows) this.shadows?.addShadowCaster(mesh);
+      else this.shadows?.removeShadowCaster(mesh);
     }
   }
 
   // ─── Disposal ─────────────────────────────────────────────────────────────
 
   dispose() {
+    if (this._onDisplaySettingsChanged) {
+      window.removeEventListener('offroad:display-settings-changed', this._onDisplaySettingsChanged);
+      this._onDisplaySettingsChanged = null;
+    }
     for (const mesh of this._parts) mesh.dispose();
     this._contactShadow?.dispose();
     this._contactShadowMat?.dispose();

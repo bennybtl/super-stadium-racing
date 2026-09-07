@@ -1,7 +1,7 @@
 {
   "id": "flag_stand",
   "name": "Flag Stand",
-  "modelFile": "decorations.obj",
+  "modelFile": "flag_stand.obj",
   "rotationX": 0,
   "baseScale": 1,
   "offsetY": 0,

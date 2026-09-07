@@ -53,6 +53,7 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   shadow: 'medium',
   lights: 4,
   checkpointArrow: true,
+  aiTruckShadows: true,
 };
 
 export const DEFAULT_GAMEPLAY_SETTINGS = {
@@ -121,6 +122,9 @@ function normalizeDisplaySettings(candidate) {
     checkpointArrow: candidate?.checkpointArrow === undefined
       ? DEFAULT_DISPLAY_SETTINGS.checkpointArrow
       : Boolean(candidate.checkpointArrow),
+    aiTruckShadows: candidate?.aiTruckShadows === undefined
+      ? DEFAULT_DISPLAY_SETTINGS.aiTruckShadows
+      : Boolean(candidate.aiTruckShadows),
   };
 }
 

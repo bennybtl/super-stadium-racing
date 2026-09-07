@@ -1,6 +1,6 @@
 # Blender 5.1.1
 # www.blender.org
-mtllib decorations.mtl
+mtllib flag_stand.mtl
 g flag_stand_Cube
 v 1.441911 0.260036 0.203005 1.0000 1.0000 1.0000
 v -1.441911 0.260036 0.203005 1.0000 1.0000 1.0000

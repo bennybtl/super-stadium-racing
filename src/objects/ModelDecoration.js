@@ -203,6 +203,15 @@ export class ModelDecoration {
     );
     if (!cached || cached.scene !== scene || cachedSceneDisposed) {
       const url = def.modelUrl;
+      if (!url) {
+        // No resolved OBJ (missing/renamed modelFile, or a def that should have
+        // had a controller). Fail soft with an empty mesh set rather than
+        // crashing the whole scene build.
+        console.error(`[ModelDecoration] "${def.id}" has no modelUrl (modelFile: ${def.modelFile ?? 'none'}); skipping`);
+        const empty = Promise.resolve([]);
+        ModelDecoration._sourcePromises.set(key, { scene, promise: empty });
+        return empty;
+      }
       const lastSlash = url.lastIndexOf('/');
       const rootUrl   = url.substring(0, lastSlash + 1);
       const fileName  = url.substring(lastSlash + 1);
