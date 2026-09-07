@@ -1,4 +1,4 @@
-import { BannerString } from "./lib/BannerString.js";
+import { BannerString, GUST_RADIUS } from "./lib/BannerString.js";
 
 /**
  * Banner string decoration controller.
@@ -12,6 +12,40 @@ import { BannerString } from "./lib/BannerString.js";
 export default {
   build(feature, def, { scene, groundY, shadows }) {
     return new BannerString(feature, groundY, scene, shadows);
+  },
+
+  /** Per-frame: feed passing trucks' wakes in, then advance the sway. */
+  update(banner, { dt, trucks }) {
+    if (!dt || dt <= 0) return;
+
+    const origin = banner.container.position;
+    const h   = banner.container.rotation.y;
+    const cos = Math.cos(h);
+    const sin = Math.sin(h);
+    // Anything beyond the span plus a wake radius can't reach the banner.
+    const reach = banner.feature.width / 2 + GUST_RADIUS;
+
+    for (const truckData of trucks ?? []) {
+      const truck = truckData.truck ?? truckData;
+      if (!truck.mesh || !truck.state) continue;
+
+      const tp = truck.mesh.position;
+      const wx = tp.x - origin.x;
+      const wz = tp.z - origin.z;
+      if (wx * wx + wz * wz > reach * reach) continue;
+
+      // Into banner-local space: +X runs along the span, +Z crosses it.
+      const vel = truck.state.velocity;
+      banner.applyGust(
+        wx * cos - wz * sin,
+        tp.y - origin.y,
+        wx * sin + wz * cos,
+        vel.x * sin + vel.z * cos,
+        dt,
+      );
+    }
+
+    banner.update(dt);
   },
 
   edit: {
