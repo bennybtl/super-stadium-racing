@@ -308,7 +308,7 @@ export class Truck {
       // turnSpeed available at a dead stop (0 = can't spin, 1 = full rate),
       // the fraction of maxSpeed at which authority peaks, and the authority
       // at maxSpeed after easing down from that peak. Tune per vehicle.
-      idleAuthority: 0.35,
+      idleAuthority: 0,
       rampSpeed: 0.22,
       topSpeedAuthority: 0.9,
 

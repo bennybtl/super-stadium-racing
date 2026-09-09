@@ -1,0 +1,29 @@
+{
+  "id": "bleachers",
+  "name": "Bleachers",
+  "modelFile": "bleachers.obj",
+  "offsetY": 0,
+  "defaultColor": "white",
+  "defaultScale": 1.5,
+  "colorableMeshes": [
+    "Cube.001_Material"
+  ],
+  "meshColors": {
+    "Cube.001_Steel_-_Satin": [0.208, 0.208, 0.208],
+    "Cube.002_Steel_-_Satin": [0.208, 0.208, 0.208]
+  },
+  "colliderMeshes": [
+    "bleachers"
+  ],
+  "castsShadows": true,
+  "featureDefaults": {
+    "heading": 0,
+    "width": 3,
+    "height": 3
+  },
+  "editable": {
+    "color": true,
+    "scale": false,
+    "heading": true
+  }
+}
