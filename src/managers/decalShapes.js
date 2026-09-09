@@ -222,9 +222,9 @@ function drawTriangle(ctx, w, h, outline) {
  * uploads its 2D canvas (row 0 = top) so that UV.y = 0 lands at the texture's
  * BOTTOM, independent of the `useOpenGLOrientationForUV` flag CreateDecal's own
  * UV formula uses. Every other shape here draws a fixed, self-contained image
- * ("pointing up") so this flip is invisible in them — GHOST_ROTATION_OFFSET_DEG
- * already calibrates around it — but a polyline maps specific world points
- * through, so getting the row direction right actually matters.
+ * ("pointing up") so this flip is invisible in them — the ghost plane's proper
+ * basis in DecalEditor already accounts for it — but a polyline maps specific
+ * world points through, so getting the row direction right actually matters.
  */
 function drawPolyline(ctx, w, h, localPoints, linePx) {
   if (!localPoints || localPoints.length < 2) return;

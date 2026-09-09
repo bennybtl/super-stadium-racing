@@ -1,6 +1,6 @@
 # Decal system unification — phased plan
 
-**Status:** Phases 0 + 1 + 2 done (2026-09-06), Phase 2 pending in-app QA. Phase 3 pending.
+**Status:** Phases 0 + 1 + 2 done — Phase 2 in-app QA passed 2026-09-09. Phase 3 pending.
 
 ## Why
 
@@ -96,9 +96,9 @@ if a decal is dragged straight through a near-N/S-facing-wall pose. Irrelevant t
 current fixed placements; revisit in Phase 2 if free-surface dragging needs it
 (store the ref at placement, or blend).
 
-The `-90°` `GHOST_ROTATION_OFFSET_DEG` fudge in `SurfaceDecalEditor` is NOT
-removed yet — it lives in the editor/ghost path and comes out in Phase 2 with the
-schema change.
+The `-90°` `GHOST_ROTATION_OFFSET_DEG` fudge in `SurfaceDecalEditor` came out in
+Phase 2 with the schema change — the merged `DecalEditor` orients its ghost plane
+by the proper basis `(u, v=u×n, u×v)` instead.
 
 ---
 
@@ -143,13 +143,15 @@ projections bit-identical to the old managers'.
 
 ---
 
-## Phase 2 — Codemod + editor merge + one feature type  ✅ DONE (2026-09-06, pending in-app QA)
+## Phase 2 — Codemod + editor merge + one feature type  ✅ DONE (2026-09-06; QA passed 2026-09-09)
 
 **Landed:** `scripts/migrate-decals.mjs` rewrote 92 decals in 17 files
 (`src/tracks/**` + `track-packs/**`) to `type:"decal"`; `SurfaceDecalEditor` →
 `DecalEditor` (absorbs `WallDecalEditor`, deleted) — one ghost that orients to
-the surface under the cursor (`decalStableU` for the U axis, `GHOST_V` flip
-constant), flat decals drag on the XZ plane / wall decals re-pick the surface,
+the surface under the cursor (`decalStableU` for the U axis; the ghost plane is
+oriented by the proper basis `(u, v=u×n, u×v)` so it matches CreateDecal's
+left-handed decal frame — no `GHOST_V` / `GHOST_ROTATION_OFFSET_DEG` fudge
+survives), flat decals drag on the XZ plane / wall decals re-pick the surface,
 polyline gated to flat surfaces; `SurfaceDecalPanel` → `DecalPanel` (absorbs
 `WallDecalPanel`); `editor.js` one `decal` slice; `EditorController` one
 `decalEditor` + `setDecal*`/`changeDecal*`; `AddEntityMenu` one "Decal";
@@ -158,9 +160,21 @@ only), `entries` (no more surface/wall split). `_rotation` maps to
 `feature.rotation` directly (stable frame) — the old SurfaceDecal slider
 direction is reversed for new edits, consistent with walls now.
 
-**Needs eyeballing:** ghost alignment vs the stamped decal on ground / deck /
-wall / ramp (flip `GHOST_V` if V is upside-down); drag feel on walls vs flat;
-the 10 migrated wall-decal rotations; polyline place + point-edit.
+**QA passed (2026-09-09):** migrated decals render correctly across the bundled
+tracks (chihuahua_flats 20 incl. 6 wall, desert_doublecross 4 wall, mesa_madness
+/ surfs_up ground + deck); ghost matches the stamp on ground / deck / wall /
+ramp; rotation slider direction correct (reversed from old SurfaceDecal, matches
+walls); wall re-pick drag and flat XZ-plane drag both good; polyline places on
+flat only and point-edit works.
+
+**Known limitation (accepted, not fixed):** dragging the ghost off a
+**north/south-facing wall** (normal within ~26° of ±Z) onto the ground rotates
+the decal 90° — `decalStableU`'s reference axis falls back from world +Z to
+world +X on those walls (the Phase 0 `DECAL_REF_POLE` discontinuity). Both
+resting states bake correctly; only the live drag across that boundary is wrong.
+Decals are placed once, not dragged wall↔ground, so this stays parked — fix via
+a per-decal stored ref axis (Phase 0 "Known limit") only if free-surface
+dragging ever needs it.
 
 ---
 
