@@ -1,5 +1,14 @@
-import { Mesh, VertexData, StandardMaterial, Color3 } from "@babylonjs/core";
+import {
+  Mesh,
+  MeshBuilder,
+  VertexData,
+  StandardMaterial,
+  Texture,
+  Color3,
+  Vector3,
+} from "@babylonjs/core";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
+import chainlinkTextureUrl from "../assets/textures/chainlink.texture.png?url";
 
 /**
  * Shared machinery for the polyline "ribbon" objects — PolyWall and PolyCurb.
@@ -232,5 +241,187 @@ export function buildStripedRibbon({
   mesh.receiveShadows = true;
   shadows?.addShadowCaster(mesh);
 
+  return mesh;
+}
+
+// ── Chain-link fence ────────────────────────────────────────────────────────
+// A rail + posts + alpha-cut chain-link strip standing on top of a sampled
+// polyline. Shared by PolyWall (fence above a wall) and BleachersStand (safety
+// rail around a grandstand). The caller supplies the sampled centerline
+// (xs/zs/s/nx/nz + a per-sample base height `smooth`) and the vertical span
+// bottom→top the fabric fills; everything is built in whatever frame those
+// coordinates are in, so a caller working in a local frame can parent the
+// returned meshes into place.
+const FENCE_POST_SPACING = 4;      // world units between posts down a straight run
+const FENCE_POST_CORNER_ANGLE = 10; // turn (deg) at a sample that counts as a bend
+const FENCE_TUBE_RADIUS = 0.07;    // rail and post radius (world units)
+const FENCE_TUBE_SIDES = 6;        // tube tessellation — hexagons read as round here
+const FENCE_MIN_HEIGHT = 0.3;      // below this there is nothing worth drawing
+const FENCE_POST_EMBED = 0.15;     // how far posts sink into the surface below
+const FENCE_COLOR = new Color3(0.60, 0.62, 0.65);
+const FENCE_MESH_TILE = 2;         // world units per chain-link texture repeat
+
+/**
+ * Metal tubing standing on a sampled polyline: a rail following the profile,
+ * carried by posts at regular intervals, backed by a chain-link strip spanning
+ * `bottom`→`top` above each sample's `smooth` height. Straight runs skip every
+ * other post; bends get one per sample. Open paths always get an end post.
+ *
+ * Purely visual — the caller owns whatever collision stops a body here.
+ *
+ * @returns {Mesh[]} `[tubing, fabric]` (or just `[tubing]` when the span is a
+ *   sliver), empty when there is no gap worth drawing.
+ */
+export function buildChainlinkFence({
+  xs, zs, s, step, total, nx, nz, smooth, closed, scene, bottom, top,
+}) {
+  const fenceHeight = top - bottom;
+  if (fenceHeight < FENCE_MIN_HEIGHT) return [];
+
+  const n = xs.length;
+  const parts = [];
+
+  // Top rail — centred a radius below `top` so the tube's crown, not its axis,
+  // lands on that height.
+  const railY = (i) => smooth[i] + top - FENCE_TUBE_RADIUS;
+  const path = [];
+  for (let i = 0; i < n; i++) path.push(new Vector3(xs[i], railY(i), zs[i]));
+  if (closed) path.push(path[0].clone());
+  parts.push(MeshBuilder.CreateTube("fenceRail", {
+    path,
+    radius: FENCE_TUBE_RADIUS,
+    tessellation: FENCE_TUBE_SIDES,
+    cap: closed ? Mesh.NO_CAP : Mesh.CAP_ALL,
+  }, scene));
+
+  const postAt = (i) => {
+    const baseY = smooth[i] + bottom - FENCE_POST_EMBED;
+    const height = smooth[i] + top - baseY;
+    const post = MeshBuilder.CreateCylinder("fencePost", {
+      height,
+      diameter: FENCE_TUBE_RADIUS * 2,
+      tessellation: FENCE_TUBE_SIDES,
+    }, scene);
+    post.position.set(xs[i], baseY + height / 2, zs[i]);
+    parts.push(post);
+  };
+
+  // Turn between the segments meeting at sample `i`, in radians.
+  const turnAt = (i) => {
+    const prev = closed ? (i - 1 + n) % n : i - 1;
+    const next = closed ? (i + 1) % n : i + 1;
+    if (prev < 0 || next >= n) return 0; // open ends have only one segment
+    const ax = xs[i] - xs[prev], az = zs[i] - zs[prev];
+    const bx = xs[next] - xs[i], bz = zs[next] - zs[i];
+    const la = Math.hypot(ax, az), lb = Math.hypot(bx, bz);
+    if (la < 1e-6 || lb < 1e-6) return 0;
+    const cos = (ax * bx + az * bz) / (la * lb);
+    return Math.acos(Math.min(1, Math.max(-1, cos)));
+  };
+
+  const cornerAngle = (FENCE_POST_CORNER_ANGLE * Math.PI) / 180;
+  let lastPost = -1;
+  let lastPostS = -Infinity;
+  for (let i = 0; i < n; i++) {
+    // Straight enough to skip every other sample; a bend gets one per sample.
+    const spacing = turnAt(i) < cornerAngle
+      ? FENCE_POST_SPACING * 2
+      : FENCE_POST_SPACING;
+    // Samples are quantised to `step`, so allow the nearest one rather than
+    // overshooting a whole sample past every target distance.
+    if (s[i] - lastPostS < spacing - step * 0.5) continue;
+    postAt(i);
+    lastPost = i;
+    lastPostS = s[i];
+  }
+  // Open paths always get an end post, so the rail never trails off unsupported.
+  if (!closed && lastPost !== n - 1) postAt(n - 1);
+
+  const tubing = Mesh.MergeMeshes(parts, true, true, undefined, false, false);
+  if (!tubing) return [];
+  tubing.name = "fenceTubing";
+
+  const mat = new StandardMaterial("fenceMat", scene);
+  mat.diffuseColor = FENCE_COLOR;
+  mat.specularColor = new Color3(0.35, 0.35, 0.35);
+  mat.specularPower = 48;
+  tubing.material = mat;
+  tubing.isPickable = false;
+  tubing.receiveShadows = true;
+
+  const fabric = _buildChainlinkFabric({
+    xs, zs, s, total, nx, nz, smooth, closed, scene,
+    bottom,
+    top: top - FENCE_TUBE_RADIUS, // hangs from the rail's axis
+  });
+
+  return fabric ? [tubing, fabric] : [tubing];
+}
+
+/**
+ * The chain-link fabric itself: a quad strip on the centerline spanning
+ * `bottom`→`top`, textured with an alpha-cut chain-link tile.
+ *
+ * Alpha *testing* rather than blending — the mesh is mostly holes, and a cutout
+ * keeps it writing depth so overlapping runs (and the tubing in front) sort
+ * correctly without a transparency pass. UVs run off arc length, so the weave
+ * keeps a constant world scale around corners and the diamonds stay square
+ * whatever the height.
+ */
+function _buildChainlinkFabric({
+  xs, zs, s, total, nx, nz, smooth, closed, scene, bottom, top,
+}) {
+  const n = xs.length;
+  const height = top - bottom;
+  if (n < 2 || height <= 0) return null;
+
+  // Closed loops repeat the first sample so the seam band has somewhere to
+  // interpolate its U to, rather than wrapping back to zero.
+  const count = closed ? n + 1 : n;
+  const positions = [], normals = [], uvs = [], indices = [];
+  // A closed loop stretches the tile just enough to fit a whole number of
+  // repeats around the perimeter, so the weave meets itself at the seam instead
+  // of being cut mid-diamond.
+  const tile = closed
+    ? total / Math.max(1, Math.round(total / FENCE_MESH_TILE))
+    : FENCE_MESH_TILE;
+  const vTop = height / tile;
+
+  for (let k = 0; k < count; k++) {
+    const i = k % n;
+    const u = (k < n ? s[i] : total) / tile;
+    positions.push(xs[i], smooth[i] + bottom, zs[i]);
+    positions.push(xs[i], smooth[i] + top, zs[i]);
+    normals.push(nx[i], 0, nz[i], nx[i], 0, nz[i]);
+    uvs.push(u, 0, u, vTop);
+  }
+
+  for (let k = 0; k < count - 1; k++) {
+    const b = k * 2;
+    indices.push(b, b + 1, b + 3, b, b + 3, b + 2);
+  }
+
+  const mesh = new Mesh("fenceMesh", scene);
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.normals = normals;
+  vd.uvs = uvs;
+  vd.applyToMesh(mesh);
+
+  const texture = new Texture(chainlinkTextureUrl, scene);
+  texture.hasAlpha = true;
+  texture.anisotropicFilteringLevel = 4;
+
+  const mat = new StandardMaterial("fenceMeshMat", scene);
+  mat.diffuseTexture = texture;
+  mat.diffuseColor = FENCE_COLOR;
+  mat.specularColor = new Color3(0.25, 0.25, 0.25);
+  mat.specularPower = 48;
+  mat.backFaceCulling = false;
+  mat.twoSidedLighting = true; // the strip is seen from both sides
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.receiveShadows = true;
   return mesh;
 }

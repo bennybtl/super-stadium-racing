@@ -8,10 +8,17 @@ import {
   applyColliderMetadata,
   colliderEnabledFor,
 } from "../../objects/ModelDecoration.js";
+import { centerlineNormals, buildChainlinkFence } from "../../objects/poly-ribbon.js";
 
 const DEFAULT_COLOR = "white";
 const MIN_UNITS = 1;
 const MAX_UNITS = 20;
+
+// Safety rail around the back and top-row ends of the stand so trucks (and
+// spectators) can't tumble off the top. Built in model space and parented to
+// the unit pivot, so it scales and rotates with the stand. Tweak by eye.
+const RAIL_HEIGHT = 1.1;   // model units above the top seating surface
+const RAIL_SAMPLE = 1.5;   // model units between rail samples (post spacing driver)
 
 // The riser cube ships as a separate OBJ; resolve its bundled URL the same way
 // DecorationLoader resolves modelFile, so the controller can load it directly
@@ -70,6 +77,7 @@ export class BleachersStand {
     this._scene = scene;
     this._shadows = (def.castsShadows === false) ? null : (shadows ?? null);
     this._meshes = [];
+    this._fenceParts = []; // safety rail (tubing + chain-link), rebuilt with the units
     this._seatSrc = null;
     this._boxSrc = null;
     this._seatB = null;
@@ -153,6 +161,67 @@ export class BleachersStand {
       }
     }
     this._applyCollider();
+    this._buildRail(w, hasBox ? h : 1, s, seatW, boxH, boxD);
+  }
+
+  /**
+   * Chain-link safety rail around the back edge and both sides of the stand,
+   * built in model space (same frame as the unit clones) and parented to the
+   * pivot. The side runs rake down at the seating's own slope (boxH per boxD —
+   * 45° when the riser cube is square) from the top-back corner to the foot of
+   * the stairs, so there's no gap over the lower rows and no overshoot past the
+   * front. Reuses the PolyWall fence primitive. Purely visual — the seating
+   * units carry collision.
+   */
+  _buildRail(w, tiers, s, seatW, boxH, boxD) {
+    const tier = tiers - 1;
+    const seatH = (s.max.y - s.min.y);
+    const backY = tier * boxH + seatH; // top seating surface at the back
+    const xl = -(w - 1) / 2 * seatW + s.min.x;
+    const xr =  (w - 1) / 2 * seatW + s.max.x;
+    const zTop = -tier * boxD + s.min.z;  // back edge of the top seat
+    const zBot = zTop + tier * boxD;      // foot of the rake (= s.min.z); slope stays boxH/boxD
+
+    // Open polyline. Each corner carries the seating height there; the side runs
+    // interpolate, giving a straight rake parallel to the steps.
+    const corners = tier === 0
+      ? [[xl, zTop, backY], [xr, zTop, backY]]
+      : [
+          [xl, zBot, seatH],
+          [xl, zTop, backY],
+          [xr, zTop, backY],
+          [xr, zBot, seatH],
+        ];
+    const xs = [], zs = [], ys = [];
+    for (let seg = 0; seg < corners.length - 1; seg++) {
+      const [ax, az, ay] = corners[seg];
+      const [bx, bz, by] = corners[seg + 1];
+      const div = Math.max(1, Math.round(Math.hypot(bx - ax, bz - az) / RAIL_SAMPLE));
+      for (let k = (seg === 0 ? 0 : 1); k <= div; k++) {
+        const t = k / div;
+        xs.push(ax + (bx - ax) * t);
+        zs.push(az + (bz - az) * t);
+        ys.push(ay + (by - ay) * t);
+      }
+    }
+    if (xs.length < 2) return;
+
+    const sArr = [0];
+    for (let i = 1; i < xs.length; i++) {
+      // 3D arc length so post spacing / weave scale stay even down the rake.
+      sArr.push(sArr[i - 1] + Math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1], zs[i] - zs[i - 1]));
+    }
+    const { nx, nz } = centerlineNormals(xs, zs, false);
+    const parts = buildChainlinkFence({
+      xs, zs, s: sArr, step: RAIL_SAMPLE, total: sArr[sArr.length - 1],
+      nx, nz, smooth: ys,
+      closed: false, scene: this._scene, bottom: 0, top: RAIL_HEIGHT,
+    });
+    for (const m of parts) {
+      m.parent = this._pivot;
+      m.isPickable = true; // clicking the rail selects the stand
+      this._fenceParts.push(m);
+    }
   }
 
   _addUnit(sources, name, x, y, z) {
@@ -188,6 +257,11 @@ export class BleachersStand {
   _clearMeshes() {
     for (const m of this._meshes) m.dispose();
     this._meshes = [];
+    for (const m of this._fenceParts) {
+      m.material?.dispose(false, true); // fence makes a fresh material + texture per build
+      m.dispose();
+    }
+    this._fenceParts = [];
   }
 
   _applyColor(colorName) {
@@ -203,7 +277,7 @@ export class BleachersStand {
   // ─── Instance contract ──────────────────────────────────────────────────────
 
   containsMesh(mesh) {
-    return this._meshes.includes(mesh);
+    return this._meshes.includes(mesh) || this._fenceParts.includes(mesh);
   }
 
   get position() {
