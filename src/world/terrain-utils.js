@@ -171,7 +171,7 @@ export function _getTerrainSlopeDegAt(track, x, z, sampleDistance) {
 }
 
 export function applySteepWaterTerrainRemap(terrainManager, track, options = {}) {
-  const slopeThreshold = options.slopeThreshold ?? 10;
+  const slopeThreshold = options.slopeThreshold ?? 24;
   const sampleDistance = options.sampleDistance ?? 2.5;
   const cellsPerSide = terrainManager?.cellsPerSide ?? 0;
   if (!track || cellsPerSide <= 0) return;
@@ -197,8 +197,8 @@ export function applySteepWaterTerrainRemap(terrainManager, track, options = {})
 }
 
 export function applySteepGrassTerrainRemap(terrainManager, track, options = {}) {
-  const slopeStart = options.slopeStart ?? 16;
-  const sampleDistance = options.sampleDistance ?? 2.5;
+  const slopeStart = options.slopeStart ?? 24;
+  const sampleDistance = options.sampleDistance ?? 4.5;
   const cellsPerSide = terrainManager?.cellsPerSide ?? 0;
   if (!track || cellsPerSide <= 0) return;
 
