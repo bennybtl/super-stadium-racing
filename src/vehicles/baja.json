@@ -24,8 +24,7 @@
   "params": {
     "maxSpeed": 39,
     "acceleration": 24,
-    "turnSpeed": 3.9,
-    "idleAuthority": 0
+    "turnSpeed": 3.9
   },
   "handling": {
     "lateralBias": 0.32,

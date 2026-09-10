@@ -304,11 +304,10 @@ export class Truck {
       // Higher = more understeer on throttle, more oversteer on brakes.
       // Tune per vehicle: heavy trucks ~1.5, light buggies ~0.6.
       weightTransfer: 1.45,
-      // Steer authority curve (see Controls._steerAuthority): fraction of
-      // turnSpeed available at a dead stop (0 = can't spin, 1 = full rate),
-      // the fraction of maxSpeed at which authority peaks, and the authority
-      // at maxSpeed after easing down from that peak. Tune per vehicle.
-      idleAuthority: 0,
+      // Steer authority curve (see Controls._steerAuthority): the fraction of
+      // maxSpeed at which authority peaks, and the authority at maxSpeed after
+      // easing down from that peak. Authority is always 0 at a dead stop (no
+      // rotation in place). Tune per vehicle.
       rampSpeed: 0.22,
       topSpeedAuthority: 0.9,
 

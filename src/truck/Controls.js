@@ -53,11 +53,10 @@ const STEER_RAMP_DOWN = 7;
 // multipliers (a stationary-spin ramp applied at delta-application time, and
 // a flat high-speed understeer term applied earlier) that both scaled the
 // same quantity and had to be tuned against each other. Authority rises from
-// idleAuthority at a dead stop to its 1.0 peak by rampSpeed·maxSpeed — fast,
-// so low/moderate-speed steering feels sharp well before top speed — then
-// eases toward topSpeedAuthority by maxSpeed. All three overridable per
-// vehicle via state.idleAuthority / state.rampSpeed / state.topSpeedAuthority.
-const DEFAULT_IDLE_AUTHORITY = 0.35;
+// zero at a dead stop (no rotation in place) to its 1.0 peak by
+// rampSpeed·maxSpeed — fast, so low/moderate-speed steering feels sharp well
+// before top speed — then eases toward topSpeedAuthority by maxSpeed. Both
+// overridable per vehicle via state.rampSpeed / state.topSpeedAuthority.
 const DEFAULT_RAMP_SPEED = 0.22;
 const DEFAULT_TOP_SPEED_AUTHORITY = 0.9;
 
@@ -79,8 +78,8 @@ const WEIGHT_SHIFT_ONSET_RATE = 22;
 const WEIGHT_SHIFT_SETTLE_RATE = 6;
 /** Default floor on steer authority after the weight-transfer term is
  *  applied, so a hard throttle understeer moment never removes turn-in
- *  entirely. Scaled down for vehicles tuned below this at rest — see
- *  calculateSpeedFactors. */
+ *  entirely. Follows the base curve down where that sits below this floor
+ *  (low speed) — see calculateSpeedFactors. */
 const MIN_STEER_AUTHORITY = 0.40;
 /** Lateral-grip taper with speed, and its floor (tire limit at speed). */
 const LATERAL_GRIP_SPEED_TAPER = 0.30;
@@ -310,16 +309,15 @@ export class Controls {
 
   /**
    * How much of turnSpeed is available at this speedRatio, before the
-   * weight-transfer term. Rises from idleAuthority to a 1.0 peak by
+   * weight-transfer term. Rises from 0 at a dead stop to a 1.0 peak by
    * rampSpeed·maxSpeed, then eases toward topSpeedAuthority by maxSpeed.
    */
   _steerAuthority(speedRatio) {
-    const idleAuthority = this.state.idleAuthority ?? DEFAULT_IDLE_AUTHORITY;
     const rampSpeed = this.state.rampSpeed ?? DEFAULT_RAMP_SPEED;
     const topSpeedAuthority = this.state.topSpeedAuthority ?? DEFAULT_TOP_SPEED_AUTHORITY;
 
     return speedRatio <= rampSpeed
-      ? lerp(idleAuthority, 1, smoothstep(0, rampSpeed, speedRatio))
+      ? smoothstep(0, rampSpeed, speedRatio)
       : lerp(1, topSpeedAuthority, smoothstep(rampSpeed, 1, speedRatio));
   }
 
@@ -374,9 +372,9 @@ export class Controls {
     const frontLoad = Math.max(0, -load); // forward shift (braking)
 
     const baseAuthority = this._steerAuthority(speedRatio);
-    // Floor scales down with the curve itself, so a vehicle deliberately tuned
-    // below MIN_STEER_AUTHORITY at rest (e.g. a low idleAuthority) keeps its
-    // own lower floor instead of being pulled back up to the default one.
+    // Floor scales down with the curve itself: at low speed the base authority
+    // is under MIN_STEER_AUTHORITY (0 at a dead stop), so the weight-transfer
+    // term is floored against the curve there rather than the default value.
     const steerAuthority = Math.max(Math.min(MIN_STEER_AUTHORITY, baseAuthority),
       baseAuthority
         - rearLoad * THROTTLE_UNDERSTEER_GAIN

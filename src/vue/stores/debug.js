@@ -31,7 +31,6 @@ export const useDebugStore = defineStore('debug', () => {
     grip: 0.16,
     turnSpeed: 5,
     weightTransfer: 1.45,
-    idleAuthority: 0.35,
     rampSpeed: 0.22,
     topSpeedAuthority: 0.9,
     maxSpeed: 34,
