@@ -40,7 +40,7 @@ export class RaceMode extends DriveMode {
     this.checkpointArrow = null;
   }
 
-  async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'baja', aiVehicleKey = 'random', playerColorKey = null, reverse = false, championship = null }) {
+  async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'baja', aiVehicleKey = 'random', playerColorKey = null, reverse = false, night = false, championship = null }) {
     const { engine, menuManager } = this.controller;
     const totalLaps = laps || 3;
     const rubberBandLevel = loadGameplaySettings().rubberBand;
@@ -56,7 +56,7 @@ export class RaceMode extends DriveMode {
       obstacleManager,
       decorationManager,
       pickupManager,
-    } = await this.buildDriveScene(trackKey);
+    } = await this.buildDriveScene(trackKey, { night });
 
     this.scene = scene;
     const frameProfiler = this.initFrameProfiler('RaceMode');

@@ -1,4 +1,4 @@
-import { MeshBuilder, StandardMaterial, Matrix, Vector3, Engine, Ray } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Matrix, Vector3, Engine, Ray, Color3 } from "@babylonjs/core";
 
 /**
  * groundDecal — shared helpers for projecting a canvas/DynamicTexture onto a
@@ -98,12 +98,17 @@ export function decalStableU(normal, rotationRad = 0) {
  */
 export function projectDecal(target, name, { position, normal, rotationRad = 0, width, height, projectionDepth = PROJECTION_DEPTH }) {
   const n = normal ? normal.normalizeToNew() : Vector3.Up();
-  return MeshBuilder.CreateDecal(name, target, {
+  const decal = MeshBuilder.CreateDecal(name, target, {
     position,
     normal: n,
     size: new Vector3(width, height, projectionDepth),
     angle: decalStableAngle(n, rotationRad),
   });
+  // No-op by day (makeDecalMaterial's self-lit material ignores shadows), but
+  // lets night decals darken under a truck/wall shadow like the surface they
+  // sit on, instead of reading as a lit patch inside a shadow.
+  decal.receiveShadows = true;
+  return decal;
 }
 
 /**
@@ -163,20 +168,34 @@ export function projectGroundDecal(ground, name, { position, width, depth, angle
 }
 
 /**
- * Self-lit decal material: the texture supplies both colour (emissive) and
- * alpha, lighting is disabled so the marking reads the same under any scene
- * light, and a negative zOffset keeps it from z-fighting the ground beneath it.
+ * Decal material. The texture supplies colour and alpha; a negative zOffset
+ * keeps it from z-fighting the surface beneath it.
+ *
+ * By day it's self-lit (emissive = the texture, lighting disabled) so the
+ * marking reads the same across every shadow-detail tier and light count.
+ * At night that would mean decals glow at full brightness through the dark —
+ * wrong for a scene that's supposed to read as lit-near-poles / dark
+ * everywhere else — so night decals are lit like any other surface instead:
+ * normal diffuse texture, real lighting, no baked-in glow.
  */
 export function makeDecalMaterial(scene, name, texture, opacity = 1) {
   texture.hasAlpha = true;
   const mat = new StandardMaterial(name, scene);
   mat.diffuseTexture = texture;
-  mat.emissiveTexture = texture;
   mat.useAlphaFromDiffuseTexture = true;
-  mat.disableLighting = true;
   mat.alphaMode = Engine.ALPHA_COMBINE;
   mat.alpha = opacity;
   mat.backFaceCulling = false;
   mat.zOffset = -2;
+
+  if (scene?.metadata?.night === true) {
+    mat.disableLighting = false;
+    mat.specularColor = new Color3(0, 0, 0); // flat printed art, no gloss highlights
+    // (Per-material light cap is lifted scene-wide — see the
+    // onNewMaterialAddedObservable hook in SceneBuilder.buildScene.)
+  } else {
+    mat.emissiveTexture = texture;
+    mat.disableLighting = true;
+  }
   return mat;
 }

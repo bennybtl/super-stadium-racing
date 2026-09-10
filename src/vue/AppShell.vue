@@ -25,6 +25,7 @@
     <DecorationsPanel />
     <TrackSignPanel />
     <StartPositionPanel />
+    <TrackLightPanel />
     <TrackSettingsPanel />
     <ActionZonePanel />
     <PolyCurbPanel />
@@ -58,6 +59,7 @@ import PolyHillPanel      from './editor/PolyHillPanel.vue';
 import DecorationsPanel   from './editor/DecorationsPanel.vue';
 import TrackSignPanel     from './editor/TrackSignPanel.vue';
 import StartPositionPanel from './editor/StartPositionPanel.vue';
+import TrackLightPanel    from './editor/TrackLightPanel.vue';
 import TrackSettingsPanel from './editor/TrackSettingsPanel.vue';
 import ActionZonePanel    from './editor/ActionZonePanel.vue';
 import PolyCurbPanel      from './editor/PolyCurbPanel.vue';

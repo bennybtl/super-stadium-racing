@@ -9,8 +9,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 3,
-    "height": 6,
-    "color": "#303030"
+    "height": 6
   },
   "name": "Mesa Madness",
   "image": "mesa_madness.jpg",
@@ -331,8 +330,8 @@
       "waterLevelOffset": 0,
       "transition": 7,
       "terrainType": null,
-      "heightAtMin": 0,
-      "heightAtMax": 9,
+      "heightAtMin": -0.5,
+      "heightAtMax": 10.5,
       "edgeShape": 0.8
     },
     {
@@ -345,8 +344,8 @@
       "waterLevelOffset": 0,
       "transition": 7,
       "terrainType": null,
-      "heightAtMin": 0,
-      "heightAtMax": 9,
+      "heightAtMin": -1.5,
+      "heightAtMax": 10,
       "edgeShape": 0.8
     },
     {
@@ -505,7 +504,7 @@
       "waterLevelOffset": 0,
       "terrainType": null,
       "edgeShape": 0.8,
-      "flatTop": 0.8
+      "flatTop": 0.7
     },
     {
       "type": "model",
@@ -642,7 +641,7 @@
         }
       ],
       "height": 2,
-      "collisionHeight": 6.5,
+      "collisionHeight": 5.5,
       "thickness": 0.5,
       "friction": 0.05,
       "closed": false,
@@ -652,13 +651,8 @@
       "type": "polyWall",
       "points": [
         {
-          "x": 34,
-          "z": 23.35,
-          "radius": 10
-        },
-        {
-          "x": 39.07,
-          "z": 25,
+          "x": 28.777593762328063,
+          "z": 39.01187918530465,
           "radius": 10
         },
         {
@@ -839,48 +833,6 @@
       "friction": 0.05,
       "closed": false,
       "fence": false
-    },
-    {
-      "type": "decal",
-      "position": [
-        4.830554800789734,
-        0,
-        -26.676905855529597
-      ],
-      "normal": [
-        0,
-        1,
-        0
-      ],
-      "rotation": -90,
-      "width": 5.5,
-      "height": 6.5,
-      "shape": "chevron",
-      "color": "white",
-      "count": 3,
-      "outline": false,
-      "opacity": 1
-    },
-    {
-      "type": "decal",
-      "position": [
-        -34.768806381389844,
-        0,
-        12.078204194512153
-      ],
-      "normal": [
-        0,
-        1,
-        0
-      ],
-      "rotation": -180,
-      "width": 5.5,
-      "height": 6.5,
-      "shape": "chevron",
-      "color": "white",
-      "count": 3,
-      "outline": false,
-      "opacity": 1
     },
     {
       "type": "model",
@@ -1135,9 +1087,9 @@
     {
       "type": "decal",
       "position": [
-        -9.268806381389844,
-        0,
-        13.578204194512153
+        -8.485421446360716,
+        8.371713573276253,
+        14.024836797292338
       ],
       "normal": [
         0,
@@ -1463,7 +1415,8 @@
       "z": 26.17871958821649,
       "color": "white",
       "scale": 1,
-      "heading": 1.5882496193148399
+      "heading": 1.5882496193148399,
+      "id": "d_mtwc0o44a2uj"
     },
     {
       "type": "model",
@@ -1472,7 +1425,7 @@
       "z": 30.873364922686893,
       "heading": 0,
       "width": 30,
-      "poleHeight": 11
+      "poleHeight": 10
     },
     {
       "type": "model",
@@ -1481,7 +1434,7 @@
       "z": 13.37336492268689,
       "heading": 1.5707963267948966,
       "width": 30,
-      "poleHeight": 11
+      "poleHeight": 10
     },
     {
       "type": "model",
@@ -1490,7 +1443,7 @@
       "z": 12.37336492268689,
       "heading": 1.5707963267948966,
       "width": 30,
-      "poleHeight": 11
+      "poleHeight": 10
     },
     {
       "type": "polyWall",
@@ -1616,9 +1569,9 @@
     {
       "type": "decal",
       "position": [
-        41.299289926368935,
+        41.10450893820316,
         0,
-        -21.810417572597146
+        -23.42598812635697
       ],
       "normal": [
         0,
@@ -1889,9 +1842,9 @@
     {
       "type": "decal",
       "position": [
-        -38.56765145719563,
-        0,
-        47.838803959554994
+        -35.053211854961994,
+        6.296596975255383,
+        40.477921547229705
       ],
       "normal": [
         0,
@@ -1908,6 +1861,106 @@
       "text": "MESA MADNESS",
       "brand": "energizer-racing.png",
       "opacity": 0.55
+    },
+    {
+      "type": "model",
+      "model": "arrow_sign",
+      "x": -26.74455868585019,
+      "z": 82.46482993119069,
+      "color": "red",
+      "scale": 1,
+      "mirrorX": false,
+      "mirrorZ": true
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "fireworks",
+      "shape": "circle",
+      "x": 6.50521497008119,
+      "z": 12.385528752411084,
+      "radius": 21,
+      "fireworkMode": "flame",
+      "fireworkCount": 4,
+      "fireworkDuration": 2,
+      "fireworkColor": "orange",
+      "fireworkHeight": 20,
+      "heading": -0.7679448708775047
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "pickupSpawn",
+      "shape": "circle",
+      "x": 3.8581168542521063,
+      "z": 10.057043748075074,
+      "radius": 9.5
+    },
+    {
+      "type": "squareHill",
+      "centerX": -57.51764846528205,
+      "centerZ": 40.570530523618245,
+      "width": 14.5,
+      "depth": 14,
+      "angle": 90,
+      "waterLevelOffset": 0,
+      "transition": 8,
+      "terrainType": null,
+      "height": 7,
+      "edgeShape": 3.85
+    },
+    {
+      "type": "trackLight",
+      "x": -12.609478034700864,
+      "z": -5.89818683005322,
+      "height": 16,
+      "spread": 92,
+      "intensity": 18,
+      "color": "cool",
+      "tilt": 0,
+      "rotation": 45
+    },
+    {
+      "type": "trackLight",
+      "x": 25.788921262127932,
+      "z": -5.652309433746359,
+      "height": 12.5,
+      "spread": 120,
+      "intensity": 12,
+      "color": "cool",
+      "tilt": 13,
+      "rotation": 313
+    },
+    {
+      "type": "trackLight",
+      "x": -9.36459414789853,
+      "z": -2.245882832687876,
+      "height": 18,
+      "spread": 120,
+      "intensity": 17,
+      "color": "cool",
+      "tilt": 18,
+      "rotation": 230
+    },
+    {
+      "type": "trackLight",
+      "x": -11.808026006299613,
+      "z": 30.95654392380107,
+      "height": 18,
+      "spread": 120,
+      "intensity": 4,
+      "color": "cool",
+      "tilt": 0,
+      "rotation": 104
+    },
+    {
+      "type": "trackLight",
+      "x": 11.938809613294238,
+      "z": -35.36208574982333,
+      "height": 21,
+      "spread": 120,
+      "intensity": 6,
+      "color": "cool",
+      "tilt": 90,
+      "rotation": 140
     }
   ]
 }

@@ -45,6 +45,7 @@ export class EditorMode extends BaseMode {
       shadows,
       obstacleManager,
       trackSignManager,
+      trackLightManager,
       decorationManager,
       bridgeMeshManager,
       steepSlopeColliderManager,
@@ -64,6 +65,9 @@ export class EditorMode extends BaseMode {
 
     // Dispose runtime DecorationManager props — DecorationsEditor creates its own.
     decorationManager.dispose();
+
+    // Dispose runtime TrackLightManager poles — TrackLightEditor creates its own.
+    trackLightManager.dispose();
 
     this.scene = scene;
 

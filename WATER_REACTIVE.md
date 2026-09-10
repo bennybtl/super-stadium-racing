@@ -4,8 +4,9 @@
 moving ripple, tuning left at the shipped defaults. Phase 2 landed
 (2026-09-07) and confirmed — it reads as a trough pressed into the surface that
 fills back in, which is what a field with no propagation gives you. Phase 4
-landed and confirmed in-app (2026-09-07) after two tuning passes. Phases 3 and 5
-not started; the entry-splash rings from Phase 4 are also still open.
+landed and confirmed in-app (2026-09-07) after two tuning passes. Phase 3
+landed (2026-09-10), build-checked, not yet confirmed in-app. Phase 5 not
+started; the entry-splash rings from Phase 4 are also still open.
 
 ## Why
 
@@ -274,25 +275,96 @@ WakeFieldManager.js; `WAKE_SLOPE_STRENGTH`, `WAKE_FOAM_GAIN`,
 
 ---
 
-## Phase 3 — Reactive foam and fake refraction
+## Phase 3 — Reactive foam and fake refraction  ✅ DONE (2026-09-10)
 
-Two cheap riders on Phase 2's field, both worth more than they cost:
+Three cheap riders on Phase 2's field, all worth more than they cost.
 
-- **Shoreline lapping.** The foam material (`getFoamMaterial`,
-  [Water.js:95](src/objects/Water.js:95)) also samples the wake field and scales
-  its band alpha by it, so the truck's wake visibly reaches the shore. Note the
-  ribbons are static meshes with baked band widths and per-vertex dither — the
-  *width* cannot change at runtime without rebuilding geometry, so this is an
-  alpha/brightness effect only. Accept that; it reads fine.
-- **Lakebed distortion.** `TerrainBlendPlugin` already takes a water overlay
-  texture and already knows which pixels are submerged (its alpha). Bind the
-  wake field there too and wobble the terrain UV by its gradient under submerged
-  pixels. Almost free once Phase 2 exists, and sells "liquid" harder than
-  surface normals do — the bottom shimmers, which is the cue people actually
-  read as water.
+### Organic foam noise — new, not in the original plan
 
-Both are additive and independently revertible. Do the lakebed one first; it is
-the bigger payoff.
+Prompted by a Babylon Playground reference (a depth-buffer foam-edge shader):
+its foam mask comes from comparing the water's clip-space depth against a
+rendered scene-depth texture, then breaking that mask up with a scrolling 3D
+value noise so the edge froths and drifts instead of glowing as a flat,
+uniform mask. The depth-comparison half is not worth taking — it needs a scene
+depth renderer this codebase has never run, and we already have proximity
+covered two ways (the per-vertex depth tint baked at mesh build, and the wake
+field's own value). **Only the noise-breakup trick was worth stealing.**
+
+Landed in `src/shaders/water-shader.js`:
+
+- `_WATER_NOISE_GLSL` — a standard value-noise construction (hash the 8 corners
+  of the containing cube via a polynomial permutation, trilinearly interpolate
+  with a smoothstep blend), adapted near-verbatim from the reference sample.
+  Shared by the wake churn and the new foam plugin below so both froths read as
+  the same medium.
+- The wake churn (`_WATER_UPDATE_DIFFUSE`, Phase 2) now computes
+  `_churn = smoothstep(lo, hi, noise(worldXZ, waterTime) * wakeMask)` instead of
+  a flat `clamp(wake * gain)` — the wake value still sets how far the mask
+  reaches, but the noise breaks it into patches that drift as `waterTime`
+  advances.
+
+**Knobs:** `WAKE_FOAM_NOISE_SCALE` (patch size), `WAKE_FOAM_NOISE_SPEED` (drift
+speed), `WAKE_FOAM_NOISE_LO`/`_HI` (how much of the noise range reads as foam).
+
+### Shoreline lapping
+
+New `WaterFoamPlugin` (`src/shaders/water-shader.js`), attached in
+`getFoamMaterial` ([Water.js](src/objects/Water.js)) the same way
+`WaterSurfacePlugin` attaches to the surface material. The ribbons
+(`createWaterFoamRibbon`) are static meshes with baked band widths and
+per-vertex dither — the *width* cannot change at runtime without rebuilding
+geometry, so both effects below are alpha-only:
+
+- The same scrolling noise multiplies the baked band alpha, with a floor
+  (`FOAM_NOISE_FLOOR`) so it froths rather than ever fully vanishing between
+  patches.
+- The plugin also samples the wake field at the fragment's world position and
+  pulls the band back toward fully solid where a wake has reached it — the
+  truck's wake visibly washes the shore.
+
+**Hazard specific to this material, documented in the plugin's header comment:**
+`alpha` at `CUSTOM_FRAGMENT_UPDATE_DIFFUSE` is still just the material's flat
+`vDiffuseColor.a` (1, since the foam material's `.alpha` is never set) —
+vertex alpha and the opacity texture both multiply in *after* this hook, not
+before. So the plugin only ever multiplies `alpha`, never `max()`s it,
+unlike the (harmless but inert — see below) `alpha = max(...)` line already
+in `WaterSurfacePlugin`'s own churn code.
+
+**Note left for later, not fixed:** that pre-existing `alpha = max(alpha, churn
+* WAKE_FOAM_ALPHA)` line in the surface plugin's churn code is a no-op as
+written — `alpha` is 1.0 at that point (same reason as above), and
+`max(1, ≤0.8)` is always 1. The wake-churn *read* comes entirely from the
+`baseColor.rgb` whitening a few lines above, which is unaffected. Left alone
+since Phase 2 already confirmed in-app and the visible read doesn't depend on
+that line; worth knowing if `WAKE_FOAM_ALPHA` is ever tuned and appears to do
+nothing.
+
+**Knobs:** `FOAM_NOISE_SCALE`/`_SPEED`/`_LO`/`_HI`, `FOAM_NOISE_FLOOR` (breakup),
+`FOAM_LAP_GAIN` (how hard a wake pulls the band solid).
+
+### Lakebed distortion
+
+`TerrainBlendPlugin` ([ground-shader.js](src/shaders/ground-shader.js)) now
+also binds the wake field (`terrainWakeSampler` + a `terrainWakeBounds`
+uniform, same dual ubo/fragment declaration `WaterSurfacePlugin` uses and the
+same `scene.metadata.wakeField` per-frame lookup with a 1×1 zero stand-in).
+Only the **water-tint overlay's sample position** is wobbled by the wake
+field's gradient — not the full terrain-blend/detail sampling above it, which
+would double the cost of the existing 3×3 Gaussian for a distortion nobody
+would see once it's under the water tint anyway. Reads as the lakebed
+shimmering wherever a wake has passed over it.
+
+**Knob:** `TERRAIN_WAKE_WOBBLE_STRENGTH`.
+
+### Verified
+
+Build-checked (`npm run build:raw`) only — shader source is template-string
+GLSL, so nothing headless exercises it; `check:water`/`check:terrain` only
+cover pure geometry, and both are currently broken on an unrelated pre-existing
+issue (`BorderWall.js`'s new `.png` imports have no esbuild loader configured
+in the check scripts — confirmed via `git stash`, not touched by this phase).
+**Not yet confirmed in-app** — this needs an in-game look before the knobs
+above are trusted at their first-pass values.
 
 ---
 
@@ -429,6 +501,18 @@ Prerequisites, both real work:
 
 Only worth it if, after Phases 1–4, the flat shoreline silhouette still reads
 wrong. Normals cannot move a silhouette; everything else can be faked.
+
+**Reference, bookmarked 2026-09-10:** [Simon Trushkin's ocean Node
+Material](https://forum.babylonjs.com/t/ocean-node-material/13554) —
+playground [9B0DNU#36](https://playground.babylonjs.com/#9B0DNU#36), material
+[3FU5FG#1](https://nme.babylonjs.com/#3FU5FG#1). A full PBR Node Material with
+actual vertex-displaced waves: stacked Worley + multi-octave Perlin noise for
+the displacement, a second noise cascade generating the normal map (rather
+than sampling one), and animated foam UV lookups, all feeding a reflective PBR
+surface. Assumes a highly-subdivided plane and grazing-angle reflections —
+worth a look for the octave-stacking and displacement approach once
+tessellation is on the table, not a fit before then (StandardMaterial+plugin,
+merged-quad geometry, isometric camera).
 
 ---
 

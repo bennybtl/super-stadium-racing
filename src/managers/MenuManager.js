@@ -24,6 +24,7 @@ export class MenuManager {
     this.selectedAIDrivers = 3;
     this.selectedAIVehicleType = 'random';
     this.selectedReverse = false;
+    this.selectedNight = false;
     this.selectedVehicle = 'baja';
     this.selectedPlayerColor = null;
 
@@ -35,6 +36,7 @@ export class MenuManager {
     this._store.selectedAIDrivers = this.selectedAIDrivers;
     this._store.selectedAIVehicleType = this.selectedAIVehicleType;
     this._store.selectedReverse = this.selectedReverse;
+    this._store.selectedNight = this.selectedNight;
     this._store.selectedVehicle = this.selectedVehicle;
     this._store.mode = null;
     this._store.screen = 'title';

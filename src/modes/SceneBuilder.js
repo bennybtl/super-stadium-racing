@@ -3,6 +3,7 @@ import {
   HavokPlugin,
   Vector3,
   HemisphericLight,
+  DirectionalLight,
   PointLight,
   MeshBuilder,
   StandardMaterial,
@@ -23,6 +24,7 @@ import { CheckpointManager } from "../managers/CheckpointManager.js";
 import { WallManager } from "../managers/WallManager.js";
 import { ObstacleManager } from "../managers/ObstacleManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
+import { TrackLightManager } from "../managers/TrackLightManager.js";
 import { DecorationManager } from "../managers/DecorationManager.js";
 import { isModelFeature } from "../decorations/decorations-registry.js";
 import { PickupManager } from "../managers/PickupManager.js";
@@ -50,6 +52,20 @@ import { loadDisplaySettings } from "../settingsStorage.js";
 import { ShadowCasterGroup } from "./ShadowCasterGroup.js";
 
 /**
+ * Toggle a live scene between day and night lighting. Stashes the flag on
+ * scene.metadata and re-runs the display-settings reconciliation (the listener
+ * registered in buildScene reads scene.metadata.night). Used by the editor's
+ * night-mode toggle so the switch is instant without a full scene rebuild.
+ */
+export function applyNightMode(scene, night) {
+  if (!scene) return;
+  scene.metadata = { ...(scene.metadata ?? {}), night: !!night };
+  window.dispatchEvent(new CustomEvent('offroad:display-settings-changed', {
+    detail: loadDisplaySettings(),
+  }));
+}
+
+/**
  * Builds the shared Babylon scene used by both RaceMode and EditorMode:
  * physics, lighting, shadows, ground mesh, terrain texture, and all
  * feature managers (checkpoints, walls, tires).
@@ -57,7 +73,7 @@ import { ShadowCasterGroup } from "./ShadowCasterGroup.js";
  * Returns an object with every constructed resource so the calling mode
  * can hold references for updates / disposal.
  */
-export async function buildScene(engine, trackLoader, trackKey) {
+export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.15, 0.12, 0.1, 1);
 
@@ -70,6 +86,18 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // is alpha-blended and never wrote depth anyway). The checkpoint arrow keeps
   // its own group 2 with the default depth-clear, so it stays a HUD-style cue.
   scene.setRenderingAutoClearDepthStencil(1, false);
+
+  // Lift every material's simultaneous-light cap above StandardMaterial's
+  // default of 4 (matches groundMat, which set this explicitly before this
+  // hook existed). Night scenes stack several track-light spots on top of the
+  // ambient fill, the moon, and the player headlight — at the default cap a
+  // mesh only picks its ~2 nearest lights and everything past that (walls,
+  // decorations, obstacles, drive boxes, bridge decks, …) silently ignores the
+  // rest. One hook here covers every material as it's created — present and
+  // future — instead of patching each object's material by hand.
+  scene.onNewMaterialAddedObservable.add((mat) => {
+    if ('maxSimultaneousLights' in mat) mat.maxSimultaneousLights = 8;
+  });
 
   // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
   const driveSurfaceManager = new DriveSurfaceManager(scene);
@@ -154,6 +182,20 @@ export async function buildScene(engine, trackLoader, trackKey) {
   _centerFloodLight.specular = new Color3(1.0, 0.98, 1.0);
   _centerFloodLight.setEnabled(false);
 
+  // Moon key — a dim, cool directional light that raked low from one side gives
+  // night scenes enough directional modelling for the terrain ruts and truck
+  // bodies to read. Off in the daytime; applyDisplaySettings enables it and
+  // sets its intensity on night tracks.
+  const _moonLight = new DirectionalLight(
+    "moonLight",
+    new Vector3(-0.35, -1, 0.5),
+    scene
+  );
+  _moonLight.intensity = 0;
+  _moonLight.diffuse = new Color3(0.55, 0.62, 0.85);
+  _moonLight.specular = new Color3(0.55, 0.62, 0.85);
+  _moonLight.setEnabled(false);
+
   // Shadow-casting lights: the primary key (corner 0) always, plus the opposite
   // corner (light 2) on the "high" tier for a two-key stadium look. Both cube
   // maps are built now; the secondary sits parked (its light's shadowEnabled
@@ -173,6 +215,51 @@ export async function buildScene(engine, trackLoader, trackKey) {
   const applyDisplaySettings = (settings) => {
     const shadowDetail = settings?.shadow ?? 'medium';
     const lightCount = settings?.lights ?? 4;
+    const night = scene.metadata?.night === true;
+
+    // Night races: deep blue-black sky, faint cool moonlight fill, and the
+    // daytime stadium floods switched off — track lights + the player headlight
+    // carry the illumination.
+    if (night) {
+      scene.clearColor = new Color4(0.02, 0.03, 0.06, 1);
+      // Lifted off pitch-black: a moonlit ambient floor so shadowed faces and
+      // undersides still carry some cool skylight instead of crushing to zero.
+      ambient.intensity = 0.28;
+      ambient.diffuse = new Color3(0.4, 0.45, 0.65);
+      ambient.groundColor = new Color3(0.05, 0.06, 0.11);
+      _moonLight.setEnabled(true);
+      _moonLight.intensity = 0.22;
+      _centerFloodLight.setEnabled(false);
+      _stadiumLights.forEach((light) => light.setEnabled(false));
+      const shadowMap = shadows.getShadowMap?.();
+      if (shadowMap) shadowMap.refreshRate = 0;
+
+      // Moonlight shadows replace the (now-off) stadium keys: a single
+      // DirectionalLight shadow map, auto-fit to the registered casters via
+      // Babylon's autoUpdateExtends (no manual ortho frustum needed — the
+      // track's whole footprint is already on-screen from the isometric
+      // camera, so one map covers it without CSM-style cascades).
+      if (shadowDetail === 'off') {
+        shadows.removeLight(_moonLight);
+      } else {
+        shadows.configure({
+          useBlurExponentialShadowMap: shadowDetail !== 'low',
+          usePoissonSampling: shadowDetail === 'low',
+          blurKernel: shadowDetail === 'high' ? 24 : 16,
+          refreshRate: shadowDetail === 'low' ? 2 : 1,
+        });
+        shadows.addLight(_moonLight, { mapSize: 2048 });
+      }
+      return;
+    }
+
+    scene.clearColor = new Color4(0.15, 0.12, 0.1, 1);
+    ambient.intensity = 0.35;
+    ambient.diffuse = new Color3(1, 1, 1);
+    ambient.groundColor = new Color3(0.1, 0.1, 0.1);
+    _moonLight.setEnabled(false);
+    _moonLight.intensity = 0;
+    shadows.removeLight(_moonLight);
 
     // Keep enabled corner lights spatially balanced at lower counts.
     const enabledLightIndices =
@@ -233,6 +320,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
     });
   };
 
+  // Night is a per-race setting (like reverse), not a track property — the
+  // caller passes it through from the race config.
+  scene.metadata.night = opts.night === true;
   applyDisplaySettings(loadDisplaySettings());
   const onDisplaySettingsChanged = (event) => {
     applyDisplaySettings(event?.detail ?? loadDisplaySettings());
@@ -398,6 +488,9 @@ export async function buildScene(engine, trackLoader, trackKey) {
     groundDepth / 2,
     { detailNormalTexture: terrainDetailNormalTex }
   );
+  // Night tracks can stack several floodlights plus the player headlight over
+  // one patch of ground; raise the per-material light cap above the default 4.
+  groundMat.maxSimultaneousLights = 8;
   groundMat.bumpTexture = compositeNormalMap;
   // Composite normals are now baked in track-aligned world space, so sample
   // full [0,1] UVs (with V flip for orientation) instead of square->rect crop.
@@ -487,6 +580,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
   // wallManager already created above
   const obstacleManager = new ObstacleManager(scene, currentTrack, shadows);
   const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
+  const trackLightManager = new TrackLightManager(scene, currentTrack, shadows);
   const decorationManager = new DecorationManager(scene, currentTrack, shadows);
   const pickupManager = new PickupManager(scene, currentTrack, shadows); // Pickups spawn lap-by-lap in RaceMode
   const bridgeMeshManager = new BridgeMeshManager(
@@ -547,6 +641,8 @@ export async function buildScene(engine, trackLoader, trackKey) {
       wallManager.createPolyCurb(feature);
     } else if (feature.type === "trackSign") {
       trackSignManager.createSign(feature);
+    } else if (feature.type === "trackLight") {
+      trackLightManager.createLight(feature);
     } else if (isModelFeature(feature)) {
       decorationManager.createDecoration(feature);
     }
@@ -617,6 +713,7 @@ export async function buildScene(engine, trackLoader, trackKey) {
     wallManager,
     obstacleManager,
     trackSignManager,
+    trackLightManager,
     decorationManager,
     pickupManager,
     bridgeMeshManager,

@@ -14,6 +14,7 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedAIDrivers = ref(3);
   const selectedAIVehicleType = ref('random');
   const selectedReverse = ref(false);
+  const selectedNight = ref(false);
   const selectedVehicle = ref('baja');
   const selectedPlayerColor = ref(null);
   // Current gameplay mode: null | 'practice' | 'single race'
@@ -73,6 +74,7 @@ export const useMenuStore = defineStore('menu', () => {
   function setSelectedAIDrivers(count) { if (!_bridge.value) return; _bridge.value.setSelectedAIDrivers(count); }
   function setSelectedAIVehicleType(key) { if (!_bridge.value) return; _bridge.value.setSelectedAIVehicleType(key); }
   function setSelectedReverse(val) { selectedReverse.value = !!val; if (_bridge.value) _bridge.value.selectedReverse = !!val; }
+  function setSelectedNight(val) { selectedNight.value = !!val; if (_bridge.value) _bridge.value.selectedNight = !!val; }
   function showPitMenu(pitMode = 'single race') {
     if (pitMode === 'single race') mode.value = 'single race';
     _bridge.value?.showPitMenu(pitMode);
@@ -136,7 +138,7 @@ export const useMenuStore = defineStore('menu', () => {
 
   return {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
-    selectedReverse, navDirection, setNavDirection, liveBackdrop,
+    selectedReverse, selectedNight, navDirection, setNavDirection, liveBackdrop,
     pitData, singleRaceData, championshipData, upgrades,
     champInitials, champTrackCount, hasActiveChampionship,
     loadingVisible, loadingMessage,
@@ -147,6 +149,7 @@ export const useMenuStore = defineStore('menu', () => {
     selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, setSelectedAIVehicleType, showPitMenu, startPracticeMode,
     showMultiplayerLobby, showMultiplayerRoom, startMultiplayer,
     setSelectedReverse,
+    setSelectedNight,
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back, refreshTrackList,

@@ -198,11 +198,11 @@
     },
     {
       "type": "driveBox",
-      "centerX": 67.95878791068117,
+      "centerX": 67.45878791068117,
       "centerZ": 8.49267743447722,
       "width": 12,
       "depth": 15.5,
-      "rotation": 270,
+      "rotation": 274,
       "solidBase": true,
       "thickness": 0.4,
       "layerId": 0,
@@ -313,12 +313,12 @@
           "radius": 20
         },
         {
-          "x": -20.17337253629161,
+          "x": -38.17337253629161,
           "z": -65.89793225269253,
           "radius": 18.5
         },
         {
-          "x": -9.197193101985746,
+          "x": -19.197193101985746,
           "z": -66.86483030562279,
           "radius": 10
         }
@@ -454,7 +454,7 @@
         }
       ],
       "height": 3,
-      "collisionHeight": 7.5,
+      "collisionHeight": 6,
       "thickness": 0.8,
       "friction": 0.05,
       "closed": true,
@@ -556,19 +556,6 @@
         "white"
       ],
       "fence": true
-    },
-    {
-      "type": "squareHill",
-      "centerX": -2.420688289427808,
-      "centerZ": -34.56348182078547,
-      "width": 18.5,
-      "depth": 34,
-      "angle": 90,
-      "waterLevelOffset": 0,
-      "transition": 4,
-      "terrainType": null,
-      "heightAtMin": 3.5,
-      "heightAtMax": 0
     },
     {
       "type": "squareHill",
@@ -688,38 +675,38 @@
     {
       "type": "model",
       "model": "bannerString",
-      "x": -66.75546445417051,
-      "z": 8.924159061175985,
+      "x": -66.70540234263129,
+      "z": 8.92415906117597,
       "heading": 0,
       "width": 29,
-      "poleHeight": 9
+      "poleHeight": 8
     },
     {
       "type": "model",
       "model": "bannerString",
-      "x": -66.75546445417051,
+      "x": -66.91059969712651,
       "z": -13.575840938824014,
       "heading": 0,
-      "width": 29,
+      "width": 27,
       "poleHeight": 9
     },
     {
       "type": "model",
       "model": "bannerString",
-      "x": 66.60596909059495,
+      "x": 67.87862545213432,
       "z": -9.862428812113306,
       "heading": 0,
-      "width": 29,
-      "poleHeight": 9
+      "width": 20,
+      "poleHeight": 8
     },
     {
       "type": "model",
       "model": "bannerString",
-      "x": 65.83278305017657,
+      "x": 67.1216800446285,
       "z": 12.331446146473917,
       "heading": 0,
-      "width": 29,
-      "poleHeight": 9
+      "width": 22,
+      "poleHeight": 7
     },
     {
       "type": "model",
@@ -740,8 +727,8 @@
     {
       "type": "model",
       "model": "tent",
-      "x": -5.250941936526516,
-      "z": -47.674581313899196,
+      "x": -4.356512027446661,
+      "z": -47.61758924093908,
       "color": "red",
       "scale": 1.5,
       "heading": 0.10471975511965978
@@ -749,8 +736,8 @@
     {
       "type": "model",
       "model": "tent",
-      "x": -1.705551918770503,
-      "z": -32.563926821491826,
+      "x": -3.9855414393171307,
+      "z": -33.35298930355708,
       "color": "white",
       "scale": 1.5,
       "heading": 0
@@ -758,8 +745,8 @@
     {
       "type": "model",
       "model": "tent",
-      "x": 1.195659358772808,
-      "z": -40.75231307126825,
+      "x": 6.033839867103189,
+      "z": -33.70498486746332,
       "color": "gray",
       "scale": 1.5,
       "heading": 1.5009831567151235
@@ -773,7 +760,7 @@
       "scale": 1.5,
       "heading": 1.5882496193148399,
       "width": 15,
-      "height": 5
+      "height": 4
     },
     {
       "type": "aiPath",
@@ -880,7 +867,7 @@
       "background": "black",
       "primaryColor": "white",
       "scale": 1.55,
-      "heightOffset": 4,
+      "heightOffset": 0.6,
       "width": 10,
       "logoScale": 1
     },
@@ -1075,18 +1062,18 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -20.115742836664538,
-          "z": -63.25938699323226,
+          "x": -31.615742836664538,
+          "z": -63.75938699323226,
           "radius": 10
         },
         {
-          "x": 28.592566566618054,
+          "x": 33.09256656661805,
           "z": -64.33147611639097,
           "radius": 10
         },
         {
           "x": 19.16182268405755,
-          "z": -45.384985925890916,
+          "z": -43.384985925890916,
           "radius": 10
         },
         {
@@ -1095,8 +1082,8 @@
           "radius": 10
         },
         {
-          "x": -18.51934020978506,
-          "z": -49.944919240653505,
+          "x": -21.01934020978506,
+          "z": -49.444919240653505,
           "radius": 10
         }
       ],
@@ -1408,6 +1395,74 @@
       "blendWidth": 5.5,
       "edgeShape": 0.8,
       "endTaper": true
+    },
+    {
+      "type": "decal",
+      "position": [
+        -52.67784608251041,
+        8.391293441871909,
+        90
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "rotation": 0,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "brand": "energizer-racing.png",
+      "width": 30,
+      "height": 30,
+      "opacity": 1,
+      "text": "Cross-Fire Canyon"
+    },
+    {
+      "type": "decal",
+      "position": [
+        49.18713097752101,
+        8.11223859997105,
+        89.99999999999999
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "rotation": 0,
+      "shape": "text",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "brand": "energizer-racing.png",
+      "width": 30,
+      "height": 30,
+      "opacity": 1,
+      "text": "Cross-Fire Canyon"
+    },
+    {
+      "type": "decal",
+      "position": [
+        0.7871869847195778,
+        8.36718814782526,
+        90
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "rotation": 0,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "brand": "ssr-logo.png",
+      "width": 20,
+      "height": 20.000000000000004,
+      "opacity": 0.8
     }
   ]
 }

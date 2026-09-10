@@ -1,10 +1,11 @@
-import { 
-  MeshBuilder, 
-  Color3, 
+import {
+  MeshBuilder,
+  Color3,
   Vector3,
   PhysicsAggregate,
   PhysicsShapeType,
   PhysicsMotionType,
+  SpotLight,
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
 import { TireMarks } from "./TireMarks.js";
@@ -170,6 +171,28 @@ export class Truck {
       surfaceFace: '-',
       surfaceLevel: '-',
     };
+
+    // Night races: give the player truck a forward-raking headlight cone.
+    // Parented to the physics box (whose rotation.y tracks heading), so it
+    // sweeps with the truck for free. AI trucks are skipped to keep the light
+    // count — and the per-material light cap — under control.
+    this.headlight = null;
+    if (!this.driver && scene?.metadata?.night === true) {
+      const hl = new SpotLight(
+        "truckHeadlight",
+        new Vector3(0, 0.6, this.depth * 0.4),   // local: nose, slightly raised
+        new Vector3(0, -0.35, 1),                // aim forward + a touch down
+        Math.PI / 2.6,                           // cone angle
+        6,                                       // edge falloff exponent
+        scene
+      );
+      hl.parent = this.mesh;
+      hl.range = 30;
+      hl.intensity = 3.0;
+      hl.diffuse = new Color3(1.0, 0.96, 0.85);
+      hl.specular = new Color3(1.0, 0.96, 0.85);
+      this.headlight = hl;
+    }
 
     // Visual puppet — sits on top of the invisible physics box
     this.body = new TruckBody(this.mesh, scene, shadows, {

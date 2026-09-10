@@ -67,7 +67,7 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hot lap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('single race')">Single Race</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showChampionshipSetup()">Championship</button>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showMultiplayerLobby()">Multiplayer</button>
+          <button v-if="isDev" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showMultiplayerLobby()">Multiplayer</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
@@ -172,7 +172,7 @@
             @update:selectedVehicle="store.selectPlayerVehicle($event)"
             @update:selectedColor="store.selectPlayerColor($event)"
           />
-          <RaceConfig :show-race-count="true" :show-reverse="false" />
+          <RaceConfig :show-race-count="true" :show-reverse="false" :show-night="false" />
           <div class="flex flex-row gap-2">
             <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
             <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" @click="store.startChampionship()">Start Cup</button>
@@ -278,8 +278,9 @@
           <div v-if="store.pitData.pitMode === 'single race'">
             <RaceConfig />
           </div>
-          <div v-else-if="store.pitData.pitMode === 'hot lap' || store.pitData.pitMode === 'practice'" class="flex justify-center">
+          <div v-else-if="store.pitData.pitMode === 'hot lap' || store.pitData.pitMode === 'practice'" class="flex justify-center gap-2">
             <ReverseToggle />
+            <NightToggle />
           </div>
         </div>
         <template v-if="setupStep == 'selectTruck'">
@@ -331,6 +332,9 @@ import { basicColors } from '../constants.js';
 import { loadControlsSettings } from '../settingsStorage.js';
 import { isSafari } from '../utils/browserSupport.js';
 
+// Multiplayer is still in progress — only expose it running under `npm run dev`.
+const isDev = import.meta.env.DEV;
+
 import ConfirmDialog from './ConfirmDialog.vue';
 import SettingsMenu from './SettingsMenu.vue';
 import rebuild from '../editor/editor-rebuild.js';
@@ -338,6 +342,7 @@ import TrackSelectionCarousel from './TrackSelectionCarousel.vue';
 import TruckSelection from './TruckSelection.vue';
 import RaceConfig from './RaceConfig.vue';
 import ReverseToggle from './ReverseToggle.vue';
+import NightToggle from './NightToggle.vue';
 import TrackLapRecords from './TrackLapRecords.vue';
 import TruckSetup from './TruckSetup.vue';
 import RacePodium3D from './RacePodium3D.vue';

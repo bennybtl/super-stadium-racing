@@ -27,6 +27,9 @@ export class ShadowCasterGroup {
     this._casters = new Map();
     /** last configure() payload, re-applied to new generators. */
     this._quality = {};
+    /** Extra always-on generators added at runtime (e.g. night track lights),
+     *  kept outside the front-N `_activeCount` model. light -> ShadowGenerator. */
+    this._extra = new Map();
   }
 
   /**
@@ -72,13 +75,40 @@ export class ShadowCasterGroup {
     }
     this._casters.set(mesh, includeDescendants);
     for (const g of this._gens) g.addShadowCaster(mesh, includeDescendants);
+    for (const g of this._extra.values()) g.addShadowCaster(mesh, includeDescendants);
     return this;
   }
 
   removeShadowCaster(mesh, includeDescendants = true) {
     this._casters.delete(mesh);
     for (const g of this._gens) g.removeShadowCaster(mesh, includeDescendants);
+    for (const g of this._extra.values()) g.removeShadowCaster(mesh, includeDescendants);
     return this;
+  }
+
+  /**
+   * Attach an extra shadow-casting light on top of the fixed key set — used for
+   * the night track lights, which don't exist when the group is created. Builds
+   * a generator now (not lazy — these are meant to be on), replays every tracked
+   * caster into it, and applies the current quality knobs. Idempotent per light.
+   */
+  addLight(light, { mapSize = 512, refreshRate } = {}) {
+    if (!light || this._extra.has(light)) return this._extra.get(light) ?? null;
+    const gen = new ShadowGenerator(mapSize, light);
+    this._applyQualityTo(gen, refreshRate ?? this._quality.refreshRate);
+    for (const [mesh, inc] of this._casters) gen.addShadowCaster(mesh, inc);
+    light.shadowEnabled = true;
+    this._extra.set(light, gen);
+    return gen;
+  }
+
+  /** Detach and dispose an extra light's generator (see addLight). */
+  removeLight(light) {
+    const gen = this._extra.get(light);
+    if (!gen) return;
+    this._extra.delete(light);
+    if (light) light.shadowEnabled = false;
+    gen.dispose?.();
   }
 
   /**
@@ -115,6 +145,7 @@ export class ShadowCasterGroup {
     for (let i = 0; i < this._gens.length; i++) {
       this._applyQualityTo(this._gens[i], i < this._activeCount ? quality.refreshRate : undefined);
     }
+    for (const g of this._extra.values()) this._applyQualityTo(g, quality.refreshRate);
   }
 
   _applyQualityTo(gen, refreshRate = this._activeCount > 0 ? this._quality.refreshRate : undefined) {
@@ -138,10 +169,16 @@ export class ShadowCasterGroup {
       const map = g.getShadowMap?.();
       if (map) map.refreshRate = rate;
     }
+    for (const g of this._extra.values()) {
+      const map = g.getShadowMap?.();
+      if (map) map.refreshRate = rate;
+    }
   }
 
   dispose() {
     for (const g of this._gens) g.dispose?.();
+    for (const g of this._extra.values()) g.dispose?.();
+    this._extra.clear();
     this._gens = [];
     this._casters.clear();
     this._activeCount = 0;

@@ -71,6 +71,7 @@ const features = [
   { label: 'Terrain Shape',    img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')        },
   { label: 'Obstacle',         img: imgObstacle,      action: () => editor.featureAction('addObstacleEntity')       },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.featureAction('addTrackSignEntity')      },
+  { label: 'Track Light',      img: null,             action: () => editor.featureAction('addTrackLightEntity')     },
   { label: 'Decoration',       img: imgDecorations,   action: () => editor.featureAction('addDecorationEntity')     },
   { label: 'Action Zone',      img: imgActionZone,    action: () => editor.featureAction('addActionZoneEntity')     },
   { label: 'AI Path',          img: imgAiPath,        action: () => editor.openAiPath()                             },

@@ -4,6 +4,7 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": false,
+  "grassBlades": true,
   "oobDeadSpace": true,
   "borderWall": {
     "enabled": true,
@@ -151,7 +152,7 @@
         -0.0097048405859681,
         -0.254480565240744,
         -6.932132284587851,
-        -7.6470532323550415,
+        -5.1470532323550415,
         0,
         5.5469309434331535,
         -1.0294114971579376,
@@ -528,15 +529,15 @@
     {
       "type": "squareHill",
       "centerX": 66.13016271019154,
-      "centerZ": -37.7455398077684,
+      "centerZ": -38.7455398077684,
       "width": 31,
-      "depth": 13,
+      "depth": 19,
       "angle": 0,
       "height": -3.5,
       "waterLevelOffset": 3,
-      "transition": 6.5,
+      "transition": 15,
       "terrainType": "water",
-      "edgeShape": 1.45,
+      "edgeShape": 0.8,
       "blendWidth": 3.5
     },
     {
@@ -572,7 +573,7 @@
           "radius": 18
         },
         {
-          "x": 24.28749954933371,
+          "x": 21.28749954933371,
           "z": 23.87377607699524,
           "radius": 10
         }
@@ -582,7 +583,8 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 1.55
+      "edgeShape": 1.55,
+      "endTaper": true
     },
     {
       "type": "polyHill",
@@ -623,14 +625,15 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 0.9
+      "edgeShape": 0.9,
+      "endTaper": true
     },
     {
       "type": "polyHill",
       "points": [
         {
           "x": 39.12808566677518,
-          "z": -80.99172217251218,
+          "z": -80.49172217251218,
           "radius": 10
         },
         {
@@ -644,12 +647,12 @@
           "radius": 16.5
         },
         {
-          "x": 80.35492665501239,
+          "x": 78.85492665501239,
           "z": -44.74451248842292,
           "radius": 10
         },
         {
-          "x": 80.70767720670308,
+          "x": 79.20767720670308,
           "z": -29.78554315823885,
           "radius": 10
         }
@@ -660,13 +663,14 @@
       "closed": false,
       "filled": false,
       "edgeShape": 1.25,
-      "blendWidth": 2
+      "blendWidth": 2,
+      "endTaper": true
     },
     {
       "type": "polyHill",
       "points": [
         {
-          "x": 76.49643406694919,
+          "x": 75.49643406694919,
           "z": 38.29800715148202,
           "radius": 10
         },
@@ -681,8 +685,8 @@
           "radius": 18
         },
         {
-          "x": 13.087545430586498,
-          "z": 63.346662189325315,
+          "x": 13.587545430586498,
+          "z": 59.846662189325315,
           "radius": 10
         }
       ],
@@ -691,14 +695,15 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 1.7
+      "edgeShape": 1.7,
+      "endTaper": true
     },
     {
       "type": "polyHill",
       "points": [
         {
-          "x": -60.76953061128595,
-          "z": -3.7641264907394003,
+          "x": -59.26953061128595,
+          "z": -3.2641264907394003,
           "radius": 10
         },
         {
@@ -718,7 +723,7 @@
         },
         {
           "x": -22.100737252170074,
-          "z": 72.18382300178972,
+          "z": 67.68382300178972,
           "radius": 10
         }
       ],
@@ -727,7 +732,8 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 2.05
+      "edgeShape": 2.05,
+      "endTaper": true
     },
     {
       "type": "polyWall",
@@ -840,7 +846,7 @@
           "radius": 10
         },
         {
-          "x": 20.049355991124916,
+          "x": 19.549355991124916,
           "z": 23.383682046595464,
           "radius": 10
         },
@@ -1032,7 +1038,8 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "endTaper": true
     },
     {
       "type": "squareHill",
@@ -1098,8 +1105,8 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -23.889032161689443,
-      "centerZ": 9.624635354871032,
+      "centerX": -22.389032161689443,
+      "centerZ": 10.124635354871032,
       "heading": 0.8971975511965975,
       "width": 20,
       "checkpointNumber": 2,
@@ -1121,7 +1128,7 @@
     {
       "type": "checkpoint",
       "centerX": -4.98824073706535,
-      "centerZ": -69.17492855228245,
+      "centerZ": -68.67492855228245,
       "heading": -1.5707963267948966,
       "width": 20,
       "checkpointNumber": 4,
@@ -1214,8 +1221,8 @@
       "x": 61.51514499659185,
       "z": 22.68184095681967,
       "heading": 0,
-      "width": 27,
-      "poleHeight": 8
+      "width": 26,
+      "poleHeight": 7
     },
     {
       "type": "model",
@@ -1223,8 +1230,8 @@
       "x": 65.53421089000578,
       "z": 6.084467003961045,
       "heading": 0,
-      "width": 27,
-      "poleHeight": 8
+      "width": 26,
+      "poleHeight": 7
     },
     {
       "type": "model",
@@ -1232,8 +1239,8 @@
       "x": 66.14263142962994,
       "z": -11.464129658527426,
       "heading": 0,
-      "width": 27,
-      "poleHeight": 8
+      "width": 26,
+      "poleHeight": 7
     },
     {
       "type": "model",
@@ -1248,8 +1255,8 @@
     {
       "type": "model",
       "model": "flag",
-      "x": 12.726780560888393,
-      "z": -14.9263865212191,
+      "x": -21.64431381274029,
+      "z": -22.525065144838123,
       "color": "red",
       "scale": 1,
       "height": 7.5,
@@ -1258,8 +1265,8 @@
     {
       "type": "model",
       "model": "flag",
-      "x": -46.15802778466869,
-      "z": 56.99916474629471,
+      "x": -54.101402464078404,
+      "z": 51.98087177406625,
       "color": "red",
       "scale": 1,
       "height": 7.5,
@@ -1335,8 +1342,8 @@
     },
     {
       "type": "trackSign",
-      "x": -4.319628451512633,
-      "z": -10.619232934095853,
+      "x": -4.906559079716583,
+      "z": -10.39698613164107,
       "name": "Knock About",
       "rotation": 0,
       "contentType": "brand",
@@ -1366,7 +1373,7 @@
     {
       "type": "trackSign",
       "x": 21.10337814517122,
-      "z": -53.93329419689202,
+      "z": -52.43329419689202,
       "name": "Knock About",
       "rotation": 0,
       "contentType": "brand",
@@ -1634,8 +1641,8 @@
           "radius": 16
         },
         {
-          "x": -55.72105584258808,
-          "z": -32.30535444434638,
+          "x": -53.77360333029747,
+          "z": -30.566820399886012,
           "radius": 10
         }
       ],
@@ -1644,7 +1651,8 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "endTaper": true
     },
     {
       "type": "hill",
@@ -1758,6 +1766,169 @@
       "depth": 29.5,
       "rotation": 0,
       "blendWidth": 16
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -56.44627081492281,
+      "z": 26.869592230797704,
+      "color": "red",
+      "scale": 1,
+      "height": 7.5,
+      "heading": 0
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 12.85568618725971,
+      "z": -17.025065144838123,
+      "color": "red",
+      "scale": 1,
+      "height": 7.5,
+      "heading": 0
+    },
+    {
+      "type": "decal",
+      "position": [
+        7.147293825987679,
+        5.021467679976325,
+        -8.041371398679264
+      ],
+      "normal": [
+        -0.25641504977488205,
+        0.9662977913217036,
+        0.02280133188527307
+      ],
+      "rotation": 0,
+      "shape": "polyline",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "brand": "energizer-racing.png",
+      "width": 4,
+      "height": 4,
+      "opacity": 0.65,
+      "points": [
+        {
+          "x": 4.844447393498923,
+          "z": 10.4077669843293
+        },
+        {
+          "x": 14.513773960685672,
+          "z": -1.6113880858709848,
+          "radius": 10
+        },
+        {
+          "x": 12.338279446637909,
+          "z": -19.545705073683706,
+          "radius": 30
+        },
+        {
+          "x": -3.1073254968717876,
+          "z": -21.416159419491663
+        }
+      ],
+      "thickness": 0.4
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": 1.22,
+          "z": -36.97
+        },
+        {
+          "x": 20.52,
+          "z": -27.54
+        },
+        {
+          "x": 26.92,
+          "z": -11.74
+        }
+      ],
+      "width": 16,
+      "blendWidth": 2,
+      "cornerRadius": 5,
+      "closed": false,
+      "terrainType": "loose_dirt"
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": 16.11,
+          "z": 51.25
+        },
+        {
+          "x": 43.84,
+          "z": 64.51
+        },
+        {
+          "x": 64.02,
+          "z": 52.69
+        }
+      ],
+      "width": 16,
+      "blendWidth": 2,
+      "cornerRadius": 5,
+      "closed": false,
+      "terrainType": "loose_dirt"
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 56.91836919112604,
+      "centerZ": -65.9105835875863,
+      "terrainType": "loose_dirt",
+      "roughness": 0.15,
+      "width": 30,
+      "depth": 17,
+      "rotation": 0,
+      "blendWidth": 3.5
+    },
+    {
+      "type": "trackLight",
+      "x": -75.28402146282498,
+      "z": -43.15147336437821,
+      "height": 17.5,
+      "spread": 103,
+      "intensity": 17,
+      "color": "warm",
+      "tilt": 19,
+      "rotation": 270
+    },
+    {
+      "type": "trackLight",
+      "x": 44.38470903394628,
+      "z": -35.1310058379494,
+      "height": 17.5,
+      "spread": 103,
+      "intensity": 33,
+      "color": "warm",
+      "tilt": 76,
+      "rotation": 319
+    },
+    {
+      "type": "trackLight",
+      "x": -42.73268914473698,
+      "z": 38.406776225811555,
+      "height": 24,
+      "spread": 103,
+      "intensity": 33,
+      "color": "warm",
+      "tilt": 90,
+      "rotation": 0
+    },
+    {
+      "type": "trackLight",
+      "x": 38.3810042124501,
+      "z": 25.91566525270848,
+      "height": 24,
+      "spread": 103,
+      "intensity": 33,
+      "color": "warm",
+      "tilt": 90,
+      "rotation": 0
     }
   ]
 }

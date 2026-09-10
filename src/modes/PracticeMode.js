@@ -24,7 +24,7 @@ export class PracticeMode extends DriveMode {
     this.truckAudioController = null;
   }
 
-  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null }) {
+  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, night = false }) {
     const { engine, menuManager } = this.controller;
 
     const {
@@ -36,7 +36,7 @@ export class PracticeMode extends DriveMode {
       obstacleManager,
       decorationManager,
       pickupManager,
-    } = await this.buildDriveScene(trackKey);
+    } = await this.buildDriveScene(trackKey, { night });
     // Note: Pickups are disabled by default via buildScene. We don't spawn them here.
 
     this.scene = scene;

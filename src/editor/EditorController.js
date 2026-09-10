@@ -14,6 +14,7 @@ import { ObstacleEditor } from "./ObstacleEditor.js";
 import { DecorationsEditor } from "./DecorationsEditor.js";
 import { TrackSignEditor } from "./TrackSignEditor.js";
 import { StartPositionEditor } from "./StartPositionEditor.js";
+import { TrackLightEditor } from "./TrackLightEditor.js";
 import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
 import { BridgeMeshEditor } from './BridgeMeshEditor.js';
@@ -24,6 +25,7 @@ import { scatterDirtChunks } from '../objects/DirtChunks.js';
 import { scatterGrassBlades } from '../objects/GrassBlades.js';
 import { buildBorderWalls, resolveBorderWall } from '../objects/BorderWall.js';
 import { buildOutskirts, OUTSKIRTS_MATERIAL_NAME } from '../objects/Outskirts.js';
+import { applyNightMode } from '../modes/SceneBuilder.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../world/terrain.js';
 import { DEFAULT_TERRAIN_WEAR_CONFIG } from '../world/terrain-utils.js';
@@ -89,6 +91,7 @@ export class EditorController {
     this.decorationsEditor = new DecorationsEditor(this);        // flags + banner strings
     this.trackSignEditor = new TrackSignEditor(this);
     this.startPositionEditor = new StartPositionEditor(this);  // starting-grid marker
+    this.trackLightEditor = new TrackLightEditor(this);
     this.actionZoneEditor = new ActionZoneEditor(this);
     this.meshGridEditor = new MeshGridEditor(this);
     this.polyWallEditor = new PolyWallEditor(this);
@@ -110,6 +113,7 @@ export class EditorController {
       this.decorationsEditor,
       this.trackSignEditor,
       this.startPositionEditor,
+      this.trackLightEditor,
       this.actionZoneEditor,
       this.meshGridEditor,
       this.polyWallEditor,
@@ -458,6 +462,10 @@ export class EditorController {
       return this._createVectorSelectionInteraction(this.startPositionEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
 
+    if (this.trackLightEditor.selected) {
+      return this._createVectorSelectionInteraction(this.trackLightEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
+    }
+
     if (this.decalEditor.selected) {
       return this._createVectorSelectionInteraction(this.decalEditor, (fast) => (fast ? 5 : 1) * (Math.PI / 180));
     }
@@ -520,6 +528,7 @@ export class EditorController {
       { selected: () => this.decorationsEditor.selected, duplicate: () => this.decorationsEditor.duplicateSelected(), delete: () => this.decorationsEditor.deleteSelected() },
       { selected: () => this.trackSignEditor.selected, duplicate: () => this.trackSignEditor.duplicateSelected(), delete: () => this.trackSignEditor.deleteSelected() },
       { selected: () => this.startPositionEditor.selected, delete: () => this.startPositionEditor.deleteSelected() },
+      { selected: () => this.trackLightEditor.selected, duplicate: () => this.trackLightEditor.duplicateSelected(), delete: () => this.trackLightEditor.deleteSelected() },
       { selected: () => this.decalEditor.selected, duplicate: () => this.decalEditor.duplicateSelected(), delete: () => this.decalEditor.deleteSelected() },
       { selected: () => this.actionZoneEditor.selected, duplicate: () => this.actionZoneEditor.duplicateSelected(), delete: () => this.actionZoneEditor.deleteSelected() },
       { selected: () => this.aiPathEditor?.selected, delete: () => this.aiPathEditor?.deleteSelected?.() },
@@ -616,6 +625,7 @@ export class EditorController {
         else if (this.decorationsEditor.isModelFeature(feature)) this.decorationsEditor.createVisual(feature);
         else if (feature.type === 'trackSign') this.trackSignEditor.createVisual(feature);
         else if (feature.type === 'startPosition') this.startPositionEditor.createVisual(feature);
+        else if (feature.type === 'trackLight') this.trackLightEditor.createVisual(feature);
         else if (feature.type === 'actionZone') this.actionZoneEditor.createVisual(feature);
         else if (feature.type === 'decal') this.decalManager?.createDecal(feature);
       }
@@ -1249,6 +1259,7 @@ export class EditorController {
       [this.driveBoxEditor, 'selected'],
       [this.obstacleEditor, 'selected'],
       [this.trackSignEditor, 'selected'],
+      [this.trackLightEditor, 'selected'],
       [this.decorationsEditor, '_selected'],
       [this.aiPathEditor, 'selected'],
       [this.terrainPathEditor, 'selected'],
@@ -1338,6 +1349,7 @@ export class EditorController {
     note('decoration',   this.decorationsEditor?._selected);
     note('trackSign',    this.trackSignEditor?.selected);
     note('startPosition', this.startPositionEditor?.selected);
+    note('trackLight',   this.trackLightEditor?.selected);
     note('actionZone',   this.actionZoneEditor?._selected);
     note('aiPath',       this.aiPathEditor?.selected);
     note('terrainPath',  this.terrainPathEditor?.selected);
@@ -1570,6 +1582,7 @@ export class EditorController {
           { editor: this.obstacleEditor },
           { editor: this.decorationsEditor },
           { editor: this.trackSignEditor },
+          { editor: this.trackLightEditor },
         ];
 
         for (const handler of clickHandlers) {
@@ -1803,6 +1816,16 @@ export class EditorController {
     this.saveSnapshot(true);
     this.currentTrack.oobDeadSpace = !!enabled;
     this._syncTrackSettingsPanel();
+  }
+
+  /** Editor-only night-mode preview. Night is a per-race setting, not a track
+   *  property — this just lights the scene so track lights can be authored. Not
+   *  persisted; not on undo/redo. */
+  toggleNightPreview(on) {
+    this._nightPreview = !!on;
+    if (this._editorStore) this._editorStore.nightPreview = this._nightPreview;
+    applyNightMode(this.scene, this._nightPreview);
+    this.trackLightEditor.setNight(this._nightPreview);
   }
 
   /** Patch the perimeter-wall settings and rebuild the perimeter in place.
@@ -2071,6 +2094,18 @@ export class EditorController {
   changeTrackSignWidth(val) { this.trackSignEditor.changeWidth(val); }
   deleteTrackSign()            { this.trackSignEditor.deleteSelected(); }
   duplicateTrackSign()         { this.trackSignEditor.duplicateSelected(); }
+
+  // ── Track Light Vue bridge methods ──
+  addTrackLightEntity()          { this.trackLightEditor.addEntity(); }
+  deselectTrackLight()           { this.trackLightEditor.deselect(); }
+  changeTrackLightHeight(val)    { this.trackLightEditor.changeHeight(val); }
+  changeTrackLightSpread(val)    { this.trackLightEditor.changeSpread(val); }
+  changeTrackLightIntensity(val) { this.trackLightEditor.changeIntensity(val); }
+  changeTrackLightColor(val)     { this.trackLightEditor.changeColor(val); }
+  changeTrackLightTilt(val)      { this.trackLightEditor.changeTilt(val); }
+  changeTrackLightRotation(val)  { this.trackLightEditor.changeRotation(val); }
+  deleteTrackLight()             { this.trackLightEditor.deleteSelected(); }
+  duplicateTrackLight()          { this.trackLightEditor.duplicateSelected(); }
 
   // ── Action Zone Vue bridge methods ──
   addActionZoneEntity()           { this.actionZoneEditor.addEntity(); }
@@ -2525,7 +2560,7 @@ export class EditorController {
     setListVisibility(this.obstacleEditor?.meshes, ['node', 'mesh']);
 
     // Editors whose features carry a GizmoHandle sphere.
-    for (const ed of [this.terrainShapeEditor, this.trackSignEditor,
+    for (const ed of [this.terrainShapeEditor, this.trackSignEditor, this.trackLightEditor,
                       this.decorationsEditor, this.decalEditor,
                       this.startPositionEditor]) {
       ed?.setHandlesVisible?.(visible);

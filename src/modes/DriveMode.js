@@ -67,9 +67,9 @@ export class DriveMode extends BaseMode {
   /**
    * Build a driving scene for this mode from the selected track.
    */
-  async buildDriveScene(trackKey) {
+  async buildDriveScene(trackKey, opts = {}) {
     const { engine, trackLoader } = this.controller;
-    const built = await buildScene(engine, trackLoader, trackKey);
+    const built = await buildScene(engine, trackLoader, trackKey, opts);
     this._setupBorderWallFade(built.scene);
     return built;
   }

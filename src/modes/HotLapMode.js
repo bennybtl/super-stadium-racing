@@ -27,7 +27,7 @@ export class HotLapMode extends DriveMode {
     this.checkpointArrow = null;
   }
 
-  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false }) {
+  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false, night = false }) {
     const { engine, menuManager } = this.controller;
 
     const {
@@ -40,7 +40,7 @@ export class HotLapMode extends DriveMode {
       obstacleManager,
       decorationManager,
       pickupManager,
-    } = await this.buildDriveScene(trackKey);
+    } = await this.buildDriveScene(trackKey, { night });
 
     this.scene = scene;
     const frameProfiler = this.initFrameProfiler('HotLapMode');

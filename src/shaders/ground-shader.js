@@ -31,6 +31,15 @@ const STEEP_GRASS_SLOPE_END = 36;
 const STEEP_GRASS_SAMPLE_DISTANCE = 6.5;
 const STEEP_GRASS_TILE_WORLD_UNITS = 10;
 
+// Lakebed shimmer (WATER_REACTIVE.md Phase 3). The wake field's own texel size
+// — duplicated from WakeFieldManager.js rather than imported, matching how
+// water-shader.js already keeps its own copy of this constant.
+const TERRAIN_WAKE_TEX_SIZE = 256;
+// Raw per-texel wake differences are small; this converts them into a UV
+// offset large enough to read as a wobble without overshooting into the
+// neighbouring cell's overlay.
+const TERRAIN_WAKE_WOBBLE_STRENGTH = 0.35;
+
 const _normalMapModules = import.meta.glob('../assets/normals/*', { eager: true, query: '?url', import: 'default' });
 const _normalMapUrls = {};
 for (const [path, url] of Object.entries(_normalMapModules)) {
@@ -715,6 +724,10 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   uniform sampler2D terrainPropertySampler;
   uniform sampler2D terrainWaterOverlaySampler;
   uniform sampler2D terrainWearOverlaySampler;
+  // Wake field (WakeFieldManager.js), shared with the water surface itself —
+  // see terrainWakeBounds below and _TERRAIN_BLEND_UPDATE_DIFFUSE's lakebed
+  // shimmer for how it's used.
+  uniform sampler2D terrainWakeSampler;
   // Per-type detail textures, one layer per terrain type, tiled in world space.
   // The precision qualifier is required: ESSL3 gives sampler2DArray no default
   // one (unlike sampler2D), and omitting it fails to compile.
@@ -885,7 +898,22 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
     _terrainDetailResult = mix(_terrainDetailResult, _sampleDetail(terrainOutsideTypeIndex, vPositionW.xz), _outsideT);
     _terrainDetailNormalResult = mix(_terrainDetailNormalResult, _sampleDetailNormal(terrainOutsideTypeIndex, vPositionW.xz), _outsideT);
   }
-  vec4 _waterOverlay = _sampleSmoothedOverlay(terrainWaterOverlaySampler, _tUV, _coord);
+  // Lakebed shimmer: the wake field's gradient at this fragment offsets where
+  // the water-tint overlay is sampled, so the visible lakebed wobbles wherever
+  // a truck's wake has passed over it. Only the overlay sample moves — not
+  // _terrainBlendResult/_terrainDetailResult above, which would mean re-running
+  // the 3x3 blend at a second UV for a distortion nobody would see once it's
+  // under the water tint anyway. Outside the wake field's bounds this reads the
+  // permanently-zero padded border, so dry terrain costs three taps and no
+  // visible change.
+  vec2 _wkUv = (vPositionW.xz - terrainWakeBounds.xy) * terrainWakeBounds.zw;
+  float _wk  = texture2D(terrainWakeSampler, _wkUv).r;
+  float _wkX = texture2D(terrainWakeSampler, _wkUv + vec2(${(1 / TERRAIN_WAKE_TEX_SIZE).toFixed(8)}, 0.0)).r;
+  float _wkZ = texture2D(terrainWakeSampler, _wkUv + vec2(0.0, ${(1 / TERRAIN_WAKE_TEX_SIZE).toFixed(8)})).r;
+  vec2 _wkWobble = vec2(_wkX - _wk, _wkZ - _wk) * ${TERRAIN_WAKE_WOBBLE_STRENGTH.toFixed(3)};
+  vec2 _tUVWobbled = clamp(_tUV + _wkWobble, vec2(0.0), vec2(1.0));
+  vec2 _coordWobbled = clamp(_tUVWobbled * terrainCellCount, vec2(0.001), vec2((terrainCellCount - 1.0) + 0.999));
+  vec4 _waterOverlay = _sampleSmoothedOverlay(terrainWaterOverlaySampler, _tUVWobbled, _coordWobbled);
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
   float _wearLighten = _wearOverlay.r;
   float _wearDarken  = _wearOverlay.g;
@@ -940,6 +968,19 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     this._terrainWaterOverlayTex = terrainWaterOverlayTex;
     this._terrainWearOverlayTex = terrainWearOverlayTex;
     this._terrainDetailTex = terrainDetailTex;
+    // Lakebed shimmer stand-in, before the track's wake field exists or between
+    // an editor water rebuild disposing one and creating the next — same
+    // pattern as WaterSurfacePlugin's _emptyWake in water-shader.js. Reads
+    // zero, so the wobble terms fall out with no branch and no define to
+    // recompile against.
+    const scene = material.getScene();
+    this._emptyWake = RawTexture.CreateRTexture(
+      new Uint8Array(1), 1, 1, scene, false, false,
+      Texture.NEAREST_SAMPLINGMODE, Constants.TEXTURETYPE_UNSIGNED_BYTE
+    );
+    this._emptyWake.wrapU = Texture.CLAMP_ADDRESSMODE;
+    this._emptyWake.wrapV = Texture.CLAMP_ADDRESSMODE;
+    this._emptyWake.gammaSpace = false;
     // Passed via options rather than another positional argument — the list is
     // long enough. Falls back to the albedo array so an un-updated caller binds
     // *something* rather than leaving the sampler unbound (which reads black,
@@ -983,10 +1024,29 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
   }
 
   getSamplers(samplers) {
-    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler", "terrainDetailSampler", "terrainDetailNormalSampler");
+    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler", "terrainDetailSampler", "terrainDetailNormalSampler", "terrainWakeSampler");
+  }
+
+  // terrainWakeBounds is a genuine uniform, not baked source — see the note on
+  // this._emptyWake above. Declared through both routes because exactly one of
+  // them is actually in the compiled source on any given path (see
+  // WaterSurfacePlugin.getUniforms in water-shader.js, which traced this down
+  // for the same StandardMaterial UBO machinery this plugin also rides on).
+  getUniforms() {
+    return {
+      ubo: [
+        { name: "terrainWakeBounds", size: 4, type: "vec4" },
+      ],
+      fragment: "uniform vec4 terrainWakeBounds;",
+    };
   }
 
   bindForSubMesh(uniformBuffer, scene) {
+    // Looked up per frame, not held: the material is cached for the life of
+    // the scene, while an editor water edit disposes the field and builds a
+    // new one with different bounds — a stored reference would go dangling.
+    const wake = scene.metadata?.wakeField;
+
     if (scene.texturesEnabled) {
       uniformBuffer.setTexture("terrainIdSampler", this._terrainIdTex);
       uniformBuffer.setTexture("terrainPropertySampler", this._terrainPropertyTex);
@@ -994,7 +1054,22 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       uniformBuffer.setTexture("terrainWearOverlaySampler", this._terrainWearOverlayTex);
       uniformBuffer.setTexture("terrainDetailSampler", this._terrainDetailTex);
       uniformBuffer.setTexture("terrainDetailNormalSampler", this._terrainDetailNormalTex);
+      uniformBuffer.setTexture("terrainWakeSampler", wake?.texture ?? this._emptyWake);
     }
+
+    if (wake) {
+      const { minX, minZ, sizeX, sizeZ } = wake.bounds;
+      uniformBuffer.updateFloat4("terrainWakeBounds", minX, minZ, 1 / sizeX, 1 / sizeZ);
+    } else {
+      uniformBuffer.updateFloat4("terrainWakeBounds", 0, 0, 0, 0);
+    }
+  }
+
+  dispose() {
+    // The 1×1 placeholder is this plugin's own; the wake field itself is
+    // scene-owned (WakeFieldManager) and not this plugin's to dispose.
+    this._emptyWake?.dispose();
+    this._emptyWake = null;
   }
 
   getCustomCode(shaderType) {

@@ -77,10 +77,53 @@ const WAKE_FOAM_GAIN = 1.3;
 const WAKE_FOAM_WHITE = 0.85;
 const WAKE_FOAM_ALPHA = 0.80;
 
+// Organic breakup for the wake's foam mask: a scrolling 3D value noise, so
+// churn reads as drifting patches instead of a flat glow. Technique borrowed
+// from a depth-buffer foam-edge reference (Babylon Playground sample) — minus
+// its screen-space depth diff, since the wake field already supplies the
+// proximity mask that noise multiplies against here.
+const WAKE_FOAM_NOISE_SCALE = 0.35; // world units^-1 — larger = smaller patches
+const WAKE_FOAM_NOISE_SPEED = 0.12; // noise-space units per second of waterTime
+const WAKE_FOAM_NOISE_LO = 0.15;    // smoothstep edges the breakup mask sits between
+const WAKE_FOAM_NOISE_HI = 0.45;
+
 // How hard the summed slope tilts the surface normal. The water is flat and lit
 // by one directional light, so this is almost entirely a specular effect —
 // turn it up and the glints get busier, not the shading darker.
 const WATER_NORMAL_STRENGTH = 0.30;
+
+// Cheap animated value noise, shared by the surface (churn breakup) and the
+// foam ribbon (WaterFoamPlugin below) so both froths read as the same medium.
+// Standard value-noise construction: hash the 8 corners of the containing
+// cube via a polynomial permutation, then trilinearly interpolate with a
+// smoothed (3t²-2t³) blend curve.
+const _WATER_NOISE_GLSL = `
+  float _waterNoiseMod289(float x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 _waterNoiseMod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 _waterNoisePerm(vec4 x) { return _waterNoiseMod289(((x * 34.0) + 1.0) * x); }
+
+  float _waterNoise(vec3 p) {
+    vec3 a = floor(p);
+    vec3 d = p - a;
+    d = d * d * (3.0 - 2.0 * d);
+
+    vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = _waterNoisePerm(b.xyxy);
+    vec4 k2 = _waterNoisePerm(k1.xyxy + b.zzww);
+
+    vec4 c = k2 + a.zzzz;
+    vec4 k3 = _waterNoisePerm(c);
+    vec4 k4 = _waterNoisePerm(c + 1.0);
+
+    vec4 o1 = fract(k3 * (1.0 / 41.0));
+    vec4 o2 = fract(k4 * (1.0 / 41.0));
+
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
+  }
+`;
 
 const _WATER_GLSL_DEFS = `
   // Declared explicitly: Babylon's plugin getSamplers() only registers the name
@@ -93,6 +136,8 @@ const _WATER_GLSL_DEFS = `
   vec2 _waterSlope(vec2 uv) {
     return texture2D(waterNormalSampler, uv).xy * 2.0 - 1.0;
   }
+
+  ${_WATER_NOISE_GLSL}
 `;
 
 /** Build the world-space scrolling UV expression for one layer. */
@@ -122,8 +167,12 @@ const _WATER_UPDATE_DIFFUSE = `
 
   // Churn. baseColor already carries the per-vertex depth tint (Babylon applies
   // VERTEXCOLOR before this hook) and alpha the depth ramp, so this whitens the
-  // real water colour and locally overrides the shallows' transparency.
-  float _churn = clamp(_wake * ${WAKE_FOAM_GAIN.toFixed(3)}, 0.0, 1.0);
+  // real water colour and locally overrides the shallows' transparency. The
+  // wake value sets how far the mask reaches; a scrolling noise breaks it into
+  // drifting patches instead of a flat glow.
+  float _churnMask = clamp(_wake * ${WAKE_FOAM_GAIN.toFixed(3)}, 0.0, 1.0);
+  float _churnNoise = _waterNoise(vec3(vPositionW.xz * ${WAKE_FOAM_NOISE_SCALE.toFixed(3)}, waterTime * ${WAKE_FOAM_NOISE_SPEED.toFixed(3)}));
+  float _churn = smoothstep(${WAKE_FOAM_NOISE_LO.toFixed(3)}, ${WAKE_FOAM_NOISE_HI.toFixed(3)}, _churnNoise * _churnMask);
   baseColor.rgb = mix(baseColor.rgb, vec3(1.0), _churn * ${WAKE_FOAM_WHITE.toFixed(3)});
   alpha = max(alpha, _churn * ${WAKE_FOAM_ALPHA.toFixed(3)});
 `;
@@ -242,4 +291,133 @@ export function attachWaterSurfacePlugin(material) {
   const webGLVersion = material?.getScene?.()?.getEngine?.()?.webGLVersion ?? 2;
   if (webGLVersion < 2) return null;
   return new WaterSurfacePlugin(material);
+}
+
+// ─── Shoreline foam ribbon (WATER_REACTIVE.md Phase 3) ────────────────────
+//
+// The foam ribbon (createWaterFoamRibbon in Water.js) bakes its band width,
+// shore-to-open falloff and dither into the mesh at build time — this plugin
+// only modulates the alpha that baked stream already produces, the same way
+// WaterSurfacePlugin only perturbs the surface normal:
+//
+//  - Organic breakup, same noise as the wake churn above, so the shoreline
+//    band froths and drifts instead of sitting as a static dithered gradient.
+//  - Shoreline lapping: where the wake field has reached the shore, the band
+//    is pushed toward fully solid — the truck's wake visibly washes it.
+//
+// One hazard specific to this material: `alpha` at CUSTOM_FRAGMENT_UPDATE_DIFFUSE
+// is still just the material's flat vDiffuseColor.a (1, since foam mat.alpha is
+// never set) — vertex alpha and the opacityTexture (the shared swirl mask) both
+// multiply in *after* this hook, not before. So this plugin only ever
+// multiplies `alpha`, never `max()`s it: a `max` against the still-1 value here
+// would be silently overwritten the instant the later vertex-alpha multiply
+// runs, which is the trap WaterSurfacePlugin's own `alpha = max(...)` line
+// above sits in without needing it (that value is only cosmetic there — the
+// churn read comes from the rgb whitening, not the alpha line).
+
+// Patch size smaller than the wake churn's — the ribbon is a much narrower
+// band, so patches need to read at that scale rather than get averaged out.
+const FOAM_NOISE_SCALE = 0.45;
+const FOAM_NOISE_SPEED = 0.10;
+const FOAM_NOISE_LO = 0.30;
+const FOAM_NOISE_HI = 0.70;
+// The breakup never drops the baked band fully to zero — a full black-out
+// would read as a hole in the shoreline rather than froth.
+const FOAM_NOISE_FLOOR = 0.55;
+// How hard a wake value pulls the band back toward fully solid.
+const FOAM_LAP_GAIN = 1.4;
+
+const _FOAM_GLSL_DEFS = `
+  uniform sampler2D waterWakeSampler;
+
+  ${_WATER_NOISE_GLSL}
+`;
+
+const _FOAM_UPDATE_DIFFUSE = `
+  float _foamBreakupNoise = _waterNoise(vec3(vPositionW.xz * ${FOAM_NOISE_SCALE.toFixed(3)}, waterTime * ${FOAM_NOISE_SPEED.toFixed(3)}));
+  float _foamBreakup = smoothstep(${FOAM_NOISE_LO.toFixed(3)}, ${FOAM_NOISE_HI.toFixed(3)}, _foamBreakupNoise);
+  float _foamMul = mix(${FOAM_NOISE_FLOOR.toFixed(3)}, 1.0, _foamBreakup);
+
+  // Outside the wake field's bounds this samples the permanently-zero padded
+  // border, so a track with no truck nearby costs one tap and changes nothing.
+  vec2 _fUv = (vPositionW.xz - waterWakeBounds.xy) * waterWakeBounds.zw;
+  float _fWake = texture2D(waterWakeSampler, _fUv).r;
+  _foamMul = mix(_foamMul, 1.0, clamp(_fWake * ${FOAM_LAP_GAIN.toFixed(3)}, 0.0, 1.0));
+
+  alpha *= _foamMul;
+`;
+
+export class WaterFoamPlugin extends MaterialPluginBase {
+  constructor(material) {
+    super(material, "WaterFoam", 200, {});
+    const scene = material.getScene();
+    // Same stand-in as WaterSurfacePlugin — see its constructor for why
+    // TEXTURETYPE_UNSIGNED_BYTE must be explicit and why this is CLAMP, not WRAP.
+    this._emptyWake = RawTexture.CreateRTexture(
+      new Uint8Array(1), 1, 1, scene, false, false,
+      Texture.NEAREST_SAMPLINGMODE, Constants.TEXTURETYPE_UNSIGNED_BYTE
+    );
+    this._emptyWake.wrapU = Texture.CLAMP_ADDRESSMODE;
+    this._emptyWake.wrapV = Texture.CLAMP_ADDRESSMODE;
+    this._emptyWake.gammaSpace = false;
+    this._enable(true);
+  }
+
+  getSamplers(samplers) {
+    samplers.push("waterWakeSampler");
+  }
+
+  getUniforms() {
+    return {
+      ubo: [
+        { name: "waterTime", size: 1, type: "float" },
+        { name: "waterWakeBounds", size: 4, type: "vec4" },
+      ],
+      fragment: "uniform float waterTime;\nuniform vec4 waterWakeBounds;",
+    };
+  }
+
+  bindForSubMesh(uniformBuffer, scene) {
+    // Stateless, same clock as WaterSurfacePlugin — see its bindForSubMesh for
+    // why this reads the wall clock rather than accumulating a delta.
+    uniformBuffer.updateFloat("waterTime", (performance.now() * 0.001) % WATER_TIME_WRAP);
+
+    const wake = scene.metadata?.wakeField;
+    if (wake) {
+      const { minX, minZ, sizeX, sizeZ } = wake.bounds;
+      uniformBuffer.updateFloat4("waterWakeBounds", minX, minZ, 1 / sizeX, 1 / sizeZ);
+    } else {
+      uniformBuffer.updateFloat4("waterWakeBounds", 0, 0, 0, 0);
+    }
+
+    if (scene.texturesEnabled) {
+      uniformBuffer.setTexture("waterWakeSampler", wake?.texture ?? this._emptyWake);
+    }
+  }
+
+  dispose() {
+    this._emptyWake?.dispose();
+    this._emptyWake = null;
+  }
+
+  getCustomCode(shaderType) {
+    if (shaderType !== "fragment") return null;
+    return {
+      "CUSTOM_FRAGMENT_DEFINITIONS": _FOAM_GLSL_DEFS,
+      "CUSTOM_FRAGMENT_UPDATE_DIFFUSE": _FOAM_UPDATE_DIFFUSE,
+    };
+  }
+}
+
+/**
+ * Attach the foam plugin to a shoreline ribbon material. No-op on WebGL1,
+ * matching attachWaterSurfacePlugin.
+ *
+ * @param {import('@babylonjs/core').StandardMaterial} material
+ * @returns {WaterFoamPlugin|null}
+ */
+export function attachWaterFoamPlugin(material) {
+  const webGLVersion = material?.getScene?.()?.getEngine?.()?.webGLVersion ?? 2;
+  if (webGLVersion < 2) return null;
+  return new WaterFoamPlugin(material);
 }

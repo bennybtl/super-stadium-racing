@@ -679,6 +679,8 @@ export class TruckBody {
     mat.diffuseColor  = color;
     mat.specularColor = options.specularColor ?? new Color3(0.9, 0.9, 0.9);
     mat.specularPower = options.specularPower ?? 32;
+    // (Per-material light cap is lifted scene-wide — see the
+    // onNewMaterialAddedObservable hook in SceneBuilder.buildScene.)
     if (this._ghost) {
       // Uniform translucent blue, unlit so it reads clearly as a ghost.
       mat.diffuseColor  = new Color3(0.45, 0.8, 1);

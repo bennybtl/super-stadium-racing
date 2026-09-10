@@ -42,6 +42,9 @@
       <div v-if="showReverse">
         <ReverseToggle />
       </div>
+      <div v-if="showNight">
+        <NightToggle />
+      </div>
     </div>
   </div>
 </template>
@@ -50,12 +53,15 @@
   import { computed } from 'vue';
   import { useMenuStore } from './store.js';
   import ReverseToggle from './ReverseToggle.vue';
+  import NightToggle from './NightToggle.vue';
 
   // `showRaceCount` adds the championship-only "Races" (track count) control;
-  // `showReverse` toggles the reverse-direction control (hidden for cups).
+  // `showReverse` / `showNight` toggle the reverse-direction and night controls
+  // (both hidden for cups).
   defineProps({
     showRaceCount: { type: Boolean, default: false },
     showReverse: { type: Boolean, default: true },
+    showNight: { type: Boolean, default: true },
   });
 
   const store = useMenuStore();

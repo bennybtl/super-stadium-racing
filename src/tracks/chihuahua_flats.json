@@ -294,6 +294,21 @@
       "smoothing": 0.65
     },
     {
+      "type": "driveBox",
+      "centerX": 90.83314856035672,
+      "centerZ": -66.69040355256587,
+      "width": 12,
+      "depth": 12.5,
+      "rotation": -146,
+      "solidBase": true,
+      "thickness": 0.4,
+      "layerId": 0,
+      "heightAtMin": 0,
+      "heightAtMax": 3.5,
+      "color": "#9aa0a8",
+      "sideColor": "tex:plywood"
+    },
+    {
       "type": "terrainPath",
       "points": [
         {
@@ -333,8 +348,8 @@
           "z": 10.288441202269317
         },
         {
-          "x": 3.176137628638373,
-          "z": 10.352666482382935
+          "x": -3.1884620999338535,
+          "z": 12.024390664969294
         },
         {
           "x": -6.684055600694134,
@@ -408,16 +423,16 @@
       "points": [
         {
           "x": -86.39795470089872,
-          "z": -92.31395554067761,
+          "z": -89.81395554067761,
           "radius": 10
         },
         {
-          "x": -119.28238027262209,
-          "z": -76.10345005093659,
+          "x": -118.21923530783775,
+          "z": -76.0767615034429,
           "radius": 15
         },
         {
-          "x": -117.74848215994467,
+          "x": -116.74848215994467,
           "z": -39.291985858596504,
           "radius": 10
         },
@@ -437,16 +452,19 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "endTaper": true
     },
     {
       "type": "trackLight",
-      "x": -11.130571305644434,
-      "z": -0.6053023088934388,
-      "height": 8,
-      "spread": 52,
-      "intensity": 32,
-      "color": "warm"
+      "x": -110.99584832211549,
+      "z": 71.82882739580182,
+      "height": 18,
+      "spread": 108,
+      "intensity": 29,
+      "color": "warm",
+      "tilt": 10,
+      "rotation": 306
     },
     {
       "type": "polyHill",
@@ -477,8 +495,8 @@
           "radius": 16
         },
         {
-          "x": 89.80137007923325,
-          "z": 12.094472083638657,
+          "x": 91.23640609408562,
+          "z": 9.481492085177528,
           "radius": 10
         }
       ],
@@ -530,13 +548,13 @@
     },
     {
       "type": "squareHill",
-      "centerX": 25.951966966112685,
+      "centerX": 27.451966966112685,
       "centerZ": -11.872904651041502,
       "width": 18,
-      "depth": 28.5,
+      "depth": 32,
       "angle": 74,
       "waterLevelOffset": 0,
-      "transition": 5.5,
+      "transition": 7,
       "terrainType": null,
       "heightAtMin": 2.5,
       "heightAtMax": 0
@@ -1067,28 +1085,15 @@
     },
     {
       "type": "squareHill",
-      "centerX": 100.87571071291724,
-      "centerZ": 52.741976914031724,
+      "centerX": 74.95595878256125,
+      "centerZ": 24.414520425615784,
       "width": 22.5,
-      "depth": 19.5,
-      "angle": 81,
+      "depth": 16.5,
+      "angle": 353,
       "waterLevelOffset": 0,
       "transition": 5.5,
       "terrainType": null,
       "heightAtMin": 4,
-      "heightAtMax": 0
-    },
-    {
-      "type": "squareHill",
-      "centerX": 84.79567299296386,
-      "centerZ": -73.69307233441702,
-      "width": 21,
-      "depth": 20.5,
-      "angle": 19,
-      "waterLevelOffset": 0,
-      "transition": 5,
-      "terrainType": null,
-      "heightAtMin": 5,
       "heightAtMax": 0
     },
     {
@@ -1164,8 +1169,8 @@
     },
     {
       "type": "trackSign",
-      "x": 71.54654639657397,
-      "z": 3.8479988222206956,
+      "x": 62.86494674431309,
+      "z": 3.8824116154020274,
       "name": "Track Name",
       "rotation": 5.98647933434055,
       "contentType": "brand",
@@ -1209,8 +1214,8 @@
           "z": -38.682782977198926
         },
         {
-          "x": -7.963420767108092,
-          "z": -4.050067249897271
+          "x": -8.819517761338325,
+          "z": -5.097717550086308
         },
         {
           "x": -23.549845981146678,
@@ -2179,10 +2184,91 @@
     {
       "type": "model",
       "model": "forest_rock_1",
-      "x": 13.999769519589393,
-      "z": -50.78107309701337,
+      "x": 15.499769519589393,
+      "z": -51.28107309701337,
       "heading": 0.8203047484373349,
       "scale": 0.7
+    },
+    {
+      "type": "model",
+      "model": "bleachers",
+      "x": -18.66762155749259,
+      "z": -92.23765188203846,
+      "color": "white",
+      "scale": 1.5,
+      "heading": 0,
+      "width": 10,
+      "height": 3
+    },
+    {
+      "type": "model",
+      "model": "bleachers",
+      "x": 18.499970410402188,
+      "z": -92.10017959460393,
+      "color": "white",
+      "scale": 1.5,
+      "heading": 0,
+      "width": 10,
+      "height": 3
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": -9.199897311803081,
+      "z": -61.15669393005556,
+      "scale": 0.8,
+      "heading": 0.7853981633974483
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_2",
+      "x": -65.73003417851845,
+      "z": -55.36604941851382,
+      "scale": 1.2
+    },
+    {
+      "type": "trackLight",
+      "x": -116.36305344099078,
+      "z": -80.9588468883602,
+      "height": 18,
+      "spread": 86,
+      "intensity": 14,
+      "color": "warm",
+      "tilt": 19,
+      "rotation": 233
+    },
+    {
+      "type": "trackLight",
+      "x": 87.28105784439167,
+      "z": -92.07366065735233,
+      "height": 24,
+      "spread": 114,
+      "intensity": 7,
+      "color": "warm",
+      "tilt": 21,
+      "rotation": 155
+    },
+    {
+      "type": "trackLight",
+      "x": 103.870186671077,
+      "z": 87.67733983098017,
+      "height": 18,
+      "spread": 120,
+      "intensity": 9,
+      "color": "warm",
+      "tilt": 16,
+      "rotation": 36
+    },
+    {
+      "type": "trackLight",
+      "x": 2.933781712455005,
+      "z": -65.53531824370152,
+      "height": 18,
+      "spread": 120,
+      "intensity": 7,
+      "color": "warm",
+      "tilt": 56,
+      "rotation": 0
     }
   ]
 }

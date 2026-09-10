@@ -12,7 +12,7 @@ import {
   foamTiling,
   FOAM_NOMINAL_WIDTH,
 } from "./water-field.js";
-import { attachWaterSurfacePlugin } from "../shaders/water-shader.js";
+import { attachWaterSurfacePlugin, attachWaterFoamPlugin } from "../shaders/water-shader.js";
 
 /**
  * Water meshes: the Babylon half of the water build. All of the geometry
@@ -133,6 +133,10 @@ function getFoamMaterial(scene) {
   // carries the froth, the vertex alpha carries shore-to-open-water falloff.
   const foam = getSharedFoamTexture(scene);
   if (foam) mat.opacityTexture = foam;
+
+  // Organic breakup + wake lapping (WATER_REACTIVE.md Phase 3). Attaches once
+  // per scene with the material, so every shoreline ribbon shares one effect.
+  attachWaterFoamPlugin(mat);
 
   _foamMaterials.set(scene, mat);
   return mat;

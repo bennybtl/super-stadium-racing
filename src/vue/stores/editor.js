@@ -4,6 +4,7 @@ import { DEFAULT_STRIPE_COLORS } from '../../objects/stripeColors.js';
 import { DEFAULT_SPARK_COLOR } from '../../objects/sparkColors.js';
 import { getObstacleSpec, clampObstacleCount, getDefaultMass } from '../../objects/Obstacle.js';
 import { DEFAULT_BORDER_WALL } from '../../objects/BorderWall.js';
+import { MAX_TRACK_LIGHTS } from '../../objects/TrackLight.js';
 
 // ─── Editor store ─────────────────────────────────────────────────────────────
 export const useEditorStore = defineStore('editor', () => {
@@ -18,6 +19,9 @@ export const useEditorStore = defineStore('editor', () => {
   const snapEnabled = ref(false);
   const snapSize = ref(1);
   const gizmosVisible = ref(true);
+  // Editor-only night-mode preview (night itself is a per-race setting, not a
+  // track property) — lets track lights be authored under night lighting.
+  const nightPreview = ref(false);
 
   // ── Checkpoint panel ──
   const checkpoint = reactive({
@@ -223,6 +227,18 @@ export const useEditorStore = defineStore('editor', () => {
     slotRotation: 0,    // picked pad's own heading, degrees (custom mode)
   });
 
+  // ── Track Light panel ──
+  const trackLight = reactive({
+    height: 8,
+    spread: 45,
+    intensity: 40,
+    color: 'warm',
+    tilt: 45,
+    rotation: 0,
+    count: 0,      // track lights placed / max
+    max: MAX_TRACK_LIGHTS,
+  });
+
   // ── Banner String panel ──
   const bannerString = reactive({
     width: 8,
@@ -272,6 +288,7 @@ export const useEditorStore = defineStore('editor', () => {
     dirtChunks: true,
     grassBlades: true,
     oobDeadSpace: false,
+    night: false,
   });
   const trackBorderWall = reactive({ ...DEFAULT_BORDER_WALL });
   const trackDefaultTerrain = ref('packed_dirt');
@@ -384,6 +401,10 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackOobDeadSpace(enabled) {
     trackSettings.oobDeadSpace = !!enabled;
     _bridge.value?.changeTrackOobDeadSpace?.(!!enabled);
+  }
+  function toggleNightPreview() {
+    nightPreview.value = !nightPreview.value;
+    _bridge.value?.toggleNightPreview?.(nightPreview.value);
   }
   function setTrackBorderWall(prop, value) {
     trackBorderWall[prop] = value;
@@ -503,7 +524,7 @@ export const useEditorStore = defineStore('editor', () => {
   // names) keep explicit actions above. New panels need zero store edits.
   const _panels = {
     checkpoint, hill, squareHill, driveBox, terrainShape, obstacle,
-    meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign, startPosition,
+    meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign, startPosition, trackLight,
     bannerString, actionZone, polyCurb, aiPathWear, terrainPath, decal,
   };
   function setFeatureProp(panelKey, prop, val) {
@@ -535,7 +556,7 @@ export const useEditorStore = defineStore('editor', () => {
     setBridge,
     setHillRadius, setSquareHillHeightMin, setSquareHillHeightMax, setSquareHillMode,
     decoration,
-    setDecorationType, setDecorationProp, trackSign, startPosition,
+    setDecorationType, setDecorationProp, trackSign, startPosition, trackLight,
     bannerString,
     actionZone,
     setActionZoneType, polyCurb,
@@ -546,6 +567,7 @@ export const useEditorStore = defineStore('editor', () => {
     trackBorderWall, setTrackBorderWall,
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
+    nightPreview, toggleNightPreview,
     toggleSnap, cycleSnapSize, quickTestTrack,
     rebuildScene, captureScreenshot, resetCamera,
     openAddMenu, closeAddMenu, toggleAddMenu,
