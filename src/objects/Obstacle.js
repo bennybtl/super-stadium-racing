@@ -186,8 +186,19 @@ export class Obstacle {
     this._pivot.rotation.x = (spec.rotationX ?? 0) * Math.PI / 180; // config is in degrees
     this._pivot.scaling.setAll((spec.baseScale ?? 1) * safeScale);
 
-    // Load once, clone per instance
-    Obstacle._getSourceMeshes(scene, this.obstacleType)
+    // Decal anchor: also a child of body (so it tumbles), but with its world
+    // transform at REST pinned to the obstacle's ground-pose frame — position
+    // (x, groundY, z), yaw `angle`, uniform base+user scale, no rotationX/offsetY.
+    // ObstacleEditor builds a node with the identical rest transform, so a decal's
+    // stored local position/normal round-trips between race and editor.
+    this.decalAnchor = new TransformNode(`tireStackDecalAnchor_${x}_${z}`, scene);
+    this.decalAnchor.parent     = this.body;
+    this.decalAnchor.position.y = -halfExtents.y * safeScale;
+    this.decalAnchor.scaling.setAll((spec.baseScale ?? 1) * safeScale);
+
+    // Load once, clone per instance. `ready` resolves once the clones exist so an
+    // attached decal can wait for its target meshes.
+    this.ready = Obstacle._getSourceMeshes(scene, this.obstacleType)
       .then(sourceMeshes => {
         // If the obstacle was disposed while the OBJ was still loading (e.g. the
         // editor disposes the runtime ObstacleManager right after buildScene),
@@ -208,6 +219,9 @@ export class Obstacle {
             m.isVisible  = true;
             m.material   = this._matRes.materialFor(src.name);
             m.isPickable = false;
+            // A decal can be stuck to the obstacle (see DecalManager); the ray
+            // predicate matches on this tag and ignores isPickable.
+            m.metadata = { ...(m.metadata ?? {}), decalTarget: true };
             shadows.addShadowCaster(m);
             m.receiveShadows = true;
             this._loadedMeshes.push(m);
@@ -220,6 +234,11 @@ export class Obstacle {
   get position() {
     return this.body.position;
   }
+
+  // ─── Decal attachment (see DecalManager) ────────────────────────────────────
+
+  /** Meshes a stuck-on decal may project onto. */
+  get decalMeshes() { return this._loadedMeshes; }
 
   /**
    * Release the obstacle from its pinned (static) state into live physics.
@@ -241,6 +260,7 @@ export class Obstacle {
     for (const m of this._loadedMeshes) m.dispose();
     this._matRes?.dispose();
     this._pivot?.dispose();
+    this.decalAnchor?.dispose();
     this.body.dispose();
     this._loadedMeshes = [];
   }

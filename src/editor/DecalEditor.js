@@ -7,6 +7,7 @@ import {
 } from "@babylonjs/core";
 import { DECAL_SHAPES, COUNTED_SHAPES, OUTLINE_SHAPES, TEXT_SHAPES, DECAL_COLORS, DECAL_BRANDS, DEFAULT_BRAND, MIN_COUNT, MAX_COUNT, createDecalTexture, decalPolylineLocalOutline } from "../managers/decalShapes.js";
 import { decalStableU } from "../managers/groundDecal.js";
+import { ensureFeatureId } from "../utils/feature-id.js";
 import { DEFAULT_CORNER_RADIUS, expandPolyline } from "../utils/polyline-utils.js";
 import { GizmoHandle } from "./GizmoHandle.js";
 import { EditorMaterials, LINE_COLOR_SURFACE_DECAL } from "./EditorMaterials.js";
@@ -137,12 +138,24 @@ export class DecalEditor {
     }
 
     for (const entry of entries) {
+      // An attached decal whose prop meshes are still loading has no mesh yet —
+      // skip until it builds (a later _syncHandles picks it up).
+      if (entry.feature.attachTo && !entry.mesh) continue;
       let h = this._handles.get(entry);
       if (!h) {
         h = { handle: new GizmoHandle(this._scene, 'decal'), pointHandles: [], lineSystem: null };
         this._handles.set(entry, h);
       }
-      const hp = this._handlePos(entry.feature);
+      // An attached decal's feature.position is in its prop's local frame, so
+      // read the handle spot off the baked mesh instead — forcing the world
+      // matrix so it's current right after the prop moved.
+      let hp;
+      if (entry.feature.attachTo && entry.mesh) {
+        entry.mesh.computeWorldMatrix(true);
+        hp = entry.mesh.getAbsolutePosition();
+      } else {
+        hp = this._handlePos(entry.feature);
+      }
       h.handle.setPosition(hp.x, hp.y, hp.z);
       h.handle.setSelected(entry === this.selected);
 
@@ -247,6 +260,15 @@ export class DecalEditor {
   // mesh (CreateDecal geometry can't just be transformed).
 
   /** Map a picked mesh to its manager entry — used by EditorController's selection loop. */
+  /**
+   * Reposition handles — call after a decoration / obstacle moves so the gizmo
+   * for a decal stuck to it tracks along (the decal mesh itself follows via its
+   * parent; the handle reads the mesh's world position).
+   */
+  refreshHandles() {
+    if (this._decalManager?.entries?.some((e) => e.feature.attachTo)) this._syncHandles();
+  }
+
   /** Global gizmo-visibility toggle (EditorController.setGizmosVisible). */
   setHandlesVisible(visible) {
     for (const h of this._handles.values()) {
@@ -359,6 +381,32 @@ export class DecalEditor {
     // XZ-plane drag below. (Polyline decals are flat-only — skip all this.)
     if (feature.shape !== 'polyline') {
       const hit = this._pickTargetSurface();
+
+      // Cursor over a decoration / obstacle → (re)stick the decal to it. Covers
+      // dragging onto a prop, and sliding it around on the prop's surface.
+      if (hit && this._attachInfoFor(hit.mesh)) {
+        this.editor.saveSnapshot(true);
+        const before = this.selected.mesh?.getAbsolutePosition().clone();
+        this._applyAttach(feature, hit);
+        this._rebuildSelected();
+        const after = this.selected.mesh?.getAbsolutePosition();
+        return before && after ? after.subtract(before) : new Vector3(0, 0, 0);
+      }
+      // Was stuck to a prop, now dragged off onto ground / wall → detach and
+      // rewrite world-space position/normal from the hit (feature.position is
+      // still in the prop's local frame at this point).
+      if (feature.attachTo && hit && !this._attachInfoFor(hit.mesh)) {
+        this.editor.saveSnapshot(true);
+        delete feature.attachTo;
+        feature.position = [hit.point.x, hit.point.y, hit.point.z];
+        feature.normal = [hit.normal.x, hit.normal.y, hit.normal.z];
+        this.editor._rawDragPos = { x: hit.point.x, z: hit.point.z };
+        this._rebuildSelected();
+        return new Vector3(0, 0, 0);
+      }
+      // Still attached but cursor off every surface — leave it put.
+      if (feature.attachTo) return new Vector3(0, 0, 0);
+
       const hitFlat = hit && Math.abs(hit.normal.y) > FLAT_NORMAL_Y;
       if (hit && !hitFlat) {
         this.editor.saveSnapshot(true);
@@ -746,6 +794,42 @@ export class DecalEditor {
     return { point: pick.pickedPoint, normal, mesh: pick.pickedMesh };
   }
 
+  // ── Attach to a decoration / obstacle ────────────────────────────────────
+
+  /**
+   * If `mesh` belongs to a decoration or obstacle, the prop to stick a decal to.
+   * Polyline decals never attach (flat-world only).
+   * @returns {{ parent: object, kind: 'decoration'|'obstacle' } | null}
+   */
+  _attachInfoFor(mesh) {
+    if (!mesh || this._shape === 'polyline') return null;
+    const deco = this.editor.decorationsEditor?.findByMesh?.(mesh);
+    if (deco?.decalAnchor && deco.feature) return { parent: deco, kind: 'decoration' };
+    const obs = this.editor.obstacleEditor?.findByMesh?.(mesh);
+    if (obs?.decalAnchor && obs.decalMeshes?.includes(mesh)) return { parent: obs, kind: 'obstacle' };
+    return null;
+  }
+
+  /**
+   * Write attach data onto `feature` from a surface hit — `attachTo` plus
+   * position / normal in the prop's `decalAnchor` local frame. Clears `attachTo`
+   * and leaves world coords when the hit isn't on an attachable prop.
+   * @returns {boolean} true when the feature is now attached.
+   */
+  _applyAttach(feature, hit) {
+    const info = this._attachInfoFor(hit.mesh);
+    if (!info) { delete feature.attachTo; return false; }
+    const { parent, kind } = info;
+    const id = ensureFeatureId(parent.feature, kind[0]);
+    const inv = parent.decalAnchor.getWorldMatrix().clone().invert();
+    const lp = Vector3.TransformCoordinates(hit.point, inv);
+    const ln = Vector3.TransformNormal(hit.normal.normalizeToNew(), inv).normalize();
+    feature.attachTo = { kind, id };
+    feature.position = [lp.x, lp.y, lp.z];
+    feature.normal = [ln.x, ln.y, ln.z];
+    return true;
+  }
+
   // ── Pointer move — ghost follows the cursor, orients to the surface ───────
 
   _onPointerMove() {
@@ -799,16 +883,19 @@ export class DecalEditor {
     if (this._shape === 'polyline') {
       feature.points = this._defaultPolylinePoints(hit.point.x, hit.point.z, this._rotation, this._width);
       feature.thickness = this._thickness;
+    } else {
+      // Landed on a decoration / obstacle → stick to it (local frame + attachTo).
+      this._applyAttach(feature, { mesh: hit.mesh, point: hit.point, normal: n });
     }
 
     this.editor.saveSnapshot();
     this._track.features.push(feature);
-    const mesh = this._decalManager.createDecal(feature);
+    this._decalManager.createDecal(feature);
     this._syncHandles();
 
     // Leave placement mode and edit the decal we just placed.
     this.close();
-    const entry = this._decalManager.findByMesh(mesh);
+    const entry = this._decalManager.entries.find((e) => e.feature === feature);
     if (entry) this.select(entry);
   }
 

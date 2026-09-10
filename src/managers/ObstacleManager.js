@@ -30,7 +30,14 @@ export class ObstacleManager {
     const scale = rawScale === 0.1 ? 1 : rawScale;
     const weight = typeof feature.weight === 'number' ? feature.weight : null;
     const stack = new Obstacle(x, z, groundY, this.scene, this.shadows, obstacleType, angle, scale, weight, feature.color, feature.count);
+    stack.feature = feature; // so a stuck-on decal can resolve its parent by id
     this._stacks.push(stack);
+  }
+
+  /** Obstacle instance whose feature carries this id, or null. */
+  findById(id) {
+    if (!id) return null;
+    return this._stacks.find((s) => s.feature?.id === id) ?? null;
   }
 
   // ─── Per-frame interaction ────────────────────────────────────────────────

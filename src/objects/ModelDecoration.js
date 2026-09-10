@@ -92,7 +92,9 @@ export class ModelDecoration {
     this._colliderMeshes = [];
 
     // Load the model once (cached per scene per def), then clone into this instance.
-    ModelDecoration._getSourceMeshes(scene, def)
+    // `ready` resolves once the clones exist, so an attached decal can wait for
+    // its target meshes before projecting.
+    this.ready = ModelDecoration._getSourceMeshes(scene, def)
       .then(sourceMeshes => {
         if (this.container.isDisposed()) return;
         for (const src of sourceMeshes) {
@@ -103,6 +105,8 @@ export class ModelDecoration {
           m.isVisible  = true;
           m.isPickable = true; // editor selects decorations by clicking their mesh
           m.material   = material;
+          // Static OBJ geometry — a decal can be stuck to it (see DecalManager).
+          m.metadata = { ...(m.metadata ?? {}), decalTarget: true };
           if (this._shadows) {
             this._shadows.addShadowCaster(m);
             m.receiveShadows = true;
@@ -114,6 +118,14 @@ export class ModelDecoration {
       })
       .catch(err => console.warn(`[ModelDecoration] Failed to load '${def.id}':`, err));
   }
+
+  // ─── Decal attachment (see DecalManager) ────────────────────────────────────
+
+  /** Node a stuck-on decal parents to / stores its position relative to. */
+  get decalAnchor() { return this.container; }
+
+  /** Meshes a stuck-on decal may project onto. */
+  get decalMeshes() { return this._meshes; }
 
   _applyCollider() {
     applyColliderMetadata(this._colliderMeshes, colliderEnabledFor(this.feature, this.def), this.def);

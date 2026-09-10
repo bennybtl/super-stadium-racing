@@ -1,5 +1,6 @@
 import { Vector3, MeshBuilder, TransformNode } from "@babylonjs/core";
 import { EditorMaterials } from './EditorMaterials.js';
+import { removeAttachedDecals, copyAttachedDecals } from './attached-decal-lifecycle.js';
 import { Obstacle, getObstacleSpec, normalizeObstacleType, clampObstacleCount, getDefaultMass } from "../objects/Obstacle.js";
 import { MeshMaterialResolver } from "../utils/mesh-materials.js";
 import { unitSizeOf } from "../utils/mesh-bounds.js";
@@ -36,6 +37,7 @@ export class ObstacleEditor {
     for (const d of this.meshes) {
       d.node.dispose();
       d.mesh.dispose();
+      d.decalAnchor?.dispose();
       d.matRes?.dispose();
     }
     this.meshes = [];
@@ -129,19 +131,27 @@ export class ObstacleEditor {
         // the repeat pitch — same technique as the decorations' scaffold arch.
         const repeats = spec.stack ? clampObstacleCount(feature.count, spec) : 1;
         const unit = spec.stack ? unitSizeOf(sourceMeshes) : null;
+        stackData.visualMeshes = [];
         for (let i = 0; i < repeats; i++) {
           const yOffset = unit ? i * unit.y - unit.minY : 0;
           for (const src of sourceMeshes) {
             const m = src.clone('obstacleEditorMesh', node);
             m.position.y = yOffset;
             m.isVisible = true;
-            m.isPickable = false;
+            m.isPickable = false; // the floating sphere stays the click/drag target
+            // Non-pickable, but the decal editor's pick predicate matches on this
+            // tag (like ground / walls) so a decal can be stamped onto the obstacle.
+            m.metadata = { ...(m.metadata ?? {}), decalTarget: true };
             m.material = matRes.materialFor(src.name);
+            stackData.visualMeshes.push(m);
           }
         }
+        stackData.decalMeshes = stackData.visualMeshes;
         const terrainNow = this.editor.terrainQuery.heightAt(feature.x, feature.z);
         const offset = this._syncHandleYOffsetFromVisual(stackData, spec, terrainNow);
         if (stackData.mesh) stackData.mesh.position.y = terrainNow + offset;
+        this._syncDecalAnchor(stackData, spec, terrainNow);
+        this.editor.decalManager?.rebuildAttachedTo?.(feature.id);
       })
       .catch(err => console.warn(`[ObstacleEditor] Failed to clone obstacle '${type}':`, err));
   }
@@ -206,7 +216,9 @@ export class ObstacleEditor {
     mesh.material   = this.material;
     mesh.isPickable = true;
 
-    const stackData = { feature, node, mesh, handleYOffset: SPHERE_Y_ABOVE };
+    const stackData = { feature, node, mesh, handleYOffset: SPHERE_Y_ABOVE, visualMeshes: [] };
+    stackData.decalMeshes = stackData.visualMeshes;
+    this._syncDecalAnchor(stackData, spec, terrainH);
 
     // Clone from shared cache — no extra network request
     this._cloneVisualMeshes(stackData, type, spec);
@@ -239,12 +251,39 @@ export class ObstacleEditor {
     mesh.position.x = feature.x;
     mesh.position.y = terrainH + SPHERE_Y_ABOVE;
     mesh.position.z = feature.z;
+
+    this._syncDecalAnchor(stackData, spec, terrainH);
+    this.editor.decalEditor?.refreshHandles();
+  }
+
+  /**
+   * Keep `stackData.decalAnchor` at the obstacle's ground-pose frame — the same
+   * world transform the runtime `Obstacle.decalAnchor` holds at rest — so a decal
+   * stuck to it in the editor lands in the same spot at race time. Position
+   * (x, groundY, z), yaw only, uniform base+user scale. No rotationX / offsetY.
+   */
+  _syncDecalAnchor(stackData, spec, terrainH) {
+    let a = stackData.decalAnchor;
+    if (!a || a.isDisposed()) {
+      a = new TransformNode('obstacleDecalAnchor', this.scene);
+      stackData.decalAnchor = a;
+    }
+    const { feature } = stackData;
+    a.position.set(feature.x, terrainH, feature.z);
+    a.rotation.y = feature.angle ?? 0;
+    a.scaling.setAll((spec.baseScale ?? 1) * (feature.scale ?? 1));
   }
 
   // ── Lookup ─────────────────────────────────────────────────────────────────
 
   findByMesh(mesh) {
-    return this.meshes.find(d => d.mesh === mesh) ?? null;
+    return this.meshes.find(d => d.mesh === mesh || d.visualMeshes?.includes(mesh)) ?? null;
+  }
+
+  /** stackData whose feature carries this id, or null. */
+  findById(id) {
+    if (!id) return null;
+    return this.meshes.find(d => d.feature?.id === id) ?? null;
   }
 
   // ── Selection ──────────────────────────────────────────────────────────────
@@ -304,8 +343,10 @@ export class ObstacleEditor {
     const stackData = this.selected;
     const idx = this.editor.currentTrack.features.indexOf(stackData.feature);
     if (idx > -1) this.editor.currentTrack.features.splice(idx, 1);
+    removeAttachedDecals(this.editor.currentTrack, this.editor.decalManager, stackData.feature.id);
     stackData.node.dispose();
     stackData.mesh.dispose();
+    stackData.decalAnchor?.dispose();
     stackData.matRes?.dispose();
     const meshIdx = this.meshes.indexOf(stackData);
     if (meshIdx > -1) this.meshes.splice(meshIdx, 1);
@@ -318,8 +359,10 @@ export class ObstacleEditor {
     this.editor.saveSnapshot();
     const src = this.selected.feature;
     const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
+    delete newFeature.id; // the copy gets its own
     this.editor.currentTrack.features.push(newFeature);
     const stackData = this.createVisual(newFeature);
+    copyAttachedDecals(this.editor.currentTrack, this.editor.decalManager, src, newFeature, 'obstacle');
     this.deselect();
     this.select(stackData);
   }
@@ -465,6 +508,7 @@ export class ObstacleEditor {
     for (const d of this.meshes) {
       d.node.dispose();
       d.mesh.dispose();
+      d.decalAnchor?.dispose();
       d.matRes?.dispose();
     }
     this.meshes = [];

@@ -2200,6 +2200,18 @@ export class EditorController {
   setDecalManager(manager) {
     this.decalManager = manager;
     this.decalEditor.setDecalManager(manager);
+    // Editor mode disposes the runtime decoration / obstacle managers and builds
+    // its own visuals, so attached decals must resolve against the sub-editors.
+    manager.setAttachResolver((attachTo) =>
+      attachTo?.kind === 'obstacle'
+        ? this.obstacleEditor.findById(attachTo.id)
+        : this.decorationsEditor.findById(attachTo.id));
+    // Rebuild decals: the ones built during buildScene parented to the now-gone
+    // runtime props and were disposed with them.
+    manager.clearAll();
+    for (const feature of this.currentTrack?.features ?? []) {
+      if (feature.type === 'decal') manager.createDecal(feature);
+    }
   }
 
   /** Provide the scene's shadow generator so editor decorations can cast shadows. */

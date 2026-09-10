@@ -32,6 +32,12 @@ export class DecorationManager {
     return deco;
   }
 
+  /** Decoration instance whose feature carries this id, or null. */
+  findById(id) {
+    if (!id) return null;
+    return this._decorations.find((d) => d.feature?.id === id) ?? null;
+  }
+
   /**
    * Call every frame after trucks have moved. Only decorations with a
    * controller `update()` do any work.

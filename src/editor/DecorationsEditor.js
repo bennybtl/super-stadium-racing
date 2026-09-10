@@ -10,6 +10,7 @@ import {
   applyDecorationProp,
 } from "../decorations/decorations-registry.js";
 import { gizmoY } from './gizmo-height.js';
+import { removeAttachedDecals, copyAttachedDecals } from './attached-decal-lifecycle.js';
 
 // Assumed prop height for decorations that don't report their own topY, so the
 // handle still clears a typical model instead of sitting inside it.
@@ -123,6 +124,12 @@ export class DecorationsEditor {
     return this.decorations.find(d => d.containsMesh(mesh)) ?? null;
   }
 
+  /** Decoration instance whose feature carries this id, or null. */
+  findById(id) {
+    if (!id) return null;
+    return this.decorations.find(d => d.feature?.id === id) ?? null;
+  }
+
   // ─── Selection ──────────────────────────────────────────────────────────────
 
   select(featureData) {
@@ -199,6 +206,7 @@ export class DecorationsEditor {
     const groundY = this.track.getHeightAt(newX, newZ);
     this._selected.moveTo(newX, newZ, groundY);
     this._positionHandle(this._selected);
+    this.editor.decalEditor?.refreshHandles();
 
     return new Vector3(newX - prevX, 0, newZ - prevZ);
   }
@@ -210,6 +218,7 @@ export class DecorationsEditor {
     const newHeading = (this._selected.feature.heading ?? 0) + angleDelta;
     this._selected.feature.heading = newHeading;
     this._selected.setHeading(newHeading);
+    this.editor.decalEditor?.refreshHandles();
     const s = this.editor._editorStore;
     if (s) s.decoration.heading = +(newHeading * 180 / Math.PI).toFixed(1);
   }
@@ -226,6 +235,7 @@ export class DecorationsEditor {
     if (!handled) applyDecorationProp(this._selected, prop, value);
     // Height-changing props (pole height) move the top the handle sits above.
     this._positionHandle(this._selected);
+    this.editor.decalEditor?.refreshHandles();
   }
 
   // ─── Type / lifecycle ───────────────────────────────────────────────────────
@@ -246,6 +256,12 @@ export class DecorationsEditor {
     const newFeature = this._defaultFeatureFor(id, feature);
     this.track.features.splice(index, 1, newFeature);
     const created = this.createVisual(newFeature);
+    // The old container (decal anchor) is gone — reproject any attached decals
+    // onto the new model, waiting for its meshes if the load is async.
+    if (newFeature.id) {
+      const reproject = () => this.editor.decalManager?.rebuildAttachedTo?.(newFeature.id);
+      created?.ready ? created.ready.then(reproject) : reproject();
+    }
     this.deselect();
     if (created) this.select(created);
   }
@@ -277,6 +293,7 @@ export class DecorationsEditor {
     if (src.scale != null && feature.scale !== undefined) feature.scale = src.scale;
     if (src.mirrorX) feature.mirrorX = true;
     if (src.mirrorZ) feature.mirrorZ = true;
+    if (src.id) feature.id = src.id; // keep attached decals pointed at this prop
     return feature;
   }
 
@@ -287,6 +304,7 @@ export class DecorationsEditor {
     const feature = this._selected.feature;
     const index = this.track.features.indexOf(feature);
     if (index > -1) this.track.features.splice(index, 1);
+    removeAttachedDecals(this.track, this.editor.decalManager, feature.id);
 
     this._removeVisual(this._selected);
     this._selected = null;
@@ -299,8 +317,10 @@ export class DecorationsEditor {
     const src = this._selected.feature;
 
     const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
+    delete newFeature.id; // the copy gets its own
     this.track.features.push(newFeature);
     const created = this.createVisual(newFeature);
+    copyAttachedDecals(this.track, this.editor.decalManager, src, newFeature, 'decoration');
 
     this.deselect();
     if (created) this.select(created);

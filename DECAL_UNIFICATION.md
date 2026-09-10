@@ -1,6 +1,7 @@
 # Decal system unification — phased plan
 
-**Status:** Phases 0 + 1 + 2 done — Phase 2 in-app QA passed 2026-09-09. Phase 3 pending.
+**Status:** Phases 0 + 1 + 2 done (QA passed 2026-09-09). Phase 3 landed 2026-09-10,
+pending in-app QA.
 
 ## Why
 
@@ -224,8 +225,36 @@ polyline near the flat/non-flat boundary.
 
 ---
 
-## Phase 3 — Attach to movable objects  *(the feature that justifies it)*
+## Phase 3 — Attach to movable objects  ✅ LANDED 2026-09-10 (pending in-app QA)
 
+**Landed:** decals stick to plain `ModelDecoration` props and obstacle stacks.
+`feature.attachTo = { kind, id }` + `position`/`normal` in the prop's `decalAnchor`
+local frame; the baked decal `setParent`s to that anchor so it follows the prop's
+move / rotate / uniform-scale (and physics tumble for obstacles) with no rebuild.
+
+- `ModelDecoration.decalAnchor` = `container`; `Obstacle.decalAnchor` = a body-child
+  node pinned (at rest) to the ground-pose frame so it matches `ObstacleEditor`'s
+  own `decalAnchor` — the editor still substitutes its own obstacle visual, but the
+  two anchors share one transform so a decal round-trips between modes.
+- Prop meshes tagged `decalTarget`; controller props (bleachers/trees/flags) have no
+  `decalAnchor` so they're silently non-attachable.
+- `DecalManager.setAttachResolver(fn)` — race wires the runtime managers
+  (`SceneBuilder`), editor wires the sub-editors (`EditorController.setDecalManager`,
+  which also rebuilds decals since the runtime prop managers are gone by then).
+- `DecalEditor`: `_attachInfoFor` + `_applyAttach` — stamping / dragging onto a prop
+  attaches, dragging off detaches, all in the existing move()/stamp() flow.
+- Lifecycle (`src/editor/attached-decal-lifecycle.js`): delete a prop → its decals go;
+  duplicate a prop → decals copied with a fresh id; type-swap carries the id.
+- Async props: `_createAttached` retries on `parent.ready` (decorations) or via
+  `rebuildAttachedTo` after the obstacle editor finishes cloning meshes.
+- New `src/utils/feature-id.js` (lazy prop ids), `test/decal-attach.test.js`.
+
+**v1 non-goals:** drive-box faces; polyline on props; width/height stay world units
+at build time (a decal placed then the prop scaled, then the decal edited, re-bakes
+at the original world size); handle position for an attached decal on a prop that
+moves while the decal editor is closed can go stale until the next interaction.
+
+### Original plan
 Decals on decoration meshes (tent, rocks) and obstacles (barrels, tire stacks),
 plus drive-box faces.
 

@@ -511,6 +511,11 @@ export async function buildScene(engine, trackLoader, trackKey) {
     }
   );
   const decalManager = new DecalManager(scene, currentTrack, ground);
+  // Stuck-on decals resolve their parent decoration / obstacle by feature id.
+  decalManager.setAttachResolver((attachTo) =>
+    attachTo?.kind === "obstacle"
+      ? obstacleManager.findById(attachTo.id)
+      : decorationManager.findById(attachTo.id));
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
     sampleStep: 3,
@@ -544,15 +549,24 @@ export async function buildScene(engine, trackLoader, trackKey) {
       trackSignManager.createSign(feature);
     } else if (isModelFeature(feature)) {
       decorationManager.createDecoration(feature);
-    } else if (feature.type === "decal" && decalManager.isFlatFeature(feature)) {
-      decalManager.createDecal(feature);
     }
   }
 
-  // Wall-ish decals project onto surfaces built above (perimeter + poly walls),
-  // so they run after the feature loop rather than inside it.
+  // Decals run after the feature loop so every surface they can land on exists:
+  //  1. flat (ground / bridge decks)   2. wall-ish (perimeter + poly walls)
+  //  3. attached — stuck to a decoration / obstacle built above.
   for (const feature of currentTrack.features) {
-    if (feature.type === "decal" && !decalManager.isFlatFeature(feature)) {
+    if (feature.type === "decal" && !feature.attachTo && decalManager.isFlatFeature(feature)) {
+      decalManager.createDecal(feature);
+    }
+  }
+  for (const feature of currentTrack.features) {
+    if (feature.type === "decal" && !feature.attachTo && !decalManager.isFlatFeature(feature)) {
+      decalManager.createDecal(feature);
+    }
+  }
+  for (const feature of currentTrack.features) {
+    if (feature.type === "decal" && feature.attachTo) {
       decalManager.createDecal(feature);
     }
   }

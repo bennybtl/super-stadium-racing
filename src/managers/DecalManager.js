@@ -1,4 +1,4 @@
-import { Vector3 } from "@babylonjs/core";
+import { Vector3, Ray } from "@babylonjs/core";
 import { DECAL_SHAPES, createDecalTexture, decalPolylineLocalOutline } from "./decalShapes.js";
 import { projectDecal, makeDecalMaterial, resolveDecalTarget } from "./groundDecal.js";
 
@@ -60,6 +60,17 @@ export class DecalManager {
     this._ground = ground;
     this._entries = [];
     this._matCache = new Map();
+    // fn(attachTo) → prop instance ({ decalAnchor, decalMeshes, ready? }) | null.
+    // Set per world (race: the runtime managers; editor: the sub-editors) because
+    // the prop objects differ between the two.
+    this._attachResolver = null;
+  }
+
+  /** Wire the attach-parent lookup (see _buildAttachedMesh). */
+  setAttachResolver(fn) { this._attachResolver = fn; }
+
+  _resolveAttach(attachTo) {
+    return attachTo && this._attachResolver ? (this._attachResolver(attachTo) ?? null) : null;
   }
 
   /** Live { feature, mesh } entries — read-only view for DecalEditor's handles. */
@@ -72,10 +83,34 @@ export class DecalManager {
   }
 
   createDecal(feature) {
+    if (feature.attachTo) return this._createAttached(feature);
     const mesh = this._buildMesh(feature);
     if (!mesh) return null;
     this._entries.push({ feature, mesh });
     return mesh;
+  }
+
+  /**
+   * A decal stuck to a decoration / obstacle. The prop's meshes may still be
+   * loading (async OBJ), so build now if we can and otherwise retry once the
+   * prop's `ready` promise settles. The entry exists either way so the editor
+   * can select / rebuild it.
+   */
+  _createAttached(feature) {
+    const parent = this._resolveAttach(feature.attachTo);
+    if (!parent?.decalAnchor) {
+      console.warn("[DecalManager] attachTo parent not found:", feature.attachTo);
+      return null;
+    }
+    const entry = { feature, mesh: null };
+    this._entries.push(entry);
+    entry.mesh = this._buildMesh(feature);
+    if (!entry.mesh && parent.ready?.then) {
+      parent.ready.then(() => {
+        if (this._entries.includes(entry) && !entry.mesh) entry.mesh = this._buildMesh(feature);
+      });
+    }
+    return entry.mesh;
   }
 
   /** Map a picked mesh back to its { feature, mesh } entry (or null). */
@@ -95,6 +130,23 @@ export class DecalManager {
     if (idx === -1) return;
     this._entries[idx].mesh?.dispose();
     this._entries.splice(idx, 1);
+  }
+
+  /** Rebuild every decal attached to the prop with this feature id. */
+  rebuildAttachedTo(id) {
+    if (!id) return; // an idless prop has no attached decals — and `?.id === undefined` would match every un-attached decal
+    for (const e of this._entries) {
+      if (e.feature.attachTo?.id === id) this.rebuild(e);
+    }
+  }
+
+  /** Dispose + forget every decal attached to the prop with this feature id. */
+  removeAttachedTo(id) {
+    for (let i = this._entries.length - 1; i >= 0; i--) {
+      if (this._entries[i].feature.attachTo?.id !== id) continue;
+      this._entries[i].mesh?.dispose();
+      this._entries.splice(i, 1);
+    }
   }
 
   /** Dispose all decal meshes and forget them (snapshot restore). Materials stay cached. */
@@ -160,6 +212,8 @@ export class DecalManager {
     const p = this._decalParams(feature);
     if (!p) return null;
 
+    if (feature.attachTo) return this._buildAttachedMesh(feature, p);
+
     const flat = Math.abs(p.normal.y) > FLAT_NORMAL_Y;
 
     // Polyline: the projector box (centre / size / rotation) comes from the
@@ -222,6 +276,58 @@ export class DecalManager {
     if (flat) decal.position.y += GROUND_PICK_LIFT;
     else decal.position.addInPlace(p.normal.scale(WALL_PICK_LIFT));
 
+    return decal;
+  }
+
+  /**
+   * A decal stuck to a decoration / obstacle. `feature.position` / `feature.normal`
+   * are in the prop's `decalAnchor` local frame; project in world space onto the
+   * prop's own meshes, then re-parent the baked mesh to the anchor so it follows
+   * the prop (move / rotate / scale, and physics tumble for obstacles). Polyline
+   * shape is not supported here (flat-world only).
+   */
+  _buildAttachedMesh(feature, p) {
+    if (p.shape === "polyline") return null;
+    const parent = this._resolveAttach(feature.attachTo);
+    const anchor = parent?.decalAnchor;
+    const meshes = parent?.decalMeshes ?? [];
+    if (!anchor || !meshes.length) return null;
+
+    const M = anchor.getWorldMatrix();
+    const worldPos = Vector3.TransformCoordinates(p.position, M);
+    const worldNormal = Vector3.TransformNormal(p.normal, M);
+    if (worldNormal.lengthSquared() < 1e-9) return null;
+    worldNormal.normalize();
+
+    // Snap to the exact face: short ray back along the normal, restricted to this
+    // prop's meshes so nothing behind it steals the hit.
+    const meshSet = new Set(meshes);
+    const ray = new Ray(
+      worldPos.add(worldNormal.scale(SURFACE_RAY_REACH * 0.5)),
+      worldNormal.scale(-1),
+      SURFACE_RAY_REACH,
+    );
+    const hit = this._scene.pickWithRay(ray, (m) => meshSet.has(m));
+    const targetMesh = hit?.hit ? hit.pickedMesh : meshes[0];
+    const surfacePoint = hit?.hit && hit.pickedPoint ? hit.pickedPoint : worldPos;
+
+    const decal = projectDecal(targetMesh, `decal_att_${feature.attachTo.id}`, {
+      position: surfacePoint,
+      normal: worldNormal,
+      rotationRad: p.rotationRad,
+      width: p.width,
+      height: p.height,
+      projectionDepth: WALL_PROJECTION_DEPTH,
+    });
+    if (!decal) return null;
+
+    // Shared decal material is already double-sided (makeDecalMaterial), so a
+    // mirrored parent flipping the winding still renders.
+    decal.material = this._getMaterial(p, p.position, p.width, p.height, null);
+    decal.isPickable = true;
+    decal.metadata = { ...(decal.metadata ?? {}), decal: true, [feature.type]: true, attached: true };
+    decal.position.addInPlace(worldNormal.scale(WALL_PICK_LIFT));
+    decal.setParent(anchor);
     return decal;
   }
 
