@@ -1,6 +1,6 @@
 {
   "name": "super-stadium-racing",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A modern 3D top-down off-road racing game built with Babylon.js and Havok Physics",
   "type": "module",
   "scripts": {
