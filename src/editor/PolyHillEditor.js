@@ -99,7 +99,8 @@ export class PolyHillEditor extends PolyPointEditor {
     s.waterLevelOffset = feature.waterLevelOffset ?? 2;
     s.canHaveWater = !!feature.closed && !!feature.filled
       && (feature.height ?? 0) < 0
-      && (feature.terrainType?.name === 'water');
+      && (feature.terrainType?.name === 'water' || feature.terrainType?.name === 'mud');
+    s.isMudWater = feature.terrainType?.name === 'mud';
   }
 
   // ── Public API expected by EditorController ──────────────────────────────

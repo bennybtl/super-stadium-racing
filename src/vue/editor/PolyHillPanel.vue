@@ -124,10 +124,10 @@
       </div>
     </template>
 
-    <!-- Water Level — only for a closed, filled, water-type depression -->
+    <!-- Water Level — only for a closed, filled, water- or mud-type depression -->
     <template v-if="editor.polyHill.canHaveWater">
       <div class="flex justify-between mb-1 mt-3 text-[12px]">
-        <span>Water Level</span>
+        <span>{{ editor.polyHill.isMudWater ? 'Mud Level' : 'Water Level' }}</span>
         <span>{{ editor.polyHill.waterLevelOffset.toFixed(1) }}</span>
       </div>
       <input

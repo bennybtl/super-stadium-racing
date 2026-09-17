@@ -226,11 +226,12 @@ export class EditorMode extends BaseMode {
         mesh.dispose();
       }
       const { buildWaterBodies } = await import('../objects/Water.js');
-      const { createWaterDepthSampler } = await import('../objects/water-field.js');
+      const { createWaterDepthSampler, createMudDepthSampler } = await import('../objects/water-field.js');
       const { createWakeField } = await import('../managers/WakeFieldManager.js');
       buildWaterBodies(currentTrack, scene);
-      // Keep the shared depth query in step with the surfaces it describes.
+      // Keep the shared depth queries in step with the surfaces they describe.
       scene.metadata.waterDepthAt = createWaterDepthSampler(currentTrack);
+      scene.metadata.mudDepthAt = createMudDepthSampler(currentTrack);
       // Same for the wake field: its bounds come from the bodies that just moved.
       // It disposes the previous one, so this does not stack up observers.
       createWakeField(currentTrack, scene);

@@ -132,9 +132,10 @@
       />
     </template>
 
-    <template v-if="editor.squareHill.terrainType == 'water'" >
+    <!-- Water Level (also fills a mud-painted depression with muddy water) -->
+    <template v-if="editor.squareHill.terrainType == 'water' || editor.squareHill.terrainType == 'mud'" >
       <div class="flex justify-between mb-1 text-[12px]">
-        <span>Water Level</span>
+        <span>{{ editor.squareHill.terrainType == 'mud' ? 'Mud Level' : 'Water Level' }}</span>
         <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
       </div>
       <input

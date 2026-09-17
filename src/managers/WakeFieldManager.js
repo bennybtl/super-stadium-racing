@@ -1,5 +1,5 @@
 import { Constants, RawTexture, Texture } from "@babylonjs/core";
-import { groupIntoBodies, isWaterFeature } from "../objects/water-field.js";
+import { groupIntoBodies, isWaterFeature, isMudFeature } from "../objects/water-field.js";
 
 /**
  * The wake field: a world-space scalar texture recording how disturbed the water
@@ -8,12 +8,12 @@ import { groupIntoBodies, isWaterFeature } from "../objects/water-field.js";
  *
  * Phase 2 of WATER_REACTIVE.md.
  *
- * One field per scene covering the union of the track's water bodies, not one
- * per body: the water material is shared scene-wide (see getWaterMaterial in
- * Water.js) and splitting the field would mean splitting the material too.
- * Sizing to the water rather than to the whole track is what keeps the
- * resolution usable — a track with one small pond gets the full 256² over that
- * pond instead of over 200 units of dry land.
+ * One field per scene covering the union of the track's water AND mud bodies,
+ * not one per body: each kind's material is shared scene-wide (see
+ * getWaterMaterial in Water.js) and splitting the field would mean splitting
+ * the material too. Sizing to the liquid rather than to the whole track is
+ * what keeps the resolution usable — a track with one small pond gets the
+ * full 256² over that pond instead of over 200 units of dry land.
  */
 
 // Field resolution. Square, while the world bounds it covers are not — so world
@@ -40,9 +40,15 @@ const WAKE_RADIUS = 1.7;
 const WAKE_MIN_INTENSITY = 0.35;
 const WAKE_SPEED_SCALE = 0.055;
 
-/** Union of every water body's bounds, padded. Null when the track has no water. */
+/**
+ * Union of every water AND mud body's bounds, padded. Null when the track has
+ * neither. Mud pools get the same reactive wake as real water (ripples, foam
+ * lapping) — they share this one field rather than each kind getting its own,
+ * for the reason in the class doc above: one shared material per kind, so
+ * splitting the field would mean splitting the shader plugin instance too.
+ */
 function waterBounds(track) {
-  const features = (track?.features ?? []).filter(isWaterFeature);
+  const features = (track?.features ?? []).filter((f) => isWaterFeature(f) || isMudFeature(f));
   if (features.length === 0) return null;
 
   const bodies = groupIntoBodies(track, features);

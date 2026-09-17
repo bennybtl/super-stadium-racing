@@ -690,16 +690,23 @@ export class Truck {
       // non-null only on the painted ground, which is what keeps a truck jumping
       // over a lake — or crossing a bridge above one — from drawing a wake.
       profile('truck.wakeRibbon', () => {
+        // Mud pools get the same wake trail as real water — both read off the
+        // scene's shared depth queries, so a truck wading through either one
+        // leaves the same V behind it.
         const waterDepth = terrain
           ? (this.scene?.metadata?.waterDepthAt?.(this.mesh.position.x, this.mesh.position.z) ?? 0)
           : 0;
+        const mudDepth = terrain
+          ? (this.scene?.metadata?.mudDepthAt?.(this.mesh.position.x, this.mesh.position.z) ?? 0)
+          : 0;
+        const liquidDepth = Math.max(waterDepth, mudDepth);
         this.wakeRibbon.update({
           position: this.mesh.position,
           heading: this.state.heading,
           speed: hSpeed,
           dt: particleDt,
-          wading: waterDepth > SPLASH_MIN_DEPTH && groundedness > 0.1 && hSpeed > 1,
-          waterDepth,
+          wading: liquidDepth > SPLASH_MIN_DEPTH && groundedness > 0.1 && hSpeed > 1,
+          waterDepth: liquidDepth,
           sampleY: this._surfaceSampler,
         });
       });

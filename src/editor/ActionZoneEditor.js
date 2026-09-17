@@ -242,10 +242,16 @@ export class ActionZoneEditor {
     cyl.position = new Vector3(x, groundY + CYLINDER_HEIGHT / 2, z);
     cyl.scaling = new Vector3(radius, CYLINDER_HEIGHT, radius);
     cyl.isPickable = false;
+    // Draw with the other overlay effects (see CheckpointArrow) so a zone dug
+    // into a water/mud pool doesn't have its lower half swallowed by the now
+    // fairly opaque surface — the gizmo needs to stay editable regardless of
+    // what's been painted into the basin it's anchored to.
+    cyl.renderingGroupId = 2;
 
     const handle = MeshBuilder.CreateSphere('azHandle', { diameter: 1.5, segments: 8 }, this.scene);
     handle.position = new Vector3(x, gizmoY(this.track, x, z), z);
     handle.isPickable = true;
+    handle.renderingGroupId = 2;
 
     zoneData.cyl = cyl;
     zoneData.handle = handle;
@@ -261,6 +267,9 @@ export class ActionZoneEditor {
     handle.position = new Vector3(center.x, gizmoY(this.track, center.x, center.z), center.z);
     handle.material = mats.handle;
     handle.isPickable = true;
+    // See _buildCircleMeshes: keep zone gizmos above whatever's painted into
+    // the basin they mark.
+    handle.renderingGroupId = 2;
     zoneData.handle = handle;
 
     zoneData.pointHandles = feature.points.map((pt, idx) => {
@@ -268,6 +277,7 @@ export class ActionZoneEditor {
       p.position = new Vector3(pt.x, gizmoY(this.track, pt.x, pt.z), pt.z);
       p.material = mats.handle;
       p.isPickable = true;
+      p.renderingGroupId = 2;
       return p;
     });
 
@@ -282,6 +292,7 @@ export class ActionZoneEditor {
     const ls = MeshBuilder.CreateLineSystem('azPolyLine', { lines: [linePoints] }, this.scene);
     ls.color = this._getLineColor(zoneType, false);
     ls.isPickable = false;
+    ls.renderingGroupId = 2;
     return ls;
   }
 

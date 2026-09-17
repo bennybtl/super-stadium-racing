@@ -8,6 +8,7 @@ import {
   decimateLoop,
   foamSide,
   isWaterFeature,
+  isMudFeature,
   foamWidths,
   foamTiling,
   FOAM_NOMINAL_WIDTH,
@@ -41,13 +42,39 @@ const FOAM_WIDTH_DITHER = 0.7;
 const FOAM_ALPHA_DITHER = 0.35;
 
 // Surface shading. Real water hides its bottom by absorbing light over distance,
-// so opacity follows 1 - e^(-depth/WATER_ABSORB) rather than sitting flat: the
+// so opacity follows 1 - e^(-depth/absorb) rather than sitting flat: the
 // shallows go clear and the terrain stops banding through the deep.
-const WATER_ABSORB = 1.2;
-const WATER_ALPHA_SHALLOW = 0.10;
-const WATER_ALPHA_DEEP = 0.55;
-const WATER_TINT_SHALLOW = [0.30, 0.58, 0.88];
-const WATER_TINT_DEEP = [0.05, 0.20, 0.68];
+//
+// Mud pools reuse every line of this pipeline — same absorption curve, same
+// foam ribbon — just against a murkier, more opaque palette: silty water reads
+// as opaque within centimetres rather than the half-metre or so real water
+// takes, and its foam is dirt-brown rather than white froth.
+const LIQUID_STYLES = {
+  water: {
+    absorb: 1.2,
+    alphaShallow: 0.10,
+    alphaDeep: 0.55,
+    tintShallow: [0.30, 0.58, 0.88],
+    tintDeep: [0.05, 0.20, 0.68],
+    emissive: [0.02, 0.08, 0.22],
+    specular: [0.8, 0.9, 1.0],
+    specularPower: 34,
+    foamEmissive: [0.9, 0.95, 1.0],
+  },
+  mud: {
+    absorb: 0.35,
+    alphaShallow: 0.75,
+    alphaDeep: 0.96,
+    tintShallow: [0.20, 0.13, 0.07],
+    tintDeep: [0.07, 0.045, 0.025],
+    emissive: [0.025, 0.015, 0.008],
+    specular: [0.35, 0.28, 0.18],
+    specularPower: 10,
+    // Left unchanged at the user's request — the shore foam should read
+    // lighter than the darker, more opaque body above.
+    foamEmissive: [0.55, 0.42, 0.27],
+  },
+};
 
 /** Deterministic 0..1 hash noise from a world position (per-vertex foam dither). */
 function _foamNoise(x, z) {
@@ -55,44 +82,47 @@ function _foamNoise(x, z) {
   return s - Math.floor(s);
 }
 
-/** Per-vertex colour + alpha for the surface, from how deep the water is there. */
-function depthShading(depths) {
+/** Per-vertex colour + alpha for the surface, from how deep the liquid is there. */
+function depthShading(depths, kind) {
+  const style = LIQUID_STYLES[kind];
   const colors = [];
   for (const d of depths) {
-    const t = 1 - Math.exp(-Math.max(0, d) / WATER_ABSORB);
+    const t = 1 - Math.exp(-Math.max(0, d) / style.absorb);
     colors.push(
-      WATER_TINT_SHALLOW[0] + (WATER_TINT_DEEP[0] - WATER_TINT_SHALLOW[0]) * t,
-      WATER_TINT_SHALLOW[1] + (WATER_TINT_DEEP[1] - WATER_TINT_SHALLOW[1]) * t,
-      WATER_TINT_SHALLOW[2] + (WATER_TINT_DEEP[2] - WATER_TINT_SHALLOW[2]) * t,
-      WATER_ALPHA_SHALLOW + (WATER_ALPHA_DEEP - WATER_ALPHA_SHALLOW) * t,
+      style.tintShallow[0] + (style.tintDeep[0] - style.tintShallow[0]) * t,
+      style.tintShallow[1] + (style.tintDeep[1] - style.tintShallow[1]) * t,
+      style.tintShallow[2] + (style.tintDeep[2] - style.tintShallow[2]) * t,
+      style.alphaShallow + (style.alphaDeep - style.alphaShallow) * t,
     );
   }
   return colors;
 }
 
 // Depth shading and the foam mask both live in the vertex stream and the
-// texture, so every body's surface — and every foam ribbon — wants the exact
-// same material. One of each per scene, built on first use and owned by the
-// scene, instead of a fresh pair per body on every editor rebuild.
+// texture, so every body of a given kind wants the exact same material. One
+// pair per kind per scene, built on first use and owned by the scene, instead
+// of a fresh pair per body on every editor rebuild.
 const _waterMaterials = new WeakMap();
 const _foamMaterials = new WeakMap();
 
-function getWaterMaterial(scene) {
-  const cached = _waterMaterials.get(scene);
-  if (cached) return cached;
+function getWaterMaterial(scene, kind) {
+  let byKind = _waterMaterials.get(scene);
+  if (!byKind) { byKind = {}; _waterMaterials.set(scene, byKind); }
+  if (byKind[kind]) return byKind[kind];
 
-  const mat = new StandardMaterial('waterSurfaceMat', scene);
+  const style = LIQUID_STYLES[kind];
+  const mat = new StandardMaterial(`${kind}SurfaceMat`, scene);
   // Colour and opacity both come from the vertex stream, so the material stays
   // neutral and lets it through unchanged.
   mat.diffuseColor = new Color3(1, 1, 1);
-  mat.emissiveColor = new Color3(0.02, 0.08, 0.22);
-  mat.specularColor = new Color3(0.8, 0.9, 1.0);
-  mat.specularPower = 34;
+  mat.emissiveColor = new Color3(...style.emissive);
+  mat.specularColor = new Color3(...style.specular);
+  mat.specularPower = style.specularPower;
   mat.backFaceCulling = false;
   // Surface animation (see WATER_REACTIVE.md). Attaches once per scene with the
-  // material, so every body shares one compiled effect.
+  // material, so every body of this kind shares one compiled effect.
   attachWaterSurfacePlugin(mat);
-  _waterMaterials.set(scene, mat);
+  byKind[kind] = mat;
   return mat;
 }
 
@@ -119,26 +149,36 @@ export function getSharedFoamTexture(scene) {
   return tex;
 }
 
-function getFoamMaterial(scene) {
-  const cached = _foamMaterials.get(scene);
-  if (cached) return cached;
+function getFoamMaterial(scene, kind) {
+  let byKind = _foamMaterials.get(scene);
+  if (!byKind) { byKind = {}; _foamMaterials.set(scene, byKind); }
+  if (byKind[kind]) return byKind[kind];
 
-  const mat = new StandardMaterial('waterFoamMat', scene);
+  const style = LIQUID_STYLES[kind];
+  const mat = new StandardMaterial(`${kind}FoamMat`, scene);
   mat.disableLighting = true;            // flat stylised foam, lighting-independent
-  mat.emissiveColor = new Color3(0.9, 0.95, 1.0);
+  // Foam colour comes purely from emissive: the vertex stream only carries
+  // alpha (see createWaterFoamRibbon), so a lit diffuseColor would tint every
+  // kind toward white regardless of foamEmissive — that's invisible on the
+  // near-white water foam but would wash out mud's brown right back to pale.
+  mat.diffuseColor = new Color3(0, 0, 0);
+  mat.emissiveColor = new Color3(...style.foamEmissive);
   mat.specularColor = new Color3(0, 0, 0);
   mat.backFaceCulling = false;
 
   // The swirl mask multiplies into the band's own gradient: the alpha channel
   // carries the froth, the vertex alpha carries shore-to-open-water falloff.
+  // Shared across kinds — only the emissive tint above changes the froth's
+  // colour, so mud and water can reuse the same mask texture.
   const foam = getSharedFoamTexture(scene);
   if (foam) mat.opacityTexture = foam;
 
   // Organic breakup + wake lapping (WATER_REACTIVE.md Phase 3). Attaches once
-  // per scene with the material, so every shoreline ribbon shares one effect.
+  // per scene with the material, so every shoreline ribbon of this kind shares
+  // one effect.
   attachWaterFoamPlugin(mat);
 
-  _foamMaterials.set(scene, mat);
+  byKind[kind] = mat;
   return mat;
 }
 
@@ -149,7 +189,7 @@ function getFoamMaterial(scene) {
  * at corners. `sgn` picks which side of the loop the band lies on, `widths` how
  * far in the band reaches at each vertex.
  */
-function createWaterFoamRibbon(name, contour, y, sgn, widths, scene) {
+function createWaterFoamRibbon(name, contour, y, sgn, widths, scene, kind) {
   const n = contour.length;
   if (n < 3) return null;
 
@@ -217,31 +257,37 @@ function createWaterFoamRibbon(name, contour, y, sgn, widths, scene) {
   mesh.isPickable = false;
   mesh.useVertexColors = true;
   mesh.hasVertexAlpha = true;
-  mesh.material = getFoamMaterial(scene);
+  mesh.material = getFoamMaterial(scene, kind);
   return mesh;
 }
 
 /**
- * Build every water body on the track: one surface mesh plus one foam ribbon per
- * shoreline. Meshes are named with the `water_` prefix, which is how the editor
- * finds and disposes them.
+ * Build every water and mud body on the track: one surface mesh plus one foam
+ * ribbon per shoreline. Mud pools run through the exact same geometry as water
+ * — grouped and rasterised separately so a mud puddle never merges into a
+ * neighbouring water body's shared level — with only the material differing
+ * (see LIQUID_STYLES). Meshes are named with the `water_` prefix, which is how
+ * the editor finds and disposes them.
  *
  * @param {import('../world/track.js').Track} currentTrack
  * @param {BABYLON.Scene} scene
  */
 export function buildWaterBodies(currentTrack, scene) {
-  const features = (currentTrack.features ?? []).filter(isWaterFeature);
-  if (features.length === 0) return;
+  const allFeatures = currentTrack.features ?? [];
+  const kindedBodies = [
+    ...groupIntoBodies(currentTrack, allFeatures.filter(isWaterFeature)).map((body) => ({ body, kind: 'water' })),
+    ...groupIntoBodies(currentTrack, allFeatures.filter(isMudFeature)).map((body) => ({ body, kind: 'mud' })),
+  ];
+  if (kindedBodies.length === 0) return;
 
   const sample = createTerrainSampler(currentTrack);
-  const bodies = groupIntoBodies(currentTrack, features);
 
-  bodies.forEach((body, index) => {
+  kindedBodies.forEach(({ body, kind }, index) => {
     const grid = rasterizeBody(body, sample);
     const { positions, indices, depths } = buildSurfaceGeometry(grid, body.level);
     if (indices.length === 0) return; // level sits below the basin floor
 
-    const name = `water_body${index}`;
+    const name = `water_${kind}_body${index}`;
     const mesh = new Mesh(name, scene);
     const vd = new VertexData();
     vd.positions = positions;
@@ -249,19 +295,19 @@ export function buildWaterBodies(currentTrack, scene) {
     // The surface is a flat horizontal plane, so the normals are known — deriving
     // them from winding would only risk a uniformly flipped (unlit) surface.
     vd.normals = Array.from({ length: positions.length }, (_, i) => (i % 3 === 1 ? 1 : 0));
-    vd.colors = depthShading(depths);
+    vd.colors = depthShading(depths, kind);
     vd.applyToMesh(mesh);
     mesh.isPickable = false;
     mesh.useVertexColors = true;
     mesh.hasVertexAlpha = true;
-    mesh.material = getWaterMaterial(scene);
+    mesh.material = getWaterMaterial(scene, kind);
 
     traceShorelines(grid).forEach((raw, loopIndex) => {
       const loop = decimateLoop(raw, Math.max(grid.cell, FOAM_NOMINAL_WIDTH * 0.55));
       if (loop.length < 4) return;
       const sgn = foamSide(loop, grid);
       const widths = foamWidths(loop, grid, sgn);
-      createWaterFoamRibbon(`${name}_foam${loopIndex}`, loop, body.level, sgn, widths, scene);
+      createWaterFoamRibbon(`${name}_foam${loopIndex}`, loop, body.level, sgn, widths, scene, kind);
     });
   });
 }

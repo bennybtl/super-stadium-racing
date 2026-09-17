@@ -176,6 +176,7 @@ export const useEditorStore = defineStore('editor', () => {
     endTaper: false,
     waterLevelOffset: 2,
     canHaveWater: false,
+    isMudWater: false,
   });
 
   // ── Flag panel ──

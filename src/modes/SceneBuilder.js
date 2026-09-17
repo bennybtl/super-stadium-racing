@@ -37,7 +37,7 @@ import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager
 import { DecalManager } from "../managers/DecalManager.js";
 import { buildWaterBodies } from "../objects/Water.js";
 import { createWakeField } from "../managers/WakeFieldManager.js";
-import { createWaterDepthSampler } from "../objects/water-field.js";
+import { createWaterDepthSampler, createMudDepthSampler } from "../objects/water-field.js";
 import { scatterDirtChunks } from "../objects/DirtChunks.js";
 import { scatterGrassBlades } from "../objects/GrassBlades.js";
 import { buildBorderWalls } from "../objects/BorderWall.js";
@@ -727,8 +727,11 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // splash effects, most of all. Shared so each truck doesn't build its own, and
   // scene-scoped so it can never outlive the track it was built from.
   scene.metadata.waterDepthAt = createWaterDepthSampler(currentTrack);
+  // Same, for muddy-water pools — kept separate from waterDepthAt so splash
+  // effects can still tell a mud puddle from real water.
+  scene.metadata.mudDepthAt = createMudDepthSampler(currentTrack);
   // The wake field the trucks stamp into while wading. Published the same way
-  // and for the same reason; empty on a track with no water.
+  // and for the same reason; empty on a track with neither water nor mud.
   createWakeField(currentTrack, scene);
 
   // Procedural dirt-chunk scatter (along walls / outside the AI drive path).

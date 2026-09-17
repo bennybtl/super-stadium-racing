@@ -247,6 +247,13 @@ export class ParticleEffects {
     return depthAt(this.mesh.position.x, this.mesh.position.z);
   }
 
+  /** As _waterDepthUnderTruck, for a muddy-water pool. */
+  _mudDepthUnderTruck() {
+    const depthAt = this.scene?.metadata?.mudDepthAt;
+    if (!depthAt) return 0;
+    return depthAt(this.mesh.position.x, this.mesh.position.z);
+  }
+
   /** Reposition and fire the nitro puff behind the truck for the given heading. */
   _fireNitroBurst(heading) {
     const sin = Math.sin(heading);
@@ -341,16 +348,21 @@ export class ParticleEffects {
     const waterDepth = terrain ? this._waterDepthUnderTruck() : 0;
     const isInWater = !!terrain && (waterDepth > SPLASH_MIN_DEPTH || terrainName === 'water');
     const isInMud = terrainName === 'mud';
+    // A mud puddle deep enough to actually be drawn as a pool (not just dry
+    // slippery mud) — gates the wake field below, kept separate from isInMud
+    // so dry mud still sprays without disturbing a wake that isn't there.
+    const mudPoolDepth = terrain ? this._mudDepthUnderTruck() : 0;
+    const isInMudPool = !!terrain && mudPoolDepth > SPLASH_MIN_DEPTH;
     if (isInWater && isSplashGrounded && speed > 1) {
       const rate = speed * 80 * effectiveScale;
       for (const p of this.splashParticles) p.emitRate = rate;
       // Disturb the wake field on the same gate that sprays: this is the one
       // place per frame that already knows the truck is in water and how fast.
-      // The field only covers real water bodies, so a truck on ground merely
-      // *painted* water (which `isInWater` also accepts) stamps outside it and
-      // is ignored. Not scaled by effectiveScale — that is a distance-based
-      // particle budget, and a wake left by an AI truck across the map should
-      // still be there when the camera comes round to it.
+      // The field covers real water AND mud bodies (see WakeFieldManager), so a
+      // truck on ground merely *painted* water (which `isInWater` also accepts)
+      // stamps outside it and is ignored. Not scaled by effectiveScale — that is
+      // a distance-based particle budget, and a wake left by an AI truck across
+      // the map should still be there when the camera comes round to it.
       this.scene?.metadata?.wakeField?.stamp(
         this.mesh.position.x, this.mesh.position.z, speed
       );
@@ -363,6 +375,16 @@ export class ParticleEffects {
       for (const p of this.mudSplashParticles) p.emitRate = rate;
     } else {
       for (const p of this.mudSplashParticles) p.emitRate = 0;
+    }
+
+    // Mud gets the same reactive wake ripples as water (see WaterSurfacePlugin
+    // in water-shader.js) without picking up water's blue splash spray — that's
+    // still gated on isInWater above, brown mud spray is its own thing just
+    // above this, and this only stamps the shared ripple field.
+    if (isInMudPool && isSplashGrounded && speed > 1) {
+      this.scene?.metadata?.wakeField?.stamp(
+        this.mesh.position.x, this.mesh.position.z, speed
+      );
     }
 
     // Deep-water splash: a strong burst on entry, periodic pulses while driving,

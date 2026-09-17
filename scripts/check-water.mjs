@@ -51,6 +51,12 @@ await esbuild.build({
   format: 'esm',
   platform: 'node',
   alias: { '@babylonjs/core': join(__dirname, 'babylon-stub.mjs') },
+  // track.js pulls in BorderWall.js for its default border-wall settings,
+  // which imports texture assets via Vite's `?url` suffix — meaningless to
+  // plain esbuild. The checks here never touch BorderWall's mesh builders
+  // (see babylon-stub.mjs), so the URL value itself is never read; `empty`
+  // just lets the module graph link without pulling in real image bytes.
+  loader: { '.png': 'empty' },
   outfile: bundlePath,
   logLevel: 'silent',
 });
@@ -346,7 +352,7 @@ check('footprint: unmodelled types report no reach', featureFootprint({ type: 'm
   // And on the shipped tracks, how much deep water the old absolute-height gate
   // silently excluded.
   const missed = [];
-  for (const file of ['king_of_the_hill', 'luck_o_the_irish', 'the_quarry']) {
+  for (const file of ['dust_devil', 'toro_bravo', 'over_the_top']) {
     const real = Track.fromJSON(readFileSync(join(root, 'src', 'tracks', `${file}.json`), 'utf8'));
     const realDepth = createWaterDepthSampler(real);
     let deep = 0, aboveOldGate = 0;

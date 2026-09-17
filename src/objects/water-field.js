@@ -69,6 +69,17 @@ function isWaterTerrain(terrainType) {
   return name === 'water';
 }
 
+// Same idea, for mud: a depression painted mud pools into "muddy water" using
+// this same geometry pipeline, just with a different tint in Water.js. Kept
+// as its own predicate rather than folded into isWaterFeature — that one's
+// callers (the wake field, the splash/depth sampler in ParticleEffects.js) are
+// gameplay systems tuned for real water and must not fire blue splash spray or
+// wake ripples over a mud puddle.
+function isMudTerrain(terrainType) {
+  const name = typeof terrainType === 'string' ? terrainType : terrainType?.name;
+  return name === 'mud';
+}
+
 /**
  * Per-type water behaviour, in one table so a new depression type is one entry
  * rather than a hunt through three functions plus a type list.
@@ -106,10 +117,19 @@ const WATER_SHAPES = {
   },
 };
 
+function holdsLiquid(feature, matchesTerrain) {
+  if (!feature || !matchesTerrain(feature.terrainType)) return false;
+  return WATER_SHAPES[feature.type]?.holdsWater(feature) ?? false;
+}
+
 /** A feature holds water only if it is a depression painted with water. */
 export function isWaterFeature(feature) {
-  if (!feature || !isWaterTerrain(feature.terrainType)) return false;
-  return WATER_SHAPES[feature.type]?.holdsWater(feature) ?? false;
+  return holdsLiquid(feature, isWaterTerrain);
+}
+
+/** A feature holds muddy water only if it is a depression painted with mud. */
+export function isMudFeature(feature) {
+  return holdsLiquid(feature, isMudTerrain);
 }
 
 /** Depth of the feature at its own centre — the most water it can possibly hold. */
@@ -253,18 +273,19 @@ export function groupIntoBodies(track, features) {
 }
 
 /**
- * How deep the water is over the terrain at a point, and zero where there is
- * none.
+ * How deep a liquid is over the terrain at a point, and zero where there is
+ * none. Shared by createWaterDepthSampler and createMudDepthSampler — each
+ * just picks which features count as that liquid.
  *
  * Built from the same bodies the surfaces are, so anything that keys off this —
- * hiding tyre wear under a lake, say — agrees with the water actually drawn
- * rather than with a second, slightly different idea of where water is.
+ * hiding tyre wear under a lake, say — agrees with the liquid actually drawn
+ * rather than with a second, slightly different idea of where it is.
  *
- * Returns a constant zero when the track has no water, so callers need no
- * special case.
+ * Returns a constant zero when the track has none of that liquid, so callers
+ * need no special case.
  */
-export function createWaterDepthSampler(track) {
-  const features = (track?.features ?? []).filter(isWaterFeature);
+function createDepthSampler(track, isMatchingFeature) {
+  const features = (track?.features ?? []).filter(isMatchingFeature);
   if (features.length === 0) return () => 0;
 
   const sample = createTerrainSampler(track);
@@ -281,6 +302,16 @@ export function createWaterDepthSampler(track) {
     }
     return deepest;
   };
+}
+
+/** Depth of real water (blue lakes/pools) at a point. See createDepthSampler. */
+export function createWaterDepthSampler(track) {
+  return createDepthSampler(track, isWaterFeature);
+}
+
+/** Depth of a muddy-water pool at a point. See createDepthSampler. */
+export function createMudDepthSampler(track) {
+  return createDepthSampler(track, isMudFeature);
 }
 
 // ─── Field rasterisation + marching squares ────────────────────────────────

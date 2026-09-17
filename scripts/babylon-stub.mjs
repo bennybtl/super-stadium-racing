@@ -13,6 +13,8 @@ export class Vector3 {
 }
 export const MeshBuilder = {};
 export class StandardMaterial {}
+export class MultiMaterial {}
+export class SubMesh {}
 export class Texture {}
 export class PhysicsAggregate {}
 export const PhysicsShapeType = {};
