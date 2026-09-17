@@ -34,9 +34,9 @@ function _aiTruckShadowsEnabled() {
  *          gain = target deflection per m/s² of accel; max = clamp on deflection.
  */
 const BODY_DYN = {
-  heave: { freq: 1.8, damping: 0.30, gain: 0.0090, max: 0.22 }, // units
-  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.22 }, // radians
-  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.24 }, // radians
+  heave: { freq: 1.8, damping: 0.30, gain: 0.0090, max: 0.14 }, // units
+  pitch: { freq: 2.0, damping: 0.45, gain: 0.0130, max: 0.14 }, // radians
+  roll:  { freq: 2.2, damping: 0.45, gain: 0.0190, max: 0.15 }, // radians
   maxDt: 1 / 30, // clamp per-substep dt so a frame spike can't destabilise a spring
 };
 

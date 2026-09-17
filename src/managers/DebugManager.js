@@ -26,7 +26,8 @@ const LOG_CAPACITY = 1200;
  *   (capped at LOG_CAPACITY frames).  dumpLog() prints console.table() and
  *   triggers a CSV download so the data can be pasted into a spreadsheet.
  *   Columns: t, x, y, z, fromY, floorY, rayDepth, nx, ny, nz,
- *            penetration, vvel, groundedness, speed, slope,
+ *            penetration, vx, vvel, vz, heading, throttle,
+ *            groundedness, controlGroundedness, speed, slope,
  *            surfaceId, surfaceType, surfaceKind, surfaceLevel
  */
 export class DebugManager {
@@ -718,8 +719,13 @@ export class DebugManager {
         ny:           +(normal?.y ?? 1).toFixed(4),
         nz:           +(normal?.z ?? 0).toFixed(4),
         penetration:  +(debugInfo.penetration      ?? 0).toFixed(4),
+        vx:           +(truck.state.velocity?.x    ?? 0).toFixed(3),
         vvel:         +(debugInfo.verticalVelocity ?? 0).toFixed(3),
-        groundedness: +(debugInfo.groundedness     ?? 0).toFixed(3),
+        vz:           +(truck.state.velocity?.z    ?? 0).toFixed(3),
+        heading:      +(((truck.state.heading ?? 0) * 180 / Math.PI) % 360).toFixed(1),
+        throttle:     truck.state.throttle ?? 0,
+        groundedness: +(debugInfo.groundedness        ?? 0).toFixed(3),
+        controlGroundedness: +(debugInfo.controlGroundedness ?? 0).toFixed(3),
         speed:        +(debugInfo.speed            ?? 0).toFixed(2),
         slope:        slopeDeg !== null ? +slopeDeg.toFixed(2) : 0,
         surfaceId:    debugInfo.surfaceId ?? '-',
