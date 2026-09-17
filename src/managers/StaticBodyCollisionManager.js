@@ -461,6 +461,9 @@ export class StaticBodyCollisionManager {
 
     pos.x = cx + dx * (reach + SKIN);
     pos.z = cz + dz * (reach + SKIN);
+    // Real lateral contact (not just driving up onto the wall's top) — let the
+    // wall know, so it can build up live scuff wear where trucks actually hit.
+    c.onContact?.(i, j, t, curSide || 1, penLateral);
     this._applyContactResponse(truck, this._normal.set(dx, 0, dz), dt, frame, {
       allowBounce: true,
       retain: c.retain ?? DEFAULT_FRICTION,

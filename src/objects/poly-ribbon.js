@@ -4,11 +4,37 @@ import {
   VertexData,
   StandardMaterial,
   Texture,
+  DynamicTexture,
   Color3,
   Vector3,
 } from "@babylonjs/core";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
+import { lerp } from "../utils/math-utils.js";
 import chainlinkTextureUrl from "../assets/textures/chainlink.texture.png?url";
+
+// Scuff marks (see paintWallScuffTexture): baked as an actual canvas texture —
+// blurred, irregular dark blotches — rather than coloured geometry, since a
+// rubbed/torn look needs real soft edges that vertex-shaded quads can't give
+// at the ribbon's mesh resolution.
+const SCUFF_COLOR = [0.10, 0.09, 0.09];
+// Texture is one shared canvas per wall, split into two vertical halves — the
+// bottom half [0, 0.5) holds the "inner (right)" face's marks, the top half
+// [0.5, 1] the "outer (left)" face's — so one diffuseTexture covers both.
+const SCUFF_TEX_HEIGHT = 256;
+const SCUFF_TEX_PX_PER_UNIT = 24; // texel density along the wall's arc length
+const SCUFF_TEX_MAX_WIDTH = 4096;
+// Where within its half a face's blotches may land (fraction of that half),
+// keeping clear of the seam between halves and the wall's buried base/top edge.
+const SCUFF_BAND_MIN = 0.12;
+const SCUFF_BAND_MAX = 0.85;
+const SCUFF_BLUR_PX = 4;
+const SCUFF_MAX_BLOBS_PER_SAMPLE = 5;
+
+/** Cheap deterministic hash → [0,1), so the same (sample, blob) always paints the same way. */
+function _hash01(n) {
+  const x = Math.sin(n) * 43758.5453123;
+  return x - Math.floor(x);
+}
 
 /**
  * Shared machinery for the polyline "ribbon" objects — PolyWall and PolyCurb.
@@ -143,6 +169,7 @@ export function buildStripedRibbon({
   xs,
   s,
   step,
+  total = 1, // only meaningful for UV generation; unused shapes (e.g. PolyCurb) can omit it
   closed,
   nx,
   nz,
@@ -154,19 +181,29 @@ export function buildStripedRibbon({
   stripeLen,
 }) {
   const n = xs.length;
-  const positions = [], indices = [], normals = [], colors = [];
-  const pushQuad = (p0, p1, p2, p3, nrm, col) => {
+  const positions = [], indices = [], normals = [], colors = [], uvs = [];
+  const pushQuad = (p0, p1, p2, p3, nrm, col, uv0, uv1, uv2, uv3) => {
     const base = positions.length / 3;
     positions.push(...p0, ...p1, ...p2, ...p3);
-    for (let k = 0; k < 4; k++) {
-      normals.push(...nrm);
-      colors.push(col[0], col[1], col[2], 1);
-    }
+    normals.push(...nrm, ...nrm, ...nrm, ...nrm);
+    colors.push(
+      col[0], col[1], col[2], 1,
+      col[0], col[1], col[2], 1,
+      col[0], col[1], col[2], 1,
+      col[0], col[1], col[2], 1,
+    );
+    uvs.push(...uv0, ...uv1, ...uv2, ...uv3);
     // Wound so the front face is the side the quad's `nrm` points to (verts are
     // listed CCW around that normal). backFaceCulling then shows the outward
     // surfaces and hides the buried interior.
     indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
   };
+  // U is a wall-length-relative arc-length fraction; V splits the texture into
+  // two halves so one shared scuff texture (see paintWallScuffTexture) can
+  // hold both side faces — clean rows (0 and the seam at 0.5) are used
+  // wherever a quad isn't one of the two scuffable faces.
+  const CLEAN = [0, 0];
+  const rightV = [0, 0.5], leftV = [0.5, 1];
 
   const bandCount = closed ? n : n - 1;
   for (let i = 0; i < bandCount; i++) {
@@ -174,6 +211,7 @@ export function buildStripedRibbon({
     // stripe colour from the band's mid arc-length
     const sMid = closed && i === n - 1 ? s[i] + step * 0.5 : (s[i] + s[j]) / 2;
     const col = stripes[Math.floor(sMid / stripeLen) % stripes.length];
+    const uI = s[i] / total, uJ = s[j] / total;
 
     // averaged outward normal for the side faces of this band
     let anx = nx[i] + nx[j], anz = nz[i] + nz[j];
@@ -190,10 +228,12 @@ export function buildStripedRibbon({
     // outward and consistently so the ribbon is a genuine single-sided solid —
     // it then casts one clean shadow silhouette at any light angle (the old open
     // double-sided shell dropped a second, offset shadow from its top edge).
-    pushQuad(Li_t, Lj_t, Rj_t, Ri_t, [0, 1, 0], col);            // top
-    pushQuad(Ri_t, Rj_t, Rj_b, Ri_b, [-anx, 0, -anz], col);      // inner (right)
-    pushQuad(Ri_b, Rj_b, Lj_b, Li_b, [0, -1, 0], col);           // bottom (buried)
-    pushQuad(Li_b, Lj_b, Lj_t, Li_t, [anx, 0, anz], col);        // outer (left)
+    pushQuad(Li_t, Lj_t, Rj_t, Ri_t, [0, 1, 0], col, CLEAN, CLEAN, CLEAN, CLEAN); // top
+    pushQuad(Ri_t, Rj_t, Rj_b, Ri_b, [-anx, 0, -anz], col,
+      [uI, rightV[1]], [uJ, rightV[1]], [uJ, rightV[0]], [uI, rightV[0]]); // inner (right)
+    pushQuad(Ri_b, Rj_b, Lj_b, Li_b, [0, -1, 0], col, CLEAN, CLEAN, CLEAN, CLEAN); // bottom (buried)
+    pushQuad(Li_b, Lj_b, Lj_t, Li_t, [anx, 0, anz], col,
+      [uI, leftV[0]], [uJ, leftV[0]], [uJ, leftV[1]], [uI, leftV[1]]); // outer (left)
   }
 
   // End caps for an open polyline — wound outward (away from the ribbon body) so
@@ -208,6 +248,7 @@ export function buildStripedRibbon({
       [rbx[0], botY[0], rbz[0]],
       [-nz[0], 0, nx[0]],
       capCol,
+      CLEAN, CLEAN, CLEAN, CLEAN,
     );
     // End cap faces +tangent — reversed winding vs the start cap.
     const e = n - 1;
@@ -218,6 +259,7 @@ export function buildStripedRibbon({
       [lbx[e], botY[e], lbz[e]],
       [nz[e], 0, -nx[e]],
       capCol,
+      CLEAN, CLEAN, CLEAN, CLEAN,
     );
   }
 
@@ -227,6 +269,7 @@ export function buildStripedRibbon({
   vd.indices = indices;
   vd.normals = normals;
   vd.colors = colors;
+  vd.uvs = uvs;
   vd.applyToMesh(mesh);
 
   const mat = new StandardMaterial(`${name}Mat`, scene);
@@ -242,6 +285,119 @@ export function buildStripedRibbon({
   shadows?.addShadowCaster(mesh);
 
   return mesh;
+}
+
+function _scuffTexWidth(total) {
+  return Math.min(SCUFF_TEX_MAX_WIDTH, Math.max(64, Math.round(total * SCUFF_TEX_PX_PER_UNIT)));
+}
+
+/** A blank (all-white) scuff canvas sized for this wall's length. */
+function _createBlankScuffTexture(scene, name, total) {
+  const texWidth = _scuffTexWidth(total);
+  const tex = new DynamicTexture(`${name}Scuff`, { width: texWidth, height: SCUFF_TEX_HEIGHT }, scene, false);
+  const ctx = tex.getContext();
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, texWidth, SCUFF_TEX_HEIGHT);
+  tex.update(false);
+  tex.wrapU = Texture.CLAMP_ADDRESSMODE;
+  tex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  return tex;
+}
+
+/** One irregular scuff blotch cluster at canvas x=`cx`, confined to [vMin,vMax] (fraction of texture height). */
+function _paintScuffBlob(ctx, cx, vMin, vMax, intensity, seed, texHeight) {
+  const blobCount = 1 + Math.round(intensity * (SCUFF_MAX_BLOBS_PER_SAMPLE - 1));
+  for (let b = 0; b < blobCount; b++) {
+    const r1 = _hash01(seed + b * 78.233);
+    const r2 = _hash01(seed + b * 11.13 + 51);
+    const r3 = _hash01(seed + b * 3.71 + 173);
+    const cy = lerp(vMin, vMax, r1) * texHeight;
+    const rx = lerp(6, 22, r2) * (0.5 + intensity * 0.5);
+    ctx.globalAlpha = intensity * lerp(0.35, 0.9, r3);
+    ctx.beginPath();
+    ctx.ellipse(cx + (r2 - 0.5) * 14, cy, rx, rx * 0.4, (r3 - 0.5) * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** This side's blob band, as [vMin,vMax] fractions of the whole texture height (see buildStripedRibbon's UVs). */
+function _scuffSideBand(side) {
+  return side >= 0
+    ? [0.5 + SCUFF_BAND_MIN * 0.5, 0.5 + SCUFF_BAND_MAX * 0.5] // left face
+    : [SCUFF_BAND_MIN * 0.5, SCUFF_BAND_MAX * 0.5];             // right face
+}
+
+/**
+ * Bake the wall's scuff-mark texture: one canvas, split into two vertical
+ * halves — [0, 0.5) for the "inner (right)" face, [0.5, 1] for "outer (left)"
+ * (see buildStripedRibbon's UVs) — each painted with soft, irregular dark
+ * blotches wherever that side's per-sample intensity (from PolyWall's AI-path
+ * slide-projection, see `scuffLeft`/`scuffRight`) is nonzero. A canvas blur
+ * pass gives the torn, feathered edges vertex colours can't reproduce at the
+ * ribbon's mesh resolution. Returns null when nothing on the wall is scuffed,
+ * so the caller can skip touching the material at all.
+ */
+export function paintWallScuffTexture(scene, name, { total, s, scuffLeft, scuffRight }) {
+  const n = s.length;
+  const hasAny = (arr) => Array.isArray(arr) && arr.some((v) => v > 0);
+  if (!hasAny(scuffLeft) && !hasAny(scuffRight)) return null;
+
+  const tex = _createBlankScuffTexture(scene, name, total);
+  const ctx = tex.getContext();
+  const texWidth = tex.getSize().width;
+  const rgb = SCUFF_COLOR.map((c) => Math.round(c * 255));
+  ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+  ctx.filter = `blur(${SCUFF_BLUR_PX}px)`;
+
+  // `seedBase` keeps the two faces' pseudo-random blob placement distinct.
+  const paintSide = (arr, side, seedBase) => {
+    if (!arr) return;
+    const [vMin, vMax] = _scuffSideBand(side);
+    for (let i = 0; i < n; i++) {
+      const intensity = arr[i];
+      if (intensity <= 0) continue;
+      const cx = (s[i] / total) * texWidth;
+      _paintScuffBlob(ctx, cx, vMin, vMax, intensity, seedBase + i * 12.9898, SCUFF_TEX_HEIGHT);
+    }
+  };
+  paintSide(scuffRight, -1, 0);
+  paintSide(scuffLeft, 1, 1000);
+
+  ctx.filter = "none";
+  ctx.globalAlpha = 1;
+  tex.update(false);
+  return tex;
+}
+
+/**
+ * Lazily-created blank scuff texture for a wall that had no deterministic
+ * baseline scuff (paintWallScuffTexture returned null) but is now taking its
+ * first live hit.
+ */
+export function createBlankWallScuffTexture(scene, name, total) {
+  return _createBlankScuffTexture(scene, name, total);
+}
+
+/**
+ * Paint one batch of live scuff hits directly onto an existing wall scuff
+ * texture — additive, no clearing — then upload once for the whole batch.
+ * `hits`: [{ s (arc length), side, intensity, seed }].
+ */
+export function addWallScuffHits(tex, { total, hits }) {
+  if (!tex || !hits?.length) return;
+  const ctx = tex.getContext();
+  const { width: texWidth, height: texHeight } = tex.getSize();
+  const rgb = SCUFF_COLOR.map((c) => Math.round(c * 255));
+  ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+  ctx.filter = `blur(${SCUFF_BLUR_PX}px)`;
+  for (const { s: sPos, side, intensity, seed } of hits) {
+    const cx = (sPos / total) * texWidth;
+    const [vMin, vMax] = _scuffSideBand(side);
+    _paintScuffBlob(ctx, cx, vMin, vMax, intensity, seed, texHeight);
+  }
+  ctx.filter = "none";
+  ctx.globalAlpha = 1;
+  tex.update(false);
 }
 
 // ── Chain-link fence ────────────────────────────────────────────────────────
