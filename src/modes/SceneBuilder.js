@@ -15,6 +15,7 @@ import {
   Texture,
   VertexBuffer,
   RawTexture,
+  ClusteredLightContainer,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { TerrainManager, TERRAIN_TYPES } from "../world/terrain.js";
@@ -96,7 +97,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // rest. One hook here covers every material as it's created — present and
   // future — instead of patching each object's material by hand.
   scene.onNewMaterialAddedObservable.add((mat) => {
-    if ('maxSimultaneousLights' in mat) mat.maxSimultaneousLights = 8;
+    if ('maxSimultaneousLights' in mat) mat.maxSimultaneousLights = 9;
   });
 
   // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
@@ -323,6 +324,26 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // Night is a per-race setting (like reverse), not a track property — the
   // caller passes it through from the race config.
   scene.metadata.night = opts.night === true;
+
+  // Vehicle headlights (Truck.js): every truck gets a pair, and a starting
+  // grid of ~10 trucks means 20 real spotlights — way past what any
+  // material's maxSimultaneousLights budget can hold. A ClusteredLightContainer
+  // buckets an arbitrary number of point/spot lights into screen-space tiles
+  // behind a single light "slot", so all vehicle headlights together only
+  // ever cost 1 slot. Tradeoff: clustered lights can't cast shadows, so
+  // Truck.js never registers them with the ShadowCasterGroup. If the GPU
+  // doesn't support clustering, Truck.js falls back to just the player
+  // getting a real (budget-costing) headlight.
+  let vehicleLights = null;
+  if (scene.metadata.night) {
+    vehicleLights = new ClusteredLightContainer('vehicleHeadlights', [], scene);
+    if (!vehicleLights.isSupported) {
+      vehicleLights.dispose();
+      vehicleLights = null;
+    }
+  }
+  scene.metadata.vehicleLights = vehicleLights;
+
   applyDisplaySettings(loadDisplaySettings());
   const onDisplaySettingsChanged = (event) => {
     applyDisplaySettings(event?.detail ?? loadDisplaySettings());
@@ -490,7 +511,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   );
   // Night tracks can stack several floodlights plus the player headlight over
   // one patch of ground; raise the per-material light cap above the default 4.
-  groundMat.maxSimultaneousLights = 8;
+  groundMat.maxSimultaneousLights = 9;
   groundMat.bumpTexture = compositeNormalMap;
   // Composite normals are now baked in track-aligned world space, so sample
   // full [0,1] UVs (with V flip for orientation) instead of square->rect crop.

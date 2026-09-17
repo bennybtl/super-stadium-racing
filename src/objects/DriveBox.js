@@ -198,7 +198,13 @@ export class DriveBox {
       centerZ - topOffset.z
     );
 
-    box.metadata = { truckCollider: true };
+    // The truck's own collision proxy only ever tracks yaw, not the roll/pitch
+    // this collider carries for a wedge — so a truck correctly riding the deck
+    // (per TerrainPhysics' analytic follow) still overlaps this box in its own
+    // tilted local frame. Real deck support already comes from TerrainPhysics;
+    // this collider's job is the side faces, so let it step aside once the
+    // truck has reached the top instead of fighting for the same job.
+    box.metadata = { truckCollider: true, truckColliderIgnoreTop: true };
 
     this._colliderMesh = box;
     this._colliderAggregate = new PhysicsAggregate(box, PhysicsShapeType.BOX, { mass: 0 }, scene);

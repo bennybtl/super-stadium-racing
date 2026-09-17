@@ -92,17 +92,21 @@
 
         <!-- ── In-game pause ── -->
         <template v-else-if="store.screen === 'pause'">
-          <ul class="list-disc list-inside text-left text-[#ccc] my-2 space-y-1">
-            <li><b>ESC:</b> to toggle this menu</li>
-            <li><b>{{ drivingBindings['Gas'] }}:</b> Gas</li>
-            <li><b>{{ drivingBindings['Brake/Reverse'] }}:</b> Brake/Reverse</li>
-            <li><b>{{ drivingBindings['Steer Left'] }} / {{ drivingBindings['Steer Right'] }}:</b> Steering</li>
-            <li><b>{{ drivingBindings['Use Nitro'] }}:</b> Use Nitro</li>
-            <li><b>{{ drivingBindings['Reset Truck'] }}:</b> Reset to last checkpoint</li>
-            <li><b>{{ drivingBindings['Cycle Camera'] }}:</b> Change camera mode</li>
-          </ul>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.resume()">Resume</button>
-          <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.reset()">Reset</button>
+          <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066]">Pause</h2>
+          <div class="grid grid-cols-5 gap-3 my-2">
+            <div
+              v-for="item in pauseControls"
+              :key="item.label"
+              class="rounded-xl border-2 border-[#999] bg-black/80 px-2 py-3 my-2 text-white shadow-[0_10px_0_0_rgba(120,120,120,1)]"
+            >
+              <div class="text-[13px] font-bold uppercase tracking-wide leading-tight">{{ item.label }}</div>
+              <div class="text-lg font-mono leading-tight mt-1">{{ item.key }}</div>
+            </div>
+          </div>
+          <div class="">
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.reset()">Reset</button>
+            <button class="menu-button pointer-events-auto px-10 py-4 text-2xl mt-2" @click="store.resume()">Resume</button>
+          </div>
           <button v-if="store.mode === 'championship'" class="menu-button pointer-events-auto px-10 py-4 text-2xl text-[#ff6b6b]" @click="showRetireConfirm = true">Retire Championship</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.exit()">Exit</button>
@@ -465,6 +469,38 @@ const backdropStyle = {
 };
 
 const drivingBindings = computed(() => loadControlsSettings().driving);
+
+// KeyboardEvent.code -> a short label for the pause-menu keycaps, e.g.
+// "KeyW" -> "W", "Backslash" -> "\". Falls back to the raw code for anything
+// unrecognized (arrow keys, function keys, etc.) so a rebind never renders blank.
+function formatKeyCode(code) {
+  if (!code) return '?';
+  if (code === 'Escape') return 'Esc';
+  if (code === 'Backslash') return '\\';
+  if (code === 'Slash') return '/';
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Arrow')) return code.slice(5);
+  return code;
+}
+
+// The pause menu's keycap grid — mirrors the driving bindings plus the two
+// fixed (non-rebindable) toggles and the menu key itself.
+const pauseControls = computed(() => {
+  const b = drivingBindings.value;
+  return [
+    { label: 'Menu', key: 'Esc' },
+    { label: 'Nitro', key: formatKeyCode(b['Use Nitro']) },
+    { label: 'Gas', key: formatKeyCode(b['Gas']) },
+    { label: 'Reset Truck', key: formatKeyCode(b['Reset Truck']) },
+    { label: 'Photo', key: formatKeyCode(b['Toggle Photo Mode']) },
+    { label: 'Change Cam', key: formatKeyCode(b['Cycle Camera']) },
+    { label: 'Left', key: formatKeyCode(b['Steer Left']) },
+    { label: 'Brake / Reverse', key: formatKeyCode(b['Brake/Reverse']) },
+    { label: 'Right', key: formatKeyCode(b['Steer Right']) },
+    { label: 'Debug', key: formatKeyCode(b['Toggle Debug']) },
+  ];
+});
 
 const title = computed(() => {
   switch (store.screen) {

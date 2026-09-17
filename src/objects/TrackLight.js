@@ -21,12 +21,14 @@ const BANK_W = HEAD_COUNT * HEAD_W + (HEAD_COUNT - 1) * HEAD_GAP;
 const BACKPLATE_H = 0.26;
 const BACKPLATE_D = 0.34;
 
-// Each pole is a real SpotLight. Babylon's StandardMaterial evaluates at most
-// `maxSimultaneousLights` per material (4 by default, 8 on the ground), and a
-// night scene already spends slots on the ambient fill, the moon, and the
-// player headlight — so the editor caps track lights per track. Clustered
-// lighting would lift this; revisit if tracks need more.
-export const MAX_TRACK_LIGHTS = 5;
+// Each pole is a real SpotLight, one of the `maxSimultaneousLights` slots
+// every material evaluates (scene-wide hook in SceneBuilder.buildScene raises
+// this above StandardMaterial's default of 4). A night scene already spends
+// slots on the ambient fill, the moon, and the vehicle-headlights clustered
+// container — so the editor caps track lights per track. Track lights don't
+// use clustered lighting themselves (clustered lights can't cast shadows, and
+// these need theirs) — revisit if a track needs more than this.
+export const MAX_TRACK_LIGHTS = 6;
 
 export const TRACK_LIGHT_DEFAULTS = {
   height: 8,       // pole height (metres)

@@ -206,14 +206,20 @@ export class StaticBodyCollisionManager {
 
     // For bridge drive meshes, top-face support is provided by TerrainPhysics.
     // Ignore static-body resolution while the truck is on/above the top plane.
+    // Tested against the RAW box top (max.y), not the Minkowski-inflated maxY
+    // below: eY folds in the truck's horizontal footprint via its dot with the
+    // collider's local Y axis, which is fine while that axis is ~world-up (a
+    // wall, a flat box) but balloons once the collider is rolled/pitched to
+    // hug a ramp (DriveBox) — a horizontal extent leaking onto a now-tilted
+    // axis. The raw top is a plain point-vs-plane test and has no such issue.
     if (mesh.metadata?.truckColliderIgnoreTop === true) {
       const TOP_EPS = 0.05;
-      if (prevLocal.y >= maxY - TOP_EPS && curLocal.y >= maxY - TOP_EPS) {
+      if (prevLocal.y >= max.y - TOP_EPS && curLocal.y >= max.y - TOP_EPS) {
         if (mesh.metadata?.truckColliderDebug) {
           console.debug(`[StaticBodyCollisionManager] ignore top skip`, mesh.name, {
             prevLocalY: prevLocal.y,
             curLocalY: curLocal.y,
-            maxY,
+            rawMaxY: max.y,
           });
         }
         return;

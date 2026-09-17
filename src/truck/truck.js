@@ -172,26 +172,35 @@ export class Truck {
       surfaceLevel: '-',
     };
 
-    // Night races: give the player truck a forward-raking headlight cone.
-    // Parented to the physics box (whose rotation.y tracks heading), so it
-    // sweeps with the truck for free. AI trucks are skipped to keep the light
-    // count — and the per-material light cap — under control.
-    this.headlight = null;
-    if (!this.driver && scene?.metadata?.night === true) {
-      const hl = new SpotLight(
-        "truckHeadlight",
-        new Vector3(0, 0.6, this.depth * 0.4),   // local: nose, slightly raised
-        new Vector3(0, -0.35, 1),                // aim forward + a touch down
-        Math.PI / 2.6,                           // cone angle
-        6,                                       // edge falloff exponent
-        scene
-      );
-      hl.parent = this.mesh;
-      hl.range = 30;
-      hl.intensity = 3.0;
-      hl.diffuse = new Color3(1.0, 0.96, 0.85);
-      hl.specular = new Color3(1.0, 0.96, 0.85);
-      this.headlight = hl;
+    // Night races: every truck gets a pair of forward headlights, parented to
+    // the physics box (whose rotation.y tracks heading) so they sweep for
+    // free. These are bundled into the scene's ClusteredLightContainer (see
+    // SceneBuilder.buildScene) rather than left as ordinary lights, since a
+    // full grid's worth (~10 trucks × 2) would blow every material's
+    // maxSimultaneousLights budget. Clustered lights can't cast shadows, so
+    // these are never registered with the ShadowCasterGroup. If clustering
+    // isn't supported on this GPU, only the player gets a real headlight.
+    this.headlights = [];
+    const vehicleLights = scene?.metadata?.vehicleLights ?? null;
+    if (scene?.metadata?.night === true && (vehicleLights || !this.driver)) {
+      const sideOffset = this.width * 0.45;
+      for (const side of [-1, 1]) {
+        const hl = new SpotLight(
+          "truckHeadlight",
+          new Vector3(side * sideOffset, 0.6, this.depth * 0.4), // local: nose, slightly raised
+          new Vector3(0, -0.3, 1),                                // aim forward + a touch down
+          Math.PI / 3.2,                                          // cone angle
+          6,                                                      // edge falloff exponent
+          scene
+        );
+        hl.parent = this.mesh;
+        hl.range = 28;
+        hl.intensity = 2.0;
+        hl.diffuse = new Color3(1.0, 0.96, 0.85);
+        hl.specular = new Color3(1.0, 0.96, 0.85);
+        vehicleLights?.addLight(hl);
+        this.headlights.push(hl);
+      }
     }
 
     // Visual puppet — sits on top of the invisible physics box
