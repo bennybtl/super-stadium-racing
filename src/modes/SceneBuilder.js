@@ -16,6 +16,7 @@ import {
   VertexBuffer,
   RawTexture,
   ClusteredLightContainer,
+  SSAO2RenderingPipeline,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { TerrainManager, TERRAIN_TYPES } from "../world/terrain.js";
@@ -213,6 +214,28 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // walls/curbs and the bridge/driveBox slab all are now), so a plain front-face
   // shadow pass yields one clean silhouette.
 
+  // Night-only screen-space ambient occlusion. Track lights need to be wide
+  // and bright enough to actually light the track, and at that spread the
+  // beams overlap enough that whatever one light's shadow blocks, another
+  // fills back in — the shadow-map mechanism is fine (verified directly
+  // against a live scene), it just reads as washed out. SSAO darkens contact
+  // points (truck-to-ground, structure legs, corners) from geometry proximity
+  // alone, independent of how many lights are hitting them, so it stays
+  // visible no matter how much the track lights overlap. Built once and
+  // attached/detached from the camera as night toggles, rather than rebuilt
+  // each time — construction pulls in a geometry buffer renderer and several
+  // render targets, not something to redo on every editor NIGHT toggle.
+  const ssaoPipeline = SSAO2RenderingPipeline.IsSupported
+    ? new SSAO2RenderingPipeline('ssao', scene, 0.75)
+    : null;
+  if (ssaoPipeline) {
+    ssaoPipeline.radius = 2;
+    ssaoPipeline.totalStrength = 0.8;
+    ssaoPipeline.base = 0.2;
+    ssaoPipeline.expensiveBlur = false;
+  }
+  let _ssaoAttached = false;
+
   const applyDisplaySettings = (settings) => {
     const shadowDetail = settings?.shadow ?? 'medium';
     const lightCount = settings?.lights ?? 4;
@@ -251,6 +274,10 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
         });
         shadows.addLight(_moonLight, { mapSize: 2048 });
       }
+      if (ssaoPipeline && !_ssaoAttached) {
+        scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline('ssao', camera);
+        _ssaoAttached = true;
+      }
       return;
     }
 
@@ -261,6 +288,10 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     _moonLight.setEnabled(false);
     _moonLight.intensity = 0;
     shadows.removeLight(_moonLight);
+    if (ssaoPipeline && _ssaoAttached) {
+      scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline('ssao', camera);
+      _ssaoAttached = false;
+    }
 
     // Keep enabled corner lights spatially balanced at lower counts.
     const enabledLightIndices =
@@ -351,6 +382,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   window.addEventListener('offroad:display-settings-changed', onDisplaySettingsChanged);
   scene.onDisposeObservable.add(() => {
     window.removeEventListener('offroad:display-settings-changed', onDisplaySettingsChanged);
+    ssaoPipeline?.dispose();
   });
 
   // -- Terrain manager --
