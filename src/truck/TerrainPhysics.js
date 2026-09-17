@@ -13,6 +13,22 @@ const EMPTY_CONTINUITY = Object.freeze({});
 // Tunable constants
 // =============================================================================
 
+/**
+ * Both downhill-follow passes below detect "still tracking the ground" via a
+ * *vertical* gap sampled straight down from the truck's own XZ. That's a bad
+ * proxy for distance-to-surface on a steep face: the truck can be genuinely
+ * airborne and pulling away from the slope along the surface normal while
+ * its XZ position still sits over the hill's tall cross-section, so the
+ * vertical gap stays deceptively small. Left unguarded, either pass then
+ * pushes groundedness back up while truly airborne — and downstream, that
+ * authorizes everything groundedness gates (the into-surface velocity strip
+ * in update(), steering, throttle) using the steep normal / the truck's
+ * current heading, not gravity. Both passes skip faces steeper than this,
+ * the same threshold already used elsewhere in this file to distrust a
+ * surface normal (~76° tilt).
+ */
+const DOWNHILL_MIN_NORMAL_Y = 0.25;
+
 /** Pass 1: detect downhill descent and inject fake compression to stay grounded. */
 const DOWNHILL_FOLLOW = {
   maxGap:          0.15,  // max gap above terrain to still trigger following (m)
@@ -770,6 +786,7 @@ export class TerrainPhysics {
       penetration > -DOWNHILL_FOLLOW.maxGap &&
       speed > DOWNHILL_FOLLOW.minSpeed &&
       this.state.velocity.y < DOWNHILL_FOLLOW.vertVelMin &&
+      this._lastFloorNormal.y >= DOWNHILL_MIN_NORMAL_Y &&
       fallLineDir() &&
       this._fallLineDrops(mesh, track, fallLineDir(), sampleHeightHere(), fromY, DOWNHILL_FOLLOW.lookAhead, DOWNHILL_FOLLOW.heightDrop)
     ) {
@@ -796,6 +813,7 @@ export class TerrainPhysics {
       this.state.velocity.y < DOWNHILL_BOOST.vertVelMin &&
       hasSurfaceSampling &&
       speed > DOWNHILL_BOOST.minSpeed &&
+      this._lastFloorNormal.y >= DOWNHILL_MIN_NORMAL_Y &&
       fallLineDir() &&
       this._fallLineDrops(mesh, track, fallLineDir(), sampleHeightHere(), fromY, DOWNHILL_BOOST.lookAhead, DOWNHILL_BOOST.heightDrop)
     ) {
