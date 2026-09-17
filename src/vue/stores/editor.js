@@ -75,6 +75,7 @@ export const useEditorStore = defineStore('editor', () => {
     layerId: 0,
     color: 'terrain',
     sideColor: 'terrain',
+    legs: true,
   });
 
   // ── Terrain shape panel (rect + circle/ellipse + polygon) ──

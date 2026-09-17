@@ -115,6 +115,7 @@ export class DriveBoxEditor {
       solidBase: true,
       thickness: 0.4,
       layerId: 0,
+      legs: true,
     };
 
     this.editor.saveSnapshot();
@@ -238,6 +239,7 @@ export class DriveBoxEditor {
     s.driveBox.layerId   = feature.layerId ?? 0;
     s.driveBox.color     = feature.color ?? 'terrain';
     s.driveBox.sideColor = feature.sideColor ?? feature.color ?? 'terrain';
+    s.driveBox.legs      = feature.legs !== false;
     if (sloped) {
       s.driveBox.heightAtMin = feature.heightAtMin ?? 0;
       s.driveBox.heightAtMax = feature.heightAtMax ?? 2;
@@ -363,6 +365,13 @@ export class DriveBoxEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot();
     this.selected.feature.sideColor = val;
+    this.rebuildMesh();
+  }
+
+  changeLegs(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+    this.selected.feature.legs = !!val;
     this.rebuildMesh();
   }
 }

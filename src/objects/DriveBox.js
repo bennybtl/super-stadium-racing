@@ -1,9 +1,26 @@
-import { Matrix, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3 } from "@babylonjs/core";
+import { Matrix, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, Quaternion, StandardMaterial, Color3 } from "@babylonjs/core";
 import { BridgeMesh } from "./BridgeMesh.js";
 
 // Extra depth below the lowest terrain corner so a solid-base box never shows
 // a gap between its sides and the ground.
 const SOLID_BASE_MARGIN = 0.5;
+
+// Cosmetic support legs along the two long (slope-direction) edges — see
+// DriveBox._buildLegs. Purely decorative: the collider/solid base already
+// handle physics, these just keep a tall ramp from reading as a floating slab.
+const LEG_SPACING = 2.75;      // world units between legs along an edge
+const LEG_ROW_SPACING = 4;     // world units between rows across a wide box — the
+                                // two edges always get a row; a box wider than this
+                                // fills in with evenly-spaced interior rows too
+const LEG_MIN_RUN = LEG_SPACING * 1.5; // shorter than this, skip legs entirely
+const LEG_MIN_HEIGHT = 0.4;    // shorter than this, a leg would look like a stub
+const LEG_TOP_MARGIN = 0.3;    // tuck the top this far below the deck, so the
+                                // post's own top corners never poke past the
+                                // silhouette of the (possibly slanted) side face
+const LEG_OUTSET = 0.05;       // nudge just past the face to avoid z-fighting
+const LEG_WIDTH = 0.14;
+const LEG_DEPTH = 0.18;
+const LEG_COLOR = new Color3(0.16, 0.16, 0.17);
 
 function _rotateVector(x, z, rotationDeg = 0) {
   const rad = rotationDeg * Math.PI / 180;
@@ -82,6 +99,15 @@ export function deriveDriveBoxGrid(feature, track) {
     resolvedThickness = Math.max(0.1, maxDrop + SOLID_BASE_MARGIN);
   }
 
+  // Absolute world-Y of the top surface at an arbitrary local point (not just
+  // the 4 corners `heights` covers) — same terrain-plane-plus-wedge-rise
+  // formula, with the rise linearly interpolated across the wedge instead of
+  // stepping at the centerline. Used to size the support legs below.
+  const heightAt = (lx, lz) => {
+    const t = width > 0 ? Math.min(1, Math.max(0, (lx + halfW) / width)) : 0.5;
+    return baseY + terrainGradX * lx + terrainGradZ * lz + hLo + (hHi - hLo) * t;
+  };
+
   return {
     type: 'bridgeMesh',
     centerX, centerZ,
@@ -93,6 +119,7 @@ export function deriveDriveBoxGrid(feature, track) {
     layerId,
     color: feature.color,
     sideColor: feature.sideColor,
+    heightAt,
   };
 }
 
@@ -130,6 +157,7 @@ export class DriveBox {
     const derived = deriveDriveBoxGrid(feature, track);
     this._bridge = new BridgeMesh(derived, track, scene, shadows, driveSurfaceManager, terrainBlendConfig);
     this._buildCollider(feature, derived, scene);
+    this._buildLegs(feature, derived, track, scene, shadows);
   }
 
   get _bridgeMeshKey() {
@@ -210,11 +238,98 @@ export class DriveBox {
     this._colliderAggregate = new PhysicsAggregate(box, PhysicsShapeType.BOX, { mass: 0 }, scene);
   }
 
+  /**
+   * Purely cosmetic support posts along the two long edges (the slope
+   * direction, per the class doc), plus evenly-spaced interior rows once the
+   * box is wide enough that a real ramp would need internal bracing too —
+   * reads as "propped up on legs" instead of a plain slab, the way a real
+   * loading ramp looks. One thin-instanced post per spot, so any number of
+   * legs costs a single draw call.
+   *
+   * Each post spans from the actual ground to `derived.heightAt` at that
+   * point, so a wedge's low tip (near-zero clearance) naturally skips legs
+   * via LEG_MIN_HEIGHT instead of needing separate wedge-vs-flat handling.
+   */
+  _buildLegs(feature, derived, track, scene, shadows) {
+    if (feature.legs === false) return;
+    const { centerX, centerZ, width, depth, rotation = 0, solidBase = true } = feature;
+    if (width < LEG_MIN_RUN) return;
+    const halfW = width / 2;
+    const halfD = depth / 2;
+
+    // Always the two edges — they sit just past the side faces, so they're
+    // the only rows ever visible when solidBase fills the whole footprint
+    // down to the ground. An interior row would land strictly inside that
+    // solid mass with its top flush against the drivable surface: invisible
+    // at best, a z-fighting speckle through the deck at worst. Only add
+    // interior rows for a real hollow/thin deck (solidBase: false), where a
+    // support actually spans open air under the surface.
+    const rowCount = solidBase
+      ? 2
+      : Math.max(2, Math.round(depth / LEG_ROW_SPACING) + 1);
+    const rowZs = [];
+    for (let r = 0; r < rowCount; r++) {
+      const t = rowCount > 1 ? r / (rowCount - 1) : 0.5;
+      let lz = -halfD + t * depth;
+      if (r === 0) lz -= LEG_OUTSET;
+      if (r === rowCount - 1) lz += LEG_OUTSET;
+      rowZs.push(lz);
+    }
+
+    const count = Math.max(2, Math.round(width / LEG_SPACING) + 1);
+    const rot = Quaternion.RotationYawPitchRoll(-rotation * Math.PI / 180, 0, 0);
+    const matrices = [];
+    for (let i = 0; i < count; i++) {
+      const lx = -halfW + (width * i) / (count - 1);
+      for (const lz of rowZs) {
+        const topY = derived.heightAt(lx, lz) - LEG_TOP_MARGIN;
+        const world = _rotateVector(lx, lz, rotation);
+        const worldX = centerX + world.x;
+        const worldZ = centerZ + world.z;
+        const groundY = track?.getHeightAt?.(worldX, worldZ) ?? topY;
+        const legHeight = topY - groundY;
+        if (legHeight < LEG_MIN_HEIGHT) continue;
+
+        matrices.push(Matrix.Compose(
+          new Vector3(1, legHeight, 1),
+          rot,
+          new Vector3(worldX, groundY + legHeight / 2, worldZ)
+        ));
+      }
+    }
+    if (!matrices.length) return;
+
+    const master = MeshBuilder.CreateBox(
+      `drive_box_leg_${centerX}_${centerZ}`,
+      { width: LEG_WIDTH, height: 1, depth: LEG_DEPTH },
+      scene
+    );
+    const mat = new StandardMaterial(`drive_box_leg_mat_${centerX}_${centerZ}`, scene);
+    mat.diffuseColor = LEG_COLOR;
+    mat.specularColor = new Color3(0.08, 0.08, 0.08);
+    master.material = mat;
+    master.isPickable = false;
+    master.receiveShadows = true;
+    master.alwaysSelectAsActiveMesh = true; // thin instances span the whole box footprint
+
+    const buf = new Float32Array(matrices.length * 16);
+    matrices.forEach((m, i) => m.copyToArray(buf, i * 16));
+    master.thinInstanceSetBuffer('matrix', buf, 16, true);
+    shadows?.addShadowCaster(master, false);
+
+    this._legsMesh = master;
+    this._legsMat = mat;
+  }
+
   dispose() {
     this._colliderAggregate?.dispose?.();
     this._colliderAggregate = null;
     this._colliderMesh?.dispose();
     this._colliderMesh = null;
+    this._legsMesh?.dispose();
+    this._legsMesh = null;
+    this._legsMat?.dispose();
+    this._legsMat = null;
     this._bridge.dispose();
     this._bridge = null;
   }

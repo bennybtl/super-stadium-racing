@@ -1936,6 +1936,7 @@ export class EditorController {
   changeDriveBoxLayerId(val)        { this.driveBoxEditor.changeLayerId(val); }
   changeDriveBoxColor(val)          { this.driveBoxEditor.changeColor(val); }
   changeDriveBoxSideColor(val)      { this.driveBoxEditor.changeSideColor(val); }
+  changeDriveBoxLegs(val)           { this.driveBoxEditor.changeLegs(val); }
 
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }
   changeSquareHillDepth(val)        { this.squareHillEditor.changeDepth(val); }

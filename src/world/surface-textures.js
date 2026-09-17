@@ -20,6 +20,12 @@ export const SURFACE_TEXTURES = {
     worldUnitsPerTile: 6,
     specular: 0.14,
   },
+  'tex:diamond_plate': {
+    label: 'Diamond Plate',
+    diffuseTexture: 'textures/diamond_plate.texture.png',
+    worldUnitsPerTile: 2,
+    specular: 0.35,
+  },
 };
 
 const _textureModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });

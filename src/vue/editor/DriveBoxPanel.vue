@@ -144,6 +144,12 @@
       />
     </template>
 
+    <!-- Support legs -->
+    <label class="flex items-center justify-between text-[12px] text-slate-200 mb-3">
+      <span>Supports</span>
+      <input type="checkbox" :checked="editor.driveBox.legs" @change="editor.setFeatureProp('driveBox', 'legs', $event.target.checked)" />
+    </label>
+
     <!-- Layer -->
     <div class="flex justify-between mb-1 text-[12px]">
       <span>Layer</span>
