@@ -940,6 +940,9 @@ export class DecalEditor {
   setShape(shape) {
     if (!DECAL_SHAPES.includes(shape) || shape === this._shape) return;
     this._shape = shape;
+    // A line decal is almost always drawn long and thin, not scaled as a
+    // square, so switching to it defaults the scale mode to non-uniform.
+    if (shape === 'line') this._linkScale = false;
     this._updateGhostTexture();
     this._syncStore();
   }

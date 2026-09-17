@@ -45,7 +45,7 @@ const STROKE_RATIO = 0.09;
 const clampCount = (n) => Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(n ?? MIN_COUNT)));
 
 /** Draw the named shape onto a 2D canvas context sized w×h. */
-export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false, text = '', localPoints = null, thickness = 1, worldWidth = 4, worldDepth = 4 } = {}) {
+export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, outline = false, text = '', localPoints = null } = {}) {
   const hexColor = basicColors[color]?.diffuse.toHexString() || '#FFFFFF';
 
   ctx.clearRect(0, 0, w, h);
@@ -72,19 +72,9 @@ export function drawDecalShape(ctx, shape, w, h, { color = 'white', count = 1, o
     case 'text':
       drawText(ctx, w, h, text, outline);
       break;
-    case 'polyline': {
-      // A single canvas stroke can't vary width per path direction, so pick
-      // one px-per-world-unit scale for the whole path. The box's narrower
-      // dimension is the one squeezed down toward the stroke's own thickness
-      // padding, so its scale is the finer of the two — using it is exact for
-      // an axis-aligned line (the common case: a straight or gently-curved
-      // line down the track) and errs toward "too thick" rather than "too
-      // thin" as the path tilts off-axis, same spirit as the minor stretch
-      // the single-segment `line` shape already accepts when width ≠ depth.
-      const pxPerUnit = Math.max(w / worldWidth, h / worldDepth);
-      drawPolyline(ctx, w, h, localPoints, thickness * pxPerUnit);
+    case 'polyline':
+      drawPolyline(ctx, w, h, localPoints, hexColor);
       break;
-    }
     case 'arrow':
     default:
       drawArrow(ctx, w, h, hexColor);
@@ -209,13 +199,20 @@ function drawTriangle(ctx, w, h, outline) {
 }
 
 /**
- * A user-drawn line traced through `localPoints` — an already-rounded, OPEN
- * polyline in the feature's own local unit frame (see `decalPolylineLocalOutline`
- * below), where ±1 is exactly the projector box edge (unlike `rect`/`oval`'s
- * stylistic 6% margin: the box itself is derived from these same points, so
- * drawing full-bleed keeps the painted marking lined up with where the user
- * actually dragged each control point). `linePx` is the pre-computed stroke
- * width in texture pixels.
+ * A user-drawn line traced through `localPoints` — the already-computed
+ * stroke OUTLINE polygon (not the bare centerline) in the feature's own local
+ * unit frame (see `decalPolylineLocalOutline` below), where ±1 is exactly the
+ * projector box edge (unlike `rect`/`oval`'s stylistic 6% margin: the box
+ * itself is derived from these same points, so drawing full-bleed keeps the
+ * painted marking lined up with where the user actually dragged each control
+ * point). Filling a pre-built polygon — rather than stroking the centerline
+ * with a canvas `lineWidth` — is what keeps the drawn thickness constant as
+ * the line curves: `decalPolylineLocalOutline` offsets the outline in true
+ * world units before the box's width/depth normalization, so the anisotropic
+ * stretch that maps this square texture onto a non-square (width ≠ depth)
+ * decal box lands the offset back at the intended thickness regardless of
+ * which way a given segment points. A plain stroke has no such compensation
+ * and comes out thicker or thinner depending on segment direction.
  *
  * The V axis (localPoints' `.z`) is flipped going into canvas rows: confirmed
  * by raycasting a live decal mesh and sampling its actual UV — a DynamicTexture
@@ -226,18 +223,52 @@ function drawTriangle(ctx, w, h, outline) {
  * basis in DecalEditor already accounts for it — but a polyline maps specific
  * world points through, so getting the row direction right actually matters.
  */
-function drawPolyline(ctx, w, h, localPoints, linePx) {
-  if (!localPoints || localPoints.length < 2) return;
-  ctx.lineWidth = Math.max(1, linePx);
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+function drawPolyline(ctx, w, h, localPoints, color) {
+  if (!localPoints || localPoints.length < 3) return;
+  ctx.fillStyle = color;
   ctx.beginPath();
   localPoints.forEach((p, i) => {
     const px = w / 2 + p.x * (w / 2);
     const pz = h / 2 - p.z * (h / 2);
     if (i === 0) ctx.moveTo(px, pz); else ctx.lineTo(px, pz);
   });
-  ctx.stroke();
+  ctx.closePath();
+  ctx.fill();
+}
+
+/**
+ * Turn a centerline (already expanded/corner-rounded, in true local-frame
+ * world units) into a filled stroke outline polygon: each point offset by
+ * half the stroke thickness along its own tangent's perpendicular, with the
+ * two open ends squared off by the same half-thickness. Offsetting here —
+ * before `decalPolylineLocalOutline` normalizes to the box's width/depth
+ * below — is what makes the eventual anisotropic stretch land back on the
+ * correct real-world thickness for every segment, not just ones aligned with
+ * the box's long axis (see `drawPolyline`).
+ */
+function strokeOutlinePoints(local, thickness) {
+  const n = local.length;
+  const half = Math.max(0, thickness) / 2;
+  const tangents = local.map((p, i) => {
+    const a = local[Math.max(0, i - 1)];
+    const b = local[Math.min(n - 1, i + 1)];
+    const tx = b.x - a.x, tz = b.z - a.z;
+    const len = Math.hypot(tx, tz) || 1;
+    return { x: tx / len, z: tz / len };
+  });
+
+  const left = [], right = [];
+  for (let i = 0; i < n; i++) {
+    const t = tangents[i];
+    const nx = -t.z, nz = t.x; // rotate tangent +90° in XZ
+    let px = local[i].x, pz = local[i].z;
+    if (i === 0) { px -= t.x * half; pz -= t.z * half; }
+    if (i === n - 1) { px += t.x * half; pz += t.z * half; }
+    left.push({ x: px + nx * half, z: pz + nz * half });
+    right.push({ x: px - nx * half, z: pz - nz * half });
+  }
+  right.reverse();
+  return left.concat(right);
 }
 
 /**
@@ -278,15 +309,20 @@ export function decalPolylineLocalOutline(points, thickness = 1) {
     z: -c * p.x - s * p.z, // localY / V
   }));
 
+  // Bounding box comes from the actual stroke outline (not just the bare
+  // centerline plus a fixed pad): a squared-off end cap can poke out further
+  // than half the thickness along one axis when the end segment runs at an
+  // angle to the local frame, so measuring the real polygon keeps it exactly
+  // contained instead of risking a clipped tip.
+  const outline = strokeOutlinePoints(local, thickness);
+
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-  for (const p of local) {
+  for (const p of outline) {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.z < minZ) minZ = p.z;
     if (p.z > maxZ) maxZ = p.z;
   }
-  const pad = Math.max(0, thickness) / 2;
-  minX -= pad; maxX += pad; minZ -= pad; maxZ += pad;
   const localCenterX = (minX + maxX) / 2;
   const localCenterZ = (minZ + maxZ) / 2;
   const width = Math.max(0.1, maxX - minX);
@@ -302,7 +338,7 @@ export function decalPolylineLocalOutline(points, thickness = 1) {
   return {
     centerX, centerZ, width, depth,
     angleRad: theta, // radians — CreateDecal's own `angle`, pass through unchanged (no sign flip)
-    localPoints: local.map(p => ({ x: (p.x - localCenterX) / halfW, z: (p.z - localCenterZ) / halfD })),
+    localPoints: outline.map(p => ({ x: (p.x - localCenterX) / halfW, z: (p.z - localCenterZ) / halfD })),
   };
 }
 
@@ -387,7 +423,7 @@ export function applyDecalWear(ctx, texW, texH, { seed = 0, worldWidth = 4, worl
  */
 export function createDecalTexture(scene, shape, {
   color = 'white', seed = 0, count = 1, outline = false, text = '',
-  worldWidth = 4, worldDepth = 4, size = TEX_SIZE, localPoints = null, thickness = 1,
+  worldWidth = 4, worldDepth = 4, size = TEX_SIZE, localPoints = null,
   brand = DEFAULT_BRAND,
 } = {}) {
   const tex = new DynamicTexture(`decalShape_${shape}`, { width: size, height: size }, scene);
@@ -404,7 +440,7 @@ export function createDecalTexture(scene, shape, {
   }
 
   const ctx = tex.getContext();
-  drawDecalShape(ctx, shape, size, size, { color, count, outline, text, localPoints, thickness, worldWidth, worldDepth });
+  drawDecalShape(ctx, shape, size, size, { color, count, outline, text, localPoints });
   applyDecalWear(ctx, size, size, { seed, worldWidth, worldDepth });
   tex.update();
   return tex;

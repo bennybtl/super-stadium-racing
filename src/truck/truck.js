@@ -8,7 +8,7 @@ import {
   SpotLight,
 } from "@babylonjs/core";
 import { ParticleEffects } from "./ParticleEffects.js";
-import { TireMarks } from "./TireMarks.js";
+import { TireMarkWriter, tireMarkColorForTerrain } from "./TireMarks.js";
 import { WakeRibbon } from "./WakeRibbon.js";
 import { TerrainPhysics } from "./TerrainPhysics.js";
 import { TerrainQuery } from "../managers/TerrainQuery.js";
@@ -42,22 +42,6 @@ const AI_TERRAIN_LOW_DETAIL_DIST = 75; // metres
 const YAW_PIVOT_FORWARD = 1.5; // ≈ front axle (TruckBody frontAxle)
 // Forward speed above which stamping on the brakes starts laying rubber (m/s).
 const TIRE_MARK_BRAKE_SPEED = 7;
-// Perceptual-luminance split for tire marks: below this, the terrain reads as
-// "dark" and marks darken it further; above, the terrain reads as "light"
-// (sand, snow) and marks lighten it instead. Standard Rec. 601 weights.
-const TIRE_MARK_LIGHTEN_LUMINANCE = 0.5;
-// Same ±22% swing the AI-path wear overlay multiplies the terrain colour by
-// (see ground-shader.js) — kept in sync so tire marks and baked wear read as
-// the same intensity of discolouration, just against terrain.color instead of
-// the actual rendered pixel (see TireMarks.js's update() doc for why).
-const TIRE_MARK_WEAR_FACTOR = 0.22;
-// Ring size per rear wheel: each node covers ~0.5 m of mark, so the player
-// carries about 2 km of marks per side and AI trucks ~0.75 km — enough that a
-// race ends before the ring wraps and starts recycling the oldest marks.
-// Uploads are per-node, not per-buffer, so raising these costs memory
-// (~40 bytes a node) and nothing per frame.
-const TIRE_MARK_CAPACITY = 4096;
-const AI_TIRE_MARK_CAPACITY = 1536;
 
 /**
  * Main Truck class that coordinates all truck subsystems
@@ -217,8 +201,11 @@ export class Truck {
     // and wheelbase, so deriving the spacing from it left the marks too close
     // together and too far forward.
     const rearWheels = this.body.rearWheelGeometry;
-    this.tireMarks = new TireMarks(scene, {
-      capacity: this.driver ? AI_TIRE_MARK_CAPACITY : TIRE_MARK_CAPACITY,
+    // Local accumulator only — no mesh/buffers of its own. The actual shared
+    // ring lives on the track (track._sharedTireMarks, see SceneBuilder.js);
+    // this only tracks this truck's own in-progress streaks until they
+    // complete and get handed off (see update()'s tireMarks.update() call).
+    this.tireMarks = new TireMarkWriter({
       halfTrack: rearWheels.halfTrack,
       rearOffset: -rearWheels.axleZ,
     });
@@ -655,31 +642,17 @@ export class Truck {
         // even mid-arc over a ramp face it never touched. isGrounded is the same
         // instant, unlagged check used above for water spray — reuse it here.
         const canMark = groundedness > 0.35 && isGrounded && !onWater && effectScaleOverride > 0.05;
-        // Same lighten/darken call the AI-path wear overlay makes for this terrain
-        // (see ground-shader.js), so tire marks read consistently with baked wear
-        // instead of always crushing toward black. Scaling terrain.color itself
-        // (rather than blending toward a fixed black/tan) keeps the mark's hue
-        // matched to whatever terrain it's actually laid on.
-        const terrainColor = terrain?.color;
-        let markColor;
-        if (terrainColor) {
-          const luminance = 0.299 * terrainColor.r + 0.587 * terrainColor.g + 0.114 * terrainColor.b;
-          const factor = luminance > TIRE_MARK_LIGHTEN_LUMINANCE
-            ? 1 + TIRE_MARK_WEAR_FACTOR
-            : 1 - TIRE_MARK_WEAR_FACTOR;
-          markColor = [
-            Math.min(1, terrainColor.r * factor),
-            Math.min(1, terrainColor.g * factor),
-            Math.min(1, terrainColor.b * factor),
-          ];
-        }
 
-        this.tireMarks.update({
+        this.tireMarks.update(track?._sharedTireMarks, {
           position: this.mesh.position,
           heading: this.state.heading,
           strength: canMark ? Math.max(driftMark, brakeMark) : 0,
-          color: markColor,
           sampleY: this._surfaceSampler,
+          // Deferred to whenever a streak actually completes (see
+          // TireMarks.appendStreak) rather than baked in per-frame — terrain
+          // colour is static, so recomputing it there gives the identical
+          // result and lets a replayed streak resolve colour the same way.
+          colorForPoint: (x, z) => tireMarkColorForTerrain(terrainManager?.getTerrainAt?.({ x, z })?.color),
         });
       });
 

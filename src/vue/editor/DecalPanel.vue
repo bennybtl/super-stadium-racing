@@ -87,7 +87,7 @@
          2-point line (a placed one is reshaped via its points instead). -->
     <template v-if="!editing || s.shape !== 'polyline'">
       <div class="flex justify-between mb-1 text-[12px]">
-        <span>{{ s.shape === 'polyline' ? 'Length' : (s.linkScale ? 'Scale' : 'Width') }}</span>
+        <span>{{ s.shape === 'polyline' ? 'Length' : (s.linkScale ? 'Scale' : (s.shape === 'line' ? 'Thickness' : 'Width')) }}</span>
         <span>{{ s.width }}m</span>
       </div>
       <input type="range" min="0.5" max="30" step="0.5"
@@ -98,7 +98,7 @@
     </template>
     <template v-if="s.shape !== 'polyline' && !s.linkScale">
       <div class="flex justify-between mb-1 text-[12px]">
-        <span>Height</span>
+        <span>{{ s.shape === 'line' ? 'Length' : 'Height' }}</span>
         <span>{{ s.height }}m</span>
       </div>
       <input type="range" min="0.5" max="30" step="0.5"

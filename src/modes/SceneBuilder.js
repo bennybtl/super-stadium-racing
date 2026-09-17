@@ -52,6 +52,7 @@ import {
 } from "../world/terrain-utils.js";
 import { loadDisplaySettings } from "../settingsStorage.js";
 import { ShadowCasterGroup } from "./ShadowCasterGroup.js";
+import { SharedTireMarksManager } from "../managers/SharedTireMarksManager.js";
 
 /**
  * Toggle a live scene between day and night lighting. Stashes the flag on
@@ -397,6 +398,12 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       terrainManager.setTerrainCell(col, row, terrainType);
     }
   }
+
+  // Shared, persistent tire marks — one ring-buffer mesh for every truck's
+  // rubber, replayed from last session's save at construction. Attached
+  // directly to the track object so truck.js can reach it through the
+  // `track` reference it already receives every frame.
+  currentTrack._sharedTireMarks = new SharedTireMarksManager(scene, currentTrack.id, terrainManager);
 
   applySteepGrassTerrainRemap(terrainManager, currentTrack);
   applySteepWaterTerrainRemap(terrainManager, currentTrack);
