@@ -323,6 +323,13 @@
     </div>
   </div>
   </Transition>
+
+  <!-- Build version — shown in the corner whenever any menu screen is up
+       (title, pause, pit, etc.), hidden the instant a race is actually live. -->
+  <div
+    v-if="store.screen || store.pitData"
+    class="fixed bottom-2.5 right-3.5 z-[1002] text-[11px] font-mono text-slate-400/70 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] select-none pointer-events-none"
+  >v{{ appVersion }}</div>
 </template>
 
 <script setup>
@@ -331,6 +338,7 @@ import { useMenuStore } from './store.js';
 import { basicColors } from '../constants.js';
 import { loadControlsSettings } from '../settingsStorage.js';
 import { isSafari } from '../utils/browserSupport.js';
+import { version as appVersion } from '../../package.json';
 
 // Multiplayer is still in progress — only expose it running under `npm run dev`.
 const isDev = import.meta.env.DEV;

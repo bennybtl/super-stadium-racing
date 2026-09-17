@@ -2,6 +2,7 @@
   <div v-if="debug.visible" class="fixed top-2 left-2 bg-black/70 text-emerald-400 font-mono text-xs p-3 border border-emerald-400 min-w-[250px] pointer-events-none">
     <div class="flex justify-between mb-1"><span class="text-slate-400">Compression:</span><span class="text-emerald-400">{{ debug.data.compression }}</span></div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Groundedness:</span><span class="text-emerald-400">{{ debug.data.groundedness }}</span></div>
+    <div class="flex justify-between mb-1"><span class="text-slate-400">Control Groundedness:</span><span class="text-emerald-400">{{ debug.data.controlGroundedness }}</span></div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Penetration:</span><span class="text-emerald-400">{{ debug.data.penetration }}</span></div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Vert Velocity:</span><span class="text-emerald-400">{{ debug.data.vvel }}</span></div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Horiz Speed:</span><span class="text-emerald-400">{{ debug.data.speed }}</span></div>

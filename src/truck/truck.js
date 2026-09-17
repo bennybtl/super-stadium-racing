@@ -438,7 +438,7 @@ export class Truck {
       }
     }
 
-    const { groundedness, penetration } = profile(
+    const { groundedness, controlGroundedness, penetration } = profile(
       'truck.terrainPhysics',
       () => this.terrainPhysics.update(this.mesh, deltaTime, track, {
         lowDetail: terrainLowDetail,
@@ -499,21 +499,21 @@ export class Truck {
     const { effectiveTurnSpeed, effectiveGrip, rearTractionFactor, throttleBreak } = profile(
       'truck.controls.speedFactors',
       () => this.controls.calculateSpeedFactors(
-        hSpeed, terrainGripMultiplier, groundedness, input, deltaTime
+        hSpeed, terrainGripMultiplier, controlGroundedness, input, deltaTime
       )
     );
 
     // Handle input
     profile('truck.controls.steering', () =>
-      this.controls.updateSteering(input, effectiveTurnSpeed, groundedness, deltaTime)
+      this.controls.updateSteering(input, effectiveTurnSpeed, controlGroundedness, deltaTime)
     );
     profile('truck.controls.acceleration', () =>
-      this.controls.updateAcceleration(input, this._forward, groundedness, deltaTime)
+      this.controls.updateAcceleration(input, this._forward, controlGroundedness, deltaTime)
     );
 
     // Apply drag
     profile('truck.drag', () =>
-      this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, groundedness)
+      this.driftPhysics.applyDrag(speed, input, deltaTime, terrainDragMultiplier, controlGroundedness)
     );
 
     // Apply grip and drift physics — rearTractionFactor encodes weight transfer:
@@ -704,6 +704,7 @@ export class Truck {
       const payload = this._debugInfo;
       payload.compression = this.state.suspensionCompression;
       payload.groundedness = groundedness;
+      payload.controlGroundedness = controlGroundedness;
       payload.penetration = penetration;
       payload.verticalVelocity = this.state.velocity.y;
       payload.speed = speed;

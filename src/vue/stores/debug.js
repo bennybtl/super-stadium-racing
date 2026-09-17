@@ -6,7 +6,7 @@ export const useDebugStore = defineStore('debug', () => {
   const visible = ref(false);
   const showBridgeDriveSurfaces = ref(false);
   const data = reactive({
-    compression: '-', groundedness: '-', penetration: '-',
+    compression: '-', groundedness: '-', controlGroundedness: '-', penetration: '-',
     vvel: '-', speed: '-', grip: '-', slip: '-',
     terrain: '-', slope: '-', x: '0.00', y: '0.00', z: '0.00',
     nx: '0.000', ny: '1.000', nz: '0.000',

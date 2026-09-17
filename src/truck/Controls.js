@@ -110,8 +110,8 @@ export class Controls {
     this._loadShift = 0; // smoothed weight-transfer direction, -1 (front/brake) .. 1 (rear/throttle)
   }
 
-  updateSteering(input, effectiveTurnSpeed, groundedness, deltaTime) {
-    if (groundedness > GROUNDEDNESS.STEER) {
+  updateSteering(input, effectiveTurnSpeed, controlGroundedness, deltaTime) {
+    if (controlGroundedness > GROUNDEDNESS.STEER) {
       // Invert steering when reversing so the truck turns the natural direction
       this._forward.set(Math.sin(this.state.heading), 0, Math.cos(this.state.heading));
       const fwdSpeed = this.state.velocity.dot(this._forward);
@@ -138,7 +138,7 @@ export class Controls {
       // Snap steering dead-center while suppressed so heading holds through the bounce.
       if (steerSuppressed) this._steerAmount = 0;
 
-      const delta = steerSign * effectiveTurnSpeed * groundedness * deltaTime * this._steerAmount;
+      const delta = steerSign * effectiveTurnSpeed * controlGroundedness * deltaTime * this._steerAmount;
       this.state.heading += delta;
 
       // Remember the rate so it can carry over the moment the wheels leave the ground.
@@ -151,7 +151,7 @@ export class Controls {
     }
   }
 
-  updateAcceleration(input, forward, groundedness, deltaTime) {
+  updateAcceleration(input, forward, controlGroundedness, deltaTime) {
     // Boost is treated as its own propulsion source: if active, keep driving
     // forward even when throttle is released (unless player/AI is braking).
     const boostProvidesThrottle = (this.state.boostActive || this.state.speedBoostActive) && !input.back;
@@ -161,7 +161,7 @@ export class Controls {
     // gate below, so it never goes stale mid-air.
     this.state.throttle = (input.forward || boostProvidesThrottle) ? 1 : 0;
 
-    if (groundedness <= GROUNDEDNESS.STEER) return;
+    if (controlGroundedness <= GROUNDEDNESS.STEER) return;
 
     // Clear brake-to-stop flag when back button is released
     if (!input.back && this.lastBackInput) {
@@ -341,7 +341,7 @@ export class Controls {
     return base;
   }
 
-  calculateSpeedFactors(speed, terrainGripMultiplier, groundedness, input, deltaTime = 1 / 60) {
+  calculateSpeedFactors(speed, terrainGripMultiplier, controlGroundedness, input, deltaTime = 1 / 60) {
     const speedRatio = Math.min(speed / this.state.maxSpeed, 1);
 
     // Detect acceleration state for weight-transfer model.
@@ -382,7 +382,7 @@ export class Controls {
     const effectiveTurnSpeed = this.state.turnSpeed * steerAuthority;
 
     const lateralGripFactor = Math.max(MIN_LATERAL_GRIP_FACTOR, 1 - speedRatio * LATERAL_GRIP_SPEED_TAPER);
-    const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * groundedness * (this.state.plantedness ?? 1);
+    const effectiveGrip = this.state.grip * lateralGripFactor * terrainGripMultiplier * controlGroundedness * (this.state.plantedness ?? 1);
 
     const rearTractionFactor = Math.max(MIN_REAR_TRACTION,
       1.0 - rearLoad * THROTTLE_REAR_UNLOAD - frontLoad * BRAKE_REAR_UNLOAD);
@@ -398,7 +398,7 @@ export class Controls {
     const surfaceLoose = Math.max(0, Math.min(1,
       SURFACE_LOOSE_GAIN / Math.max(SURFACE_LOOSE_MIN_GRIP, terrainGripMultiplier) - SURFACE_LOOSE_BIAS));
     const throttleBreakTarget = isAccelerating
-      ? Math.min(MAX_THROTTLE_BREAK, lowSpeedFactor * surfaceLoose * THROTTLE_BREAK_STRENGTH * wt * groundedness)
+      ? Math.min(MAX_THROTTLE_BREAK, lowSpeedFactor * surfaceLoose * THROTTLE_BREAK_STRENGTH * wt * controlGroundedness)
       : 0;
     // Ease toward the target so key presses/releases ramp the break instead of
     // stepping the grip multiplier (and the drift-speed gate it also feeds).

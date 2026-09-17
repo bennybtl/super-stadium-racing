@@ -164,6 +164,12 @@ export class TerrainPhysics {
     this._normalSampleInterval = Math.max(0, options?.normalSampleInterval ?? 0);
     this._normalSampleTimer = 0;
     this._smoothedGroundedness = 0;
+    // Real (unfaked) suspension compression and its derived groundedness — see
+    // the comment above DOWNHILL_MIN_NORMAL_Y. Tracked separately from
+    // state.suspensionCompression (which the downhill-follow passes inject
+    // into for visual smoothness) so control authority can't be fooled by them.
+    this._controlCompression = 0;
+    this._smoothedControlGroundedness = 0;
     this._plantedness = 1;
     this._multiProbeSurfaceSampling = options?.multiProbeSurfaceSampling === true;
     this._multiProbeHalfTrack = Math.max(0, options?.multiProbeHalfTrack ?? 0.45);
@@ -211,7 +217,7 @@ export class TerrainPhysics {
     );
     const forward = this._forwardVector();
 
-    const groundedness = this._updateSuspension(mesh, track, penetration, forward, hSpeed, lowDetail, centerY);
+    const { groundedness, controlGroundedness } = this._updateSuspension(mesh, track, penetration, forward, hSpeed, lowDetail, centerY);
 
     if (groundedness > ORIENTATION.groundednessThreshold && track) {
       this.updateTerrainOrientation(mesh, deltaTime);
@@ -228,7 +234,10 @@ export class TerrainPhysics {
     sn.z += (this._lastFloorNormal.z - sn.z) * nf;
     normalizeOr(sn, 0, 1, 0);
 
-    const isGrounded = groundedness > ORIENTATION.groundednessThreshold;
+    // controlGroundedness, not the cosmetic groundedness above: this strip
+    // affects the actual trajectory, so it must not be fooled by the downhill
+    // passes' fake-grounded boost near steep terrain (see DOWNHILL_MIN_NORMAL_Y).
+    const isGrounded = controlGroundedness > ORIENTATION.groundednessThreshold;
 
     // While grounded, project velocity onto the surface tangent plane.
     // This strips the into-surface component, naturally giving the correct velocity.y
@@ -259,16 +268,28 @@ export class TerrainPhysics {
     this._updatePitch(deltaTime, forward, hSpeed, penetration);
 
     // Low-pass the published groundedness. The compression path is already
-    // smooth, but the downhill-boost pass steps it to 0.8 and back, and grip /
-    // steering authority multiply by it directly. Snap inside the epsilon band
-    // so exact 0/1 endpoints survive for downstream `<= 0` airborne checks.
+    // smooth, but the downhill-boost pass steps it to 0.8 and back. Snap
+    // inside the epsilon band so exact 0/1 endpoints survive for downstream
+    // `<= 0` airborne checks.
     const gf = 1 - Math.exp(-GROUNDEDNESS_SMOOTHING_RATE * deltaTime);
     this._smoothedGroundedness += (groundedness - this._smoothedGroundedness) * gf;
     if (Math.abs(groundedness - this._smoothedGroundedness) < GROUNDEDNESS_SNAP_EPS) {
       this._smoothedGroundedness = groundedness;
     }
 
-    return { groundedness: this._smoothedGroundedness, penetration };
+    // Same low-pass, applied to controlGroundedness — the signal grip / steering
+    // / throttle authority actually multiply by. Matched timing to the cosmetic
+    // value above so the two don't feel offset from each other.
+    this._smoothedControlGroundedness += (controlGroundedness - this._smoothedControlGroundedness) * gf;
+    if (Math.abs(controlGroundedness - this._smoothedControlGroundedness) < GROUNDEDNESS_SNAP_EPS) {
+      this._smoothedControlGroundedness = controlGroundedness;
+    }
+
+    return {
+      groundedness: this._smoothedGroundedness,
+      controlGroundedness: this._smoothedControlGroundedness,
+      penetration,
+    };
   }
 
   /**
@@ -735,14 +756,29 @@ export class TerrainPhysics {
   /**
    * Compute suspension compression and groundedness from the current penetration.
    * Handles both downhill terrain-following passes.
-   * @returns {number} groundedness (0–1)
+   *
+   * Returns two groundedness values. `groundedness` is cosmetic — response
+   * smoothing for the visual body, terrain-orientation snap, roughness bumps —
+   * and the downhill passes are allowed to inject fake compression into it for
+   * smooth visuals on bumpy descents. `controlGroundedness` drives everything
+   * that actually moves the truck (steering/throttle authority, grip, the
+   * into-surface velocity strip in update()) and is derived from real
+   * (unfaked) compression only, so it can't be fooled by those passes — see
+   * DOWNHILL_MIN_NORMAL_Y above for why that matters on steep terrain.
+   *
+   * @returns {{ groundedness: number, controlGroundedness: number }}
    */
   _updateSuspension(mesh, track, penetration, forward, speed, lowDetail = false, centerFloorY = null) {
     const hasSurfaceSampling = !!this._terrainQuery || !!track;
     // Base compression from current overlap depth.
     let baseCompression = Math.max(0, Math.min(1, penetration / SPRING.compressionNorm));
+    // Captured before the downhill passes can override baseCompression — the
+    // "real" reading control authority is derived from.
+    const realBaseCompression = baseCompression;
 
     if (lowDetail) {
+      // Neither downhill pass runs in low detail, so there's nothing for
+      // real/cosmetic compression to diverge on — one value serves both.
       const targetCompression = baseCompression > 0
         ? baseCompression * SUSPENSION.compressionBaseScale +
           Math.max(0, -this.state.velocity.y * SUSPENSION.velCompressionFactor)
@@ -753,7 +789,8 @@ export class TerrainPhysics {
       this.state.suspensionCompression =
         Math.max(0, Math.min(SUSPENSION.maxCompression, this.state.suspensionCompression));
 
-      return Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
+      const g = Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
+      return { groundedness: g, controlGroundedness: g };
     }
 
     const fromY = mesh.position.y + RAY_OFFSET;
@@ -807,6 +844,8 @@ export class TerrainPhysics {
 
     // Pass 2: boost groundedness when clearly tracking a descending slope. Uses
     // the fall line too, so cornering across a downhill doesn't drop grounding.
+    // Cosmetic only — see the docstring above for why control authority never
+    // reads this boost.
     if (
       groundedness < DOWNHILL_BOOST.groundedness &&
       penetration > -DOWNHILL_BOOST.maxGap &&
@@ -820,6 +859,16 @@ export class TerrainPhysics {
       groundedness = Math.max(groundedness, DOWNHILL_BOOST.groundedness);
     }
 
-    return groundedness;
+    // Real compression pipeline — identical shape to the cosmetic one above,
+    // but fed from realBaseCompression so neither downhill pass can inflate it.
+    const controlTargetCompression = realBaseCompression > 0
+      ? realBaseCompression * SUSPENSION.compressionBaseScale +
+        Math.max(0, -this.state.velocity.y * SUSPENSION.velCompressionFactor)
+      : 0;
+    this._controlCompression += (controlTargetCompression - this._controlCompression) * SUSPENSION.smoothing;
+    this._controlCompression = Math.max(0, Math.min(SUSPENSION.maxCompression, this._controlCompression));
+    const controlGroundedness = Math.min(1, this._controlCompression / SUSPENSION.groundednessRef);
+
+    return { groundedness, controlGroundedness };
   }
 }

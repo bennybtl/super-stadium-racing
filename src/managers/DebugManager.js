@@ -683,6 +683,7 @@ export class DebugManager {
     const d = this._store.data;
     d.compression  = (debugInfo.compression        ?? 0).toFixed(2);
     d.groundedness = (debugInfo.groundedness        ?? 0).toFixed(2);
+    d.controlGroundedness = (debugInfo.controlGroundedness ?? 0).toFixed(2);
     d.penetration  = (debugInfo.penetration         ?? 0).toFixed(3);
     d.vvel         = (debugInfo.verticalVelocity    ?? 0).toFixed(2);
     d.speed        = (debugInfo.speed               ?? 0).toFixed(2);
