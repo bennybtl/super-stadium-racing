@@ -259,21 +259,6 @@ export class TerrainPhysics {
       const normal = this._lastFloorNormal;
       const vIntoSurface = this.state.velocity.dot(normal);
       if (vIntoSurface < 0) {
-        // DEBUG: a real, sizeable strip while penetration is still negative
-        // (i.e. the truck reads as above the sampled floor by the naive
-        // vertical metric) is the signature of a fake-grounded strip killing
-        // airborne momentum near a slope. Remove once confirmed fixed.
-        if (penetration < 0 && vIntoSurface < -2) {
-          console.warn('[TerrainPhysics] velocity strip fired while penetration < 0', {
-            penetration: +penetration.toFixed(3),
-            vIntoSurface: +vIntoSurface.toFixed(2),
-            groundedness: +groundedness.toFixed(3),
-            controlGroundedness: +controlGroundedness.toFixed(3),
-            normalY: +normal.y.toFixed(3),
-            velBefore: { x: +this.state.velocity.x.toFixed(2), y: +this.state.velocity.y.toFixed(2), z: +this.state.velocity.z.toFixed(2) },
-            pos: { x: +mesh.position.x.toFixed(1), y: +mesh.position.y.toFixed(1), z: +mesh.position.z.toFixed(1) },
-          });
-        }
         // Truck is moving into the surface — remove that component
         this.state.velocity.x -= normal.x * vIntoSurface;
         this.state.velocity.y -= normal.y * vIntoSurface;
@@ -307,11 +292,21 @@ export class TerrainPhysics {
     // Same low-pass, applied to controlGroundedness — the signal grip / steering
     // / throttle authority actually multiply by. Matched timing to the cosmetic
     // value above so the two don't feel offset from each other.
-    const hadControlAuthority = this._smoothedControlGroundedness > GROUNDEDNESS.STEER;
     this._smoothedControlGroundedness += (controlGroundedness - this._smoothedControlGroundedness) * gf;
     if (Math.abs(controlGroundedness - this._smoothedControlGroundedness) < GROUNDEDNESS_SNAP_EPS) {
       this._smoothedControlGroundedness = controlGroundedness;
     }
+    // A gap under the truck deeper than either downhill pass can bridge means
+    // no wheel is touching anything: control authority ends now, not ~0.4 s
+    // later when the compression + publish low-passes finally tail off. Same
+    // "trust the real gap, not the smoothed value" reasoning as _updatePitch.
+    // Ordinary driving never sees this (the passes own gaps up to maxGap; the
+    // suspension lag at speed is in the 15-40 cm range) and the cosmetic value
+    // keeps its smoothing, so only genuine liftoff changes. Without it the
+    // lateral scrub in applyGripAndDrift — a fixed rate, not scaled by grip —
+    // kept working on the airborne truck through that tail, bleeding half its
+    // launch momentum before the low-pass reached zero.
+    if (penetration < -DOWNHILL_BOOST.maxGap) this._smoothedControlGroundedness = 0;
 
     return {
       groundedness: this._smoothedGroundedness,
@@ -788,6 +783,28 @@ export class TerrainPhysics {
   }
 
   /**
+   * Low-pass state.suspensionCompression toward `targetCompression` and return
+   * the raw (pre-publish) groundedness it implies.
+   *
+   * The exponential decay after liftoff never reaches zero on its own, so once
+   * it drops below the published snap band it is clamped to exactly 0. That
+   * exact zero matters: applyDrag's airborne test and applyGripAndDrift's
+   * early-out both check `<= 0`, and a leftover 1e-6 kept the ground drag and
+   * the lateral-velocity scrub (whose low-speed damp and grip-zone bite are
+   * fixed rates, not scaled by grip) running for the whole flight — enough to
+   * swing an airborne truck's momentum around toward whatever its nose was
+   * pointing at.
+   */
+  _smoothCompression(targetCompression) {
+    let c = this.state.suspensionCompression;
+    c += (targetCompression - c) * SUSPENSION.smoothing;
+    c = Math.max(0, Math.min(SUSPENSION.maxCompression, c));
+    if (targetCompression <= 0 && c < SUSPENSION.groundednessRef * GROUNDEDNESS_SNAP_EPS) c = 0;
+    this.state.suspensionCompression = c;
+    return Math.min(1, c / SUSPENSION.groundednessRef);
+  }
+
+  /**
    * Compute suspension compression and groundedness from the current penetration.
    * Handles both downhill terrain-following passes.
    *
@@ -834,12 +851,7 @@ export class TerrainPhysics {
           Math.max(0, -this.state.velocity.y * SUSPENSION.velCompressionFactor)
         : 0;
 
-      this.state.suspensionCompression +=
-        (targetCompression - this.state.suspensionCompression) * SUSPENSION.smoothing;
-      this.state.suspensionCompression =
-        Math.max(0, Math.min(SUSPENSION.maxCompression, this.state.suspensionCompression));
-
-      const g = Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
+      const g = this._smoothCompression(targetCompression);
       return { groundedness: g, controlGroundedness: steepFalseReading ? 0 : g };
     }
 
@@ -885,12 +897,7 @@ export class TerrainPhysics {
         Math.max(0, -this.state.velocity.y * SUSPENSION.velCompressionFactor)
       : 0;
 
-    this.state.suspensionCompression +=
-      (targetCompression - this.state.suspensionCompression) * SUSPENSION.smoothing;
-    this.state.suspensionCompression =
-      Math.max(0, Math.min(SUSPENSION.maxCompression, this.state.suspensionCompression));
-
-    let groundedness = Math.min(1, this.state.suspensionCompression / SUSPENSION.groundednessRef);
+    let groundedness = this._smoothCompression(targetCompression);
 
     // Pass 2: boost groundedness when clearly tracking a descending slope. Uses
     // the fall line too, so cornering across a downhill doesn't drop grounding.
