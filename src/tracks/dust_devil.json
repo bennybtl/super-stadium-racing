@@ -6,6 +6,7 @@
   "dirtChunks": false,
   "grassBlades": true,
   "oobDeadSpace": true,
+  "allowReverse": true,
   "borderWall": {
     "enabled": true,
     "thickness": 3.5,

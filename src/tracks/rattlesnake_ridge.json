@@ -5,6 +5,7 @@
   "hidden": false,
   "dirtChunks": true,
   "oobDeadSpace": true,
+  "allowReverse": true,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
