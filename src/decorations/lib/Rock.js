@@ -1,43 +1,89 @@
-import { MeshBuilder, Mesh, Matrix, VertexBuffer } from "@babylonjs/core";
+import { MeshBuilder, Matrix, VertexBuffer } from "@babylonjs/core";
 import { makeRng, hashSeed } from "../../objects/scatter-utils.js";
 
 /**
  * ProceduralRock — deterministic low-poly rock geometry.
  *
- * A cluster of 1–3 jittered boulders. Unlike Bush.js's radial (blob-shaped)
- * jitter, each vertex here is scaled independently per axis, which tears the
- * shared octahedron into flat, angular facets once convertToFlatShadedMesh
- * runs — reads as chipped stone rather than a round pebble. Given the same
+ * A single polyhedron, not several fused together. Mesh.MergeMeshes is a
+ * plain concatenation, not a boolean union — nesting one closed solid inside
+ * another still leaves both surfaces in the buffer, so wherever they cross
+ * you see the seam, reading as stacked objects rather than one rock. Instead,
+ * all the variety comes from deforming ONE mesh's own shared vertices:
+ *   - a random base solid (ROCK_POLY_TYPES, 6-24 shared vertices)
+ *   - an angular per-axis jitter
+ *   - a handful of asymmetric "bump" swells pushed out from random directions
+ * before convertToFlatShadedMesh bakes the low-poly facets in. Given the same
  * options it always produces the same rock.
  */
 
 export const ROCK_DEFAULTS = {
-  radius: 0.6, // main boulder radius
+  radius: 0.6, // overall size
   seed: 1,
 };
 
-const ROCK_POLY = 1; // octahedron — fewer, bigger facets than the bush's icosahedron
-const MIN_ROCKS = 1;
-const MAX_ROCKS = 3;
+// Babylon polyhedron `type` values, spanning a range of shared-vertex counts
+// so rocks vary from simple facets to denser, more detailed chunks.
+const ROCK_POLY_TYPES = [
+  1,  // Octahedron                        6 verts,  8 faces
+  6,  // Pentagonal Prism                 10 verts,  7 faces
+  12, // Elongated Square Dipyramid (J15) 10 verts, 12 faces
+  3,  // Icosahedron                      12 verts, 20 faces
+  7,  // Hexagonal Prism                  12 verts,  8 faces
+  13, // Elongated Pentagonal Dipyramid (J16) 12 verts, 15 faces
+  2,  // Dodecahedron                     20 verts, 12 faces
+  4,  // Rhombicuboctahedron              24 verts, 26 faces
+];
+
+const BUMPS_MIN = 2;
+const BUMPS_MAX = 4;
 
 /** Scale each shared vertex independently per axis for an angular chunk. */
-function jitter(mesh, rand) {
+function axisJitter(mesh, rand) {
   const pos = mesh.getVerticesData(VertexBuffer.PositionKind);
   for (let i = 0; i < pos.length; i += 3) {
-    pos[i]     *= 0.7 + rand() * 0.6;
-    pos[i + 1] *= 0.6 + rand() * 0.7;
-    pos[i + 2] *= 0.7 + rand() * 0.6;
+    pos[i]     *= 0.65 + rand() * 0.7;
+    pos[i + 1] *= 0.55 + rand() * 0.75;
+    pos[i + 2] *= 0.65 + rand() * 0.7;
   }
   mesh.updateVerticesData(VertexBuffer.PositionKind, pos);
 }
 
-function chunk(name, x, y, z, r, rand, scene) {
-  const m = MeshBuilder.CreatePolyhedron(name, {
-    type: ROCK_POLY, size: r, flat: false,
-  }, scene);
-  jitter(m, rand);
-  m.bakeTransformIntoVertices(Matrix.RotationY(rand() * Math.PI * 2).multiply(Matrix.Translation(x, y, z)));
-  return m;
+/**
+ * Push vertices outward from a few random directions, so the silhouette
+ * swells asymmetrically instead of the axis jitter's uniform egg/box shape.
+ * Cheap stand-in for real 3D noise: each "bump" is a direction + strength; a
+ * vertex whose own direction from center aligns with it gets pushed out more.
+ */
+function bumpDeform(mesh, rand) {
+  const bumps = [];
+  const n = BUMPS_MIN + Math.floor(rand() * (BUMPS_MAX - BUMPS_MIN + 1));
+  for (let b = 0; b < n; b++) {
+    const theta = rand() * Math.PI * 2;
+    const phi = Math.acos(rand() * 2 - 1);
+    bumps.push({
+      x: Math.sin(phi) * Math.cos(theta),
+      y: Math.cos(phi),
+      z: Math.sin(phi) * Math.sin(theta),
+      strength: 0.2 + rand() * 0.3,
+    });
+  }
+
+  const pos = mesh.getVerticesData(VertexBuffer.PositionKind);
+  for (let i = 0; i < pos.length; i += 3) {
+    const x = pos[i], y = pos[i + 1], z = pos[i + 2];
+    const len = Math.hypot(x, y, z) || 1;
+    const nx = x / len, ny = y / len, nz = z / len;
+    let push = 1;
+    for (const b of bumps) {
+      const d = Math.max(0, nx * b.x + ny * b.y + nz * b.z);
+      push += b.strength * d * d * d;
+    }
+    push = Math.min(push, 1.7);
+    pos[i] = x * push;
+    pos[i + 1] = y * push;
+    pos[i + 2] = z * push;
+  }
+  mesh.updateVerticesData(VertexBuffer.PositionKind, pos);
 }
 
 export class ProceduralRock {
@@ -50,32 +96,36 @@ export class ProceduralRock {
     const o = { ...ROCK_DEFAULTS, ...options };
     const rand = makeRng(hashSeed(String(o.seed)));
 
-    const parts = [];
-    const rocks = MIN_ROCKS + Math.floor(rand() * (MAX_ROCKS - MIN_ROCKS + 1));
-    let height = 0;
+    const type = ROCK_POLY_TYPES[Math.floor(rand() * ROCK_POLY_TYPES.length)];
+    const m = MeshBuilder.CreatePolyhedron(`rockBody_${o.seed}`, {
+      type, size: o.radius, flat: false,
+    }, scene);
 
-    for (let i = 0; i < rocks; i++) {
-      // First rock sits centered and largest; any extras scatter beside it,
-      // smaller, so the cluster reads as one outcrop, not a random pile.
-      const r = o.radius * (i === 0 ? (0.85 + rand() * 0.3) : (0.35 + rand() * 0.35));
-      const ang = rand() * Math.PI * 2;
-      const dist = i === 0 ? 0 : o.radius * (0.5 + rand() * 0.4);
-      const cx = Math.cos(ang) * dist;
-      const cz = Math.sin(ang) * dist;
-      const cy = r * (0.5 + rand() * 0.15); // partly embedded in the ground
+    axisJitter(m, rand);
+    bumpDeform(m, rand);
 
-      parts.push(chunk(`r${i}`, cx, cy, cz, r, rand, scene));
-      height = Math.max(height, cy + r);
+    const tumble = Matrix.RotationY(rand() * Math.PI * 2)
+      .multiply(Matrix.RotationX((rand() - 0.5) * Math.PI * 0.6))
+      .multiply(Matrix.RotationZ((rand() - 0.5) * Math.PI * 0.6));
+    m.bakeTransformIntoVertices(tumble);
+
+    // Settle it onto the ground: lift so the lowest point sits a little below
+    // y=0, like a real rock partly embedded rather than floating on top.
+    const pos = m.getVerticesData(VertexBuffer.PositionKind);
+    let minY = Infinity, maxY = -Infinity;
+    for (let i = 1; i < pos.length; i += 3) {
+      minY = Math.min(minY, pos[i]);
+      maxY = Math.max(maxY, pos[i]);
     }
+    const embed = o.radius * (0.1 + rand() * 0.1);
+    const lift = -minY - embed;
+    m.bakeTransformIntoVertices(Matrix.Translation(0, lift, 0));
 
-    const merged = Mesh.MergeMeshes(parts, true, true, undefined, false, false);
-    if (!merged) return { rock: null, height: 0 };
-    merged.name = `rockBody_${o.seed}`;
-    merged.convertToFlatShadedMesh();
-    merged.isVisible = false; // instances still render; this only hides the source
-    merged.isPickable = false;
-    merged.freezeWorldMatrix();
+    m.convertToFlatShadedMesh();
+    m.isVisible = false; // instances still render; this only hides the source
+    m.isPickable = false;
+    m.freezeWorldMatrix();
 
-    return { rock: merged, height };
+    return { rock: m, height: maxY + lift };
   }
 }

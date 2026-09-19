@@ -1,11 +1,11 @@
 import { StandardMaterial, Color3 } from "@babylonjs/core";
-import { basicColors } from "../constants.js";
+import { foliageColors, FOLIAGE_COLOR_OPTIONS } from "../constants.js";
 import { ProceduralBush, BUSH_DEFAULTS } from "./lib/Bush.js";
 import { instancedDecoration } from "./lib/instanced-decoration.js";
 
 const DEFAULT_LEAF = "green";
 
-const tint = (name, fallback) => (basicColors[name] ?? basicColors[fallback]).diffuse;
+const tint = (name, fallback) => (foliageColors[name] ?? foliageColors[fallback]).diffuse;
 
 /**
  * Procedural bush — a dense clump of overlapping foliage blobs. Geometry in
@@ -30,9 +30,8 @@ export default instancedDecoration({
   buildVariant(scene, p, key) {
     const { foliage, height } = ProceduralBush.buildMasters(scene, p);
 
-    // basicColors are UI-bright; foliage wants a darker, flatter forest green.
     const mat = new StandardMaterial(`bushFoliage_${key}`, scene);
-    mat.diffuseColor = tint(p.leafColor, DEFAULT_LEAF).scale(0.5);
+    mat.diffuseColor = tint(p.leafColor, DEFAULT_LEAF);
     mat.specularColor = Color3.Black();
 
     if (foliage) foliage.material = mat;
@@ -41,7 +40,7 @@ export default instancedDecoration({
   },
 
   controls: {
-    color:   { type: "color", label: "Foliage" },
+    color:   { type: "color", label: "Foliage", options: FOLIAGE_COLOR_OPTIONS },
     seed:    { type: "range", label: "Variant",  min: 1,   max: 40,  step: 1, random: true },
     scale:   { type: "range", label: "Scale",    min: 0.5, max: 4,   step: 0.1, unit: "×" },
     heading: { type: "range", label: "Rotation", min: 0,   max: 360, step: 1,   unit: "°" },

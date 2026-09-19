@@ -8,22 +8,23 @@ const SAVE_INTERVAL_MS = 15000;
  * Owns the scene's one shared TireMarks ring plus its persistence.
  *
  * At construction, replays whatever streaks were saved last session straight
- * into the ring (via the same appendStreak every live truck streak goes
- * through), using a generic terrain-height/colour sampler since there's no
- * real truck to ask yet. During play, every truck's TireMarkWriter calls
- * appendStreak here (not on the ring directly) — this keeps the completed
- * streak in an in-memory FIFO (capped at TIRE_MARKS_MAX_STREAKS) and
- * periodically saves it, so persistence stays current without saving on
- * every single streak.
+ * into the ring's history region (see TireMarks.appendHistory), using a
+ * generic terrain-height/colour sampler since there's no real truck to ask
+ * yet. During play, drawing itself is real-time and happens directly on the
+ * ring (see TireMarkWriter.writeLiveNode) — this manager only hears about a
+ * streak once it's *finished* (recordCompletedStreak), purely to keep an
+ * in-memory FIFO (capped at TIRE_MARKS_MAX_STREAKS) and periodically save it,
+ * so persistence stays current without saving on every single streak, and
+ * without gating what's already on screen.
  *
  * Attach one instance to track._sharedTireMarks (see SceneBuilder.js) so
  * truck.js can reach it through the `track` reference it already receives
  * every frame.
  */
 export class SharedTireMarksManager {
-  constructor(scene, trackKey, terrainManager, { capacity } = {}) {
+  constructor(scene, trackKey, terrainManager, ringOptions = {}) {
     this._trackKey = trackKey;
-    this.ring = new TireMarks(scene, { capacity });
+    this.ring = new TireMarks(scene, ringOptions);
     this._streaks = loadTireMarkStreaks(trackKey);
     this._unsaved = false;
     this._lastSaveAt = performance.now();
@@ -35,17 +36,16 @@ export class SharedTireMarksManager {
     const replaySampleY = (x, z, fromY) => terrainQuery.heightAt(x, z, fromY);
     const replayColorForPoint = (x, z) => tireMarkColorForTerrain(terrainManager?.getTerrainAt?.({ x, z })?.color);
     for (const streak of this._streaks) {
-      // appendStreak calls sampleY(x, z, fromY + 1) — a high fromY here (there's
-      // no real truck position to take one from) so the raycast starts above
-      // anything on the track, including an elevated bridge deck, rather than
-      // punching through it from below.
-      this.ring.appendStreak(streak.points, { sampleY: replaySampleY, fromY: 499, colorForPoint: replayColorForPoint });
+      // appendHistory calls sampleY(x, z, fromY + 1) — a high fromY here
+      // (there's no real truck position to take one from) so the raycast
+      // starts above anything on the track, including an elevated bridge
+      // deck, rather than punching through it from below.
+      this.ring.appendHistory(streak.points, { sampleY: replaySampleY, fromY: 499, colorForPoint: replayColorForPoint });
     }
   }
 
-  /** Called by TireMarkWriter when a truck's streak completes. */
-  appendStreak(points, opts) {
-    this.ring.appendStreak(points, opts);
+  /** Called by TireMarkWriter once a truck's streak ends — persistence bookkeeping only, already drawn live. */
+  recordCompletedStreak(points) {
     this._streaks.push({ points });
     if (this._streaks.length > TIRE_MARKS_MAX_STREAKS) this._streaks.shift();
     this._unsaved = true;

@@ -648,10 +648,10 @@ export class Truck {
           heading: this.state.heading,
           strength: canMark ? Math.max(driftMark, brakeMark) : 0,
           sampleY: this._surfaceSampler,
-          // Deferred to whenever a streak actually completes (see
-          // TireMarks.appendStreak) rather than baked in per-frame — terrain
-          // colour is static, so recomputing it there gives the identical
-          // result and lets a replayed streak resolve colour the same way.
+          // Resolved fresh per node rather than once per frame from `terrain`
+          // — terrain colour is static, so this gives the identical result
+          // and lets a replayed streak (see TireMarks.appendHistory) resolve
+          // colour the same way with nothing extra to persist.
           colorForPoint: (x, z) => tireMarkColorForTerrain(terrainManager?.getTerrainAt?.({ x, z })?.color),
         });
       });

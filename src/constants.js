@@ -47,6 +47,54 @@ export const basicColors = {
   magenta: { diffuse: new Color3(1.0, 0.3, 0.7), emissive: new Color3(0.4, 0.2, 0.4) }, // X
 };
 
+// A handful of foliage-appropriate greens for procedural plants (tree, bush,
+// cactus) — narrower than basicColors' full hue wheel, since "purple foliage"
+// isn't a look those decorations want to offer.
+export const foliageColors = {
+  green:  { diffuse: new Color3(0.16, 0.42, 0.18), emissive: new Color3(0.0, 0.0, 0.0) },
+  forest: { diffuse: new Color3(0.07, 0.28, 0.11), emissive: new Color3(0.0, 0.0, 0.0) },
+  olive:  { diffuse: new Color3(0.36, 0.38, 0.12), emissive: new Color3(0.0, 0.0, 0.0) },
+  sage:   { diffuse: new Color3(0.42, 0.50, 0.40), emissive: new Color3(0.0, 0.0, 0.0) },
+  lime:   { diffuse: new Color3(0.45, 0.62, 0.16), emissive: new Color3(0.0, 0.0, 0.0) },
+  // Autumn — only offered on the tree (see TREE_FOLIAGE_COLOR_OPTIONS), not
+  // bush/cactus, which don't have a "fall" look.
+  fall:   { diffuse: new Color3(0.60, 0.30, 0.08), emissive: new Color3(0.0, 0.0, 0.0) },
+};
+
+// Editor dropdown options for a foliageColors-restricted color control.
+export const FOLIAGE_COLOR_OPTIONS = [
+  { value: 'green',  label: 'Green' },
+  { value: 'forest', label: 'Forest' },
+  { value: 'olive',  label: 'Olive' },
+  { value: 'sage',   label: 'Sage' },
+  { value: 'lime',   label: 'Lime' },
+];
+
+// Tree-only: the base foliage set plus autumn.
+export const TREE_FOLIAGE_COLOR_OPTIONS = [
+  ...FOLIAGE_COLOR_OPTIONS,
+  { value: 'fall', label: 'Fall' },
+];
+
+// Stone-appropriate browns/tans/grays for the procedural rock — narrower than
+// basicColors' full hue wheel, since "purple rock" isn't a look it wants to offer.
+export const rockColors = {
+  gray:      { diffuse: new Color3(0.32, 0.32, 0.32), emissive: new Color3(0.0, 0.0, 0.0) },
+  slate:     { diffuse: new Color3(0.22, 0.24, 0.27), emissive: new Color3(0.0, 0.0, 0.0) },
+  tan:       { diffuse: new Color3(0.55, 0.46, 0.32), emissive: new Color3(0.0, 0.0, 0.0) },
+  brown:     { diffuse: new Color3(0.30, 0.22, 0.14), emissive: new Color3(0.0, 0.0, 0.0) },
+  sandstone: { diffuse: new Color3(0.62, 0.54, 0.40), emissive: new Color3(0.0, 0.0, 0.0) },
+};
+
+// Editor dropdown options for a rockColors-restricted color control.
+export const ROCK_COLOR_OPTIONS = [
+  { value: 'gray',      label: 'Gray' },
+  { value: 'slate',     label: 'Slate' },
+  { value: 'tan',       label: 'Tan' },
+  { value: 'brown',     label: 'Brown' },
+  { value: 'sandstone', label: 'Sandstone' },
+];
+
 export const TERRAIN_COLORS = {
   asphalt: new Color3(0.2, 0.2, 0.25),
   loamy_dirt: new Color3(0.39, 0.23, 0.13),

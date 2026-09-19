@@ -38,7 +38,7 @@
           :value="editor.decoration[prop]"
           @change="editor.setDecorationProp(prop, $event.target.value)"
         >
-          <option v-for="c in COLORS" :key="c.value" :value="c.value">{{ c.label }}</option>
+          <option v-for="c in (ctl.options ?? COLORS)" :key="c.value" :value="c.value">{{ c.label }}</option>
         </select>
       </template>
 

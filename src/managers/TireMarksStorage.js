@@ -3,7 +3,7 @@
 // streak's raw geometry is stored (position + perpendicular offset + alpha
 // per point), never colour or height, since both are cheaply recomputed at
 // replay time the same way a live streak computes them (see
-// TireMarks.appendStreak's `colorForPoint`/`sampleY`).
+// TireMarks.appendHistory's `colorForPoint`/`sampleY`).
 
 const STORAGE_PREFIX = "tireMarks_";
 export const TIRE_MARKS_SCHEMA_VERSION = 1;

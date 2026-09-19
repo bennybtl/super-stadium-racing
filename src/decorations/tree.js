@@ -1,12 +1,13 @@
 import { StandardMaterial, Color3 } from "@babylonjs/core";
-import { basicColors } from "../constants.js";
+import { basicColors, foliageColors, TREE_FOLIAGE_COLOR_OPTIONS } from "../constants.js";
 import { ProceduralTree, TREE_DEFAULTS } from "./lib/Tree.js";
 import { instancedDecoration } from "./lib/instanced-decoration.js";
 
 const DEFAULT_LEAF = "green";
 const DEFAULT_WOOD = "brown";
 
-const tint = (name, fallback) => (basicColors[name] ?? basicColors[fallback]).diffuse;
+const woodTint = (name, fallback) => (basicColors[name] ?? basicColors[fallback]).diffuse;
+const leafTint = (name, fallback) => (foliageColors[name] ?? foliageColors[fallback]).diffuse;
 
 /**
  * Procedural tree — a trunk with 1–4 primary branches, one distinct foliage blob
@@ -38,12 +39,11 @@ export default instancedDecoration({
     const { trunk, branch, leaf, height } = ProceduralTree.buildMasters(scene, p);
 
     const wood = new StandardMaterial(`treeWood_${key}`, scene);
-    wood.diffuseColor = tint(p.woodColor, DEFAULT_WOOD);
+    wood.diffuseColor = woodTint(p.woodColor, DEFAULT_WOOD);
     wood.specularColor = new Color3(0.02, 0.02, 0.02);
 
-    // basicColors are UI-bright; foliage wants a darker, flatter forest green.
     const foliage = new StandardMaterial(`treeLeaf_${key}`, scene);
-    foliage.diffuseColor = tint(p.leafColor, DEFAULT_LEAF).scale(0.5);
+    foliage.diffuseColor = leafTint(p.leafColor, DEFAULT_LEAF);
     foliage.specularColor = Color3.Black();
 
     if (trunk) trunk.material = wood;
@@ -54,7 +54,7 @@ export default instancedDecoration({
   },
 
   controls: {
-    color:   { type: "color", label: "Foliage" },
+    color:   { type: "color", label: "Foliage", options: TREE_FOLIAGE_COLOR_OPTIONS },
     seed:    { type: "range", label: "Variant",  min: 1,   max: 40,  step: 1, random: true },
     scale:   { type: "range", label: "Scale",    min: 0.5, max: 4,   step: 0.1, unit: "×" },
     heading: { type: "range", label: "Rotation", min: 0,   max: 360, step: 1,   unit: "°" },

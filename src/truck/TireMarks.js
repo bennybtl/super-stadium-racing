@@ -14,11 +14,24 @@ const DEFAULT_COLOR = [0, 0, 0]; // fallback: plain darken, if no terrain colour
 // fixed black/tan) keeps the mark's hue matched to whatever it's laid on.
 const TIRE_MARK_LIGHTEN_LUMINANCE = 0.5;
 const TIRE_MARK_WEAR_FACTOR = 0.22;
-// Ring slots zeroed (alpha only, not position) right after each appended
-// streak, so the quad bridging into whatever the ring holds next — possibly a
-// much older, still-visible mark landed there on a previous lap around the
-// buffer — never becomes visible until real content overwrites it.
+// Ring slots zeroed (alpha only, not position) right after a write, so the
+// quad bridging into whatever comes next — possibly a much older, still-
+// visible mark from a previous lap around that region — never becomes
+// visible until real content overwrites it.
 const ERASE_AHEAD = 2;
+// Real-time drawing region: each currently-marking truck side gets its own
+// reserved, fixed-size slice of the ring (assigned once, kept for the whole
+// session) so it can write node-by-node as it moves — exactly like the old
+// per-truck ring did — with zero risk of interleaving with another truck's
+// slot. ~1km of marks per side before a truck's own slot starts recycling.
+const LIVE_SLOT_CAPACITY = 2048;
+// Generous headroom over any realistic field size (2 sides per truck).
+const MAX_LIVE_SLOTS = 64;
+// Bulk-loaded, once, at construction — the previous session's saved streaks
+// (see TireMarksStorage / SharedTireMarksManager). Not written to again after
+// that, so one shared monotonic cursor is fine here (no live truck is
+// concurrently writing into it).
+const DEFAULT_HISTORY_CAPACITY = 20000;
 
 /** [r,g,b] (0-1) a tire mark should blend toward, given the terrain colour under it. */
 export function tireMarkColorForTerrain(terrainColor) {
@@ -38,51 +51,94 @@ export function tireMarkColorForTerrain(terrainColor) {
  * TireMarks — shared, persistent rubber laid down by every truck's rear
  * wheels, in ONE ring-buffer mesh for the whole track (not one per truck).
  *
- * Trucks never touch this directly while marking — see TireMarkWriter, which
- * accumulates one truck's in-progress streak locally and only hands off a
- * *completed* streak (appendStreak) once it ends. That means several trucks
- * marking at the same time never interfere with each other, and a completed
- * streak is also the natural unit for persistence: TireMarksStorage saves a
- * bounded list of the most recent completed streaks, and loading replays them
- * through this same appendStreak to reconstruct the ring's visible content
- * exactly.
- *
- * A streak's first and last point are written at alpha 0 (see TireMarkWriter)
- * so it fades in and tapers out rather than popping, and the quad bridging
- * two unrelated streaks that happen to land adjacent in ring order is
- * invisible at both ends.
+ * The mesh is carved into two kinds of region so marks still draw in real
+ * time (node by node, as the old per-truck ring did) while staying safe to
+ * share across trucks:
+ *  - a history region, bulk-written once at construction from last session's
+ *    saved streaks (see appendHistory) — nothing live touches it afterward;
+ *  - one reserved "live slot" per currently-marking truck side (see
+ *    allocateSlot/writeLiveNode), each with its own private write cursor, so
+ *    several trucks marking at once write into disjoint index ranges and
+ *    never interleave. See TireMarkWriter, which owns exactly when a live
+ *    node gets written vs. when a completed streak gets reported for
+ *    persistence — those are separate concerns now: rendering is real-time,
+ *    persistence just wants the finished shape once a streak ends.
  */
 export class TireMarks {
-  constructor(scene, { capacity = 20000 } = {}) {
-    this._capacity = capacity;
-    this._positions = new Float32Array(capacity * 2 * 3);
-    this._colors = new Float32Array(capacity * 2 * 4);
-    this._head = 0;
-    this.mesh = this._createMesh(scene, capacity);
+  constructor(scene, { historyCapacity = DEFAULT_HISTORY_CAPACITY, slotCapacity = LIVE_SLOT_CAPACITY, maxSlots = MAX_LIVE_SLOTS } = {}) {
+    this._historyCapacity = historyCapacity;
+    this._slotCapacity = slotCapacity;
+    this._maxSlots = maxSlots;
+    this._capacity = historyCapacity + slotCapacity * maxSlots;
+    this._positions = new Float32Array(this._capacity * 2 * 3);
+    this._colors = new Float32Array(this._capacity * 2 * 4);
+    this._historyHead = 0;
+    this._slotHeads = new Array(maxSlots).fill(0);
+    this._nextSlot = 0;
+    this._slotsByOwner = new Map(); // owner (e.g. a TireMarkWriter) -> [leftSlot, rightSlot]
+    this.mesh = this._createMesh(scene, this._capacity);
   }
 
   /**
-   * Append one completed streak (points in travel order): each
-   * `{ x, z, offsetX, offsetZ, alpha }` — offsetX/Z already scaled to half the
-   * mark width, perpendicular to travel. `y` is resolved here via `sampleY`
-   * (never stored — see TireMarksStorage), and colour is resolved here too via
-   * `colorForPoint(x, z)`, so a replayed streak recomputes the exact same
-   * terrain-matched colour a live one would.
+   * The pair of live slot indices reserved for `owner` (assigned once, on
+   * first request, then stable for the rest of the session). `owner` can be
+   * anything stable and unique per marking entity — TireMarkWriter passes
+   * itself. Slots are reused round-robin if more owners request one than
+   * `maxSlots` allows, which would let two trucks share a region on an
+   * unrealistically large field — degraded sharing, not a crash.
    */
-  appendStreak(points, { sampleY, fromY, colorForPoint }) {
+  allocateSlots(owner) {
+    let slots = this._slotsByOwner.get(owner);
+    if (!slots) {
+      slots = [this._nextSlot % this._maxSlots, (this._nextSlot + 1) % this._maxSlots];
+      this._nextSlot += 2;
+      this._slotsByOwner.set(owner, slots);
+    }
+    return slots;
+  }
+
+  /**
+   * Write one node into `slot`'s own region, in real time — the ring
+   * equivalent of the old per-truck ring's per-frame node write. `offsetX/Z`
+   * are already scaled to half the mark width, perpendicular to travel.
+   */
+  writeLiveNode(slot, x, y, z, offsetX, offsetZ, alpha, color) {
+    const base = this._historyCapacity + slot * this._slotCapacity;
+    const cursor = this._slotHeads[slot];
+    const node = base + cursor;
+    this._writeNode(node, x, y, z, offsetX, offsetZ, alpha, color);
+    this._uploadNode(node);
+
+    const next = (cursor + 1) % this._slotCapacity;
+    this._slotHeads[slot] = next;
+    for (let k = 0; k < ERASE_AHEAD; k++) {
+      const eraseNode = base + (next + k) % this._slotCapacity;
+      this._setAlpha(eraseNode, 0);
+      this._uploadNode(eraseNode);
+    }
+  }
+
+  /**
+   * Bulk-load one saved streak into the history region — used only for
+   * replaying last session's save at construction. Points: `{ x, z, offsetX,
+   * offsetZ, alpha }`. `y` is resolved here via `sampleY` (never stored — see
+   * TireMarksStorage), and colour via `colorForPoint(x, z)`, so a replayed
+   * streak resolves the exact same terrain-matched colour a live one would.
+   */
+  appendHistory(points, { sampleY, fromY, colorForPoint }) {
     if (!points || points.length === 0) return;
-    const startHead = this._head;
+    const startHead = this._historyHead;
     for (const p of points) {
       const y = sampleY(p.x, p.z, fromY + 1) + MARK_LIFT;
       const color = colorForPoint?.(p.x, p.z) ?? DEFAULT_COLOR;
-      this._writeNode(this._head, p.x, y, p.z, p.offsetX, p.offsetZ, p.alpha, color);
-      this._head = (this._head + 1) % this._capacity;
+      this._writeNode(this._historyHead, p.x, y, p.z, p.offsetX, p.offsetZ, p.alpha, color);
+      this._historyHead = (this._historyHead + 1) % this._historyCapacity;
     }
     for (let k = 0; k < ERASE_AHEAD; k++) {
-      this._setAlpha((this._head + k) % this._capacity, 0);
+      this._setAlpha((this._historyHead + k) % this._historyCapacity, 0);
     }
-    const lastTouched = (this._head + ERASE_AHEAD - 1) % this._capacity;
-    this._uploadRange(startHead, lastTouched);
+    const lastTouched = (this._historyHead + ERASE_AHEAD - 1) % this._historyCapacity;
+    this._uploadSpan(startHead, lastTouched, this._historyCapacity, 0);
   }
 
   _writeNode(node, x, y, z, offsetX, offsetZ, alpha, color) {
@@ -109,27 +165,40 @@ export class TireMarks {
     this._colors[c + 7] = alpha;
   }
 
-  /** Upload [startNode, endNode] (inclusive), wrapping around the ring in at most two calls. */
-  _uploadRange(startNode, endNode) {
+  _uploadNode(node) {
     const posBuf = this.mesh.getVertexBuffer(VertexBuffer.PositionKind);
     const colBuf = this.mesh.getVertexBuffer(VertexBuffer.ColorKind);
-    const upload = (from, toExclusive) => {
-      posBuf.updateDirectly(this._positions.subarray(from * 6, toExclusive * 6), from * 6);
-      colBuf.updateDirectly(this._colors.subarray(from * 8, toExclusive * 8), from * 8);
+    posBuf.updateDirectly(this._positions.subarray(node * 6, node * 6 + 6), node * 6);
+    colBuf.updateDirectly(this._colors.subarray(node * 8, node * 8 + 8), node * 8);
+  }
+
+  /** Upload [startNode, endNode] (inclusive) within a sub-range [rangeOffset, rangeOffset+rangeCapacity), wrapping at that sub-range's own boundary. */
+  _uploadSpan(startNode, endNode, rangeCapacity, rangeOffset) {
+    const posBuf = this.mesh.getVertexBuffer(VertexBuffer.PositionKind);
+    const colBuf = this.mesh.getVertexBuffer(VertexBuffer.ColorKind);
+    const upload = (fromRel, toRelExclusive) => {
+      const from = rangeOffset + fromRel;
+      const count = toRelExclusive - fromRel;
+      posBuf.updateDirectly(this._positions.subarray(from * 6, (from + count) * 6), from * 6);
+      colBuf.updateDirectly(this._colors.subarray(from * 8, (from + count) * 8), from * 8);
     };
-    if (endNode >= startNode) {
-      upload(startNode, endNode + 1);
+    const relStart = startNode - rangeOffset, relEnd = endNode - rangeOffset;
+    if (relEnd >= relStart) {
+      upload(relStart, relEnd + 1);
     } else {
-      // The streak (plus erase-ahead) wrapped past the end of the ring.
-      upload(startNode, this._capacity);
-      upload(0, endNode + 1);
+      upload(relStart, rangeCapacity);
+      upload(0, relEnd + 1);
     }
   }
 
   _createMesh(scene, capacity) {
     const mesh = new Mesh("tireMarks", scene);
 
-    // One quad between consecutive ring slots, wrapping at the end.
+    // One quad between consecutive ring slots. History and each live slot
+    // wrap within their own sub-range (handled by never writing across a
+    // sub-range boundary), but the index topology itself just connects n to
+    // n+1 for the whole buffer — a stray quad at a sub-range's own seam reads
+    // no differently than the erase-ahead trick already guards against.
     const indices = new Uint32Array(capacity * 6);
     let i = 0;
     for (let n = 0; n < capacity; n++) {
@@ -155,7 +224,7 @@ export class TireMarks {
     // per-node vertex colour passes through unchanged instead of being crushed
     // to black. That, blended by vertex alpha via the standard alpha-combine
     // (dst*(1-a) + colour*a), is what lets a mark blend toward whatever target
-    // colour appendStreak's `colorForPoint` supplies.
+    // colour writeLiveNode/appendHistory's `colorForPoint` supplies.
     material.emissiveColor = Color3.White();
     material.diffuseColor = Color3.Black();
     material.specularColor = Color3.Black();
@@ -179,11 +248,14 @@ export class TireMarks {
 }
 
 /**
- * Per-truck, local accumulator for that truck's two in-progress streaks (rear
- * left/right wheel). Nothing shared is touched while a streak is being laid
- * down — only once one ends does it get handed to the shared TireMarks ring
- * (see appendStreak). Lets several trucks mark at once without needing to
- * coordinate any shared write-cursor state.
+ * Per-truck accumulator for that truck's two wheel marks (rear left/right).
+ * Splits two concerns that used to be one: drawing happens in real time,
+ * node by node, straight into this truck's own reserved slots (see
+ * TireMarks.writeLiveNode) exactly like the old per-truck ring did — nothing
+ * waits for a streak to finish. Separately, the same points are accumulated
+ * locally purely so a *completed* streak can be reported once (see
+ * recordCompletedStreak) for persistence's sake — that list plays no part in
+ * what's currently on screen, which was already drawn as it happened.
  */
 export class TireMarkWriter {
   /**
@@ -195,6 +267,7 @@ export class TireMarkWriter {
   constructor({ halfTrack, rearOffset }) {
     this._halfTrack = halfTrack;
     this._rearOffset = rearOffset;
+    this._slots = null; // [leftSlot, rightSlot], assigned on first update()
     this._streaks = [
       { active: false, points: [], lastX: 0, lastZ: 0 },
       { active: false, points: [], lastX: 0, lastZ: 0 },
@@ -202,7 +275,8 @@ export class TireMarkWriter {
   }
 
   /**
-   * @param {TireMarks} sharedMarks - the scene's one shared ring, e.g. track._sharedTireMarks
+   * @param {import("../managers/SharedTireMarksManager.js").SharedTireMarksManager} sharedMarks
+   *   the scene's one shared manager, e.g. track._sharedTireMarks
    * @param {object} params
    * @param {{x:number,y:number,z:number}} params.position - truck centre
    * @param {number} params.heading   - truck yaw (rad)
@@ -211,11 +285,13 @@ export class TireMarkWriter {
    *   resolves the drivable surface height, so marks sit on bridge decks too
    * @param {(x:number, z:number) => [number,number,number]} params.colorForPoint
    *   resolves the terrain-matched mark colour at a point (see
-   *   tireMarkColorForTerrain) — deferred to append time since terrain colour
-   *   doesn't change mid-race, and this also lets a replayed streak resolve
-   *   colour identically to a live one, with no need to persist it.
+   *   tireMarkColorForTerrain), evaluated fresh per node just like the old
+   *   per-frame version did.
    */
   update(sharedMarks, { position, heading, strength, sampleY, colorForPoint }) {
+    if (!sharedMarks) return;
+    if (!this._slots) this._slots = sharedMarks.ring.allocateSlots(this);
+
     const sin = Math.sin(heading);
     const cos = Math.cos(heading);
     // forward = (sin, cos); across = (cos, -sin)
@@ -228,39 +304,45 @@ export class TireMarkWriter {
       const sideSign = side === 0 ? -1 : 1;
       const x = rearX + cos * this._halfTrack * sideSign;
       const z = rearZ - sin * this._halfTrack * sideSign;
-      const finished = this._updateStreak(this._streaks[side], x, z, offsetX, offsetZ, strength);
-      if (finished) sharedMarks?.appendStreak(finished, { sampleY, fromY: position.y, colorForPoint });
+      this._updateSide(sharedMarks, this._slots[side], this._streaks[side], x, z, offsetX, offsetZ, strength, position.y, sampleY, colorForPoint);
     }
   }
 
-  /** Returns the finished streak's points if this call just closed one out, else null. */
-  _updateStreak(streak, x, z, offsetX, offsetZ, strength) {
+  _updateSide(sharedMarks, slot, streak, x, z, offsetX, offsetZ, strength, fromY, sampleY, colorForPoint) {
+    const drawNow = (px, pz, alpha) => {
+      const y = sampleY(px, pz, fromY + 1) + MARK_LIFT;
+      const color = colorForPoint?.(px, pz) ?? DEFAULT_COLOR;
+      sharedMarks.ring.writeLiveNode(slot, px, y, pz, offsetX, offsetZ, alpha, color);
+    };
+
     if (strength <= 0) {
-      if (!streak.active) return null;
-      // Streak ended: taper it off so the append's own boundary fades rather
-      // than cutting hard.
+      if (!streak.active) return;
+      // Streak ended: taper it off so the mark fades rather than cutting hard.
+      drawNow(x, z, 0);
       streak.points.push({ x, z, offsetX, offsetZ, alpha: 0 });
       streak.active = false;
-      const finished = streak.points;
+      sharedMarks.recordCompletedStreak(streak.points);
       streak.points = [];
-      return finished;
+      return;
     }
 
     if (streak.active) {
       const dx = x - streak.lastX, dz = z - streak.lastZ;
-      if (dx * dx + dz * dz < NODE_SPACING * NODE_SPACING) return null;
-      streak.points.push({ x, z, offsetX, offsetZ, alpha: strength * MAX_ALPHA });
+      if (dx * dx + dz * dz < NODE_SPACING * NODE_SPACING) return;
+      const alpha = strength * MAX_ALPHA;
+      drawNow(x, z, alpha);
+      streak.points.push({ x, z, offsetX, offsetZ, alpha });
       streak.lastX = x;
       streak.lastZ = z;
-      return null;
+      return;
     }
 
-    // Streak start: an alpha-0 point first, so the very first real quad
-    // (once the truck has moved NODE_SPACING) fades in rather than popping.
+    // Streak start: an alpha-0 node first, so the very first real quad (once
+    // the truck has moved NODE_SPACING) fades in rather than popping.
+    drawNow(x, z, 0);
     streak.points.push({ x, z, offsetX, offsetZ, alpha: 0 });
     streak.active = true;
     streak.lastX = x;
     streak.lastZ = z;
-    return null;
   }
 }
