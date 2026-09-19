@@ -60,6 +60,24 @@
       Shares this step with the previous checkpoint — the driver passes either one to advance. Use for branching routes.
     </div>
 
+    <!-- Joker lap -->
+    <label
+      class="flex items-center gap-2 text-[12px] mb-1"
+      :class="editor.checkpoint.canBeJokerLap ? 'text-slate-200 cursor-pointer' : 'text-slate-500'"
+    >
+      <input
+        type="checkbox"
+        class="accent-[var(--accent)]"
+        :checked="editor.checkpoint.jokerLap"
+        :disabled="!editor.checkpoint.canBeJokerLap"
+        @change="editor.setFeatureProp('checkpoint', 'jokerLap', $event.target.checked)"
+      />
+      Joker lap
+    </label>
+    <div class="text-[10px] text-slate-400 mb-3 max-w-48">
+      A branch off the previous checkpoint that's never required — the driver only has to take it once, on any lap, over the whole race.
+    </div>
+
     <hr class="border-t border-slate-700 my-4" />
 
     <!-- Actions -->

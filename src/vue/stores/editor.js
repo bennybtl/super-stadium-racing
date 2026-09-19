@@ -30,6 +30,8 @@ export const useEditorStore = defineStore('editor', () => {
     heading: 0,
     alternative: false,     // shares a step with the previous checkpoint
     canBeAlternative: false, // false for the first checkpoint (nothing before it)
+    jokerLap: false,        // optional branch — only has to be driven once, any lap, all race
+    canBeJokerLap: false,   // false for the first checkpoint (nothing before it)
   });
 
   // ── Hill panel ──

@@ -278,6 +278,8 @@ export class CheckpointEditor {
     s.checkpoint.heading  = +(checkpointData.feature.heading * 180 / Math.PI).toFixed(1);
     s.checkpoint.alternative = !!checkpointData.feature.alternative;
     s.checkpoint.canBeAlternative = featureIndex > 0; // first checkpoint has no predecessor
+    s.checkpoint.jokerLap = !!checkpointData.feature.jokerLap;
+    s.checkpoint.canBeJokerLap = featureIndex > 0; // first checkpoint has no predecessor
     s.selectedType        = 'checkpoint';
   }
 
@@ -373,6 +375,29 @@ export class CheckpointEditor {
     const s = this.editor._editorStore;
     if (s) {
       s.checkpoint.alternative = !!this.selected.feature.alternative;
+      s.checkpoint.orderNum = this.selected.feature.checkpointNumber;
+    }
+  }
+
+  /**
+   * Toggle whether this checkpoint is a "joker lap" gate — a branch that
+   * shares a step with the previous checkpoint (like `alternative`) but is
+   * never required: the normal gate is always available too, so the driver
+   * only has to take this one once, on any lap, over the whole race.
+   */
+  changeJokerLap(val) {
+    if (!this.selected) return;
+    const cpFeatures = this.editor.currentTrack.features.filter(f => f.type === 'checkpoint');
+    // The first checkpoint has no predecessor to branch from.
+    if (cpFeatures.indexOf(this.selected.feature) <= 0) return;
+
+    this.editor.saveSnapshot();
+    this.selected.feature.jokerLap = !!val;
+    this.editor.checkpointManager?.renumberCheckpoints();
+
+    const s = this.editor._editorStore;
+    if (s) {
+      s.checkpoint.jokerLap = !!this.selected.feature.jokerLap;
       s.checkpoint.orderNum = this.selected.feature.checkpointNumber;
     }
   }

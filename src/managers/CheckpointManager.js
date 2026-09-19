@@ -35,8 +35,11 @@ export class CheckpointManager {
 
   createCheckpoints(reverse = false) {
     // Collect checkpoints in track order and group them into sequential steps.
-    // Consecutive checkpoints flagged `alternative` share the previous step —
-    // passing any gate of a step advances the lap ("one or the other").
+    // Consecutive checkpoints flagged `alternative` (or `jokerLap`) share the
+    // previous step — passing any gate of a step advances the lap ("one or
+    // the other"). A `jokerLap` gate is a branch that never has to be taken —
+    // the normal gate it shares a step with is always available too — so it
+    // only needs to be driven through once, on any lap, over the whole race.
     const cpFeatures = this.track.features.filter(f => f.type === "checkpoint");
     const groups = CheckpointManager.groupIntoSteps(cpFeatures);
 
@@ -73,13 +76,15 @@ export class CheckpointManager {
 
   /**
    * Group ordered checkpoint features into steps. Each checkpoint starts a new
-   * step unless it is flagged `alternative` (then it joins the previous step).
-   * The first checkpoint always starts step 1. Returns an array of feature groups.
+   * step unless it is flagged `alternative` or `jokerLap` (then it joins the
+   * previous step). The first checkpoint always starts step 1. Returns an
+   * array of feature groups.
    */
   static groupIntoSteps(orderedCheckpointFeatures) {
     const groups = [];
     orderedCheckpointFeatures.forEach((f, i) => {
-      if (i === 0 || !f.alternative || groups.length === 0) groups.push([f]);
+      const joinsPrevious = f.alternative || f.jokerLap;
+      if (i === 0 || !joinsPrevious || groups.length === 0) groups.push([f]);
       else groups[groups.length - 1].push(f);
     });
     return groups;

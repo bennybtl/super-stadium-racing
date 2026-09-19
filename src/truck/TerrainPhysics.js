@@ -303,22 +303,6 @@ export class TerrainPhysics {
       this._smoothedControlGroundedness = controlGroundedness;
     }
 
-    // DEBUG: log the exact frame steering/throttle authority cuts out while
-    // moving at real speed, with the raw inputs behind it — this is the class
-    // of bug ("loses steering downhill") that's hard to catch from feel alone.
-    // Remove once the downhill-control regression is confirmed fixed.
-    if (hadControlAuthority && this._smoothedControlGroundedness <= GROUNDEDNESS.STEER && hSpeed > 2) {
-      console.warn('[TerrainPhysics] control authority lost', {
-        penetration: +penetration.toFixed(3),
-        groundedness: +groundedness.toFixed(3),
-        controlGroundedness: +this._smoothedControlGroundedness.toFixed(3),
-        normalY: +this._lastFloorNormal.y.toFixed(3),
-        vy: +this.state.velocity.y.toFixed(2),
-        hSpeed: +hSpeed.toFixed(2),
-        pos: { x: +mesh.position.x.toFixed(1), y: +mesh.position.y.toFixed(1), z: +mesh.position.z.toFixed(1) },
-      });
-    }
-
     return {
       groundedness: this._smoothedGroundedness,
       controlGroundedness: this._smoothedControlGroundedness,

@@ -296,14 +296,20 @@ export class Checkpoint {
    */
   _decalLabel(feature) {
     const n = feature.checkpointNumber;
+    let label = `${n}`;
     if (feature._altCount > 1 && feature._altIndex != null) {
-      return `${n}${String.fromCharCode(97 + feature._altIndex)}`;
+      label += String.fromCharCode(97 + feature._altIndex);
     }
-    return `${n}`;
+    if (feature.jokerLap) label += "J";
+    return label;
   }
 
   _drawNumberedDecal(ctx, checkpointNumber, label, texW, texH) {
     this._drawArrowDecal(ctx, texW)
+
+    // Joker-lap gates get a gold box/label instead of white — a branch that's
+    // never required, only has to be taken once over the whole race.
+    const markColor = this.feature.jokerLap ? "#ffd700" : "white";
 
     // Square border — fixed pixel dimensions, always centered horizontally
     const sqW = 240, sqH = 228;
@@ -311,7 +317,7 @@ export class Checkpoint {
     const sqRight  = sqLeft + sqW;
     const sqTop    = 148;
     const sqBottom = sqTop + sqH;
-    ctx.strokeStyle = "white";
+    ctx.strokeStyle = markColor;
     ctx.lineWidth   = 18;
     ctx.strokeRect(sqLeft, sqTop, sqW, sqH);
 
@@ -319,13 +325,14 @@ export class Checkpoint {
     const lineThick = 18;
     const linePad   = 64;
     const lineY     = Math.round((sqTop + sqBottom) / 2) - lineThick / 2;
-    ctx.fillStyle   = "white";
+    ctx.fillStyle   = markColor;
     ctx.fillRect(linePad,           lineY, sqLeft  - linePad * 2,          lineThick);
     ctx.fillRect(sqRight + linePad, lineY, texW - sqRight - linePad * 2,   lineThick);
 
-    // Checkpoint label (number, plus a/b suffix for alternatives). Shrink the
-    // font for multi-character labels so "2a" still fits the box.
-    ctx.fillStyle    = "white";
+    // Checkpoint label (number, plus a/b suffix for alternatives, plus "J" for
+    // joker-lap gates). Shrink the font for multi-character labels so they
+    // still fit the box.
+    ctx.fillStyle    = markColor;
     ctx.font         = `bold ${label.length > 1 ? 150 : 210}px Arial`;
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
