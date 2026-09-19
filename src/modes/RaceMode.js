@@ -56,7 +56,7 @@ export class RaceMode extends DriveMode {
       obstacleManager,
       decorationManager,
       pickupManager,
-    } = await this.buildDriveScene(trackKey, { night });
+    } = await this.buildDriveScene(trackKey, { night, reverse });
 
     this.scene = scene;
     const frameProfiler = this.initFrameProfiler('RaceMode');

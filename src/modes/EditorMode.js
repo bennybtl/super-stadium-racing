@@ -362,6 +362,14 @@ export class EditorMode extends BaseMode {
       this.controller.goToTest({ trackKey: testKey, returnToEditor: trackKey });
     };
 
+    // Same hot-swap, driven in reverse — lets a reverseOverride/forwardOnly/
+    // reverseOnly edit be test-driven immediately without saving first.
+    rebuild.testReverse = () => {
+      const testKey = '__quicktest__';
+      trackLoader.tracks.set(testKey, currentTrack);
+      this.controller.goToTest({ trackKey: testKey, returnToEditor: trackKey, reverse: true });
+    };
+
     rebuild.editorScene = () => {
       const liveKey = '__editor_live__';
       trackLoader.tracks.set(liveKey, currentTrack);

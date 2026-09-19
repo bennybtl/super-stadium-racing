@@ -167,6 +167,59 @@ export class Track {
     this.defaultTerrainType = TERRAIN_TYPES.PACKED_DIRT;
     this.borderTerrainType = TERRAIN_TYPES.PACKED_DIRT;
     this.image = null;
+    // Some tracks' terrain only works one way (a one-way descent, a jump with
+    // no landing from the other side, etc.) — false excludes them from reverse
+    // selection entirely. Doesn't affect this.features; see setReverse().
+    this.allowReverse = true;
+    this._reverse = false;
+  }
+
+  /**
+   * Switches between the track's forward and reverse feature layout. A feature
+   * may opt into reverse-only behaviour with:
+   *   - `reverseOverride: {...}` — shallow-merged onto the feature when reversed
+   *     (e.g. `{ rotation: 210 }` to turn a ramp around).
+   *   - `forwardOnly: true` — dropped when reversed ("removed in reverse").
+   *   - `reverseOnly: true` — only exists when reversed ("added in reverse").
+   * Nothing is cached — getFeatures()/getHeightAt()/getTerrainTypeAt() all read
+   * `features` live against this flag, so edits made to `features` (the editor
+   * mutates it directly, all over the place, with no single funnel) are always
+   * picked up without needing to call this again.
+   */
+  setReverse(reverse) {
+    this._reverse = !!reverse;
+    return this;
+  }
+
+  get isReversed() {
+    return this._reverse;
+  }
+
+  /**
+   * Direction-aware view of one feature: null if it doesn't exist in the
+   * active direction (forwardOnly/reverseOnly), otherwise the feature itself
+   * or — only when reversed with a reverseOverride — a shallow-merged clone.
+   * The hot-path terrain queries use this directly against live `features` to
+   * avoid materializing a whole extra array on every call.
+   */
+  _resolveFeature(feature) {
+    if (this._reverse) {
+      if (feature.forwardOnly) return null;
+      return feature.reverseOverride ? { ...feature, ...feature.reverseOverride } : feature;
+    }
+    return feature.reverseOnly ? null : feature;
+  }
+
+  /** The feature list for the active direction — what SceneBuilder should
+   *  iterate instead of `features` directly. Resolved fresh each call (cheap;
+   *  only called at scene-build time, never per-frame). */
+  getFeatures() {
+    const out = [];
+    for (const feature of this.features) {
+      const resolved = this._resolveFeature(feature);
+      if (resolved) out.push(resolved);
+    }
+    return out;
   }
 
   /**
@@ -227,7 +280,9 @@ export class Track {
   getHeightAt(x, z, skip = null) {
     let totalHeight = 0;
 
-    for (const feature of this.features) {
+    for (const raw of this.features) {
+      const feature = this._resolveFeature(raw);
+      if (!feature) continue;
       if (skip !== null && skip(feature)) continue;
       switch (feature.type) {
         case "hill": {
@@ -599,8 +654,9 @@ export class Track {
   getTerrainTypeAt(x, z) {
     // Check features in reverse order so later additions take priority
     for (let i = this.features.length - 1; i >= 0; i--) {
-      const feature = this.features[i];
-      
+      const feature = this._resolveFeature(this.features[i]);
+      if (!feature) continue;
+
       if (!feature.terrainType) continue;
 
       switch (feature.type) {
@@ -948,6 +1004,7 @@ export class Track {
       dirtChunks: this.dirtChunks,
       grassBlades: this.grassBlades,
       oobDeadSpace: this.oobDeadSpace,
+      allowReverse: this.allowReverse,
       borderWall: { ...DEFAULT_BORDER_WALL, ...(this.borderWall ?? {}) },
       name: this.name,
       image: this.image ?? undefined,
@@ -974,6 +1031,10 @@ export class Track {
     track.dirtChunks = data.dirtChunks ?? track.dirtChunks;
     track.grassBlades = data.grassBlades ?? track.grassBlades;
     track.oobDeadSpace = data.oobDeadSpace ?? track.oobDeadSpace;
+    // Tracks saved before reverse existed had no way to opt out, and were all
+    // driven forward-only anyway, so defaulting missing data to true (via the
+    // constructor's default) reproduces that with no behaviour change.
+    track.allowReverse = data.allowReverse ?? track.allowReverse;
     // Tracks saved before the perimeter-wall options existed fall back to the
     // defaults, which reproduce the original grey wall.
     track.borderWall = { ...DEFAULT_BORDER_WALL, ...(data.borderWall ?? {}) };

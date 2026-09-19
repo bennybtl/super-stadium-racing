@@ -140,6 +140,12 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     }
   }
 
+  // Resolve the reverse-direction feature layout (reverseOverride/forwardOnly/
+  // reverseOnly) before anything below samples terrain or builds features from
+  // the track. Tracks that opt out (allowReverse: false) always build forward,
+  // regardless of what the caller asks for.
+  currentTrack.setReverse(opts.reverse === true && currentTrack.allowReverse !== false);
+
   const trackWidth = currentTrack.width ?? 160;
   const trackDepth = currentTrack.depth ?? 160;
   const maxTrackDim = Math.max(trackWidth, trackDepth);
@@ -506,7 +512,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   const specularTex = null;
 
   // -- Normal map with decals for surface detail (divots, holes, bumps) --
-  const normalMapDecals = currentTrack.features.filter(f => f.type === 'normalMapDecal');
+  const normalMapDecals = currentTrack.getFeatures().filter(f => f.type === 'normalMapDecal');
   const compositeNormalMap = await createCompositeNormalMap(scene, normalMapDecals, terrainManager, currentTrack, texSize, groundWidth, groundDepth);
   const waterDepthOverlayTex = await createWaterDepthOverlayTexture(scene, terrainManager, texSize, groundWidth, groundDepth);
   // `wear: false` skips the AI-path wear bake (independent of terrain types);
@@ -678,7 +684,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
 
   // Build bridge drive surfaces first so downstream terrain-following features
   // (poly walls/curbs) can sample across all bridge meshes in one pass.
-  for (const feature of currentTrack.features) {
+  for (const feature of currentTrack.getFeatures()) {
     if (feature.type === "bridgeMesh" || feature.type === "driveBox") {
       bridgeMeshManager.create(feature);
     }
@@ -696,7 +702,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   currentTrack._sharedTireMarks = new SharedTireMarksManager(scene, currentTrack.id, terrainManager);
 
   // Create movable obstacles, walls, flags, and track signs from track features.
-  for (const feature of currentTrack.features) {
+  for (const feature of currentTrack.getFeatures()) {
     if (feature.type === "obstacle") {
       obstacleManager.createStack(feature);
     } else if (feature.type === "polyWall") {
@@ -715,17 +721,17 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // Decals run after the feature loop so every surface they can land on exists:
   //  1. flat (ground / bridge decks)   2. wall-ish (perimeter + poly walls)
   //  3. attached — stuck to a decoration / obstacle built above.
-  for (const feature of currentTrack.features) {
+  for (const feature of currentTrack.getFeatures()) {
     if (feature.type === "decal" && !feature.attachTo && decalManager.isFlatFeature(feature)) {
       decalManager.createDecal(feature);
     }
   }
-  for (const feature of currentTrack.features) {
+  for (const feature of currentTrack.getFeatures()) {
     if (feature.type === "decal" && !feature.attachTo && !decalManager.isFlatFeature(feature)) {
       decalManager.createDecal(feature);
     }
   }
-  for (const feature of currentTrack.features) {
+  for (const feature of currentTrack.getFeatures()) {
     if (feature.type === "decal" && feature.attachTo) {
       decalManager.createDecal(feature);
     }

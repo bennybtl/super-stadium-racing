@@ -164,6 +164,42 @@
 
     <hr class="border-t border-slate-700 my-4" />
 
+    <!-- Reverse-race overrides -->
+    <div class="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">Reverse</div>
+
+    <label class="flex items-center justify-between text-[12px] text-slate-200 mb-2">
+      <span>Different rotation when reversed</span>
+      <input
+        type="checkbox"
+        :checked="editor.driveBox.reverseRotationEnabled"
+        @change="editor.setFeatureProp('driveBox', 'reverseRotationEnabled', $event.target.checked)"
+      />
+    </label>
+    <template v-if="editor.driveBox.reverseRotationEnabled">
+      <div class="flex justify-between mb-1 text-[12px]">
+        <span>Reverse Rotation</span>
+        <span>{{ editor.driveBox.reverseRotation.toFixed(0) }}°</span>
+      </div>
+      <input
+        type="range" min="-180" max="180" step="2"
+        :value="editor.driveBox.reverseRotation"
+        @input="editor.setFeatureProp('driveBox', 'reverseRotation', +$event.target.value)"
+        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      />
+    </template>
+
+    <label class="flex items-center justify-between text-[12px] text-slate-200 mb-3">
+      <span>Remove in reverse</span>
+      <input
+        type="checkbox"
+        :checked="editor.driveBox.forwardOnly"
+        @change="editor.setFeatureProp('driveBox', 'forwardOnly', $event.target.checked)"
+      />
+    </label>
+    <div class="text-[10px] text-slate-400 mb-3">Only take effect when racing in reverse — use "Test Reverse" in the status bar to preview. Doesn't change how this box looks here.</div>
+
+    <hr class="border-t border-slate-700 my-4" />
+
     <!-- Actions -->
     <div class="flex gap-2">
       <button

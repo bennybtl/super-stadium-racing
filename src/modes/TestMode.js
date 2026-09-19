@@ -19,7 +19,7 @@ export class TestMode extends DriveMode {
     this.debugManager = null;
   }
 
-  async setup({ trackKey, returnToEditor }) {
+  async setup({ trackKey, returnToEditor, reverse = false }) {
     const { engine } = this.controller;
 
     const {
@@ -28,12 +28,20 @@ export class TestMode extends DriveMode {
       shadows,
       currentTrack,
       terrainManager,
+      checkpointManager,
       obstacleManager,
       decorationManager,
-    } = await this.buildDriveScene(trackKey);
+    } = await this.buildDriveScene(trackKey, { reverse });
 
     this.scene = scene;
     const frameProfiler = this.initFrameProfiler('TestMode');
+
+    // Rebuild checkpoints for the test direction (SceneBuilder built forward
+    // order; see RaceMode for why this can't just be an opt into buildScene).
+    if (reverse) {
+      checkpointManager._reverse = true;
+      checkpointManager.rebuild();
+    }
 
     // Spawn just behind the start/finish checkpoint, facing forward
     const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);

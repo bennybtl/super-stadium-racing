@@ -65,7 +65,7 @@ export class MultiplayerMode extends DriveMode {
       decorationManager,
       pickupManager,
       checkpointManager,
-    } = await this.buildDriveScene(trackKey);
+    } = await this.buildDriveScene(trackKey, { reverse });
 
     this.scene = scene;
     const frameProfiler = this.initFrameProfiler('MultiplayerMode');

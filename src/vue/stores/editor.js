@@ -78,6 +78,11 @@ export const useEditorStore = defineStore('editor', () => {
     color: 'terrain',
     sideColor: 'terrain',
     legs: true,
+    // Reverse-race behaviour — see Track.setReverse(). Most features need
+    // neither; a ramp is the motivating case for reverseRotation.
+    forwardOnly: false,
+    reverseRotationEnabled: false,
+    reverseRotation: 0,
   });
 
   // ── Terrain shape panel (rect + circle/ellipse + polygon) ──
@@ -292,6 +297,7 @@ export const useEditorStore = defineStore('editor', () => {
     dirtChunks: true,
     grassBlades: true,
     oobDeadSpace: false,
+    allowReverse: true,
     night: false,
   });
   const trackBorderWall = reactive({ ...DEFAULT_BORDER_WALL });
@@ -372,6 +378,7 @@ export const useEditorStore = defineStore('editor', () => {
   function cycleSnapSize() { const idx = snapSizes.indexOf(snapSize.value); snapSize.value = snapSizes[(idx + 1) % snapSizes.length]; snapEnabled.value = true; }
   function toggleGizmosVisible() { gizmosVisible.value = !gizmosVisible.value; _bridge.value?.toggleGizmosVisible(); }
   function quickTestTrack() { _bridge.value?.quickTestTrack(); }
+  function testTrackReverse() { _bridge.value?.testTrackReverse(); }
   function rebuildScene() { _bridge.value?.rebuildScene?.(); }
   function captureScreenshot() { _bridge.value?.captureTrackScreenshot?.(); }
   function resetCamera() { _bridge.value?.resetCamera?.(); }
@@ -405,6 +412,10 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackOobDeadSpace(enabled) {
     trackSettings.oobDeadSpace = !!enabled;
     _bridge.value?.changeTrackOobDeadSpace?.(!!enabled);
+  }
+  function setTrackAllowReverse(enabled) {
+    trackSettings.allowReverse = !!enabled;
+    _bridge.value?.changeTrackAllowReverse?.(!!enabled);
   }
   function toggleNightPreview() {
     nightPreview.value = !nightPreview.value;
@@ -565,14 +576,14 @@ export const useEditorStore = defineStore('editor', () => {
     actionZone,
     setActionZoneType, polyCurb,
     trackSettingsOpen, trackSettings,
-    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackGrassBlades, setTrackOobDeadSpace, setTrackWidth, setTrackDepth,
+    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackGrassBlades, setTrackOobDeadSpace, setTrackAllowReverse, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
     trackBorderWall, setTrackBorderWall,
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
     nightPreview, toggleNightPreview,
-    toggleSnap, cycleSnapSize, quickTestTrack,
+    toggleSnap, cycleSnapSize, quickTestTrack, testTrackReverse,
     rebuildScene, captureScreenshot, resetCamera,
     openAddMenu, closeAddMenu, toggleAddMenu,
     setObstacleType, openAiPath, closeAiPath,

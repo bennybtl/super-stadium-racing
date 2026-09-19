@@ -121,6 +121,18 @@
       </div>
       <div>
         <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+            :checked="editor.trackSettings.allowReverse"
+            @change="editor.setTrackAllowReverse($event.target.checked)"
+          />
+          <span class="text-[13px] text-white">Allow Reverse</span>
+        </label>
+        <div class="mt-2 text-[10px] text-slate-400 max-w-96">Turn off for tracks whose terrain only works one way (a one-way drop, a jump with no reverse landing, etc.) — excludes the track from reverse selection in cups and race setup.</div>
+      </div>
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
         <input
           type="checkbox"
           class="h-4 w-4 accent-[var(--accent)] cursor-pointer"

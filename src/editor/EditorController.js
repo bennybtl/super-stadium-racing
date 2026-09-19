@@ -299,6 +299,7 @@ export class EditorController {
     this._editorStore.trackSettings.dirtChunks = this.currentTrack.dirtChunks ?? true;
     this._editorStore.trackSettings.grassBlades = this.currentTrack.grassBlades ?? true;
     this._editorStore.trackSettings.oobDeadSpace = this.currentTrack.oobDeadSpace ?? false;
+    this._editorStore.trackSettings.allowReverse = this.currentTrack.allowReverse ?? true;
     Object.assign(this._editorStore.trackBorderWall, resolveBorderWall(this.currentTrack));
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
@@ -1677,6 +1678,10 @@ export class EditorController {
     rebuild.quickTestTrack?.();
   }
 
+  testTrackReverse() {
+    rebuild.testReverse?.();
+  }
+
   rebuildScene() {
     rebuild.editorScene?.();
   }
@@ -1819,6 +1824,16 @@ export class EditorController {
     this._syncTrackSettingsPanel();
   }
 
+  /** Tracks whose terrain only works one way (Mesa Madness) opt out here rather
+   *  than through per-feature overrides — the whole track is excluded from
+   *  reverse selection, not just individually adjusted. */
+  changeTrackAllowReverse(enabled) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.allowReverse = !!enabled;
+    this._syncTrackSettingsPanel();
+  }
+
   /** Editor-only night-mode preview. Night is a per-race setting, not a track
    *  property — this just lights the scene so track lights can be authored. Not
    *  persisted; not on undo/redo. */
@@ -1938,6 +1953,9 @@ export class EditorController {
   changeDriveBoxColor(val)          { this.driveBoxEditor.changeColor(val); }
   changeDriveBoxSideColor(val)      { this.driveBoxEditor.changeSideColor(val); }
   changeDriveBoxLegs(val)           { this.driveBoxEditor.changeLegs(val); }
+  changeDriveBoxForwardOnly(val)              { this.driveBoxEditor.changeForwardOnly(val); }
+  changeDriveBoxReverseRotationEnabled(val)   { this.driveBoxEditor.changeReverseRotationEnabled(val); }
+  changeDriveBoxReverseRotation(val)          { this.driveBoxEditor.changeReverseRotation(val); }
 
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }
   changeSquareHillDepth(val)        { this.squareHillEditor.changeDepth(val); }

@@ -18,6 +18,7 @@ const rebuild = {
   bridgeMesh: null,
   polyHill: null,
   quickTestTrack: null,
+  testReverse: null,
   editorScene: null,
 };
 
