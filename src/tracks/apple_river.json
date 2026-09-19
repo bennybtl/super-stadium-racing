@@ -976,14 +976,14 @@
     },
     {
       "type": "model",
-      "model": "forest_bush_1",
+      "model": "bush",
       "x": -28.39548426143339,
       "z": 22.929571957471595,
       "heading": 0
     },
     {
       "type": "model",
-      "model": "forest_bush_1",
+      "model": "bush",
       "x": -24.819841819055025,
       "z": 21.86568176948128,
       "heading": 0.6457718232379019,
@@ -991,7 +991,7 @@
     },
     {
       "type": "model",
-      "model": "forest_bush_1",
+      "model": "bush",
       "x": -26.773548195950145,
       "z": 27.682407931234057,
       "heading": 1.6580627893946132,
@@ -1044,14 +1044,14 @@
     },
     {
       "type": "model",
-      "model": "forest_rock_1",
+      "model": "rock",
       "x": -44.76240660645331,
       "z": 26.41793089938261,
       "scale": 1.1
     },
     {
       "type": "model",
-      "model": "forest_rock_1",
+      "model": "rock",
       "x": -40.78023847069886,
       "z": 26.442742081418462,
       "scale": 1.1,
@@ -1059,7 +1059,7 @@
     },
     {
       "type": "model",
-      "model": "forest_rock_1",
+      "model": "rock",
       "x": -43.433542436271395,
       "z": 22.58413041830719,
       "scale": 0.8,

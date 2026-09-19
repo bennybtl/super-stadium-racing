@@ -719,8 +719,8 @@
           "radius": 10.5
         },
         {
-          "x": -4.473990713482479,
-          "z": 80.17057588597805,
+          "x": -2.473990713482479,
+          "z": 79.67057588597805,
           "radius": 6.5
         },
         {
@@ -2035,6 +2035,61 @@
       "radialSegments": 6,
       "collider": false,
       "heading": 6.126105674500097
+    },
+    {
+      "type": "trackLight",
+      "x": 30.96667588568687,
+      "z": -67.08909102247517,
+      "height": 19.5,
+      "spread": 95,
+      "intensity": 16,
+      "color": "warm",
+      "tilt": 19,
+      "rotation": 106
+    },
+    {
+      "type": "trackLight",
+      "x": 34.101784399829455,
+      "z": 31.279612605196114,
+      "height": 19.5,
+      "spread": 95,
+      "intensity": 16,
+      "color": "warm",
+      "tilt": 19,
+      "rotation": 108
+    },
+    {
+      "type": "trackLight",
+      "x": 56.601784399829455,
+      "z": 54.279612605196114,
+      "height": 19.5,
+      "spread": 120,
+      "intensity": 7,
+      "color": "warm",
+      "tilt": 90,
+      "rotation": 0
+    },
+    {
+      "type": "trackLight",
+      "x": 59.79309092365838,
+      "z": -5.384943545363896,
+      "height": 19.5,
+      "spread": 120,
+      "intensity": 7,
+      "color": "warm",
+      "tilt": 90,
+      "rotation": 0
+    },
+    {
+      "type": "trackLight",
+      "x": 58.29309092365838,
+      "z": -59.884943545363896,
+      "height": 19.5,
+      "spread": 120,
+      "intensity": 7,
+      "color": "warm",
+      "tilt": 90,
+      "rotation": 0
     }
   ]
 }

@@ -1280,13 +1280,13 @@
     },
     {
       "type": "model",
-      "model": "forest_rock_1",
+      "model": "rock",
       "x": -55.26018717660989,
       "z": -59.732435499966165
     },
     {
       "type": "model",
-      "model": "forest_rock_3",
+      "model": "rock",
       "x": -52.26018717660989,
       "z": -63.232435499966165
     },

@@ -4,6 +4,7 @@
   "packId": "midwest_pack_1",
   "hidden": false,
   "dirtChunks": true,
+  "grassBlades": true,
   "oobDeadSpace": true,
   "borderWall": {
     "enabled": true,
@@ -1449,6 +1450,61 @@
       "depth": 10,
       "rotation": 129,
       "blendWidth": 6
+    },
+    {
+      "type": "trackLight",
+      "x": -72.92804826991271,
+      "z": 76.57364371500996,
+      "height": 12.5,
+      "spread": 120,
+      "intensity": 24,
+      "color": "cool",
+      "tilt": 13,
+      "rotation": 309
+    },
+    {
+      "type": "trackLight",
+      "x": 74.5156295820563,
+      "z": 76.23159152010776,
+      "height": 12.5,
+      "spread": 120,
+      "intensity": 24,
+      "color": "cool",
+      "tilt": 13,
+      "rotation": 44
+    },
+    {
+      "type": "trackLight",
+      "x": 26.95214801928327,
+      "z": 28.27514578880674,
+      "height": 12.5,
+      "spread": 120,
+      "intensity": 10,
+      "color": "cool",
+      "tilt": 13,
+      "rotation": 44
+    },
+    {
+      "type": "trackLight",
+      "x": 58.6646664153127,
+      "z": -21.274391881847762,
+      "height": 12.5,
+      "spread": 120,
+      "intensity": 9,
+      "color": "cool",
+      "tilt": 13,
+      "rotation": 21
+    },
+    {
+      "type": "trackLight",
+      "x": -14.089340681813479,
+      "z": -51.755118214388766,
+      "height": 12.5,
+      "spread": 120,
+      "intensity": 13,
+      "color": "cool",
+      "tilt": 13,
+      "rotation": 44
     }
   ]
 }
