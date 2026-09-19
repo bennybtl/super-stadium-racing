@@ -14,20 +14,35 @@ const EMPTY_CONTINUITY = Object.freeze({});
 // =============================================================================
 
 /**
- * Both downhill-follow passes below detect "still tracking the ground" via a
- * *vertical* gap sampled straight down from the truck's own XZ. That's a bad
- * proxy for distance-to-surface on a steep face: the truck can be genuinely
- * airborne and pulling away from the slope along the surface normal while
- * its XZ position still sits over the hill's tall cross-section, so the
- * vertical gap stays deceptively small. Left unguarded, either pass then
- * pushes groundedness back up while truly airborne — and both feed
- * controlGroundedness (see _updateSuspension's docstring), so unguarded they
- * would authorize steering/throttle using the steep normal / the truck's
- * current heading, not gravity. Both passes skip faces steeper than this,
- * the same threshold already used elsewhere in this file to distrust a
- * surface normal (~76° tilt).
+ * Terrain steeper than this has a real Havok box collider from
+ * SteepSlopeColliderManager (maxSlopeDeg: 60 there — keep the two in sync) —
+ * past this limit the game doesn't consider the terrain climbable at all, so
+ * nothing in this heuristic layer should treat it as ordinary drivable ground.
+ *
+ * Two different things key off this threshold, at two different bars:
+ *
+ *   - The downhill-follow passes below detect "still tracking the ground" via
+ *     a *vertical* gap sampled straight down from the truck's own XZ. That's
+ *     a bad proxy for distance-to-surface on a steep face: the truck can be
+ *     genuinely airborne and pulling away from the slope along the surface
+ *     normal while its XZ position still sits over the hill's tall
+ *     cross-section, so the vertical gap stays deceptively small. Both passes
+ *     skip faces steeper than this outright (their own gap tolerances are
+ *     small — 15-40cm — so there's no legitimate-steep-descent case to
+ *     protect below this same limit; SteepSlopeColliderManager's collider
+ *     would intervene first anyway).
+ *   - _applySpring and _updateSuspension's control-authority compression only
+ *     distrust a steep reading when penetration has ALSO grown past
+ *     SPRING.depenetrationMinDepth — the same "this is obviously not real
+ *     contact" bar the tunneling check already uses. Small penetration (real
+ *     close contact) is left alone regardless of steepness.
+ *
+ * Left unguarded, either downhill pass pushes groundedness (and, through it,
+ * controlGroundedness) back up while truly airborne near a steep face —
+ * authorizing the into-surface velocity strip, steering, and throttle using
+ * the steep normal / the truck's current heading, not gravity.
  */
-const DOWNHILL_MIN_NORMAL_Y = 0.25;
+const STEEP_COLLIDER_MIN_NORMAL_Y = 0.5; // cos(60°)
 
 /** Pass 1: detect downhill descent and inject fake compression to stay grounded. */
 const DOWNHILL_FOLLOW = {
@@ -57,26 +72,6 @@ const DOWNHILL_BOOST = {
   heightDrop:   0.1,   // terrain must drop at least this much to apply boost (m)
   groundedness: 0.8,   // groundedness clamped to at least this when tracking
 };
-
-/**
- * Terrain steeper than this has a real Havok box collider from
- * SteepSlopeColliderManager (maxSlopeDeg: 60 there — keep the two in sync).
- * Past the climbable limit, a vertical raycast is a bad distance-to-surface
- * proxy for the same reason DOWNHILL_MIN_NORMAL_Y exists: the truck's XZ can
- * sit over the tall part of a near-vertical face while genuinely airborne and
- * clear of it in 3D, reading as metres of fake "penetration."
- *
- * Steepness alone isn't enough to act on, though — plenty of legitimate
- * downhill driving crosses locally steep (>60°) patches with real, close
- * wheel contact, and penetration stays small the whole time regardless of
- * slope angle (the vertical-proxy error only blows up once the gap itself is
- * large). So both _applySpring and _updateSuspension's control-authority
- * compression only distrust a steep reading when penetration has also grown
- * past SPRING.depenetrationMinDepth — the same "this is obviously not real
- * contact" bar the tunneling check already uses. Below that depth, steep
- * terrain is handled exactly as before.
- */
-const STEEP_COLLIDER_MIN_NORMAL_Y = 0.5; // cos(60°)
 
 /**
  * Terrain spring and slope-tunneling depenetration.
@@ -253,7 +248,7 @@ export class TerrainPhysics {
 
     // controlGroundedness, not the cosmetic groundedness above: this strip
     // affects the actual trajectory, so it must not be fooled by the downhill
-    // passes' fake-grounded boost near steep terrain (see DOWNHILL_MIN_NORMAL_Y).
+    // passes' fake-grounded boost near steep terrain (see STEEP_COLLIDER_MIN_NORMAL_Y).
     const isGrounded = controlGroundedness > ORIENTATION.groundednessThreshold;
 
     // While grounded, project velocity onto the surface tangent plane.
@@ -264,6 +259,21 @@ export class TerrainPhysics {
       const normal = this._lastFloorNormal;
       const vIntoSurface = this.state.velocity.dot(normal);
       if (vIntoSurface < 0) {
+        // DEBUG: a real, sizeable strip while penetration is still negative
+        // (i.e. the truck reads as above the sampled floor by the naive
+        // vertical metric) is the signature of a fake-grounded strip killing
+        // airborne momentum near a slope. Remove once confirmed fixed.
+        if (penetration < 0 && vIntoSurface < -2) {
+          console.warn('[TerrainPhysics] velocity strip fired while penetration < 0', {
+            penetration: +penetration.toFixed(3),
+            vIntoSurface: +vIntoSurface.toFixed(2),
+            groundedness: +groundedness.toFixed(3),
+            controlGroundedness: +controlGroundedness.toFixed(3),
+            normalY: +normal.y.toFixed(3),
+            velBefore: { x: +this.state.velocity.x.toFixed(2), y: +this.state.velocity.y.toFixed(2), z: +this.state.velocity.z.toFixed(2) },
+            pos: { x: +mesh.position.x.toFixed(1), y: +mesh.position.y.toFixed(1), z: +mesh.position.z.toFixed(1) },
+          });
+        }
         // Truck is moving into the surface — remove that component
         this.state.velocity.x -= normal.x * vIntoSurface;
         this.state.velocity.y -= normal.y * vIntoSurface;
@@ -796,7 +806,7 @@ export class TerrainPhysics {
    * anyway (both require penetration within a small negative-to-slightly-
    * positive band — see DOWNHILL_FOLLOW.maxGap / DOWNHILL_BOOST.maxGap), so
    * this is a narrow, orthogonal guard, not a general distrust of the passes:
-   * both are already steepness-guarded (DOWNHILL_MIN_NORMAL_Y) against firing
+   * both are already steepness-guarded (STEEP_COLLIDER_MIN_NORMAL_Y) against firing
    * falsely near a cliff, and at high speed on ordinary terrain the
    * suspension's one-frame lag routinely produces gaps in the 15-40cm range
    * that both passes exist to bridge — cutting control there (an earlier,
@@ -863,7 +873,7 @@ export class TerrainPhysics {
       penetration > -DOWNHILL_FOLLOW.maxGap &&
       speed > DOWNHILL_FOLLOW.minSpeed &&
       this.state.velocity.y < DOWNHILL_FOLLOW.vertVelMin &&
-      this._lastFloorNormal.y >= DOWNHILL_MIN_NORMAL_Y &&
+      this._lastFloorNormal.y >= STEEP_COLLIDER_MIN_NORMAL_Y &&
       fallLineDir() &&
       this._fallLineDrops(mesh, track, fallLineDir(), sampleHeightHere(), fromY, DOWNHILL_FOLLOW.lookAhead, DOWNHILL_FOLLOW.heightDrop)
     ) {
@@ -890,7 +900,7 @@ export class TerrainPhysics {
       this.state.velocity.y < DOWNHILL_BOOST.vertVelMin &&
       hasSurfaceSampling &&
       speed > DOWNHILL_BOOST.minSpeed &&
-      this._lastFloorNormal.y >= DOWNHILL_MIN_NORMAL_Y &&
+      this._lastFloorNormal.y >= STEEP_COLLIDER_MIN_NORMAL_Y &&
       fallLineDir() &&
       this._fallLineDrops(mesh, track, fallLineDir(), sampleHeightHere(), fromY, DOWNHILL_BOOST.lookAhead, DOWNHILL_BOOST.heightDrop)
     ) {

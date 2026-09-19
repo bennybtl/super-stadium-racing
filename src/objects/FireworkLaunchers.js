@@ -1,4 +1,4 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3, TransformNode } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, TransformNode, Mesh } from "@babylonjs/core";
 import { basicColors } from "../constants";
 
 /** Mortar can dimensions in world units. */
@@ -118,6 +118,9 @@ export class FireworkLaunchers {
       diameterTop: CAN_DIAMETER_TOP,
       diameterBottom: CAN_DIAMETER_BOTTOM,
       tessellation: 14,
+      // No top cap: it would sit exactly coplanar with the wider rim's own top
+      // cap (both land at y = CAN_HEIGHT) and z-fight with it. The rim covers it.
+      cap: Mesh.CAP_START,
     }, this._scene);
     body.position.y = CAN_HEIGHT / 2;
     body.material = this._bodyMat;

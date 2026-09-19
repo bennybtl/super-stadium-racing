@@ -14,11 +14,6 @@ const DEFAULT_COLOR = [0, 0, 0]; // fallback: plain darken, if no terrain colour
 // fixed black/tan) keeps the mark's hue matched to whatever it's laid on.
 const TIRE_MARK_LIGHTEN_LUMINANCE = 0.5;
 const TIRE_MARK_WEAR_FACTOR = 0.22;
-// Ring slots zeroed (alpha only, not position) right after a write, so the
-// quad bridging into whatever comes next — possibly a much older, still-
-// visible mark from a previous lap around that region — never becomes
-// visible until real content overwrites it.
-const ERASE_AHEAD = 2;
 // Real-time drawing region: each currently-marking truck side gets its own
 // reserved, fixed-size slice of the ring (assigned once, kept for the whole
 // session) so it can write node-by-node as it moves — exactly like the old
@@ -110,12 +105,21 @@ export class TireMarks {
     this._uploadNode(node);
 
     const next = (cursor + 1) % this._slotCapacity;
+    const nextNode = base + next;
+    // Collapse the immediately-following node onto THIS SAME position (alpha
+    // 0) — a zero-length quad, so it can never stretch toward whatever that
+    // node's position happens to be: stale content from a previous lap
+    // around this slot, or — for a node never written before — the
+    // position array's zero-initialized default, i.e. the world origin. The
+    // node after that only needs its alpha zeroed: once both ends of THAT
+    // quad are alpha 0, its position no longer matters either.
+    this._writeNode(nextNode, x, y, z, 0, 0, 0, color);
+    this._uploadNode(nextNode);
+    const after = base + (next + 1) % this._slotCapacity;
+    this._setAlpha(after, 0);
+    this._uploadNode(after);
+
     this._slotHeads[slot] = next;
-    for (let k = 0; k < ERASE_AHEAD; k++) {
-      const eraseNode = base + (next + k) % this._slotCapacity;
-      this._setAlpha(eraseNode, 0);
-      this._uploadNode(eraseNode);
-    }
   }
 
   /**
@@ -128,17 +132,24 @@ export class TireMarks {
   appendHistory(points, { sampleY, fromY, colorForPoint }) {
     if (!points || points.length === 0) return;
     const startHead = this._historyHead;
+    let lastX = 0, lastY = 0, lastZ = 0, lastColor = DEFAULT_COLOR;
     for (const p of points) {
       const y = sampleY(p.x, p.z, fromY + 1) + MARK_LIFT;
       const color = colorForPoint?.(p.x, p.z) ?? DEFAULT_COLOR;
       this._writeNode(this._historyHead, p.x, y, p.z, p.offsetX, p.offsetZ, p.alpha, color);
+      lastX = p.x; lastY = y; lastZ = p.z; lastColor = color;
       this._historyHead = (this._historyHead + 1) % this._historyCapacity;
     }
-    for (let k = 0; k < ERASE_AHEAD; k++) {
-      this._setAlpha((this._historyHead + k) % this._historyCapacity, 0);
-    }
-    const lastTouched = (this._historyHead + ERASE_AHEAD - 1) % this._historyCapacity;
-    this._uploadSpan(startHead, lastTouched, this._historyCapacity, 0);
+    // Same collapse-then-zero trick as writeLiveNode, using the streak's own
+    // last point as the collapse position — otherwise the node right after a
+    // streak (stale from a previous lap around history, or at the position
+    // array's zero-initialized default if never written) would connect via a
+    // real quad to this streak's real end point.
+    this._writeNode(this._historyHead, lastX, lastY, lastZ, 0, 0, 0, lastColor);
+    this._historyHead = (this._historyHead + 1) % this._historyCapacity;
+    this._setAlpha(this._historyHead, 0);
+
+    this._uploadSpan(startHead, this._historyHead, this._historyCapacity, 0);
   }
 
   _writeNode(node, x, y, z, offsetX, offsetZ, alpha, color) {
