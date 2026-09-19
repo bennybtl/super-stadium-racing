@@ -212,7 +212,8 @@
       "color": "#b3342e",
       "sideColor": "tex:plywood",
       "heightAtMin": 0,
-      "heightAtMax": 3.5
+      "heightAtMax": 3.5,
+      "forwardOnly": true
     },
     {
       "type": "driveBox",
@@ -227,7 +228,10 @@
       "heightAtMin": 0,
       "heightAtMax": 3,
       "color": "#b3342e",
-      "sideColor": "tex:plywood"
+      "sideColor": "tex:plywood",
+      "reverseOverride": {
+        "rotation": -180
+      }
     },
     {
       "type": "checkpoint",
@@ -424,7 +428,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": -0.5,
-      "heightAtMax": 4.5
+      "heightAtMax": 4.5,
+      "reverseOverride": {
+        "angle": 0
+      }
     },
     {
       "type": "polyWall",
@@ -919,7 +926,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 4.5
+      "heightAtMax": 4.5,
+      "reverseOverride": {
+        "angle": 185
+      }
     },
     {
       "type": "decal",

@@ -119,6 +119,9 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   const camera = new FreeCamera("cam", new Vector3(0, 28, -20), scene);
   camera.setTarget(Vector3.Zero());
   const cameraController = new CameraController(camera, new Vector3(0, 28, -20));
+  // Starting mode only — a live settings change mid-drive shouldn't yank the
+  // camera away from whatever the player has since cycled to with 'C'.
+  cameraController.mode = loadDisplaySettings().preferredView;
 
   // --- Ambient ---
   const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);

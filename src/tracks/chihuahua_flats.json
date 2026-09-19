@@ -296,18 +296,57 @@
     },
     {
       "type": "driveBox",
-      "centerX": 90.83314856035672,
-      "centerZ": -66.69040355256587,
+      "centerX": -48.96873193593262,
+      "centerZ": -45.02632397766184,
+      "width": 8,
+      "depth": 8,
+      "rotation": -16,
+      "solidBase": false,
+      "thickness": 0.4,
+      "layerId": 0,
+      "heightAtMin": 0,
+      "heightAtMax": 2.5,
+      "color": "#9aa0a8",
+      "sideColor": "tex:plywood",
+      "reverseOverride": {
+        "rotation": 52
+      }
+    },
+    {
+      "type": "driveBox",
+      "centerX": 93.83314856035672,
+      "centerZ": -63.69040355256587,
       "width": 12,
       "depth": 12.5,
       "rotation": -146,
-      "solidBase": true,
+      "solidBase": false,
       "thickness": 0.4,
       "layerId": 0,
       "heightAtMin": 0,
       "heightAtMax": 3.5,
       "color": "#9aa0a8",
-      "sideColor": "tex:plywood"
+      "sideColor": "tex:plywood",
+      "reverseOverride": {
+        "rotation": 52
+      }
+    },
+    {
+      "type": "driveBox",
+      "centerX": -69.80646692054259,
+      "centerZ": 28.83292416127078,
+      "width": 8,
+      "depth": 8,
+      "rotation": -128,
+      "solidBase": false,
+      "thickness": 0.4,
+      "layerId": 0,
+      "heightAtMin": 0,
+      "heightAtMax": 2.5,
+      "color": "#9aa0a8",
+      "sideColor": "tex:plywood",
+      "reverseOverride": {
+        "rotation": 52
+      }
     },
     {
       "type": "terrainPath",
@@ -1082,7 +1121,10 @@
       "transition": 5.5,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 5.5
+      "heightAtMax": 5.5,
+      "reverseOverride": {
+        "angle": 339
+      }
     },
     {
       "type": "squareHill",
@@ -1095,7 +1137,10 @@
       "transition": 5.5,
       "terrainType": null,
       "heightAtMin": 4,
-      "heightAtMax": 0
+      "heightAtMax": 0,
+      "reverseOverride": {
+        "angle": 173
+      }
     },
     {
       "type": "squareHill",
@@ -1121,7 +1166,10 @@
       "transition": 5,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3.5
+      "heightAtMax": 3.5,
+      "reverseOverride": {
+        "angle": 180
+      }
     },
     {
       "type": "trackSign",
@@ -1358,7 +1406,10 @@
       "transition": 5,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 4
+      "heightAtMax": 4,
+      "reverseOverride": {
+        "angle": 180
+      }
     },
     {
       "type": "squareHill",
@@ -1372,7 +1423,10 @@
       "terrainType": null,
       "heightAtMin": 0,
       "heightAtMax": 5,
-      "edgeShape": 1.35
+      "edgeShape": 1.35,
+      "reverseOverride": {
+        "angle": 180
+      }
     },
     {
       "type": "actionZone",
@@ -1514,9 +1568,9 @@
     {
       "type": "decal",
       "position": [
-        -45.43375064781432,
+        -46.39459590533243,
         0,
-        -77.66028761938452
+        -77.51615416313426
       ],
       "normal": [
         0,
@@ -1536,9 +1590,9 @@
     {
       "type": "decal",
       "position": [
-        -36.171584026937566,
+        -36.45578554607115,
         0,
-        -81.23457384833024
+        -81.3752731142103
       ],
       "normal": [
         0,
@@ -1665,8 +1719,8 @@
     },
     {
       "type": "startPosition",
-      "x": 75.37387366690277,
-      "z": -45.22642050879849,
+      "x": 75.08987027957501,
+      "z": -46.23129052796204,
       "heading": -2.443460952792061,
       "columns": 10,
       "colSpacing": 3.5,
@@ -1774,7 +1828,7 @@
       "x": 90.21924443027807,
       "z": -55.9653065331588,
       "color": "red",
-      "scale": 1.5,
+      "scale": 0.9,
       "height": 7.5
     },
     {
@@ -2153,8 +2207,8 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": 21.78308067703962,
-      "z": -58.93368606750178,
+      "x": 21.676298718229198,
+      "z": -58.876943611082424,
       "color": "green",
       "scale": 1,
       "seed": 11,
@@ -2313,6 +2367,46 @@
       "heading": 0.4014257279586958,
       "mirrorZ": true,
       "scale": 0.7
+    },
+    {
+      "type": "squareHill",
+      "centerX": -95.02907366348276,
+      "centerZ": 13.0245247138961,
+      "width": 4.5,
+      "depth": 15.5,
+      "angle": 0,
+      "height": -1.2,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": "loose_dirt",
+      "blendWidth": 2
+    },
+    {
+      "type": "squareHill",
+      "centerX": -100.02907366348276,
+      "centerZ": 15.5245247138961,
+      "width": 4.5,
+      "depth": 13.5,
+      "angle": -20,
+      "height": -1.2,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": "loose_dirt",
+      "blendWidth": 1.5
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -21.372934655184146,
+      "z": -4.866155217877463,
+      "color": "green",
+      "scale": 2.1,
+      "seed": 3,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.792526803190927
     }
   ]
 }

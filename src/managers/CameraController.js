@@ -5,6 +5,8 @@ import { Vector3 } from "@babylonjs/core";
  *
  * Modes:
  *   'fixed'      - classic overhead camera, offset is world-space (default)
+ *   'isometric'  - same as 'fixed', but the horizontal offset is rotated 45°
+ *                  for a diamond-style isometric view
  *   'chase'      - camera sits behind and above the truck, rotating with its heading
  *   'chase-low'  - low third-person camera tight behind the truck
  *   'screenshot' - fixed camera position for screenshots
@@ -21,7 +23,7 @@ export class CameraController {
     this.zoomStep = 0.1;
 
     // Camera mode
-    this.mode = 'fixed'; // 'fixed' | 'chase' | 'chase-low' | 'free'
+    this.mode = 'fixed'; // 'fixed' | 'isometric' | 'chase' | 'chase-low' | 'free'
     this._savedMode = this.mode;
 
     // Free camera state
@@ -34,10 +36,16 @@ export class CameraController {
     // Screenshot camera fixed position
     this.screenshotCameraPosition = new Vector3(0, 124, -110);
     this.screenshotCameraTarget = new Vector3(0, 0.5, -13);
+
+    // Blend from the pre-switch camera pose to the new mode's over this many
+    // seconds, instead of snapping. Re-triggering mid-blend just restarts it
+    // from wherever the camera currently is, so rapid cycling stays smooth.
+    this.transitionDuration = 0.5;
+    this._transition = null; // { t, fromPos: Vector3, fromTarget: Vector3 }
   }
 
   toggleMode() {
-    const modes = ['fixed', 'chase', 'chase-low', 'screenshot'];
+    const modes = ['fixed', 'isometric', 'chase', 'chase-low', 'screenshot'];
     if (this.mode === 'free') {
       const next = (modes.indexOf(this._savedMode) + 1) % modes.length;
       this._savedMode = modes[next];
@@ -47,6 +55,11 @@ export class CameraController {
     this.mode = modes[next];
     // Snap smoothed heading to current on mode switch to avoid a sweep-in from stale value
     this._smoothHeading = 0;
+    this._transition = {
+      t: 0,
+      fromPos: this.camera.position.clone(),
+      fromTarget: (this.camera.getTarget ? this.camera.getTarget() : this.camera.target).clone(),
+    };
   }
 
   update(targetPosition, heading = 0, dt = 1/60) {
@@ -62,13 +75,13 @@ export class CameraController {
       return;
     }
 
-    if (this.mode === 'screenshot') {
-      this.camera.position.copyFrom(this.screenshotCameraPosition);
-      this.camera.setTarget(this.screenshotCameraTarget);
-      return;
-    }
+    let desiredPos;
+    let desiredTarget = targetPosition;
 
-    if (this.mode === 'chase' || this.mode === 'chase-low') {
+    if (this.mode === 'screenshot') {
+      desiredPos = this.screenshotCameraPosition;
+      desiredTarget = this.screenshotCameraTarget;
+    } else if (this.mode === 'chase' || this.mode === 'chase-low') {
       // Lerp the smoothed heading toward the truck heading via the shortest arc
       let diff = heading - this._smoothHeading;
       // Wrap diff into [-π, π]
@@ -87,19 +100,32 @@ export class CameraController {
       }
       const camX = targetPosition.x - Math.sin(this._smoothHeading) * dist;
       const camZ = targetPosition.z - Math.cos(this._smoothHeading) * dist;
-      this.camera.position.x = camX;
-      this.camera.position.y = targetPosition.y + height;
-      this.camera.position.z = camZ;
+      desiredPos = new Vector3(camX, targetPosition.y + height, camZ);
+    } else if (this.mode === 'isometric') {
+      // Same as 'fixed', but the horizontal offset is rotated 45° around Y so
+      // the view lines up diagonally with the world axes (diamond/isometric
+      // look) instead of looking straight down the track's -Z axis.
+      const rad = Math.PI / 4;
+      const cos = Math.cos(rad), sin = Math.sin(rad);
+      const ox = this.baseOffset.x * cos - this.baseOffset.z * sin;
+      const oz = this.baseOffset.x * sin + this.baseOffset.z * cos;
+      desiredPos = targetPosition.add(new Vector3(ox, this.baseOffset.y, oz).scale(this.zoomLevel));
     } else {
       // Fixed: world-space offset
-      const offset = this.baseOffset.scale(this.zoomLevel);
-      const targetCamPos = targetPosition.add(offset);
-      this.camera.position.x = targetCamPos.x;
-      this.camera.position.y = targetCamPos.y;
-      this.camera.position.z = targetCamPos.z;
+      desiredPos = targetPosition.add(this.baseOffset.scale(this.zoomLevel));
     }
 
-    this.camera.setTarget(targetPosition);
+    if (this._transition) {
+      this._transition.t += dt;
+      const progress = Math.min(1, this._transition.t / this.transitionDuration);
+      const ease = progress * progress * (3 - 2 * progress); // smoothstep
+      this.camera.position.copyFrom(Vector3.Lerp(this._transition.fromPos, desiredPos, ease));
+      this.camera.setTarget(Vector3.Lerp(this._transition.fromTarget, desiredTarget, ease));
+      if (progress >= 1) this._transition = null;
+    } else {
+      this.camera.position.copyFrom(desiredPos);
+      this.camera.setTarget(desiredTarget);
+    }
   }
 
   zoomIn() {

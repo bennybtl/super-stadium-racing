@@ -210,7 +210,10 @@
       "heightAtMin": 0,
       "heightAtMax": 3,
       "color": "tex:plywood",
-      "sideColor": "#b3342e"
+      "sideColor": "#b3342e",
+      "reverseOverride": {
+        "rotation": 94
+      }
     },
     {
       "type": "squareHill",
@@ -569,7 +572,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": -0.5,
-      "heightAtMax": 3.5
+      "heightAtMax": 3.5,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "squareHill",
@@ -582,7 +588,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 3.5,
-      "heightAtMax": 0
+      "heightAtMax": 0,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "polyHill",
@@ -658,7 +667,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 2.5
+      "heightAtMax": 2.5,
+      "reverseOverride": {
+        "angle": 271
+      }
     },
     {
       "type": "squareHill",
@@ -671,7 +683,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 2.5
+      "heightAtMax": 2.5,
+      "reverseOverride": {
+        "angle": 271
+      }
     },
     {
       "type": "model",
@@ -1106,7 +1121,7 @@
       "x": -48.314018395728496,
       "z": -2.757040368212863,
       "name": "Track Name",
-      "rotation": -1.3264502315156905,
+      "rotation": 5.462880558742252,
       "contentType": "brand",
       "brandImage": "energizer-racing.png",
       "background": "black",

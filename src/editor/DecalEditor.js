@@ -25,6 +25,13 @@ const norm180 = (deg) => ((deg % 360) + 540) % 360 - 180;
 const SIZE_MIN = 0.5;
 const SIZE_MAX = 30;
 const clampSize = (v) => Math.max(SIZE_MIN, Math.min(SIZE_MAX, v));
+
+// The handle sphere shrinks to fit small decals so it never reaches past the
+// decal's own footprint and grabs clicks meant to pan past it nearby — capped
+// at GizmoHandle's shared default so normal/large decals are unaffected.
+const HANDLE_DIAMETER_MAX = 1.5;
+const HANDLE_DIAMETER_MIN = 0.5;
+const HANDLE_SIZE_FACTOR = 0.4;
 const DEG = Math.PI / 180;
 
 /**
@@ -158,6 +165,8 @@ export class DecalEditor {
       }
       h.handle.setPosition(hp.x, hp.y, hp.z);
       h.handle.setSelected(entry === this.selected);
+      const footprint = Math.min(entry.feature.width ?? 4, entry.feature.height ?? 4);
+      h.handle.setDiameter(Math.min(HANDLE_DIAMETER_MAX, Math.max(HANDLE_DIAMETER_MIN, footprint * HANDLE_SIZE_FACTOR)));
 
       if (entry.feature.shape === 'polyline') {
         this._syncPolylineHandles(entry, h);

@@ -362,7 +362,10 @@
       "color": "tex:diamond_plate",
       "sideColor": "#e8e8e8",
       "heightAtMin": 0,
-      "heightAtMax": 2
+      "heightAtMax": 2,
+      "reverseOverride": {
+        "rotation": 270
+      }
     },
     {
       "type": "driveBox",
@@ -377,7 +380,10 @@
       "color": "tex:diamond_plate",
       "sideColor": "#e8e8e8",
       "heightAtMin": 0,
-      "heightAtMax": 2
+      "heightAtMax": 2,
+      "reverseOverride": {
+        "rotation": 270
+      }
     },
     {
       "type": "driveBox",
@@ -1835,7 +1841,10 @@
       "terrainType": "loamy_dirt",
       "heightAtMin": 0,
       "heightAtMax": 4,
-      "blendWidth": 1.5
+      "blendWidth": 1.5,
+      "reverseOverride": {
+        "angle": 350
+      }
     },
     {
       "type": "decal",
@@ -1882,9 +1891,9 @@
     {
       "type": "decal",
       "position": [
-        18.7845783205783,
+        18.764319785323437,
         0,
-        -14.598502614078843
+        -14.762858441200418
       ],
       "normal": [
         0,
@@ -2091,6 +2100,34 @@
       "color": "warm",
       "tilt": 90,
       "rotation": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": -44.446079547320586,
+      "centerZ": -75.58550666547319,
+      "width": 18,
+      "depth": 14,
+      "angle": 170,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": "loamy_dirt",
+      "heightAtMin": 0,
+      "heightAtMax": 4,
+      "blendWidth": 1.5,
+      "reverseOverride": {
+        "angle": 350
+      }
+    },
+    {
+      "type": "hill",
+      "centerX": -10.296036466584662,
+      "centerZ": 64.7115006821747,
+      "radiusX": 8,
+      "radiusZ": 4.5,
+      "angle": 112,
+      "height": 2,
+      "waterLevelOffset": 0,
+      "terrainType": null
     }
   ]
 }

@@ -34,6 +34,11 @@ export class GizmoHandle {
     this.mesh?.position.set(x, y, z);
   }
 
+  /** Scale the handle sphere to a given diameter (default DEFAULT_DIAMETER). */
+  setDiameter(diameter) {
+    this.mesh?.scaling.setAll(diameter / DEFAULT_DIAMETER);
+  }
+
   setSelected(selected) {
     if (this.mesh) this.mesh.material = selected ? this._mats.selected : this._mats.handle;
   }

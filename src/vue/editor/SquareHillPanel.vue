@@ -162,7 +162,7 @@
         <option value="remove">Remove</option>
       </select>
     </div>
-    <div class="text-[10px] text-slate-400 mb-3">Only takes effect when racing in reverse — use "Test Reverse" in the status bar to preview. Doesn't change how this hill looks here.</div>
+    <div class="text-[10px] text-slate-400 mb-3">What happens to this hill in reverse mode?</div>
 
     <hr class="border-t border-slate-700 my-4" />
 

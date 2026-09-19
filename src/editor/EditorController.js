@@ -154,10 +154,6 @@ export class EditorController {
     // delay. Squared to compare against squared pixel distance.
     this._dragStartThresholdSq = 16;
 
-    // Set by handlePointerDown when a click hits nothing selectable (empty
-    // terrain). Marks that a drag from here should pan the camera (never over a
-    // gizmo). Clicking empty terrain does NOT deselect the active feature.
-    this._emptyTerrainPanCandidate = false;
     // Mouse-drag camera pan (empty terrain) + wheel zoom.
     this._panState = null;        // { anchor:{x,z}, startX, startY, active }
     this._panPlaneY = 0;          // ground plane the grab point is projected onto
@@ -935,14 +931,16 @@ export class EditorController {
 
       const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
       const clickedMesh = pickResult?.pickedMesh ?? null;
+      // Captured BEFORE handlePointerDown runs, since that call may itself
+      // select clickedMesh (e.g. a fresh click on a not-yet-selected decal) —
+      // only a click that landed on what was ALREADY selected arms a drag.
       const wasSelectedTarget = this._isSelectedGizmoTarget(clickedMesh);
 
       this._clearDragHoldTimer();
-      this._emptyTerrainPanCandidate = false;
       this._panState = null;
       this.handlePointerDown(pointerInfo);
 
-      if (pickResult?.pickedMesh && this._hasDraggableSelection() && this._isSelectedGizmoTarget(pickResult.pickedMesh)) {
+      if (wasSelectedTarget && this._hasDraggableSelection()) {
         this._dragHoldTarget = clickedMesh;
         this._dragHoldStart = { x: this.scene.pointerX, y: this.scene.pointerY };
         this._dragHoldTimer = setTimeout(() => {
@@ -953,12 +951,12 @@ export class EditorController {
           }
           this._clearDragHoldTimer();
         }, this._dragHoldDelayMs);
-      }
-
-      // Empty terrain + left button → arm a camera-pan candidate.
-      // _emptyTerrainPanCandidate (set by handlePointerDown) means the click hit
-      // nothing selectable, so gizmo presses never start a pan.
-      if (this._emptyTerrainPanCandidate && pointerInfo.event.button === 0) {
+      } else if (pointerInfo.event.button === 0) {
+        // Anything else — empty terrain, a different object, or an object this
+        // click just selected for the first time — treats hold/drag as a
+        // camera pan. Only dragging the gizmo you already had selected moves
+        // it; a plain click (no movement past the threshold) still just
+        // selects.
         const anchor = this._groundXZUnderPointer();
         if (anchor) {
           this._panState = { anchor, startX: this.scene.pointerX, startY: this.scene.pointerY, active: false };
@@ -1031,7 +1029,6 @@ export class EditorController {
       // dragged) nor deselects — the active feature stays selected so a stray
       // ground click can't drop it. Deselect is explicit (Esc / another feature).
       this._panState = null;
-      this._emptyTerrainPanCandidate = false;
 
       if (this._aiPathMouseDownSelectedWaypoint && !this._aiPathMouseDownMoved) {
         if (this._aiPathMouseDownType === 'terrainPath') {
@@ -1608,11 +1605,7 @@ export class EditorController {
         // it to select, the picked mesh below is what the ray actually hit (e.g.
         // "ground" occluding a buried gizmo).
         this._logGizmoDiag('click hit a mesh but no editor claimed it → keep selection (pan candidate)', clickedMesh);
-        this._emptyTerrainPanCandidate = true;
-      } else {
-        this._emptyTerrainPanCandidate = true;
       }
-
     }
   }
 

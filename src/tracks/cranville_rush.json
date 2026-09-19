@@ -306,7 +306,10 @@
       "heightAtMin": 0,
       "heightAtMax": 4,
       "color": "tex:diamond_plate",
-      "sideColor": "tex:concrete"
+      "sideColor": "tex:concrete",
+      "reverseOverride": {
+        "rotation": 0
+      }
     },
     {
       "type": "terrainPath",
@@ -810,7 +813,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 4
+      "heightAtMax": 4,
+      "reverseOverride": {
+        "angle": 222
+      }
     },
     {
       "type": "terrain",
@@ -1147,7 +1153,10 @@
       "terrainType": "packed_dirt",
       "heightAtMin": 3,
       "heightAtMax": -0.5,
-      "blendWidth": 1.5
+      "blendWidth": 1.5,
+      "reverseOverride": {
+        "angle": 277
+      }
     },
     {
       "type": "squareHill",
@@ -1161,7 +1170,10 @@
       "terrainType": "packed_dirt",
       "heightAtMin": 3,
       "heightAtMax": -0.5,
-      "blendWidth": 3
+      "blendWidth": 3,
+      "reverseOverride": {
+        "angle": 266
+      }
     },
     {
       "type": "trackSign",

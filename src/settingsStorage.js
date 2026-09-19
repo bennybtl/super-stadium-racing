@@ -54,6 +54,7 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   lights: 4,
   checkpointArrow: true,
   aiTruckShadows: true,
+  preferredView: 'fixed',
 };
 
 export const DEFAULT_GAMEPLAY_SETTINGS = {
@@ -113,8 +114,11 @@ function normalizeAudioSettings(candidate) {
 function normalizeDisplaySettings(candidate) {
   const shadow = candidate?.shadow;
   const lights = Number(candidate?.lights);
+  const preferredView = candidate?.preferredView;
   const validShadow = shadow === 'off' || shadow === 'low' || shadow === 'medium' || shadow === 'high';
   const validLights = lights === 1 || lights === 2 || lights === 4;
+  const validView = preferredView === 'fixed' || preferredView === 'isometric'
+    || preferredView === 'chase' || preferredView === 'chase-low';
 
   return {
     shadow: validShadow ? shadow : DEFAULT_DISPLAY_SETTINGS.shadow,
@@ -125,6 +129,7 @@ function normalizeDisplaySettings(candidate) {
     aiTruckShadows: candidate?.aiTruckShadows === undefined
       ? DEFAULT_DISPLAY_SETTINGS.aiTruckShadows
       : Boolean(candidate.aiTruckShadows),
+    preferredView: validView ? preferredView : DEFAULT_DISPLAY_SETTINGS.preferredView,
   };
 }
 
