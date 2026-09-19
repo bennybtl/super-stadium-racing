@@ -1953,9 +1953,7 @@ export class EditorController {
   changeDriveBoxColor(val)          { this.driveBoxEditor.changeColor(val); }
   changeDriveBoxSideColor(val)      { this.driveBoxEditor.changeSideColor(val); }
   changeDriveBoxLegs(val)           { this.driveBoxEditor.changeLegs(val); }
-  changeDriveBoxForwardOnly(val)              { this.driveBoxEditor.changeForwardOnly(val); }
-  changeDriveBoxReverseRotationEnabled(val)   { this.driveBoxEditor.changeReverseRotationEnabled(val); }
-  changeDriveBoxReverseRotation(val)          { this.driveBoxEditor.changeReverseRotation(val); }
+  changeDriveBoxReverseMode(val)    { this.driveBoxEditor.changeReverseMode(val); }
 
   changeSquareHillWidth(val)        { this.squareHillEditor.changeWidth(val); }
   changeSquareHillDepth(val)        { this.squareHillEditor.changeDepth(val); }
@@ -1969,6 +1967,7 @@ export class EditorController {
   changeSquareHillMode(sloped)      { this.squareHillEditor.changeMode(sloped); }
   changeSquareHillTerrainType(name) { this.squareHillEditor.changeTerrainType(name); }
   changeSquareHillBlendWidth(val)   { this.squareHillEditor.changeBlendWidth(val); }
+  changeSquareHillReverseMode(val)  { this.squareHillEditor.changeReverseMode(val); }
 
   changeTerrainShapeShape(val)     { this.terrainShapeEditor.changeShape(val); }
   changeTerrainShapeWidth(val)    { this.terrainShapeEditor.changeWidth(val); }

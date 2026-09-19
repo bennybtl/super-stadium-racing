@@ -24,6 +24,11 @@ const MAX_PICKUP_VALUE = 3;
 /** Cap on pickups active on the track at once (keeps late-race laps from flooding it). */
 const MAX_ACTIVE_PICKUPS = 6;
 
+/** Random delay (s) between a lap-completion roll and the pickup actually
+ *  appearing, so spawns don't read as tied to the checkpoint cross. */
+const SPAWN_DELAY_MIN = 1.5;
+const SPAWN_DELAY_MAX = 4.5;
+
 /** Cash awarded by a money (coin) pickup, indexed by value tier (1x/2x/3x). */
 const MONEY_VALUES = [250, 500, 1000];
 /** In championship races, share of spawns that are money instead of nitro. */
@@ -56,6 +61,10 @@ export class PickupManager {
 
     /** @type {Pickup[]} */
     this._pickups = [];
+
+    /** Rolled spawns waiting out their random delay before appearing.
+     *  @type {{ pos: {x:number,z:number}, lapCount: number, zone: object|null, remainingSec: number }[]} */
+    this._pendingSpawns = [];
 
     /**
      * Assigned by the owning mode. Called with (type, truckData, value)
@@ -160,6 +169,17 @@ export class PickupManager {
    * @param {number}   dt      - frame delta time (seconds)
    */
   update(trucks, dt) {
+    if (this._pendingSpawns.length) {
+      const ready = [];
+      this._pendingSpawns = this._pendingSpawns.filter((pending) => {
+        pending.remainingSec -= dt;
+        if (pending.remainingSec > 0) return true;
+        ready.push(pending);
+        return false;
+      });
+      for (const pending of ready) this._spawnPickup(pending.pos, pending.lapCount);
+    }
+
     let anyCollected = false;
 
     for (const pickup of this._pickups) {
@@ -204,42 +224,51 @@ export class PickupManager {
   /**
    * When a truck completes a lap, each empty "pickupSpawn" zone independently
    * rolls to spawn a pickup (value scaled to the lap, up to MAX_PICKUP_VALUE).
-   * Tracks with no zones fall back to a single track-wide roll.
+   * Tracks with no zones fall back to a single track-wide roll. Successful
+   * rolls are queued and appear after a random delay (see `_queueSpawn`).
    * @param {number} lapCount - the lap the truck just completed
-   * @returns {Pickup[]} the pickups spawned this lap
    */
   spawnForLap(lapCount) {
     const zones = (this.track?.features ?? []).filter(
       f => f.type === 'actionZone' && f.zoneType === 'pickupSpawn'
     );
+    const activeCount = () => this._pickups.length + this._pendingSpawns.length;
 
     // No authored zones: fall back to a single track-wide roll at a random spot.
     if (zones.length === 0) {
-      if (Math.random() < LAP_SPAWN_CHANCE && this._pickups.length < MAX_ACTIVE_PICKUPS) {
+      if (Math.random() < LAP_SPAWN_CHANCE && activeCount() < MAX_ACTIVE_PICKUPS) {
         const [pos] = this._generatePositionsRandom(1);
-        if (pos) return [this._spawnPickup(pos, lapCount)];
+        if (pos) this._queueSpawn(pos, lapCount, null);
       }
-      return [];
+      return;
     }
 
-    const spawned = [];
+    let queued = 0;
     for (const zone of zones) {
-      if (this._pickups.length >= MAX_ACTIVE_PICKUPS) break;
+      if (activeCount() >= MAX_ACTIVE_PICKUPS) break;
       if (this._zoneOccupied(zone)) continue;
       if (Math.random() >= LAP_SPAWN_CHANCE) continue;
       const pos = this._randomPointInZone(zone);
       if (!Number.isFinite(pos.x) || !Number.isFinite(pos.z)) continue;
-      spawned.push(this._spawnPickup(pos, lapCount));
+      this._queueSpawn(pos, lapCount, zone);
+      queued++;
     }
-    if (spawned.length) {
-      console.debug(`[Pickup] lap ${lapCount}: spawned ${spawned.length} (${spawned.map(p => p.type === 'coin' ? '$' + p.value : p.value + 'x').join(', ')})`);
+    if (queued) {
+      console.debug(`[Pickup] lap ${lapCount}: queued ${queued} spawn(s)`);
     }
-    return spawned;
   }
 
-  /** True if an active pickup already sits inside `zone`. */
+  /** Roll a spawn now, but delay its appearance so it doesn't read as tied
+   *  to the checkpoint cross that triggered it. */
+  _queueSpawn(pos, lapCount, zone) {
+    const remainingSec = SPAWN_DELAY_MIN + Math.random() * (SPAWN_DELAY_MAX - SPAWN_DELAY_MIN);
+    this._pendingSpawns.push({ pos, lapCount, zone, remainingSec });
+  }
+
+  /** True if an active or pending pickup already occupies `zone`. */
   _zoneOccupied(zone) {
-    return this._pickups.some(p => this._pointInZone(p.position.x, p.position.z, zone));
+    if (this._pickups.some(p => this._pointInZone(p.position.x, p.position.z, zone))) return true;
+    return this._pendingSpawns.some(p => p.zone === zone);
   }
 
   /**
@@ -278,5 +307,6 @@ export class PickupManager {
   clearAll() {
     this._pickups.forEach(p => p.dispose());
     this._pickups = [];
+    this._pendingSpawns = [];
   }
 }

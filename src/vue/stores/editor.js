@@ -61,6 +61,9 @@ export const useEditorStore = defineStore('editor', () => {
     heightAtMax: 3,
     terrainType: 'none',
     blendWidth: 0,
+    // Reverse-race behaviour — see Track.setReverse(). Same three options as
+    // the drive box panel.
+    reverseMode: 'active',
   });
 
   // ── Drive box panel ──
@@ -78,11 +81,10 @@ export const useEditorStore = defineStore('editor', () => {
     color: 'terrain',
     sideColor: 'terrain',
     legs: true,
-    // Reverse-race behaviour — see Track.setReverse(). Most features need
-    // neither; a ramp is the motivating case for reverseRotation.
-    forwardOnly: false,
-    reverseRotationEnabled: false,
-    reverseRotation: 0,
+    // Reverse-race behaviour — see Track.setReverse(). 'active' (default,
+    // unchanged), 'rotate180' (turned to face the oncoming direction — the
+    // ramp case), or 'remove' (dropped entirely — a one-way jump).
+    reverseMode: 'active',
   });
 
   // ── Terrain shape panel (rect + circle/ellipse + polygon) ──

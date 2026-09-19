@@ -12,7 +12,7 @@ import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
-import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
+import { loadPlayerUpgrades, jitterUpgrades } from "../managers/UpgradeStorage.js";
 import { RacePositionLabels } from "../managers/RacePositionLabels.js";
 import { FloatingTextManager } from "../managers/FloatingTextManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
@@ -224,7 +224,11 @@ export class RaceMode extends DriveMode {
     // given AI keeps its identity race to race (indexed by ai order).
     const getAIColorKey   = championship?.aiColorKeys   ? (i) => championship.aiColorKeys[i]   : null;
     const getAIVehicleKey = championship?.aiVehicleKeys ? (i) => championship.aiVehicleKeys[i] : null;
-    const getAIUpgrades   = championship?.aiUpgrades    ? (i) => championship.aiUpgrades[i]    : null;
+    // Outside a championship there's no AI economy to earn upgrades from, so
+    // give each AI truck a jittered variant of the player's own upgrade
+    // levels (each category +/-1) to keep the race competitive without
+    // every AI being identically tuned.
+    const getAIUpgrades   = championship?.aiUpgrades    ? (i) => championship.aiUpgrades[i]    : () => jitterUpgrades(playerUpgrades);
     const getAIGridSlot   = championship?.aiGridSlots   ? (i) => championship.aiGridSlots[i]   : null;
 
     const { aiTruckDataList, aiDrivers } = setupAIDrivers({

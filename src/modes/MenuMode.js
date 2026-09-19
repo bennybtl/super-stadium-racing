@@ -97,6 +97,7 @@ export class MenuMode extends DriveMode {
         trackKey:   menuManager.selectedTrack,
         vehicleKey: menuManager.selectedVehicle,
         playerColorKey: menuManager.selectedPlayerColor,
+        reverse:    menuManager.selectedReverse,
         night:      menuManager.selectedNight,
       });
     };

@@ -24,7 +24,7 @@ export class PracticeMode extends DriveMode {
     this.truckAudioController = null;
   }
 
-  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, night = false }) {
+  async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false, night = false }) {
     const { engine, menuManager } = this.controller;
 
     const {
@@ -33,11 +33,19 @@ export class PracticeMode extends DriveMode {
       shadows,
       currentTrack,
       terrainManager,
+      checkpointManager,
       obstacleManager,
       decorationManager,
       pickupManager,
-    } = await this.buildDriveScene(trackKey, { night });
+    } = await this.buildDriveScene(trackKey, { night, reverse });
     // Note: Pickups are disabled by default via buildScene. We don't spawn them here.
+
+    // Rebuild checkpoints with reverse flag (SceneBuilder already called createCheckpoints
+    // with the default forward order; rebuild here so the spawn heading below flips too).
+    if (reverse) {
+      checkpointManager._reverse = true;
+      checkpointManager.rebuild();
+    }
 
     this.scene = scene;
     const frameProfiler = this.initFrameProfiler('PracticeMode');
@@ -46,8 +54,10 @@ export class PracticeMode extends DriveMode {
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
 
-    // Spawn just behind the start/finish checkpoint, facing forward
-    const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);
+    // Spawn just behind the start/finish checkpoint. Resolve the gate from the
+    // (possibly reversed) checkpoint manager so the heading faces the right way.
+    const startCp = this.getStartFinishCheckpoint(checkpointManager)
+      ?? this.getStartFinishInfo(currentTrack).startFinishCp;
 
     // Create truck first so we can read its height when calculating spawnPos
     const vehicleDef = window.vehicleLoader?.getVehicle(vehicleKey) ?? null;

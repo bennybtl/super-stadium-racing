@@ -137,6 +137,26 @@ export function incrementUpgradeLevel(upgradeId) {
   return { ok: true, upgrades: state };
 }
 
+/**
+ * Given a normalized upgrade state, returns a variant with each category
+ * nudged by -1, 0, or +1 (clamped to its valid range). Used to give AI
+ * trucks upgrades comparable to the player's without mirroring exactly.
+ */
+export function jitterUpgrades(upgrades) {
+  const state = normalizeUpgradeState(upgrades);
+  const jittered = { ...state };
+
+  for (const u of UPGRADES) {
+    const key = u.id === 'nitro' ? 'nitroCount' : u.id;
+    const maxLevel = u.id === 'nitro' ? 99 : u.maxLevel;
+    const level = state[key] ?? 0;
+    const offset = Math.floor(Math.random() * 3) - 1; // -1, 0, +1
+    jittered[key] = Math.min(maxLevel, Math.max(0, level + offset));
+  }
+
+  return normalizeUpgradeState(jittered);
+}
+
 export function resetPlayerUpgrades() {
   localStorage.removeItem(STORAGE_KEY);
   return loadPlayerUpgrades();

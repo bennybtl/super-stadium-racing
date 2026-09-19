@@ -240,9 +240,8 @@ export class DriveBoxEditor {
     s.driveBox.color     = feature.color ?? 'terrain';
     s.driveBox.sideColor = feature.sideColor ?? feature.color ?? 'terrain';
     s.driveBox.legs      = feature.legs !== false;
-    s.driveBox.forwardOnly = feature.forwardOnly === true;
-    s.driveBox.reverseRotationEnabled = feature.reverseOverride?.rotation !== undefined;
-    s.driveBox.reverseRotation = feature.reverseOverride?.rotation ?? feature.rotation ?? 0;
+    s.driveBox.reverseMode = feature.forwardOnly ? 'remove'
+      : (feature.reverseOverride?.rotation !== undefined ? 'rotate180' : 'active');
     if (sloped) {
       s.driveBox.heightAtMin = feature.heightAtMin ?? 0;
       s.driveBox.heightAtMax = feature.heightAtMax ?? 2;
@@ -281,7 +280,12 @@ export class DriveBoxEditor {
   changeRotation(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
-    this.selected.feature.rotation = val;
+    const f = this.selected.feature;
+    f.rotation = val;
+    // Rotate-180 tracks the forward rotation, so keep it in sync.
+    if (f.reverseOverride?.rotation !== undefined) {
+      f.reverseOverride.rotation = (val + 180) % 360;
+    }
     this.rebuildMesh();
   }
 
@@ -378,46 +382,27 @@ export class DriveBoxEditor {
     this.rebuildMesh();
   }
 
-  // ── Reverse-race overrides (see Track.setReverse) ─────────────────────────
-  // These don't change what's visible here — the forward layout, which this
+  // ── Reverse-race override (see Track.setReverse) ──────────────────────────
+  // Doesn't change what's visible here — the forward layout, which this
   // editor always shows — only what SceneBuilder builds for a reverse race.
   // "Test Reverse" in the status bar is how to actually see the effect.
 
-  /** Drop this box entirely when the track is raced in reverse — e.g. a jump
-   *  with no reverse landing, in place of a track-wide Allow Reverse veto. */
-  changeForwardOnly(val) {
+  /**
+   * 'active' (default, unchanged), 'rotate180' (turned to face the oncoming
+   * direction — the ramp case), or 'remove' (dropped entirely — a jump with
+   * no reverse landing, in place of a track-wide Allow Reverse veto).
+   */
+  changeReverseMode(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot();
     const f = this.selected.feature;
-    if (val) f.forwardOnly = true;
-    else delete f.forwardOnly;
-    this.rebuildMesh();
-  }
-
-  /** Arms/disarms a reverse-only rotation override — the ramp case: same box,
-   *  turned to face the oncoming direction when the race runs backwards. */
-  changeReverseRotationEnabled(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot();
-    const f = this.selected.feature;
-    if (val) {
-      // A half-turn from the current heading is the common case; the number
-      // field lets it be fine-tuned from there.
-      const start = f.reverseOverride?.rotation ?? (((f.rotation ?? 0) + 180) % 360);
-      f.reverseOverride = { ...(f.reverseOverride ?? {}), rotation: start };
-      if (this.editor._editorStore) this.editor._editorStore.driveBox.reverseRotation = start;
-    } else if (f.reverseOverride) {
-      delete f.reverseOverride.rotation;
-      if (Object.keys(f.reverseOverride).length === 0) delete f.reverseOverride;
+    delete f.forwardOnly;
+    delete f.reverseOverride;
+    if (val === 'remove') {
+      f.forwardOnly = true;
+    } else if (val === 'rotate180') {
+      f.reverseOverride = { rotation: ((f.rotation ?? 0) + 180) % 360 };
     }
-    this.rebuildMesh();
-  }
-
-  changeReverseRotation(val) {
-    if (!this.selected) return;
-    this.editor.saveSnapshot(true);
-    const f = this.selected.feature;
-    f.reverseOverride = { ...(f.reverseOverride ?? {}), rotation: val };
     this.rebuildMesh();
   }
 }

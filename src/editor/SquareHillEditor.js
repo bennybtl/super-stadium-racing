@@ -309,6 +309,8 @@ export class SquareHillEditor {
     s.squareHill.slopeMode   = sloped;
     s.squareHill.terrainType = feature.terrainType?.name || 'none';
     s.squareHill.blendWidth  = feature.blendWidth ?? 0;
+    s.squareHill.reverseMode = feature.forwardOnly ? 'remove'
+      : (feature.reverseOverride?.angle !== undefined ? 'rotate180' : 'active');
     if (sloped) {
       s.squareHill.heightAtMin = feature.heightAtMin ?? 0;
       s.squareHill.heightAtMax = feature.heightAtMax ?? 5;
@@ -387,7 +389,12 @@ export class SquareHillEditor {
   changeAngle(val) {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
-    this.selected.feature.angle = val;
+    const f = this.selected.feature;
+    f.angle = val;
+    // Rotate-180 tracks the forward angle, so keep it in sync.
+    if (f.reverseOverride?.angle !== undefined) {
+      f.reverseOverride.angle = (val + 180) % 360;
+    }
     this.rebuildTerrain();
   }
 
@@ -461,6 +468,30 @@ export class SquareHillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.blendWidth = Math.max(0, val);
+    this.rebuildTerrain();
+  }
+
+  // ── Reverse-race override (see Track.setReverse) ──────────────────────────
+  // Doesn't change what's visible here — the forward layout, which this
+  // editor always shows — only what SceneBuilder builds for a reverse race.
+  // "Test Reverse" in the status bar is how to actually see the effect.
+
+  /**
+   * 'active' (default, unchanged), 'rotate180' (turned to face the oncoming
+   * direction — the ramp case), or 'remove' (dropped entirely — a jump with
+   * no reverse landing, in place of a track-wide Allow Reverse veto).
+   */
+  changeReverseMode(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+    const f = this.selected.feature;
+    delete f.forwardOnly;
+    delete f.reverseOverride;
+    if (val === 'remove') {
+      f.forwardOnly = true;
+    } else if (val === 'rotate180') {
+      f.reverseOverride = { angle: ((f.angle ?? 0) + 180) % 360 };
+    }
     this.rebuildTerrain();
   }
 }
