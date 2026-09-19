@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 10
+    "height": 8
   },
   "name": "Cross Country",
   "image": "cross_country.jpg",

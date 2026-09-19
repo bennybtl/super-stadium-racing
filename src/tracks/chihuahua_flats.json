@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
   "id": "chihuahua_flats",
-  "packId": null,
+  "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
   "grassBlades": true,
@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 3,
-    "height": 12
+    "height": 10
   },
   "name": "Chihuahua Flats",
   "image": "chihuahua_flats.jpg",

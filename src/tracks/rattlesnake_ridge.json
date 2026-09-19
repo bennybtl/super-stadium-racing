@@ -9,8 +9,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 24,
-    "color": "#808080"
+    "height": 8
   },
   "name": "Rattlesnake Ridge",
   "image": "rattlesnake_ridge.jpg",

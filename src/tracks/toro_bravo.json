@@ -10,8 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 12,
-    "color": "#808080"
+    "height": 8
   },
   "name": "Toro Bravo",
   "image": "toro_bravo.jpg",

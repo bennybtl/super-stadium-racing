@@ -153,6 +153,9 @@ export const useEditorStore = defineStore('editor', () => {
     pointHeight: 0,
     color: 'terrain',
     sideColor: 'terrain',
+    // Reverse-race behaviour — see Track.setReverse(). Same options as the
+    // drive box / square hill panels.
+    reverseMode: 'active',
   });
 
   // ── Poly wall panel ──
@@ -527,7 +530,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ── Decal stamp / edit (one panel, any surface) ──
-  const decal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, brand: '', brands: [], hasBrand: false, rotation: 0, width: 4, height: 4, linkScale: true, opacity: 1, thickness: 1, pointCount: 0, selectedPointIndex: -1, canHaveRadius: false, radius: 0 });
+  const decal = reactive({ shape: 'arrow', shapes: ['arrow'], count: 3, hasCount: false, outline: false, hasOutline: false, color: 'white', colors: ['white'], text: 'TEXT', hasText: false, brand: '', brands: [], hasBrand: false, rotation: 0, width: 4, height: 4, linkScale: true, opacity: 1, thickness: 1, pointCount: 0, selectedPointIndex: -1, canHaveRadius: false, radius: 0, reverseMode: 'active' });
 
 
   // ── Generic panel plumbing ──────────────────────────────────────────────

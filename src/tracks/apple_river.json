@@ -10,8 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 4,
-    "height": 4,
-    "color": "#6b4d3d"
+    "height": 4
   },
   "name": "Apple River",
   "image": "apple_river.jpg",

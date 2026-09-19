@@ -241,6 +241,7 @@ export class DriveBoxEditor {
     s.driveBox.sideColor = feature.sideColor ?? feature.color ?? 'terrain';
     s.driveBox.legs      = feature.legs !== false;
     s.driveBox.reverseMode = feature.forwardOnly ? 'remove'
+      : feature.reverseOnly ? 'only'
       : (feature.reverseOverride?.rotation !== undefined ? 'rotate180' : 'active');
     if (sloped) {
       s.driveBox.heightAtMin = feature.heightAtMin ?? 0;
@@ -389,8 +390,9 @@ export class DriveBoxEditor {
 
   /**
    * 'active' (default, unchanged), 'rotate180' (turned to face the oncoming
-   * direction — the ramp case), or 'remove' (dropped entirely — a jump with
-   * no reverse landing, in place of a track-wide Allow Reverse veto).
+   * direction — the ramp case), 'remove' (dropped in reverse — a jump with no
+   * reverse landing, in place of a track-wide Allow Reverse veto), or 'only'
+   * (dropped in forward — a feature that exists only when racing backwards).
    */
   changeReverseMode(val) {
     if (!this.selected) return;
@@ -398,8 +400,11 @@ export class DriveBoxEditor {
     const f = this.selected.feature;
     delete f.forwardOnly;
     delete f.reverseOverride;
+    delete f.reverseOnly;
     if (val === 'remove') {
       f.forwardOnly = true;
+    } else if (val === 'only') {
+      f.reverseOnly = true;
     } else if (val === 'rotate180') {
       f.reverseOverride = { rotation: ((f.rotation ?? 0) + 180) % 360 };
     }

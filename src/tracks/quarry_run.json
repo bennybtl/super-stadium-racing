@@ -10,8 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 24,
-    "color": "#808080"
+    "height": 24
   },
   "name": "Quarry Run",
   "image": "quarry_run.jpg",

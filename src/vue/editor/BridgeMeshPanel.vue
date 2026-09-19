@@ -195,6 +195,26 @@
 
     <hr class="border-t border-slate-700 my-4" />
 
+    <!-- Reverse-race override -->
+    <div class="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">Reverse</div>
+
+    <div class="flex justify-between items-center mb-1 text-[12px]">
+      <span>Reverse Mode</span>
+      <select
+        :value="editor.bridgeMesh.reverseMode"
+        @change="editor.setFeatureProp('bridgeMesh', 'reverseMode', $event.target.value)"
+        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+      >
+        <option value="active">Active</option>
+        <option value="rotate180">Rotate 180</option>
+        <option value="remove">Remove</option>
+        <option value="only">Only</option>
+      </select>
+    </div>
+    <div class="text-[10px] text-slate-400 mb-3">Only takes effect when racing in reverse — use "Test Reverse" in the status bar to preview. Doesn't change how this mesh looks here.</div>
+
+    <hr class="border-t border-slate-700 my-4" />
+
     <div class="flex gap-2">
       <button
         class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"

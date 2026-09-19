@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 12
+    "height": 8
   },
   "name": "Over Rush",
   "image": "over_rush.jpg",

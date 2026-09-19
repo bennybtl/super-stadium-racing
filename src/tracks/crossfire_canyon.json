@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 16
+    "height": 8
   },
   "name": "Crossfire Canyon",
   "image": "crossfire_canyon.jpg",

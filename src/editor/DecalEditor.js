@@ -611,6 +611,29 @@ export class DecalEditor {
     this._rebuildSelected();
   }
 
+  /**
+   * 'active' (default, unchanged), 'rotate180' (turned to face the oncoming
+   * direction — the ramp case), 'remove' (dropped in reverse — a jump with no
+   * reverse landing, in place of a track-wide Allow Reverse veto), or 'only'
+   * (dropped in forward — a feature that exists only when racing backwards).
+   */
+  changeReverseMode(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+    const f = this.selected.feature;
+    delete f.forwardOnly;
+    delete f.reverseOverride;
+    delete f.reverseOnly;
+    if (val === 'remove') {
+      f.forwardOnly = true;
+    } else if (val === 'only') {
+      f.reverseOnly = true;
+    } else if (val === 'rotate180') {
+      f.reverseOverride = { rotation: norm180((f.rotation ?? 0) + 180) };
+    }
+    this._rebuildSelected();
+  }
+
   /** Resize a placed decal. In linked mode the other dimension scales with it
    *  (aspect preserved); never linked for the polyline shape. */
   _changeSize(dim, val) {
@@ -669,6 +692,9 @@ export class DecalEditor {
     s.canHaveRadius = s.shape === 'polyline' && this._selectedPointIndex >= 0
       && this._canHaveRadius(this._selectedPointIndex, f.points.length);
     s.radius = s.canHaveRadius ? (f.points[this._selectedPointIndex]?.radius ?? 0) : 0;
+    s.reverseMode = f.forwardOnly ? 'remove'
+      : f.reverseOnly ? 'only'
+      : (f.reverseOverride?.rotation !== undefined ? 'rotate180' : 'active');
   }
 
   // ── Ghost preview ─────────────────────────────────────────────────────────

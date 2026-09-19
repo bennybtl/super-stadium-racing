@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 3,
-    "height": 12
+    "height": 8
   },
   "name": "Cranville Rush",
   "image": "cranville_rush.jpg",

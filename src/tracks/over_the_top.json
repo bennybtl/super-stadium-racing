@@ -10,8 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 24,
-    "color": "#808080"
+    "height": 8
   },
   "name": "Over the Top",
   "image": "over_the_top.jpg",

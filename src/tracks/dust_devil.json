@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 3.5,
-    "height": 21
+    "height": 8
   },
   "name": "Dust Devil",
   "image": "dust_devil.jpg",

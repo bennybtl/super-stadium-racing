@@ -596,6 +596,9 @@ export class BridgeMeshEditor {
     s.bridgeMesh.layerId = feature.layerId ?? feature.level ?? 1;
     s.bridgeMesh.color     = feature.color ?? 'terrain';
     s.bridgeMesh.sideColor = feature.sideColor ?? feature.color ?? 'terrain';
+    s.bridgeMesh.reverseMode = feature.forwardOnly ? 'remove'
+      : feature.reverseOnly ? 'only'
+      : (feature.reverseOverride?.rotation !== undefined ? 'rotate180' : 'active');
     s.selectedType         = 'bridgeMesh';
   }
 

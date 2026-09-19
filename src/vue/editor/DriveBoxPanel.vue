@@ -177,6 +177,7 @@
         <option value="active">Active</option>
         <option value="rotate180">Rotate 180</option>
         <option value="remove">Remove</option>
+        <option value="only">Only</option>
       </select>
     </div>
     <div class="text-[10px] text-slate-400 mb-3">What happens to this box in reverse mode?</div>

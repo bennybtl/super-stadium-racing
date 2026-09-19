@@ -310,6 +310,7 @@ export class SquareHillEditor {
     s.squareHill.terrainType = feature.terrainType?.name || 'none';
     s.squareHill.blendWidth  = feature.blendWidth ?? 0;
     s.squareHill.reverseMode = feature.forwardOnly ? 'remove'
+      : feature.reverseOnly ? 'only'
       : (feature.reverseOverride?.angle !== undefined ? 'rotate180' : 'active');
     if (sloped) {
       s.squareHill.heightAtMin = feature.heightAtMin ?? 0;
@@ -478,8 +479,9 @@ export class SquareHillEditor {
 
   /**
    * 'active' (default, unchanged), 'rotate180' (turned to face the oncoming
-   * direction — the ramp case), or 'remove' (dropped entirely — a jump with
-   * no reverse landing, in place of a track-wide Allow Reverse veto).
+   * direction — the ramp case), 'remove' (dropped in reverse — a jump with no
+   * reverse landing, in place of a track-wide Allow Reverse veto), or 'only'
+   * (dropped in forward — a feature that exists only when racing backwards).
    */
   changeReverseMode(val) {
     if (!this.selected) return;
@@ -487,8 +489,11 @@ export class SquareHillEditor {
     const f = this.selected.feature;
     delete f.forwardOnly;
     delete f.reverseOverride;
+    delete f.reverseOnly;
     if (val === 'remove') {
       f.forwardOnly = true;
+    } else if (val === 'only') {
+      f.reverseOnly = true;
     } else if (val === 'rotate180') {
       f.reverseOverride = { angle: ((f.angle ?? 0) + 180) % 360 };
     }

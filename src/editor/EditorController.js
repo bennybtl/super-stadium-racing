@@ -2235,6 +2235,28 @@ export class EditorController {
     feature.sideColor = v;
     rebuild.bridgeMesh?.(feature);
   }
+  /**
+   * 'active' (default, unchanged), 'rotate180' (turned to face the oncoming
+   * direction — the ramp case), 'remove' (dropped in reverse — a jump with no
+   * reverse landing, in place of a track-wide Allow Reverse veto), or 'only'
+   * (dropped in forward — a feature that exists only when racing backwards).
+   */
+  changeBridgeMeshReverseMode(v) {
+    const feature = this.bridgeMeshEditor?.activeFeature;
+    if (!feature) return;
+    this.saveSnapshot();
+    delete feature.forwardOnly;
+    delete feature.reverseOverride;
+    delete feature.reverseOnly;
+    if (v === 'remove') {
+      feature.forwardOnly = true;
+    } else if (v === 'only') {
+      feature.reverseOnly = true;
+    } else if (v === 'rotate180') {
+      feature.reverseOverride = { rotation: ((feature.rotation ?? 0) + 180) % 360 };
+    }
+    rebuild.bridgeMesh?.(feature);
+  }
   flattenBridgeMesh()                { this.bridgeMeshEditor?.flattenBridgeMesh(); }
   deleteBridgeMesh()                 { this.bridgeMeshEditor?.deleteBridgeMesh(); }
   duplicateBridgeMesh()              { this.bridgeMeshEditor?.duplicateBridgeMesh(); }
@@ -2299,6 +2321,7 @@ export class EditorController {
   changeDecalBrand(v)     { this.decalEditor.changeBrand(v); }
   changeDecalRadius(v)    { this.decalEditor.changeRadius(v); }
   changeDecalThickness(v) { this.decalEditor.changeThickness(v); }
+  changeDecalReverseMode(v) { this.decalEditor.changeReverseMode(v); }
   insertDecalPoint()     { this.decalEditor.insertPoint(); }
   deleteDecalPoint()     { this.decalEditor.deletePoint(); }
 

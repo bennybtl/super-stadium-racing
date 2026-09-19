@@ -186,7 +186,27 @@
     />
 
     <hr class="border-t border-slate-700 my-4" />
-    
+
+    <!-- Reverse-race override (edit mode only — nothing to override before it's placed) -->
+    <template v-if="editing">
+      <div class="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">Reverse</div>
+      <div class="flex justify-between items-center mb-1 text-[12px]">
+        <span>Reverse Mode</span>
+        <select
+          :value="s.reverseMode"
+          @change="editor.setFeatureProp('decal', 'reverseMode', $event.target.value)"
+          class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        >
+          <option value="active">Active</option>
+          <option value="rotate180">Rotate 180</option>
+          <option value="remove">Remove</option>
+          <option value="only">Only</option>
+        </select>
+      </div>
+      <div class="text-[10px] text-slate-400 mb-3">Only takes effect when racing in reverse — use "Test Reverse" in the status bar to preview. Doesn't change how this decal looks here.</div>
+      <hr class="border-t border-slate-700 my-4" />
+    </template>
+
     <!-- Actions (edit mode only) -->
     <div v-if="editing" class="flex gap-2 mb-3">
       <button
