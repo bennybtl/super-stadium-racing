@@ -460,10 +460,10 @@
       "x": -110.99584832211549,
       "z": 71.82882739580182,
       "height": 18,
-      "spread": 108,
+      "spread": 78,
       "intensity": 29,
       "color": "warm",
-      "tilt": 10,
+      "tilt": 16,
       "rotation": 306
     },
     {
@@ -2228,13 +2228,13 @@
     },
     {
       "type": "trackLight",
-      "x": -116.36305344099078,
-      "z": -80.9588468883602,
+      "x": -112.36305344099078,
+      "z": -77.4588468883602,
       "height": 18,
-      "spread": 86,
+      "spread": 68,
       "intensity": 14,
       "color": "warm",
-      "tilt": 19,
+      "tilt": 27,
       "rotation": 233
     },
     {
@@ -2242,7 +2242,7 @@
       "x": 87.28105784439167,
       "z": -92.07366065735233,
       "height": 24,
-      "spread": 114,
+      "spread": 76,
       "intensity": 7,
       "color": "warm",
       "tilt": 21,
@@ -2253,7 +2253,7 @@
       "x": 103.870186671077,
       "z": 87.67733983098017,
       "height": 18,
-      "spread": 120,
+      "spread": 65,
       "intensity": 9,
       "color": "warm",
       "tilt": 16,
@@ -2261,14 +2261,57 @@
     },
     {
       "type": "trackLight",
-      "x": 2.933781712455005,
-      "z": -65.53531824370152,
+      "x": 3.7104615574738107,
+      "z": -39.14073746679668,
       "height": 18,
-      "spread": 120,
-      "intensity": 7,
+      "spread": 74,
+      "intensity": 12,
       "color": "warm",
-      "tilt": 56,
+      "tilt": 23,
       "rotation": 0
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": -29.19989731180308,
+      "z": -36.15669393005556,
+      "scale": 0.8,
+      "heading": 0.7853981633974483
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_3",
+      "x": -27.19989731180308,
+      "z": -32.15669393005556,
+      "heading": 0.7853981633974483,
+      "mirrorZ": true,
+      "scale": 0.8
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_3",
+      "x": -107.35174747826078,
+      "z": -25.97805677667345,
+      "heading": 0.7853981633974483,
+      "mirrorZ": true,
+      "scale": 2
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": -101.35174747826078,
+      "z": -23.47805677667345,
+      "heading": 0.4014257279586958,
+      "mirrorZ": true
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": -91.85174747826078,
+      "z": -15.478056776673451,
+      "heading": 0.4014257279586958,
+      "mirrorZ": true,
+      "scale": 0.7
     }
   ]
 }

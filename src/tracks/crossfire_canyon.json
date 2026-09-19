@@ -727,8 +727,8 @@
     {
       "type": "model",
       "model": "tent",
-      "x": -4.356512027446661,
-      "z": -47.61758924093908,
+      "x": -5.042927540817449,
+      "z": -42.67860153285002,
       "color": "red",
       "scale": 1.5,
       "heading": 0.10471975511965978
@@ -736,17 +736,8 @@
     {
       "type": "model",
       "model": "tent",
-      "x": -3.9855414393171307,
-      "z": -33.35298930355708,
-      "color": "white",
-      "scale": 1.5,
-      "heading": 0
-    },
-    {
-      "type": "model",
-      "model": "tent",
-      "x": 6.033839867103189,
-      "z": -33.70498486746332,
+      "x": 7.087741293952271,
+      "z": -41.93598525160873,
       "color": "gray",
       "scale": 1.5,
       "heading": 1.5009831567151235
@@ -754,7 +745,7 @@
     {
       "type": "model",
       "model": "scaffold",
-      "x": 0.9796211672848703,
+      "x": -0.5203788327151297,
       "z": 9.050244225952083,
       "color": "black",
       "scale": 1.5,
@@ -858,16 +849,16 @@
     },
     {
       "type": "trackSign",
-      "x": -0.02216947379511236,
-      "z": -24.33198132131336,
+      "x": 0.41404834759340137,
+      "z": -34.88770815414285,
       "name": "Cross-Fire Canyon",
       "rotation": 0,
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "background": "black",
       "primaryColor": "white",
-      "scale": 1.55,
-      "heightOffset": 0.6,
+      "scale": 1.75,
+      "heightOffset": 5.4,
       "width": 10,
       "logoScale": 1
     },
@@ -1043,20 +1034,11 @@
     {
       "type": "model",
       "model": "tent",
-      "x": -5.384219509816905,
-      "z": 52.46268874306733,
+      "x": -46.92666365589407,
+      "z": 36.96293994251465,
       "color": "white",
       "scale": 1.5,
       "heading": 1.5184364492350666
-    },
-    {
-      "type": "model",
-      "model": "tent",
-      "x": 4.752226628124909,
-      "z": 52.060945011957486,
-      "color": "white",
-      "scale": 1.5,
-      "heading": 1.6406094968746698
     },
     {
       "type": "polyHill",
@@ -1150,8 +1132,8 @@
     },
     {
       "type": "trackSign",
-      "x": 45.848106406065156,
-      "z": -46.56707238082679,
+      "x": 46.177018018111774,
+      "z": -38.72952088990029,
       "name": "Track Name",
       "rotation": 0.017453292519943295,
       "contentType": "brand",
@@ -1298,8 +1280,8 @@
     },
     {
       "type": "trackSign",
-      "x": 45.848106406065156,
-      "z": -42.06707238082679,
+      "x": 45.75581867350273,
+      "z": -35.283824344267565,
       "name": "Track Name",
       "rotation": 0.017453292519943295,
       "contentType": "brand",
@@ -1463,6 +1445,83 @@
       "width": 20,
       "height": 20.000000000000004,
       "opacity": 0.8
+    },
+    {
+      "type": "model",
+      "model": "bleachers",
+      "x": 0.4294795416972397,
+      "z": 51.93233865822409,
+      "color": "yellow",
+      "scale": 1,
+      "heading": 3.141592653589793,
+      "width": 11,
+      "height": 3
+    },
+    {
+      "type": "model",
+      "model": "bleachers",
+      "x": 0.06835845695555509,
+      "z": -29.50237662921701,
+      "color": "yellow",
+      "scale": 1,
+      "heading": 0,
+      "width": 11,
+      "height": 3
+    },
+    {
+      "type": "trackLight",
+      "x": -38.03146663939073,
+      "z": -67.88372049635561,
+      "height": 18.5,
+      "spread": 57,
+      "intensity": 10,
+      "color": "warm",
+      "tilt": 22,
+      "rotation": 203
+    },
+    {
+      "type": "trackLight",
+      "x": -46.167827269613284,
+      "z": 69.27987937958524,
+      "height": 18.5,
+      "spread": 69,
+      "intensity": 14,
+      "color": "white",
+      "tilt": 37,
+      "rotation": 347
+    },
+    {
+      "type": "trackLight",
+      "x": 36.58715652009942,
+      "z": -68.23949479941874,
+      "height": 18.5,
+      "spread": 65,
+      "intensity": 10,
+      "color": "warm",
+      "tilt": 26,
+      "rotation": 186
+    },
+    {
+      "type": "trackLight",
+      "x": 44.20295581551891,
+      "z": 68.85001046623846,
+      "height": 18.5,
+      "spread": 67,
+      "intensity": 10,
+      "color": "warm",
+      "tilt": 32,
+      "rotation": 5
+    },
+    {
+      "type": "trackLight",
+      "x": -52.72053686390696,
+      "z": 11.028740432882785,
+      "height": 15,
+      "spread": 62,
+      "intensity": 10,
+      "color": "warm",
+      "tilt": 20,
+      "rotation": 19
     }
   ]
 }

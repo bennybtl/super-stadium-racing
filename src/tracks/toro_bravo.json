@@ -4,6 +4,7 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
+  "grassBlades": true,
   "oobDeadSpace": false,
   "borderWall": {
     "enabled": true,
@@ -128,6 +129,19 @@
       "smoothing": 0.3
     },
     {
+      "type": "driveBox",
+      "centerX": -13.858560931573463,
+      "centerZ": -43.3336483894216,
+      "width": 11.5,
+      "depth": 26,
+      "rotation": 0,
+      "height": 0.5,
+      "solidBase": true,
+      "thickness": 0.4,
+      "layerId": 0,
+      "color": "tex:concrete"
+    },
+    {
       "type": "polyWall",
       "points": [
         {
@@ -215,7 +229,7 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -7.6977785900601186,
+          "x": 13.302221409939882,
           "z": 81.04189647715911,
           "radius": 10
         },
@@ -225,9 +239,14 @@
           "radius": 10
         },
         {
-          "x": -64.7950036436779,
-          "z": 52.74033861993854,
+          "x": -67.56697071901372,
+          "z": 49.38253025439885,
           "radius": 30
+        },
+        {
+          "x": -73.42552177746214,
+          "z": 25.17232782022963,
+          "radius": 10
         },
         {
           "x": -76.28407283591056,
@@ -240,7 +259,8 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "edgeShape": 1
+      "edgeShape": 1,
+      "endTaper": true
     },
     {
       "type": "polyWall",
@@ -501,13 +521,13 @@
     },
     {
       "type": "hill",
-      "centerX": -29.344931884759287,
+      "centerX": -32.34493188475929,
       "centerZ": -41.69885350376905,
       "radiusX": 13.5,
       "radiusZ": 12.5,
       "angle": 0,
       "height": -2.8,
-      "waterLevelOffset": 2,
+      "waterLevelOffset": 1.3,
       "terrainType": "mud",
       "blendWidth": 3.5,
       "edgeShape": 0.8
@@ -526,10 +546,10 @@
     },
     {
       "type": "squareHill",
-      "centerX": -28.803411566970265,
-      "centerZ": -68.07654169872713,
+      "centerX": -31.989734948467824,
+      "centerZ": -60.13966807802535,
       "width": 18,
-      "depth": 18,
+      "depth": 8.5,
       "angle": 0,
       "waterLevelOffset": 0,
       "transition": 4,
@@ -539,7 +559,7 @@
     },
     {
       "type": "squareHill",
-      "centerX": 45.30362235354013,
+      "centerX": 44.30362235354013,
       "centerZ": -66.09339474711358,
       "width": 16.5,
       "depth": 28,
@@ -617,8 +637,8 @@
       "type": "aiPath",
       "points": [
         {
-          "x": -3.5021135988993795,
-          "z": -67.5983040699086
+          "x": -2.9296061654492007,
+          "z": -67.54299660066583
         },
         {
           "x": -53.96330699168322,
@@ -776,7 +796,7 @@
     },
     {
       "type": "bannerString",
-      "x": -9.435710110726276,
+      "x": -7.935710110726276,
       "z": -67.64632371003754,
       "heading": 1.5707963267948966,
       "width": 24,
@@ -786,7 +806,7 @@
       "type": "bannerString",
       "x": -20.384586108481294,
       "z": -67.4225125836942,
-      "heading": 1.5707963267948966,
+      "heading": 1.4137166941154067,
       "width": 24,
       "poleHeight": 10
     },
@@ -879,9 +899,9 @@
     },
     {
       "type": "squareHill",
-      "centerX": 22.247148774759204,
-      "centerZ": -67.2061494845811,
-      "width": 14,
+      "centerX": -2.350593259959215,
+      "centerZ": -67.63495921646177,
+      "width": 15.5,
       "depth": 28,
       "angle": 0,
       "waterLevelOffset": 0,
@@ -925,7 +945,7 @@
       "type": "bannerString",
       "x": 0.5642898892737236,
       "z": -67.64632371003754,
-      "heading": 1.5707963267948966,
+      "heading": 1.4486232791552933,
       "width": 24,
       "poleHeight": 10
     },
@@ -994,11 +1014,623 @@
     {
       "type": "model",
       "model": "flag_stand",
-      "x": -14.177466437692072,
+      "x": -13.177466437692072,
       "z": -55.512940241124035,
       "color": "red",
       "scale": 1,
       "heading": 3.141592653589793
+    },
+    {
+      "type": "hill",
+      "centerX": -24.602421520939362,
+      "centerZ": -45.958836253425154,
+      "radiusX": 7.5,
+      "radiusZ": 9.5,
+      "angle": 0,
+      "height": -3.8,
+      "waterLevelOffset": 0,
+      "terrainType": "mud",
+      "blendWidth": 3.5,
+      "edgeShape": 0.8
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": -68.25041973223281,
+          "z": 5.775762315914251
+        },
+        {
+          "x": -67.905765680718,
+          "z": 33.88822230598111
+        },
+        {
+          "x": -42.980763367854806,
+          "z": 69.23682331240789
+        },
+        {
+          "x": -10.930549767386239,
+          "z": 75.31900127427481
+        }
+      ],
+      "width": 16,
+      "blendWidth": 2,
+      "cornerRadius": 5,
+      "closed": false,
+      "terrainType": "loose_dirt"
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": 28.781657151103452,
+      "z": -5.7053431698899715
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_1",
+      "x": 33.28165715110345,
+      "z": 1.7946568301100283,
+      "heading": 1.4311699866353502
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_2",
+      "x": 45.28165715110345,
+      "z": 4.7946568301100285,
+      "heading": 1.4311699866353502,
+      "scale": 1.4
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_2",
+      "x": 31.008690037181758,
+      "z": -7.485393084101418,
+      "heading": 0.7155849933176751,
+      "scale": 0.7
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_2",
+      "x": 29.957618171475257,
+      "z": 2.749468502805975,
+      "heading": 1.9547687622336491,
+      "scale": 0.7
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_3",
+      "x": 30.95761817147526,
+      "z": 0.7494685028059749,
+      "heading": 1.9547687622336491,
+      "scale": 0.8
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 26.30236938882856,
+      "z": -10.718246881720226,
+      "color": "green",
+      "scale": 1,
+      "seed": 28,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 29.30236938882856,
+      "z": -17.218246881720226,
+      "color": "green",
+      "scale": 1,
+      "seed": 23,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.9024088846738192
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 28.30236938882856,
+      "z": -15.218246881720226,
+      "color": "green",
+      "scale": 0.8,
+      "seed": 23,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 3.944444109507185
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 26.92797742016863,
+      "z": -20.292006856833815,
+      "color": "green",
+      "scale": 0.8,
+      "seed": 7,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "tent",
+      "x": -10.90040408814486,
+      "z": -33.99582648515528,
+      "color": "brown",
+      "scale": 1
+    },
+    {
+      "type": "model",
+      "model": "tent",
+      "x": -16.40040408814486,
+      "z": -33.99582648515528,
+      "color": "white",
+      "scale": 1
+    },
+    {
+      "type": "model",
+      "model": "tent",
+      "x": -10.90040408814486,
+      "z": -40.49582648515528,
+      "color": "brown",
+      "scale": 1
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -8.901492415033568,
+      "z": -52.28807412584784,
+      "angle": 0,
+      "scale": 1,
+      "count": 1,
+      "weight": 22,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -9.272301697684867,
+      "z": -47.510379543729066,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -9.262505616999828,
+      "z": -50.11103705366264,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "decal",
+      "position": [
+        -13.776918828148524,
+        0.5,
+        -44.815375258505576
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 0,
+      "shape": "line",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "brand": "energizer-racing.png",
+      "width": 3,
+      "height": 12,
+      "opacity": 1
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -10.928299879701727,
+      "z": -48.77955050898996,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "startPosition",
+      "x": 16.888122319882008,
+      "z": -67.83522834098623,
+      "heading": -1.5707963267948966,
+      "mode": "grid",
+      "poleIndex": 3,
+      "columns": 4,
+      "colSpacing": 4,
+      "rowSpacing": 7
+    },
+    {
+      "type": "squareHill",
+      "centerX": -38.48973494846783,
+      "centerZ": -67.63966807802535,
+      "width": 18,
+      "depth": 8.5,
+      "angle": 0,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 4,
+      "heightAtMax": 0
+    },
+    {
+      "type": "squareHill",
+      "centerX": -45.98973494846783,
+      "centerZ": -74.13966807802535,
+      "width": 18,
+      "depth": 8.5,
+      "angle": 0,
+      "waterLevelOffset": 0,
+      "transition": 4,
+      "terrainType": null,
+      "heightAtMin": 4,
+      "heightAtMax": 0
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -2.5291637224449453,
+      "z": -38.53783575328837,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -0.9286972038289889,
+      "z": -41.701671336635954,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 1.0924482422105832,
+      "z": -44.5497371789757,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 3.182023419562352,
+      "z": -47.08325926579875,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 5.699772553200782,
+      "z": -49.61047016519472,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 66.47352300256667,
+      "z": 73.912955201046,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 69.17500882119049,
+      "z": 72.0887321382334,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 71.63214079199584,
+      "z": 69.87012833410009,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 72.71816796730899,
+      "z": 66.84419116706115,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 12.208791498189793,
+      "z": 62.611056569368266,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -20.086580160774112,
+      "z": 57.24109103364474,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -42.0028610564079,
+      "z": 35.169432167556224,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -36.760902403629906,
+      "z": 5.953078992750861,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "black"
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -66.57447305432716,
+      "z": -13.311411646512944,
+      "color": "green",
+      "scale": 1,
+      "seed": 4,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.426007660272118
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -72.07447305432716,
+      "z": -10.311411646512944,
+      "color": "green",
+      "scale": 1,
+      "seed": 7,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.9024088846738192
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -69.07447305432716,
+      "z": -7.811411646512944,
+      "color": "green",
+      "scale": 1.3,
+      "seed": 7,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.9024088846738192
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -65.07447305432716,
+      "z": -8.811411646512944,
+      "color": "green",
+      "scale": 1.3,
+      "seed": 15,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 1.9024088846738192
+    },
+    {
+      "type": "trackSign",
+      "x": -14.083431439804691,
+      "z": -6.240128894579719,
+      "name": "Track Name",
+      "rotation": -1.2740903539558606,
+      "contentType": "brand",
+      "brandImage": "phoenix-auto.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.35,
+      "heightOffset": 2.5,
+      "width": 10,
+      "logoScale": 1
+    },
+    {
+      "type": "trackSign",
+      "x": -14.583431439804691,
+      "z": -19.24012889457972,
+      "name": "Track Name",
+      "rotation": -1.2740903539558606,
+      "contentType": "brand",
+      "brandImage": "phoenix-auto.png",
+      "background": "black",
+      "primaryColor": "red",
+      "scale": 1.35,
+      "heightOffset": 2.5,
+      "width": 10,
+      "logoScale": 1
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": 3.564625777040847,
+          "z": 60.284865062346405
+        },
+        {
+          "x": 13.96427834371631,
+          "z": 50.10412226001682
+        },
+        {
+          "x": -2.0794992927684195,
+          "z": 32.686122393774454
+        },
+        {
+          "x": 6.284679468733834,
+          "z": 25.33044936484683
+        },
+        {
+          "x": 7.48,
+          "z": 18.04
+        }
+      ],
+      "width": 5.5,
+      "blendWidth": 4,
+      "cornerRadius": 5,
+      "closed": false,
+      "terrainType": "weedy_grass",
+      "roughness": 0.15
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": -22.78,
+          "z": 7.08
+        },
+        {
+          "x": -17.05,
+          "z": 13.43
+        },
+        {
+          "x": -9.22,
+          "z": 6.79
+        },
+        {
+          "x": -5.128382248891562,
+          "z": -1.1186135167608997
+        }
+      ],
+      "width": 4.5,
+      "blendWidth": 4,
+      "cornerRadius": 5,
+      "closed": false,
+      "terrainType": "weedy_grass",
+      "roughness": 0.15
+    },
+    {
+      "type": "trackLight",
+      "x": -75.64487641915835,
+      "z": -76.982277871158,
+      "height": 18,
+      "spread": 120,
+      "intensity": 17,
+      "color": "warm",
+      "tilt": 25,
+      "rotation": 224
+    },
+    {
+      "type": "trackLight",
+      "x": -67.53100424538883,
+      "z": 49.04169853359176,
+      "height": 18,
+      "spread": 120,
+      "intensity": 9,
+      "color": "warm",
+      "tilt": 25,
+      "rotation": 307
+    },
+    {
+      "type": "trackLight",
+      "x": 54.59978595634068,
+      "z": 57.958021138829416,
+      "height": 18,
+      "spread": 120,
+      "intensity": 17,
+      "color": "warm",
+      "tilt": 25,
+      "rotation": 49
+    },
+    {
+      "type": "trackLight",
+      "x": 54.62435015761288,
+      "z": -31.841095891775737,
+      "height": 18,
+      "spread": 120,
+      "intensity": 11,
+      "color": "warm",
+      "tilt": 25,
+      "rotation": 41
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_2",
+      "x": 54.693313615018816,
+      "z": -34.13243452658265,
+      "heading": 1.4311699866353502,
+      "scale": 1.4
+    },
+    {
+      "type": "model",
+      "model": "forest_rock_2",
+      "x": 52.78562348486998,
+      "z": -36.002066232128925,
+      "heading": 1.4311699866353502,
+      "scale": 0.8
     }
   ]
 }

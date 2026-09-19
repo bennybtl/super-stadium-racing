@@ -4,6 +4,7 @@
   "packId": "midwest_pack_1",
   "hidden": false,
   "dirtChunks": true,
+  "grassBlades": true,
   "oobDeadSpace": false,
   "borderWall": {
     "enabled": true,
@@ -293,8 +294,8 @@
           "radius": 8.5
         },
         {
-          "x": -65.38331972888858,
-          "z": -1.880070034128316,
+          "x": -60.29683996097736,
+          "z": -3.940735007322907,
           "radius": 6
         },
         {
@@ -333,13 +334,13 @@
           "smoothing": 1
         },
         {
-          "x": 52.22363548839381,
+          "x": 46.22363548839381,
           "z": 74.79471787191356,
           "radius": 18
         },
         {
           "x": 51.98063660774879,
-          "z": 53.779175959297596,
+          "z": 52.279175959297596,
           "radius": 5
         },
         {
@@ -542,7 +543,7 @@
       "type": "terrain",
       "shape": "circle",
       "centerX": -88,
-      "centerZ": 65.49874707273528,
+      "centerZ": 63.998747072735284,
       "terrainType": "asphalt",
       "width": 27.5,
       "depth": 28,
@@ -567,15 +568,16 @@
     {
       "type": "squareHill",
       "centerX": -21.1384953267071,
-      "centerZ": -67.9248791296149,
-      "width": 14,
-      "depth": 13.5,
+      "centerZ": -67.4248791296149,
+      "width": 15,
+      "depth": 18.5,
       "angle": 180,
       "waterLevelOffset": 0,
-      "transition": 0.5,
+      "transition": 4.5,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 5.5
+      "heightAtMax": 5.5,
+      "edgeShape": 1.25
     },
     {
       "type": "squareHill",
@@ -687,7 +689,7 @@
       "radiusZ": 10,
       "angle": 0,
       "height": -1.5,
-      "waterLevelOffset": 1.5,
+      "waterLevelOffset": 0.4,
       "terrainType": "mud",
       "blendWidth": 2.5
     },
@@ -707,7 +709,7 @@
       "type": "polyHill",
       "points": [
         {
-          "x": -47.38369739786586,
+          "x": -40.38369739786586,
           "z": -75.77630712515602,
           "radius": 10
         },
@@ -717,12 +719,12 @@
           "radius": 10
         },
         {
-          "x": -93.23782386697947,
+          "x": -90.73782386697947,
           "z": -55.34650937830457,
           "radius": 10
         },
         {
-          "x": -93.01251995337329,
+          "x": -92.51251995337329,
           "z": -30.847673412151586,
           "radius": 10
         }
@@ -731,7 +733,8 @@
       "width": 15,
       "terrainType": null,
       "closed": false,
-      "filled": false
+      "filled": false,
+      "endTaper": true
     },
     {
       "type": "aiPath",
@@ -1305,6 +1308,80 @@
       "heightOffset": 1.2,
       "width": 12,
       "logoScale": 1.4
+    },
+    {
+      "type": "squareHill",
+      "centerX": 16.3976862068337,
+      "centerZ": -58.938087180479215,
+      "width": 5,
+      "depth": 18,
+      "angle": 237,
+      "height": -0.8,
+      "waterLevelOffset": 0.8,
+      "transition": 4,
+      "terrainType": "mud",
+      "blendWidth": 2.5
+    },
+    {
+      "type": "squareHill",
+      "centerX": 17.8245330165528,
+      "centerZ": -57.59596526139754,
+      "width": 5,
+      "depth": 18,
+      "angle": 124,
+      "height": -0.8,
+      "waterLevelOffset": 0.8,
+      "transition": 4,
+      "terrainType": "mud",
+      "blendWidth": 2.5
+    },
+    {
+      "type": "model",
+      "model": "bleachers",
+      "x": 69.20192977582738,
+      "z": 63.78650488672185,
+      "color": "blue",
+      "scale": 1,
+      "heading": 3.351032163829113,
+      "width": 16,
+      "height": 3
+    },
+    {
+      "type": "model",
+      "model": "bleachers",
+      "x": -88.97176125243698,
+      "z": 35.22704767563291,
+      "color": "blue",
+      "scale": 1,
+      "heading": 1.5707963267948966,
+      "width": 10,
+      "height": 3
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": -87,
+      "centerZ": 37.998747072735284,
+      "terrainType": "asphalt",
+      "width": 9.5,
+      "depth": 28,
+      "rotation": 0,
+      "blendWidth": 0
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -59.15069111847827,
+      "z": -48.60004268578909,
+      "color": "green",
+      "scale": 1.5,
+      "seed": 35,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 2.251474735072685
     }
   ]
 }

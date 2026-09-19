@@ -1,0 +1,19 @@
+{
+  "id": "rock",
+  "name": "Rock (procedural)",
+  "rotationX": 0,
+  "baseScale": 1,
+  "offsetY": 0,
+  "defaultColor": "gray",
+  "defaultScale": 1,
+  "bodyColor": "gray",
+  "colliderMeshes": ["rock"],
+  "colliderFriction": 0.9,
+  "castsShadows": true,
+  "featureDefaults": {
+    "seed": 1,
+    "radius": 0.6,
+    "collider": false
+  },
+  "editable": { "color": true, "scale": true, "heading": true }
+}

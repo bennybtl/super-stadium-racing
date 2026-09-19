@@ -682,13 +682,13 @@
     },
     {
       "type": "model",
-      "model": "forest_bush_1",
+      "model": "bush",
       "x": -64.41332290253729,
       "z": 44.50242772363913
     },
     {
       "type": "model",
-      "model": "forest_bush_1",
+      "model": "bush",
       "x": -60.092839358316716,
       "z": 40.632867580016224,
       "scale": 1.1,
@@ -696,13 +696,13 @@
     },
     {
       "type": "model",
-      "model": "forest_bush_1",
+      "model": "bush",
       "x": -42.66827635552366,
       "z": 56.99546810871979
     },
     {
       "type": "model",
-      "model": "forest_bush_3",
+      "model": "bush",
       "x": -38.06184294854479,
       "z": 63.44653359062817,
       "heading": 1.1519173063162575,
@@ -710,7 +710,7 @@
     },
     {
       "type": "model",
-      "model": "forest_bush_2",
+      "model": "bush",
       "x": -24.0631409020848,
       "z": 54.88197918274402
     },
@@ -736,20 +736,20 @@
     },
     {
       "type": "model",
-      "model": "forest_bush_2",
+      "model": "bush",
       "x": 19.48778385107073,
       "z": -11.627161142271078
     },
     {
       "type": "model",
-      "model": "forest_bush_3",
+      "model": "bush",
       "x": 13.817686965907626,
       "z": -15.589407021899774,
       "heading": 1.2217304763960306
     },
     {
       "type": "model",
-      "model": "forest_bush_3",
+      "model": "bush",
       "x": 5.935240407937471,
       "z": -16.088734255984207,
       "heading": 1.2217304763960306,
