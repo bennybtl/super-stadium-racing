@@ -49,6 +49,9 @@ export const useMenuStore = defineStore('menu', () => {
   
   // Settings state
   const truckMode = ref(localStorage.getItem('truckMode') || 'arcade');
+  // Where the settings screen's Back button should return to — 'start' from
+  // the main menu, 'pause' when opened from an in-progress race.
+  const settingsReturnScreen = ref('start');
 
   // Opaque reference to MenuManager; not observed deeply.
   const _bridge = shallowRef(null);
@@ -99,12 +102,16 @@ export const useMenuStore = defineStore('menu', () => {
   function editorSave()   { _bridge.value?.onEditorSave(); }
   function editorLoad()   { _bridge.value?.onEditorLoad(); }
   function editorExit()   { navDirection.value = 'back'; _bridge.value?.onEditorExit(); }
-  function settings()     { _bridge.value?.onSettings(); }
+  function settings(returnTo = 'start') {
+    settingsReturnScreen.value = returnTo;
+    _bridge.value?.onSettings();
+  }
 
   function back(target) {
     if (!_bridge.value) return;
     navDirection.value = 'back';
     if (target === 'start')            _bridge.value.showStartMenu();
+    else if (target === 'pause')       _bridge.value.showPauseMenu();
   }
 
   function refreshTrackList() { _bridge.value?._refreshTrackList(); }
@@ -142,6 +149,7 @@ export const useMenuStore = defineStore('menu', () => {
     pitData, singleRaceData, championshipData, upgrades,
     champInitials, champTrackCount, hasActiveChampionship,
     loadingVisible, loadingMessage,
+    settingsReturnScreen,
     setBridge,
     showStartMenu,
     showEditorTrackSelect,

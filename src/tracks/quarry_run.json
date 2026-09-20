@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 24
+    "height": 14
   },
   "name": "Quarry Run",
   "image": "quarry_run.jpg",
@@ -468,7 +468,11 @@
       "heightAtMin": 0,
       "heightAtMax": 2.5,
       "sideColor": "#6e4f2f",
-      "color": "tex:plywood"
+      "color": "tex:plywood",
+      "reverseOverride": {
+        "rotation": 180
+      },
+      "legs": false
     },
     {
       "type": "driveBox",
@@ -483,7 +487,11 @@
       "heightAtMin": 0,
       "heightAtMax": 3,
       "sideColor": "#6e4f2f",
-      "color": "tex:plywood"
+      "color": "tex:plywood",
+      "reverseOverride": {
+        "rotation": 1
+      },
+      "legs": false
     },
     {
       "type": "terrainPath",
@@ -796,7 +804,7 @@
       "model": "arrow_sign",
       "x": 0.9499794892931451,
       "z": 21.188397098100907,
-      "color": "yellow",
+      "color": "orange",
       "scale": 1.1,
       "heading": 0,
       "mirrorX": true,
@@ -811,10 +819,14 @@
       "depth": 24,
       "angle": 180,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 6,
       "terrainType": "rocky",
-      "heightAtMin": 0,
-      "heightAtMax": 5
+      "heightAtMin": -2,
+      "heightAtMax": 5,
+      "blendWidth": 1.5,
+      "reverseOverride": {
+        "angle": 0
+      }
     },
     {
       "type": "hill",
@@ -875,7 +887,7 @@
     {
       "type": "squareHill",
       "centerX": -69.45119009008427,
-      "centerZ": -23.23094058290997,
+      "centerZ": -24.23094058290997,
       "width": 18,
       "depth": 18,
       "angle": 90,
@@ -883,7 +895,10 @@
       "transition": 4,
       "terrainType": "rocky",
       "heightAtMin": 0,
-      "heightAtMax": 2
+      "heightAtMax": 2,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "squareHill",
@@ -896,7 +911,10 @@
       "transition": 4,
       "terrainType": "rocky",
       "heightAtMin": 0,
-      "heightAtMax": 2
+      "heightAtMax": 2,
+      "reverseOverride": {
+        "angle": 269
+      }
     },
     {
       "type": "squareHill",
@@ -909,7 +927,10 @@
       "transition": 4,
       "terrainType": "rocky",
       "heightAtMin": 0,
-      "heightAtMax": 2
+      "heightAtMax": 2,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "hill",
@@ -956,7 +977,7 @@
       "contentType": "text",
       "brandImage": "energizer-racing.png",
       "background": "black",
-      "primaryColor": "orange",
+      "primaryColor": "yellow",
       "scale": 1.6,
       "heightOffset": 2.8,
       "width": 12.5,
@@ -975,7 +996,7 @@
       "scale": 1.85,
       "heightOffset": 1.2,
       "width": 12.5,
-      "logoScale": 1
+      "logoScale": 1.35
     },
     {
       "type": "trackSign",
@@ -990,7 +1011,7 @@
       "scale": 1.85,
       "heightOffset": 1.2,
       "width": 12.5,
-      "logoScale": 1
+      "logoScale": 1.35
     },
     {
       "type": "trackSign",
@@ -1505,6 +1526,235 @@
       "color": "cool",
       "tilt": 13,
       "rotation": 44
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 24.019200675822713,
+      "z": -78.02453107289662,
+      "color": "yellow",
+      "scale": 1,
+      "seed": 4,
+      "radius": 0.6,
+      "collider": true
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 21.332057422033674,
+      "z": -80,
+      "color": "yellow",
+      "scale": 1,
+      "seed": 1,
+      "radius": 0.6,
+      "collider": true
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 37.14080855469059,
+      "z": -79.4610188998573,
+      "color": "yellow",
+      "scale": 1,
+      "seed": 21,
+      "radius": 0.6,
+      "collider": true
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 28.464781060493788,
+      "z": -79.00576507703752,
+      "color": "yellow",
+      "scale": 1,
+      "seed": 21,
+      "radius": 0.6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 31.288297962731008,
+      "z": -79.27594433284978,
+      "color": "yellow",
+      "scale": 1,
+      "seed": 10,
+      "radius": 0.6,
+      "collider": true
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 0.4360527335264095,
+      "z": -50.461324070085865,
+      "color": "yellow",
+      "scale": 2.9,
+      "seed": 11,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.710422666954443
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -2.0639472664735905,
+      "z": -46.961324070085865,
+      "color": "yellow",
+      "scale": 2.6,
+      "seed": 8,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.710422666954443
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 0.9360527335264095,
+      "z": -43.461324070085865,
+      "color": "yellow",
+      "scale": 2.6,
+      "seed": 6,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.710422666954443
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -2.5639472664735905,
+      "z": -36.961324070085865,
+      "color": "yellow",
+      "scale": 2.6,
+      "seed": 3,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.710422666954443
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 0.9360527335264095,
+      "z": -36.961324070085865,
+      "color": "yellow",
+      "scale": 1.4,
+      "seed": 3,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.3788101090755203
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -7.56515852181628,
+      "z": -50.23361031476889,
+      "color": "yellow",
+      "scale": 1.4,
+      "seed": 3,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.3788101090755203
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 54.20927726457914,
+      "z": 30.31079597486102,
+      "color": "yellow",
+      "scale": 1.2,
+      "seed": 14,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.710422666954443
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 56.029686794759584,
+      "z": 25.628819047019526,
+      "color": "yellow",
+      "scale": 2.6,
+      "seed": 15,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 0.8028514559173916
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 57.029686794759584,
+      "z": 32.128819047019526,
+      "color": "yellow",
+      "scale": 2.6,
+      "seed": 15,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.9722220547535925
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 55.2980820145016,
+      "z": 38.43597976478566,
+      "color": "yellow",
+      "scale": 2.2,
+      "seed": 15,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 2.5830872929516078
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 74.5,
+      "z": -37.35633987014977,
+      "color": "forest",
+      "scale": 1,
+      "seed": 40,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 78,
+      "z": -45.35633987014977,
+      "color": "forest",
+      "scale": 1,
+      "seed": 15,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 75.05848396861344,
+      "z": -76.91296627623566,
+      "color": "forest",
+      "scale": 1,
+      "seed": 3,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false
+    },
+    {
+      "type": "terrain",
+      "shape": "circle",
+      "centerX": 17.819796376501913,
+      "centerZ": -71.15202199749308,
+      "terrainType": "rocky",
+      "roughness": 1,
+      "width": 16,
+      "depth": 20,
+      "rotation": 0,
+      "blendWidth": 2.5
     }
   ]
 }

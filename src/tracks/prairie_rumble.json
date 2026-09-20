@@ -226,7 +226,10 @@
       "heightAtMin": 0,
       "heightAtMax": 2,
       "color": "tex:diamond_plate",
-      "sideColor": "tex:plywood"
+      "sideColor": "tex:plywood",
+      "reverseOverride": {
+        "rotation": 180
+      }
     },
     {
       "type": "driveBox",
@@ -747,8 +750,8 @@
     {
       "type": "model",
       "model": "bannerString",
-      "x": -19.26962796579661,
-      "z": 33.41347969062301,
+      "x": -18.76962796579661,
+      "z": 32.41347969062301,
       "heading": 2.4609142453120048,
       "width": 25,
       "poleHeight": 10
@@ -762,7 +765,7 @@
       "scale": 1,
       "count": 4,
       "weight": 80,
-      "color": "yellow"
+      "color": "white"
     },
     {
       "type": "obstacle",
@@ -773,7 +776,7 @@
       "scale": 1,
       "count": 4,
       "weight": 80,
-      "color": "yellow"
+      "color": "red"
     },
     {
       "type": "obstacle",
@@ -784,7 +787,7 @@
       "scale": 1,
       "count": 4,
       "weight": 80,
-      "color": "yellow"
+      "color": "white"
     },
     {
       "type": "obstacle",
@@ -795,7 +798,7 @@
       "scale": 1,
       "count": 4,
       "weight": 80,
-      "color": "yellow"
+      "color": "white"
     },
     {
       "type": "obstacle",
@@ -806,7 +809,7 @@
       "scale": 1,
       "count": 4,
       "weight": 80,
-      "color": "yellow"
+      "color": "red"
     },
     {
       "type": "obstacle",
@@ -817,7 +820,7 @@
       "scale": 1,
       "count": 4,
       "weight": 80,
-      "color": "yellow"
+      "color": "white"
     },
     {
       "type": "decal",
@@ -838,7 +841,8 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "forwardOnly": true
     },
     {
       "type": "decal",
@@ -859,7 +863,8 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "forwardOnly": true
     },
     {
       "type": "hill",
@@ -1280,7 +1285,7 @@
     {
       "type": "model",
       "model": "rock",
-      "color": "gray",
+      "color": "brown",
       "scale": 2.1,
       "seed": 10,
       "radius": 0.6,
@@ -1442,6 +1447,96 @@
       "color": "warm",
       "tilt": 14,
       "rotation": 213
+    },
+    {
+      "type": "decal",
+      "position": [
+        -42.324227269281806,
+        0,
+        56.377111629492155
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 33,
+      "width": 6,
+      "height": 6.5,
+      "shape": "arrow",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "opacity": 1,
+      "reverseOnly": true
+    },
+    {
+      "type": "decal",
+      "position": [
+        33.945660055712956,
+        0,
+        53.902824826828805
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "rotation": 61,
+      "width": 6.5,
+      "height": 7,
+      "shape": "arrow",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "opacity": 1,
+      "reverseOnly": true
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "color": "brown",
+      "scale": 2.1,
+      "seed": 14,
+      "radius": 0.6,
+      "collider": false,
+      "x": -12.868192439682993,
+      "z": -19.314996339941835,
+      "heading": 2.0245819323134224
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "color": "brown",
+      "scale": 1.7,
+      "seed": 28,
+      "radius": 0.6,
+      "collider": false,
+      "x": -16.488547681577124,
+      "z": -22.85028498644567,
+      "heading": 2.0245819323134224
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": -17.662810637504244,
+      "z": 55.47306757612012,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "red"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "tireStack",
+      "x": 23.894410587514777,
+      "z": 56.71768547504661,
+      "angle": 0,
+      "scale": 1,
+      "count": 4,
+      "weight": 80,
+      "color": "red"
     }
   ]
 }

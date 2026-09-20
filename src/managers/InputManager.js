@@ -78,7 +78,7 @@ export class InputManager {
     this.onToggleDebugCallback = null;
     this.onToggleVehicleDebugCallback = null;
     this.onTogglePhotoModeCallback = null;
-    
+
     this.setupEventListeners();
   }
 
@@ -86,15 +86,19 @@ export class InputManager {
     // Store bound functions so we can remove them later
     this.boundKeyDown = (e) => this.handleKeyDown(e);
     this.boundKeyUp = (e) => this.handleKeyUp(e);
-    
+    // Rebinding keys from the pause menu mid-race takes effect immediately.
+    this.boundControlsChanged = () => { this.drivingCodes = resolveDrivingCodes(); };
+
     window.addEventListener("keydown", this.boundKeyDown);
     window.addEventListener("keyup", this.boundKeyUp);
+    window.addEventListener("offroad:controls-settings-changed", this.boundControlsChanged);
   }
 
   dispose() {
     this._disposed = true;
     window.removeEventListener("keydown", this.boundKeyDown);
     window.removeEventListener("keyup", this.boundKeyUp);
+    window.removeEventListener("offroad:controls-settings-changed", this.boundControlsChanged);
   }
 
   handleKeyDown(e) {

@@ -310,6 +310,58 @@
       "legs": false
     },
     {
+      "type": "bridgeMesh",
+      "centerX": 42.66729712795961,
+      "centerZ": 14.561979291309846,
+      "width": 36,
+      "depth": 20,
+      "cols": 5,
+      "rows": 2,
+      "heights": [
+        4,
+        6.0566867453802224,
+        4,
+        4,
+        3,
+        6.243117528241521,
+        5.985919268124949,
+        5.636637015150024,
+        4,
+        1.5
+      ],
+      "rotation": 70,
+      "thickness": 5,
+      "smoothing": 1,
+      "layerId": 1,
+      "level": 1,
+      "offsetsX": [
+        4.41,
+        3.2474658148744906,
+        3.546302053604611,
+        0.3420201433256688,
+        -0.855050358314172,
+        1.5477382330467269,
+        3.383939570022994,
+        3.7259597133486624,
+        1.1089771457293804,
+        -3.034997385335469
+      ],
+      "offsetsZ": [
+        1.155612143763653,
+        -3.0747301964922955,
+        -2.433873814436507,
+        -0.9396926207859083,
+        2.349231551964771,
+        -1.5373650982461482,
+        1.8811107882911786,
+        4.7001886506489035,
+        5.724523533906548,
+        6.876684584231478
+      ],
+      "sideColor": "#9aa0a8",
+      "reverseOnly": true
+    },
+    {
       "type": "squareHill",
       "centerX": 7.153938568362019,
       "centerZ": 13.10797051881184,
@@ -334,7 +386,8 @@
       "terrainType": null,
       "heightAtMin": -0.5,
       "heightAtMax": 10.5,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "forwardOnly": true
     },
     {
       "type": "squareHill",
@@ -348,7 +401,10 @@
       "terrainType": null,
       "heightAtMin": -1.5,
       "heightAtMax": 10,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "reverseOverride": {
+        "angle": 90
+      }
     },
     {
       "type": "terrainPath",
@@ -426,8 +482,8 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -51.999892562305746,
-      "centerZ": 13.459791991550759,
+      "centerX": -56.499892562305746,
+      "centerZ": 13.959791991550759,
       "heading": 1.6580627893946132,
       "width": 16,
       "checkpointNumber": 1,
@@ -940,7 +996,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 4
+      "heightAtMax": 4,
+      "reverseOverride": {
+        "angle": 185
+      }
     },
     {
       "type": "squareHill",
@@ -953,7 +1012,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3
+      "heightAtMax": 3,
+      "reverseOverride": {
+        "angle": 0
+      }
     },
     {
       "type": "actionZone",
@@ -1070,7 +1132,7 @@
       "position": [
         4.830554800789734,
         0,
-        -0.676905855529597
+        28.323094144470403
       ],
       "normal": [
         0,
@@ -1629,7 +1691,7 @@
     },
     {
       "type": "checkpoint",
-      "centerX": -11.360331186036516,
+      "centerX": -10.360331186036516,
       "centerZ": -73.29351757798959,
       "heading": 1.5707963267948966,
       "width": 13.5,
@@ -1640,8 +1702,8 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 7.0001074376942505,
-      "centerZ": 25.45979199155076,
+      "centerX": 5.5001074376942505,
+      "centerZ": -6.540208008449241,
       "heading": 0,
       "width": 20,
       "checkpointNumber": 5,
@@ -2019,6 +2081,32 @@
       "colors": [
         "gray"
       ]
+    },
+    {
+      "type": "squareHill",
+      "centerX": 3.4094471947056277,
+      "centerZ": 50.95991569319248,
+      "width": 35,
+      "depth": 31.5,
+      "angle": 276,
+      "waterLevelOffset": 0,
+      "transition": 7,
+      "terrainType": null,
+      "heightAtMin": -1.5,
+      "heightAtMax": 10,
+      "edgeShape": 0.8,
+      "reverseOnly": true
+    },
+    {
+      "type": "startPosition",
+      "x": -13.651065487900631,
+      "z": -73.58243908498501,
+      "heading": 1.5707963267948966,
+      "mode": "grid",
+      "poleIndex": 0,
+      "columns": 3,
+      "colSpacing": 4,
+      "rowSpacing": 7
     }
   ]
 }

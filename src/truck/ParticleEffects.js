@@ -12,6 +12,11 @@ const STAR_TEXTURE_URL = starTextureUrl;
 const FLAME_TEXTURE_URL = flameTextureUrl;
 const WATER_TEXTURE_URL = waterTextureUrl;
 
+// Minimum downward speed (m/s) at touchdown before a landing poof fires at
+// all, and the range over which that impact scales the burst up to full.
+const LANDING_DUST_MIN_FALL_SPEED = 5.5;
+const LANDING_DUST_FALL_SPEED_RANGE = 12;
+
 const CLOUD_TEXTURES = new WeakMap();
 const STAR_TEXTURES = new WeakMap();
 const FLAME_TEXTURES = new WeakMap();
@@ -78,6 +83,19 @@ const EMITTER_SPECS = {
     gravity: [0, -1, 0], dir1: [-1, 0.5, -0.5], dir2: [1, 0.5, -0.5],
     angular: [0, Math.PI], power: [1, 4], updateSpeed: 0.01, emitRate: 2,
   },
+  // Landing dust: a horizontal poof kicked up the instant the truck slams
+  // back down after air time. Terrain-tinted like drift, but a wide flat box
+  // spanning the truck's footprint, near-zero gravity, and bigger/longer-
+  // lived particles so it reads as a low cloud spreading outward rather than
+  // smoke rising off the tires.
+  landingDust: {
+    capacity: 200,
+    emitBox: { min: [-1.4, -1.0, -2.0], max: [1.4, -0.8, 2.0] },
+    tint: { a1: 0.6, a2: 0.35 },
+    size: [2.5, 5.0], life: [0.6, 1.4],
+    gravity: [0, -0.5, 0], dir1: [-3, 0.3, -3], dir2: [3, 1.0, 3],
+    angular: [0, Math.PI], power: [2, 5], updateSpeed: 0.012,
+  },
   // Rooster tail: dirt thrown up and back off the rear tires under throttle.
   // Terrain-tinted, denser and longer-lived than drift, launched with force.
   rooster: {
@@ -139,6 +157,7 @@ export class ParticleEffects {
     this._qualityScale = Math.max(0.1, Math.min(1, options?.qualityScale ?? 1));
 
     this.driftParticles = this._buildEmitter("drift", EMITTER_SPECS.drift);
+    this.landingDustParticles = this._buildEmitter("landingDust", EMITTER_SPECS.landingDust);
     this.roosterParticles = [
       this._buildEmitter("roosterL", EMITTER_SPECS.rooster, -1),
       this._buildEmitter("roosterR", EMITTER_SPECS.rooster, 1),
@@ -161,6 +180,10 @@ export class ParticleEffects {
     this._wasInDeepWater = false;
     this._deepSplashPulseTimer = 0;
     this._deepSplashPulseCooldown = 0;
+    this._wasGroundedForLanding = true;
+    this._landingFallSpeed = 0;
+    this._landingDustTimer = 0;
+    this._landingDustImpact = 0;
     this._nitroTimer = 0;
     this._wasBoostActive = false;
     this._nitroEmitter = new Vector3();
@@ -232,6 +255,10 @@ export class ParticleEffects {
     for (const p of this.roosterParticles) this._applyTint(p, color, EMITTER_SPECS.rooster.tint);
   }
 
+  setLandingDustColor(color) {
+    this._applyTint(this.landingDustParticles, color, EMITTER_SPECS.landingDust.tint);
+  }
+
   /**
    * How deep the water is under the truck right now, 0 on dry ground.
    *
@@ -294,6 +321,7 @@ export class ParticleEffects {
       const color = terrain?.smokeColor ?? terrain?.color ?? TERRAIN_TYPES.PACKED_DIRT.color;
       this.setDriftColor(color);
       this.setRoosterColor(color);
+      this.setLandingDustColor(color);
     }
 
     // Update drift particles
@@ -321,6 +349,32 @@ export class ParticleEffects {
       this.driftParticles.emitRate = Math.max(driftRate, cruiseRate);
     } else {
       this.driftParticles.emitRate = 0;
+    }
+
+    // Landing dust: a poof the instant the truck comes back down from air
+    // time. Track the fastest downward speed seen while airborne — by the
+    // time groundedness reports contact, the suspension has already damped
+    // velocity.y back toward zero, so that can't be sampled at landing itself.
+    // Gated on the terrain's own dustIntensity, same as cruise dust above, so
+    // pavement/water/mud (which already have their own impact effects) don't
+    // also kick this up.
+    if (!isGrounded) {
+      this._landingFallSpeed = Math.max(this._landingFallSpeed, -(state.velocity?.y ?? 0));
+    } else {
+      const dustCharacter = terrain?.dustIntensity ?? 0;
+      if (!this._wasGroundedForLanding && dustCharacter > 0 && this._landingFallSpeed > LANDING_DUST_MIN_FALL_SPEED) {
+        this._landingDustImpact = Math.min(1, (this._landingFallSpeed - LANDING_DUST_MIN_FALL_SPEED) / LANDING_DUST_FALL_SPEED_RANGE) * dustCharacter;
+        this._landingDustTimer = 0.18 + this._landingDustImpact * 0.12;
+      }
+      this._landingFallSpeed = 0;
+    }
+    this._wasGroundedForLanding = isGrounded;
+
+    if (this._landingDustTimer > 0) {
+      this._landingDustTimer -= deltaTime;
+      this.landingDustParticles.emitRate = (250 + this._landingDustImpact * 550) * effectiveScale;
+    } else {
+      this.landingDustParticles.emitRate = 0;
     }
 
     // Rooster tail: rear tires throw dirt up and back under throttle. This is

@@ -4,7 +4,9 @@
   "packId": "onroad_pack_1",
   "hidden": false,
   "dirtChunks": false,
+  "grassBlades": true,
   "oobDeadSpace": false,
+  "allowReverse": true,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
@@ -106,7 +108,11 @@
       "color": "#9aa0a8",
       "sideColor": "#e0b32e",
       "heightAtMin": 0,
-      "heightAtMax": 2.5
+      "heightAtMax": 2.5,
+      "reverseOverride": {
+        "rotation": 172
+      },
+      "legs": false
     },
     {
       "type": "driveBox",
@@ -121,7 +127,11 @@
       "color": "#9aa0a8",
       "sideColor": "#e0b32e",
       "heightAtMin": 0,
-      "heightAtMax": 2.5
+      "heightAtMax": 2.5,
+      "legs": false,
+      "reverseOverride": {
+        "rotation": 172
+      }
     },
     {
       "type": "terrainPath",
@@ -407,7 +417,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -417,7 +428,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -427,7 +439,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "flag",
@@ -532,7 +545,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -542,7 +556,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -552,7 +567,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -562,7 +578,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -572,7 +589,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -582,7 +600,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -592,7 +611,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -602,7 +622,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -612,7 +633,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -622,7 +644,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -632,7 +655,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "checkpoint",
@@ -981,7 +1005,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "hill",
@@ -990,8 +1015,8 @@
       "radiusX": 7,
       "radiusZ": 12.5,
       "angle": 0,
-      "height": 1.4,
-      "waterLevelOffset": 0,
+      "height": -1.8,
+      "waterLevelOffset": 1.8,
       "terrainType": "mud",
       "blendWidth": 2
     },
@@ -1077,7 +1102,7 @@
       "centerX": -113.8250701627037,
       "centerZ": 3.6265748924197836,
       "terrainType": "mud",
-      "roughness": 0.35,
+      "roughness": 0.7,
       "width": 10,
       "depth": 10,
       "rotation": 0,
@@ -1302,35 +1327,35 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 29.980744334132595,
-      "z": 61.09605267219067,
+      "x": 30.980744334132595,
+      "z": 62.09605267219067,
       "heading": 1.1868238913561442,
-      "scale": 0.8
+      "scale": 2.1
     },
     {
       "type": "model",
       "model": "rock",
-      "x": 32.8547474254937,
-      "z": 53.59680866231009,
+      "x": 34.275008719723566,
+      "z": 62.622957175378836,
       "heading": 1.1868238913561442,
-      "scale": 0.8
+      "scale": 2.5
     },
     {
       "type": "model",
       "model": "rock",
       "x": 28.361409751732587,
-      "z": 55.23009683153707,
+      "z": 59.73009683153707,
       "heading": 0.5934119456780721,
-      "scale": 0.6,
+      "scale": 1.4,
       "collider": true
     },
     {
       "type": "model",
       "model": "rock",
-      "x": 36.567738166303606,
-      "z": 54.217309889519164,
+      "x": 32.199934404919524,
+      "z": 66.47486294265568,
       "heading": 0.5934119456780721,
-      "scale": 0.6,
+      "scale": 2.8,
       "collider": true
     },
     {
@@ -1361,7 +1386,8 @@
       "type": "model",
       "model": "bush",
       "x": -63.420398264303515,
-      "z": 43.25340911427493
+      "z": 43.25340911427493,
+      "scale": 2.1
     },
     {
       "type": "model",
@@ -1369,28 +1395,34 @@
       "x": -58.31321797985974,
       "z": 42.473660828030205,
       "heading": 3.07177948351002,
-      "scale": 0.7
+      "scale": 1.2,
+      "seed": 10
     },
     {
       "type": "model",
       "model": "bush",
       "x": -93.43353248108177,
       "z": 67.77702648496741,
-      "heading": 3.490658503988659
+      "heading": 3.490658503988659,
+      "scale": 1.8,
+      "seed": 6
     },
     {
       "type": "model",
       "model": "bush",
       "x": -89.58489132503833,
       "z": 61.5373184850922,
-      "heading": 4.886921905584122
+      "heading": 4.886921905584122,
+      "seed": 3,
+      "scale": 1.5
     },
     {
       "type": "model",
       "model": "bush",
       "x": -96.634464308464,
       "z": 64.13584793983102,
-      "scale": 0.7
+      "scale": 1.6,
+      "seed": 16
     },
     {
       "type": "model",
@@ -1419,14 +1451,17 @@
       "color": "white",
       "count": 6,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": 138
+      }
     },
     {
       "type": "decal",
       "position": [
         144.74442405499178,
         0,
-        30.604796351456343
+        21.104796351456343
       ],
       "normal": [
         0,
@@ -1440,7 +1475,10 @@
       "color": "white",
       "count": 6,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": -91
+      }
     },
     {
       "type": "actionZone",
@@ -1475,26 +1513,26 @@
       "zoneType": "speedBoost",
       "shape": "polygon",
       "x": 144.89995044088099,
-      "z": 30.71542386398609,
+      "z": 21.71542386398609,
       "radius": 15,
       "boostStrength": 1.25,
       "boostDuration": 1,
       "points": [
         {
           "x": 141.78855380844624,
-          "z": 37.656854390144694
+          "z": 28.656854390144694
         },
         {
           "x": 141.8484510928867,
-          "z": 24.076606644917923
+          "z": 15.076606644917923
         },
         {
           "x": 147.9644124079802,
-          "z": 23.86068508240399
+          "z": 14.86068508240399
         },
         {
           "x": 147.99838445421076,
-          "z": 37.26754933847775
+          "z": 28.26754933847775
         }
       ]
     },
@@ -1598,6 +1636,77 @@
       "x": -6.418356148293981,
       "z": -76.6453676692866,
       "heading": 1.0122909661567112
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -117.56220894459811,
+      "z": 65.6294609505481,
+      "color": "green",
+      "scale": 1.5,
+      "seed": 18,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -129.89277312917773,
+      "z": 64.41906542998179,
+      "color": "green",
+      "scale": 1,
+      "seed": 14,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -66.89277312917773,
+      "z": 66.91906542998179,
+      "color": "green",
+      "scale": 1,
+      "seed": 25,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -69.89277312917773,
+      "z": 48.919065429981785,
+      "color": "green",
+      "scale": 1,
+      "seed": 31,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -49.12986674796285,
+      "z": 35.40334175713538,
+      "color": "green",
+      "scale": 1,
+      "seed": 31,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 1.5009831567151235
     }
   ]
 }

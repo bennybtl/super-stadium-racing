@@ -5,11 +5,11 @@
     <div :key="screen">
     <div v-if="screen === ''" class="flex flex-col">
       <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">Settings</h2>
-      <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('controls')">Controls</button>
-      <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('sound')">Sound</button>
-      <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('display')">Display</button>
-      <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('gameplay')">Gameplay</button>
-      <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('tracks')">Manage Tracks</button>
+      <button v-if="isAvailable('controls')" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('controls')">Controls</button>
+      <button v-if="isAvailable('sound')" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('sound')">Sound</button>
+      <button v-if="isAvailable('display')" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('display')">Display</button>
+      <button v-if="isAvailable('gameplay')" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('gameplay')">Gameplay</button>
+      <button v-if="isAvailable('tracks')" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="open('tracks')">Manage Tracks</button>
       <hr class="my-2 opacity-60">
       <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="$emit('back')">Back</button>
     </div>
@@ -20,7 +20,7 @@
       <SoundSettings @back="close" />
     </div>
     <div v-else-if="screen === 'display'">
-      <DisplaySettings @back="close" />
+      <DisplaySettings :in-race="inRace" @back="close" />
     </div>
     <div v-else-if="screen === 'gameplay'">
       <GameplaySettings @back="close" />
@@ -42,6 +42,19 @@ import ManageTracksSettings from './settings/ManageTracksSettings.vue';
 
 // Declared so the listener doesn't fall through onto the root <Transition>.
 defineEmits(['back']);
+
+const props = defineProps({
+  // True when opened from the in-race pause menu. Pages that don't apply
+  // until the next race (everything but Controls/Sound so far) are hidden
+  // rather than shown as if changing them would do something right now.
+  inRace: { type: Boolean, default: false },
+});
+
+// Grows as more pages get live-update support.
+const LIVE_DURING_RACE = new Set(['controls', 'sound', 'gameplay', 'display']);
+function isAvailable(page) {
+  return !props.inRace || LIVE_DURING_RACE.has(page);
+}
 
 const screen = ref('');
 

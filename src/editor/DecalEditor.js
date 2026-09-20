@@ -923,6 +923,13 @@ export class DecalEditor {
       this._applyAttach(feature, { mesh: hit.mesh, point: hit.point, normal: n });
     }
 
+    // Directional shapes point the way traffic flows, so a reversed race needs
+    // them turned around too — default that instead of making every arrow/
+    // chevron a manual Reverse Mode edit.
+    if (this._shape === 'arrow' || this._shape === 'chevron') {
+      feature.reverseOverride = { rotation: norm180(this._rotation + 180) };
+    }
+
     this.editor.saveSnapshot();
     this._track.features.push(feature);
     this._decalManager.createDecal(feature);

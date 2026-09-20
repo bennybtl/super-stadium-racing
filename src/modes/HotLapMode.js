@@ -5,6 +5,7 @@ import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
+import { MusicManager } from "../managers/MusicManager.js";
 import { HotLapTracker } from "../managers/HotLapTracker.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { DriveMode } from "./DriveMode.js";
@@ -22,6 +23,7 @@ export class HotLapMode extends DriveMode {
     this.inputManager = null;
     this.audioManager = null;
     this.truckAudioController = null;
+    this.musicManager = null;
     this.hotLap = null;
     this.uiManager = null;
     this.checkpointArrow = null;
@@ -48,6 +50,8 @@ export class HotLapMode extends DriveMode {
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
+    this.musicManager = await MusicManager.create(audioManager);
+    this.musicManager.start();
 
     // SceneBuilder created checkpoints in forward order; rebuild for reverse so
     // gate order and headings match the chosen direction.
@@ -231,6 +235,8 @@ export class HotLapMode extends DriveMode {
     if (this.audioManager) {
       this.truckAudioController?.stop();
       this.truckAudioController = null;
+      this.musicManager?.stop();
+      this.musicManager = null;
       this.audioManager.dispose();
       this.audioManager = null;
     }

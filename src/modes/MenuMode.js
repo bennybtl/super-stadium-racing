@@ -4,6 +4,8 @@ import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { generateDriverNames } from "../ai/driverNames.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
+import { AudioManager } from "../managers/AudioManager.js";
+import { playTheme } from "../managers/MusicManager.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
 
 /** Size of the attract-mode field. */
@@ -33,6 +35,7 @@ export class MenuMode extends DriveMode {
 
   constructor(controller) {
     super(controller);
+    this.audioManager = null;
   }
 
   async setup(_config) {
@@ -150,7 +153,19 @@ export class MenuMode extends DriveMode {
     // The blank fallback has nothing to show through the menus.
     this.hasLiveBackdrop = demoScene != null;
     this.scene = demoScene ?? this._buildBlankScene();
+
+    this.audioManager = await AudioManager.create(this.scene);
+    await playTheme(this.audioManager);
+
     return this.scene;
+  }
+
+  teardown() {
+    if (this.audioManager) {
+      this.audioManager.dispose();
+      this.audioManager = null;
+    }
+    super.teardown();
   }
 
   /**

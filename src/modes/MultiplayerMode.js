@@ -7,6 +7,7 @@ import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
+import { MusicManager, playTheme, stopTheme } from "../managers/MusicManager.js";
 import { DriveMode } from "./DriveMode.js";
 import { basicColors, TRUCK_HALF_HEIGHT, TRUCK_WIDTH, TRUCK_HEIGHT, TRUCK_DEPTH } from "../constants.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
@@ -46,6 +47,7 @@ export class MultiplayerMode extends DriveMode {
     this.inputManager = null;
     this.audioManager = null;
     this.truckAudioController = null;
+    this.musicManager = null;
     this._remotePuppets = new Map(); // sessionId -> RemotePuppet
     this._sendAccumulator = 0;
     this._netUnsubscribers = [];
@@ -73,6 +75,8 @@ export class MultiplayerMode extends DriveMode {
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
+    this.musicManager = await MusicManager.create(audioManager);
+    await playTheme(audioManager);
     // Money pickups are a championship-only feature; irrelevant here.
     pickupManager.enableMoney = false;
 
@@ -300,9 +304,16 @@ export class MultiplayerMode extends DriveMode {
     const startCountdown = () => {
       countdownActive = true;
       this.respawnTruck(playerTruck, spawn0.pos, spawn0.heading, staticBodyCollisionManager);
+      // Handbrake hold: a sloped grid spot would otherwise let the truck roll
+      // during the countdown, since neutral input applies no brake.
+      playerTruck.state.parked = true;
 
       this.runCountdownSequence(uiManager, () => {
         countdownActive = false;
+        playerTruck.state.parked = false;
+        // Green light: hand off from the theme to the regular playlist.
+        stopTheme(audioManager);
+        this.musicManager?.start();
         if (maxCheckpointNumber === 0 && !raceStarted) {
           raceStarted = true;
           raceStartTime = Date.now();
@@ -472,6 +483,8 @@ export class MultiplayerMode extends DriveMode {
     if (this.audioManager) {
       this.truckAudioController?.stop();
       this.truckAudioController = null;
+      this.musicManager?.stop();
+      this.musicManager = null;
       this.audioManager.dispose();
       this.audioManager = null;
     }

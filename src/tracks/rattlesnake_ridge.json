@@ -4,6 +4,7 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
+  "grassBlades": true,
   "oobDeadSpace": true,
   "allowReverse": true,
   "borderWall": {
@@ -210,7 +211,7 @@
         0
       ],
       "offsetsZ": [
-        0,
+        5.551115123125783e-17,
         0,
         0,
         0,
@@ -303,17 +304,17 @@
         },
         {
           "x": 10,
-          "z": 50,
+          "z": 49,
           "radius": 5
         },
         {
           "x": -2,
-          "z": 60,
+          "z": 54.5,
           "radius": 5
         },
         {
-          "x": -20.29277383494562,
-          "z": 57.07001618251731,
+          "x": -20.79277383494562,
+          "z": 53.57001618251731,
           "radius": 11.5
         },
         {
@@ -480,12 +481,12 @@
         },
         {
           "x": -79.21906974125488,
-          "z": -99.88811724651998,
+          "z": -98.88811724651998,
           "radius": 21
         },
         {
           "x": 78.50886433809175,
-          "z": -100,
+          "z": -99,
           "radius": 28
         },
         {
@@ -540,7 +541,10 @@
       "heightAtMin": 0,
       "heightAtMax": 4.5,
       "blendWidth": 2.5,
-      "edgeShape": 1.6
+      "edgeShape": 1.6,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "squareHill",
@@ -555,7 +559,10 @@
       "heightAtMin": 0,
       "heightAtMax": 4.5,
       "blendWidth": 2.5,
-      "edgeShape": 1.65
+      "edgeShape": 1.65,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "squareHill",
@@ -570,7 +577,10 @@
       "heightAtMin": 0,
       "heightAtMax": 4.5,
       "blendWidth": 3,
-      "edgeShape": 1.15
+      "edgeShape": 1.15,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "polyHill",
@@ -939,7 +949,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3
+      "heightAtMax": 3,
+      "reverseOverride": {
+        "angle": 180
+      }
     },
     {
       "type": "actionZone",
@@ -976,13 +989,13 @@
     {
       "type": "terrain",
       "shape": "circle",
-      "centerX": 64.8167708270666,
+      "centerX": 62.316770827066605,
       "centerZ": -33.28688162511766,
       "terrainType": "mud",
       "width": 29.5,
       "depth": 19,
       "rotation": 39,
-      "blendWidth": 3.5,
+      "blendWidth": 5,
       "roughness": 0.35
     },
     {
@@ -996,7 +1009,10 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 0,
-      "heightAtMax": 3
+      "heightAtMax": 3,
+      "reverseOverride": {
+        "angle": 180
+      }
     },
     {
       "type": "squareHill",
@@ -1011,7 +1027,10 @@
       "heightAtMin": 0,
       "heightAtMax": 4.5,
       "blendWidth": 3,
-      "edgeShape": 1.7
+      "edgeShape": 1.7,
+      "reverseOverride": {
+        "angle": 270
+      }
     },
     {
       "type": "actionZone",
@@ -1252,7 +1271,8 @@
       "width": 19,
       "depth": 30.5,
       "rotation": 0,
-      "blendWidth": 4
+      "blendWidth": 4,
+      "roughness": 0.55
     },
     {
       "type": "trackSign",
@@ -1336,10 +1356,11 @@
       "centerX": 39.943724620791954,
       "centerZ": -89.33866711195667,
       "terrainType": "mud",
-      "width": 13,
+      "width": 18.5,
       "depth": 23,
       "rotation": 0,
-      "blendWidth": 2
+      "blendWidth": 2.5,
+      "roughness": 0.45
     },
     {
       "type": "obstacle",
@@ -1427,13 +1448,12 @@
       ],
       "height": 1.5,
       "collisionHeight": 1.5,
-      "thickness": 0.5,
+      "thickness": 0.8,
       "friction": 0.05,
       "closed": false,
       "fence": false,
       "colors": [
-        "red",
-        "black"
+        "red"
       ]
     },
     {
@@ -1448,7 +1468,10 @@
       "terrainType": "loose_dirt",
       "heightAtMin": 0,
       "heightAtMax": -4,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "reverseOverride": {
+        "angle": 90
+      }
     },
     {
       "type": "squareHill",
@@ -1462,7 +1485,10 @@
       "terrainType": "loose_dirt",
       "heightAtMin": 0,
       "heightAtMax": -4,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "reverseOverride": {
+        "angle": 90
+      }
     },
     {
       "type": "squareHill",
@@ -1476,7 +1502,10 @@
       "terrainType": "loose_dirt",
       "heightAtMin": 0,
       "heightAtMax": -4,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "reverseOverride": {
+        "angle": 90
+      }
     },
     {
       "type": "squareHill",
@@ -1490,7 +1519,10 @@
       "terrainType": "loose_dirt",
       "heightAtMin": 0,
       "heightAtMax": -4,
-      "edgeShape": 0.8
+      "edgeShape": 0.8,
+      "reverseOverride": {
+        "angle": 90
+      }
     },
     {
       "type": "obstacle",
@@ -1574,7 +1606,7 @@
       "centerX": -4.817398968951961,
       "centerZ": -88.94468211585334,
       "heading": -1.5707963267948966,
-      "width": 19.5,
+      "width": 16.5,
       "checkpointNumber": 5,
       "_altIndex": 0,
       "_altCount": 1,
@@ -1625,6 +1657,83 @@
       "heading": 0,
       "width": 25,
       "poleHeight": 9
+    },
+    {
+      "type": "hill",
+      "centerX": -7.394116767014973,
+      "centerZ": 44.31536689495006,
+      "radiusX": 15,
+      "radiusZ": 10,
+      "angle": 15,
+      "height": -3.8,
+      "waterLevelOffset": 2.4,
+      "terrainType": "mud",
+      "edgeShape": 0.8,
+      "blendWidth": 4.5
+    },
+    {
+      "type": "trackSign",
+      "x": 0.5,
+      "z": -10.000303512436645,
+      "name": "Track Name",
+      "rotation": 0,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "background": "black",
+      "primaryColor": "yellow",
+      "scale": 1.7,
+      "heightOffset": 1.7,
+      "width": 10.5,
+      "logoScale": 1.35
+    },
+    {
+      "type": "trackSign",
+      "x": -7.295684485929868,
+      "z": 65.5610750061768,
+      "name": "Track Name",
+      "rotation": 6.213372137099813,
+      "contentType": "brand",
+      "brandImage": "rocket-gasoline.png",
+      "background": "black",
+      "primaryColor": "yellow",
+      "scale": 1.7,
+      "heightOffset": 1.7,
+      "width": 10.5,
+      "logoScale": 1.35
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 58.279701999699654,
+      "z": 83.83097071201342,
+      "angle": 0,
+      "scale": 1.3,
+      "count": 1,
+      "weight": 20,
+      "color": "yellow"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 45.41586640175257,
+      "z": 90.65106879192021,
+      "angle": 0,
+      "scale": 1.3,
+      "count": 1,
+      "weight": 20,
+      "color": "yellow"
+    },
+    {
+      "type": "hill",
+      "centerX": 56.38918254149418,
+      "centerZ": 1.6336648609181381,
+      "radiusX": 8.5,
+      "radiusZ": 7.5,
+      "angle": 0,
+      "height": 2,
+      "waterLevelOffset": 0,
+      "terrainType": "loose_dirt",
+      "blendWidth": 3
     }
   ]
 }

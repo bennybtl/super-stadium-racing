@@ -4,7 +4,9 @@
   "packId": "onroad_pack_1",
   "hidden": false,
   "dirtChunks": true,
+  "grassBlades": true,
   "oobDeadSpace": false,
+  "allowReverse": true,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
@@ -209,7 +211,11 @@
       "layerId": 0,
       "heightAtMin": 0,
       "heightAtMax": 3,
-      "sideColor": "#e8e8e8"
+      "sideColor": "#e8e8e8",
+      "reverseOverride": {
+        "rotation": 38
+      },
+      "legs": false
     },
     {
       "type": "terrainPath",
@@ -533,9 +539,9 @@
     {
       "type": "decal",
       "position": [
-        12.094401235079939,
+        13.094401235079939,
         0,
-        6.25524221411375
+        7.25524221411375
       ],
       "normal": [
         0,
@@ -549,7 +555,10 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": -138
+      }
     },
     {
       "type": "decal",
@@ -570,7 +579,10 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": -35
+      }
     },
     {
       "type": "hill",
@@ -635,7 +647,10 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": 8
+      }
     },
     {
       "type": "decal",
@@ -656,7 +671,10 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 1
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": 173
+      }
     },
     {
       "type": "aiPath",
@@ -812,7 +830,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -822,7 +841,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -832,7 +852,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -842,7 +863,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -852,7 +874,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -862,7 +885,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -872,7 +896,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -882,7 +907,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -892,7 +918,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -902,7 +929,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -912,7 +940,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -922,7 +951,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -932,7 +962,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -942,7 +973,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -952,7 +984,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -962,7 +995,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -972,7 +1006,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -982,7 +1017,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -992,7 +1028,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "obstacle",
@@ -1002,7 +1039,8 @@
       "angle": 0,
       "scale": 1,
       "weight": 40,
-      "color": "yellow"
+      "color": "yellow",
+      "count": 4
     },
     {
       "type": "model",

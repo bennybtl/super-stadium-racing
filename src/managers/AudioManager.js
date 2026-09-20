@@ -1,5 +1,5 @@
 import { CreateAudioEngineAsync } from "@babylonjs/core/AudioV2/webAudio/webAudioEngine";
-import { CreateSoundAsync } from "@babylonjs/core/AudioV2/abstractAudio/audioEngineV2";
+import { CreateSoundAsync, CreateStreamingSoundAsync } from "@babylonjs/core/AudioV2/abstractAudio/audioEngineV2";
 import { loadAudioSettings } from "../settingsStorage.js";
 import { clamp01 } from "../utils/math-utils.js";
 
@@ -108,11 +108,13 @@ export class AudioManager {
     if (this._sounds.has(key)) return this._sounds.get(key);
 
     try {
-      const sound = await CreateSoundAsync(key, url, {
+      const { streaming, ...soundOptions } = options;
+      const createSound = streaming ? CreateStreamingSoundAsync : CreateSoundAsync;
+      const sound = await createSound(key, url, {
         autoplay: false,
         loop: false,
         volume: 1,
-        ...options,
+        ...soundOptions,
       }, this.audioEngine);
 
       const category = this._resolveCategory(key, options.category);
@@ -128,6 +130,10 @@ export class AudioManager {
       console.error(`[AudioManager] failed to load sound ${key}:`, error);
       return null;
     }
+  }
+
+  getSound(key) {
+    return this._sounds.get(key) ?? null;
   }
 
   async playSound(key, options = {}) {

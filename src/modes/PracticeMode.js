@@ -6,6 +6,7 @@ import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
+import { MusicManager } from "../managers/MusicManager.js";
 import { DriveMode } from "./DriveMode.js";
 import { basicColors } from "../constants.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
@@ -22,6 +23,7 @@ export class PracticeMode extends DriveMode {
     this.inputManager = null;
     this.audioManager = null;
     this.truckAudioController = null;
+    this.musicManager = null;
   }
 
   async setup({ trackKey, vehicleKey = 'baja', playerColorKey = null, reverse = false, night = false }) {
@@ -53,6 +55,8 @@ export class PracticeMode extends DriveMode {
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
+    this.musicManager = await MusicManager.create(audioManager);
+    this.musicManager.start();
 
     // Spawn just behind the start/finish checkpoint. Resolve the gate from the
     // (possibly reversed) checkpoint manager so the heading faces the right way.
@@ -206,6 +210,8 @@ export class PracticeMode extends DriveMode {
     if (this.audioManager) {
       this.truckAudioController?.stop();
       this.truckAudioController = null;
+      this.musicManager?.stop();
+      this.musicManager = null;
       this.audioManager.dispose();
       this.audioManager = null;
     }

@@ -11,6 +11,7 @@ import { DriveMode } from "./DriveMode.js";
 import { TelemetryRecorder } from "../managers/TelemetryRecorder.js";
 import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
+import { MusicManager, playTheme, stopTheme } from "../managers/MusicManager.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { loadPlayerUpgrades, jitterUpgrades } from "../managers/UpgradeStorage.js";
 import { RacePositionLabels } from "../managers/RacePositionLabels.js";
@@ -35,15 +36,24 @@ export class RaceMode extends DriveMode {
     this.debugManager = null;
     this.audioManager = null;
     this.truckAudioController = null;
+    this.musicManager = null;
     this.positionLabels = null;
     this.floatingText = null;
     this.checkpointArrow = null;
+    this._gameplaySettingsChangedHandler = null;
   }
 
   async setup({ trackKey, laps, aiCount = 9, vehicleKey = 'baja', aiVehicleKey = 'random', playerColorKey = null, reverse = false, night = false, championship = null }) {
     const { engine, menuManager } = this.controller;
     const totalLaps = laps || 3;
-    const rubberBandLevel = loadGameplaySettings().rubberBand;
+    // Mutable (not const) and kept live via the settings-changed event below,
+    // so changing the Gameplay > Rubber Band setting from the pause menu
+    // applies on the next frame instead of needing a race restart.
+    let rubberBandLevel = loadGameplaySettings().rubberBand;
+    this._gameplaySettingsChangedHandler = (e) => {
+      rubberBandLevel = e.detail?.rubberBand ?? loadGameplaySettings().rubberBand;
+    };
+    window.addEventListener('offroad:gameplay-settings-changed', this._gameplaySettingsChangedHandler);
 
     const {
       scene,
@@ -70,6 +80,8 @@ export class RaceMode extends DriveMode {
     const audioManager = await AudioManager.create(scene);
     this.audioManager = audioManager;
     pickupManager.setAudioManager(audioManager);
+    this.musicManager = await MusicManager.create(audioManager);
+    await playTheme(audioManager);
     // Money (coin) pickups only appear in championship races, where the wallet
     // they feed actually means something.
     pickupManager.enableMoney = !!championship;
@@ -403,6 +415,11 @@ export class RaceMode extends DriveMode {
     const startCountdown = () => {
       countdownActive = true;
       aiDrivers.forEach(d => { d.paused = true; });
+      // Restarting mid-race (pause-menu reset) hands audio back to the theme
+      // for the new countdown; on the very first call this is a no-op since
+      // the theme is already playing from setup().
+      this.musicManager?.stop();
+      playTheme(audioManager);
 
       // Re-snap all trucks to their grid positions with zeroed physics state.
       // This neutralises any drift from the large first-frame dt that accumulates
@@ -410,11 +427,19 @@ export class RaceMode extends DriveMode {
       trucks.forEach((truckData, index) => {
         const { pos, heading } = getGridSpawn(index);
         this.respawnTruck(truckData.truck, pos, heading, staticBodyCollisionManager);
+        // Handbrake hold: a sloped grid spot would otherwise let the truck
+        // roll during the countdown, since neither AI's paused input nor the
+        // player's neutral input engages any brake.
+        truckData.truck.state.parked = true;
       });
 
       this.runCountdownSequence(uiManager, () => {
         countdownActive = false;
         aiDrivers.forEach(d => { d.paused = false; });
+        trucks.forEach(td => { td.truck.state.parked = false; });
+        // Green light: hand off from the theme to the regular playlist.
+        stopTheme(audioManager);
+        this.musicManager?.start();
         if (maxCheckpointNumber === 0 && !raceStarted) {
           raceStarted = true;
           raceStartTime = Date.now();
@@ -811,6 +836,10 @@ export class RaceMode extends DriveMode {
   }
 
   teardown() {
+    if (this._gameplaySettingsChangedHandler) {
+      window.removeEventListener('offroad:gameplay-settings-changed', this._gameplaySettingsChangedHandler);
+      this._gameplaySettingsChangedHandler = null;
+    }
     if (this._dnfTimer) { clearTimeout(this._dnfTimer); this._dnfTimer = null; }
     if (this.positionLabels) {
       this.positionLabels.dispose();
@@ -831,6 +860,8 @@ export class RaceMode extends DriveMode {
     if (this.audioManager) {
       this.truckAudioController?.stop();
       this.truckAudioController = null;
+      this.musicManager?.stop();
+      this.musicManager = null;
       this.audioManager.dispose();
       this.audioManager = null;
     }

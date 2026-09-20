@@ -360,7 +360,13 @@ export class Truck {
       // suspend driving / steering (set on head-on collisions so the truck
       // bounces straight back without drive force or steering overriding it)
       noDriveUntil: false,
-      noSteerUntil: false
+      noSteerUntil: false,
+
+      // Handbrake hold — set true while grid-lined up pre-race so a sloped
+      // start doesn't let gravity's along-slope component (never cancelled by
+      // the terrain spring, which only strips the into-surface component)
+      // accumulate into a roll. See update()'s pre-integrate check.
+      parked: false,
     };
 
     // Overlay any params supplied by the vehicle definition
@@ -518,6 +524,12 @@ export class Truck {
       this.driftPhysics.applyGripAndDrift(this._forward, effectiveGrip, rearTractionFactor, deltaTime, throttleBreak)
     );
     
+    // Handbrake hold takes effect after every other pass (terrain gravity,
+    // drag, drift) has run this frame, so it wins over all of them.
+    if (this.state.parked) {
+      this.state.velocity.setAll(0);
+    }
+
     // Movement - apply full 3D velocity (Y integration now handled here, not in TerrainPhysics)
     profile('truck.integrate', () => {
       this.mesh.position.x += this.state.velocity.x * deltaTime;

@@ -107,6 +107,7 @@
             <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.reset()">Reset</button>
             <button class="menu-button pointer-events-auto px-10 py-4 text-2xl mt-2" @click="store.resume()">Resume</button>
           </div>
+          <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings('pause')">Settings</button>
           <button v-if="store.mode === 'championship'" class="menu-button pointer-events-auto px-10 py-4 text-2xl text-[#ff6b6b]" @click="showRetireConfirm = true">Retire Championship</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto mt-1 px-10 py-4 text-2xl" @click="store.exit()">Exit</button>
@@ -139,7 +140,7 @@
 
         <!-- ── Settings ── -->
         <template v-else-if="store.screen === 'settings'">
-          <SettingsMenu @back="store.back('start')" />
+          <SettingsMenu :in-race="store.settingsReturnScreen === 'pause'" @back="store.back(store.settingsReturnScreen)" />
         </template>
 
         <!-- ── Multiplayer lobby ── -->
