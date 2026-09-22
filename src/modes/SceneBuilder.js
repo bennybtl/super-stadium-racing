@@ -123,11 +123,28 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // camera away from whatever the player has since cycled to with 'C'.
   cameraController.mode = loadDisplaySettings().preferredView;
 
+  // -- Light intensity tuning --
+  // Every number here is consumed by applyDisplaySettings() below, which runs
+  // immediately after scene build and on every Display-settings change — it is
+  // the sole source of truth for light intensity. Edit these, not intensity
+  // assignments made at light creation time (those are just off-screen defaults
+  // and get overwritten before the first frame renders).
+  const LIGHT_AMBIENT_DAY = 0.35;
+  const LIGHT_AMBIENT_NIGHT = 0.08;
+  const LIGHT_MOON_NIGHT = 0.22;
+  const LIGHT_CENTER_FLOOD = 0.8;      // lightCount === 1: the single center light
+  const LIGHT_SINGLE_FILL = 1.30;      // lightCount === 1: the 3 non-caster corners
+  const LIGHT_CASTER_ONE_KEY = 1.7;    // lightCount >= 2, single shadow key (corner 0)
+  const LIGHT_CASTER_TWO_KEY = 1.35;   // lightCount >= 2, two shadow keys (shadow 'high')
+  const LIGHT_FILL_TWO_LIGHTS = 0.4;   // lightCount === 2: the non-key corner
+  const LIGHT_FILL_FOUR_LIGHTS = 0.3;  // lightCount === 4: the non-key corners
+
   // --- Ambient ---
   const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);
   // Lower ambient fill deepens shadows: the hemispheric light is never occluded,
-  // so it sets the brightness floor inside every shadowed area.
-  ambient.intensity = 0.35;
+  // so it sets the brightness floor inside every shadowed area. Real value is
+  // set by applyDisplaySettings() below; this is just the pre-first-frame default.
+  ambient.intensity = LIGHT_AMBIENT_DAY;
   ambient.groundColor = new Color3(0.1, 0.1, 0.1);
 
   // -- Track --
@@ -180,6 +197,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     light.range = terrainSize * 2.2;
     light.diffuse  = new Color3(1.0, 0.97, 1.00);
     light.specular = new Color3(1.0, 0.97, 1.00);
+    // Intensity is set by applyDisplaySettings() below, not here.
     return light;
   });
 
@@ -188,7 +206,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     new Vector3(0, _lightHeight, 0),
     scene
   );
-  _centerFloodLight.intensity = 1.8;
+  _centerFloodLight.intensity = LIGHT_CENTER_FLOOD;
   _centerFloodLight.range = terrainSize * 2.4;
   _centerFloodLight.diffuse = new Color3(1.0, 0.98, 1.0);
   _centerFloodLight.specular = new Color3(1.0, 0.98, 1.0);
@@ -258,11 +276,11 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       scene.clearColor = new Color4(0.02, 0.03, 0.06, 1);
       // Lifted off pitch-black: a moonlit ambient floor so shadowed faces and
       // undersides still carry some cool skylight instead of crushing to zero.
-      ambient.intensity = 0.28;
+      ambient.intensity = LIGHT_AMBIENT_NIGHT;
       ambient.diffuse = new Color3(0.4, 0.45, 0.65);
       ambient.groundColor = new Color3(0.05, 0.06, 0.11);
       _moonLight.setEnabled(true);
-      _moonLight.intensity = 0.22;
+      _moonLight.intensity = LIGHT_MOON_NIGHT;
       _centerFloodLight.setEnabled(false);
       _stadiumLights.forEach((light) => light.setEnabled(false));
       const shadowMap = shadows.getShadowMap?.();
@@ -292,7 +310,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     }
 
     scene.clearColor = new Color4(0.15, 0.12, 0.1, 1);
-    ambient.intensity = 0.35;
+    ambient.intensity = LIGHT_AMBIENT_DAY;
     ambient.diffuse = new Color3(1, 1, 1);
     ambient.groundColor = new Color3(0.1, 0.1, 0.1);
     _moonLight.setEnabled(false);
@@ -317,7 +335,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       _stadiumLights.forEach((light, index) => {
         // Keep corner light #0 alive as shadow caster but with no visible contribution.
         light.setEnabled(index === 0);
-        light.intensity = index === 0 ? 0 : 1.30;
+        light.intensity = index === 0 ? 0 : LIGHT_SINGLE_FILL;
       });
     } else {
       _centerFloodLight.setEnabled(false);
@@ -326,8 +344,8 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       // while the dimmer fill lights keep the rest of the scene lit. With two
       // keys each carries less of the total, so the per-key boost is smaller.
       const keyIndices = twoKeys ? [0, 2] : [0];
-      const casterIntensity = twoKeys ? 1.35 : 1.7;
-      const fillIntensity   = lightCount === 2 ? 0.6 : 0.5;
+      const casterIntensity = twoKeys ? LIGHT_CASTER_TWO_KEY : LIGHT_CASTER_ONE_KEY;
+      const fillIntensity   = lightCount === 2 ? LIGHT_FILL_TWO_LIGHTS : LIGHT_FILL_FOUR_LIGHTS;
       _stadiumLights.forEach((light, index) => {
         light.setEnabled(enabledLightIndices.includes(index));
         light.intensity = keyIndices.includes(index) ? casterIntensity : fillIntensity;
