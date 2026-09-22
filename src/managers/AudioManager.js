@@ -168,11 +168,12 @@ export class AudioManager {
     console.debug(`[AudioManager] playSound ${key}: engineState=${engineState}, volume=${scaledVolume}, loop=${loop}, loopStart=${loopStart}, loopEnd=${loopEnd}`);
 
     if (this.audioEngine && this.audioEngine.state !== "running") {
-      try {
-        await this.audioEngine.unlockAsync();
-      } catch (err) {
+      // Don't block on this: some browsers (Firefox) never resolve unlockAsync()
+      // until a real user gesture, which would hang whatever awaited playSound().
+      // The pointerdown/keydown listeners in the constructor handle the real unlock.
+      this.audioEngine.unlockAsync().catch((err) => {
         console.error(`[AudioManager] unlockAsync failed before play ${key}:`, err);
-      }
+      });
     }
 
     try {
