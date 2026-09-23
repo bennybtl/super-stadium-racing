@@ -303,6 +303,7 @@ export const useEditorStore = defineStore('editor', () => {
     grassBlades: true,
     oobDeadSpace: false,
     allowReverse: true,
+    stadiumLighting: false,
     night: false,
   });
   const trackBorderWall = reactive({ ...DEFAULT_BORDER_WALL });
@@ -421,6 +422,10 @@ export const useEditorStore = defineStore('editor', () => {
   function setTrackAllowReverse(enabled) {
     trackSettings.allowReverse = !!enabled;
     _bridge.value?.changeTrackAllowReverse?.(!!enabled);
+  }
+  function setTrackStadiumLighting(enabled) {
+    trackSettings.stadiumLighting = !!enabled;
+    _bridge.value?.changeTrackStadiumLighting?.(!!enabled);
   }
   function toggleNightPreview() {
     nightPreview.value = !nightPreview.value;
@@ -581,7 +586,7 @@ export const useEditorStore = defineStore('editor', () => {
     actionZone,
     setActionZoneType, polyCurb,
     trackSettingsOpen, trackSettings,
-    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackGrassBlades, setTrackOobDeadSpace, setTrackAllowReverse, setTrackWidth, setTrackDepth,
+    openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackGrassBlades, setTrackOobDeadSpace, setTrackAllowReverse, setTrackStadiumLighting, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,
     trackBorderTerrain, setTrackBorderTerrain,
     trackBorderWall, setTrackBorderWall,

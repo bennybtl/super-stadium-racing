@@ -57,6 +57,12 @@ export class TrackLightEditor {
   createVisual(feature) {
     const groundY = this._track.getHeightAt(feature.x, feature.z);
     const light = new TrackLight(feature, groundY, this._scene, this.editor._shadows);
+    // Stadium-lighting tracks (Track.stadiumLighting) light these poles for
+    // the daytime look too — mirrors TrackLightManager.createLight, which
+    // handles the same case for the runtime (non-editor) scene.
+    if (this._track?.stadiumLighting && this._scene?.metadata?.night !== true) {
+      light.setNight(true);
+    }
     this._lights.push(light);
 
     const handle = new GizmoHandle(this._scene, 'decoration');

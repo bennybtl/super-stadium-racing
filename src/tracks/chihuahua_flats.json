@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 3,
-    "height": 10
+    "height": 12
   },
   "name": "Chihuahua Flats",
   "image": "chihuahua_flats.jpg",

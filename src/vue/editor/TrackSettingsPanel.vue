@@ -155,6 +155,18 @@
         </label>
         <div class="mt-2 text-[10px] text-slate-400">Scatters procedural grass tufts along walls and off the racing line, over grass terrain only.</div>
       </div>
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+          :checked="editor.trackSettings.stadiumLighting"
+          @change="editor.setTrackStadiumLighting($event.target.checked)"
+        />
+        <span class="text-[13px] text-white">Stadium Lighting</span>
+        </label>
+        <div class="mt-2 text-[10px] text-slate-400">Lights the placed Track Light poles for the day look too (ambient floor + poles, no sun) — for arena-style tracks. Needs Track Light features placed to have any effect. Off (default) uses a single directional sun, which reads better on open outdoor terrain.</div>
+      </div>
     </div>
     <hr class="border-t border-slate-700 my-4" />
 

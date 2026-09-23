@@ -3,7 +3,8 @@ import { TerrainQuery } from "./TerrainQuery.js";
 
 /**
  * TrackLightManager — creates floodlight poles from `trackLight` features in
- * game/practice mode. Purely visual; the SpotLights illuminate night tracks.
+ * game/practice mode. Purely visual; the SpotLights illuminate night tracks,
+ * and stadium-lighting tracks (Track.stadiumLighting) during the day too.
  */
 export class TrackLightManager {
   constructor(scene, track, shadows = null) {
@@ -17,6 +18,12 @@ export class TrackLightManager {
   createLight(feature) {
     const groundY = this._terrainQuery.heightAt(feature.x, feature.z);
     const light = new TrackLight(feature, groundY, this.scene, this.shadows);
+    // Stadium-lighting tracks (Track.stadiumLighting) reuse these poles for
+    // the daytime look too — see SceneBuilder's applyDisplaySettings, which
+    // otherwise only lights them at night.
+    if (this.track?.stadiumLighting && this.scene?.metadata?.night !== true) {
+      light.setNight(true);
+    }
     this._lights.push(light);
     return light;
   }

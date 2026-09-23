@@ -130,14 +130,12 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // assignments made at light creation time (those are just off-screen defaults
   // and get overwritten before the first frame renders).
   const LIGHT_AMBIENT_DAY = 0.35;
-  const LIGHT_AMBIENT_NIGHT = 0.08;
+  const LIGHT_AMBIENT_NIGHT = 0.18;
   const LIGHT_MOON_NIGHT = 0.22;
-  const LIGHT_CENTER_FLOOD = 0.8;      // lightCount === 1: the single center light
-  const LIGHT_SINGLE_FILL = 1.30;      // lightCount === 1: the 3 non-caster corners
-  const LIGHT_CASTER_ONE_KEY = 1.7;    // lightCount >= 2, single shadow key (corner 0)
-  const LIGHT_CASTER_TWO_KEY = 1.35;   // lightCount >= 2, two shadow keys (shadow 'high')
-  const LIGHT_FILL_TWO_LIGHTS = 0.4;   // lightCount === 2: the non-key corner
-  const LIGHT_FILL_FOUR_LIGHTS = 0.3;  // lightCount === 4: the non-key corners
+  // Stadium-lighting day tracks: same recipe as night (ambient floor + the
+  // placed trackLight poles carrying the illumination, no sun/moon), but
+  // raised since it's daytime, not night-black.
+  const LIGHT_AMBIENT_STADIUM_DAY = 0.82;
 
   // --- Ambient ---
   const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);
@@ -180,10 +178,13 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     ? 1
     : Math.max(2, Math.ceil(terrainSize / terrainResolutionTarget));
 
-  // -- Stadium lights --
+  // -- Stadium lights (unused day/night, kept as the primary shadow group's
+  // fixed key light — see ShadowCasterGroup below) --
   // 4 point lights arranged in a square, elevated like stadium floodlights.
-  // Inset from the track edge (not at the far corners) so the key light strikes
-  // the play area at a steeper angle and fill is more even across it.
+  // No display mode actually illuminates with these any more (day uses a sun,
+  // stadiumLighting tracks use the placed trackLight poles, night uses the
+  // moon) — they stay disabled and exist only so the shadow group has a fixed
+  // light to build its eager primary generator against.
   const _lightHeight = 60;
   const _lightSpread = maxTrackDim * 0.30;
   const _stadiumPositions = [
@@ -197,20 +198,9 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     light.range = terrainSize * 2.2;
     light.diffuse  = new Color3(1.0, 0.97, 1.00);
     light.specular = new Color3(1.0, 0.97, 1.00);
-    // Intensity is set by applyDisplaySettings() below, not here.
+    light.setEnabled(false);
     return light;
   });
-
-  const _centerFloodLight = new PointLight(
-    "stadiumLightCenter",
-    new Vector3(0, _lightHeight, 0),
-    scene
-  );
-  _centerFloodLight.intensity = LIGHT_CENTER_FLOOD;
-  _centerFloodLight.range = terrainSize * 2.4;
-  _centerFloodLight.diffuse = new Color3(1.0, 0.98, 1.0);
-  _centerFloodLight.specular = new Color3(1.0, 0.98, 1.0);
-  _centerFloodLight.setEnabled(false);
 
   // Moon key — a dim, cool directional light that raked low from one side gives
   // night scenes enough directional modelling for the terrain ruts and truck
@@ -226,11 +216,24 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   _moonLight.specular = new Color3(0.55, 0.62, 0.85);
   _moonLight.setEnabled(false);
 
-  // Shadow-casting lights: the primary key (corner 0) always, plus the opposite
-  // corner (light 2) on the "high" tier for a two-key stadium look. Both cube
-  // maps are built now; the secondary sits parked (its light's shadowEnabled
-  // off) until applyDisplaySettings calls setActiveCount(2), so it's ~free on
-  // the lower tiers. Every caster is registered with both via the group.
+  // Daytime sun — same idea as _moonLight, warm instead of cool. Default day
+  // lighting for every track; tracks that opt into `stadiumLighting` (see
+  // Track.js) instead light the placed trackLight poles, same as night, with
+  // no sun/moon.
+  const _sunLight = new DirectionalLight(
+    "sunLight",
+    new Vector3(-0.4, -1, 0.3),
+    scene
+  );
+  _sunLight.intensity = 0;
+  _sunLight.diffuse = new Color3(1.0, 0.96, 0.88);
+  _sunLight.specular = new Color3(1.0, 0.96, 0.88);
+  _sunLight.setEnabled(false);
+
+  // The group's fixed/eager generator is built against the (permanently
+  // disabled) corner light 0 and parked at refreshRate 0 by every display
+  // branch below — actual shadows all come from `shadows.addLight()` extras
+  // (the sun, the moon, or the stadium trackLight poles).
   const shadows = ShadowCasterGroup.create([_stadiumLights[0], _stadiumLights[2]], { mapSize: 1024 });
   shadows.configure({ bias: 0.005, normalBias: 0.02 });
   // NOTE: forceBackFacesOnly is deliberately OFF. It was tried to kill the
@@ -266,13 +269,14 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
 
   const applyDisplaySettings = (settings) => {
     const shadowDetail = settings?.shadow ?? 'medium';
-    const lightCount = settings?.lights ?? 4;
     const night = scene.metadata?.night === true;
 
     // Night races: deep blue-black sky, faint cool moonlight fill, and the
-    // daytime stadium floods switched off — track lights + the player headlight
-    // carry the illumination.
+    // placed trackLight poles (TrackLightManager) carrying the illumination.
     if (night) {
+      _sunLight.setEnabled(false);
+      _sunLight.intensity = 0;
+      shadows.removeLight(_sunLight);
       scene.clearColor = new Color4(0.02, 0.03, 0.06, 1);
       // Lifted off pitch-black: a moonlit ambient floor so shadowed faces and
       // undersides still carry some cool skylight instead of crushing to zero.
@@ -281,16 +285,14 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       ambient.groundColor = new Color3(0.05, 0.06, 0.11);
       _moonLight.setEnabled(true);
       _moonLight.intensity = LIGHT_MOON_NIGHT;
-      _centerFloodLight.setEnabled(false);
-      _stadiumLights.forEach((light) => light.setEnabled(false));
       const shadowMap = shadows.getShadowMap?.();
       if (shadowMap) shadowMap.refreshRate = 0;
 
-      // Moonlight shadows replace the (now-off) stadium keys: a single
-      // DirectionalLight shadow map, auto-fit to the registered casters via
-      // Babylon's autoUpdateExtends (no manual ortho frustum needed — the
-      // track's whole footprint is already on-screen from the isometric
-      // camera, so one map covers it without CSM-style cascades).
+      // Moonlight shadows: a single DirectionalLight shadow map, auto-fit to
+      // the registered casters via Babylon's autoUpdateExtends (no manual
+      // ortho frustum needed — the track's whole footprint is already
+      // on-screen from the isometric camera, so one map covers it without
+      // CSM-style cascades).
       if (shadowDetail === 'off') {
         shadows.removeLight(_moonLight);
       } else {
@@ -309,75 +311,58 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       return;
     }
 
+    _moonLight.setEnabled(false);
+    _moonLight.intensity = 0;
+    shadows.removeLight(_moonLight);
+
+    // Arena/stadium tracks (Track.stadiumLighting) reuse the placed
+    // trackLight floodlight poles — the same ones night races light up
+    // (TrackLightManager.createLight lights them for this case too) —
+    // instead of the sun. Same recipe as night (ambient floor + pole
+    // spotlights, no sun/moon), just with the ambient floor raised since
+    // it's daytime, not night-black.
+    if (currentTrack.stadiumLighting) {
+      _sunLight.setEnabled(false);
+      _sunLight.intensity = 0;
+      shadows.removeLight(_sunLight);
+      scene.clearColor = new Color4(0.02, 0.03, 0.06, 1);
+      ambient.intensity = LIGHT_AMBIENT_STADIUM_DAY;
+      ambient.diffuse = new Color3(0.8, 0.82, 0.9);
+      ambient.groundColor = new Color3(0.25, 0.26, 0.32);
+      const shadowMap = shadows.getShadowMap?.();
+      if (shadowMap) shadowMap.refreshRate = 0;
+      if (ssaoPipeline && !_ssaoAttached) {
+        scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline('ssao', camera);
+        _ssaoAttached = true;
+      }
+      return;
+    }
+
+    // Default day: a single directional sun, which reads better on open
+    // outdoor terrain than lights that only make sense under a roof or at
+    // night.
     scene.clearColor = new Color4(0.15, 0.12, 0.1, 1);
     ambient.intensity = LIGHT_AMBIENT_DAY;
     ambient.diffuse = new Color3(1, 1, 1);
     ambient.groundColor = new Color3(0.1, 0.1, 0.1);
-    _moonLight.setEnabled(false);
-    _moonLight.intensity = 0;
-    shadows.removeLight(_moonLight);
     if (ssaoPipeline && _ssaoAttached) {
       scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline('ssao', camera);
       _ssaoAttached = false;
     }
 
-    // Keep enabled corner lights spatially balanced at lower counts.
-    const enabledLightIndices =
-      lightCount === 2 ? [0, 2] :
-      [0, 1, 2, 3];
-
-    // Two shadow-casting keys (opposite corners 0 and 2) only on 'high', and
-    // only when both of those corners are actually lit.
-    const twoKeys = shadowDetail === 'high' && lightCount >= 2;
-
-    if (lightCount === 1) {
-      _centerFloodLight.setEnabled(true);
-      _stadiumLights.forEach((light, index) => {
-        // Keep corner light #0 alive as shadow caster but with no visible contribution.
-        light.setEnabled(index === 0);
-        light.intensity = index === 0 ? 0 : LIGHT_SINGLE_FILL;
-      });
+    _sunLight.setEnabled(true);
+    _sunLight.intensity = 2.2;
+    if (shadowDetail === 'off') {
+      shadows.removeLight(_sunLight);
     } else {
-      _centerFloodLight.setEnabled(false);
-      // Rebalance toward the shadow-casting light(s): occluding a key light then
-      // removes a large slice of the illumination, so its shadow reads dark,
-      // while the dimmer fill lights keep the rest of the scene lit. With two
-      // keys each carries less of the total, so the per-key boost is smaller.
-      const keyIndices = twoKeys ? [0, 2] : [0];
-      const casterIntensity = twoKeys ? LIGHT_CASTER_TWO_KEY : LIGHT_CASTER_ONE_KEY;
-      const fillIntensity   = lightCount === 2 ? LIGHT_FILL_TWO_LIGHTS : LIGHT_FILL_FOUR_LIGHTS;
-      _stadiumLights.forEach((light, index) => {
-        light.setEnabled(enabledLightIndices.includes(index));
-        light.intensity = keyIndices.includes(index) ? casterIntensity : fillIntensity;
-      });
-    }
-
-    const shadowsEnabled = shadowDetail !== 'off' && _stadiumLights[0].isEnabled();
-    const wantCasters = !shadowsEnabled
-      ? 0
-      : (twoKeys && _stadiumLights[2].isEnabled() ? 2 : 1);
-    shadows.setActiveCount(wantCasters);
-    if (wantCasters === 0) return;
-
-    if (shadowDetail === 'low') {
       shadows.configure({
-        useBlurExponentialShadowMap: false,
-        usePoissonSampling: true,
-        blurKernel: 4,
-        refreshRate: 2,
+        useBlurExponentialShadowMap: shadowDetail !== 'low',
+        usePoissonSampling: shadowDetail === 'low',
+        blurKernel: shadowDetail === 'high' ? 24 : 16,
+        refreshRate: shadowDetail === 'low' ? 2 : 1,
       });
-      return;
+      shadows.addLight(_sunLight, { mapSize: 2048 });
     }
-
-    shadows.configure({
-      useBlurExponentialShadowMap: true,
-      usePoissonSampling: false,
-      blurKernel: shadowDetail === 'high' ? 24 : 16,
-      // Single key on 'high' keeps its every-frame update; with two maps, drop
-      // both to every-other-frame so the added cost is ~half a map, not a whole
-      // one. (True odd/even frame stagger would need manual RTT control.)
-      refreshRate: shadowDetail === 'high' && wantCasters < 2 ? 1 : 2,
-    });
   };
 
   // Night is a per-race setting (like reverse), not a track property — the

@@ -171,6 +171,11 @@ export class Track {
     // no landing from the other side, etc.) — false excludes them from reverse
     // selection entirely. Doesn't affect this.features; see setReverse().
     this.allowReverse = true;
+    // Arena/indoor tracks use the 4 stadium corner floodlights during the day
+    // (no sun); every other track defaults to a single directional sun, which
+    // reads better on open outdoor terrain. See SceneBuilder's
+    // applyDisplaySettings.
+    this.stadiumLighting = false;
     this._reverse = false;
   }
 
@@ -1005,6 +1010,7 @@ export class Track {
       grassBlades: this.grassBlades,
       oobDeadSpace: this.oobDeadSpace,
       allowReverse: this.allowReverse,
+      stadiumLighting: this.stadiumLighting,
       borderWall: { ...DEFAULT_BORDER_WALL, ...(this.borderWall ?? {}) },
       name: this.name,
       image: this.image ?? undefined,
@@ -1035,6 +1041,10 @@ export class Track {
     // driven forward-only anyway, so defaulting missing data to true (via the
     // constructor's default) reproduces that with no behaviour change.
     track.allowReverse = data.allowReverse ?? track.allowReverse;
+    // Tracks saved before stadiumLighting existed default to false (sun), the
+    // new default day lighting; arena tracks that actually want the old
+    // corner-floodlight look need to opt in explicitly via the editor.
+    track.stadiumLighting = data.stadiumLighting ?? track.stadiumLighting;
     // Tracks saved before the perimeter-wall options existed fall back to the
     // defaults, which reproduce the original grey wall.
     track.borderWall = { ...DEFAULT_BORDER_WALL, ...(data.borderWall ?? {}) };

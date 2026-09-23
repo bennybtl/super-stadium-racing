@@ -29,7 +29,7 @@ import { applyNightMode } from '../modes/SceneBuilder.js';
 import { useEditorStore } from '../vue/store.js';
 import { TERRAIN_TYPES } from '../world/terrain.js';
 import { DEFAULT_TERRAIN_WEAR_CONFIG } from '../world/terrain-utils.js';
-import { loadControlsSettings } from '../settingsStorage.js';
+import { loadControlsSettings, loadDisplaySettings } from '../settingsStorage.js';
 import { storeTrackImage } from '../managers/TrackPackLoader.js';
 import { getTrackJson, setTrackJson } from '../managers/TrackStore.js';
 
@@ -296,6 +296,7 @@ export class EditorController {
     this._editorStore.trackSettings.grassBlades = this.currentTrack.grassBlades ?? true;
     this._editorStore.trackSettings.oobDeadSpace = this.currentTrack.oobDeadSpace ?? false;
     this._editorStore.trackSettings.allowReverse = this.currentTrack.allowReverse ?? true;
+    this._editorStore.trackSettings.stadiumLighting = this.currentTrack.stadiumLighting ?? false;
     Object.assign(this._editorStore.trackBorderWall, resolveBorderWall(this.currentTrack));
     this._editorStore.trackDefaultTerrain = this.currentTrack.defaultTerrainType?.name ?? 'packed_dirt';
     this._editorStore.trackBorderTerrain = this.currentTrack.borderTerrainType?.name ?? this._editorStore.trackDefaultTerrain;
@@ -1825,6 +1826,20 @@ export class EditorController {
     this.saveSnapshot(true);
     this.currentTrack.allowReverse = !!enabled;
     this._syncTrackSettingsPanel();
+  }
+
+  /** Arena tracks that want the old 4-corner stadium floodlight day look (no
+   *  sun) opt in here; every other track defaults to the single directional
+   *  sun. Re-dispatches display-settings so the editor preview updates live,
+   *  same mechanism as the night toggle. */
+  changeTrackStadiumLighting(enabled) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    this.currentTrack.stadiumLighting = !!enabled;
+    this._syncTrackSettingsPanel();
+    window.dispatchEvent(new CustomEvent('offroad:display-settings-changed', {
+      detail: loadDisplaySettings(),
+    }));
   }
 
   /** Editor-only night-mode preview. Night is a per-race setting, not a track
