@@ -308,11 +308,11 @@ export class Truck {
       // Control parameters that can be tweaked for different handling characteristics
       springStrength: 150,
       damping: 7,
-      maxSpeed: 34,
+      maxSpeed: 30,
       maxReverseSpeed: -10,
-      acceleration: 18,
-      braking: 1.5,
-      turnSpeed: 5,
+      acceleration: 16,
+      braking: 1.0,
+      turnSpeed: 3,
       grip: 0.145,
       // Drift-zone grip params (driftThreshold, maxDriftGrip, slipDropoffRate,
       // minSlipFactor, gripZoneCorrection, the driftFade speed band, and

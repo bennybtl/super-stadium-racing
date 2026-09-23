@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 7
+    "height": 12
   },
   "name": "Lucky Eight",
   "image": "lucky_eight.jpg",

@@ -10,7 +10,7 @@
   "borderWall": {
     "enabled": true,
     "thickness": 3,
-    "height": 6
+    "height": 12
   },
   "name": "Mesa Madness",
   "image": "mesa_madness.jpg",

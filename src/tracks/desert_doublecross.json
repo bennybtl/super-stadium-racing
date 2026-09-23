@@ -4,13 +4,14 @@
   "packId": "offroad_pack_3",
   "hidden": false,
   "dirtChunks": true,
-  "grassBlades": true,
+  "grassBlades": false,
   "oobDeadSpace": false,
   "allowReverse": true,
+  "stadiumLighting": true,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
-    "height": 8
+    "height": 10
   },
   "name": "Desert Doublecross",
   "image": "desert_doublecross.jpg",
@@ -303,7 +304,7 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 3,
-      "heightAtMax": 0
+      "heightAtMax": -0.5
     },
     {
       "type": "squareHill",
@@ -316,7 +317,7 @@
       "transition": 4,
       "terrainType": null,
       "heightAtMin": 3,
-      "heightAtMax": 0
+      "heightAtMax": -1
     },
     {
       "type": "hill",
@@ -332,8 +333,8 @@
     },
     {
       "type": "hill",
-      "centerX": 48.08747010605309,
-      "centerZ": 67.53249328374254,
+      "centerX": 48.66261697829329,
+      "centerZ": 67.41462898267424,
       "radiusX": 10,
       "radiusZ": 10,
       "angle": 0,
@@ -458,48 +459,48 @@
       "type": "aiPath",
       "points": [
         {
-          "x": 41.26101671251303,
-          "z": -72.52013587410538
+          "x": 39.30150101381462,
+          "z": -76.34909132071691
         },
         {
-          "x": 12.07841459192508,
-          "z": -74.35714124258917
+          "x": 13.57841459192508,
+          "z": -72.85714124258917
         },
         {
-          "x": -12.399427643163486,
-          "z": -69.61550185196967
+          "x": -4.834871909690117,
+          "z": -75.61775347270505
         },
         {
           "x": -21.8384934932873,
           "z": -55.873841403225825
         },
         {
-          "x": -14.07,
-          "z": -26.93
+          "x": -19.38347591522379,
+          "z": -25.846962892930527
         },
         {
-          "x": 40.43084368816213,
-          "z": 42.897403510496474
+          "x": 13.18,
+          "z": 7.98
+        },
+        {
+          "x": 31.159742987550818,
+          "z": 43.01788614548697
         },
         {
           "x": 58.29506121673332,
           "z": 39.27444500534552
         },
         {
-          "x": 66.73510117765508,
-          "z": 16.196594653244127
-        },
-        {
-          "x": 61.57529100202431,
-          "z": 2.813572452910316
+          "x": 72.44538249470634,
+          "z": 17.819704665640145
         },
         {
           "x": 49.27798179907487,
           "z": -0.2892750845044958
         },
         {
-          "x": -18.555243498209457,
-          "z": 45.270240474765735
+          "x": -16.922615758880866,
+          "z": 50.625266460123534
         },
         {
           "x": -52.466342019178086,
@@ -510,20 +511,20 @@
           "z": 20.583859693383435
         },
         {
-          "x": -54.43283467073167,
-          "z": 4.5416961500395026
+          "x": -56.22589387308716,
+          "z": -3.1576914883897835
         },
         {
-          "x": -34.37968887923616,
-          "z": -6.743754367968961
+          "x": -31.227389243175125,
+          "z": -10.362073582381221
         },
         {
-          "x": 0.7999811909366277,
-          "z": -29.89085188798041
+          "x": 3.675237910974634,
+          "z": -27.63506798136129
         },
         {
-          "x": 45.85511440320763,
-          "z": -46.29383991525343
+          "x": 49.32598308114273,
+          "z": -38.099147687746026
         },
         {
           "x": 51.48356892216038,
@@ -936,16 +937,16 @@
       "x": 36.10844783984492,
       "z": -56.27951625675273,
       "height": 23,
-      "spread": 120,
+      "spread": 94,
       "intensity": 14,
       "color": "white",
-      "tilt": 90,
-      "rotation": 0
+      "tilt": 66,
+      "rotation": 300
     },
     {
       "type": "squareHill",
       "centerX": -31.29546315000024,
-      "centerZ": 3.4353007812248038,
+      "centerZ": 4.435300781224804,
       "width": 7,
       "depth": 29.5,
       "angle": 61,
@@ -1093,7 +1094,7 @@
     },
     {
       "type": "hill",
-      "centerX": -31.570563275882826,
+      "centerX": -31.070563275882826,
       "centerZ": -66.5121129168812,
       "radiusX": 4.5,
       "radiusZ": 5.5,
@@ -1107,8 +1108,8 @@
     },
     {
       "type": "hill",
-      "centerX": 42.05007409774809,
-      "centerZ": 55.91832611581521,
+      "centerX": 44.569954113734724,
+      "centerZ": 53.48233621226543,
       "radiusX": 2,
       "radiusZ": 2,
       "angle": 100,
@@ -1121,8 +1122,8 @@
     },
     {
       "type": "hill",
-      "centerX": 48.89273128438012,
-      "centerZ": 61.64701597740559,
+      "centerX": 52.328052998554696,
+      "centerZ": 54.89346086177602,
       "radiusX": 4,
       "radiusZ": 4,
       "angle": 100,
@@ -1135,8 +1136,8 @@
     },
     {
       "type": "hill",
-      "centerX": 58.3308222006364,
-      "centerZ": 64.7845115053034,
+      "centerX": 61.30025145880663,
+      "centerZ": 62.21686252567433,
       "radiusX": 3,
       "radiusZ": 3,
       "angle": 100,
@@ -1282,20 +1283,21 @@
     {
       "type": "model",
       "model": "rock",
-      "x": -55.26018717660989,
-      "z": -59.732435499966165
+      "x": -44.04145422905253,
+      "z": -22.938779886667767,
+      "scale": 1.6
     },
     {
       "type": "model",
       "model": "rock",
-      "x": -52.26018717660989,
-      "z": -63.232435499966165
+      "x": -42.21506734816483,
+      "z": -25.51267079180903
     },
     {
       "type": "model",
       "model": "cactus",
-      "x": -76.63960620968221,
-      "z": -76.54425735490493,
+      "x": 59.2202306710566,
+      "z": -30.91652966868307,
       "color": "green",
       "scale": 1,
       "seed": 1,
@@ -1307,8 +1309,8 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": -70.9762690936268,
-      "z": -70.83591202559563,
+      "x": -24.933085911415546,
+      "z": 13.082287567517241,
       "color": "green",
       "scale": 1.3,
       "seed": 7,
@@ -1321,8 +1323,8 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": -78.67859698131954,
-      "z": -61.52962972641173,
+      "x": 23.333401173922013,
+      "z": -17.58639577942624,
       "color": "green",
       "scale": 2.2,
       "seed": 16,
@@ -1335,8 +1337,8 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": -78.67859698131954,
-      "z": -50.02962972641173,
+      "x": -18.48044276758083,
+      "z": 12.060153318942437,
       "color": "green",
       "scale": 2.2,
       "seed": 23,
@@ -1344,12 +1346,12 @@
       "trunkRadius": 0.42,
       "ribs": 8,
       "collider": false,
-      "heading": 2.8797932657906435
+      "heading": 4.729842272904633
     },
     {
       "type": "trackLight",
-      "x": 74.73847352986404,
-      "z": 68.99035847167944,
+      "x": 75.23847352986404,
+      "z": 69.49035847167944,
       "height": 19.5,
       "spread": 97,
       "intensity": 15,
@@ -1372,12 +1374,12 @@
       "type": "trackLight",
       "x": -5.415269600420427,
       "z": -48.13594221851292,
-      "height": 23,
-      "spread": 120,
+      "height": 21.5,
+      "spread": 114,
       "intensity": 14,
       "color": "white",
-      "tilt": 90,
-      "rotation": 0
+      "tilt": 81,
+      "rotation": 162
     },
     {
       "type": "model",
@@ -1394,8 +1396,8 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -2.8727453421595808,
-          "z": 53.28756582897776,
+          "x": -4.372745342159581,
+          "z": 55.78756582897776,
           "radius": 10
         },
         {
@@ -1434,12 +1436,12 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -50.78,
+          "x": -54.28,
           "z": -18.82,
           "radius": 10
         },
         {
-          "x": -50.775528676315325,
+          "x": -50.275528676315325,
           "z": -48.25697149019138,
           "radius": 1.5
         },
@@ -1458,6 +1460,267 @@
       "colors": [
         "gray"
       ]
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 65.90928600570506,
+      "z": -24.750304799635085,
+      "color": "green",
+      "scale": 1,
+      "seed": 16,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.007128639793479
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 59.409286005705056,
+      "z": -26.750304799635085,
+      "color": "green",
+      "scale": 1,
+      "seed": 30,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.007128639793479
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 48.17399465955921,
+      "z": 21.38026897680794,
+      "color": "brown",
+      "scale": 4,
+      "seed": 15,
+      "radius": 0.6,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 30.92660237350318,
+      "z": 74.21785780934562,
+      "color": "brown",
+      "scale": 2.9,
+      "seed": 10,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 3.036872898470133
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 33.905001755834206,
+      "z": 72.82205608506875,
+      "color": "brown",
+      "scale": 1.9,
+      "seed": 14,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 3.036872898470133
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 35.007729206276906,
+      "z": 77.52861551807116,
+      "color": "brown",
+      "scale": 3.6,
+      "seed": 25,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 3.9968039870670147
+    },
+    {
+      "type": "hill",
+      "centerX": -29.96470144760614,
+      "centerZ": -51.621290286042445,
+      "radiusX": 4.5,
+      "radiusZ": 5.5,
+      "angle": 100,
+      "height": -1.4,
+      "waterLevelOffset": 0,
+      "terrainType": "packed_dirt",
+      "blendWidth": 4,
+      "edgeShape": 0.8,
+      "flatTop": 0.75
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "fireworks",
+      "shape": "polygon",
+      "x": -27.10215201793028,
+      "z": -13.97042871388788,
+      "radius": 15,
+      "fireworkMode": "sparks",
+      "fireworkCount": 4,
+      "fireworkDuration": 2,
+      "fireworkColor": "red",
+      "fireworkHeight": 29,
+      "heading": -0.8726646259971648,
+      "points": [
+        {
+          "x": -32.467556761211796,
+          "z": -25.35902691710091
+        },
+        {
+          "x": -16.711448394296024,
+          "z": -5.041069323172536
+        },
+        {
+          "x": -21.60225081412797,
+          "z": -3.209564932821607
+        },
+        {
+          "x": -37.62735210208533,
+          "z": -22.272053682456477
+        }
+      ]
+    },
+    {
+      "type": "actionZone",
+      "zoneType": "fireworks",
+      "shape": "polygon",
+      "x": 34.205627256997545,
+      "z": 7.356626583445654,
+      "radius": 15,
+      "fireworkMode": "sparks",
+      "fireworkCount": 4,
+      "fireworkDuration": 2,
+      "fireworkColor": "red",
+      "fireworkHeight": 29,
+      "heading": -0.8726646259971648,
+      "points": [
+        {
+          "x": 25.11379166584846,
+          "z": 0.94509399730795
+        },
+        {
+          "x": 30.568534978537667,
+          "z": -2.3391149469078947
+        },
+        {
+          "x": 43.01703377456959,
+          "z": 14.448283388932179
+        },
+        {
+          "x": 38.123148609034466,
+          "z": 16.37224389445038
+        }
+      ]
+    },
+    {
+      "type": "hill",
+      "centerX": 47.04493210250534,
+      "centerZ": -6.486876998562199,
+      "radiusX": 2,
+      "radiusZ": 2,
+      "angle": 100,
+      "height": -1.4,
+      "waterLevelOffset": 0,
+      "terrainType": "packed_dirt",
+      "blendWidth": 4,
+      "edgeShape": 0.8,
+      "flatTop": 0.75
+    },
+    {
+      "type": "hill",
+      "centerX": -38.358162624325715,
+      "centerZ": 3.055302594944937,
+      "radiusX": 2,
+      "radiusZ": 2,
+      "angle": 100,
+      "height": -1.4,
+      "waterLevelOffset": 0,
+      "terrainType": "packed_dirt",
+      "blendWidth": 4,
+      "edgeShape": 0.8,
+      "flatTop": 0.75
+    },
+    {
+      "type": "hill",
+      "centerX": -13.248866410846933,
+      "centerZ": 27.49864625125984,
+      "radiusX": 2,
+      "radiusZ": 2,
+      "angle": 100,
+      "height": -1.4,
+      "waterLevelOffset": 0,
+      "terrainType": "packed_dirt",
+      "blendWidth": 4,
+      "edgeShape": 0.8,
+      "flatTop": 0.75
+    },
+    {
+      "type": "trackLight",
+      "x": -16.237294520822438,
+      "z": 4.079699218640293,
+      "height": 13,
+      "spread": 75,
+      "intensity": 5,
+      "color": "white",
+      "tilt": 48,
+      "rotation": 289
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -38.18471001022676,
+      "z": 24.463789344663365,
+      "angle": 0,
+      "scale": 1,
+      "count": 1,
+      "weight": 22,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -16.20069313320034,
+      "z": 4.016843720355763,
+      "angle": 0,
+      "scale": 1,
+      "count": 1,
+      "weight": 22,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": -5.388105621802978,
+      "z": -48.14736606788925,
+      "angle": 0,
+      "scale": 1,
+      "count": 1,
+      "weight": 22,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 36.047811588967306,
+      "z": -56.28418426632725,
+      "angle": 0,
+      "scale": 1,
+      "count": 1,
+      "weight": 22,
+      "color": "black"
+    },
+    {
+      "type": "obstacle",
+      "obstacleType": "barrel",
+      "x": 75.28110256300367,
+      "z": 69.4774196759055,
+      "angle": 0,
+      "scale": 1,
+      "count": 1,
+      "weight": 22,
+      "color": "black"
     }
   ]
 }

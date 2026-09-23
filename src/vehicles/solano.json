@@ -23,15 +23,15 @@
     "rearScale": [0.8, 0.9, 0.9]
   },
   "params": {
-    "maxSpeed": 38,
+    "maxSpeed": 36,
     "maxReverseSpeed": -15,
-    "acceleration": 22,
-    "braking": 2.5,
+    "acceleration": 23,
+    "braking": 1.6,
     "turnSpeed": 4.5,
     "weightTransfer": 1.10
   },
   "handling": {
-    "lateralBias": 0.5,
+    "lateralBias": 0.4,
     "driftEnter": 0.68,
     "driftMaintain": 0.6
   },

@@ -22,12 +22,12 @@
   },
   "suspensionTravel": 1.4,
   "params": {
-    "maxSpeed": 39,
-    "acceleration": 24,
-    "turnSpeed": 3.9
+    "maxSpeed": 30,
+    "acceleration": 22,
+    "turnSpeed": 3.7
   },
   "handling": {
-    "lateralBias": 0.32,
+    "lateralBias": 0.28,
     "driftEnter": 0.5
   }
 }
