@@ -16,7 +16,8 @@
     "check:panels": "node scripts/check-panel-bindings.mjs",
     "check:surface": "node scripts/check-surface.mjs",
     "check:walls": "node scripts/check-walls.mjs",
-    "check:water": "node scripts/check-water.mjs"
+    "check:water": "node scripts/check-water.mjs",
+    "check:eztree": "node scripts/check-eztree.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",

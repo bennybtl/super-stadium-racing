@@ -230,6 +230,19 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   _sunLight.specular = new Color3(1.0, 0.96, 0.88);
   _sunLight.setEnabled(false);
 
+  // A directional light's shadow camera sits at `light.position`, which
+  // defaults to -direction — i.e. about 1 unit from the track centre. Casters
+  // on the far side of that plane (lower-right, tall ones like trees worst)
+  // fell behind its near plane and silently lost their shadows. Park both
+  // lights well back along their direction so every caster is in front.
+  // (Position doesn't affect directional lighting, only the shadow camera.)
+  // NOT autoCalcShadowZBounds: with the blur-ESM map a tight depth range
+  // pushes the far casters to depth≈1 where ESM fades them out, so only the
+  // caster nearest the light kept a shadow (verified in a standalone repro).
+  const _shadowBackoff = maxTrackDim + 200;
+  _sunLight.position = _sunLight.direction.normalizeToNew().scale(-_shadowBackoff);
+  _moonLight.position = _moonLight.direction.normalizeToNew().scale(-_shadowBackoff);
+
   // The group's fixed/eager generator is built against the (permanently
   // disabled) corner light 0 and parked at refreshRate 0 by every display
   // branch below — actual shadows all come from `shadows.addLight()` extras

@@ -30,8 +30,8 @@
 
     <!-- Controls come from the decoration's controller (or its `editable` flags) -->
     <template v-for="(ctl, prop) in editor.decoration.controls" :key="prop">
-      <!-- Colour -->
-      <template v-if="ctl.type === 'color'">
+      <!-- Colour / generic dropdown -->
+      <template v-if="ctl.type === 'color' || ctl.type === 'select'">
         <div class="text-[12px] mb-1 mt-3">{{ ctl.label ?? 'Color' }}</div>
         <select
           class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
