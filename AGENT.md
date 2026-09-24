@@ -14,7 +14,7 @@ drives all menus/HUD; the 3D world is Babylon.js + Havok.
 - **Havok Physics 1.3** — WASM physics (MESH colliders for terrain/bridges/walls, BOX for trucks)
 - **Vue 3 + Pinia** — reactive UI (menus, editor panels, HUD)
 - **Vite 6** — build + dev server
-- **colyseus 0.16** — authoritative multiplayer server (`server/`), `colyseus.js` client
+- **colyseus 0.16** — multiplayer relay server (`server/`), `colyseus.js` client
 - **Tailwind CSS** — utility CSS in Vue components
 - **ES Modules**, vanilla JS everywhere except `.vue` files
 - **Vitest** — unit tests for the pure-logic modules (`test/`)
@@ -29,6 +29,7 @@ offroad/
 ├── server/                          # colyseus multiplayer server (its own mini-app)
 │   ├── index.js                     #   express + colyseus bootstrap
 │   ├── DriveRoom.js                 #   per-race room: roster, state broadcast, lap/finish reports
+│   ├── validate.js                  #   input hygiene for every client message (unit-tested)
 │   └── Dockerfile
 ├── web/                             # static-site container for the built client
 ├── docs/                            # design/plan docs (MULTIPLAYER, TERRAIN_REFACTOR, CHAMPIONSHIP_MODE)
@@ -71,7 +72,7 @@ offroad/
     │   ├── SceneBuilder.js          # buildScene(): ground, lights, physics, all the per-track managers
     │   ├── MenuMode.js              # menu callbacks + the attract-mode demo race behind the menus
     │   ├── RaceMode.js              # single race / championship race: field, laps, timing, finish/DNF, results
-    │   ├── MultiplayerMode.js       # networked race: local player + remote puppets, server-authoritative
+    │   ├── MultiplayerMode.js       # networked race: local player + remote puppets (client-simulated, server-relayed)
     │   ├── PracticeMode.js          # free drive, one truck
     │   ├── HotLapMode.js            # solo time attack + ghost
     │   ├── EditorMode.js            # hosts EditorController
@@ -179,7 +180,9 @@ so the podium can render each finisher's truck.
 **`MultiplayerMode`** — one locally-simulated player truck + `RemotePuppet`s
 interpolated from server state. The client runs checkpoints/laps for its own
 player only and reports lap/finish to the server; the server owns the roster and
-race order. `runTimerWhilePaused: true` — a live server race doesn't stop for
+race order. The server is a relay, not a simulation — it validates every message
+(`server/validate.js`) but trusts positions and lap timing. See
+`docs/MULTIPLAYER.md` ("What actually shipped") before changing any of this. `runTimerWhilePaused: true` — a live server race doesn't stop for
 this client's pause menu.
 
 **`MenuMode`** — builds the attract-mode demo (a random track, AI-only field,

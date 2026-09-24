@@ -1,7 +1,53 @@
 # Online Multiplayer — Implementation Plan
 
+> **Read this first.** Everything below "What actually shipped" is a *future*
+> plan (server-authoritative simulation) that has **not** been built. The
+> multiplayer in the game today is a client-simulated relay. Don't design
+> against the plan as if it were the current architecture.
+
+## What actually shipped (as of 2026-09-24)
+
+**Architecture: client-simulated, server-relayed.** `server/DriveRoom.js` is a
+thin colyseus room, not a simulation.
+
+- Each client runs the normal single-player physics for **its own truck only**
+  (`src/modes/MultiplayerMode.js`) and sends `state` — `{x, y, z, heading}` — at
+  15 Hz. The room relays it to everyone else, where it drives a visual-only
+  `RemotePuppet`. `RemoteTruckCollision` pushes the local truck off puppets
+  (one-sided: nobody pushes you from the server).
+- Laps and finishes are **self-reported**: each client runs checkpoint/lap
+  tracking locally and sends `lapCompleted` / `finished`. The room is the arbiter
+  of finish order, the 45 s DNF grace after the first finisher, and the final
+  `raceOver` results.
+- Lobby flow: the host creates a room (track, direction, laps), players pick a
+  truck/colour, the host sends `start` → room locks → everyone loads the track.
+  `GET /lobbies` (server/index.js) lists open rooms.
+
+**Input hygiene** (`server/validate.js`, tested in `test/server-validate.test.js`):
+every client value is rebuilt from type-checked fields or dropped — nothing is
+relayed verbatim. `state` is whitelisted, range-checked and rate-limited (token
+bucket, 30/s sustained, burst 10); names/keys are type- and length-checked;
+`maxClients` clamped 2–8, laps 1–20; a lap is accepted only as the next lap, and
+`finished` only after the final lap; times must be finite and sane.
+
+**Still trusted (i.e. cheatable):** position (teleporting/speed hacks are
+invisible to the server), lap *timing*, and checkpoint order — the server only
+checks that laps arrive in sequence. Acceptable for friendly lobbies; the
+server-authoritative plan below is the fix if that stops being true.
+
+**Since this plan was written:** the fixed 60 Hz sim step from Phase 2 has
+landed client-side (`src/modes/fixed-step.js`, max 5 steps/frame), and the game
+loop is split into sim step / render parts. The "Current state" findings below
+about `dt` coming from the renderer and the loop being one interleaved closure
+are therefore partly outdated; the determinism items (`Math.random`, `Date.now`
+in sim paths) still stand.
+
+---
+
+# Future plan: server-authoritative simulation
+
 Server-authoritative racing over WebSockets. Clients send inputs; the server runs
-the real simulation and broadcasts state. This document is the plan of record.
+the real simulation and broadcasts state. Not started.
 
 ## Architecture decisions (locked)
 

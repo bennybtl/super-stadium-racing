@@ -1,4 +1,8 @@
 import { Room } from "@colyseus/core";
+import {
+  cleanText, cleanKey, cleanLobbyName, cleanMaxClients, cleanLaps,
+  cleanState, isValidLap, cleanTimeMs, takeToken,
+} from "./validate.js";
 
 const DEFAULT_MAX_CLIENTS = 8;
 // Grace period after the first finisher before stragglers are forced to DNF
@@ -16,7 +20,8 @@ const DNF_GRACE_MS = 45_000;
  */
 export class DriveRoom extends Room {
   onCreate(options = {}) {
-    this.maxClients = options.maxClients ?? DEFAULT_MAX_CLIENTS;
+    // Every client-supplied value goes through validate.js — see there.
+    this.maxClients = cleanMaxClients(options.maxClients, DEFAULT_MAX_CLIENTS);
     this.autoDispose = true;
     // The first client to join is the room's creator — Colyseus fires onJoin
     // for them like any other client, so "host" isn't known until then.
@@ -25,9 +30,9 @@ export class DriveRoom extends Room {
     // Host-editable, pre-start only. metadata.trackKey is kept in sync with
     // this so the lobby list (server/index.js's /lobbies) reflects live changes.
     this.settings = {
-      trackKey: options.trackKey || null,
-      reverse: !!options.reverse,
-      laps: Number.isFinite(options.laps) ? options.laps : 3,
+      trackKey: cleanKey(options.trackKey),
+      reverse: options.reverse === true,
+      laps: cleanLaps(options.laps, 3),
     };
     // Race progress — only exists once started. Each client tracks its own
     // checkpoint/lap progress locally (same client-side logic as RaceMode)
@@ -37,36 +42,39 @@ export class DriveRoom extends Room {
     this.race = null;
     this._raceOverFired = false;
     this._dnfTimer = null;
+    this._raceLaps = null;           // settings.laps, frozen at start
+    this._stateBuckets = new Map();  // sessionId -> "state" rate-limit bucket
 
     this.setMetadata({
-      name: options.name || "Lobby",
+      name: cleanLobbyName(options.name),
       trackKey: this.settings.trackKey,
-      hostName: options.hostName || "Host",
+      hostName: cleanText(options.hostName, "Host"),
     });
 
     // sessionId -> { id, name, colorKey, vehicleKey, x, y, z, heading, vx, vy, vz }
     this.players = new Map();
 
+    // Relays exactly the whitelisted fields, never the client's object.
     this.onMessage("state", (client, data) => {
       const player = this.players.get(client.sessionId);
-      if (!player || !data) return;
-      player.x = data.x;
-      player.y = data.y;
-      player.z = data.z;
-      player.heading = data.heading;
-      player.vx = data.vx ?? 0;
-      player.vy = data.vy ?? 0;
-      player.vz = data.vz ?? 0;
-      this.broadcast("state", { id: client.sessionId, ...data }, { except: client });
+      if (!player) return;
+      const bucket = this._stateBuckets.get(client.sessionId) ?? {};
+      this._stateBuckets.set(client.sessionId, bucket);
+      if (!takeToken(bucket, Date.now())) return;
+      const state = cleanState(data);
+      if (!state) return;
+      Object.assign(player, state);
+      this.broadcast("state", { id: client.sessionId, ...state }, { except: client });
     });
 
     // Host-only, pre-start: track choice and direction. Rebroadcast (not
     // schema-synced) so already-connected clients see the live change.
     this.onMessage("updateSettings", (client, data) => {
       if (this.started || client.sessionId !== this.hostId || !data) return;
-      if (typeof data.trackKey === "string") this.settings.trackKey = data.trackKey;
+      const trackKey = cleanKey(data.trackKey);
+      if (trackKey) this.settings.trackKey = trackKey;
       if (typeof data.reverse === "boolean") this.settings.reverse = data.reverse;
-      if (Number.isFinite(data.laps)) this.settings.laps = data.laps;
+      this.settings.laps = cleanLaps(data.laps, this.settings.laps);
       this.setMetadata({ ...this.metadata, trackKey: this.settings.trackKey });
       this.broadcast("settings", this.settings);
     });
@@ -76,8 +84,9 @@ export class DriveRoom extends Room {
       if (this.started) return;
       const player = this.players.get(client.sessionId);
       if (!player || !data) return;
-      if (typeof data.vehicleKey === "string") player.vehicleKey = data.vehicleKey;
-      if ("colorKey" in data) player.colorKey = data.colorKey;
+      const vehicleKey = cleanKey(data.vehicleKey);
+      if (vehicleKey) player.vehicleKey = vehicleKey;
+      if ("colorKey" in data) player.colorKey = cleanKey(data.colorKey);
       this.broadcast("playerUpdated", player);
     });
 
@@ -88,6 +97,7 @@ export class DriveRoom extends Room {
       if (this.started || client.sessionId !== this.hostId) return;
       this.started = true;
       this.lock();
+      this._raceLaps = this.settings.laps;
       this.race = new Map();
       for (const [id, player] of this.players) {
         // Captured now, not looked up later — a player who finishes and then
@@ -107,6 +117,8 @@ export class DriveRoom extends Room {
     this.onMessage("lapCompleted", (client, data) => {
       const progress = this.race?.get(client.sessionId);
       if (!progress || progress.finished || !data) return;
+      // Only ever the next lap — no skipping ahead, no replays.
+      if (!isValidLap(data.lap, progress.lap, this._raceLaps)) return;
       progress.lap = data.lap;
       this.broadcast("raceProgress", { id: client.sessionId, lap: data.lap }, { except: client });
     });
@@ -114,9 +126,11 @@ export class DriveRoom extends Room {
     this.onMessage("finished", (client, data) => {
       const progress = this.race?.get(client.sessionId);
       if (!progress || progress.finished) return;
+      // The client reports its last lap before "finished"; no finishing early.
+      if (progress.lap < this._raceLaps) return;
       progress.finished = true;
-      progress.totalTimeMs = data?.totalTimeMs ?? null;
-      progress.fastestLapMs = data?.fastestLapMs ?? null;
+      progress.totalTimeMs = cleanTimeMs(data?.totalTimeMs);
+      progress.fastestLapMs = cleanTimeMs(data?.fastestLapMs);
       progress.finishPosition = this._nextFinishPosition();
       this.broadcast("playerFinished", {
         id: client.sessionId,
@@ -193,9 +207,9 @@ export class DriveRoom extends Room {
 
     const player = {
       id: client.sessionId,
-      name: (options.playerName || "Racer").slice(0, 24),
-      colorKey: options.colorKey || null,
-      vehicleKey: options.vehicleKey || "baja",
+      name: cleanText(options.playerName, "Racer"),
+      colorKey: cleanKey(options.colorKey),
+      vehicleKey: cleanKey(options.vehicleKey) ?? "baja",
       // null (not 0) until a real "state" message arrives — a client-side
       // Number.isFinite check on this uses it to tell "no real position
       // reported yet" apart from "legitimately at world origin".
@@ -216,6 +230,7 @@ export class DriveRoom extends Room {
 
   onLeave(client) {
     this.players.delete(client.sessionId);
+    this._stateBuckets.delete(client.sessionId);
     this.broadcast("playerLeft", { id: client.sessionId });
     // The player who left may have been the only one still racing.
     if (this.race) this._checkRaceOver();

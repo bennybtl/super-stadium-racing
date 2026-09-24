@@ -4,7 +4,7 @@ _Review date: 2026-09-23 · last status update 2026-09-24 · branch `better-rock
 
 Complements `CLEANUP.md` (refactor plan, still valid — not repeated here).
 
-**Health now:** `npm test` 92/92 · `npm run check` (all 8 check scripts) green and
+**Health now:** `npm test` 102/102 · `npm run check` (all 8 check scripts) green and
 enforced in the deploy workflow · app JS chunk **707 KB** (was 8.6 MB), Babylon in
 its own 6.1 MB vendor chunk, editor lazy-loaded.
 
@@ -14,10 +14,10 @@ its own 6.1 MB vendor chunk, editor lazy-loaded.
 | --- | --- |
 | A1 Fix `check:terrain` | ✅ Done 2026-09-23 |
 | A2 Tests + checks in CI | ✅ Done 2026-09-23 |
-| A3 MP server input hygiene | ⬜ Open |
-| A4 MULTIPLAYER.md vs code | ⬜ Open |
+| A3 MP server input hygiene | ✅ Done 2026-09-24 |
+| A4 MULTIPLAYER.md vs code | ✅ Done 2026-09-24 |
 | A5 Strip console logs in prod | ⬜ Open |
-| B1 Gamepad support | ⬜ Open — **next up** |
+| B1 Gamepad support | ⬜ Open — deferred |
 | B2 Keyboard steering smoothing | ⬜ Open |
 | B3 Minimap | ✅ Done 2026-09-24 (races only) |
 | B4 Camera juice | ✅ Done 2026-09-24 |
@@ -41,15 +41,20 @@ re-recorded for the 21 current tracks (it held renamed/removed tracks).
 `check:*` scripts; `deploy-pages.yml` runs `npm test` + `npm run check` before
 building. Only on pushes to `main` — a separate PR workflow is an easy add.
 
-**A3. Multiplayer server input hygiene.** `DriveRoom` `"state"` handler relays
-`{ ...data }` verbatim to every client — any client can inject arbitrary fields
-or NaN/huge numbers. Whitelist + `Number.isFinite` the 7 fields and broadcast
-only those; add a per-client message rate cap. ~20 lines.
+**A3. Multiplayer server input hygiene. — ✅ DONE 2026-09-24.** New
+`server/validate.js` (pure, 10 tests in `test/server-validate.test.js`, incl.
+DriveRoom driven through its handlers). Every client value is rebuilt from
+whitelisted fields or dropped: `state` whitelisted + range-checked + token-bucket
+rate limit (30/s, burst 10); names/keys type/length/control-char checked;
+`maxClients` 2–8 and laps 1–20 clamped (maxClients was unbounded); laps accepted
+only as the next lap and `finished` only after the last one (both were trusted
+outright); times finite and sane. Still trusted: positions and lap timing — true
+anti-cheat is the server-authoritative plan.
 
-**A4. `docs/MULTIPLAYER.md` contradicts the code.** Doc says server-authoritative
-sim with per-lobby child processes; `DriveRoom.js` is (by its own comment) a thin
-relay with client-reported laps/finishes. Mark the doc as a future plan and add a
-short "what actually shipped" section, so a future session doesn't design against it.
+**A4. `docs/MULTIPLAYER.md` vs code. — ✅ DONE 2026-09-24.** Doc now opens with
+"What actually shipped" (client-simulated relay, what's validated, what's still
+trusted, which of its findings C1 made outdated); the rest is labelled a future
+plan. AGENT.md no longer calls the server authoritative.
 
 **A5. Strip `console.debug`/`log` from prod** (69 call sites) via
 `esbuild.drop`/`pure` in `vite.config.js`. One line (CLEANUP 3.5 alternative).
@@ -163,8 +168,9 @@ list covers `_nextFinishPosition`, host migration on leave, DNF timer.
 
 ## Suggested order (remaining)
 
-1. B1 + B2 — gamepad + analog keyboard feel. Biggest player-facing gap left.
-2. A3 + A4 — before anyone plays multiplayer with strangers.
-3. C4 physics goldens — cheap now that the sim is fixed-step.
-4. Minimap in HotLap / Practice / MP; Race/MP lap times on sim time (C1 follow-up).
+1. C4 physics goldens — cheap now that the sim is fixed-step.
+2. Minimap in HotLap / Practice / MP; Race/MP lap times on sim time (C1 follow-up).
+3. B2 keyboard steering smoothing; B1 gamepad when un-deferred.
+4. C5 remaining server tests (host migration, DNF timer) — the harness in
+   `test/server-validate.test.js` makes these quick.
 5. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.
