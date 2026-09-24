@@ -1,5 +1,5 @@
 <template>
-  <div class="w-[min(90vw,480px)] mx-auto px-4 py-10 text-center">
+  <div class="min-w-[620px] mx-auto px-4 py-10 text-center">
     <h2 class="text-3xl font-extrabold italic uppercase mb-8 text-white">Local Tracks</h2>
 
     <p v-if="tracks.length === 0" class="text-[#cbb] italic uppercase tracking-wide mb-8">
