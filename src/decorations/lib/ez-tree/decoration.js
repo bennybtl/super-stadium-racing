@@ -18,6 +18,26 @@ function foliageShift(name) {
 }
 
 /**
+ * Duplicate handler that grows a cluster: a new seed, heading and ±20% scale,
+ * dropped at a random bearing about `spread` × scale from the source. Rolled
+ * once and frozen into the feature, so reloads stay deterministic.
+ */
+export function scatterDuplicate(spread) {
+  return (copy, src) => {
+    const srcScale = Number(src.scale) || 1;
+    let seed;
+    do seed = 1 + Math.floor(Math.random() * 40); while (seed === src.seed);
+    copy.seed = seed;
+    copy.heading = Math.random() * Math.PI * 2;
+    copy.scale = +Math.min(4, Math.max(0.5, srcScale * (0.8 + Math.random() * 0.4))).toFixed(2); // slider range
+    const angle = Math.random() * Math.PI * 2;
+    const dist = spread * srcScale * (0.7 + Math.random() * 0.6);
+    copy.x = src.x + Math.cos(angle) * dist;
+    copy.z = src.z + Math.sin(angle) * dist;
+  };
+}
+
+/**
  * An editor decoration backed by ez-tree presets (EZ_TREE.md): tree.js and
  * bush.js are both thin configs of this. Geometry is generated per
  * (species, seed, colour) variant; caching / instancing / editor contract in
@@ -47,21 +67,7 @@ export function ezTreeDecoration({ presetFilter, defaultPreset, scale, colorOpti
 
     variantKey: (p) => [p.preset, p.seed, p.leafColor].join("|"),
 
-    // Duplicate grows a cluster: a new seed, heading and ±20% scale, dropped
-    // at a random bearing roughly one canopy away. Rolled once here and
-    // frozen into the feature, so reloads stay deterministic.
-    duplicate(copy, src) {
-      const srcScale = Number(src.scale) || 1;
-      let seed;
-      do seed = 1 + Math.floor(Math.random() * 40); while (seed === src.seed);
-      copy.seed = seed;
-      copy.heading = Math.random() * Math.PI * 2;
-      copy.scale = +Math.min(4, Math.max(0.5, srcScale * (0.8 + Math.random() * 0.4))).toFixed(2); // slider range
-      const angle = Math.random() * Math.PI * 2;
-      const dist = spread * srcScale * (0.7 + Math.random() * 0.6);
-      copy.x = src.x + Math.cos(angle) * dist;
-      copy.z = src.z + Math.sin(angle) * dist;
-    },
+    duplicate: scatterDuplicate(spread),
 
     buildVariant(scene, p, key) {
       const options = ezTreeOptions(p);

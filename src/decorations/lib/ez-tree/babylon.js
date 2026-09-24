@@ -20,25 +20,31 @@ export const EZ_TREE_PRESET_OPTIONS = Object.keys(EZ_TREE_PRESETS)
   .map((id) => ({ value: id, label: LABEL(id) }));
 
 /**
- * One mesh from ez-tree buffers, scaled to world units. ez-tree is right-handed
- * (Three); mirroring z converts it, and the mirror alone also turns Three's CCW
- * front faces into Babylon's CW ones — so indices are kept as-is (checked:
- * VertexData.ComputeNormals agrees with the supplied normals 100%; swapping
- * winding makes it 0%). `vScale` scales uv.v. ez-tree sets bark
- * texture.repeat.y = 1/textureScale.y instead, but here the bark texture is
- * shared by presets with different scales, so the scale is baked into the UVs.
+ * One hidden, instanceable master mesh from generator buffers
+ * ({verts, normals, uvs, indices}), or null when empty. Shared by the ez-tree
+ * and cactus builders.
+ *
+ * `mirrorZ`: ez-tree output is right-handed (Three); mirroring z converts it,
+ * and the mirror alone also turns Three's CCW front faces into Babylon's CW
+ * ones, so indices are kept as-is (checked: VertexData.ComputeNormals agrees
+ * with the supplied normals 100%; swapping winding makes it 0%). The cactus
+ * generator is already Babylon-native and passes mirrorZ: false.
+ * `vScale` scales uv.v. ez-tree sets bark texture.repeat.y = 1/textureScale.y
+ * instead, but here the bark texture is shared by presets with different
+ * scales, so the scale is baked into the UVs.
  */
-function masterFromBuffers(name, buf, scale, scene, vScale = 1) {
+export function masterFromBuffers(name, buf, scene, { scale = 1, vScale = 1, mirrorZ = false } = {}) {
   if (!buf.indices.length) return null;
+  const zSign = mirrorZ ? -1 : 1;
   const positions = new Float32Array(buf.verts.length);
   const normals = new Float32Array(buf.normals.length);
   for (let i = 0; i < buf.verts.length; i += 3) {
     positions[i] = buf.verts[i] * scale;
     positions[i + 1] = buf.verts[i + 1] * scale;
-    positions[i + 2] = -buf.verts[i + 2] * scale;
+    positions[i + 2] = zSign * buf.verts[i + 2] * scale;
     normals[i] = buf.normals[i];
     normals[i + 1] = buf.normals[i + 1];
-    normals[i + 2] = -buf.normals[i + 2];
+    normals[i + 2] = zSign * buf.normals[i + 2];
   }
   const vd = new VertexData();
   vd.positions = positions;
@@ -54,6 +60,29 @@ function masterFromBuffers(name, buf, scale, scene, vScale = 1) {
   return mesh;
 }
 
+/**
+ * Hang lower-detail meshes off each full-detail master as screen-coverage LOD
+ * levels. `full` is { group: Mesh|null }; each of `lods` is
+ * { coverage, groups: { group: Mesh|null } }. Instances follow their master's
+ * LOD per instance (Babylon picks the level from the instance's own bounding
+ * sphere), in the shadow pass as well.
+ */
+export function attachLods(full, lods) {
+  for (const master of Object.values(full)) if (master) master.useLODScreenCoverage = true;
+  for (const { coverage, groups } of lods) {
+    for (const [group, mesh] of Object.entries(groups)) {
+      const master = full[group];
+      if (!master || !mesh) { mesh?.dispose(); continue; }
+      master.addLODLevel(coverage, mesh);
+      // Mesh.dispose() doesn't take its LOD meshes with it.
+      master.onDisposeObservable.addOnce(() => mesh.dispose());
+    }
+  }
+}
+
+/** Screen-coverage thresholds (fraction of the screen) for LOD1 / LOD2. */
+export const LOD_COVERAGE = [0.05, 0.015];
+
 /** Resolved ez-tree options for a preset id + seed. */
 export function ezTreeOptions({ preset, seed }) {
   return treeOptions({ ...(EZ_TREE_PRESETS[preset] ?? {}), seed });
@@ -66,9 +95,9 @@ export function ezTreeOptions({ preset, seed }) {
  * ez-tree's own defaultLODLevels (~40% and ~20% of full triangles). A 16-unit
  * tree ~40 units from the race camera covers ~14%. Tune by eye.
  */
-const LOD_LEVELS = [
-  { coverage: 0.05, detail: { sectionStride: 3, segmentFactor: 0.75, leafStride: 2, leafScale: 1.25 } },
-  { coverage: 0.015, detail: { sectionStride: 6, segmentFactor: 0.4, leafStride: 2, leafScale: 1.3, billboard: "single" } },
+const LOD_DETAILS = [
+  { sectionStride: 3, segmentFactor: 0.75, leafStride: 2, leafScale: 1.25 },
+  { sectionStride: 6, segmentFactor: 0.4, leafStride: 2, leafScale: 1.3, billboard: "single" },
 ];
 
 /**
@@ -76,8 +105,6 @@ const LOD_LEVELS = [
  *   trunk  — the level-0 branch only (collider target: its bounds are trunk-sized)
  *   branch — every other branch
  *   leaf   — leaf quads
- * Instances follow their master's LOD per instance (Babylon picks the level
- * from the instance's own bounding sphere), in the shadow pass as well.
  * @param {{bark, leaf}} materials  assigned to every level
  * @returns {{ trunk, branch, leaf, height }}
  */
@@ -92,15 +119,14 @@ export function buildEzTreeMasters(scene, options, scale, name, materials) {
     const trunkBuf = meshSkeleton(trunkSkeleton, options, detail).branches;
     const { branches, leaves } = meshSkeleton(restSkeleton, options, detail);
     const level = {
-      trunk: masterFromBuffers(`${name}_trunk${suffix}`, trunkBuf, scale, scene, barkV),
-      branch: masterFromBuffers(`${name}_branch${suffix}`, branches, scale, scene, barkV),
-      leaf: masterFromBuffers(`${name}_leaf${suffix}`, leaves, scale, scene),
-      bufs: [trunkBuf, branches, leaves],
+      trunk: masterFromBuffers(`${name}_trunk${suffix}`, trunkBuf, scene, { scale, vScale: barkV, mirrorZ: true }),
+      branch: masterFromBuffers(`${name}_branch${suffix}`, branches, scene, { scale, vScale: barkV, mirrorZ: true }),
+      leaf: masterFromBuffers(`${name}_leaf${suffix}`, leaves, scene, { scale, mirrorZ: true }),
     };
     if (level.trunk) level.trunk.material = materials.bark;
     if (level.branch) level.branch.material = materials.bark;
     if (level.leaf) level.leaf.material = materials.leaf;
-    return level;
+    return { groups: level, bufs: [trunkBuf, branches, leaves] };
   };
 
   const full = buildLevel({}, "");
@@ -109,21 +135,12 @@ export function buildEzTreeMasters(scene, options, scale, name, materials) {
     for (let i = 1; i < b.verts.length; i += 3) if (b.verts[i] > maxY) maxY = b.verts[i];
   }
 
-  for (const master of [full.trunk, full.branch, full.leaf]) {
-    if (master) master.useLODScreenCoverage = true;
-  }
-  LOD_LEVELS.forEach(({ coverage, detail }, i) => {
-    const lod = buildLevel(detail, `_lod${i + 1}`);
-    for (const group of ["trunk", "branch", "leaf"]) {
-      const master = full[group], mesh = lod[group];
-      if (!master || !mesh) { mesh?.dispose(); continue; }
-      master.addLODLevel(coverage, mesh);
-      // Mesh.dispose() doesn't take its LOD meshes with it.
-      master.onDisposeObservable.addOnce(() => mesh.dispose());
-    }
-  });
+  attachLods(full.groups, LOD_DETAILS.map((detail, i) => ({
+    coverage: LOD_COVERAGE[i],
+    groups: buildLevel(detail, `_lod${i + 1}`).groups,
+  })));
 
-  return { trunk: full.trunk, branch: full.branch, leaf: full.leaf, height: maxY * scale };
+  return { ...full.groups, height: maxY * scale };
 }
 
 // Textures (src/assets/trees, see LICENSE.md there): leaf sprig cutouts per

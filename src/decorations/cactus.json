@@ -11,10 +11,8 @@
   "colliderFriction": 0.9,
   "castsShadows": true,
   "featureDefaults": {
+    "preset": "saguaro",
     "seed": 1,
-    "trunkHeight": 3.2,
-    "trunkRadius": 0.42,
-    "ribs": 8,
     "collider": false
   },
   "editable": { "color": true, "scale": true, "heading": true }

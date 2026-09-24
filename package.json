@@ -17,7 +17,8 @@
     "check:surface": "node scripts/check-surface.mjs",
     "check:walls": "node scripts/check-walls.mjs",
     "check:water": "node scripts/check-water.mjs",
-    "check:eztree": "node scripts/check-eztree.mjs"
+    "check:eztree": "node scripts/check-eztree.mjs",
+    "check:cactus": "node scripts/check-cactus.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",
