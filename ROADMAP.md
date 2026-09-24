@@ -1,24 +1,45 @@
 # Roadmap — suggestions for upcoming sessions
 
-_Review date: 2026-09-23 · branch `better-rocks` · ~60k lines JS/Vue_
+_Review date: 2026-09-23 · last status update 2026-09-24 · branch `better-rocks`_
 
 Complements `CLEANUP.md` (refactor plan, still valid — not repeated here).
-Health snapshot: `npm test` 79/79 green; `check:water/surface/walls/panels/rocks/cactus/eztree`
-green; `check:terrain` crashed (fixed, A1). Main JS bundle is **8.6 MB**, `dist/` 142 MB.
+
+**Health now:** `npm test` 92/92 · `npm run check` (all 8 check scripts) green and
+enforced in the deploy workflow · app JS chunk **707 KB** (was 8.6 MB), Babylon in
+its own 6.1 MB vendor chunk, editor lazy-loaded.
+
+## Status
+
+| Item | Status |
+| --- | --- |
+| A1 Fix `check:terrain` | ✅ Done 2026-09-23 |
+| A2 Tests + checks in CI | ✅ Done 2026-09-23 |
+| A3 MP server input hygiene | ⬜ Open |
+| A4 MULTIPLAYER.md vs code | ⬜ Open |
+| A5 Strip console logs in prod | ⬜ Open |
+| B1 Gamepad support | ⬜ Open — **next up** |
+| B2 Keyboard steering smoothing | ⬜ Open |
+| B3 Minimap | ✅ Done 2026-09-24 (races only) |
+| B4 Camera juice | ✅ Done 2026-09-24 |
+| B5 Shareable ghosts | ⬜ Open |
+| B6 Touch controls | ⬜ Open (only if phones matter) |
+| C1 Fixed-timestep sim | ✅ Done 2026-09-23 |
+| C2 Bundle size | 🟨 (a)+(b) done 2026-09-24, (c) open |
+| C3 Finish CLEANUP §2.3 | ⬜ Open |
+| C4 Physics regression check | ⬜ Open — now practical (C1 landed) |
+| C5 Server tests | ⬜ Open |
 
 ---
 
 ## A. Quick wins (≤ 1 session each)
 
-**A1. Fix `check:terrain`. — DONE 2026-09-23** (png loader stub + golden re-recorded for 21 current tracks). It dies in esbuild before running:
-`BorderWall.js:12` imports `concrete_2.texture.png?url` and the script's esbuild
-config has no loader for it. `check-water.mjs:55` already stubs `?url` imports —
-copy that plugin into `check-terrain.mjs`'s `esbuild.build`, then
-re-bless `terrain-golden.json` if it's stale. Has been broken since at least 2026-09-03.
+**A1. Fix `check:terrain`. — ✅ DONE 2026-09-23.** esbuild crashed on
+`BorderWall.js`'s `?url` png imports; stubbed like `check-water.mjs`. Golden
+re-recorded for the 21 current tracks (it held renamed/removed tracks).
 
-**A2. Run tests + checks in CI. — DONE 2026-09-23** (`npm run check` aggregate; deploy workflow runs `npm test` + `npm run check` before build). `deploy-pages.yml` only does `npm ci && npm run build`.
-Add `npm test` and the `check:*` scripts before the build so a broken check blocks
-deploy instead of rotting silently (which is how A1 happened).
+**A2. Run tests + checks in CI. — ✅ DONE 2026-09-23.** `npm run check` runs all
+`check:*` scripts; `deploy-pages.yml` runs `npm test` + `npm run check` before
+building. Only on pushes to `main` — a separate PR workflow is an easy add.
 
 **A3. Multiplayer server input hygiene.** `DriveRoom` `"state"` handler relays
 `{ ...data }` verbatim to every client — any client can inject arbitrary fields
@@ -43,25 +64,30 @@ racing game this is the single biggest gap. Poll `navigator.getGamepads()` in
 buttons → boost/reset/camera. The truck already accepts analog `input.steer`
 (the AI uses it — see AI proportional steering), so the physics side is ready.
 Add a Gamepad row to the Controls settings panel; rumble via
-`gamepad.vibrationActuator` on collisions/landings is a cheap bonus.
+`gamepad.vibrationActuator` on collisions/landings is a cheap bonus (the camera
+shake's impact detection in `CameraController._updateMotion` is a ready trigger).
 
 **B2. Keyboard steering smoothing.** Related: with digital keys the player gets
 binary steer while AI gets proportional. A short steer ramp (attack/release,
 faster return-to-centre, speed-scaled max lock) usually makes keyboard driving
 feel much less twitchy. Tunable like the DriftTuning knobs.
 
-**B3. Minimap / track overview in the HUD.** Nothing exists. The AI path polyline
-+ checkpoint positions are already on hand; render to a small 2D canvas in
-`RaceHUD.vue` with truck dots. Helps on the isometric camera where upcoming
-turns are often off-screen.
+**B3. Minimap. — ✅ DONE 2026-09-24.** `managers/Minimap.js`: north-up overview,
+bottom-right, AI racing line as the road + walls + gates + start/finish, a dot per
+truck. Static layer drawn once; per frame only dots. Hidden in photo mode; Display
+setting "Minimap". _Follow-up:_ wired into RaceMode only — MP / HotLap / Practice
+are a few lines each.
 
-**B4. Camera juice.** Landing/impact shake (2 mentions total, not wired to
-collisions), subtle speed-based FOV/zoom-out, and look-ahead offset in the
-direction of travel. All in `CameraController`, all small.
+**B4. Camera juice. — ✅ DONE 2026-09-24.** In `CameraController` (tuning
+constants at top of file): impact shake (trauma from frame-to-frame velocity Δ,
+ignores respawns and the MP finish stop), look-ahead along travel (overhead modes,
+≤ 7 m), ~8% speed pull-back. Display setting "Camera Shake". Unit-tested in
+`test/camera-motion.test.js`. Menu demo camera left plain.
 
 **B5. Hot-lap ghosts as shareable files.** `GhostRecorder`/`HotLapStorage` exist;
 export/import a ghost (JSON + fflate, already a dep) the same way track packs
-work. Gives asynchronous competition without servers.
+work. Gives asynchronous competition without servers. Now fair across machines:
+hot-lap time is summed fixed-step sim time (C1).
 
 **B6. Touch / mobile controls** (0 touch handlers today). Only if the Pages build
 is meant for phones — virtual steer/gas/boost buttons + a perf tier default.
@@ -70,39 +96,36 @@ is meant for phones — virtual steer/gas/boost buttons + a perf tier default.
 
 ## C. Engine / architecture
 
-**C1. Fixed-timestep truck simulation. — DONE 2026-09-23** (`src/modes/fixed-step.js`:
-60 Hz `FixedStepLoop` + truck-mesh render interpolation in all six driving loops;
-each loop split into step (sim) and render (camera/HUD/decorations/puppets/ghost)).
-Follow-ups: RaceMode/MultiplayerMode lap times still use `Date.now()` (HotLap already
-sums sim dt); tire marks/particles emit at the sim pose, up to one step ahead of
-the rendered truck. Original note: Truck/AI physics integrate a variable
-`dt` clamped at 50 ms (`BaseMode.getClampedDeltaTime`). Consequences: handling
-differs subtly between 60/120/144 Hz displays; below 20 fps the game runs in
-slow-motion; hot-lap times and ghosts aren't comparable across machines;
-multiplayer clients (each simulating themselves) aren't on equal footing; and
-the headless repro harness can't replay a frame sequence exactly. Standard fix:
-accumulator with fixed 1/120 s steps for `truck.update` + AI, render interpolates
-the visual transform between the last two states. Medium effort, touches the
-frame envelope in `DriveMode.installRaceFrameLoop()` (one place now, thanks to
-CLEANUP 2.4). Do before B5 and before any MP work.
+**C1. Fixed-timestep truck simulation. — ✅ DONE 2026-09-23.** `modes/fixed-step.js`:
+60 Hz `FixedStepLoop` (max 5 steps/frame) + truck-mesh render interpolation in all
+six driving loops; each loop is split into a sim step and a per-frame render part.
+Gotcha found on the way: Havok syncs the truck body back onto its mesh after every
+physics step (float32), so "was the mesh moved?" checks must use a tolerance.
+_Follow-ups:_
+- Race / Multiplayer lap times still use `Date.now()` (HotLap already sums sim dt).
+- Tire marks / particles emit at the sim pose, up to one step (~0.5 m at top
+  speed) ahead of the rendered truck — hasn't been noticeable so far.
 
-**C2. Bundle size (8.6 MB main chunk).** 97 files import from the
-`@babylonjs/core` barrel, which defeats tree-shaking. Options in order of payoff:
-(a) `manualChunks` to split Babylon/Havok/Vue into cacheable vendor chunks —
-trivial, faster reloads after deploys; (b) lazy-load the editor (`EditorMode` +
-`src/editor/` + editor panels) since players rarely open it — `import()` in
-`ModeController.switchTo`; (c) deep imports (`@babylonjs/core/Meshes/...`) —
-biggest win but big churn; script it, one commit, after the CLEANUP dir moves.
+**C2. Bundle size. — 🟨 (a)+(b) DONE 2026-09-24.**
+- (a) Vendor chunks: babylon 6.1 MB, colyseus 118 KB, vue 79 KB, havok 34 KB.
+- Found: the vehicle/obstacle/decoration loaders inlined every OBJ as a raw string
+  (1.1 MB, and shipped again as the `.obj` asset). Now `fetchMeshDefaultColors`
+  (`utils/mtl-parser.js`) fetches the model URL; Babylon's later load hits cache.
+- (b) Editor (`EditorMode` → `EditorController` + sub-editors, 255 KB) and its 21
+  Vue panels load on first open.
+- **Open — (c):** deep Babylon imports (`@babylonjs/core/Meshes/...`) instead of the
+  barrel (97 files) to tree-shake the 6.1 MB vendor chunk. Biggest remaining win,
+  big churn; script it, one commit, after the CLEANUP dir moves.
 
-**C3. Finish CLEANUP §2.3** — `RaceMode.setup()` is still one ~640-line closure
-(`RaceFinishTracker` extraction). Still the riskiest file to edit; B3/B5 will
-both want to touch it.
+**C3. Finish CLEANUP §2.3** — `RaceMode.setup()` is still one ~650-line closure
+(`RaceFinishTracker` extraction). Still the riskiest file to edit; C1/B3/B4 each
+had to thread new code through it.
 
-**C4. Test the headless physics harness into a regression test.** The esbuild
+**C4. Turn the headless physics harness into a regression check.** The esbuild
 Node harness from the airborne-momentum bug is valuable; promote one or two
 scenarios (e.g. jump landing Δv, wall scrape) into `check:physics` with golden
-tolerances so drift tuning changes show numeric diffs. Pairs well with C1
-(determinism makes goldens exact).
+tolerances so drift tuning changes show numeric diffs. With C1 done the sim steps
+are fixed, so goldens can be near-exact.
 
 **C5. Server tests.** `server/DriveRoom.js` has finish-order / DNF-grace logic
 with zero tests. Colyseus rooms are plain classes — a vitest with a fake client
@@ -120,14 +143,28 @@ list covers `_nextFinishPosition`, host migration on leave, DNF timer.
   — shortens the edit→drive loop a lot.
 - Replay camera for the finish: `TelemetryRecorder/Player` already exist;
   a post-race TV-cam replay of the last lap is mostly camera work.
+- Track sign breeze: the new hanging-sheet banner is static; a slow sway using the
+  same fold functions would bring it to life.
 
 ---
 
-## Suggested order
+## Also done (not on the original list)
 
-1. A1 + A2 (restore + enforce the safety net) — one short session
-2. B1 + B2 (gamepad + analog feel) — biggest player-facing win
-3. A3/A4 before anyone plays MP with strangers
-4. C1 fixed timestep (+ C4 physics goldens) — foundation for fair times/ghosts/MP
-5. C2(a,b) bundle split — cheap load-time win
-6. B3/B4 HUD + camera juice, then C3 when next editing RaceMode
+- **Track signs** (2026-09-23, `objects/TrackSign.js`): flat planes → hanging
+  fabric sheet — taut top edge, sag and fanning folds deepening toward a looser
+  bottom, seeded per sign, fold shading baked into vertex colours.
+- **Stadium light base** (2026-09-24, `objects/TrackLight.js`): concrete footing at
+  the pole foot, with round-post collision (polyline collider, radial push-out). New
+  `landOnTop: false` collider option in `StaticBodyCollisionManager` so a boosted hit
+  can't pop a truck onto short colliders. Covered by 3 cases in `check:walls`.
+- **Display settings**: "Minimap" and "Camera Shake" toggles, applied live.
+
+---
+
+## Suggested order (remaining)
+
+1. B1 + B2 — gamepad + analog keyboard feel. Biggest player-facing gap left.
+2. A3 + A4 — before anyone plays multiplayer with strangers.
+3. C4 physics goldens — cheap now that the sim is fixed-step.
+4. Minimap in HotLap / Practice / MP; Race/MP lap times on sim time (C1 follow-up).
+5. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.
