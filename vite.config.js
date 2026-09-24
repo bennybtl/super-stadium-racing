@@ -4,6 +4,13 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
   plugins: [vue()],
+  esbuild: {
+    // Strip console.debug from production builds (68 call sites of dev
+    // tracing). `pure` only lets the minifier drop the calls, so dev keeps
+    // them. console.log / console.table stay: FrameProfiler's opt-in reports
+    // and DebugManager's log dump use them. warn/error are untouched.
+    pure: ["console.debug"],
+  },
   build: {
     rollupOptions: {
       output: {
