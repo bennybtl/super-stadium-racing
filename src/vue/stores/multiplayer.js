@@ -40,6 +40,7 @@ export const useMultiplayerStore = defineStore('multiplayer', () => {
   multiplayerClient.on('leave', syncRoom);
   multiplayerClient.on('settings', syncRoom);
   multiplayerClient.on('update', syncRoom);
+  multiplayerClient.on('host', syncRoom);
 
   function setPlayerName(name) {
     const trimmed = String(name ?? '').slice(0, 24);

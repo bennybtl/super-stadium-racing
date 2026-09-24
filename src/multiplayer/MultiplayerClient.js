@@ -37,7 +37,7 @@ export class MultiplayerClient {
     // sessionId -> { id, name, colorKey, vehicleKey, x, y, z, heading, vx, vy, vz }
     this.players = new Map();
     this._listeners = {
-      init: [], join: [], leave: [], state: [], start: [], settings: [], update: [],
+      init: [], join: [], leave: [], host: [], state: [], start: [], settings: [], update: [],
       raceProgress: [], playerFinished: [], raceOver: [],
     };
   }
@@ -134,6 +134,12 @@ export class MultiplayerClient {
     room.onMessage("playerLeft", ({ id }) => {
       this.players.delete(id);
       this._emit("leave", id);
+    });
+
+    // The host left — the server handed host to someone (possibly this client).
+    room.onMessage("hostChanged", ({ hostId }) => {
+      this.hostId = hostId ?? null;
+      this._emit("host", this.hostId);
     });
 
     room.onMessage("state", (data) => {

@@ -3,7 +3,7 @@ import {
   cleanText, cleanKey, cleanMaxClients, cleanLaps, cleanState,
   isValidLap, cleanTimeMs, takeToken, STATE_BURST, STATE_RATE,
 } from '../server/validate.js';
-import { DriveRoom } from '../server/DriveRoom.js';
+import { makeRoom } from './helpers/drive-room.js';
 
 describe('server validate helpers', () => {
   it('cleans display text', () => {
@@ -70,22 +70,6 @@ describe('server validate helpers', () => {
   });
 });
 
-// DriveRoom driven directly: capture its message handlers, stub the transport.
-function makeRoom(options = {}) {
-  const room = new DriveRoom();
-  const handlers = {};
-  const sent = [];
-  room.onMessage = (type, fn) => { handlers[type] = fn; };
-  room.broadcast = (type, payload) => sent.push({ type, payload });
-  // Colyseus exposes metadata as a getter; shadow it with a plain field.
-  Object.defineProperty(room, 'metadata', { value: undefined, writable: true });
-  room.setMetadata = (m) => { room.metadata = m; };
-  room.lock = () => {};
-  room.onCreate(options);
-  const client = (id) => ({ sessionId: id, send: () => {} });
-  const msg = (c, type, data) => handlers[type](c, data);
-  return { room, sent, client, msg };
-}
 
 describe('DriveRoom input hygiene', () => {
   it('sanitises create options', () => {

@@ -232,6 +232,15 @@ export class DriveRoom extends Room {
     this.players.delete(client.sessionId);
     this._stateBuckets.delete(client.sessionId);
     this.broadcast("playerLeft", { id: client.sessionId });
+    // Host handover: without it, a host leaving the lobby strands everyone
+    // else — only the host can change settings or start. The Map keeps join
+    // order, so the longest-connected remaining player takes over.
+    if (client.sessionId === this.hostId) {
+      this.hostId = this.players.keys().next().value ?? null;
+      const host = this.players.get(this.hostId);
+      if (host) this.setMetadata({ ...this.metadata, hostName: host.name });
+      this.broadcast("hostChanged", { hostId: this.hostId });
+    }
     // The player who left may have been the only one still racing.
     if (this.race) this._checkRaceOver();
   }

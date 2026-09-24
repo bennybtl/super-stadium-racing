@@ -21,6 +21,7 @@ thin colyseus room, not a simulation.
   `raceOver` results.
 - Lobby flow: the host creates a room (track, direction, laps), players pick a
   truck/colour, the host sends `start` → room locks → everyone loads the track.
+  If the host leaves, the longest-connected player becomes host (`hostChanged`).
   `GET /lobbies` (server/index.js) lists open rooms.
 
 **Input hygiene** (`server/validate.js`, tested in `test/server-validate.test.js`):

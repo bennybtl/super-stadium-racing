@@ -4,7 +4,7 @@ _Review date: 2026-09-23 · last status update 2026-09-24 · branch `better-rock
 
 Complements `CLEANUP.md` (refactor plan, still valid — not repeated here).
 
-**Health now:** `npm test` 102/102 · `npm run check` (all 9 check scripts, incl. physics) green and
+**Health now:** `npm test` 112/112 · `npm run check` (all 9 check scripts, incl. physics) green and
 enforced in the deploy workflow · app JS chunk **707 KB** (was 8.6 MB), Babylon in
 its own 6.1 MB vendor chunk, editor lazy-loaded.
 
@@ -16,7 +16,7 @@ its own 6.1 MB vendor chunk, editor lazy-loaded.
 | A2 Tests + checks in CI | ✅ Done 2026-09-23 |
 | A3 MP server input hygiene | ✅ Done 2026-09-24 |
 | A4 MULTIPLAYER.md vs code | ✅ Done 2026-09-24 |
-| A5 Strip console logs in prod | ⬜ Open |
+| A5 Strip console logs in prod | ✅ Done 2026-09-24 |
 | B1 Gamepad support | ⬜ Open — deferred |
 | B2 Keyboard steering smoothing | 🟨 Mostly exists already — see below |
 | B3 Minimap | ✅ Done 2026-09-24 (all race modes) |
@@ -27,7 +27,7 @@ its own 6.1 MB vendor chunk, editor lazy-loaded.
 | C2 Bundle size | 🟨 (a)+(b) done 2026-09-24, (c) open |
 | C3 Finish CLEANUP §2.3 | ⬜ Open |
 | C4 Physics regression check | ✅ Done 2026-09-24 |
-| C5 Server tests | ⬜ Open |
+| C5 Server tests | ✅ Done 2026-09-24 (+ host handover fix) |
 
 ---
 
@@ -56,8 +56,11 @@ anti-cheat is the server-authoritative plan.
 trusted, which of its findings C1 made outdated); the rest is labelled a future
 plan. AGENT.md no longer calls the server authoritative.
 
-**A5. Strip `console.debug`/`log` from prod** (69 call sites) via
-`esbuild.drop`/`pure` in `vite.config.js`. One line (CLEANUP 3.5 alternative).
+**A5. Strip console logs from prod. — ✅ DONE 2026-09-24.** `esbuild.pure:
+["console.debug"]` in `vite.config.js`: the minifier drops all 68 `console.debug`
+calls from production builds (0 left in `dist/`), dev keeps them. `console.log` /
+`console.table` kept on purpose — FrameProfiler's opt-in reports and DebugManager's
+log dump use them; warn/error untouched. Covers CLEANUP §3.5.
 
 ---
 
@@ -141,9 +144,14 @@ under the nitro × soft-cap speed limit). Seeded `Math.random`, sim-time `Date.n
 Verified sensitive: STEER_RAMP_UP 4 → 4.5 fails turn + slalom only. Not covered:
 wall/truck collisions (walls are in `check:walls`), AI driving, bridges.
 
-**C5. Server tests.** `server/DriveRoom.js` has finish-order / DNF-grace logic
-with zero tests. Colyseus rooms are plain classes — a vitest with a fake client
-list covers `_nextFinishPosition`, host migration on leave, DNF timer.
+**C5. Server tests. — ✅ DONE 2026-09-24.** `test/drive-room.test.js` (10 tests,
+shared harness `test/helpers/drive-room.js`): finish order, DNF after the 45 s
+grace (fake timers), raceOver fires exactly once, a finisher who disconnects keeps
+their result, a leaver who never finished isn't waited for, solo races. **Found a
+bug:** there was no host migration — a host leaving the lobby stranded everyone
+(only the host can change settings or start). Fixed: the longest-connected player
+takes over (`hostChanged` message → client/store re-sync `isHost`, lobby list
+host name updated); 3 of the tests fail without the fix.
 
 ---
 
@@ -177,8 +185,5 @@ list covers `_nextFinishPosition`, host migration on leave, DNF timer.
 
 ## Suggested order (remaining)
 
-1. A5 strip console logs in prod (one line).
-2. C5 remaining server tests (host migration, DNF timer) — the harness in
-   `test/server-validate.test.js` makes these quick.
-3. B1 gamepad when un-deferred (B2 steering easing already exists).
-4. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.
+1. B1 gamepad when un-deferred (B2 steering easing already exists).
+2. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.
