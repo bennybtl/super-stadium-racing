@@ -2,7 +2,7 @@
 
 Replace the low-poly `ProceduralTree` (src/decorations/lib/Tree.js) with a port of
 [ez-tree](https://github.com/dgreenheck/ez-tree) (MIT, © 2024 Daniel Greenheck).
-Status: **Phases 1–4 done** (Sept 23 2026). The port is bit-exact and the Tree decoration uses it with real textures and screen-coverage LOD. Phases 5–6 are open.
+Status: **Phases 1–5 done** (Sept 23 2026). The port is bit-exact and the Tree decoration uses it with real textures, screen-coverage LOD and leaf wind sway. Phase 6 (cleanup) is open.
 
 ## What ez-tree is
 
@@ -142,11 +142,32 @@ changes:
    one is hooked to its master's `onDisposeObservable`. Materials are created
    before the build and passed into `buildEzTreeMasters` so every level shares
    them (`ezTreeOptions()` gives tree.js the options up front).
-5. **Wind (optional).** A small `MaterialPluginBase` vertex plugin, like
-   `TerrainBlendPlugin`, that ports the simplex sway weighted by `uv.y`, with one
-   shared time uniform. Use numeric defines, not values baked into the source (see
-   `terrain-bake-aspect-correct`).
-6. **Cleanup.** Delete the old `lib/Tree.js` once the new one is accepted. Cactus
+5. ✅ **Wind.** Done in `src/shaders/tree-wind-shader.js`: a `TreeWindPlugin`
+   on the leaf material, so it applies to every LOD level. It ports ez-tree's
+   three-sine sway, weighted by `uv.y` so leaf bases stay attached, with these
+   changes:
+   - It's applied in **world space** (`CUSTOM_VERTEX_UPDATE_WORLDPOS`). In model
+     space, every instance of a variant would sway in lockstep.
+   - Two crossed world-xz sines set the phase instead of simplex noise.
+   - Amplitude and scale are ez values × 0.22, so tips move about 0.11 units.
+
+   The constants are baked; they're global, so there's no effect-cache hazard.
+   The clock is a uniform, declared through both the UBO and plain `vertex:`
+   routes, as in water-shader.js. The shadow pass doesn't sway, and at this
+   amplitude that isn't visible.
+- ✅ **Bushes migrated.** The spec now lives in `lib/ez-tree/decoration.js`
+  (`ezTreeDecoration({presetFilter, defaultPreset, scale, colorOptions})`), and
+  `tree.js`/`bush.js` are thin configs of it:
+  - **Tree:** non-bush presets, scale 0.22.
+  - **Bush:** `bush_1..3`, scale 0.12, about 2.3–3.7 units tall versus the old
+    blob's ~1.7.
+
+  The `bush` decoration id is unchanged, so all 50 bushes on 6 tracks (and any
+  saved or localStorage copies) migrate with no track-file edits. They keep
+  their seed, scale, colour and heading, and default to `bush_1`. A leftover
+  per-feature `radius` key is simply ignored. Tree's Species dropdown no longer
+  lists bushes.
+6. **Cleanup.** Delete the now-unused `lib/Tree.js` and `lib/Bush.js`. Cactus
    keeps using `instanced-decoration.js` unchanged.
 
 ## Risks / open questions

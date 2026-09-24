@@ -9,8 +9,8 @@
   "leafColor": "green",
   "castsShadows": true,
   "featureDefaults": {
-    "seed": 1,
-    "radius": 0.9
+    "preset": "bush_1",
+    "seed": 1
   },
   "editable": { "color": true, "scale": true, "heading": true }
 }

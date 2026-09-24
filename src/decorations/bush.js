@@ -1,48 +1,16 @@
-import { StandardMaterial, Color3 } from "@babylonjs/core";
-import { foliageColors, FOLIAGE_COLOR_OPTIONS } from "../constants.js";
-import { ProceduralBush, BUSH_DEFAULTS } from "./lib/Bush.js";
-import { instancedDecoration } from "./lib/instanced-decoration.js";
-
-const DEFAULT_LEAF = "green";
-
-const tint = (name, fallback) => (foliageColors[name] ?? foliageColors[fallback]).diffuse;
+import { FOLIAGE_COLOR_OPTIONS } from "../constants.js";
+import { ezTreeDecoration } from "./lib/ez-tree/decoration.js";
 
 /**
- * Procedural bush — a dense clump of overlapping foliage blobs. Geometry in
- * ./lib/Bush.js; caching / instancing / editor contract in
- * ./lib/instanced-decoration.js. `radius` is JSON-only (bush.json
- * featureDefaults); the panel exposes seed + colour.
+ * Bush decoration: the ez-tree bush presets (EZ_TREE.md). Existing track
+ * bushes keep their `bush` id, seed, scale and colour, and pick up bush_1
+ * unless they name a preset.
+ * Scale: ez-tree bushes are ~19–31 units tall, so 0.12 makes them ~2.3–3.7
+ * world units (the old blob bush was ~1.7). Tune by eye.
  */
-export default instancedDecoration({
-  colliderGroup: "foliage", // bushes have no colliderMeshes in bush.json, so this is unused
-
-  variantParams(feature, def) {
-    const fd = def.featureDefaults ?? {};
-    return {
-      seed:      Number(feature.seed ?? fd.seed ?? BUSH_DEFAULTS.seed),
-      radius:    Number(fd.radius ?? BUSH_DEFAULTS.radius),
-      leafColor: feature.color ?? def.leafColor ?? DEFAULT_LEAF,
-    };
-  },
-
-  variantKey: (p) => [p.seed, p.radius, p.leafColor].join("|"),
-
-  buildVariant(scene, p, key) {
-    const { foliage, height } = ProceduralBush.buildMasters(scene, p);
-
-    const mat = new StandardMaterial(`bushFoliage_${key}`, scene);
-    mat.diffuseColor = tint(p.leafColor, DEFAULT_LEAF);
-    mat.specularColor = Color3.Black();
-
-    if (foliage) foliage.material = mat;
-
-    return { groups: { foliage }, mats: [mat], height };
-  },
-
-  controls: {
-    color:   { type: "color", label: "Foliage", options: FOLIAGE_COLOR_OPTIONS },
-    seed:    { type: "range", label: "Variant",  min: 1,   max: 40,  step: 1, random: true },
-    scale:   { type: "range", label: "Scale",    min: 0.5, max: 4,   step: 0.1, unit: "×" },
-    heading: { type: "range", label: "Rotation", min: 0,   max: 360, step: 1,   unit: "°" },
-  },
+export default ezTreeDecoration({
+  presetFilter: (id) => id.startsWith("bush_"),
+  defaultPreset: "bush_1",
+  scale: 0.12,
+  colorOptions: FOLIAGE_COLOR_OPTIONS,
 });
