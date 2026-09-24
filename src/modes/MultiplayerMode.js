@@ -317,6 +317,10 @@ export class MultiplayerMode extends DriveMode {
     const fireworkZones = this.getFireworkZones(currentTrack);
 
     // -- Countdown --
+    // Race timing here is deliberately wall-clock (Date.now), unlike RaceMode's
+    // sim-time race clock: the shared race keeps running while this client is
+    // paused or stalls, and finish order is real arrival at the server, so the
+    // reported times have to be on the same real-time footing.
     let raceStarted = false;
     let raceStartTime = null;
     let countdownActive = false;

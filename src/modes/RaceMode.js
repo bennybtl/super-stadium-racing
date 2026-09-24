@@ -32,7 +32,6 @@ export class RaceMode extends DriveMode {
   constructor(controller) {
     super(controller);
     this.inputManager = null;
-    this._dnfTimer = null;
     this.debugManager = null;
     this.audioManager = null;
     this.truckAudioController = null;
@@ -102,27 +101,28 @@ export class RaceMode extends DriveMode {
     const getGridSpawn = this.makeGridSpawner(currentTrack, checkpointManager, startFinishCp);
 
     // -- Race state --
+    // Race timing runs on sim time: raceClockMs advances only in fixed physics
+    // steps, so pausing, a background tab or slow frames never count against a
+    // lap. raceStartTime / lapStartTime / the DNF deadline are all on this clock.
+    let raceClockMs = 0;
     let raceStarted = false;
     let raceStartTime = null;
     let countdownActive = false;
 
     // -- Finish / DNF tracking --
     const finishOrder  = [];   // truckData entries in finish order
-    let dnfTimer       = null; // started when the first driver begins their last lap
+    let dnfDeadlineMs  = null; // race-clock time the DNF grace ends (set on first finish)
     let raceEnded      = false;
 
     // Cash collected from money pickups this race, per driver id. Applied to
     // each driver's championship wallet at race end (see triggerRaceEnd meta).
     const moneyCollected = {};
 
-    // Keep a reference on `this` so teardown() can cancel an in-flight timer
-    const setDnfTimer = (t) => { dnfTimer = t; this._dnfTimer = t; };
-    const clearDnfTimer = () => { clearTimeout(dnfTimer); dnfTimer = null; this._dnfTimer = null; };
 
     const triggerRaceEnd = () => {
       if (raceEnded) return;
       raceEnded = true;
-      if (dnfTimer) { clearDnfTimer(); }
+      dnfDeadlineMs = null;
       checkpointManager.clearPlayerCheckpointHighlight();
 
       // Stop the player engine loop immediately when the race ends.
@@ -451,8 +451,8 @@ export class RaceMode extends DriveMode {
         this.musicManager?.start();
         if (maxCheckpointNumber === 0 && !raceStarted) {
           raceStarted = true;
-          raceStartTime = Date.now();
-          trucks.forEach(t => t.lapStartTime = Date.now());
+          raceStartTime = raceClockMs;
+          trucks.forEach(t => t.lapStartTime = raceClockMs);
           uiManager.showRaceTimer();
         }
       });
@@ -465,7 +465,7 @@ export class RaceMode extends DriveMode {
       trucks.forEach(t => t.lapStartTime = null);
       raceEnded = false;
       finishOrder.length = 0;
-      if (dnfTimer) { clearDnfTimer(); }
+      dnfDeadlineMs = null;
       uiManager.hideRaceTimer();
 
       trucks.forEach((truckData, index) => {
@@ -560,8 +560,15 @@ export class RaceMode extends DriveMode {
       isMenuUp: () => menuManager.isMenuActive(),
       isCountdownActive: () => countdownActive,
       getRaceStartMs: () => (raceStarted && raceStartTime !== null ? raceStartTime : null),
+      getRaceClockMs: () => raceClockMs,
       getMeshes: () => trucks.map(td => td.truck.mesh),
       onStep: (dt, input) => {
+
+      raceClockMs += dt * 1000;
+      if (dnfDeadlineMs !== null && raceClockMs >= dnfDeadlineMs && !raceEnded) {
+        dnfDeadlineMs = null;
+        handleDNF();
+      }
 
       frameProfiler.measure('collision.truck.pre', () => truckCollisionManager.preUpdate(trucks, dt));
 
@@ -665,12 +672,12 @@ export class RaceMode extends DriveMode {
           
           if (!raceStarted) {
             raceStarted = true;
-            raceStartTime = Date.now();
+            raceStartTime = raceClockMs;
             uiManager.showRaceTimer();
             console.debug("Race started!");
           }
           
-          truckData.lapStartTime = Date.now();
+          truckData.lapStartTime = raceClockMs;
           truckData.gameState.lastCheckpointPassed = 0;
           truckData.gameState.checkpointCount = 0;
           checkpointManager.resetForTruck(truckData.id);
@@ -725,7 +732,7 @@ export class RaceMode extends DriveMode {
         }
 
         if (newCount === checkpointManager.getTotalCheckpoints()) {
-          const currentTime = Date.now();
+          const currentTime = raceClockMs;
           const lapTime = truckData.lapStartTime ? currentTime - truckData.lapStartTime : 0;
           truckData.lapStartTime = currentTime;
           const lapCount = truckData.gameState.completeLap(lapTime);
@@ -764,9 +771,9 @@ export class RaceMode extends DriveMode {
 
             // For 1-lap races the "start final lap" trigger never fires, so start
             // the DNF timer here on first finish instead.
-            if (dnfTimer === null && !raceEnded && finishOrder.length < trucks.length) {
+            if (dnfDeadlineMs === null && !raceEnded && finishOrder.length < trucks.length) {
               console.debug(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
-              setDnfTimer(setTimeout(handleDNF, DNF_GRACE_MS));
+              dnfDeadlineMs = raceClockMs + DNF_GRACE_MS;
             }
 
             if (truckData.isPlayer) {
@@ -850,7 +857,6 @@ export class RaceMode extends DriveMode {
       window.removeEventListener('offroad:gameplay-settings-changed', this._gameplaySettingsChangedHandler);
       this._gameplaySettingsChangedHandler = null;
     }
-    if (this._dnfTimer) { clearTimeout(this._dnfTimer); this._dnfTimer = null; }
     if (this.positionLabels) {
       this.positionLabels.dispose();
       this.positionLabels = null;

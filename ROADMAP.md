@@ -108,7 +108,11 @@ six driving loops; each loop is split into a sim step and a per-frame render par
 Gotcha found on the way: Havok syncs the truck body back onto its mesh after every
 physics step (float32), so "was the mesh moved?" checks must use a tolerance.
 _Follow-ups:_
-- Race / Multiplayer lap times still use `Date.now()` (HotLap already sums sim dt).
+- ~~Race lap times on `Date.now()`~~ — done 2026-09-24: RaceMode times laps, the
+  race, the HUD timer and the 45 s DNF grace on a sim-time race clock (pausing
+  used to add the paused time to your lap, and the DNF `setTimeout` fired behind
+  the pause menu). Multiplayer keeps wall-clock time on purpose — the shared race
+  runs in real time and finish order is real arrival (commented in the code).
 - Tire marks / particles emit at the sim pose, up to one step (~0.5 m at top
   speed) ahead of the rendered truck — hasn't been noticeable so far.
 
@@ -173,9 +177,8 @@ list covers `_nextFinishPosition`, host migration on leave, DNF timer.
 
 ## Suggested order (remaining)
 
-1. Race/MP lap times on sim time (C1 follow-up).
-2. A5 strip console logs in prod (one line).
-3. B1 gamepad when un-deferred (B2 steering easing already exists).
-4. C5 remaining server tests (host migration, DNF timer) — the harness in
+1. A5 strip console logs in prod (one line).
+2. C5 remaining server tests (host migration, DNF timer) — the harness in
    `test/server-validate.test.js` makes these quick.
-5. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.
+3. B1 gamepad when un-deferred (B2 steering easing already exists).
+4. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.

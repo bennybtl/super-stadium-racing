@@ -207,8 +207,12 @@ export class DriveMode extends BaseMode {
    * @param {object}   o.inputManager
    * @param {() => boolean}      o.isMenuUp           pause/menu overlay is showing
    * @param {() => boolean}      o.isCountdownActive  pre-race 3-2-1 is running
-   * @param {() => (number|null)} o.getRaceStartMs    Date.now() basis for the HUD
+   * @param {() => (number|null)} o.getRaceStartMs    race-clock basis for the HUD
    *                                                  timer, or null before the start
+   * @param {() => number} [o.getRaceClockMs=Date.now] the clock that basis is on.
+   *   Single-player passes its sim-time race clock (stops while paused / in slow
+   *   frames); multiplayer keeps the wall clock — the shared race runs in real
+   *   time whether or not this client is paused.
    * @param {boolean} [o.runTimerWhilePaused=false]   keep ticking the HUD timer
    *   while a menu/photo mode holds the sim. Single-player leaves this off (the
    *   race is genuinely suspended); multiplayer sets it, since the server keeps
@@ -217,7 +221,7 @@ export class DriveMode extends BaseMode {
    * @param {(dt: number, input: object) => void} o.onStep
    * @param {(dt: number) => void} o.onRender
    */
-  installRaceFrameLoop({ engine, scene, uiManager, inputManager, isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused = false, getMeshes, onStep, onRender }) {
+  installRaceFrameLoop({ engine, scene, uiManager, inputManager, isMenuUp, isCountdownActive, getRaceStartMs, getRaceClockMs = Date.now, runTimerWhilePaused = false, getMeshes, onStep, onRender }) {
     const sim = this.fixedStep = new FixedStepLoop(getMeshes);
     const NEUTRAL = Object.freeze({ forward: false, back: false, left: false, right: false });
     const TIMER_UI_INTERVAL_MS = 50; // HUD reads MM:SS.cc; 20Hz is finer than the glyphs
@@ -230,7 +234,7 @@ export class DriveMode extends BaseMode {
       timerUiElapsedMs += dt * 1000;
       if (timerUiElapsedMs >= TIMER_UI_INTERVAL_MS) {
         timerUiElapsedMs = 0;
-        this.frameProfiler.measure('ui.timer', () => uiManager.updateTimer(Date.now() - raceStartMs));
+        this.frameProfiler.measure('ui.timer', () => uiManager.updateTimer(getRaceClockMs() - raceStartMs));
       }
     };
 
