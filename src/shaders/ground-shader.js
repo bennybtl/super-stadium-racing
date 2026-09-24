@@ -105,28 +105,6 @@ function _buildScaledTileCanvas(img, tileWidth, tileHeight) {
   return _cacheTile(_tileCanvasCache, key, canvas);
 }
 
-/**
- * Fill one terrain cell, snapped to whole texture pixels.
- *
- * `pixelsPerCell` is texture size ÷ cell count and is rarely a whole number
- * (2000 / 180 = 11.111…), so filling at raw fractional coordinates leaves every
- * cell edge antialiased. Two neighbouring cells then composite over the same
- * boundary pixel, and source-over applied twice does not add up to one full
- * cover: the pixel keeps a fraction of whatever was underneath. Over the grid
- * that reads as a faint checkerboard of lines.
- *
- * Snapping both edges to integers hands each boundary to exactly one cell —
- * cell i ends where cell i+1 begins, by construction, so there is no gap and no
- * double coverage.
- */
-function _fillTerrainCell(ctx, col, row, pixelsPerCell) {
-  const x0 = Math.round(col * pixelsPerCell);
-  const y0 = Math.round(row * pixelsPerCell);
-  const x1 = Math.round((col + 1) * pixelsPerCell);
-  const y1 = Math.round((row + 1) * pixelsPerCell);
-  ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-}
-
 const _textureMapModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
 const _textureMapUrls = {};
 for (const [path, url] of Object.entries(_textureMapModules)) {
@@ -208,43 +186,52 @@ async function _paintSteepTerrainOverlay(
   const img = await _loadNormalMap(normalMap);
   if (!img || img.naturalWidth <= 0) return;
 
-  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
+  const n = terrainManager.cellsPerSide;
   const tileSizeX = (textureSize / worldWidth) * worldUnitsPerTile;
   const tileSizeY = (textureSize / worldDepth) * worldUnitsPerTile;
-  const pattern = ctx.createPattern(_buildScaledTileCanvas(img, tileSizeX, tileSizeY), 'repeat');
-  if (!pattern) return;
 
-  const cellsByBlend = new Map();
-  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
-    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-      const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
-      const cellName = cell?.name ?? '';
-      if (!sourceTerrainNames.includes(cellName)) continue;
+  // One pixel per cell holding its blend as alpha. Upscaled bilinearly below,
+  // so the overlay fades between cell centres instead of stamping a hard square
+  // per steep cell (which read as a checkerboard on banks and lakebeds).
+  const mask = document.createElement('canvas');
+  mask.width = n;
+  mask.height = n;
+  const maskCtx = mask.getContext('2d');
+  const maskImage = maskCtx.createImageData(n, n);
+  let any = false;
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      const cell = terrainManager.grid[row * n + col];
+      if (!sourceTerrainNames.includes(cell?.name ?? '')) continue;
 
       const { x, z } = _getCellWorldCenter(terrainManager, col, row, worldWidth, worldDepth);
       const slopeDeg = _getTerrainSlopeDeg(track, x, z, sampleDistance * terrainManager.cellSize);
       const blend = _smoothstep(slopeStart, slopeEnd, slopeDeg);
       if (blend <= 0) continue;
 
-      const key = Math.round(blend * 20) / 20;
-      if (!cellsByBlend.has(key)) cellsByBlend.set(key, []);
-      cellsByBlend.get(key).push({ col, row });
+      maskImage.data[(row * n + col) * 4 + 3] = Math.round(Math.min(1, blend) * 255);
+      any = true;
     }
   }
+  if (!any) return;
+  maskCtx.putImageData(maskImage, 0, 0);
 
-  if (cellsByBlend.size === 0) return;
+  const layer = document.createElement('canvas');
+  layer.width = textureSize;
+  layer.height = textureSize;
+  const layerCtx = layer.getContext('2d');
+  const pattern = layerCtx.createPattern(_buildScaledTileCanvas(img, tileSizeX, tileSizeY), 'repeat');
+  if (!pattern) return;
+  layerCtx.fillStyle = pattern;
+  layerCtx.fillRect(0, 0, textureSize, textureSize);
+  layerCtx.globalCompositeOperation = 'destination-in';
+  layerCtx.imageSmoothingEnabled = true;
+  layerCtx.imageSmoothingQuality = 'high';
+  layerCtx.drawImage(mask, 0, 0, textureSize, textureSize);
 
   ctx.save();
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = pattern;
-
-  for (const [blend, cells] of cellsByBlend.entries()) {
-    ctx.globalAlpha = Math.min(1, Math.max(0, blend));
-    for (const { col, row } of cells) {
-      _fillTerrainCell(ctx, col, row, pixelsPerCell);
-    }
-  }
-
+  ctx.drawImage(layer, 0, 0);
   ctx.restore();
 }
 
@@ -347,7 +334,6 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWi
   const img = await (_textureMapUrls[waterTextureName] ? _loadTextureMap(waterTextureName) : _loadNormalMap(waterTextureName));
   if (!img || img.naturalWidth <= 0) return;
 
-  const pixelsPerCell = textureSize / terrainManager.cellsPerSide;
   const worldUnitsPerTile = waterCfg.diffuseTextureWorldUnitsPerTile ?? 12;
   // Per axis, like every other tiling pass — averaging the two stretches the
   // repeat on a non-square track.
@@ -362,13 +348,8 @@ async function _paintWaterDepthOverlay(ctx, terrainManager, textureSize, worldWi
   ctx.globalAlpha = 1.0;
   ctx.fillStyle = pattern;
 
-  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
-    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-      const cell = terrainManager.grid[row * terrainManager.cellsPerSide + col];
-      if (cell?.name !== 'water') continue;
-      _fillTerrainCell(ctx, col, row, pixelsPerCell);
-    }
-  }
+  // Pattern only — the shader masks it to water cells (_waterCoverage).
+  ctx.fillRect(0, 0, textureSize, textureSize);
 
   ctx.restore();
 }
@@ -806,25 +787,26 @@ __TERRAIN_DETAIL_PARAMS__
       vec3 n = texture(terrainDetailNormalSampler, vec3(worldXZ / params.z, typeIndex)).xyz * 2.0 - 1.0;
       return vec2(n.x, -n.y) * params.w;
   }
-    // Cell overlays are painted as hard-edged rectangles, one per terrain cell,
-    // so they need the same neighbour weighting the type blend gets or their
-    // edges stay visible as squares.
-    vec4 _sampleSmoothedOverlay(sampler2D overlaySampler, vec2 tUV, vec2 coord) {
-      float n = terrainCellCount;
-      vec2 invN = vec2(1.0 / n);
-      vec4 accum = vec4(0.0);
+    // Smoothed 0–1 share of water cells around this fragment, with the same
+    // cell-centre Gaussian as the type blend. The water overlay's pattern is
+    // painted everywhere and masked by this, rather than blurring the pattern
+    // itself: shifting a detailed texture by whole cells and re-weighting it
+    // jumps at every cell edge, which showed as a checkerboard at the shore.
+    float _waterCoverage(vec2 coord) {
+      float n  = terrainCellCount;
+      float nm = n - 1.0;
+      vec2 cell = floor(coord);
+      float accum = 0.0;
       float totalW = 0.0;
       const float sigma = 0.65;
       const float invTwoSigma2 = 1.0 / (2.0 * sigma * sigma);
       for (int dy = -1; dy <= 1; dy++) {
         for (int dx = -1; dx <= 1; dx++) {
-          vec2 offset = vec2(float(dx), float(dy));
-          vec2 sampleUv = clamp(tUV + offset * invN, vec2(0.0), vec2(1.0));
-          vec2 sampleCenter = floor(coord) + offset + 0.5;
-          vec2 delta = sampleCenter - coord;
-          float dist2 = dot(delta, delta);
-          float w = exp(-dist2 * invTwoSigma2);
-          accum += texture2D(overlaySampler, sampleUv) * w;
+          vec2 nc = clamp(cell + vec2(float(dx), float(dy)), vec2(0.0), vec2(nm));
+          vec2 delta = nc + 0.5 - coord;
+          float w = exp(-dot(delta, delta) * invTwoSigma2);
+          float nId = _decodeTerrainId(texture2D(terrainIdSampler, (nc + 0.5) / n));
+          accum += (abs(nId - ${_terrainTypeList.indexOf(TERRAIN_TYPES.WATER).toFixed(1)}) < 0.5 ? 1.0 : 0.0) * w;
           totalW += w;
         }
       }
@@ -913,7 +895,8 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   vec2 _wkWobble = vec2(_wkX - _wk, _wkZ - _wk) * ${TERRAIN_WAKE_WOBBLE_STRENGTH.toFixed(3)};
   vec2 _tUVWobbled = clamp(_tUV + _wkWobble, vec2(0.0), vec2(1.0));
   vec2 _coordWobbled = clamp(_tUVWobbled * terrainCellCount, vec2(0.001), vec2((terrainCellCount - 1.0) + 0.999));
-  vec4 _waterOverlay = _sampleSmoothedOverlay(terrainWaterOverlaySampler, _tUVWobbled, _coordWobbled);
+  vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUVWobbled);
+  _waterOverlay.a *= _waterCoverage(_coordWobbled);
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
   float _wearLighten = _wearOverlay.r;
   float _wearDarken  = _wearOverlay.g;

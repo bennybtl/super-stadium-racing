@@ -30,7 +30,8 @@ export class MeshMaterialResolver {
 
     this.colorMaterial = new StandardMaterial(`matColor_${tag}`, scene);
     this.colorMaterial.specularColor = new Color3(0.15, 0.15, 0.15);
-    this.colorMaterial.specularPower = 0;
+    // Must be > 0: pow(N·H, 0) = 1 adds the specular flat across every lit face.
+    this.colorMaterial.specularPower = 16;
 
     /** @type {Map<string, StandardMaterial>} group name → fixed material */
     this._fixedMaterials = new Map();
@@ -79,7 +80,7 @@ export class MeshMaterialResolver {
       // regardless of winding (no dependency on consistent normals).
       mat.backFaceCulling = false;
       mat.specularColor = new Color3(0.05, 0.05, 0.05);
-      mat.specularPower = 0;
+      mat.specularPower = 16;
       this._texturedMaterials.set(name, mat);
     }
     return mat;

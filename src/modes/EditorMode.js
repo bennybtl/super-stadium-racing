@@ -7,6 +7,7 @@ import rebuild, { reset as resetRebuild } from "../editor/editor-rebuild.js";
 import {
   updateTerrainIdTexture,
   applySteepGrassTerrainRemap,
+  applySteepWaterTerrainRemap,
 } from "../world/terrain-utils.js";
 
 /**
@@ -111,6 +112,9 @@ export class EditorMode extends BaseMode {
         _postTerrainEditTimer = null;
         driveSurfaceManager.refreshPickingAcceleration(ground);
         steepSlopeColliderManager.rebuild();
+        // Steep-slope normal overlays are baked from heights, so any height
+        // edit stales them — not just the editors that remembered to ask.
+        rebuild.normalMap?.();
       }, 300);
     };
 
@@ -165,6 +169,7 @@ export class EditorMode extends BaseMode {
         }
       }
       applySteepGrassTerrainRemap(terrainManager, currentTrack);
+      applySteepWaterTerrainRemap(terrainManager, currentTrack);
     };
 
     // Rebuild terrain texture buffers from terrainManager.grid (call on deselect).

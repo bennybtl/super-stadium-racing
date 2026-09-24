@@ -67,7 +67,7 @@ export class ScaffoldArch {
     // One material shared by every box in the arch.
     this._material = new StandardMaterial(`decoMat_${tag}`, scene);
     this._material.specularColor = new Color3(0.15, 0.15, 0.15);
-    this._material.specularPower = 0;
+    this._material.specularPower = 16;
     this._applyColor(this.color);
 
     ModelDecoration.loadSourceMeshes(scene, def)

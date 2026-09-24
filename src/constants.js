@@ -34,17 +34,17 @@ export const GROUNDEDNESS = {
 
 export const basicColors = {
   black: { diffuse: new Color3(0.04, 0.04, 0.04), emissive: new Color3(0.0, 0.0, 0.0) },  // X
-  gray: { diffuse: new Color3(0.45, 0.45, 0.45), emissive: new Color3(0.1, 0.1, 0.1) },  // X
-  white: { diffuse: new Color3(0.95, 0.95, 0.95), emissive: new Color3(0.04, 0.04, 0.04) }, // X
+  gray: { diffuse: new Color3(0.38, 0.38, 0.38), emissive: new Color3(0.1, 0.1, 0.1) },  // X
+  white: { diffuse: new Color3(0.80, 0.80, 0.80), emissive: new Color3(0.04, 0.04, 0.04) }, // X
   brown: { diffuse: new Color3(0.28, 0.22, 0.16), emissive: new Color3(0.08, 0.08, 0.08) },
-  red: { diffuse: new Color3(0.8, 0.0, 0.0), emissive: new Color3(0.55, 0.10, 0.10) },  // X
-  orange: { diffuse: new Color3(1.0, 0.35, 0.0), emissive: new Color3(1.0, 1, 1) },
-  yellow: { diffuse: new Color3(1.0, 0.8, 0.2), emissive: new Color3(0.6, 0.4, 0.0) },  // X
-  green: { diffuse: new Color3(0.2, 0.9, 0.3), emissive: new Color3(0.0, 0.5, 0.0) },  // X
-  teal: { diffuse: new Color3(0.2, 1.0, 0.9), emissive: new Color3(0.05, 0.40, 0.35) }, // X
-  blue: { diffuse: new Color3(0.0, 0.4, 0.9), emissive: new Color3(0.05, 0.15, 0.3) },  // X
-  purple: { diffuse: new Color3(0.6, 0.0, 1.0), emissive: new Color3(0.15, 0.08, 0.18) }, // X
-  magenta: { diffuse: new Color3(1.0, 0.3, 0.7), emissive: new Color3(0.4, 0.2, 0.4) }, // X
+  red: { diffuse: new Color3(0.62, 0.03, 0.03), emissive: new Color3(0.55, 0.10, 0.10) },  // X
+  orange: { diffuse: new Color3(0.78, 0.26, 0.02), emissive: new Color3(1.0, 1, 1) },
+  yellow: { diffuse: new Color3(0.82, 0.62, 0.08), emissive: new Color3(0.6, 0.4, 0.0) },  // X
+  green: { diffuse: new Color3(0.13, 0.60, 0.18), emissive: new Color3(0.0, 0.5, 0.0) },  // X
+  teal: { diffuse: new Color3(0.10, 0.66, 0.60), emissive: new Color3(0.05, 0.40, 0.35) }, // X
+  blue: { diffuse: new Color3(0.02, 0.30, 0.70), emissive: new Color3(0.05, 0.15, 0.3) },  // X
+  purple: { diffuse: new Color3(0.45, 0.05, 0.75), emissive: new Color3(0.15, 0.08, 0.18) }, // X
+  magenta: { diffuse: new Color3(0.78, 0.20, 0.52), emissive: new Color3(0.4, 0.2, 0.4) }, // X
 };
 
 // A handful of foliage-appropriate greens for procedural plants (tree, bush,
