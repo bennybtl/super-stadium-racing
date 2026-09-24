@@ -5,7 +5,9 @@ import {
   TransformNode,
   Vector3,
   Color3,
+  Texture,
 } from "@babylonjs/core";
+import concreteUrl from "../assets/textures/concrete_2.texture.png?url";
 
 // Geometry constants (metres). A thin pole carries a horizontal bank of four
 // floodlight heads on a backplate. The bank yaws around the pole (rotation) and
@@ -20,6 +22,15 @@ const HEAD_GAP = 0.16;    // gap between heads
 const BANK_W = HEAD_COUNT * HEAD_W + (HEAD_COUNT - 1) * HEAD_GAP;
 const BACKPLATE_H = 0.26;
 const BACKPLATE_D = 0.34;
+// Concrete footing the pole stands in: a squat, slightly tapered pier. Sunk
+// just below grade so slopes don't show a gap, but only just — caster
+// geometry buried deeper throws a phantom shadow through the non-occluding
+// terrain (see the bridge/drive-box double-shadow fix).
+const BASE_DIAM_BOTTOM = 1.3;
+const BASE_DIAM_TOP = 1.05;
+const BASE_H = 0.75;      // above grade
+const BASE_SINK = 0.15;   // below grade
+const CONCRETE_TILE_M = 6; // world metres per texture repeat, as BorderWall
 // Shadow cone = visible pool (`spread`) × this; see _applyLight.
 const SHADOW_POOL_MARGIN = 1.15;
 
@@ -109,6 +120,26 @@ export class TrackLight {
     this._lensMat.diffuseColor = new Color3(1, 1, 1);
     this._lensMat.disableLighting = true;
 
+    this._baseMat = new StandardMaterial(`trackLightBaseMat_${tag}`, scene);
+    const concrete = new Texture(concreteUrl, scene);
+    concrete.uScale = (Math.PI * BASE_DIAM_BOTTOM) / CONCRETE_TILE_M;
+    concrete.vScale = (BASE_H + BASE_SINK) / CONCRETE_TILE_M;
+    this._baseMat.diffuseTexture = concrete;
+    this._baseMat.specularColor = new Color3(0.05, 0.05, 0.05);
+
+    // ── Concrete base (fixed; doesn't follow height) ──
+    this.base = MeshBuilder.CreateCylinder(`trackLightBase_${tag}`, {
+      height: BASE_H + BASE_SINK,
+      diameterTop: BASE_DIAM_TOP,
+      diameterBottom: BASE_DIAM_BOTTOM,
+      tessellation: 20,
+    }, scene);
+    this.base.parent = this.container;
+    this.base.position.y = (BASE_H - BASE_SINK) / 2;
+    this.base.material = this._baseMat;
+    this.base.isPickable = true;
+    this._shadows?.addShadowCaster?.(this.base);
+
     // ── Pole (fixed, vertical) ──
     this.pole = MeshBuilder.CreateCylinder(`trackLightPole_${tag}`, {
       height: 1,
@@ -142,7 +173,7 @@ export class TrackLight {
     // ── Four fixtures in a row along local X. Each is a bright emissive lamp
     //    block on a short dark stalk, so it reads as a lit floodlight from any
     //    angle — top-down in the editor or oblique in the race. ──
-    this._pickMeshes = [this.pole, this.backplate];
+    this._pickMeshes = [this.base, this.pole, this.backplate];
     this.stalks = [];
     this.lenses = [];
     const x0 = -BANK_W / 2 + HEAD_W / 2;
@@ -331,6 +362,7 @@ export class TrackLight {
     this.tilt?.dispose();
     this.yaw?.dispose();
     this._poleMat?.dispose();
+    this._baseMat?.dispose(false, true);
     this._headMat?.dispose();
     this._lensMat?.dispose();
     this.container?.dispose();

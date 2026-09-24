@@ -1,9 +1,11 @@
 import {
+  Mesh,
   MeshBuilder,
   StandardMaterial,
   DynamicTexture,
   TransformNode,
   Vector3,
+  VertexData,
 } from "@babylonjs/core";
 
 import { basicColors } from "../constants.js";
@@ -20,6 +22,114 @@ const MAX_BANNER_W = 40;
 
 const TEX_W = 1024;
 const TEX_H = 256;
+
+// ─── Hanging-sheet shape ──────────────────────────────────────────────────
+// The banner is a soft sheet tied to the poles at its four corners. The top
+// edge carries the load, so it runs nearly straight; below it the cloth hangs
+// looser — folds start shallow under the top edge and deepen and fan out
+// toward a slacker bottom edge. Static geometry, rebuilt only on width change.
+const SHEET_SEGS_PER_M = 4;    // horizontal grid density
+const SHEET_SEGS_Y = 10;
+const SAG_PER_M = 0.035;       // mid-span droop of the bottom edge per metre of width…
+const SAG_MAX = 0.35;          // …capped so wide banners don't hang to the ground
+const SAG_TOP = 0.3;           // top-edge droop as a fraction of the bottom's
+const FOLD_DEPTH = 0.1;        // peak out-of-plane displacement at the bottom edge, m
+const FOLD_TOP = 0.08;         // fold depth under the top edge, fraction of FOLD_DEPTH
+const FOLD_FAN = 0.35;         // how much fold spacing widens from top to bottom
+// A broad fold, a finer ripple, and a small off-beat crease so no spacing repeats.
+const FOLD_WAVELENGTHS = [2.3, 1.35, 0.83]; // m
+const FOLD_LEAN = [0.2, -0.3, 0.45];        // diagonal lean (Δphase per m of height)
+const FOLD_WEIGHTS = [1, 0.5, 0.25];
+const FOLD_PATCHINESS = 0.45;  // along-width strength variation (0 = uniform)
+const FOLD_PATCH_WAVELENGTH = 3.7; // m
+// Baked fold shading. The banner is mostly self-lit (emissive texture), so
+// scene lights alone can't show the ripples; vertex colours multiply the
+// final colour, emissive included, and so read by day and at night.
+const SHADE_LIGHT = new Vector3(-0.45, 0.55, -1).normalize(); // front-side key direction
+const SHADE_STRENGTH = 1.6;
+const SHADE_MIN = 0.62;
+
+/** Deterministic 0..1 hash so each sign gets its own folds, stable across rebuilds. */
+function hash01(x, z, salt) {
+  const h = Math.sin(x * 12.9898 + z * 78.233 + salt * 37.719) * 43758.5453;
+  return h - Math.floor(h);
+}
+
+/**
+ * Vertex data for the hanging sheet, centred on the banner node. `back`
+ * reverses the winding so the same surface faces the other way (the solid
+ * back sheet) — coincident with the front, but each side is back-face culled
+ * so they never fight.
+ */
+export function buildSheetVertexData(width, seedX, seedZ, back) {
+  const nx = Math.max(8, Math.round(width * SHEET_SEGS_PER_M));
+  const ny = SHEET_SEGS_Y;
+  const halfW = width / 2;
+  const halfH = BANNER_H / 2;
+  const sag = Math.min(SAG_MAX, width * SAG_PER_M);
+  const phases = FOLD_WAVELENGTHS.map((_, i) => hash01(seedX, seedZ, i + 1) * Math.PI * 2);
+  const patchPhase = hash01(seedX, seedZ, 9) * Math.PI * 2;
+
+  const positions = [];
+  const uvs = [];
+  for (let j = 0; j <= ny; j++) {
+    const v = j / ny;
+    const y = -halfH + v * BANNER_H;
+    for (let i = 0; i <= nx; i++) {
+      const u = i / nx;
+      const x = -halfW + u * width;
+      const t = 2 * u - 1;
+      const pinned = 1 - t * t; // 0 at the poles, 1 mid-span
+      const hang = 1 - v;       // 0 at the taut top edge, 1 at the bottom
+      // Fold lines spread apart going down, as if radiating from the top edge.
+      const fanX = x / (1 + FOLD_FAN * hang);
+      let fold = 0;
+      for (let k = 0; k < FOLD_WAVELENGTHS.length; k++) {
+        const kx = (Math.PI * 2) / FOLD_WAVELENGTHS[k];
+        fold += FOLD_WEIGHTS[k] * Math.sin(kx * fanX + FOLD_LEAN[k] * kx * y + phases[k]);
+      }
+      const patch = 1 - FOLD_PATCHINESS * (0.5 + 0.5 * Math.sin((Math.PI * 2 * x) / FOLD_PATCH_WAVELENGTH + patchPhase));
+      const depth = FOLD_DEPTH * (FOLD_TOP + (1 - FOLD_TOP) * hang * hang) * patch;
+      const droop = sag * (SAG_TOP + (1 - SAG_TOP) * hang);
+      positions.push(x, y - droop * pinned, depth * pinned * fold);
+      uvs.push(u, v);
+    }
+  }
+
+  const indices = [];
+  const row = nx + 1;
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const a = j * row + i, b = a + 1, c = a + row + 1, d = a + row;
+      // Same winding as MeshBuilder.CreatePlane (front faces -Z).
+      if (back) indices.push(a, c, b, a, d, c);
+      else indices.push(a, b, c, a, c, d);
+    }
+  }
+
+  const normals = [];
+  VertexData.ComputeNormals(positions, indices, normals);
+
+  // Shade relative to a flat sheet: flat stays at full brightness, faces
+  // turned away from the key darken. The back side mirrors the key through
+  // the sheet so both sides read the same way.
+  const colors = [];
+  const lz = back ? -SHADE_LIGHT.z : SHADE_LIGHT.z;
+  const flatDot = Math.abs(SHADE_LIGHT.z);
+  for (let n = 0; n < normals.length; n += 3) {
+    const d = normals[n] * SHADE_LIGHT.x + normals[n + 1] * SHADE_LIGHT.y + normals[n + 2] * lz;
+    const shade = Math.max(SHADE_MIN, Math.min(1, 1 - SHADE_STRENGTH * (flatDot - d)));
+    colors.push(shade, shade, shade, 1);
+  }
+
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.normals = normals;
+  vd.uvs = uvs;
+  vd.colors = colors;
+  return vd;
+}
 
 export class TrackSign {
   /**
@@ -79,25 +189,18 @@ export class TrackSign {
     this.rightPole.isPickable = true;
     this._shadows?.addShadowCaster?.(this.rightPole);
 
-    this.banner = MeshBuilder.CreatePlane(`signBanner_${x}_${z}`, {
-      width: BASE_BANNER_W,
-      height: BANNER_H,
-      sideOrientation: 0,
-    }, scene);
+    // Front (printed) and back (solid colour) share one hanging-sheet surface;
+    // geometry is filled in by _applyWidthVisual.
+    this.banner = new Mesh(`signBanner_${x}_${z}`, scene);
     this.banner.parent = this.container;
-    this.banner.position = new Vector3(0, BANNER_CENTER_Y + feature.heightOffset, 0.01);
+    this.banner.position = new Vector3(0, BANNER_CENTER_Y + feature.heightOffset, 0);
     this.banner.isPickable = true;
     this._shadows?.addShadowCaster?.(this.banner);
 
     // Opaque back sheet so the sign is not see-through from behind.
-    this.bannerBack = MeshBuilder.CreatePlane(`signBannerBack_${x}_${z}`, {
-      width: BASE_BANNER_W,
-      height: BANNER_H,
-      sideOrientation: 0,
-    }, scene);
+    this.bannerBack = new Mesh(`signBannerBack_${x}_${z}`, scene);
     this.bannerBack.parent = this.container;
-    this.bannerBack.position = new Vector3(0, BANNER_CENTER_Y + feature.heightOffset, -0.01);
-    this.bannerBack.rotation.y = Math.PI;
+    this.bannerBack.position = new Vector3(0, BANNER_CENTER_Y + feature.heightOffset, 0);
     this.bannerBack.isPickable = true;
     this._shadows?.addShadowCaster?.(this.bannerBack);
 
@@ -130,8 +233,12 @@ export class TrackSign {
       const half = width / 2;
       this.leftPole.position.x = -half;
       this.rightPole.position.x = half;
-      this.banner.scaling.x = width / BASE_BANNER_W;
-      this.bannerBack.scaling.x = width / BASE_BANNER_W;
+      // Seeded from the original placement so moving a sign in the editor
+      // doesn't reshuffle its folds.
+      this._sheetSeed ??= { x: this.feature.x, z: this.feature.z };
+      const { x, z } = this._sheetSeed;
+      buildSheetVertexData(width, x, z, false).applyToMesh(this.banner);
+      buildSheetVertexData(width, x, z, true).applyToMesh(this.bannerBack);
     }
   /**
    * World-space Y of the top of the sign (poles / banner top, whichever is
