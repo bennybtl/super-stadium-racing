@@ -117,6 +117,7 @@ export class DriveMode extends BaseMode {
     if (!this.cameraController) return;
     this._photoModeActive = !this._photoModeActive;
     this.cameraController.toggleFreeMode();
+    this.minimap?.setVisible(!this._photoModeActive);
     console.debug(
       `[DriveMode] Screenshot camera ${this._photoModeActive ? 'enabled' : 'disabled'} - WASD to move, +/- to zoom, P to toggle`
     );

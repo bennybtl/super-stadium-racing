@@ -54,6 +54,8 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   lights: 4,
   checkpointArrow: true,
   aiTruckShadows: true,
+  minimap: true,
+  cameraShake: true,
   preferredView: 'fixed',
 };
 
@@ -129,6 +131,12 @@ function normalizeDisplaySettings(candidate) {
     aiTruckShadows: candidate?.aiTruckShadows === undefined
       ? DEFAULT_DISPLAY_SETTINGS.aiTruckShadows
       : Boolean(candidate.aiTruckShadows),
+    minimap: candidate?.minimap === undefined
+      ? DEFAULT_DISPLAY_SETTINGS.minimap
+      : Boolean(candidate.minimap),
+    cameraShake: candidate?.cameraShake === undefined
+      ? DEFAULT_DISPLAY_SETTINGS.cameraShake
+      : Boolean(candidate.cameraShake),
     preferredView: validView ? preferredView : DEFAULT_DISPLAY_SETTINGS.preferredView,
   };
 }

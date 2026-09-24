@@ -1,4 +1,35 @@
 import { Vector3 } from "@babylonjs/core";
+import { loadDisplaySettings } from "../settingsStorage.js";
+
+// Display setting "Camera Shake". Module-level (one listener, not one per
+// CameraController) since controllers are made per mode with no dispose hook.
+let shakeEnabled = loadDisplaySettings().cameraShake !== false;
+if (typeof window !== "undefined") {
+  window.addEventListener("offroad:display-settings-changed", (event) => {
+    shakeEnabled = (event?.detail ?? loadDisplaySettings()).cameraShake !== false;
+  });
+}
+
+// ── Motion feel (driving cameras) ─────────────────────────────────────────
+// All three are fed by the truck velocity passed to update(); set a constant
+// to 0 to switch its effect off.
+// Look-ahead (overhead modes only): aim ahead of the truck along its travel,
+// so upcoming corners come on screen sooner.
+const LOOK_AHEAD_S = 0.35;      // aim this many seconds of travel ahead…
+const LOOK_AHEAD_MAX = 7;       // …capped, metres
+const LOOK_AHEAD_RATE = 2.5;    // 1/s — how quickly the aim point settles
+// Speed pull-back: widen the view a little at speed.
+const SPEED_ZOOM = 0.08;        // extra distance fraction at SPEED_ZOOM_REF
+const SPEED_ZOOM_REF = 30;      // m/s — base top speed
+const SPEED_ZOOM_RATE = 1.5;    // 1/s
+// Impact shake: a sudden velocity change (wall hit, truck-truck hit, hard
+// landing) adds "trauma"; the shake is trauma², so small knocks barely move
+// the view while big hits rattle it. Translation only — no roll.
+const SHAKE_MIN_DV = 4;         // m/s change in one frame that counts as a hit
+const SHAKE_FULL_DV = 16;       // m/s change that maxes the shake
+const SHAKE_DECAY = 1.8;        // trauma lost per second
+const SHAKE_MAX_OFFSET = 0.3;   // metres at zoom 1 (scales with zoom)
+const TELEPORT_JUMP = 5;        // m in one frame = respawn, not a hit
 
 /**
  * CameraController - Handles camera positioning and zoom
@@ -42,6 +73,57 @@ export class CameraController {
     // from wherever the camera currently is, so rapid cycling stays smooth.
     this.transitionDuration = 0.5;
     this._transition = null; // { t, fromPos: Vector3, fromTarget: Vector3 }
+
+    // Motion-feel state (see constants at the top).
+    this._lookAhead = new Vector3();
+    this._speedZoom = 0;
+    this._trauma = 0;
+    this._shakeTime = 0;
+    this._prevVel = null;
+    this._prevPos = null;
+  }
+
+  /** Add impact shake, 0..1 (accumulates, capped at 1). No-op when the setting is off. */
+  addShake(amount) {
+    if (!shakeEnabled) return;
+    this._trauma = Math.min(1, this._trauma + amount);
+  }
+
+  _updateMotion(targetPosition, velocity, dt) {
+    const k = (rate) => Math.min(1, dt * rate);
+    if (!velocity) {
+      this._prevVel = this._prevPos = null;
+    } else {
+      // Impact detection from the frame-to-frame velocity change.
+      if (this._prevVel && Vector3.Distance(targetPosition, this._prevPos) < TELEPORT_JUMP) {
+        const dv = Math.hypot(
+          velocity.x - this._prevVel.x, velocity.y - this._prevVel.y, velocity.z - this._prevVel.z,
+        );
+        if (dv > SHAKE_MIN_DV) this.addShake(Math.min(1, (dv - SHAKE_MIN_DV) / (SHAKE_FULL_DV - SHAKE_MIN_DV)));
+      }
+      (this._prevVel ??= new Vector3()).copyFrom(velocity);
+      (this._prevPos ??= new Vector3()).copyFrom(targetPosition);
+
+      const hx = velocity.x, hz = velocity.z;
+      const speed = Math.hypot(hx, hz);
+      const ahead = Math.min(LOOK_AHEAD_MAX, speed * LOOK_AHEAD_S);
+      const s = speed > 0.5 ? ahead / speed : 0;
+      this._lookAhead.x += (hx * s - this._lookAhead.x) * k(LOOK_AHEAD_RATE);
+      this._lookAhead.z += (hz * s - this._lookAhead.z) * k(LOOK_AHEAD_RATE);
+      const zoomTarget = SPEED_ZOOM * Math.min(1.5, speed / SPEED_ZOOM_REF);
+      this._speedZoom += (zoomTarget - this._speedZoom) * k(SPEED_ZOOM_RATE);
+    }
+    this._trauma = Math.max(0, this._trauma - SHAKE_DECAY * dt);
+    this._shakeTime += dt;
+  }
+
+  /** Smooth pseudo-random offset for the current trauma, world metres. */
+  _shakeOffset() {
+    const amp = this._trauma * this._trauma * SHAKE_MAX_OFFSET * this.zoomLevel;
+    if (amp <= 0) return null;
+    const t = this._shakeTime;
+    const n = (a, b, c) => (Math.sin(t * a + c) + 0.5 * Math.sin(t * b + c * 1.7)) / 1.5;
+    return new Vector3(n(31, 57, 0.3), n(27, 49, 1.9), n(35, 61, 4.1)).scaleInPlace(amp);
   }
 
   toggleMode() {
@@ -62,7 +144,14 @@ export class CameraController {
     };
   }
 
-  update(targetPosition, heading = 0, dt = 1/60) {
+  /**
+   * @param {Vector3} targetPosition  truck (rendered) position
+   * @param {number}  heading
+   * @param {number}  dt              frame seconds
+   * @param {Vector3} [velocity]      truck velocity — enables look-ahead,
+   *   speed pull-back and impact shake; omit for a plain follow camera
+   */
+  update(targetPosition, heading = 0, dt = 1/60, velocity = null) {
     if (this.mode === 'free') {
       if (!this.freeCameraPosition) {
         this.freeCameraPosition = this.camera.position.clone();
@@ -74,6 +163,9 @@ export class CameraController {
       this.camera.setTarget(this.freeCameraTarget);
       return;
     }
+
+    this._updateMotion(targetPosition, velocity, dt);
+    const zoom = this.zoomLevel * (1 + this._speedZoom);
 
     let desiredPos;
     let desiredTarget = targetPosition;
@@ -91,12 +183,12 @@ export class CameraController {
 
       // Offset is relative to the smoothed heading:
       // sit behind (−Z in local space) and above
-      let dist   = -this.baseOffset.z * this.zoomLevel; // baseOffset.z is negative, negate to get behind-truck distance
-      let height = this.baseOffset.y * this.zoomLevel;
+      let dist   = -this.baseOffset.z * zoom; // baseOffset.z is negative, negate to get behind-truck distance
+      let height = this.baseOffset.y * zoom;
       if (this.mode === 'chase-low') {
         // Low and close — 8 units back, 3 units above ground
-        dist   = 16 * this.zoomLevel;
-        height = 6 * this.zoomLevel;
+        dist   = 16 * zoom;
+        height = 6 * zoom;
       }
       const camX = targetPosition.x - Math.sin(this._smoothHeading) * dist;
       const camZ = targetPosition.z - Math.cos(this._smoothHeading) * dist;
@@ -109,10 +201,20 @@ export class CameraController {
       const cos = Math.cos(rad), sin = Math.sin(rad);
       const ox = this.baseOffset.x * cos - this.baseOffset.z * sin;
       const oz = this.baseOffset.x * sin + this.baseOffset.z * cos;
-      desiredPos = targetPosition.add(new Vector3(ox, this.baseOffset.y, oz).scale(this.zoomLevel));
+      desiredTarget = targetPosition.add(this._lookAhead);
+      desiredPos = desiredTarget.add(new Vector3(ox, this.baseOffset.y, oz).scale(zoom));
     } else {
       // Fixed: world-space offset
-      desiredPos = targetPosition.add(this.baseOffset.scale(this.zoomLevel));
+      desiredTarget = targetPosition.add(this._lookAhead);
+      desiredPos = desiredTarget.add(this.baseOffset.scale(zoom));
+    }
+
+    if (this.mode !== 'screenshot') {
+      const shake = this._shakeOffset();
+      if (shake) {
+        desiredPos = desiredPos.add(shake);
+        desiredTarget = desiredTarget.add(shake);
+      }
     }
 
     if (this._transition) {

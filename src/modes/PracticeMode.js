@@ -192,7 +192,7 @@ export class PracticeMode extends DriveMode {
       });
 
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
-      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
+      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt, playerTruck.state.velocity));
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
       frameRenderStartMs = performance.now();
     });

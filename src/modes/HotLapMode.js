@@ -215,7 +215,7 @@ export class HotLapMode extends DriveMode {
       frameProfiler.measure('checkpointArrow.update', () => this.checkpointArrow.update(playerTruck.mesh));
 
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
-      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
+      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt, playerTruck.state.velocity));
       frameRenderStartMs = performance.now();
     });
 

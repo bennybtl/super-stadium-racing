@@ -17,6 +17,7 @@ import { loadPlayerUpgrades, jitterUpgrades } from "../managers/UpgradeStorage.j
 import { RacePositionLabels } from "../managers/RacePositionLabels.js";
 import { FloatingTextManager } from "../managers/FloatingTextManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
+import { Minimap } from "../managers/Minimap.js";
 import { loadGameplaySettings } from "../settingsStorage.js";
 import { stepRubberBandMultiplier } from "../ai/RubberBand.js";
 
@@ -38,6 +39,7 @@ export class RaceMode extends DriveMode {
     this.truckAudioController = null;
     this.musicManager = null;
     this.positionLabels = null;
+    this.minimap = null;
     this.floatingText = null;
     this.checkpointArrow = null;
     this._gameplaySettingsChangedHandler = null;
@@ -338,6 +340,16 @@ export class RaceMode extends DriveMode {
     const positionLabels = new RacePositionLabels(scene);
     this.positionLabels = positionLabels;
     trucks.forEach(td => positionLabels.attach(td));
+
+    // -- Track overview, bottom-right --
+    const minimap = new Minimap(currentTrack, startFinishCp);
+    this.minimap = minimap;
+    const minimapDots = trucks.map(td => ({
+      truck: td.truck,
+      isPlayer: td.isPlayer,
+      color: td.truck.diffuseColor?.toHexString?.() ?? '#ff6b2e',
+      x: 0, z: 0,
+    }));
 
     // Transient world popups ("+$500" on coin pickup).
     const floatingText = new FloatingTextManager(scene);
@@ -823,7 +835,12 @@ export class RaceMode extends DriveMode {
         else positionLabels.hideAll();
       });
 
-      frameProfiler.measure('camera.update', () => cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt));
+      frameProfiler.measure('minimap', () => {
+        for (const d of minimapDots) { d.x = d.truck.mesh.position.x; d.z = d.truck.mesh.position.z; }
+        minimap.update(minimapDots);
+      });
+
+      frameProfiler.measure('camera.update', () => cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt, playerTruckData.truck.state.velocity));
       }, // end onRender
     });
 
@@ -844,6 +861,8 @@ export class RaceMode extends DriveMode {
       this.positionLabels.dispose();
       this.positionLabels = null;
     }
+    this.minimap?.dispose();
+    this.minimap = null;
     if (this.floatingText) {
       this.floatingText.dispose();
       this.floatingText = null;

@@ -457,7 +457,11 @@ export class MultiplayerMode extends DriveMode {
       frameProfiler.measure('multiplayer.puppets', () => {
         this._remotePuppets.forEach(puppet => puppet.update(dt));
       });
-      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
+      frameProfiler.measure('camera.update', () => cameraController.update(
+        playerTruck.mesh.position, playerTruck.state.heading, dt,
+        // Finishing zeroes velocity outright — not an impact to shake for.
+        gameState.raceFinished ? null : playerTruck.state.velocity,
+      ));
       frameProfiler.measure('ui.boost', () => uiManager.setBoostActive(playerTruck.state.boostActive));
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
       }, // end onRender

@@ -34,6 +34,20 @@
           <option :value="false">Off</option>
         </select>
       </div>
+      <div class="flex items-center gap-6">
+        <div class="grow min-w-[140px] text-right text-xl font-bold italic uppercase text-white pr-4">Minimap</div>
+        <select v-model="minimap" class="w-[180px] shrink-0 px-6 py-2 rounded-md border border-[#333] bg-[#222] text-white text-lg font-bold uppercase italic tracking-wider outline-none transition-colors focus:border-[#ffd400]">
+          <option :value="true">On</option>
+          <option :value="false">Off</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-6">
+        <div class="grow min-w-[140px] text-right text-xl font-bold italic uppercase text-white pr-4">Camera Shake</div>
+        <select v-model="cameraShake" class="w-[180px] shrink-0 px-6 py-2 rounded-md border border-[#333] bg-[#222] text-white text-lg font-bold uppercase italic tracking-wider outline-none transition-colors focus:border-[#ffd400]">
+          <option :value="true">On</option>
+          <option :value="false">Off</option>
+        </select>
+      </div>
       <!-- The starting camera for the *next* race — deliberately not applied to a
            race in progress, so this would silently do nothing there. Cycle the
            live camera with the "Cycle Camera" key instead. -->
@@ -69,14 +83,18 @@ const shadow = ref(displaySettings.shadow);
 const lights = ref(displaySettings.lights);
 const checkpointArrow = ref(displaySettings.checkpointArrow);
 const aiTruckShadows = ref(displaySettings.aiTruckShadows);
+const minimap = ref(displaySettings.minimap);
+const cameraShake = ref(displaySettings.cameraShake);
 const preferredView = ref(displaySettings.preferredView);
 
-watch([shadow, lights, checkpointArrow, aiTruckShadows, preferredView], () => {
+watch([shadow, lights, checkpointArrow, aiTruckShadows, minimap, cameraShake, preferredView], () => {
   saveDisplaySettings({
     shadow: shadow.value,
     lights: lights.value,
     checkpointArrow: checkpointArrow.value,
     aiTruckShadows: aiTruckShadows.value,
+    minimap: minimap.value,
+    cameraShake: cameraShake.value,
     preferredView: preferredView.value,
   });
 });
