@@ -2,7 +2,10 @@
  * Post-race results rows for RaceMode: finishers in finish order, then every
  * truck that didn't finish (DNF) in truck order. Pure — unit-tested in
  * test/race-results.test.js.
-
+ *
+ * Trucks timed out by the DNF grace are in `finishOrder` too (RaceMode's
+ * _handleDNF finishes them with a null time), so "no time" is what marks a DNF
+ * row — the results screen keys its DNF badge and podium off `dnf`.
  *
  * Vehicle key + driver colour ride along so the results podium can render each
  * finisher's actual truck; colour is serialised to a plain [r,g,b].
@@ -28,7 +31,7 @@ export function buildRaceResultRows(finishOrder, trucks) {
       finishPosition:  idx + 1,
       totalRaceTimeMs: td.gameState.totalRaceTime,
       fastestLapMs:    td.gameState.fastestLap,
-      dnf:             false,
+      dnf:             td.gameState.totalRaceTime == null,
       ...identityOf(td),
     })),
     ...dnfTrucks.map((td, idx) => ({

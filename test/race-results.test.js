@@ -30,6 +30,17 @@ describe('buildRaceResultRows', () => {
     expect(buildRaceResultRows([bare], [bare])[0]).toMatchObject({ vehicleKey: null, color: null });
   });
 
+  it('marks trucks timed out by the DNF grace as DNF, after the real finishers', () => {
+    // _handleDNF finishes stragglers with a null time and appends them to finishOrder.
+    const winner = truck('ai1', { time: 90000 });
+    const timedOut = truck('player', { time: null });
+    const rows = buildRaceResultRows([winner, timedOut], [timedOut, winner]);
+    expect(rows.map(r => [r.id, r.finishPosition, r.dnf])).toEqual([
+      ['ai1', 1, false],
+      ['player', 2, true],
+    ]);
+  });
+
   it('handles a race with no finishers', () => {
     const a = truck('ai1', { finished: false });
     expect(buildRaceResultRows([], [a])).toEqual([
