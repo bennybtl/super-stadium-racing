@@ -248,9 +248,21 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // within ~maxTrackDim of the centre, _shadowBackoff away). Otherwise it
   // defaults to the camera's (~10000), and the PCF bias — a fraction of that
   // range, see ShadowCasterGroup.biasWorld — would lift shadows off by metres.
+  // Also pin the ortho extents: autoUpdateExtends refits them to the casters'
+  // bounds every frame, so a truck moving/jumping or a knocked obstacle
+  // resized the map and every shadow texel swam (flicker). The light looks
+  // through the track centre, so a circle round the footprint covers it at
+  // any sun angle.
+  const _shadowRadius = Math.hypot(trackWidth, trackDepth) / 2 + 20;
   for (const l of [_sunLight, _moonLight]) {
     l.shadowMinZ = _shadowBackoff - maxTrackDim - 50;
     l.shadowMaxZ = _shadowBackoff + maxTrackDim + 50;
+    l.autoUpdateExtends = false;
+    l.shadowOrthoScale = 0;
+    l.orthoLeft = -_shadowRadius;
+    l.orthoRight = _shadowRadius;
+    l.orthoBottom = -_shadowRadius;
+    l.orthoTop = _shadowRadius;
   }
 
   // The group's fixed/eager generator is built against the (permanently
@@ -260,7 +272,9 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   const shadows = ShadowCasterGroup.create([_stadiumLights[0], _stadiumLights[2]], { mapSize: 1024 });
   // biasWorld: PCF depth offset in world units, for lights with an explicit
   // shadow depth range; `bias` is the fallback for the rest (stadium points).
-  shadows.configure({ bias: 0.005, biasWorld: 0.04, normalBias: 0.02 });
+  // normalBias (world units × sin of the light angle) must be about one sun
+  // shadow texel (~0.2) or grazing-lit faces like wall sides stripe with acne.
+  shadows.configure({ bias: 0.005, biasWorld: 0.04, normalBias: 0.15 });
   // Shadow filter: PCF (not blur-ESM) on every detail tier but low. ESM blurs
   // depth, so any caster that also receives (walls, tent roofs, the bridge
   // deck) sat in its own blurred shadow: a dark middle with a bright rim, or a
