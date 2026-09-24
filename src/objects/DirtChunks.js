@@ -1,36 +1,43 @@
 import {
-  MeshBuilder,
+  Mesh,
+  VertexData,
   Matrix,
   Vector3,
   Quaternion,
   StandardMaterial,
   Color3,
-  VertexBuffer,
 } from "@babylonjs/core";
-import { TERRAIN_COLORS } from "../constants";
+import {
+  ROCK_COLOR_BASE,
+  rockOptions,
+  growRock,
+  meshRock,
+} from "../decorations/lib/rock/RockGen.js";
 import {
   makeRng,
   hashSeed,
   minDistToPolylines,
   collectWallPolylines,
   collectAiPathPolylines,
+  groundColor,
 } from "./scatter-utils.js";
 
 /**
  * Procedural "dirt chunk" scatter.
  *
- * Builds a few jittered low-poly polyhedra and scatters them as thin instances
- * (one draw call each) across the track — densely along wall lines and sparsely
- * in open areas, while keeping a clearance around the AI drive path. Generation
- * is deterministic (seeded from the track id) so it's stable across rebuilds.
+ * Builds a handful of small RockGen rocks (low icosphere level, with RockGen's
+ * baked ground-line AO) and scatters them as thin instances in clumps: drifts
+ * piled against walls, where loose dirt accumulates, and a few sparse clumps
+ * on open ground, keeping a clearance around the AI drive path. Each chunk is
+ * tinted to the terrain it sits on. Generation is deterministic (seeded from
+ * the track id) so it's stable across rebuilds.
  *
  * Chunks are not saved features: they're regenerated at scene build time.
  */
 
 const DEFAULTS = {
-  variants: 3, // distinct base shapes (each thin-instanced)
   baseSize: 0.4, // base chunk radius (world units), before per-instance scale
-  maxChunks: 2400, // hard cap for safety/perf
+  maxChunks: 5200, // hard cap for safety/perf
 
   driveClearance: 7, // keep this far from the AI path (and its branches)
   boundsPadding: 4, // stay this far inside the track edge
@@ -39,48 +46,72 @@ const DEFAULTS = {
   // terrain type is one of these (matched by terrain type name).
   excludeTerrain: ["grass", "asphalt"],
 
-  // Wall-hugging scatter
-  wallBand: 5.0, // dirt sits within this distance of a wall
-  wallMinOffset: 0.4, // ...but at least this far off it
-  wallStep: 2.4, // sample a cluster every ~this many units along a wall
-  wallPerStep: 10, // candidate chunks per wall sample (denser near walls)
+  // Wall drifts: clumps piled against the wall base, patchy along its length.
+  wallMinOffset: 0.2, // chunks stay at least this far off the wall line
+  wallFalloff: 0.4, // mean extra distance of a clump from the wall (exponential)
+  wallBand: 4.0, // distance at which chunks reach their smallest size
+  wallStep: 1.2, // try a clump every ~this many units along each side of a wall
+  driftLength: 7, // along-wall length of a drift / gap (noise period)
+  clumpSize: [4, 14], // chunks per wall clump (scaled by local drift density)
+  clumpSpread: 0.55, // clump radius (gaussian sigma), stretched along the wall
 
-  // General open-ground scatter
-  areaDensity: 0.012, // candidate points per square unit
-  areaAccept: 0.5, // fraction of open-ground candidates kept
+  // Open-ground clumps.
+  areaDensity: 0.0025, // clump centres per square unit
+  areaClumpSize: [1, 5],
+  areaSpread: 0.6,
+
+  // Per-clump tone: each pile is this much lighter or darker than the ground
+  // (random sign, magnitude in range), so it reads against the dirt it sits on.
+  clumpTone: [0.08, 0.16],
 };
 
-// Babylon built-in polyhedron types (0..14) used as chunk base shapes.
-const CHUNK_POLY_TYPES = [2, 3, 5, 8];
-const CHUNK_FLATTEN = 0.7; // squash on Y so chunks sit like rocks (baked into geometry)
+// RockGen shapes used as chunk variants (each one thin-instanced draw call).
+// Icosphere level 1 (80 tris) keeps a few thousand instances cheap.
+const CHUNK_VARIANTS = [
+  ["granite", 3],
+  ["granite", 11],
+  ["granite", 27],
+  ["boulder", 5],
+  ["boulder", 19],
+  ["slab", 8],
+];
+const CHUNK_DETAIL = { subdivisions: 1 };
 
 // ── Base chunk mesh ──────────────────────────────────────────────────────────
-function makeChunkMesh(name, scene, rng, size, polyType, material) {
-  // flat:false → SHARED vertices. CreatePolyhedron defaults to flat:true, which
-  // duplicates each corner per face; jittering those independently splits the
-  // faces apart (broken geometry). With shared vertices each corner is jittered
-  // exactly once and the mesh stays watertight, then convertToFlatShadedMesh
-  // re-facets it for the low-poly rock look.
-  const mesh = MeshBuilder.CreatePolyhedron(
-    name,
-    { type: polyType, size, flat: false },
-    scene,
-  );
-  const pos = mesh.getVerticesData(VertexBuffer.PositionKind);
-  for (let i = 0; i < pos.length; i += 3) {
-    const j = 0.72 + rng() * 0.56; // 0.72 .. 1.28, radial → stays star-shaped
-    pos[i] *= j;
-    pos[i + 1] *= j * CHUNK_FLATTEN; // squash on Y so chunks sit like rocks
-    pos[i + 2] *= j;
-  }
-  mesh.updateVerticesData(VertexBuffer.PositionKind, pos);
-  mesh.convertToFlatShadedMesh();
+function makeChunkMesh(name, scene, preset, seed, size, material) {
+  const options = rockOptions(preset, seed);
+  const buf = meshRock(growRock(options), options, CHUNK_DETAIL);
+  const k = size / options.preset.size; // RockGen body → chunk radius
+  const vd = new VertexData();
+  vd.positions = buf.verts.map((v) => v * k);
+  vd.normals = buf.normals;
+  vd.colors = buf.colors;
+  vd.indices = buf.indices;
+  const mesh = new Mesh(name, scene);
+  vd.applyToMesh(mesh);
   mesh.material = material;
   mesh.isPickable = false;
   mesh.receiveShadows = true;
   mesh.alwaysSelectAsActiveMesh = true; // thin instances span the whole track
   return mesh;
 }
+
+// Seeded 1D value noise in [0, 1] (smooth, two octaves) for patchy drifts.
+function makeNoise1D(rng, size = 256) {
+  const lattice = Array.from({ length: size }, rng);
+  const at = (x) => {
+    const i = Math.floor(x), f = x - i;
+    const a = lattice[((i % size) + size) % size];
+    const b = lattice[(((i + 1) % size) + size) % size];
+    return a + (b - a) * f * f * (3 - 2 * f);
+  };
+  return (x) => (at(x) * 2 + at(x * 2.3 + 17)) / 3;
+}
+
+const smoothstep = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 
 /**
  * Scatter procedural dirt chunks onto the track. Returns the base meshes so the
@@ -102,11 +133,18 @@ export function scatterDirtChunks(scene, track, options = {}) {
   const halfD = (track.depth ?? 160) / 2 - cfg.boundsPadding;
 
   const rng = makeRng(hashSeed(track.id) ^ 0x1f2e3d4c);
+  const gauss = () => (rng() + rng() + rng() - 1.5) * 1.41; // ~N(0, 1)
+  const drift = makeNoise1D(rng);
+  const clumpTone = () => {
+    const [lo, hi] = cfg.clumpTone;
+    return (rng() < 0.5 ? -1 : 1) * (lo + (hi - lo) * rng());
+  };
   const excluded = new Set(cfg.excludeTerrain);
   const placements = [];
 
-  // NEW: Accept an optional wallDistNorm parameter (0 = at the wall, 1 = far/default)
-  const tryPlace = (x, z, wallDistNorm = 1.0) => {
+  // `near` is 1 right at a wall, 0 at wallBand and beyond; `core` is 1 at a
+  // clump's centre, 0 at its edge. Both push chunk size up.
+  const tryPlace = (x, z, near, core, tone) => {
     if (placements.length >= cfg.maxChunks) return;
     if (Math.abs(x) > halfW || Math.abs(z) > halfD) return;
     if (minDistToPolylines(x, z, aiPath) < cfg.driveClearance) return; // keep racing line clear
@@ -115,19 +153,15 @@ export function scatterDirtChunks(scene, track, options = {}) {
     const terrain = track.getTerrainTypeAt(x, z);
     if (excluded.has(terrain?.name)) return;
 
-    const baseColor = terrain?.color ?? TERRAIN_COLORS.packed_dirt;
-
-    placements.push({
-      x,
-      z,
-      y: track.getHeightAt(x, z),
-      wallDistNorm,
-      color: baseColor,
-    });
+    placements.push({ x, z, y: track.getHeightAt(x, z), near, core, tone, color: groundColor(terrain) });
   };
 
-  // 1) Dense scatter hugging the walls.
+  // 1) Drifts against the walls. Walk each side of each wall by arc length; a
+  // noise field along the wall decides where dirt has piled up and where it's
+  // bare, so drifts come in patches rather than an even band.
+  let lineSeed = 0;
   for (const line of wallLines) {
+    let arc = (lineSeed += 97.3);
     for (let i = 0; i < line.length - 1; i++) {
       const a = line[i],
         b = line[i + 1];
@@ -141,114 +175,116 @@ export function scatterDirtChunks(scene, track, options = {}) {
       const perpX = -uz,
         perpZ = ux;
 
-      const steps = Math.max(1, Math.floor(len / cfg.wallStep));
+      for (let s = rng() * cfg.wallStep; s < len; s += cfg.wallStep) {
+        for (const side of [1, -1]) {
+          const u = (arc + s) / cfg.driftLength + (side > 0 ? 0 : 131.7);
+          const density = smoothstep(0.35, 0.8, drift(u));
+          if (rng() >= density) continue;
 
-      for (let s = 0; s < steps; s++) {
-        const t = (s + rng()) / steps;
-        const cx = a.x + dx * t,
-          cz = a.z + dz * t;
+          const cx = a.x + ux * s,
+            cz = a.z + uz * s;
+          const centrePerp = cfg.wallMinOffset - Math.log(1 - rng()) * cfg.wallFalloff;
+          const [nMin, nMax] = cfg.clumpSize;
+          const n = Math.round(nMin + (nMax - nMin) * density * (0.5 + 0.5 * rng()));
+          const sigma = cfg.clumpSpread * (0.7 + 0.6 * rng());
+          const tone = clumpTone();
 
-        for (let k = 0; k < cfg.wallPerStep; k++) {
-          const side = rng() < 0.5 ? 1 : -1;
-
-          // Perpendicular offset
-          const offPerp = cfg.wallMinOffset + rng() * rng() * cfg.wallBand;
-
-          // Parallel offset jitter along the wall tangent
-          const paraSide = rng() < 0.5 ? 1 : -1;
-          const offPara = rng() * (cfg.wallParallelBand ?? cfg.wallStep * 0.5);
-
-          // Combine both vectors for the final position
-          const finalX = cx + perpX * offPerp * side + ux * offPara * paraSide;
-          const finalZ = cz + perpZ * offPerp * side + uz * offPara * paraSide;
-
-          // NEW: Normalize the distance based on your maximum band width.
-          // 0.0 means directly against the wall, 1.0 means at the absolute edge of the band.
-          const wallDistNorm = Math.min(
-            1.0,
-            offPerp / (cfg.wallMinOffset + cfg.wallBand),
-          );
-
-          tryPlace(finalX, finalZ, wallDistNorm);
+          for (let k = 0; k < n; k++) {
+            const gp = gauss(),
+              gq = gauss();
+            const para = gp * sigma * 1.8;
+            let perp = centrePerp + gq * sigma * 0.6;
+            // Reflect off the wall face rather than poke through it.
+            if (perp < cfg.wallMinOffset) perp = 2 * cfg.wallMinOffset - perp;
+            const x = cx + ux * para + perpX * perp * side;
+            const z = cz + uz * para + perpZ * perp * side;
+            const near = 1 - Math.min(1, perp / cfg.wallBand);
+            const core = Math.max(0, 1 - Math.hypot(gp, gq) / 2.5);
+            tryPlace(x, z, near, core, tone);
+          }
         }
       }
+      arc += len;
     }
   }
 
-  // 2) Sparse scatter across open ground outside the drive path.
+  // 2) Sparse clumps across open ground outside the drive path.
   const nArea = Math.floor(2 * halfW * (2 * halfD) * cfg.areaDensity);
   for (let i = 0; i < nArea; i++) {
-    if (rng() >= cfg.areaAccept) continue;
-    // Open ground rocks default to 1.0 (furthest/smallest base scale)
-    tryPlace((rng() * 2 - 1) * halfW, (rng() * 2 - 1) * halfD, 1.0);
+    const cx = (rng() * 2 - 1) * halfW,
+      cz = (rng() * 2 - 1) * halfD;
+    const [nMin, nMax] = cfg.areaClumpSize;
+    const n = nMin + Math.floor(rng() * (nMax - nMin + 1));
+    const tone = clumpTone();
+    for (let k = 0; k < n; k++) {
+      const gp = gauss(),
+        gq = gauss();
+      const core = Math.max(0, 1 - Math.hypot(gp, gq) / 2.5);
+      tryPlace(cx + gp * cfg.areaSpread, cz + gq * cfg.areaSpread, 0, core, tone);
+    }
   }
 
   if (placements.length === 0) return null;
 
-  // Build the base meshes (one per variant) and bucket placements into them.
-  // Diffuse is white so the per-instance color buffer controls the tint.
-  const baseMeshes = [];
-  const buckets = [];
-  for (let v = 0; v < cfg.variants; v++) {
-    const mat = new StandardMaterial(`dirtChunkMat_${v}`, scene);
-    mat.diffuseColor = new Color3(1, 1, 1);
-    mat.emissiveColor = new Color3(0.06, 0.04, 0.03);
-    mat.specularColor = new Color3(0.05, 0.05, 0.05);
+  // One shared material: white diffuse so vertex AO × per-instance tint give
+  // the colour. No emissive — it lifted the chunks off the ground they sit on.
+  const mat = new StandardMaterial("dirtChunkMat_0", scene);
+  mat.diffuseColor = new Color3(1, 1, 1);
+  mat.specularColor = new Color3(0.03, 0.03, 0.03);
 
-    const polyType = CHUNK_POLY_TYPES[v % CHUNK_POLY_TYPES.length];
-    baseMeshes.push(
-      makeChunkMesh(`dirtChunk_${v}`, scene, rng, cfg.baseSize, polyType, mat),
-    );
-    buckets.push([]);
-  }
+  const baseMeshes = CHUNK_VARIANTS.map(([preset, seed], v) =>
+    makeChunkMesh(`dirtChunk_${v}`, scene, preset, seed, cfg.baseSize, mat),
+  );
+  const buckets = baseMeshes.map(() => []);
+  const colorBuckets = baseMeshes.map(() => []);
 
-  // Per-instance transform
   const _scale = new Vector3();
   const _pos = new Vector3();
   const _rot = new Quaternion();
 
-  const colorBuckets = Array.from({ length: cfg.variants }, () => []);
-
   for (const p of placements) {
-    const v = (rng() * cfg.variants) | 0;
+    const v = (rng() * baseMeshes.length) | 0;
 
-    // Dynamic scale based on wall proximity.
-    const maxPossibleScale = 1.0 + rng() * 0.45;
-    const minPossibleScale = 0.4 + rng() * 0.2;
+    // Heavy-tailed size: mostly small grit, the odd bigger lump — bigger near
+    // walls and at clump centres, where the pile is deepest.
     const sc =
-      maxPossibleScale + (minPossibleScale - maxPossibleScale) * p.wallDistNorm;
-
-    _scale.set(sc, sc, sc);
+      (0.3 + 0.9 * rng() ** 2.2) * (0.6 + 0.4 * p.near) * (0.75 + 0.45 * p.core);
+    _scale.set(sc * (0.85 + 0.3 * rng()), sc * (0.7 + 0.5 * rng()), sc * (0.85 + 0.3 * rng()));
     Quaternion.FromEulerAnglesToRef(
-      (rng() - 0.5) * 0.5,
+      (rng() - 0.5) * 0.35,
       rng() * Math.PI * 2,
-      (rng() - 0.5) * 0.5,
+      (rng() - 0.5) * 0.35,
       _rot,
     );
-    _pos.set(p.x, p.y - cfg.baseSize * CHUNK_FLATTEN * sc * 0.4, p.z);
+    // Settle into the ground a little (RockGen's flat bottom already sits
+    // just below y=0); smaller pieces sink proportionally deeper.
+    _pos.set(p.x, p.y - cfg.baseSize * sc * (0.05 + 0.2 * rng()), p.z);
 
-    const m = Matrix.Compose(_scale, _rot, _pos);
     const arr = new Float32Array(16);
-    m.copyToArray(arr);
+    Matrix.Compose(_scale, _rot, _pos).copyToArray(arr);
     buckets[v].push(arr);
 
-    // Per-instance color: terrain tint with random shade variation.
-    const shade = 0.75 + rng() * 0.5;
-    colorBuckets[v].push(p.color.r * shade, p.color.g * shade, p.color.b * shade, 1.0);
+    // Terrain colour, un-doing RockGen's vertex-colour base so a plain face
+    // matches the ground; small shade/warmth jitter so pieces read separately.
+    const shade = ((0.9 + 0.2 * rng()) * (1 + p.tone)) / ROCK_COLOR_BASE;
+    const warm = (rng() - 0.5) * 0.06;
+    const [r, g, b] = p.color;
+    colorBuckets[v].push(r * shade * (1 + warm), g * shade, b * shade * (1 - warm), 1.0);
   }
 
-  for (let v = 0; v < cfg.variants; v++) {
+  const kept = [];
+  baseMeshes.forEach((mesh, v) => {
     const list = buckets[v];
     if (list.length === 0) {
-      baseMeshes[v].dispose();
-      baseMeshes[v] = null;
-      continue;
+      mesh.dispose();
+      return;
     }
     const data = new Float32Array(list.length * 16);
     list.forEach((arr, i) => data.set(arr, i * 16));
-    baseMeshes[v].thinInstanceSetBuffer("matrix", data, 16, true);
-    baseMeshes[v].thinInstanceSetBuffer("color", new Float32Array(colorBuckets[v]), 4, false);
-  }
+    mesh.thinInstanceSetBuffer("matrix", data, 16, true);
+    mesh.thinInstanceSetBuffer("color", new Float32Array(colorBuckets[v]), 4, true);
+    kept.push(mesh);
+  });
 
-  return baseMeshes.filter(Boolean);
+  return kept;
 }

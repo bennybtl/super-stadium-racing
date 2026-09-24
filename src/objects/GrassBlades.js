@@ -6,15 +6,16 @@ import {
   Quaternion,
   StandardMaterial,
   Color3,
+  VertexBuffer,
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
-import { TERRAIN_COLORS } from "../constants";
 import {
   makeRng,
   hashSeed,
   minDistToPolylines,
   collectWallPolylines,
   collectAiPathPolylines,
+  groundColor,
 } from "./scatter-utils.js";
 import grass1Url from "../decorations/grass_1.obj?url";
 import grass2Url from "../decorations/grass_2.obj?url";
@@ -36,6 +37,12 @@ OBJFileLoader.SKIP_MATERIALS = true;
  */
 
 const GRASS_URLS = [grass1Url, grass2Url];
+
+// Baked root→tip colour (multiplies the per-instance tint): shaded and dark at
+// the root, lighter and a little sun-bleached yellow at the tips. ROOT..TIP
+// averages ~1 so a tuft still reads as the ground's colour overall.
+const ROOT_COLOR = [0.45, 0.45, 0.45];
+const TIP_COLOR = [1.3, 1.22, 0.95];
 
 const DEFAULTS = {
   baseScale: 0.45, // OBJ→world scale before per-instance variance
@@ -117,6 +124,25 @@ async function buildGrassBase(scene, url, name, material) {
   );
   base.bakeCurrentTransformIntoVertices();
 
+  // Root→tip gradient as vertex colours, and every normal straight up: thin
+  // double-sided blades otherwise go dark on their back faces and flicker as
+  // the camera turns; up-normals light each tuft like the ground it grows from.
+  const pos = base.getVerticesData(VertexBuffer.PositionKind);
+  const nVerts = pos.length / 3;
+  let top = 0;
+  for (let i = 1; i < pos.length; i += 3) top = Math.max(top, pos[i]);
+  const colors = new Float32Array(nVerts * 4);
+  const normals = new Float32Array(nVerts * 3);
+  for (let v = 0; v < nVerts; v++) {
+    // Clamp: baked roots can sit at -1e-7, and (negative) ** 0.8 is NaN.
+    const t = top > 0 ? Math.min(1, Math.max(0, pos[v * 3 + 1] / top)) ** 0.8 : 1;
+    for (let c = 0; c < 3; c++) colors[v * 4 + c] = ROOT_COLOR[c] + (TIP_COLOR[c] - ROOT_COLOR[c]) * t;
+    colors[v * 4 + 3] = 1;
+    normals[v * 3 + 1] = 1;
+  }
+  base.setVerticesData(VertexBuffer.ColorKind, colors, false, 4);
+  base.setVerticesData(VertexBuffer.NormalKind, normals, false, 3);
+
   base.material = material;
   base.isVisible = true;
   base.isPickable = false;
@@ -163,7 +189,7 @@ export async function scatterGrassBlades(scene, track, options = {}) {
       z,
       y: track.getHeightAt(x, z),
       wallDistNorm,
-      color: terrain?.color ?? TERRAIN_COLORS.grass,
+      color: groundColor(terrain),
     });
   };
 
@@ -218,10 +244,10 @@ export async function scatterGrassBlades(scene, track, options = {}) {
 
   if (placements.length === 0) return null;
 
-  // Shared material — diffuse white so the per-instance colour buffer tints it.
+  // Shared material — diffuse white so vertex gradient × per-instance tint give
+  // the colour. No emissive: it lifted the tufts off the ground they grow from.
   const mat = new StandardMaterial("grassBladeMat", scene);
   mat.diffuseColor = new Color3(1, 1, 1);
-  mat.emissiveColor = new Color3(0.05, 0.11, 0.03);
   mat.specularColor = new Color3(0.04, 0.06, 0.03);
   mat.backFaceCulling = false; // grass planes read from both sides
 
@@ -266,11 +292,12 @@ export async function scatterGrassBlades(scene, track, options = {}) {
     buckets[v].push(arr);
 
     // Per-instance colour: grass tint with random shade + a little dry-out.
-    const shade = 0.7 + rng() * 0.5;
+    const shade = 0.8 + rng() * 0.4;
     const dry = rng() < 0.15 ? 0.35 * rng() : 0; // toward tan
-    const r = p.color.r * shade + dry * 0.35;
-    const g = p.color.g * shade + dry * 0.22;
-    const bch = p.color.b * shade;
+    const [gr, gg, gb] = p.color;
+    const r = gr * shade + dry * 0.35;
+    const g = gg * shade + dry * 0.22;
+    const bch = gb * shade;
     colorBuckets[v].push(r, g, bch, 1.0);
   }
 

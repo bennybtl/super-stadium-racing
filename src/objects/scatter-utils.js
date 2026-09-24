@@ -4,6 +4,33 @@
  * the racing line. Kept deterministic so a scatter is stable across rebuilds.
  */
 
+import { TERRAIN_COLORS } from "../constants";
+
+// ── Ground colour ────────────────────────────────────────────────────────────
+// Average colour of each terrain's diffuse texture. The ground shader lerps the
+// flat terrain colour toward its texture by diffuseTextureOpacity, so scatters do
+// the same with the texture's mean to land on the colour the ground reads as.
+const TEXTURE_MEAN = {
+  packed_dirt: [0.592, 0.455, 0.314],
+  loamy_dirt: [0.239, 0.18, 0.129],
+  loose_dirt: [0.514, 0.365, 0.251],
+  mud: [0.306, 0.247, 0.196],
+  rocky: [0.396, 0.384, 0.384],
+  grass: [0.2, 0.349, 0.067],
+  weedy_grass: [0.439, 0.471, 0.259],
+};
+
+export function groundColor(terrain) {
+  const flat = terrain?.color ?? TERRAIN_COLORS.packed_dirt;
+  const tex = TEXTURE_MEAN[terrain?.name ?? "packed_dirt"];
+  const k = tex ? (terrain?.diffuseTextureOpacity ?? 0.5) : 0;
+  return [
+    flat.r + ((tex?.[0] ?? 0) - flat.r) * k,
+    flat.g + ((tex?.[1] ?? 0) - flat.g) * k,
+    flat.b + ((tex?.[2] ?? 0) - flat.b) * k,
+  ];
+}
+
 // ── Seeded RNG (mulberry32) ──────────────────────────────────────────────────
 export function makeRng(seed) {
   let a = seed >>> 0;
