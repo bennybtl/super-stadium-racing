@@ -1,4 +1,4 @@
-import { ShadowGenerator } from "@babylonjs/core";
+import { ShadowGenerator, Light } from "@babylonjs/core";
 
 /**
  * A drop-in stand-in for a single Babylon `ShadowGenerator` that fans shadow
@@ -168,17 +168,29 @@ export class ShadowCasterGroup {
   }
 
   /**
-   * Depth bias. Babylon's bias is a fraction of the light's shadow depth
-   * range, so a world-unit `biasWorld` is converted per light wherever the
-   * light has an explicit shadowMinZ/shadowMaxZ (sun, moon, track-light
-   * spots); other lights take the plain fractional `bias`.
+   * Depth bias. With PCF, Babylon adds `bias` to the shadow pass's clip-space
+   * z, so a world-unit `biasWorld` is converted per light wherever the light
+   * has an explicit shadowMinZ/shadowMaxZ (sun, moon, track-light spots):
+   *   - orthographic (directional): NDC depth is linear, Δworld = bias·(f−n)/2
+   *   - perspective (spot): NDC depth is ~1/d, Δworld = bias·(f−n)·d²/(2fn),
+   *     so it's exact at a reference distance d (mid-range) and grows ∝ d²
+   *     beyond it. A plain fraction there put a lit strip along wall bases.
+   * Other lights (point/cube maps) take the plain fractional `bias`.
    */
   _applyBias(gen) {
     const q = this._quality;
     const light = gen.getLight?.();
-    const range = (light?.shadowMaxZ ?? NaN) - (light?.shadowMinZ ?? NaN);
-    if (q.biasWorld !== undefined && range > 0) gen.bias = q.biasWorld / range;
-    else if (q.bias !== undefined) gen.bias = q.bias;
+    const n = light?.shadowMinZ, f = light?.shadowMaxZ;
+    if (q.biasWorld === undefined || !(f > n && n > 0)) {
+      if (q.bias !== undefined) gen.bias = q.bias;
+      return;
+    }
+    if (light.getTypeID?.() === Light.LIGHTTYPEID_SPOTLIGHT) {
+      const d = (n + f) / 2;
+      gen.bias = (q.biasWorld * 2 * f * n) / ((f - n) * d * d);
+    } else {
+      gen.bias = (2 * q.biasWorld) / (f - n);
+    }
   }
 
   /** Re-derive an extra light's bias after its shadowMinZ/shadowMaxZ changed. */

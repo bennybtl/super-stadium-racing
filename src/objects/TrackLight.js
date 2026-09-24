@@ -20,6 +20,8 @@ const HEAD_GAP = 0.16;    // gap between heads
 const BANK_W = HEAD_COUNT * HEAD_W + (HEAD_COUNT - 1) * HEAD_GAP;
 const BACKPLATE_H = 0.26;
 const BACKPLATE_D = 0.34;
+// Shadow cone = visible pool (`spread`) × this; see _applyLight.
+const SHADOW_POOL_MARGIN = 1.15;
 
 // Each pole is a real SpotLight, one of the `maxSimultaneousLights` slots
 // every material evaluates (scene-wide hook in SceneBuilder.buildScene raises
@@ -235,7 +237,7 @@ export class TrackLight {
     this.tilt.rotation.x = (90 - tiltDeg) * (Math.PI / 180);
   }
 
-  /** Re-apply cone angle, edge softness, range and intensity. */
+  /** Re-apply cone angle, edge softness, shadow cone, range and intensity. */
   _applyLight() {
     const h = Math.max(1, this.feature.height ?? TRACK_LIGHT_DEFAULTS.height);
     const spreadDeg = Math.max(5, Math.min(120, this.feature.spread ?? TRACK_LIGHT_DEFAULTS.spread));
@@ -252,6 +254,11 @@ export class TrackLight {
     this.light.angle = (gateDeg * Math.PI) / 180;
     const cosHalf = Math.max(0.02, Math.cos(halfRad));
     this.light.exponent = Math.max(1.5, Math.min(48, Math.log(0.12) / Math.log(cosHalf)));
+    // The shadow map only needs the visible pool, not that padded cone: past
+    // `spread` the light is under ~12%. Covering the full cone spread a 512²
+    // map so thin that walls (~0.3 thick) dropped out near their base. A
+    // little margin keeps the pool's soft edge inside the map.
+    this.light.shadowAngleScale = Math.min(1, (spreadDeg * SHADOW_POOL_MARGIN) / gateDeg);
 
     // Shallow tilts throw the beam much farther across the track, so scale the
     // reach up as the aim drops toward the horizon.

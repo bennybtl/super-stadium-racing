@@ -260,7 +260,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   const shadows = ShadowCasterGroup.create([_stadiumLights[0], _stadiumLights[2]], { mapSize: 1024 });
   // biasWorld: PCF depth offset in world units, for lights with an explicit
   // shadow depth range; `bias` is the fallback for the rest (stadium points).
-  shadows.configure({ bias: 0.005, biasWorld: 0.08, normalBias: 0.02 });
+  shadows.configure({ bias: 0.005, biasWorld: 0.04, normalBias: 0.02 });
   // Shadow filter: PCF (not blur-ESM) on every detail tier but low. ESM blurs
   // depth, so any caster that also receives (walls, tent roofs, the bridge
   // deck) sat in its own blurred shadow: a dark middle with a bright rim, or a
