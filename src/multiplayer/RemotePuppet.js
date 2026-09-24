@@ -39,6 +39,7 @@ export class RemotePuppet {
     this._root.rotationQuaternion = null;
 
     const color = colorKey ? basicColors[colorKey]?.diffuse : null;
+    this.color = color; // Color3 or null (vehicle default) — used for the minimap dot
     this._body = new TruckBody(this._root, scene, shadows, { body: color }, vehicleDef, {});
     this._state = { heading: 0, velocity: new Vector3(), suspensionCompression: 0 };
     this._noInput = { left: false, right: false, forward: false, back: false };

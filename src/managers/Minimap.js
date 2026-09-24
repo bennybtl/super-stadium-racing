@@ -164,6 +164,11 @@ export class Minimap {
    * Redraw with the current truck positions. Call once per render frame.
    * @param {{x:number, z:number, color:string, isPlayer?:boolean}[]} dots
    */
+  /** False while the "Minimap" Display setting is off — skip building dots. */
+  get enabled() {
+    return this._enabled;
+  }
+
   update(dots) {
     if (!this._enabled) return;
     const ctx = this._ctx;

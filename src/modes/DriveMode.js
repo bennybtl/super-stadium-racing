@@ -8,6 +8,7 @@ import { buildScene } from "./SceneBuilder.js";
 import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
 import { FireworksManager } from "../managers/FireworksManager.js";
 import { FixedStepLoop } from "./fixed-step.js";
+import { Minimap } from "../managers/Minimap.js";
 
 /**
  * DriveMode - shared utilities for drivable gameplay modes.
@@ -27,6 +28,29 @@ export class DriveMode extends BaseMode {
     this.frameProfiler = null;
     // Pending 3-2-1-GO timeouts, tracked so teardown / a restart cancels them.
     this._countdownTimeouts = [];
+    this.minimap = null;
+    this._minimapDots = null;
+  }
+
+  /**
+   * Track overview, bottom-right (managers/Minimap.js). The minimap itself
+   * honours the "Minimap" Display setting (live) and is hidden in photo mode.
+   * `getDots()` returns `[{ x, z, color, isPlayer }]`; it's called from
+   * updateMinimap(), which the mode calls once per render frame. Disposed in
+   * teardown.
+   */
+  setupMinimap(track, startFinish, getDots) {
+    this.minimap = new Minimap(track, startFinish);
+    this._minimapDots = getDots;
+  }
+
+  updateMinimap() {
+    if (this.minimap?.enabled) this.minimap.update(this._minimapDots());
+  }
+
+  /** CSS colour for a truck's minimap dot. */
+  static dotColor(color3, fallback = '#ff6b2e') {
+    return color3?.toHexString?.() ?? fallback;
   }
 
   /**
@@ -142,6 +166,10 @@ export class DriveMode extends BaseMode {
       this.debugManager.hide();
       this.debugManager = null;
     }
+    this.minimap?.dispose();
+    this.minimap = null;
+    this._minimapDots = null;
+
     if (this.frameProfiler) {
       this.frameProfiler.dispose(window, "gameLoopProfiler");
       this.frameProfiler = null;

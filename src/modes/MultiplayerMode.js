@@ -155,6 +155,27 @@ export class MultiplayerMode extends DriveMode {
     };
     multiplayerClient.players.forEach(spawnPuppet);
 
+    // -- Track overview, bottom-right. Puppets are re-read each frame, so
+    // players joining/leaving mid-race appear/disappear on the map. --
+    const playerDotColor = DriveMode.dotColor(playerTruck.diffuseColor);
+    this.setupMinimap(currentTrack, startFinishCp, () => {
+      const dots = [{
+        x: playerTruck.mesh.position.x,
+        z: playerTruck.mesh.position.z,
+        color: playerDotColor,
+        isPlayer: true,
+      }];
+      for (const puppet of this._remotePuppets.values()) {
+        dots.push({
+          x: puppet.position.x,
+          z: puppet.position.z,
+          color: DriveMode.dotColor(puppet.color, '#bbbbbb'),
+          isPlayer: false,
+        });
+      }
+      return dots;
+    });
+
     // -- UI --
     const uiManager = new UIManager();
     this.uiManager = uiManager;
@@ -454,6 +475,7 @@ export class MultiplayerMode extends DriveMode {
 
       onRender: (dt) => {
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
+      frameProfiler.measure('minimap', () => this.updateMinimap());
       frameProfiler.measure('multiplayer.puppets', () => {
         this._remotePuppets.forEach(puppet => puppet.update(dt));
       });

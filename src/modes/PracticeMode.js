@@ -73,6 +73,15 @@ export class PracticeMode extends DriveMode {
     playerTruck.setAudioController(this.truckAudioController);
 
     const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);
+
+    // -- Track overview, bottom-right --
+    const playerDotColor = DriveMode.dotColor(playerTruck.diffuseColor);
+    this.setupMinimap(currentTrack, startCp, () => [{
+      x: playerTruck.mesh.position.x,
+      z: playerTruck.mesh.position.z,
+      color: playerDotColor,
+      isPlayer: true,
+    }]);
     const spawnPos = spawn.pos;
     const heading = spawn.heading;
 
@@ -192,6 +201,7 @@ export class PracticeMode extends DriveMode {
       });
 
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
+      frameProfiler.measure('minimap', () => this.updateMinimap());
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt, playerTruck.state.velocity));
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
       frameRenderStartMs = performance.now();

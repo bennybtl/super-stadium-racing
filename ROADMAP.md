@@ -19,7 +19,7 @@ its own 6.1 MB vendor chunk, editor lazy-loaded.
 | A5 Strip console logs in prod | ⬜ Open |
 | B1 Gamepad support | ⬜ Open — deferred |
 | B2 Keyboard steering smoothing | 🟨 Mostly exists already — see below |
-| B3 Minimap | ✅ Done 2026-09-24 (races only) |
+| B3 Minimap | ✅ Done 2026-09-24 (all race modes) |
 | B4 Camera juice | ✅ Done 2026-09-24 |
 | B5 Shareable ghosts | ⬜ Open |
 | B6 Touch controls | ⬜ Open (only if phones matter) |
@@ -81,8 +81,8 @@ feel if it's still twitchy — `check:physics` (turn/slalom) will show the effec
 **B3. Minimap. — ✅ DONE 2026-09-24.** `managers/Minimap.js`: north-up overview,
 bottom-right, AI racing line as the road + walls + gates + start/finish, a dot per
 truck. Static layer drawn once; per frame only dots. Hidden in photo mode; Display
-setting "Minimap". _Follow-up:_ wired into RaceMode only — MP / HotLap / Practice
-are a few lines each.
+setting "Minimap" (live). In Race, HotLap, Practice and Multiplayer (remote players
+as dots, joins/leaves live) via `DriveMode.setupMinimap` / `updateMinimap`.
 
 **B4. Camera juice. — ✅ DONE 2026-09-24.** In `CameraController` (tuning
 constants at top of file): impact shake (trauma from frame-to-frame velocity Δ,
@@ -173,7 +173,7 @@ list covers `_nextFinishPosition`, host migration on leave, DNF timer.
 
 ## Suggested order (remaining)
 
-1. Minimap in HotLap / Practice / MP; Race/MP lap times on sim time (C1 follow-up).
+1. Race/MP lap times on sim time (C1 follow-up).
 2. A5 strip console logs in prod (one line).
 3. B1 gamepad when un-deferred (B2 steering easing already exists).
 4. C5 remaining server tests (host migration, DNF timer) — the harness in

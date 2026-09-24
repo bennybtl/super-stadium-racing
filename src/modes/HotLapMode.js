@@ -73,6 +73,15 @@ export class HotLapMode extends DriveMode {
     const truckDims = { width: playerTruck.width, height: playerTruck.height, depth: playerTruck.depth };
 
     const spawn = this.getSpawnBehindCheckpoint(currentTrack, startFinishCp, playerTruck.height, 6);
+
+    // -- Track overview, bottom-right --
+    const playerDotColor = DriveMode.dotColor(playerTruck.diffuseColor);
+    this.setupMinimap(currentTrack, startFinishCp, () => [{
+      x: playerTruck.mesh.position.x,
+      z: playerTruck.mesh.position.z,
+      color: playerDotColor,
+      isPlayer: true,
+    }]);
     const spawnPos = spawn.pos;
     const heading = spawn.heading;
 
@@ -212,6 +221,7 @@ export class HotLapMode extends DriveMode {
 
       frameProfiler.measure('hotlap.ghost', () => this.hotLap.updateGhost(dt, sim.renderLag * 1000));
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
+      frameProfiler.measure('minimap', () => this.updateMinimap());
       frameProfiler.measure('checkpointArrow.update', () => this.checkpointArrow.update(playerTruck.mesh));
 
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
