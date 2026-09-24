@@ -11,6 +11,7 @@
   "colliderFriction": 0.9,
   "castsShadows": true,
   "featureDefaults": {
+    "preset": "boulder",
     "seed": 1,
     "radius": 0.6,
     "collider": false

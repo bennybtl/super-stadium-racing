@@ -50,6 +50,7 @@ export function masterFromBuffers(name, buf, scene, { scale = 1, vScale = 1, mir
   vd.positions = positions;
   vd.normals = normals;
   vd.uvs = vScale === 1 ? buf.uvs : buf.uvs.map((v, i) => (i & 1 ? v * vScale : v));
+  if (buf.colors) vd.colors = buf.colors; // RGBA, optional (rocks)
   vd.indices = buf.indices;
 
   const mesh = new Mesh(name, scene);
