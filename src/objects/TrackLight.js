@@ -31,6 +31,11 @@ const BASE_DIAM_TOP = 1.05;
 const BASE_H = 0.75;      // above grade
 const BASE_SINK = 0.15;   // below grade
 const CONCRETE_TILE_M = 6; // world metres per texture repeat, as BorderWall
+// Trucks collide with the base as a round post: StaticBodyCollisionManager's
+// polyline collider on a near-zero-length segment, thickened to the base
+// radius (a box collider would catch trucks on invisible square corners).
+const BASE_COLLIDER_RADIUS = (BASE_DIAM_BOTTOM + BASE_DIAM_TOP) / 4;
+const BASE_COLLIDER_HALF_LEN = 0.001;
 // Shadow cone = visible pool (`spread`) × this; see _applyLight.
 const SHADOW_POOL_MARGIN = 1.15;
 
@@ -139,6 +144,9 @@ export class TrackLight {
     this.base.material = this._baseMat;
     this.base.isPickable = true;
     this._shadows?.addShadowCaster?.(this.base);
+    this._baseCollider = { xs: [0, 0], zs: [0, 0], topY: [0, 0], botY: [0, 0], closed: false, halfThick: BASE_COLLIDER_RADIUS, landOnTop: false };
+    this.base.metadata = { ...(this.base.metadata ?? {}), polylineCollider: this._baseCollider };
+    this._updateBaseCollider();
 
     // ── Pole (fixed, vertical) ──
     this.pole = MeshBuilder.CreateCylinder(`trackLightPole_${tag}`, {
@@ -314,6 +322,18 @@ export class TrackLight {
     this.feature.x = x;
     this.feature.z = z;
     this.container.position.copyFromFloats(x, groundY, z);
+    this._updateBaseCollider();
+  }
+
+  /** Collider is in world space — keep it on the base when the pole moves. */
+  _updateBaseCollider() {
+    const { x, y, z } = this.container.position;
+    const c = this._baseCollider;
+    c.xs[0] = c.xs[1] = x;
+    c.zs[0] = z - BASE_COLLIDER_HALF_LEN;
+    c.zs[1] = z + BASE_COLLIDER_HALF_LEN;
+    c.topY[0] = c.topY[1] = y + BASE_H;
+    c.botY[0] = c.botY[1] = y - BASE_SINK;
   }
 
   setHeight(height) {

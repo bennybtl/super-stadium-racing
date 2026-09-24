@@ -449,8 +449,10 @@ export class StaticBodyCollisionManager {
 
     // Landing on top beats lateral ejection when it's the smaller correction
     // (preserves driving onto/along a wall top, as the old box chain allowed).
+    // Short, narrow colliders opt out (`landOnTop: false`): a fast truck can
+    // sink deeper than their height in one step and would pop up onto them.
     const penTop = top - truckBot;
-    if (!crossed && penTop < penLateral) {
+    if (!crossed && c.landOnTop !== false && penTop < penLateral) {
       pos.y = top + halfHeight + SKIN;
       this._applyContactResponse(truck, this._normal.set(0, 1, 0), dt, frame, {
         allowBounce: true,

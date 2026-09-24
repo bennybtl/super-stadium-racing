@@ -174,5 +174,58 @@ const setPrev = (x, y, z) => mgr._prevPositions.set(1, new Vector3(x, y, z));
     `(moved to ${truck.mesh.position.x.toFixed(2)}, ${truck.mesh.position.z.toFixed(2)})`);
 }
 
+// ── 6. Round post (TrackLight concrete base) ────────────────────────────────
+// A near-zero-length polyline thickened to the base radius. It must eject a
+// truck radially at every approach angle — a box collider would push
+// diagonal approaches out along an axis, off invisible square corners — and a
+// fast head-on hit must shove the truck aside, not lift it onto the 0.75 top.
+{
+  const R = 0.5875, TOP = 0.75, BOT = -0.15;
+  const post = {
+    metadata: { polylineCollider: {
+      xs: [0, 0], zs: [-0.001, 0.001], topY: [TOP, TOP], botY: [BOT, BOT],
+      halfThick: R, closed: false, landOnTop: false,
+    } },
+    isDisposed: () => false,
+    isEnabled: () => true,
+    getBoundingInfo: () => ({ boundingBox: {
+      minimumWorld: new Vector3(-0.65, BOT, -0.65),
+      maximumWorld: new Vector3(0.65, TOP, 0.65),
+    } }),
+  };
+  const pm = new StaticBodyCollisionManager({ meshes: [post] });
+
+  let worstAngleErr = 0;
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2;
+    const ux = Math.cos(a), uz = Math.sin(a);
+    // Heading along the approach, so the truck's own support is the same each time.
+    const truck = makeTruck(ux * 1.8, uz * 1.8, Math.atan2(-ux, -uz), -ux * 5, -uz * 5);
+    pm._prevPositions.set(1, new Vector3(ux * 2.6, 0.75, uz * 2.6));
+    pm.update([truck], 1 / 60);
+    const p = truck.mesh.position;
+    const err = Math.abs(Math.atan2(Math.sin(Math.atan2(p.z, p.x) - a), Math.cos(Math.atan2(p.z, p.x) - a)));
+    worstAngleErr = Math.max(worstAngleErr, err);
+  }
+  check('post: ejects radially at every angle', worstAngleErr < 1e-3,
+    `(worst off-radial ${(worstAngleErr * 180 / Math.PI).toFixed(3)}°)`);
+
+  // Boosted head-on (nitro 30×1.5 = 45 m/s, 0.75 m per 60 Hz step) that has
+  // already sunk a full step — 0.8 m, deeper than the post is tall — past the
+  // contact reach (post radius + half truck length ≈ 2.09).
+  const fast = makeTruck(0.4, -1.25, 0, 0, 45);
+  pm._prevPositions.set(1, new Vector3(0.4, 0.75, -2.0));
+  pm.update([fast], 1 / 60);
+  check('post: fast hit pushes aside, not onto the top', Math.abs(fast.mesh.position.y - 0.75) < 1e-9,
+    `(y ${fast.mesh.position.y.toFixed(3)})`);
+
+  const over = makeTruck(0, 0, 0, 0, 5);
+  over.mesh.position.y = TOP + 0.75 + 0.01; // wheels just clear the top
+  const overBefore = over.mesh.position.clone();
+  pm._prevPositions.set(1, new Vector3(0, over.mesh.position.y, -0.1));
+  pm.update([over], 1 / 60);
+  check('post: a truck above the top passes over', over.mesh.position.equals(overBefore));
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nall wall checks pass');
 process.exit(failures ? 1 : 0);
