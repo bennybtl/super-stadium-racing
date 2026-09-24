@@ -92,26 +92,25 @@ export function ezTreeOptions({ preset, seed }) {
 }
 
 /**
- * Lower-detail levels, as screen coverage: the fraction of the screen the
- * tree's bounding sphere covers (Babylon `useLODScreenCoverage`). That makes
- * the switch independent of tree scale and camera zoom. The detail specs are
- * ez-tree's own defaultLODLevels (~40% and ~20% of full triangles). A 16-unit
- * tree ~40 units from the race camera covers ~14%. Tune by eye.
+ * Mesh detail per "Tree Detail" display setting. One fixed level per tree —
+ * the old screen-coverage LOD switching popped visibly. `low` is ez-tree's
+ * first defaultLODLevel (~40% of full triangles).
  */
-const LOD_DETAILS = [
-  { sectionStride: 3, segmentFactor: 0.75, leafStride: 2, leafScale: 1.25 },
-  { sectionStride: 6, segmentFactor: 0.4, leafStride: 2, leafScale: 1.3, billboard: "single" },
-];
+export const TREE_DETAILS = {
+  high: {},
+  low: { sectionStride: 3, segmentFactor: 0.75, leafStride: 2, leafScale: 1.25 },
+};
 
 /**
- * Build the masters for one tree variant, each with its LOD chain. Groups:
+ * Build the masters for one tree variant at one detail level. Groups:
  *   trunk  — the level-0 branch only (collider target: its bounds are trunk-sized)
  *   branch — every other branch
  *   leaf   — leaf quads
- * @param {{bark, leaf}} materials  assigned to every level
+ * @param {{bark, leaf}} materials
+ * @param {"high"|"low"} detail  see TREE_DETAILS
  * @returns {{ trunk, branch, leaf, height }}
  */
-export function buildEzTreeMasters(scene, options, scale, name, materials) {
+export function buildEzTreeMasters(scene, options, scale, name, materials, detail = "high") {
   const skeleton = growSkeleton(options);
   const [trunkBranch, ...rest] = skeleton.branches;
   const trunkSkeleton = { branches: [trunkBranch], leaves: [] };
@@ -132,18 +131,13 @@ export function buildEzTreeMasters(scene, options, scale, name, materials) {
     return { groups: level, bufs: [trunkBuf, branches, leaves] };
   };
 
-  const full = buildLevel({}, "");
+  const level = buildLevel(TREE_DETAILS[detail] ?? TREE_DETAILS.high, "");
   let maxY = 0;
-  for (const b of full.bufs) {
+  for (const b of level.bufs) {
     for (let i = 1; i < b.verts.length; i += 3) if (b.verts[i] > maxY) maxY = b.verts[i];
   }
 
-  attachLods(full.groups, LOD_DETAILS.map((detail, i) => ({
-    coverage: LOD_COVERAGE[i],
-    groups: buildLevel(detail, `_lod${i + 1}`).groups,
-  })));
-
-  return { ...full.groups, height: maxY * scale };
+  return { ...level.groups, height: maxY * scale };
 }
 
 // Textures (src/assets/trees, see LICENSE.md there): leaf sprig cutouts per

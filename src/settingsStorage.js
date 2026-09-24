@@ -54,6 +54,7 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   lights: 4,
   checkpointArrow: true,
   aiTruckShadows: true,
+  treeDetail: 'high',
   minimap: true,
   cameraShake: true,
   preferredView: 'fixed',
@@ -131,6 +132,9 @@ function normalizeDisplaySettings(candidate) {
     aiTruckShadows: candidate?.aiTruckShadows === undefined
       ? DEFAULT_DISPLAY_SETTINGS.aiTruckShadows
       : Boolean(candidate.aiTruckShadows),
+    treeDetail: candidate?.treeDetail === 'low' || candidate?.treeDetail === 'high'
+      ? candidate.treeDetail
+      : DEFAULT_DISPLAY_SETTINGS.treeDetail,
     minimap: candidate?.minimap === undefined
       ? DEFAULT_DISPLAY_SETTINGS.minimap
       : Boolean(candidate.minimap),

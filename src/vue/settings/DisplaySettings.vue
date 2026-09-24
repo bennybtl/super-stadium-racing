@@ -34,6 +34,15 @@
           <option :value="false">Off</option>
         </select>
       </div>
+      <!-- Tree meshes are built at scene load, so a change applies from the
+           next race; hidden mid-race where it would silently do nothing. -->
+      <div v-if="!inRace" class="flex items-center gap-6">
+        <div class="grow min-w-[140px] text-right text-xl font-bold italic uppercase text-white pr-4">Tree Detail</div>
+        <select v-model="treeDetail" class="w-[180px] shrink-0 px-6 py-2 rounded-md border border-[#333] bg-[#222] text-white text-lg font-bold uppercase italic tracking-wider outline-none transition-colors focus:border-[#ffd400]">
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
       <div class="flex items-center gap-6">
         <div class="grow min-w-[140px] text-right text-xl font-bold italic uppercase text-white pr-4">Minimap</div>
         <select v-model="minimap" class="w-[180px] shrink-0 px-6 py-2 rounded-md border border-[#333] bg-[#222] text-white text-lg font-bold uppercase italic tracking-wider outline-none transition-colors focus:border-[#ffd400]">
@@ -83,16 +92,18 @@ const shadow = ref(displaySettings.shadow);
 const lights = ref(displaySettings.lights);
 const checkpointArrow = ref(displaySettings.checkpointArrow);
 const aiTruckShadows = ref(displaySettings.aiTruckShadows);
+const treeDetail = ref(displaySettings.treeDetail);
 const minimap = ref(displaySettings.minimap);
 const cameraShake = ref(displaySettings.cameraShake);
 const preferredView = ref(displaySettings.preferredView);
 
-watch([shadow, lights, checkpointArrow, aiTruckShadows, minimap, cameraShake, preferredView], () => {
+watch([shadow, lights, checkpointArrow, aiTruckShadows, treeDetail, minimap, cameraShake, preferredView], () => {
   saveDisplaySettings({
     shadow: shadow.value,
     lights: lights.value,
     checkpointArrow: checkpointArrow.value,
     aiTruckShadows: aiTruckShadows.value,
+    treeDetail: treeDetail.value,
     minimap: minimap.value,
     cameraShake: cameraShake.value,
     preferredView: preferredView.value,

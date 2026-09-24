@@ -2,6 +2,7 @@ import { StandardMaterial, Color3 } from "@babylonjs/core";
 import { foliageColors } from "../../../constants.js";
 import { buildEzTreeMasters, ezTreeOptions, leafTexture, barkTexture, EZ_TREE_PRESET_OPTIONS } from "./babylon.js";
 import { instancedDecoration } from "../instanced-decoration.js";
+import { loadDisplaySettings } from "../../../settingsStorage.js";
 import { attachTreeWindPlugin } from "../../../shaders/tree-wind-shader.js";
 
 const DEFAULT_LEAF = "green";
@@ -62,10 +63,11 @@ export function ezTreeDecoration({ presetFilter, defaultPreset, scale, colorOpti
         preset:    feature.preset ?? fd.preset ?? defaultPreset,
         seed:      Number(feature.seed ?? fd.seed ?? 1),
         leafColor: feature.color ?? def.leafColor ?? DEFAULT_LEAF,
+        detail:    loadDisplaySettings().treeDetail, // read at scene build
       };
     },
 
-    variantKey: (p) => [p.preset, p.seed, p.leafColor].join("|"),
+    variantKey: (p) => [p.preset, p.seed, p.leafColor, p.detail].join("|"),
 
     duplicate: scatterDuplicate(spread),
 
@@ -86,7 +88,7 @@ export function ezTreeDecoration({ presetFilter, defaultPreset, scale, colorOpti
       attachTreeWindPlugin(foliage);
 
       const { trunk, branch, leaf, height } = buildEzTreeMasters(
-        scene, options, scale, `ezTree_${key}`, { bark: wood, leaf: foliage },
+        scene, options, scale, `ezTree_${key}`, { bark: wood, leaf: foliage }, p.detail,
       );
       return { groups: { trunk, branch, leaf }, mats: [wood, foliage], height };
     },
