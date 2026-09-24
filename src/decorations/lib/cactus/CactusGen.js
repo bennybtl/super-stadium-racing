@@ -62,6 +62,7 @@ const COLUMNAR_MESH = {
 export const CACTUS_PRESETS = {
   saguaro: {
     kind: "columnar",
+    color: [0.3, 0.42, 0.26], // grey-green (linear diffuse)
     stem: {
       length: [4.5, 8],       // trunk height
       radius: [0.4, 0.55],
@@ -85,6 +86,9 @@ export const CACTUS_PRESETS = {
       rise: [0.25, 0.55],     // vertical rise after the elbow, × trunk length
       gnarl: 0.02,
     },
+    // Areole rows every `every` rings; each areole gets a cluster of spines
+    // `size` long. Columnar: one areole per rib per row, on the ridge.
+    spines: { every: 2, size: 0.13 },
     mesh: COLUMNAR_MESH,
   },
 
@@ -92,6 +96,7 @@ export const CACTUS_PRESETS = {
   // steeply, splay a little and rise to staggered heights.
   organ_pipe: {
     kind: "columnar",
+    color: [0.25, 0.39, 0.23], // deeper olive green (linear diffuse)
     stem: {
       length: [3, 5],
       radius: [0.3, 0.4],
@@ -115,6 +120,7 @@ export const CACTUS_PRESETS = {
       rise: [0.35, 0.95],
       gnarl: 0.02,
     },
+    spines: { every: 2, size: 0.1 },
     // Many stems: coarser rings keep it near a saguaro's triangle budget.
     mesh: { ...COLUMNAR_MESH, step: 0.3, segmentsPerRib: 3 },
   },
@@ -122,6 +128,7 @@ export const CACTUS_PRESETS = {
   // Squat, fat and deeply ribbed, with a flattened crown and spiralled ribs.
   barrel: {
     kind: "columnar",
+    color: [0.34, 0.45, 0.22], // yellow-green (linear diffuse)
     stem: {
       length: [0.7, 1.5],
       radius: [0.45, 0.75],
@@ -136,12 +143,14 @@ export const CACTUS_PRESETS = {
       ribTwist: 0.25,
     },
     arms: { count: [0, 0] },
+    spines: { every: 2, size: 0.2 },  // barrels are the spiny ones
     mesh: { ...COLUMNAR_MESH, step: 0.12, domeRings: 6, baseSink: 0.15 },
   },
 
   // Flat oval paddles, each sprouting from the upper rim of its parent.
   prickly_pear: {
     kind: "pads",
+    color: [0.26, 0.45, 0.34], // blue-green (linear diffuse)
     pads: {
       count: [4, 11],         // total pads
       roots: [1, 2],          // pads growing from the ground
@@ -156,8 +165,10 @@ export const CACTUS_PRESETS = {
       rootTilt: [0, 0.35],    // root pad lean off vertical (radians)
       minUp: 0.15,            // children never point below this t.y
     },
+    // Pads: `around` areoles spaced round the oval rim-to-rim, every `every` rings.
+    spines: { every: 3, around: 8, size: 0.1 },
     mesh: {
-      rings: 12,              // rings per pad
+      rings: 20,              // rings per pad (12 showed a polygonal outline)
       segments: 16,           // ring vertices per pad
       baseSink: 0.1,
     },
@@ -178,13 +189,14 @@ export function cactusOptions(preset, seed) {
  * the next step (bends, gnarl); growth stops when `done(p, t, s)` or at
  * maxLength. `radiusAt(s)` sets each ring's radius. Optional tip dome:
  * `domeRings` rings on a quarter circle (height × `domeScale`).
- * Section: { p, t, n, r, s, dome }.
+ * Section: { p, t, n, r, s, i, dome }.
  */
 function growStem({ origin, dir, n0, radiusAt, step, maxLength, turn, done, domeRings = 0, domeScale = 1 }) {
   const sections = [];
   let p = origin, t = norm(dir), n = n0 ?? perpendicular(t), s = 0;
   for (;;) {
-    sections.push({ p, t, n, r: radiusAt(s), s, dome: false });
+    // `i`: ring index along the stem, used for the areole rows (UV v, spines).
+    sections.push({ p, t, n, r: radiusAt(s), s, i: sections.length, dome: false });
     if (s >= maxLength || done?.(p, t, s)) break;
     const t2 = norm(turn(t, s));
     n = norm(transport(n, t, t2));
@@ -196,7 +208,7 @@ function growStem({ origin, dir, n0, radiusAt, step, maxLength, turn, done, dome
   for (let k = 1; k <= domeRings; k++) {
     const a = (k / domeRings) * (Math.PI / 2);
     const h = last.r * Math.sin(a) * domeScale;
-    sections.push({ p: add(last.p, scale(last.t, h)), t: last.t, n: last.n, r: last.r * Math.cos(a), s: last.s + h, dome: true });
+    sections.push({ p: add(last.p, scale(last.t, h)), t: last.t, n: last.n, r: last.r * Math.cos(a), s: last.s + h, i: last.i + k / domeRings, dome: true });
   }
   return sections;
 }
@@ -388,6 +400,39 @@ function sectionPoint(shape, theta, twist) {
   return [rho * Math.cos(theta), rho * Math.sin(theta)];
 }
 
+/**
+ * Point and normal on a stem's surface at ring `sec`, angle `theta`.
+ * Surface P(s,θ) = p + r·S(θ): ∂P/∂s ≈ t + r'·S, ∂P/∂θ = r·S'. The normal
+ * ∝ S' × (t + r'·S) — r cancels, so it stays valid where the ring closes to a
+ * point (tips, pad ends). Ribbed twist only adds an S' term to ∂P/∂s, which
+ * drops out of the cross product.
+ */
+function surfaceAt(shape, sec, theta, dr) {
+  const { p, t, n, r, s } = sec;
+  const b = cross(t, n);
+  const twist = shape.kind === "pad" ? 0 : shape.ribTwist * s;
+  const eps = 1e-3;
+  const [x, y] = sectionPoint(shape, theta, twist);
+  const S = add(scale(n, x), scale(b, y));
+  const [x1, y1] = sectionPoint(shape, theta + eps, twist);
+  const [x0, y0] = sectionPoint(shape, theta - eps, twist);
+  const Sd = add(scale(n, (x1 - x0) / (2 * eps)), scale(b, (y1 - y0) / (2 * eps)));
+  return { point: add(p, scale(S, r)), normal: norm(cross(Sd, add(t, scale(S, dr)))) };
+}
+
+/** Rib twist at a ring; the vertex grid (and ridges) turn by it. */
+const twistAt = (shape, sec) => (shape.kind === "pad" ? 0 : shape.ribTwist * sec.s);
+
+/** dr/ds at ring index k of `rings`, from its neighbours. */
+function slopeAt(rings, k) {
+  const prev = rings[Math.max(0, k - 1)], next = rings[Math.min(rings.length - 1, k + 1)];
+  const ds = next.s - prev.s;
+  return ds > 1e-9 ? (next.r - prev.r) / ds : 0;
+}
+
+/** Areole tiles around a ring: one per rib (on the ridges), or `around` on a pad. */
+const tilesAround = (shape, preset) => (shape.kind === "pad" ? preset.spines.around : shape.ribs);
+
 function meshStem(buf, { shape, sections }, detail, preset) {
   const stride = Math.max(1, Math.floor(detail.sectionStride ?? 1));
   const factor = detail.segmentFactor ?? 1;
@@ -402,35 +447,26 @@ function meshStem(buf, { shape, sections }, detail, preset) {
   if ((body.length - 1) % stride !== 0) rings.push(body[body.length - 1]);
   for (const sec of sections) if (sec.dome) rings.push(sec);
 
-  const base = buf.verts.length / 3;
-  const eps = 1e-3;
-  for (let i = 0; i < rings.length; i++) {
-    const { p, t, n, r, s } = rings[i];
-    const b = cross(t, n);
-    const prev = rings[Math.max(0, i - 1)], next = rings[Math.min(rings.length - 1, i + 1)];
-    const ds = next.s - prev.s;
-    const dr = ds > 1e-9 ? (next.r - prev.r) / ds : 0; // dr/ds
-    const twist = shape.kind === "pad" ? 0 : shape.ribTwist * s;
+  // UVs tile once per areole: u = rib (ridges on integers), v = areole row.
+  // One small texture tile (a dot at its corner) then lands every areole dot
+  // on a ridge, exactly where spineCactus puts the spine clusters.
+  const uTiles = tilesAround(shape, preset);
+  const every = preset.spines.every;
 
+  const base = buf.verts.length / 3;
+  for (let i = 0; i < rings.length; i++) {
+    const sec = rings[i];
+    const dr = slopeAt(rings, i);
+    const twist = twistAt(shape, sec);
     for (let j = 0; j <= N; j++) {
       // The grid turns with the twist, so each ridge stays on its own vertex
       // column. A fixed grid lets sharp ridges slide between vertices ring
       // to ring, which reads as a sawtooth fringe.
       const theta = (j / N) * Math.PI * 2 - twist;
-      const [x, y] = sectionPoint(shape, theta, twist);
-      const S = add(scale(n, x), scale(b, y));
-      buf.verts.push(p.x + S.x * r, p.y + S.y * r, p.z + S.z * r);
-
-      // Surface P(s,θ) = p + r·S(θ): ∂P/∂s ≈ t + r'·S, ∂P/∂θ = r·S'. The
-      // normal ∝ S' × (t + r'·S) — r cancels, so it stays valid where the
-      // ring closes to a point (tips, pad ends). Ribbed twist only adds an S'
-      // term to ∂P/∂s, which drops out of the cross product.
-      const [x1, y1] = sectionPoint(shape, theta + eps, twist);
-      const [x0, y0] = sectionPoint(shape, theta - eps, twist);
-      const Sd = add(scale(n, (x1 - x0) / (2 * eps)), scale(b, (y1 - y0) / (2 * eps)));
-      const normal = norm(cross(Sd, add(t, scale(S, dr))));
+      const { point, normal } = surfaceAt(shape, sec, theta, dr);
+      buf.verts.push(point.x, point.y, point.z);
       buf.normals.push(normal.x, normal.y, normal.z);
-      buf.uvs.push(j / N, s);
+      buf.uvs.push((j / N) * uTiles, sec.i / every);
     }
   }
 
@@ -441,6 +477,65 @@ function meshStem(buf, { shape, sections }, detail, preset) {
       buf.indices.push(a, c, bb, bb, c, d);
     }
   }
+}
+
+/** Deterministic 0..1 hash of two integers (spine cluster jitter, no RNG). */
+function hash2(a, b) {
+  const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * Spine clusters: at every areole (ridge × row, or pad grid point), two
+ * crossed quads standing out of the surface along its normal, each textured
+ * with a fan of spines (cactus.js draws it). Like ez-tree leaves: base at the
+ * surface (uv.y = 0), fanning outward (uv.y = 1). Full detail only.
+ * @returns {Buffers}
+ */
+export function spineCactus(skeleton, options) {
+  const { preset } = options;
+  const { every, size } = preset.spines;
+  const buf = { verts: [], normals: [], uvs: [], indices: [] };
+  const w = size * 1.6;
+  let stemId = 0;
+
+  for (const { shape, sections } of [skeleton.trunk, ...skeleton.arms]) {
+    stemId++;
+    const body = sections.filter((sec) => !sec.dome);
+    const tiles = tilesAround(shape, preset);
+    for (let k = 0; k < body.length; k++) {
+      const sec = body[k];
+      if (sec.i % every !== 0 || sec.r < size * 0.5) continue;
+      const dr = slopeAt(body, k);
+      const twist = twistAt(shape, sec);
+      for (let m = 0; m < tiles; m++) {
+        const theta = (m / tiles) * Math.PI * 2 - twist;
+        const { point, normal } = surfaceAt(shape, sec, theta, dr);
+        if (point.y < 0.03) continue; // underground
+        // Two quad planes containing the normal, spun by a per-areole jitter.
+        const spin = hash2(stemId * 131 + sec.i, m) * Math.PI;
+        const a1 = rotate(norm(cross(normal, sec.t)), normal, spin);
+        const a2 = norm(cross(normal, a1));
+        const baseP = add(point, scale(normal, -size * 0.1)); // tuck the base in
+        for (const across of [a1, a2]) {
+          const vi = buf.verts.length / 3;
+          const half = scale(across, w / 2);
+          const up = scale(normal, size);
+          const quad = [
+            add(baseP, scale(half, -1)), add(baseP, half),
+            add(add(baseP, up), half), add(add(baseP, up), scale(half, -1)),
+          ];
+          for (const q of quad) {
+            buf.verts.push(q.x, q.y, q.z);
+            buf.normals.push(normal.x, normal.y, normal.z);
+          }
+          buf.uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+          buf.indices.push(vi, vi + 2, vi + 1, vi, vi + 3, vi + 2);
+        }
+      }
+    }
+  }
+  return buf;
 }
 
 /**

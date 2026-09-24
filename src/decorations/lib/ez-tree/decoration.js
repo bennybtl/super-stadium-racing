@@ -8,10 +8,10 @@ const DEFAULT_LEAF = "green";
 
 const hexColor = (hex) => new Color3(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
-// The leaf textures are already naturally coloured, so the Foliage choice
-// tints them relative to "green": green = the species' own colour, and
+// Species colours are natural (leaf textures, cactus presets), so the palette
+// choice tints relative to "green": green = the species' own colour, and
 // forest/olive/fall shift it by that palette entry ÷ green, per channel.
-function foliageShift(name) {
+export function foliageShift(name) {
   const base = foliageColors[DEFAULT_LEAF].diffuse;
   const c = (foliageColors[name] ?? foliageColors[DEFAULT_LEAF]).diffuse;
   return new Color3(c.r / base.r, c.g / base.g, c.b / base.b);

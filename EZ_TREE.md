@@ -2,7 +2,7 @@
 
 Replace the low-poly `ProceduralTree` (src/decorations/lib/Tree.js) with a port of
 [ez-tree](https://github.com/dgreenheck/ez-tree) (MIT, © 2024 Daniel Greenheck).
-Status: **Phases 1–5 done** (Sept 23 2026). The port is bit-exact and the Tree decoration uses it with real textures, screen-coverage LOD and leaf wind sway. Phase 6 (cleanup) is open.
+Status: **Complete** (Sept 23 2026). The port is bit-exact, and the Tree and Bush decorations use it with real textures, screen-coverage LOD and leaf wind sway. The old generators are deleted.
 
 ## What ez-tree is
 
@@ -117,7 +117,7 @@ changes:
    panel renders `select` like `color`. `instancedDecoration` gained
    `spec.variantProps`, handled by `edit.apply`, so a species change rebuilds
    the variant. `tree.json` featureDefaults went from trunkHeight/maxDepth/… to
-   `preset: "oak_medium"`. Old `lib/Tree.js` is unused and waits for phase 6.
+   `preset: "oak_medium"`. Old `lib/Tree.js` has since been deleted (phase 6).
 3. ✅ **Textures.** Done. `src/assets/trees/` holds 4 leaf sprig PNGs
    (ash/aspen/oak/pine) and the Bark001/002/003 colour maps, each shrunk to 512²
    (about 425 KB in total). Licences are in `LICENSE.md` there: the leaves are
@@ -167,7 +167,7 @@ changes:
   their seed, scale, colour and heading, and default to `bush_1`. A leftover
   per-feature `radius` key is simply ignored. Tree's Species dropdown no longer
   lists bushes.
-6. **Cleanup.** Delete the now-unused `lib/Tree.js` and `lib/Bush.js`. Cactus
+6. ✅ **Cleanup.** The unused `lib/Tree.js` and `lib/Bush.js` are deleted. Cactus
    keeps using `instanced-decoration.js` unchanged.
 
 ## Risks / open questions

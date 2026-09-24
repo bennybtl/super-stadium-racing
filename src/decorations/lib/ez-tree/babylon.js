@@ -63,8 +63,9 @@ export function masterFromBuffers(name, buf, scene, { scale = 1, vScale = 1, mir
 /**
  * Hang lower-detail meshes off each full-detail master as screen-coverage LOD
  * levels. `full` is { group: Mesh|null }; each of `lods` is
- * { coverage, groups: { group: Mesh|null } }. Instances follow their master's
- * LOD per instance (Babylon picks the level from the instance's own bounding
+ * { coverage, groups: { group: Mesh|null } }. A null mesh for a group that has
+ * a master is a null level: the group is culled below that coverage (cactus
+ * spines). Instances follow their master's LOD per instance (Babylon picks the level from the instance's own bounding
  * sphere), in the shadow pass as well.
  */
 export function attachLods(full, lods) {
@@ -72,10 +73,11 @@ export function attachLods(full, lods) {
   for (const { coverage, groups } of lods) {
     for (const [group, mesh] of Object.entries(groups)) {
       const master = full[group];
-      if (!master || !mesh) { mesh?.dispose(); continue; }
-      master.addLODLevel(coverage, mesh);
+      if (!master) { mesh?.dispose(); continue; }
+      // A null level culls the group below this coverage (cactus spines).
+      master.addLODLevel(coverage, mesh ?? null);
       // Mesh.dispose() doesn't take its LOD meshes with it.
-      master.onDisposeObservable.addOnce(() => mesh.dispose());
+      if (mesh) master.onDisposeObservable.addOnce(() => mesh.dispose());
     }
   }
 }

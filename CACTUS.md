@@ -2,7 +2,7 @@
 
 Replace the low-poly `ProceduralCactus` (src/decorations/lib/Cactus.js) with a
 generator built on the ideas proven in the ez-tree port (see EZ_TREE.md).
-Status: **Phases 1–3 done** (Sept 23 2026). The Cactus decoration uses the new generator with 4 species; phases 4 (spines) and 5 (cleanup) are open.
+Status: **Complete** (Sept 23 2026). There are 4 species, with areoles and spines, and the old `lib/Cactus.js` is deleted.
 
 ## Problems with the current cactus
 
@@ -118,8 +118,35 @@ Status: **Phases 1–3 done** (Sept 23 2026). The Cactus decoration uses the new
      saguaros already placed keep their shapes.
    - LOD details are now `{sectionStride, segmentFactor}`.
    - `check:cactus` passes for all 4 species.
-4. **Spines,** plus maybe a subtle vertical stripe texture.
-5. **Cleanup:** delete `lib/Cactus.js`.
+- ✅ **Tweaks after the first in-game look.**
+  - **Per-species colour.** Each preset has a `color`: saguaro grey-green,
+    organ pipe deeper olive, barrel yellow-green, prickly pear blue-green. The
+    Colour palette now shifts it relative to "green" via `foliageShift`,
+    shared with the trees, so existing cacti saved as "green" get their
+    species colour.
+  - **Smoother pads.** Prickly pear pads go from 12 to 20 rings, which fixes
+    the polygonal outline. That's 2.6–7k triangles at full detail.
+4. ✅ **Spines.** Done. These are the ez-tree leaf ideas applied to spines:
+   - **Areole UVs.** Body UVs are laid out one tile per areole: u = rib
+     index, so ridges fall on integers (the vertex grid turns with the
+     twist), and v = ring index / `spines.every`. Pads use `spines.around`
+     tiles round the oval. One shared 64² procedural texture, white with a
+     felted dot at the tile corner, then puts an areole on every ridge at
+     every spine row. `sections` now carry a ring index `i` for this.
+   - **Spine clusters.** `spineCactus()` places two crossed quads per areole,
+     standing out along the surface normal with a per-areole hash spin (no
+     RNG). A shared procedural fan-of-spines alpha cutout, straw-tinted,
+     textures them.
+   - **Culled at distance.** Spines are a separate `spines` group, full
+     detail only. `attachLods` now accepts a null mesh as a culling level,
+     so spines disappear from LOD1 down.
+   - **Sizes and counts.** Barrel 0.2 (the spiny one), saguaro 0.13, organ
+     pipe and pads 0.1. Spine triangles: saguaro 0.7–3.4k, organ pipe
+     ~1.2–3.2k (rows every 2 rings), barrel 0.3–0.6k, pear 0.7–2.1k.
+   - **Checks.** `check:cactus` covers spine buffer validity and determinism.
+     There's no winding test, since the quads are double-sided and their
+     normals are the surface normal.
+5. ✅ **Cleanup.** `lib/Cactus.js` is deleted.
 
 ## Risks / open questions
 

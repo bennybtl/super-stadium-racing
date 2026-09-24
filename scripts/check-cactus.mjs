@@ -11,7 +11,7 @@
 // Prints triangle counts so budget changes are visible.
 
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
-import { CACTUS_PRESET_IDS, cactusOptions, growCactus, meshCactus } from '../src/decorations/lib/cactus/CactusGen.js';
+import { CACTUS_PRESET_IDS, cactusOptions, growCactus, meshCactus, spineCactus } from '../src/decorations/lib/cactus/CactusGen.js';
 
 const DETAILS = { full: {}, lod1: { sectionStride: 2, segmentFactor: 0.5 }, lod2: { sectionStride: 4, segmentFactor: 0.5 } };
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
@@ -19,12 +19,12 @@ const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 let failures = 0;
 const fail = (msg) => { failures++; console.log(`FAIL  ${msg}`); };
 
-function checkBuffers(label, b) {
+function checkBuffers(label, b, { winding = true } = {}) {
   const nv = b.verts.length / 3;
   if (b.normals.length !== b.verts.length || b.uvs.length !== nv * 2) return fail(`${label}: attribute lengths`);
   if (![...b.verts, ...b.normals, ...b.uvs].every(Number.isFinite)) return fail(`${label}: non-finite value`);
   if (!b.indices.every((i) => Number.isInteger(i) && i >= 0 && i < nv)) return fail(`${label}: index out of range`);
-  if (!b.indices.length) return;
+  if (!b.indices.length || !winding) return;
   // Winding vs supplied normals. Ignore near-zero computed normals (apex fans).
   const computed = [];
   VertexData.ComputeNormals(b.verts, b.indices, computed);
@@ -43,6 +43,7 @@ const same = (a, b) => ['verts', 'normals', 'uvs', 'indices'].every((k) => a[k].
 
 for (const preset of CACTUS_PRESET_IDS) {
   const tris = {};
+  const spineTris = [];
   let armsTotal = 0, maxH = 0;
   for (const seed of SEEDS) {
     const opts = cactusOptions(preset, seed);
@@ -54,6 +55,14 @@ for (const preset of CACTUS_PRESET_IDS) {
       const tip = arm.sections.filter((s) => !s.dome).at(-1);
       if (tip.t.y < 0.9) fail(`${preset}#${seed}: arm ${i} tip not vertical (t.y=${tip.t.y.toFixed(2)})`);
     }
+
+    // Spine quads: double-sided, normals are the surface normal (in the quad's
+    // plane), so validity only — no winding check.
+    const sp = spineCactus(sk, opts);
+    checkBuffers(`${preset}#${seed} spines`, sp, { winding: false });
+    if (!sp.indices.length) fail(`${preset}#${seed}: no spines`);
+    if (!same(sp, spineCactus(growCactus(cactusOptions(preset, seed)), opts))) fail(`${preset}#${seed}: spines not deterministic`);
+    spineTris.push(sp.indices.length / 3);
 
     for (const [name, detail] of Object.entries(DETAILS)) {
       const m = meshCactus(sk, opts, detail);
@@ -70,7 +79,7 @@ for (const preset of CACTUS_PRESET_IDS) {
   }
   const stat = (a) => `${Math.min(...a)}–${Math.max(...a)}`;
   console.log(`${preset}: ${SEEDS.length} seeds, ${armsTotal} arms, max height ${maxH.toFixed(1)}; tris ` +
-    Object.entries(tris).map(([k, v]) => `${k} ${stat(v)}`).join(', '));
+    Object.entries(tris).map(([k, v]) => `${k} ${stat(v)}`).join(', ') + `; spines ${stat(spineTris)}`);
 }
 
 console.log(failures ? `\n${failures} failure(s)` : '\nall ok');
