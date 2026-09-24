@@ -36,6 +36,8 @@ await esbuild.build({
   format: 'esm',
   platform: 'node',
   alias: { '@babylonjs/core': join(__dirname, 'babylon-stub.mjs') },
+  // BorderWall.js imports textures via Vite's `?url` — see check-water.mjs.
+  loader: { '.png': 'empty' },
   outfile: bundlePath,
   logLevel: 'silent',
 });

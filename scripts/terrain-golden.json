@@ -1,92 +1,212 @@
 {
+  "apple_river": {
+    "hash": "f73e6a540c8e6bec",
+    "spots": [
+      "0,0 h=-2.513010 t=loamy_dirt",
+      "-30,-30 h=-0.261311 t=loamy_dirt",
+      "30,30 h=11.187273 t=loamy_dirt",
+      "-55,40 h=-2.480300 t=loamy_dirt",
+      "48,-52 h=-3.529586 t=grass"
+    ]
+  },
   "chihuahua_flats": {
-    "hash": "96e1c5613ca90d13",
+    "hash": "fc11d67266c2df3d",
     "spots": [
-      "0,0 h=0.000000 t=packed_dirt",
-      "-30,-30 h=-0.031749 t=loose_dirt",
-      "30,30 h=6.063367 t=packed_dirt",
-      "-55,40 h=2.224110 t=packed_dirt",
-      "48,-52 h=0.185415 t=loose_dirt"
+      "0,0 h=-2.537349 t=loose_dirt",
+      "-30,-30 h=-0.306542 t=loose_dirt",
+      "30,30 h=6.152457 t=loose_dirt",
+      "-55,40 h=2.001767 t=packed_dirt",
+      "48,-52 h=0.377974 t=loose_dirt"
     ]
   },
-  "crossover": {
-    "hash": "4dc45e6123014d51",
+  "cranville_rush": {
+    "hash": "dd5764e7db1499b4",
     "spots": [
-      "0,0 h=0.000000 t=loose_dirt",
-      "-30,-30 h=2.208212 t=loose_dirt",
-      "30,30 h=0.000000 t=packed_dirt",
-      "-55,40 h=0.186283 t=packed_dirt",
-      "48,-52 h=0.000000 t=packed_dirt"
+      "0,0 h=4.045975 t=loamy_dirt",
+      "-30,-30 h=7.119067 t=loamy_dirt",
+      "30,30 h=3.773585 t=grass",
+      "-55,40 h=0.270115 t=packed_dirt",
+      "48,-52 h=-4.760303 t=water"
     ]
   },
-  "el_camino": {
-    "hash": "55ab95c67c7bb659",
+  "cross_country": {
+    "hash": "7e406311859d6989",
     "spots": [
       "0,0 h=-1.530000 t=grass",
-      "-30,-30 h=-1.171141 t=mud",
+      "-30,-30 h=-1.124298 t=mud",
       "30,30 h=-2.931034 t=grass",
       "-55,40 h=0.000000 t=grass",
       "48,-52 h=0.000000 t=asphalt"
     ]
   },
-  "king_of_the_hill": {
-    "hash": "eb3c16bfd3527fe6",
+  "crossfire_canyon": {
+    "hash": "85de1a4907388206",
+    "spots": [
+      "0,0 h=6.850746 t=packed_dirt",
+      "-30,-30 h=-0.010579 t=packed_dirt",
+      "30,30 h=1.500000 t=packed_dirt",
+      "-55,40 h=2.937500 t=packed_dirt",
+      "48,-52 h=0.236666 t=packed_dirt"
+    ]
+  },
+  "desert_doublecross": {
+    "hash": "b161b5228d9152b2",
+    "spots": [
+      "0,0 h=0.000000 t=packed_dirt",
+      "-30,-30 h=1.025905 t=loose_dirt",
+      "30,30 h=0.000000 t=packed_dirt",
+      "-55,40 h=0.019080 t=packed_dirt",
+      "48,-52 h=0.000000 t=packed_dirt"
+    ]
+  },
+  "dust_devil": {
+    "hash": "a0afd6afdbcc309b",
+    "spots": [
+      "0,0 h=4.385139 t=loose_dirt",
+      "-30,-30 h=8.974425 t=packed_dirt",
+      "30,30 h=5.877847 t=loose_dirt",
+      "-55,40 h=3.190182 t=water",
+      "48,-52 h=3.188092 t=packed_dirt"
+    ]
+  },
+  "green_horn": {
+    "hash": "9e5dc4d0397718dd",
+    "spots": [
+      "0,0 h=0.000000 t=asphalt",
+      "-30,-30 h=2.584156 t=grass",
+      "30,30 h=0.259285 t=grass",
+      "-55,40 h=2.917969 t=grass",
+      "48,-52 h=1.964192 t=asphalt"
+    ]
+  },
+  "hot_shot": {
+    "hash": "d47a347146b972b5",
+    "spots": [
+      "0,0 h=3.500000 t=grass",
+      "-30,-30 h=1.755306 t=grass",
+      "30,30 h=-1.708704 t=water",
+      "-55,40 h=0.000828 t=grass",
+      "48,-52 h=0.007884 t=grass"
+    ]
+  },
+  "lucky_eight": {
+    "hash": "86df3c539ee8a841",
+    "spots": [
+      "0,0 h=-5.000000 t=packed_dirt",
+      "-30,-30 h=-0.306698 t=packed_dirt",
+      "30,30 h=-0.307568 t=grass",
+      "-55,40 h=-2.163838 t=water",
+      "48,-52 h=0.349301 t=grass"
+    ]
+  },
+  "mesa_madness": {
+    "hash": "aa88e40cebed58a4",
+    "spots": [
+      "0,0 h=6.600000 t=packed_dirt",
+      "-30,-30 h=-2.726048 t=loose_dirt",
+      "30,30 h=7.406223 t=loose_dirt",
+      "-55,40 h=5.286786 t=loose_dirt",
+      "48,-52 h=0.358496 t=packed_dirt"
+    ]
+  },
+  "over_rush": {
+    "hash": "3ced70e86d956541",
+    "spots": [
+      "0,0 h=-10.000000 t=loamy_dirt",
+      "-30,-30 h=-10.198657 t=loamy_dirt",
+      "30,30 h=-10.173647 t=loamy_dirt",
+      "-55,40 h=-3.644531 t=loamy_dirt",
+      "48,-52 h=-2.991014 t=loamy_dirt"
+    ]
+  },
+  "over_the_top": {
+    "hash": "2c453f017526ceba",
     "spots": [
       "0,0 h=20.000000 t=loamy_dirt",
-      "-30,-30 h=9.835412 t=loamy_dirt",
+      "-30,-30 h=9.554624 t=loamy_dirt",
       "30,30 h=8.754755 t=loamy_dirt",
       "-55,40 h=5.893549 t=loamy_dirt",
       "48,-52 h=4.366799 t=loamy_dirt"
     ]
   },
-  "luck_o_the_irish": {
-    "hash": "88021ab8d9a88899",
+  "prairie_rumble": {
+    "hash": "3b06cbcb7aaf0242",
     "spots": [
-      "0,0 h=-5.000000 t=mud",
-      "-30,-30 h=-0.306629 t=packed_dirt",
-      "30,30 h=-0.307568 t=packed_dirt",
-      "-55,40 h=-0.726696 t=packed_dirt",
-      "48,-52 h=0.272541 t=packed_dirt"
+      "0,0 h=-7.258825 t=weedy_grass",
+      "-30,-30 h=-9.967803 t=grass",
+      "30,30 h=-9.518124 t=mud",
+      "-55,40 h=-6.466681 t=loamy_dirt",
+      "48,-52 h=-5.229708 t=loamy_dirt"
     ]
   },
-  "rattler": {
-    "hash": "38b53a8149fbb22e",
+  "quarry_run": {
+    "hash": "a7ecc1a82d1fdd9c",
     "spots": [
-      "0,0 h=14.000000 t=packed_dirt",
-      "-30,-30 h=9.409359 t=packed_dirt",
-      "30,30 h=16.574824 t=packed_dirt",
-      "-55,40 h=6.747547 t=packed_dirt",
-      "48,-52 h=4.431945 t=packed_dirt"
+      "0,0 h=-1.400000 t=water",
+      "-30,-30 h=-0.109436 t=rocky",
+      "30,30 h=14.834671 t=loose_dirt",
+      "-55,40 h=13.541912 t=rocky",
+      "48,-52 h=3.307692 t=rocky"
+    ]
+  },
+  "rattlesnake_ridge": {
+    "hash": "cf4ade9d52c44532",
+    "spots": [
+      "0,0 h=13.000000 t=packed_dirt",
+      "-30,-30 h=1.757773 t=packed_dirt",
+      "30,30 h=16.660814 t=packed_dirt",
+      "-55,40 h=5.054660 t=packed_dirt",
+      "48,-52 h=4.426667 t=packed_dirt"
+    ]
+  },
+  "rock_ridge": {
+    "hash": "2c1215051a80d3de",
+    "spots": [
+      "0,0 h=0.000000 t=grass",
+      "-30,-30 h=-0.375000 t=grass",
+      "30,30 h=0.000000 t=grass",
+      "-55,40 h=0.000000 t=asphalt",
+      "48,-52 h=0.000000 t=asphalt"
+    ]
+  },
+  "slingshot_speedway": {
+    "hash": "4369488ff5c32167",
+    "spots": [
+      "0,0 h=-6.000000 t=asphalt",
+      "-30,-30 h=-3.347804 t=grass",
+      "30,30 h=-4.583041 t=asphalt",
+      "-55,40 h=-1.039353 t=asphalt",
+      "48,-52 h=1.584834 t=asphalt"
     ]
   },
   "surfs_up": {
-    "hash": "35df9139e06cb312",
+    "hash": "2a3d0f2fb4a0eacb",
     "spots": [
       "0,0 h=0.000000 t=packed_dirt",
-      "-30,-30 h=-1.489870 t=water",
-      "30,30 h=7.423462 t=packed_dirt",
+      "-30,-30 h=-1.543701 t=water",
+      "30,30 h=7.421814 t=packed_dirt",
       "-55,40 h=-0.219727 t=packed_dirt",
-      "48,-52 h=-0.519773 t=loose_dirt"
+      "48,-52 h=-1.922320 t=water"
+    ]
+  },
+  "switchback": {
+    "hash": "8e18695b6317affc",
+    "spots": [
+      "0,0 h=0.000000 t=asphalt",
+      "-30,-30 h=1.189173 t=grass",
+      "30,30 h=0.000000 t=asphalt",
+      "-55,40 h=2.995857 t=grass",
+      "48,-52 h=0.000000 t=grass"
     ]
   },
   "toro_bravo": {
-    "hash": "cc97f176e9a10fd0",
+    "hash": "19e71fa6a87525ae",
     "spots": [
-      "0,0 h=-0.546981 t=water",
-      "-30,-30 h=-0.492702 t=packed_dirt",
-      "30,30 h=0.000000 t=packed_dirt",
-      "-55,40 h=4.392534 t=packed_dirt",
-      "48,-52 h=-0.800000 t=packed_dirt"
-    ]
-  },
-  "zipper": {
-    "hash": "d8dff1f3d2f23535",
-    "spots": [
-      "0,0 h=6.752229 t=packed_dirt",
-      "-30,-30 h=0.750000 t=packed_dirt",
-      "30,30 h=1.500000 t=packed_dirt",
-      "-55,40 h=3.691572 t=packed_dirt",
-      "48,-52 h=5.058356 t=packed_dirt"
+      "0,0 h=-0.582429 t=weedy_grass",
+      "-30,-30 h=-0.012241 t=packed_dirt",
+      "30,30 h=0.053693 t=loose_dirt",
+      "-55,40 h=2.844556 t=packed_dirt",
+      "48,-52 h=-0.857715 t=packed_dirt"
     ]
   }
 }
