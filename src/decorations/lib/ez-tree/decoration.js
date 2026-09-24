@@ -28,8 +28,10 @@ function foliageShift(name) {
  * @param {string} cfg.defaultPreset  used when neither feature nor def names one
  * @param {number} cfg.scale          ez-tree units → world units
  * @param {object[]} cfg.colorOptions Foliage dropdown options
+ * @param {number} cfg.spread         typical distance (world units, at 1×) from the
+ *                                    source when duplicating, about one canopy radius
  */
-export function ezTreeDecoration({ presetFilter, defaultPreset, scale, colorOptions }) {
+export function ezTreeDecoration({ presetFilter, defaultPreset, scale, colorOptions, spread }) {
   return instancedDecoration({
     colliderGroup: "trunk", // trunk-sized collider (only if the def lists colliderMeshes)
     variantProps: ["preset"],
@@ -44,6 +46,22 @@ export function ezTreeDecoration({ presetFilter, defaultPreset, scale, colorOpti
     },
 
     variantKey: (p) => [p.preset, p.seed, p.leafColor].join("|"),
+
+    // Duplicate grows a cluster: a new seed, heading and ±20% scale, dropped
+    // at a random bearing roughly one canopy away. Rolled once here and
+    // frozen into the feature, so reloads stay deterministic.
+    duplicate(copy, src) {
+      const srcScale = Number(src.scale) || 1;
+      let seed;
+      do seed = 1 + Math.floor(Math.random() * 40); while (seed === src.seed);
+      copy.seed = seed;
+      copy.heading = Math.random() * Math.PI * 2;
+      copy.scale = +Math.min(4, Math.max(0.5, srcScale * (0.8 + Math.random() * 0.4))).toFixed(2); // slider range
+      const angle = Math.random() * Math.PI * 2;
+      const dist = spread * srcScale * (0.7 + Math.random() * 0.6);
+      copy.x = src.x + Math.cos(angle) * dist;
+      copy.z = src.z + Math.sin(angle) * dist;
+    },
 
     buildVariant(scene, p, key) {
       const options = ezTreeOptions(p);

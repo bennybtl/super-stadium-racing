@@ -318,6 +318,8 @@ export class DecorationsEditor {
 
     const newFeature = { ...src, x: src.x + 3, z: src.z + 3 };
     delete newFeature.id; // the copy gets its own
+    // A controller can vary the copy (trees/bushes scatter a new variant nearby).
+    defForFeature(src)?.controller?.edit?.duplicate?.(newFeature, src);
     this.track.features.push(newFeature);
     const created = this.createVisual(newFeature);
     copyAttachedDecals(this.track, this.editor.decalManager, src, newFeature, 'decoration');

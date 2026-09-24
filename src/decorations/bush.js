@@ -12,5 +12,6 @@ export default ezTreeDecoration({
   presetFilter: (id) => id.startsWith("bush_"),
   defaultPreset: "bush_1",
   scale: 0.12,
+  spread: 2.5, // duplicate scatter distance, ~ a bush radius at 0.12
   colorOptions: FOLIAGE_COLOR_OPTIONS,
 });

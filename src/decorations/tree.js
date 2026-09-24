@@ -10,5 +10,6 @@ export default ezTreeDecoration({
   presetFilter: (id) => !id.startsWith("bush_"),
   defaultPreset: "oak_medium",
   scale: 0.22,
+  spread: 6, // duplicate scatter distance, ~ an Oak Medium canopy radius at 0.22
   colorOptions: TREE_FOLIAGE_COLOR_OPTIONS,
 });
