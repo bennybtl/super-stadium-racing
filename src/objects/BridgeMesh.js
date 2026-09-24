@@ -284,19 +284,11 @@ export class BridgeMesh {
     // Surface decals resolve their projection target with a downward ray for
     // `surfaceDecalTarget` meshes, so a decal stamped over the deck lands on it.
     this._mesh.metadata = { ...(this._mesh.metadata ?? {}), surfaceDecalTarget: true };
-    // Casts onto the ground, but does NOT receive — the same tradeoff the terrain
-    // makes (see SceneBuilder, "the ground receives shadows but is NOT a caster").
-    // The shadow generator is a blurred exponential cube map on the one stadium
-    // light that carries most of the illumination, so a large flat face that both
-    // casts and receives sits in its own blurred shadow and loses that light,
-    // rendering markedly darker than the identically-materialed terrain beside it.
-    //
-    // An inset shadow-caster proxy was tried to win back deck shadows and does
-    // not work: ESM fades the shadow over `depthScale` (50) units of NORMALIZED
-    // depth, so escaping it needs a separation of several percent of the light's
-    // whole range — metres, not centimetres — which no longer reads as the deck's
-    // own shadow. Selective per-receiver exclusion would be needed instead.
-    this._mesh.receiveShadows = false;
+    // Casts and receives. It used to skip receiving: under the old blur-ESM
+    // shadows the deck sat in its own blurred shadow and rendered darker than
+    // the terrain. The sun now uses PCF, which doesn't self-shadow (see
+    // SceneBuilder).
+    this._mesh.receiveShadows = true;
     shadows?.addShadowCaster(this._mesh);
 
     // ── Drive surface mesh (top face only, invisible but pickable) ───────────

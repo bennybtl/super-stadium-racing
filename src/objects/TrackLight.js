@@ -200,8 +200,16 @@ export class TrackLight {
     this._lensMat.emissiveColor.copyFromFloats(v, v, v);
     // The spot casts shadows only while lit — a per-light 2D shadow map, added on
     // top of the fixed stadium key set (see ShadowCasterGroup.addLight).
-    if (lit) this._shadows?.addLight?.(this.light, { mapSize: 512, refreshRate: 2 });
-    else this._shadows?.removeLight?.(this.light);
+    if (lit) {
+      const gen = this._shadows?.addLight?.(this.light, { mapSize: 512, refreshRate: 2 });
+      // Leave this light's own fixture out of its own map: the housing sits
+      // right at the emitter, so its backplate and lenses threw hard edges and
+      // spreading wedges across the whole pool. The fixture still casts under
+      // the moon and the other poles.
+      for (const m of [this.pole, this.backplate, ...this.lenses]) gen?.removeShadowCaster?.(m);
+    } else {
+      this._shadows?.removeLight?.(this.light);
+    }
   }
 
   setNight(on) {
@@ -250,6 +258,11 @@ export class TrackLight {
     const tiltDeg = Math.max(0, Math.min(90, this.feature.tilt ?? TRACK_LIGHT_DEFAULTS.tilt));
     const reach = h / Math.max(0.2, Math.sin((tiltDeg * Math.PI) / 180));
     this.light.range = Math.min(h * 8, Math.max(h * 3.5, reach * 2));
+    // Shadow depth range = the beam's reach, so the group's world-unit PCF
+    // bias maps to a sensible fraction (see ShadowCasterGroup._applyBias).
+    this.light.shadowMinZ = 0.5;
+    this.light.shadowMaxZ = this.light.range;
+    this._shadows?.refreshLight?.(this.light);
     this.light.intensity = Math.max(0, this.feature.intensity ?? TRACK_LIGHT_DEFAULTS.intensity);
   }
 

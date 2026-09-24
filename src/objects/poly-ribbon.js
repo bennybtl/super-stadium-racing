@@ -154,6 +154,10 @@ export function centerlineNormals(xs, zs, closed) {
   return { nx, nz };
 }
 
+// Vertex-colour factor at the foot of a striped ribbon's side faces (1 at the
+// top), a baked stand-in for the ground occluding light near the base.
+const BASE_SHADE = 0.65;
+
 /**
  * Sweep a striped band along a centerline and return the finished mesh.
  *
@@ -182,16 +186,12 @@ export function buildStripedRibbon({
 }) {
   const n = xs.length;
   const positions = [], indices = [], normals = [], colors = [], uvs = [];
+  // `col` is one [r,g,b] for the whole quad, or four (one per vertex).
   const pushQuad = (p0, p1, p2, p3, nrm, col, uv0, uv1, uv2, uv3) => {
     const base = positions.length / 3;
     positions.push(...p0, ...p1, ...p2, ...p3);
     normals.push(...nrm, ...nrm, ...nrm, ...nrm);
-    colors.push(
-      col[0], col[1], col[2], 1,
-      col[0], col[1], col[2], 1,
-      col[0], col[1], col[2], 1,
-      col[0], col[1], col[2], 1,
-    );
+    for (const c of Array.isArray(col[0]) ? col : [col, col, col, col]) colors.push(c[0], c[1], c[2], 1);
     uvs.push(...uv0, ...uv1, ...uv2, ...uv3);
     // Wound so the front face is the side the quad's `nrm` points to (verts are
     // listed CCW around that normal). backFaceCulling then shows the outward
@@ -211,6 +211,7 @@ export function buildStripedRibbon({
     // stripe colour from the band's mid arc-length
     const sMid = closed && i === n - 1 ? s[i] + step * 0.5 : (s[i] + s[j]) / 2;
     const col = stripes[Math.floor(sMid / stripeLen) % stripes.length];
+    const base = col.map((c) => c * BASE_SHADE); // side faces darken toward the ground
     const uI = s[i] / total, uJ = s[j] / total;
 
     // averaged outward normal for the side faces of this band
@@ -229,10 +230,10 @@ export function buildStripedRibbon({
     // it then casts one clean shadow silhouette at any light angle (the old open
     // double-sided shell dropped a second, offset shadow from its top edge).
     pushQuad(Li_t, Lj_t, Rj_t, Ri_t, [0, 1, 0], col, CLEAN, CLEAN, CLEAN, CLEAN); // top
-    pushQuad(Ri_t, Rj_t, Rj_b, Ri_b, [-anx, 0, -anz], col,
+    pushQuad(Ri_t, Rj_t, Rj_b, Ri_b, [-anx, 0, -anz], [col, col, base, base],
       [uI, rightV[1]], [uJ, rightV[1]], [uJ, rightV[0]], [uI, rightV[0]]); // inner (right)
     pushQuad(Ri_b, Rj_b, Lj_b, Li_b, [0, -1, 0], col, CLEAN, CLEAN, CLEAN, CLEAN); // bottom (buried)
-    pushQuad(Li_b, Lj_b, Lj_t, Li_t, [anx, 0, anz], col,
+    pushQuad(Li_b, Lj_b, Lj_t, Li_t, [anx, 0, anz], [base, base, col, col],
       [uI, leftV[0]], [uJ, leftV[0]], [uJ, leftV[1]], [uI, leftV[1]]); // outer (left)
   }
 

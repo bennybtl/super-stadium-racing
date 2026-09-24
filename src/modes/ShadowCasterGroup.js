@@ -151,15 +151,40 @@ export class ShadowCasterGroup {
   _applyQualityTo(gen, refreshRate = this._activeCount > 0 ? this._quality.refreshRate : undefined) {
     const q = this._quality;
     if (q.blurKernel !== undefined) gen.blurKernel = q.blurKernel;
-    if (q.bias !== undefined) gen.bias = q.bias;
+    this._applyBias(gen);
     if (q.normalBias !== undefined) gen.normalBias = q.normalBias;
     if (q.darkness !== undefined) gen.setDarkness(q.darkness);
+    // Filter flags are applied in this order so the one set true wins (each
+    // setter only clears the filter when it's the current one). Babylon falls
+    // back from PCF to Poisson on point-light cube maps by itself.
     if (q.useBlurExponentialShadowMap !== undefined) gen.useBlurExponentialShadowMap = q.useBlurExponentialShadowMap;
     if (q.usePoissonSampling !== undefined) gen.usePoissonSampling = q.usePoissonSampling;
+    if (q.usePercentageCloserFiltering !== undefined) gen.usePercentageCloserFiltering = q.usePercentageCloserFiltering;
+    if (q.filteringQuality !== undefined) gen.filteringQuality = q.filteringQuality;
     if (refreshRate !== undefined) {
       const map = gen.getShadowMap?.();
       if (map) map.refreshRate = refreshRate;
     }
+  }
+
+  /**
+   * Depth bias. Babylon's bias is a fraction of the light's shadow depth
+   * range, so a world-unit `biasWorld` is converted per light wherever the
+   * light has an explicit shadowMinZ/shadowMaxZ (sun, moon, track-light
+   * spots); other lights take the plain fractional `bias`.
+   */
+  _applyBias(gen) {
+    const q = this._quality;
+    const light = gen.getLight?.();
+    const range = (light?.shadowMaxZ ?? NaN) - (light?.shadowMinZ ?? NaN);
+    if (q.biasWorld !== undefined && range > 0) gen.bias = q.biasWorld / range;
+    else if (q.bias !== undefined) gen.bias = q.bias;
+  }
+
+  /** Re-derive an extra light's bias after its shadowMinZ/shadowMaxZ changed. */
+  refreshLight(light) {
+    const gen = this._extra.get(light);
+    if (gen) this._applyBias(gen);
   }
 
   /** Set the shadow-map refresh rate on the active generators (RaceMode/MenuMode). */

@@ -17,6 +17,7 @@ import {
   RawTexture,
   ClusteredLightContainer,
   SSAO2RenderingPipeline,
+  ShadowGenerator,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { TerrainManager, TERRAIN_TYPES } from "../world/terrain.js";
@@ -243,12 +244,34 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   _sunLight.position = _sunLight.direction.normalizeToNew().scale(-_shadowBackoff);
   _moonLight.position = _moonLight.direction.normalizeToNew().scale(-_shadowBackoff);
 
+  // Pin the sun/moon shadow depth range to the track (every caster lies
+  // within ~maxTrackDim of the centre, _shadowBackoff away). Otherwise it
+  // defaults to the camera's (~10000), and the PCF bias — a fraction of that
+  // range, see ShadowCasterGroup.biasWorld — would lift shadows off by metres.
+  for (const l of [_sunLight, _moonLight]) {
+    l.shadowMinZ = _shadowBackoff - maxTrackDim - 50;
+    l.shadowMaxZ = _shadowBackoff + maxTrackDim + 50;
+  }
+
   // The group's fixed/eager generator is built against the (permanently
   // disabled) corner light 0 and parked at refreshRate 0 by every display
   // branch below — actual shadows all come from `shadows.addLight()` extras
   // (the sun, the moon, or the stadium trackLight poles).
   const shadows = ShadowCasterGroup.create([_stadiumLights[0], _stadiumLights[2]], { mapSize: 1024 });
-  shadows.configure({ bias: 0.005, normalBias: 0.02 });
+  // biasWorld: PCF depth offset in world units, for lights with an explicit
+  // shadow depth range; `bias` is the fallback for the rest (stadium points).
+  shadows.configure({ bias: 0.005, biasWorld: 0.08, normalBias: 0.02 });
+  // Shadow filter: PCF (not blur-ESM) on every detail tier but low. ESM blurs
+  // depth, so any caster that also receives (walls, tent roofs, the bridge
+  // deck) sat in its own blurred shadow: a dark middle with a bright rim, or a
+  // dark-top/light-bottom gradient. PCF's depth test + bias doesn't self-shadow.
+  const shadowFilter = (detail) => ({
+    useBlurExponentialShadowMap: false,
+    usePoissonSampling: detail === 'low',
+    usePercentageCloserFiltering: detail !== 'low',
+    filteringQuality: detail === 'high' ? ShadowGenerator.QUALITY_HIGH : ShadowGenerator.QUALITY_MEDIUM,
+    refreshRate: detail === 'low' ? 2 : 1,
+  });
   // NOTE: forceBackFacesOnly is deliberately OFF. It was tried to kill the
   // "double shadow" from double-sided caster materials, but under this single
   // *point* light it renders each solid's FAR side into the cube depth map, and
@@ -309,12 +332,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       if (shadowDetail === 'off') {
         shadows.removeLight(_moonLight);
       } else {
-        shadows.configure({
-          useBlurExponentialShadowMap: shadowDetail !== 'low',
-          usePoissonSampling: shadowDetail === 'low',
-          blurKernel: shadowDetail === 'high' ? 24 : 16,
-          refreshRate: shadowDetail === 'low' ? 2 : 1,
-        });
+        shadows.configure(shadowFilter(shadowDetail));
         shadows.addLight(_moonLight, { mapSize: 2048 });
       }
       if (ssaoPipeline && !_ssaoAttached) {
@@ -344,6 +362,8 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       ambient.groundColor = new Color3(0.25, 0.26, 0.32);
       const shadowMap = shadows.getShadowMap?.();
       if (shadowMap) shadowMap.refreshRate = 0;
+      // The pole spotlights' shadow maps take the same filter as night.
+      if (shadowDetail !== 'off') shadows.configure(shadowFilter(shadowDetail));
       if (ssaoPipeline && !_ssaoAttached) {
         scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline('ssao', camera);
         _ssaoAttached = true;
@@ -368,12 +388,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     if (shadowDetail === 'off') {
       shadows.removeLight(_sunLight);
     } else {
-      shadows.configure({
-        useBlurExponentialShadowMap: shadowDetail !== 'low',
-        usePoissonSampling: shadowDetail === 'low',
-        blurKernel: shadowDetail === 'high' ? 24 : 16,
-        refreshRate: shadowDetail === 'low' ? 2 : 1,
-      });
+      shadows.configure(shadowFilter(shadowDetail));
       shadows.addLight(_sunLight, { mapSize: 2048 });
     }
   };
