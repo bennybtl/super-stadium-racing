@@ -467,10 +467,17 @@ Origin at track centre. **+X East, +Z North, +Y Up.** `heading` 0 = +Z,
   fast compile check.
 - **Test:** `npm test` — Vitest, pure-logic only (grid math, polyline,
   championship scoring, upgrade economy, colour parsing). No scene, no DOM.
-- **Headless checks:** `npm run check:panels` (editor bindings, keep green) ·
-  `check:surface` · `check:walls` · `check:terrain` / `check:water` (both
-  currently failing on `main` — see `CLEANUP.md §3.1`).
-- Rendering / physics / editor interaction: run the app.
+- **Headless checks:** `npm run check` runs them all (and CI runs it before
+  deploy): `check:panels` (editor bindings) · `check:surface` · `check:walls` ·
+  `check:terrain` / `check:water` · `check:eztree` / `check:cactus` /
+  `check:rocks` · `check:physics`.
+- **`check:physics`** drives the real `Truck.update()` through scripted
+  scenarios (accel, brake, coast, turn, slalom, nitro, surfaces, jump) on
+  synthetic tracks and diffs outcomes against `scripts/physics-golden.json`.
+  **Any handling/tuning change fails it by design** — if intended, re-record with
+  `npm run check:physics -- --update` and commit the golden with the change. Its
+  `makeTruck` mirrors the sim wiring of the Truck constructor; keep them in step.
+- Rendering / editor interaction: run the app.
 - **Deploy:** GitHub Pages (`.github/workflows/deploy-pages.yml`); `web/` +
   `server/` Dockerfiles for the multiplayer stack.
 

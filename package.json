@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run check:terrain && npm run check:panels && npm run check:surface && npm run check:walls && npm run check:water && npm run check:eztree && npm run check:cactus && npm run check:rocks",
+    "check": "npm run check:terrain && npm run check:panels && npm run check:surface && npm run check:walls && npm run check:water && npm run check:eztree && npm run check:cactus && npm run check:rocks && npm run check:physics",
     "check:terrain": "node scripts/check-terrain.mjs",
     "check:panels": "node scripts/check-panel-bindings.mjs",
     "check:surface": "node scripts/check-surface.mjs",
@@ -20,7 +20,8 @@
     "check:water": "node scripts/check-water.mjs",
     "check:eztree": "node scripts/check-eztree.mjs",
     "check:cactus": "node scripts/check-cactus.mjs",
-    "check:rocks": "node scripts/check-rocks.mjs"
+    "check:rocks": "node scripts/check-rocks.mjs",
+    "check:physics": "node scripts/check-physics.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",

@@ -17,7 +17,7 @@ const GEAR_COUNT = 4;
  * Soft speed cap: holding throttle can push past maxSpeed up to this multiple,
  * but very slowly (one gear weaker than the top gear), before a hard ceiling.
  */
-const SOFT_CAP_FACTOR = 1.2;
+export const SOFT_CAP_FACTOR = 1.2;
 
 // ─── Power oversteer / launch break ─────────────────────────────────────────
 /** How strongly throttle overwhelms tire grip from low speed (0 = off). */

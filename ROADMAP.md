@@ -4,7 +4,7 @@ _Review date: 2026-09-23 · last status update 2026-09-24 · branch `better-rock
 
 Complements `CLEANUP.md` (refactor plan, still valid — not repeated here).
 
-**Health now:** `npm test` 102/102 · `npm run check` (all 8 check scripts) green and
+**Health now:** `npm test` 102/102 · `npm run check` (all 9 check scripts, incl. physics) green and
 enforced in the deploy workflow · app JS chunk **707 KB** (was 8.6 MB), Babylon in
 its own 6.1 MB vendor chunk, editor lazy-loaded.
 
@@ -18,7 +18,7 @@ its own 6.1 MB vendor chunk, editor lazy-loaded.
 | A4 MULTIPLAYER.md vs code | ✅ Done 2026-09-24 |
 | A5 Strip console logs in prod | ⬜ Open |
 | B1 Gamepad support | ⬜ Open — deferred |
-| B2 Keyboard steering smoothing | ⬜ Open |
+| B2 Keyboard steering smoothing | 🟨 Mostly exists already — see below |
 | B3 Minimap | ✅ Done 2026-09-24 (races only) |
 | B4 Camera juice | ✅ Done 2026-09-24 |
 | B5 Shareable ghosts | ⬜ Open |
@@ -26,7 +26,7 @@ its own 6.1 MB vendor chunk, editor lazy-loaded.
 | C1 Fixed-timestep sim | ✅ Done 2026-09-23 |
 | C2 Bundle size | 🟨 (a)+(b) done 2026-09-24, (c) open |
 | C3 Finish CLEANUP §2.3 | ⬜ Open |
-| C4 Physics regression check | ⬜ Open — now practical (C1 landed) |
+| C4 Physics regression check | ✅ Done 2026-09-24 |
 | C5 Server tests | ⬜ Open |
 
 ---
@@ -72,10 +72,11 @@ Add a Gamepad row to the Controls settings panel; rumble via
 `gamepad.vibrationActuator` on collisions/landings is a cheap bonus (the camera
 shake's impact detection in `CameraController._updateMotion` is a ready trigger).
 
-**B2. Keyboard steering smoothing.** Related: with digital keys the player gets
-binary steer while AI gets proportional. A short steer ramp (attack/release,
-faster return-to-centre, speed-scaled max lock) usually makes keyboard driving
-feel much less twitchy. Tunable like the DriftTuning knobs.
+**B2. Keyboard steering smoothing. — 🟨 mostly exists already** (found 2026-09-24;
+the original review missed it). `Controls.updateSteering` already eases keyboard
+steer (STEER_RAMP_UP 4/s, STEER_RAMP_DOWN 7/s, per-vehicle `steerRampScale`) and
+`calculateSpeedFactors` has a speed-based authority curve. Only left: tuning by
+feel if it's still twitchy — `check:physics` (turn/slalom) will show the effect.
 
 **B3. Minimap. — ✅ DONE 2026-09-24.** `managers/Minimap.js`: north-up overview,
 bottom-right, AI racing line as the road + walls + gates + start/finish, a dot per
@@ -126,11 +127,15 @@ _Follow-ups:_
 (`RaceFinishTracker` extraction). Still the riskiest file to edit; C1/B3/B4 each
 had to thread new code through it.
 
-**C4. Turn the headless physics harness into a regression check.** The esbuild
-Node harness from the airborne-momentum bug is valuable; promote one or two
-scenarios (e.g. jump landing Δv, wall scrape) into `check:physics` with golden
-tolerances so drift tuning changes show numeric diffs. With C1 done the sim steps
-are fixed, so goldens can be near-exact.
+**C4. Physics regression check. — ✅ DONE 2026-09-24.** `scripts/check-physics.mjs`
+(`npm run check:physics`, part of `npm run check` / CI). Runs the real
+`Truck.update()` (visual subsystems stubbed) at SIM_DT through 9 scenarios on
+synthetic tracks — accel, brake, coast, sustained turn, slalom, nitro, asphalt,
+loose dirt, jump (airtime / apex / speed through landing) — against
+`scripts/physics-golden.json`, plus invariants (finite state, never below ground,
+under the nitro × soft-cap speed limit). Seeded `Math.random`, sim-time `Date.now`.
+Verified sensitive: STEER_RAMP_UP 4 → 4.5 fails turn + slalom only. Not covered:
+wall/truck collisions (walls are in `check:walls`), AI driving, bridges.
 
 **C5. Server tests.** `server/DriveRoom.js` has finish-order / DNF-grace logic
 with zero tests. Colyseus rooms are plain classes — a vitest with a fake client
@@ -168,9 +173,9 @@ list covers `_nextFinishPosition`, host migration on leave, DNF timer.
 
 ## Suggested order (remaining)
 
-1. C4 physics goldens — cheap now that the sim is fixed-step.
-2. Minimap in HotLap / Practice / MP; Race/MP lap times on sim time (C1 follow-up).
-3. B2 keyboard steering smoothing; B1 gamepad when un-deferred.
+1. Minimap in HotLap / Practice / MP; Race/MP lap times on sim time (C1 follow-up).
+2. A5 strip console logs in prod (one line).
+3. B1 gamepad when un-deferred (B2 steering easing already exists).
 4. C5 remaining server tests (host migration, DNF timer) — the harness in
    `test/server-validate.test.js` makes these quick.
 5. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.

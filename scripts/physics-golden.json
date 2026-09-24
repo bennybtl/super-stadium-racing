@@ -1,0 +1,51 @@
+{
+  "accel": {
+    "speed@1s": 12.757,
+    "speed@2s": 20.9588,
+    "speed@4s": 30.0151,
+    "speed@6s": 33.535,
+    "distance": 139.575
+  },
+  "brake": {
+    "startSpeed": 33.535,
+    "stopTime": 2.9833,
+    "stopDistance": 23.1588
+  },
+  "coast": {
+    "startSpeed": 31.907,
+    "speedAfter3s": 16.225
+  },
+  "turn": {
+    "headingChange": 1.9519,
+    "maxSlipAngle": 0.3294,
+    "endSpeed": 29.4947,
+    "endX": 43.9492,
+    "endZ": 12.2333
+  },
+  "slalom": {
+    "endX": -80.7981,
+    "endZ": 84.2254,
+    "endHeading": -0.7031,
+    "endSpeed": 32.4753
+  },
+  "nitro": {
+    "speedAtFire": 26.051,
+    "peakSpeed": 45.2636,
+    "speedAfter3s": 35.91
+  },
+  "surface_asphalt": {
+    "speed": 28.1597,
+    "distance": 50.0142
+  },
+  "surface_looseDirt": {
+    "speed": 24.2463,
+    "distance": 45.479
+  },
+  "jump": {
+    "airtime": 0.7167,
+    "apex": 2.3235,
+    "takeoffSpeed": 19.7272,
+    "landingSpeed": 20.903,
+    "endZ": 48.3756
+  }
+}
