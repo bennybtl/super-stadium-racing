@@ -10,7 +10,11 @@ championship + hot-lap + practice modes, and (new) online multiplayer. Vue 3
 drives all menus/HUD; the 3D world is Babylon.js + Havok.
 
 ## Technology Stack
-- **Babylon.js 8** — rendering
+- **Babylon.js 8** — rendering. `import … from "@babylonjs/core"` is aliased (vite.config.js)
+  to `src/babylon.js`, a curated deep-import list + the side-effect imports the game
+  needs (~2 MB vs the barrel's ~6.5 MB). New Babylon class → add its deep export
+  there (the build fails until you do); a feature throwing "needs to be imported"
+  at runtime → add its side-effect import there.
 - **Havok Physics 1.3** — WASM physics (MESH colliders for terrain/bridges/walls, BOX for trucks)
 - **Vue 3 + Pinia** — reactive UI (menus, editor panels, HUD)
 - **Vite 6** — build + dev server

@@ -4,9 +4,9 @@ _Review date: 2026-09-23 · last status update 2026-09-24 · branch `better-rock
 
 Complements `CLEANUP.md` (refactor plan, still valid — not repeated here).
 
-**Health now:** `npm test` 112/112 · `npm run check` (all 9 check scripts, incl. physics) green and
-enforced in the deploy workflow · app JS chunk **707 KB** (was 8.6 MB), Babylon in
-its own 6.1 MB vendor chunk, editor lazy-loaded.
+**Health now:** `npm test` 116/116 · `npm run check` (all 9 check scripts, incl. physics) green and
+enforced in the deploy workflow · app JS chunk **718 KB** (was 8.6 MB), Babylon
+chunk **2.2 MB** (was 6.1 MB; curated deep imports), editor lazy-loaded.
 
 ## Status
 
@@ -24,8 +24,8 @@ its own 6.1 MB vendor chunk, editor lazy-loaded.
 | B5 Shareable ghosts | ⬜ Open |
 | B6 Touch controls | ⬜ Open (only if phones matter) |
 | C1 Fixed-timestep sim | ✅ Done 2026-09-23 |
-| C2 Bundle size | 🟨 (a)+(b) done 2026-09-24, (c) open |
-| C3 Finish CLEANUP §2.3 | ⬜ Open |
+| C2 Bundle size | ✅ Done 2026-09-24 |
+| C3 Finish CLEANUP §2.3 | ✅ Done 2026-09-24 |
 | C4 Physics regression check | ✅ Done 2026-09-24 |
 | C5 Server tests | ✅ Done 2026-09-24 (+ host handover fix) |
 
@@ -126,13 +126,22 @@ _Follow-ups:_
   (`utils/mtl-parser.js`) fetches the model URL; Babylon's later load hits cache.
 - (b) Editor (`EditorMode` → `EditorController` + sub-editors, 255 KB) and its 21
   Vue panels load on first open.
-- **Open — (c):** deep Babylon imports (`@babylonjs/core/Meshes/...`) instead of the
-  barrel (97 files) to tree-shake the 6.1 MB vendor chunk. Biggest remaining win,
-  big churn; script it, one commit, after the CLEANUP dir moves.
+- (c) **Done 2026-09-24** — without touching the 98 importing files: the bare
+  `"@babylonjs/core"` specifier is aliased (vite.config.js) to `src/babylon.js`,
+  which re-exports the 40 symbols the game uses from their deep paths plus the
+  side-effect imports (thin instances, instancing, picking, shadow / clustered /
+  particle / prepass scene components, physics component, loading screen,
+  screenshots). Babylon chunk 6.1 MB → 2.2 MB (gzip ~1.3 → 0.5 MB). A missing
+  symbol fails the build; a missing side effect fails at runtime — add it there.
 
-**C3. Finish CLEANUP §2.3** — `RaceMode.setup()` is still one ~650-line closure
-(`RaceFinishTracker` extraction). Still the riskiest file to edit; C1/B3/B4 each
-had to thread new code through it.
+**C3. Finish CLEANUP §2.3. — ✅ DONE 2026-09-24.** `RaceMode.setup()` (a ~780-line
+closure) now builds the scene managers + race state into `this._race` and hands off
+to methods: `_createTrucks`, `_createRaceUi`, `_wireInputAndMenus`, `_wirePickups`;
+loop = `_stepRace` / `_updateLaps` / `_renderRace`; `_startCountdown`, `_resetGame`,
+`_triggerRaceEnd`, `_handleDNF`. Results rows are a pure `buildRaceResultRows`
+(`modes/race-results.js`, tested). Found + fixed: trucks timed out by the DNF grace
+showed as finishers (no DNF badge, podium-eligible). MultiplayerMode.setup() is
+still one closure — same treatment if it's next touched.
 
 **C4. Physics regression check. — ✅ DONE 2026-09-24.** `scripts/check-physics.mjs`
 (`npm run check:physics`, part of `npm run check` / CI). Runs the real
@@ -186,4 +195,5 @@ host name updated); 3 of the tests fail without the fix.
 ## Suggested order (remaining)
 
 1. B1 gamepad when un-deferred (B2 steering easing already exists).
-2. C3 when RaceMode is next touched; C2(c) after the CLEANUP dir moves.
+2. Same setup() breakup for MultiplayerMode when it's next touched.
+3. D-list polish ideas (sign breeze, per-vehicle handling, test-drive-from-here…).

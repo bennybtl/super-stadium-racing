@@ -1,9 +1,19 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
   plugins: [vue()],
+  resolve: {
+    alias: [
+      // Bare "@babylonjs/core" → our curated deep-import module (src/babylon.js),
+      // so only the parts of Babylon the game uses are bundled (~2 MB, not the
+      // barrel's ~6.5 MB). Exact match only: deep "@babylonjs/core/…" paths
+      // (used by src/babylon.js itself and by @babylonjs/loaders) pass through.
+      { find: /^@babylonjs\/core$/, replacement: fileURLToPath(new URL("./src/babylon.js", import.meta.url)) },
+    ],
+  },
   esbuild: {
     // Strip console.debug from production builds (68 call sites of dev
     // tracing). `pure` only lets the minifier drop the calls, so dev keeps
