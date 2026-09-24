@@ -55,7 +55,7 @@
  *   editable        { color, scale, heading }  which panel controls to show
  */
 
-import { parseMeshDefaultColors } from "../utils/mtl-parser.js";
+import { fetchMeshDefaultColors } from "../utils/mtl-parser.js";
 
 /**
  * Normalize a meshTextures entry to { file, uScale, vScale, uOffset, vOffset }.
@@ -94,7 +94,6 @@ export class DecorationLoader {
   async loadAllDecorations() {
     const modules = import.meta.glob('/src/decorations/*.json', { query: '?raw', import: 'default' });
     const objUrls = import.meta.glob('/src/decorations/*.obj', { query: '?url', import: 'default', eager: true });
-    const objText = import.meta.glob('/src/decorations/*.obj', { query: '?raw', import: 'default', eager: true });
     const mtlText = import.meta.glob('/src/decorations/*.mtl', { query: '?raw', import: 'default', eager: true });
     const imgUrls = import.meta.glob('/src/decorations/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
     // Optional behaviour modules: /src/decorations/<id>.js (or def.controller).
@@ -111,13 +110,8 @@ export class DecorationLoader {
           // baked diffuse colour as its default fixed colour. `colorableMeshes`
           // in the JSON opts specific groups out of this, back to the shared
           // user-chosen colour.
-          const obj = objText[`/src/decorations/${def.modelFile}`];
-          const mtlFile = obj?.match(/^mtllib\s+(\S+)/m)?.[1];
-          const mtl = mtlFile ? mtlText[`/src/decorations/${mtlFile}`] : null;
-          if (obj && mtl) {
-            const meshDefaultColors = parseMeshDefaultColors(obj, mtl);
-            if (Object.keys(meshDefaultColors).length) def.meshDefaultColors = meshDefaultColors;
-          }
+          const meshDefaultColors = await fetchMeshDefaultColors(def.modelUrl, (f) => mtlText[`/src/decorations/${f}`]);
+          if (meshDefaultColors) def.meshDefaultColors = meshDefaultColors;
         }
         if (def.imageFile) {
           def.imageUrl = imgUrls[`/src/decorations/${def.imageFile}`] ?? null;

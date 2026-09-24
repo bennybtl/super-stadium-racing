@@ -46,3 +46,28 @@ export function parseMeshDefaultColors(objText, mtlText) {
   }
   return meshDefaultColors;
 }
+
+/**
+ * Fetch an OBJ from its asset URL and derive its meshDefaultColors against the
+ * sibling .mtl (looked up by filename via `mtlTextFor`). The OBJ is fetched,
+ * not bundled as a raw string: Babylon's loader requests the same hashed URL
+ * when the model is built and gets it from the HTTP cache, so each model is
+ * downloaded once and stays out of the JS bundle. Null when the OBJ has no
+ * `mtllib`, the .mtl has no usable colours, or the fetch fails.
+ */
+export async function fetchMeshDefaultColors(objUrl, mtlTextFor) {
+  if (!objUrl) return null;
+  let obj;
+  try {
+    const res = await fetch(objUrl);
+    if (!res.ok) return null;
+    obj = await res.text();
+  } catch {
+    return null;
+  }
+  const mtlFile = obj.match(/^mtllib\s+(\S+)/m)?.[1];
+  const mtl = mtlFile ? mtlTextFor(mtlFile) : null;
+  if (!mtl) return null;
+  const colors = parseMeshDefaultColors(obj, mtl);
+  return Object.keys(colors).length ? colors : null;
+}

@@ -13,34 +13,38 @@
     <RaceHUD />
     <DebugPanel />
     <VehicleDebugOverlay />
-    <!-- Editor property panels (each self-gates on selectedType) -->
-    <CheckpointPanel />
-    <HillPanel />
-    <SquareHillPanel />
-    <DriveBoxPanel />
-    <TerrainShapePanel />
-    <ObstaclePanel />
-    <PolyWallPanel />
-    <PolyHillPanel />
-    <DecorationsPanel />
-    <TrackSignPanel />
-    <StartPositionPanel />
-    <TrackLightPanel />
-    <TrackSettingsPanel />
-    <ActionZonePanel />
-    <PolyCurbPanel />
-    <MeshGridPanel />
-    <BridgeMeshPanel />
-    <AiPathPanel />
-    <TerrainPathPanel />
-    <DecalPanel />
-    <AddEntityMenu />
-    <EditorStatusBar />
+    <!-- Editor property panels (each self-gates on selectedType). Mounted only
+         while the editor is open, and loaded on first open — see below. -->
+    <template v-if="editor.isEditorActive">
+      <CheckpointPanel />
+      <HillPanel />
+      <SquareHillPanel />
+      <DriveBoxPanel />
+      <TerrainShapePanel />
+      <ObstaclePanel />
+      <PolyWallPanel />
+      <PolyHillPanel />
+      <DecorationsPanel />
+      <TrackSignPanel />
+      <StartPositionPanel />
+      <TrackLightPanel />
+      <TrackSettingsPanel />
+      <ActionZonePanel />
+      <PolyCurbPanel />
+      <MeshGridPanel />
+      <BridgeMeshPanel />
+      <AiPathPanel />
+      <TerrainPathPanel />
+      <DecalPanel />
+      <AddEntityMenu />
+      <EditorStatusBar />
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
+import { useEditorStore } from './store.js';
 import MenuOverlay        from './MenuOverlay.vue';
 import LoadingOverlay     from './LoadingOverlay.vue';
 import SingleRaceOverlay  from './SingleRaceOverlay.vue';
@@ -48,28 +52,32 @@ import ChampionshipPodium from './ChampionshipPodium.vue';
 import RaceHUD            from './RaceHUD.vue';
 import DebugPanel         from './DebugPanel.vue';
 import VehicleDebugOverlay from './VehicleDebugOverlay.vue';
-import CheckpointPanel    from './editor/CheckpointPanel.vue';
-import HillPanel          from './editor/HillPanel.vue';
-import SquareHillPanel    from './editor/SquareHillPanel.vue';
-import DriveBoxPanel      from './editor/DriveBoxPanel.vue';
-import TerrainShapePanel  from './editor/TerrainShapePanel.vue';
-import ObstaclePanel      from './editor/ObstaclePanel.vue';
-import PolyWallPanel      from './editor/PolyWallPanel.vue';
-import PolyHillPanel      from './editor/PolyHillPanel.vue';
-import DecorationsPanel   from './editor/DecorationsPanel.vue';
-import TrackSignPanel     from './editor/TrackSignPanel.vue';
-import StartPositionPanel from './editor/StartPositionPanel.vue';
-import TrackLightPanel    from './editor/TrackLightPanel.vue';
-import TrackSettingsPanel from './editor/TrackSettingsPanel.vue';
-import ActionZonePanel    from './editor/ActionZonePanel.vue';
-import PolyCurbPanel      from './editor/PolyCurbPanel.vue';
-import MeshGridPanel      from './editor/MeshGridPanel.vue';
-import BridgeMeshPanel    from './editor/BridgeMeshPanel.vue';
-import AiPathPanel        from './editor/AiPathPanel.vue';
-import TerrainPathPanel   from './editor/TerrainPathPanel.vue';
-import DecalPanel        from './editor/DecalPanel.vue';
-import AddEntityMenu      from './editor/AddEntityMenu.vue';
-import EditorStatusBar    from './editor/EditorStatusBar.vue';
+// Editor UI is split out of the main bundle: players who never open the
+// editor never download it. (EditorMode itself is lazy-loaded the same way in
+// ModeController.goToEditor.)
+const editor = useEditorStore();
+const CheckpointPanel = defineAsyncComponent(() => import('./editor/CheckpointPanel.vue'));
+const HillPanel = defineAsyncComponent(() => import('./editor/HillPanel.vue'));
+const SquareHillPanel = defineAsyncComponent(() => import('./editor/SquareHillPanel.vue'));
+const DriveBoxPanel = defineAsyncComponent(() => import('./editor/DriveBoxPanel.vue'));
+const TerrainShapePanel = defineAsyncComponent(() => import('./editor/TerrainShapePanel.vue'));
+const ObstaclePanel = defineAsyncComponent(() => import('./editor/ObstaclePanel.vue'));
+const PolyWallPanel = defineAsyncComponent(() => import('./editor/PolyWallPanel.vue'));
+const PolyHillPanel = defineAsyncComponent(() => import('./editor/PolyHillPanel.vue'));
+const DecorationsPanel = defineAsyncComponent(() => import('./editor/DecorationsPanel.vue'));
+const TrackSignPanel = defineAsyncComponent(() => import('./editor/TrackSignPanel.vue'));
+const StartPositionPanel = defineAsyncComponent(() => import('./editor/StartPositionPanel.vue'));
+const TrackLightPanel = defineAsyncComponent(() => import('./editor/TrackLightPanel.vue'));
+const TrackSettingsPanel = defineAsyncComponent(() => import('./editor/TrackSettingsPanel.vue'));
+const ActionZonePanel = defineAsyncComponent(() => import('./editor/ActionZonePanel.vue'));
+const PolyCurbPanel = defineAsyncComponent(() => import('./editor/PolyCurbPanel.vue'));
+const MeshGridPanel = defineAsyncComponent(() => import('./editor/MeshGridPanel.vue'));
+const BridgeMeshPanel = defineAsyncComponent(() => import('./editor/BridgeMeshPanel.vue'));
+const AiPathPanel = defineAsyncComponent(() => import('./editor/AiPathPanel.vue'));
+const TerrainPathPanel = defineAsyncComponent(() => import('./editor/TerrainPathPanel.vue'));
+const DecalPanel = defineAsyncComponent(() => import('./editor/DecalPanel.vue'));
+const AddEntityMenu = defineAsyncComponent(() => import('./editor/AddEntityMenu.vue'));
+const EditorStatusBar = defineAsyncComponent(() => import('./editor/EditorStatusBar.vue'));
 
 // Average fps over each 500ms window, plus the "min fps" derived from the
 // longest single frame in that window. The average is vsync-capped and smoothed,

@@ -39,7 +39,7 @@
  *   angularDamping  number        0..1, how fast it stops tumbling
  */
 
-import { parseMeshDefaultColors } from "../utils/mtl-parser.js";
+import { fetchMeshDefaultColors } from "../utils/mtl-parser.js";
 
 /**
  * Normalize a meshTextures entry to { file, uScale, vScale, uOffset, vOffset }.
@@ -78,7 +78,6 @@ export class ObstacleLoader {
   async loadAllObstacles() {
     const modules = import.meta.glob('/src/obstacles/*.json', { query: '?raw', import: 'default' });
     const objUrls = import.meta.glob('/src/obstacles/*.obj', { query: '?url', import: 'default', eager: true });
-    const objText = import.meta.glob('/src/obstacles/*.obj', { query: '?raw', import: 'default', eager: true });
     const mtlText = import.meta.glob('/src/obstacles/*.mtl', { query: '?raw', import: 'default', eager: true });
     const imgUrls = import.meta.glob('/src/obstacles/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
 
@@ -93,13 +92,8 @@ export class ObstacleLoader {
           // baked diffuse colour as its default fixed colour. `colorableMeshes`
           // in the JSON opts specific groups out of this, back to the shared
           // user-chosen colour.
-          const obj = objText[`/src/obstacles/${def.modelFile}`];
-          const mtlFile = obj?.match(/^mtllib\s+(\S+)/m)?.[1];
-          const mtl = mtlFile ? mtlText[`/src/obstacles/${mtlFile}`] : null;
-          if (obj && mtl) {
-            const meshDefaultColors = parseMeshDefaultColors(obj, mtl);
-            if (Object.keys(meshDefaultColors).length) def.meshDefaultColors = meshDefaultColors;
-          }
+          const meshDefaultColors = await fetchMeshDefaultColors(def.modelUrl, (f) => mtlText[`/src/obstacles/${f}`]);
+          if (meshDefaultColors) def.meshDefaultColors = meshDefaultColors;
         }
         // Resolve per-mesh texture entries to bundled URLs + tiling params so
         // the material resolver can load them by mesh (group) name.

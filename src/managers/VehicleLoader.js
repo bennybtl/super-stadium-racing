@@ -1,4 +1,4 @@
-import { parseMeshDefaultColors } from "../utils/mtl-parser.js";
+import { fetchMeshDefaultColors } from "../utils/mtl-parser.js";
 
 /**
  * VehicleLoader - Loads vehicle definitions from JSON files in /src/vehicles/
@@ -28,8 +28,7 @@ export class VehicleLoader {
     const modules = import.meta.glob('/src/vehicles/*.json', { query: '?raw', import: 'default' });
     // Eagerly resolve OBJ URLs so Vite bundles them and we can look them up by filename
     const objUrls = import.meta.glob('/src/vehicles/*.obj', { query: '?url', import: 'default', eager: true });
-    // Raw OBJ/MTL text, to derive each mesh's baked-in default colour.
-    const objText = import.meta.glob('/src/vehicles/*.obj', { query: '?raw', import: 'default', eager: true });
+    // MTL text, to derive each mesh's baked-in default colour (see fetchMeshDefaultColors).
     const mtlText = import.meta.glob('/src/vehicles/*.mtl', { query: '?raw', import: 'default', eager: true });
     // Eagerly resolve image URLs (png/jpg)
     const imgUrls = import.meta.glob('/src/vehicles/*.{png,jpg,jpeg}', { query: '?url', import: 'default', eager: true });
@@ -44,13 +43,8 @@ export class VehicleLoader {
           def.modelUrl = objUrls[`/src/vehicles/${def.modelFile}`] ?? null;
           // If the OBJ references an .mtl (`mtllib …`), derive each group's
           // baked diffuse colour as its default fixed colour.
-          const obj = objText[`/src/vehicles/${def.modelFile}`];
-          const mtlFile = obj?.match(/^mtllib\s+(\S+)/m)?.[1];
-          const mtl = mtlFile ? mtlText[`/src/vehicles/${mtlFile}`] : null;
-          if (obj && mtl) {
-            const meshDefaultColors = parseMeshDefaultColors(obj, mtl);
-            if (Object.keys(meshDefaultColors).length) def.meshDefaultColors = meshDefaultColors;
-          }
+          const meshDefaultColors = await fetchMeshDefaultColors(def.modelUrl, (f) => mtlText[`/src/vehicles/${f}`]);
+          if (meshDefaultColors) def.meshDefaultColors = meshDefaultColors;
         }
         // Resolve the image URL from the vehicles folder
         if (def.imageFile) {

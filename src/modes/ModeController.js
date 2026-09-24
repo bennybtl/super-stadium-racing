@@ -1,6 +1,5 @@
 import { MenuMode } from "./MenuMode.js";
 import { RaceMode } from "./RaceMode.js";
-import { EditorMode } from "./EditorMode.js";
 import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
 import { HotLapMode } from "./HotLapMode.js";
@@ -396,7 +395,10 @@ export class ModeController {
     return this.switchTo(PracticeMode, config);
   }
 
-  goToEditor(config) {
+  async goToEditor(config) {
+    // Lazy: the editor (EditorMode → EditorController + every sub-editor) is
+    // its own chunk, fetched the first time someone opens it.
+    const { EditorMode } = await import("./EditorMode.js");
     return this.switchTo(EditorMode, config);
   }
 

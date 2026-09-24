@@ -4,6 +4,23 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
   plugins: [vue()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendor code changes far less often than the game, so split it into
+        // its own chunks: after a deploy returning players re-download only the
+        // app chunk, and the browser parses the pieces in parallel.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("@babylonjs/havok")) return "havok";
+          if (id.includes("@babylonjs/")) return "babylon";
+          if (/node_modules\/(@vue|vue|pinia)\//.test(id)) return "vue";
+          if (/colyseus/.test(id)) return "colyseus";
+          return "vendor";
+        },
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ["@babylonjs/havok"],
   },
