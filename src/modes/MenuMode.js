@@ -1,5 +1,6 @@
 import { Scene, Color4, FreeCamera, Vector3 } from "@babylonjs/core";
 import { DriveMode } from "./DriveMode.js";
+import { FixedStepLoop } from "./fixed-step.js";
 import { setupAIDrivers } from "../ai/setupAIDrivers.js";
 import { generateDriverNames } from "../ai/driverNames.js";
 import { TruckCollisionManager } from "../managers/TruckCollisionManager.js";
@@ -322,77 +323,81 @@ export class MenuMode extends DriveMode {
 
     cameraController.update(focusTruck().mesh.position, focusTruck().state.heading);
 
+    const sim = this.fixedStep = new FixedStepLoop(() => trucks.map(td => td.truck.mesh));
+
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
-      const dt = this.getClampedDeltaTime(engine, 0.05);
+      const dt = this.getClampedDeltaTime(engine, 0.1);
 
       focusElapsed += dt;
       if (focusElapsed >= DEMO_FOCUS_SWITCH_SEC) {
         focusElapsed = 0;
         focusIndex = (focusIndex + 1) % trucks.length;
       }
-      const focusPos = focusTruck().mesh.position;
 
-      truckCollisionManager.preUpdate(trucks, dt);
-      // Each truck steers itself: Truck.update pulls input from its AI driver
-      // and ignores the object passed here.
-      trucks.forEach(td => td.truck.update(NO_INPUT, dt, terrainManager, currentTrack, false, focusPos, null));
+      sim.run(dt, (dt) => {
+        const focusPos = focusTruck().mesh.position;
+        truckCollisionManager.preUpdate(trucks, dt);
+        // Each truck steers itself: Truck.update pulls input from its AI driver
+        // and ignores the object passed here.
+        trucks.forEach(td => td.truck.update(NO_INPUT, dt, terrainManager, currentTrack, false, focusPos, null));
 
-      staticBodyCollisionManager.update(trucks, dt);
-      this.applyZoneEffects(scene, currentTrack, trucks, { slowZones, speedBoostZones, fireworkZones }, dt);
+        staticBodyCollisionManager.update(trucks, dt);
+        this.applyZoneEffects(scene, currentTrack, trucks, { slowZones, speedBoostZones, fireworkZones }, dt);
 
-      trucks.forEach(td => this.updateOutOfBoundsCountdown({
-        truckId: td.id,
-        truck: td.truck,
-        outOfBoundsZones,
-        track: currentTrack,
-        dt,
-        durationSec: 2,
-        onTimeout: () => respawnToLastGate(td),
-      }));
+        trucks.forEach(td => this.updateOutOfBoundsCountdown({
+          truckId: td.id,
+          truck: td.truck,
+          outOfBoundsZones,
+          track: currentTrack,
+          dt,
+          durationSec: 2,
+          onTimeout: () => respawnToLastGate(td),
+        }));
 
-      truckCollisionManager.update(trucks, dt);
-      obstacleManager.update(trucks);
-      decorationManager.update(trucks, dt);
+        truckCollisionManager.update(trucks, dt);
+        obstacleManager.update(trucks);
 
-      trucks.forEach(td => {
-        const result = checkpointManager.update(
-          td.truck.mesh.position,
-          td.truck.state.velocity,
-          td.gameState.lastCheckpointPassed,
-          td.id,
-        );
-        if (!result?.passed) return;
+        trucks.forEach(td => {
+          const result = checkpointManager.update(
+            td.truck.mesh.position,
+            td.truck.state.velocity,
+            td.gameState.lastCheckpointPassed,
+            td.id,
+          );
+          if (!result?.passed) return;
 
-        // Crossing start/finish for the first time opens the lap sequence.
-        if (result.index === maxCheckpointNumber && !td.hasStarted) {
-          td.hasStarted = true;
-          td.gameState.lastCheckpointPassed = 0;
-          td.gameState.checkpointCount = 0;
-          checkpointManager.resetForTruck(td.id);
-          td.truck.driver?.onCheckpointPassed(maxCheckpointNumber, {
+          // Crossing start/finish for the first time opens the lap sequence.
+          if (result.index === maxCheckpointNumber && !td.hasStarted) {
+            td.hasStarted = true;
+            td.gameState.lastCheckpointPassed = 0;
+            td.gameState.checkpointCount = 0;
+            checkpointManager.resetForTruck(td.id);
+            td.truck.driver?.onCheckpointPassed(maxCheckpointNumber, {
+              x: td.truck.mesh.position.x,
+              z: td.truck.mesh.position.z,
+            });
+            return;
+          }
+
+          const count = td.gameState.incrementCheckpoint(result.index);
+          td.truck.driver?.onCheckpointPassed(result.index, {
             x: td.truck.mesh.position.x,
             z: td.truck.mesh.position.z,
           });
-          return;
-        }
 
-        const count = td.gameState.incrementCheckpoint(result.index);
-        td.truck.driver?.onCheckpointPassed(result.index, {
-          x: td.truck.mesh.position.x,
-          z: td.truck.mesh.position.z,
+          if (count === checkpointManager.getTotalCheckpoints()) {
+            td.gameState.completeLap();
+            checkpointManager.resetForTruck(td.id);
+            // Endless race: hand the nitro back each lap so the field keeps
+            // showing off boosts instead of settling into a parade.
+            td.gameState.boostCount = td.truck.state.maxBoosts ?? 5;
+          }
         });
-
-        if (count === checkpointManager.getTotalCheckpoints()) {
-          td.gameState.completeLap();
-          checkpointManager.resetForTruck(td.id);
-          // Endless race: hand the nitro back each lap so the field keeps
-          // showing off boosts instead of settling into a parade.
-          td.gameState.boostCount = td.truck.state.maxBoosts ?? 5;
-        }
       });
 
-      cameraController.update(focusPos, focusTruck().state.heading, dt);
+      decorationManager.update(trucks, dt);
+      cameraController.update(focusTruck().mesh.position, focusTruck().state.heading, dt);
     });
   }
 }

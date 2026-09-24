@@ -28,7 +28,8 @@ export class BaseMode {
    * cause large time gaps.
    * 
    * @param {Engine} engine - Babylon engine
-   * @param {number} maxDt - Maximum allowed deltaTime in seconds (default: 0.020 = 50fps)
+   * @param {number} maxDt - Maximum allowed deltaTime in seconds (default: 0.05 = 20fps).
+   *   Driving modes pass 0.1 and let FixedStepLoop cap the steps per frame.
    * @returns {number} Clamped deltaTime in seconds
    */
   getClampedDeltaTime(engine, maxDt = 0.05) {

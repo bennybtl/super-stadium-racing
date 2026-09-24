@@ -104,18 +104,25 @@ export class HotLapTracker {
   }
 
   /** Drive one frame from the player truck and delta time (seconds). */
+  /**
+   * Ghost playback, driven by the live lap clock rather than its own counter.
+   * Called once per render frame; `lagMs` is how far the rendered player truck
+   * trails the sim (FixedStepLoop.renderLag), so the ghost lines up with it.
+   */
+  updateGhost(dt, lagMs = 0) {
+    if (!this.ghost) return;
+    const visible = this.store.hotLapGhostVisible;
+    this.ghost.setVisible(visible);
+    if (!visible) return;
+    const ms = this.recorder.recording ? Math.max(0, this.recorder.elapsedMs - lagMs) : 0;
+    this.ghost.update(ms, dt);
+  }
+
   update(truck, dt) {
     // Lap clock + ghost recording.
     if (this.recorder.recording) {
       this.recorder.record(truck.mesh.position, truck.state.heading, dt * 1000);
       this.uiManager.updateTimer(this.recorder.elapsedMs);
-    }
-
-    // Ghost playback, driven by the live lap clock rather than its own counter.
-    if (this.ghost) {
-      const visible = this.store.hotLapGhostVisible;
-      this.ghost.setVisible(visible);
-      if (visible) this.ghost.update(this.recorder.recording ? this.recorder.elapsedMs : 0, dt);
     }
 
     // Checkpoint / lap detection.

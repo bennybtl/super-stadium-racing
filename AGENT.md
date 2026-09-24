@@ -154,9 +154,16 @@ starts rendering). `BaseMode` → `DriveMode` → the concrete driving modes.
   / `getOutOfBoundsZones`, `applyZoneEffects`, `updateOutOfBoundsCountdown`
 - `makeAIDriverFactory` — the good/ok/bad skill ladder (Race + Menu)
 - `runCountdownSequence` — the 3-2-1-GO choreography (Race + Multiplayer)
-- `installRaceFrameLoop({ isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused, onFrame })`
+- `installRaceFrameLoop({ isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused, getMeshes, onStep, onRender })`
   — the per-frame envelope (dt clamp, profiler frame, photo-mode camera, menu
-  bail, HUD-timer throttle). Each mode supplies the `onFrame(dt, input)` body.
+  bail, HUD-timer throttle). Each mode supplies `onStep(SIM_DT, input)` (the
+  simulation: trucks, collisions, zones, checkpoints, laps) and `onRender(dt)`
+  (camera, HUD, decorations, puppets).
+- **Fixed timestep** (`modes/fixed-step.js`): every driving loop — including
+  Practice/HotLap/Test/Menu, which have their own loops — advances the sim in
+  1/60 s steps via `FixedStepLoop.run(frameDt, step)`, then leaves truck meshes
+  on a pose interpolated between the last two steps. Anything that must see
+  the true sim pose belongs in the step; anything visual per-frame goes after.
 - `respawnAtLastCheckpoint(truck, { … })` — teleport back to the last cleared gate
 - frame profiler + photo mode + fireworks lifecycle
 

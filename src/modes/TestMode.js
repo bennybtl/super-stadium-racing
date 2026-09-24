@@ -2,6 +2,7 @@ import { Vector3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { DriveMode } from "./DriveMode.js";
+import { FixedStepLoop } from "./fixed-step.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 
@@ -88,33 +89,39 @@ export class TestMode extends DriveMode {
       frameProfiler.endFrame();
     });
 
+    const sim = this.fixedStep = new FixedStepLoop(() => [playerTruck.mesh]);
+    let debugInfo = null;
+
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
 
-      const dt = this.getClampedDeltaTime(engine, 0.05);
+      const dt = this.getClampedDeltaTime(engine, 0.1);
       frameProfiler.beginFrame(dt);
       const input = frameProfiler.measure('input', () => inputManager.getMovementInput());
-      const debugInfo = frameProfiler.measure(
-        'truck.update',
-        () => playerTruck.update(input, dt, terrainManager, currentTrack, true, null, frameProfiler)
-      );
+      sim.run(dt, (dt) => {
+        debugInfo = frameProfiler.measure(
+          'truck.update',
+          () => playerTruck.update(input, dt, terrainManager, currentTrack, true, null, frameProfiler)
+        );
 
-      frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
+        frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
 
-      frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
-        truckId: 'player',
-        truck: playerTruck,
-        outOfBoundsZones,
-        track: currentTrack,
-        dt,
-        durationSec: 5,
-        onTimeout: () => {
-          this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
-        },
-      }));
+        frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
+          truckId: 'player',
+          truck: playerTruck,
+          outOfBoundsZones,
+          track: currentTrack,
+          dt,
+          durationSec: 5,
+          onTimeout: () => {
+            this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
+          },
+        }));
 
-      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
-      frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
+        frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
+        frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
+      });
+
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
       frameProfiler.measure('debug.update', () => this.debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));

@@ -326,8 +326,10 @@ export class MultiplayerMode extends DriveMode {
     this.setupVisibilityHandler(scene, trucks);
 
     // installRaceFrameLoop owns the frame envelope (dt clamp, profiler frame,
-    // photo mode, menu bail, HUD-timer throttle) and hands us (dt, input). The
-    // body below keeps its indentation to keep this diff readable.
+    // photo mode, menu bail, HUD-timer throttle, fixed step) and calls onStep
+    // (simulation) / onRender (presentation). The bodies keep their indentation
+    // to keep this diff readable.
+    let debugInfo = null;
     this.installRaceFrameLoop({
       engine, scene, uiManager, inputManager,
       isMenuUp: () => menuManager.isPaused,
@@ -336,7 +338,8 @@ export class MultiplayerMode extends DriveMode {
       // A live server race doesn't stop when this client opens the pause menu or
       // photo mode — keep the HUD clock honest with the real elapsed time.
       runTimerWhilePaused: true,
-      onFrame: (dt, input) => {
+      getMeshes: () => [playerTruck.mesh],
+      onStep: (dt, input) => {
 
       frameProfiler.measure('collision.remoteTrucks.pre', () =>
         remoteTruckCollision.preUpdate(playerTruck, this._remotePuppets.values(), dt)
@@ -344,7 +347,7 @@ export class MultiplayerMode extends DriveMode {
 
       // Finished truck coasts to a stop under its own drag (zero input).
       const truckInput = gameState.raceFinished ? { forward: false, back: false, left: false, right: false } : input;
-      const debugInfo = frameProfiler.measure(
+      debugInfo = frameProfiler.measure(
         'truck.update',
         () => playerTruck.update(truckInput, dt, terrainManager, currentTrack, true, null, frameProfiler)
       );
@@ -368,14 +371,7 @@ export class MultiplayerMode extends DriveMode {
         remoteTruckCollision.update(playerTruck, this._remotePuppets.values())
       );
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
-      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
-      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
-      frameProfiler.measure('ui.boost', () => uiManager.setBoostActive(playerTruck.state.boostActive));
-
-      frameProfiler.measure('multiplayer.puppets', () => {
-        this._remotePuppets.forEach(puppet => puppet.update(dt));
-      });
 
       this._sendAccumulator += dt;
       if (this._sendAccumulator >= NETWORK_SEND_INTERVAL) {
@@ -454,9 +450,17 @@ export class MultiplayerMode extends DriveMode {
         }
       });
 
-      frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
+      }, // end onStep
 
-      }, // end onFrame
+      onRender: (dt) => {
+      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
+      frameProfiler.measure('multiplayer.puppets', () => {
+        this._remotePuppets.forEach(puppet => puppet.update(dt));
+      });
+      frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
+      frameProfiler.measure('ui.boost', () => uiManager.setBoostActive(playerTruck.state.boostActive));
+      frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
+      }, // end onRender
     });
 
     cameraController.update(playerTruck.mesh.position, playerTruck.state.heading);

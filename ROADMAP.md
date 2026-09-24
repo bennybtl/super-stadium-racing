@@ -70,7 +70,12 @@ is meant for phones — virtual steer/gas/boost buttons + a perf tier default.
 
 ## C. Engine / architecture
 
-**C1. Fixed-timestep truck simulation.** Truck/AI physics integrate a variable
+**C1. Fixed-timestep truck simulation. — DONE 2026-09-23** (`src/modes/fixed-step.js`:
+60 Hz `FixedStepLoop` + truck-mesh render interpolation in all six driving loops;
+each loop split into step (sim) and render (camera/HUD/decorations/puppets/ghost)).
+Follow-ups: RaceMode/MultiplayerMode lap times still use `Date.now()` (HotLap already
+sums sim dt); tire marks/particles emit at the sim pose, up to one step ahead of
+the rendered truck. Original note: Truck/AI physics integrate a variable
 `dt` clamped at 50 ms (`BaseMode.getClampedDeltaTime`). Consequences: handling
 differs subtly between 60/120/144 Hz displays; below 20 fps the game runs in
 slow-motion; hot-lap times and ghosts aren't comparable across machines;

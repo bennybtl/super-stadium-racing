@@ -541,20 +541,21 @@ export class RaceMode extends DriveMode {
     this.setupVisibilityHandler(scene, trucks);
 
     // -- Game loop -- installRaceFrameLoop owns the frame envelope (dt clamp,
-    // profiler frame, photo mode, menu bail, HUD-timer throttle) and hands us
-    // (dt, input) for the race body below. The body keeps its indentation to
-    // keep this diff readable — `git diff -w` shows the real change.
+    // profiler frame, photo mode, menu bail, HUD-timer throttle, fixed step)
+    // and calls onStep (simulation, SIM_DT) / onRender (presentation, frame dt).
+    // The bodies keep their indentation to keep this diff readable.
+    let playerDebugInfo = null;
     this.installRaceFrameLoop({
       engine, scene, uiManager,
       inputManager: this.inputManager,
       isMenuUp: () => menuManager.isMenuActive(),
       isCountdownActive: () => countdownActive,
       getRaceStartMs: () => (raceStarted && raceStartTime !== null ? raceStartTime : null),
-      onFrame: (dt, input) => {
+      getMeshes: () => trucks.map(td => td.truck.mesh),
+      onStep: (dt, input) => {
 
       frameProfiler.measure('collision.truck.pre', () => truckCollisionManager.preUpdate(trucks, dt));
 
-      let playerDebugInfo = null;
       frameProfiler.measure('trucks.update', () => trucks.forEach((truckData) => {
         // Finished trucks still get physics updates (zero input) so they coast to a stop
         const isCoasting = truckData.gameState.raceFinished;
@@ -600,24 +601,7 @@ export class RaceMode extends DriveMode {
 
       frameProfiler.measure('collision.truck.resolve', () => truckCollisionManager.update(trucks, dt));
       frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks));
-      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
       frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
-      frameProfiler.measure('floatingText.update', () => floatingText.update(dt));
-      frameProfiler.measure('checkpointArrow.update', () => checkpointArrow.update(playerTruckData.truck.mesh));
-
-      truckStatusUiElapsedMs += dt * 1000;
-      if (truckStatusUiElapsedMs >= truckStatusUiIntervalMs) {
-        syncTruckStatus();
-        truckStatusUiElapsedMs = 0;
-      }
-
-      frameProfiler.measure('debug.update', () => debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck));
-      frameProfiler.measure('ui.boost', () => uiManager.setBoostActive(playerTruckData.truck.state.boostActive));
-
-      const engineSpeed = Math.sqrt(
-        playerTruckData.truck.state.velocity.x * playerTruckData.truck.state.velocity.x +
-        playerTruckData.truck.state.velocity.z * playerTruckData.truck.state.velocity.z
-      );
 
       // Feed telemetry recorder each frame for the player truck
       frameProfiler.measure('telemetry.player', () => {
@@ -818,14 +802,29 @@ export class RaceMode extends DriveMode {
         });
       });
 
+      }, // end onStep
+
+      onRender: (dt) => {
+      frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
+      frameProfiler.measure('floatingText.update', () => floatingText.update(dt));
+      frameProfiler.measure('checkpointArrow.update', () => checkpointArrow.update(playerTruckData.truck.mesh));
+
+      truckStatusUiElapsedMs += dt * 1000;
+      if (truckStatusUiElapsedMs >= truckStatusUiIntervalMs) {
+        syncTruckStatus();
+        truckStatusUiElapsedMs = 0;
+      }
+
+      frameProfiler.measure('debug.update', () => debugManager.update(playerDebugInfo, terrainManager, currentTrack, playerTruckData.truck));
+      frameProfiler.measure('ui.boost', () => uiManager.setBoostActive(playerTruckData.truck.state.boostActive));
+
       frameProfiler.measure('positions', () => {
         if (raceStarted && !raceEnded) positionLabels.update(trucks, checkpointManager, finishOrder);
         else positionLabels.hideAll();
       });
 
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruckData.truck.mesh.position, playerTruckData.truck.state.heading, dt));
-
-      }, // end onFrame
+      }, // end onRender
     });
 
     // Start the pre-race countdown

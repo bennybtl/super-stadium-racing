@@ -8,6 +8,7 @@ import { AudioManager } from "../managers/AudioManager.js";
 import { TruckAudioController } from "../managers/TruckAudioController.js";
 import { MusicManager } from "../managers/MusicManager.js";
 import { DriveMode } from "./DriveMode.js";
+import { FixedStepLoop } from "./fixed-step.js";
 import { basicColors } from "../constants.js";
 import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 
@@ -139,10 +140,13 @@ export class PracticeMode extends DriveMode {
       frameProfiler.endFrame();
     });
 
+    const sim = this.fixedStep = new FixedStepLoop(() => [playerTruck.mesh]);
+    let debugInfo = null;
+
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
 
-      const dt = this.getClampedDeltaTime(engine, 0.05);
+      const dt = this.getClampedDeltaTime(engine, 0.1);
       frameProfiler.beginFrame(dt);
       if (this._photoModeActive) {
         const input = frameProfiler.measure('input.photo', () => inputManager.getMovementInput());
@@ -158,39 +162,37 @@ export class PracticeMode extends DriveMode {
 
       const input = frameProfiler.measure('input', () => inputManager.getMovementInput());
 
-      const debugInfo = frameProfiler.measure(
-        'truck.update',
-        () => playerTruck.update(input, dt, terrainManager, currentTrack, true, null, frameProfiler)
-      );
+      sim.run(dt, (dt) => {
+        debugInfo = frameProfiler.measure(
+          'truck.update',
+          () => playerTruck.update(input, dt, terrainManager, currentTrack, true, null, frameProfiler)
+        );
 
-      frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
-      frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
-      frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
+        frameProfiler.measure('zones.slow', () => this.applySlowZones(trucks, slowZones));
+        frameProfiler.measure('zones.boost', () => this.applySpeedBoostZones(trucks, speedBoostZones));
+        frameProfiler.measure('zones.fireworks', () => this.updateFireworkZones(scene, currentTrack, trucks, fireworkZones, dt));
 
-      const oobRemaining = frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
-        truckId: 'player',
-        truck: playerTruck,
-        outOfBoundsZones,
-        track: currentTrack,
-        dt,
-        durationSec: 5,
-        onTimeout: () => {
-          this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
-        },
-      }));
-      if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
-      else uiManager.showOutOfBoundsCountdown(oobRemaining);
+        const oobRemaining = frameProfiler.measure('zones.oob', () => this.updateOutOfBoundsCountdown({
+          truckId: 'player',
+          truck: playerTruck,
+          outOfBoundsZones,
+          track: currentTrack,
+          dt,
+          durationSec: 5,
+          onTimeout: () => {
+            this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager);
+          },
+        }));
+        if (oobRemaining == null) uiManager.hideOutOfBoundsCountdown();
+        else uiManager.showOutOfBoundsCountdown(oobRemaining);
 
-      frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
-      frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
+        frameProfiler.measure('collision.staticBodies', () => staticBodyCollisionManager.update(trucks, dt));
+        frameProfiler.measure('obstacles.update', () => obstacleManager.update(trucks, dt));
+        frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
+      });
+
       frameProfiler.measure('decorations.update', () => decorationManager.update(trucks, dt));
-      frameProfiler.measure('pickups.update', () => pickupManager.update(trucks, dt));
       frameProfiler.measure('camera.update', () => cameraController.update(playerTruck.mesh.position, playerTruck.state.heading, dt));
-      
-      const engineSpeed = Math.sqrt(
-        playerTruck.state.velocity.x * playerTruck.state.velocity.x +
-        playerTruck.state.velocity.z * playerTruck.state.velocity.z
-      );
       frameProfiler.measure('debug.update', () => debugManager.update(debugInfo, terrainManager, currentTrack, playerTruck));
       frameRenderStartMs = performance.now();
     });

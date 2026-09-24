@@ -7,6 +7,7 @@ import { BaseMode } from "./BaseMode.js";
 import { buildScene } from "./SceneBuilder.js";
 import { FrameProfiler, shouldEnableFrameProfiler } from "../managers/FrameProfiler.js";
 import { FireworksManager } from "../managers/FireworksManager.js";
+import { FixedStepLoop } from "./fixed-step.js";
 
 /**
  * DriveMode - shared utilities for drivable gameplay modes.
@@ -161,10 +162,14 @@ export class DriveMode extends BaseMode {
    *   onBeforeRender → bail while the tab is hidden; clamp dt + open the profiler
    *                    frame; in photo mode fly the free camera and stop; while a
    *                    menu is up, stop; throttle the HUD race timer to ~20Hz;
-   *                    then hand `(dt, input)` to `onFrame` for the mode body.
+   *                    then run `onStep(SIM_DT, input)` on the fixed timestep
+   *                    (see fixed-step.js) and `onRender(dt)` once per frame.
    *
    * `input` is the movement stick, forced to neutral while the countdown runs.
-   * Everything downstream — collisions, checkpoints, HUD, camera — is the mode's.
+   * `onStep` is the simulation — trucks, collisions, zones, checkpoints, laps.
+   * `onRender` is presentation — camera, HUD, labels, decoration animation — and
+   * runs after the truck meshes (from `getMeshes`) are on their interpolated
+   * render pose.
    *
    * @param {object} o
    * @param {import('@babylonjs/core').Engine}  o.engine
@@ -179,9 +184,12 @@ export class DriveMode extends BaseMode {
    *   while a menu/photo mode holds the sim. Single-player leaves this off (the
    *   race is genuinely suspended); multiplayer sets it, since the server keeps
    *   the race running whether or not this client is looking.
-   * @param {(dt: number, input: object) => void} o.onFrame
+   * @param {() => Iterable<object>} o.getMeshes  truck meshes to interpolate
+   * @param {(dt: number, input: object) => void} o.onStep
+   * @param {(dt: number) => void} o.onRender
    */
-  installRaceFrameLoop({ engine, scene, uiManager, inputManager, isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused = false, onFrame }) {
+  installRaceFrameLoop({ engine, scene, uiManager, inputManager, isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused = false, getMeshes, onStep, onRender }) {
+    const sim = this.fixedStep = new FixedStepLoop(getMeshes);
     const NEUTRAL = Object.freeze({ forward: false, back: false, left: false, right: false });
     const TIMER_UI_INTERVAL_MS = 50; // HUD reads MM:SS.cc; 20Hz is finer than the glyphs
     let timerUiElapsedMs = 0;
@@ -208,7 +216,7 @@ export class DriveMode extends BaseMode {
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
 
-      const dt = this.getClampedDeltaTime(engine, 0.05);
+      const dt = this.getClampedDeltaTime(engine, 0.1);
       this.frameProfiler.beginFrame(dt);
 
       if (this._photoModeActive) {
@@ -231,7 +239,8 @@ export class DriveMode extends BaseMode {
         isCountdownActive() ? NEUTRAL : inputManager.getMovementInput()
       );
 
-      onFrame(dt, input);
+      sim.run(dt, (stepDt) => onStep(stepDt, input));
+      onRender(dt);
       frameRenderStartMs = performance.now();
     });
   }
