@@ -34,7 +34,7 @@ export class AIStuckRecoveryController {
     this.lastCheckedPosition = null;
   }
 
-  update({ dt, input, fwdSpeed, currentPos, targetWaypoint }) {
+  update({ dt, input, fwdSpeed, currentPos, targetWaypoint, reversing = false }) {
     const dtMs = dt * 1000;
     const absFwdSpeed = Math.abs(fwdSpeed);
 
@@ -63,7 +63,9 @@ export class AIStuckRecoveryController {
           controlStall,
         });
       }
-    } else {
+    } else if (!reversing) {
+      // Hold (don't clear) the timer through a reverse maneuver, so a truck
+      // that keeps backing out and re-hitting the same wall still respawns.
       this.stuckTimer = 0;
     }
 

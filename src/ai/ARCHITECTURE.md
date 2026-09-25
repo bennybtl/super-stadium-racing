@@ -26,6 +26,10 @@
   - Straight/clear checks
   - Behind/stock weighted boost probability
 
+- `AIReverseController`
+  - Wall-press detection (throttle held, no forward speed)
+  - Timed reverse that swings the nose toward the target, then cooldown
+
 - `AIStuckRecoveryController`
   - Control-stall detection
   - Position-no-progress detection

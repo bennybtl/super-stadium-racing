@@ -9,6 +9,7 @@ import { AISteeringController, DEFAULT_STEERING_CONFIG } from "./controllers/AIS
 import { AIThrottleController, DEFAULT_THROTTLE_CONFIG } from "./controllers/AIThrottleController.js";
 import { AISpawnRecoveryController, DEFAULT_SPAWN_RECOVERY_CONFIG } from "./controllers/AISpawnRecoveryController.js";
 import { AICheckpointGuidanceController } from "./controllers/AICheckpointGuidanceController.js";
+import { AIReverseController } from "./controllers/AIReverseController.js";
 import { AIDebugRenderer } from "./controllers/AIDebugRenderer.js";
 
 /**
@@ -188,6 +189,7 @@ export class AIDriver {
       pathAdvance,
     });
     this._checkpointGuidance = new AICheckpointGuidanceController(this);
+    this._reverse = new AIReverseController();
     this._debugRenderer = new AIDebugRenderer(this);
 
     // Debug visualization — enabled state is driven by the global DebugManager store
@@ -469,7 +471,7 @@ export class AIDriver {
     // sign) for consumers that still read booleans (e.g. stuck-recovery logs).
     const isActuallyReversing = fwdSpeed < -0.3;
     const steerCmd = isActuallyReversing ? -steer : steer;
-    const input = {
+    let input = {
       forward: shouldMoveForward,
       back: shouldReverse,
       left: steerCmd < 0,
@@ -477,6 +479,18 @@ export class AIDriver {
       steer: steerCmd,
       brake: brakeIntensity,
     };
+
+    // Pressing into a wall: back out, swinging the nose toward the target.
+    const reverseInput = this._reverse.update({
+      dt: aiDt,
+      input,
+      fwdSpeed,
+      position,
+      heading,
+      target: steerTarget,
+      brakingToStop: this.truck?.controls?.brakingToStop ?? false,
+    });
+    if (reverseInput) input = reverseInput;
 
     this._boostController.update({ position, forward, rightVec, fwdSpeed, input });
 
@@ -487,6 +501,7 @@ export class AIDriver {
       fwdSpeed,
       currentPos,
       targetWaypoint,
+      reversing: this._reverse.active,
     });
 
     // Backup: detect a driven-around gate and respawn through it after a delay.
@@ -516,6 +531,7 @@ export class AIDriver {
     this._stuckRecovery.reset();
     this._boostController.reset();
     this._checkpointGuidance.reset();
+    this._reverse.reset();
   }
 
   // /**
@@ -532,6 +548,7 @@ export class AIDriver {
    */
   respawnFacingTarget(targetWaypoint) {
     this._spawnRecovery.respawnFacingTarget(targetWaypoint);
+    this._reverse.reset();
   }
 
   // /**
