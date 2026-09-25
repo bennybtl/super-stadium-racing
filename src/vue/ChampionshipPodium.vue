@@ -1,32 +1,31 @@
 <template>
   <Transition name="menu-fade">
+    <!-- Full-screen podium stage behind the results -->
     <div v-if="store.championshipData" class="fixed inset-0 z-[1100] bg-black pointer-events-auto">
-      <div class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-black/50"></div>
+      <RacePodium3D class="absolute inset-0" :entries="podiumEntries" />
     </div>
   </Transition>
 
   <Transition name="menu-slide">
     <div
       v-if="store.championshipData"
-      class="fixed inset-0 z-[1101] flex items-center justify-center overflow-hidden font-sans pointer-events-none"
+      class="fixed inset-0 z-[1101] flex flex-col items-center justify-between overflow-hidden py-8 font-sans pointer-events-none"
     >
-      <div class="menu-panel px-10 py-8 pointer-events-auto" :style="panelStyle" @mousedown.stop>
-        <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] text-center">Championship Complete</h2>
-        <p class="text-center text-xs uppercase italic tracking-[0.18em] text-slate-400">
+      <div class="text-center drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+        <h2 class="text-3xl uppercase italic tracking-[0.2em] text-[#ffe066]">Championship Complete</h2>
+        <p class="text-xs uppercase italic tracking-[0.18em] text-slate-300">
           {{ store.championshipData.initials }}
         </p>
         <p
           v-if="store.championshipData.scoreRank >= 0"
-          class="mt-1 text-center text-xs uppercase italic tracking-[0.18em] text-[#ffe066]"
+          class="mt-1 text-xs uppercase italic tracking-[0.18em] text-[#ffe066]"
         >
           ★ New High Score — #{{ store.championshipData.scoreRank + 1 }}
         </p>
+      </div>
 
-        <div class="mx-auto mt-3 h-[36vh] max-h-[560px] min-h-[340px] w-full">
-          <RacePodium3D :entries="podiumEntries" />
-        </div>
-
-        <table class="mx-auto mt-4 mb-6 w-full max-w-[760px] border-collapse text-sm text-slate-200">
+      <div class="menu-panel max-h-[42vh] px-10 py-6 pointer-events-auto" :style="panelStyle" @mousedown.stop>
+        <table class="mx-auto mb-6 w-full max-w-[760px] border-collapse text-sm text-slate-200">
           <thead>
             <tr class="text-[11px] uppercase italic tracking-[0.2em] text-slate-400">
               <th class="border-b border-white/10 px-3 py-2 text-left">Pos</th>

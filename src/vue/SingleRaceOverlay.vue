@@ -1,23 +1,20 @@
 <template>
   <Transition name="menu-fade">
+    <!-- Full-screen podium stage behind the results -->
     <div v-if="store.singleRaceData" class="fixed inset-0 z-[1100] bg-black pointer-events-auto">
-      <div class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-black/50"></div>
+      <RacePodium3D class="absolute inset-0" :entries="podiumEntries" />
     </div>
   </Transition>
 
   <Transition name="menu-slide">
     <div
       v-if="store.singleRaceData"
-      class="fixed inset-0 z-[1101] flex items-center justify-center overflow-hidden font-sans pointer-events-none"
+      class="fixed inset-0 z-[1101] flex flex-col items-center justify-between overflow-hidden py-8 font-sans pointer-events-none"
     >
-      <div class="menu-panel px-10 py-8 pointer-events-auto" :style="panelStyle" @mousedown.stop>
-        <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] mb-2 text-center">Race Results</h2>
+      <h2 class="text-3xl uppercase italic tracking-[0.2em] text-[#ffe066] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">Race Results</h2>
 
-        <div class="mx-auto h-[36vh] max-h-[560px] min-h-[340px] w-full">
-          <RacePodium3D :entries="podiumEntries" />
-        </div>
-
-        <table class="mx-auto mt-4 mb-6 w-full max-w-[760px] border-collapse text-sm text-slate-200">
+      <div class="menu-panel max-h-[42vh] px-10 py-6 pointer-events-auto" :style="panelStyle" @mousedown.stop>
+        <table class="mx-auto mb-6 w-full max-w-[760px] border-collapse text-sm text-slate-200">
           <thead>
             <tr class="text-[11px] uppercase italic tracking-[0.2em] text-slate-400">
               <th class="border-b border-white/10 px-3 py-2 text-left">Pos</th>
