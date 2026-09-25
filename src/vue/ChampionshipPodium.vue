@@ -11,45 +11,24 @@
       v-if="store.championshipData"
       class="fixed inset-0 z-[1101] flex flex-col items-center justify-between overflow-hidden py-8 font-sans pointer-events-none"
     >
-      <div class="text-center drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-        <h2 class="text-3xl uppercase italic tracking-[0.2em] text-[#ffe066]">Championship Complete</h2>
-        <p class="text-xs uppercase italic tracking-[0.18em] text-slate-300">
+      <div class="text-center">
+        <h2 class="menu-text text-5xl tracking-[0.14em] text-[#ffe066]">Championship Complete</h2>
+        <p class="menu-text mt-1 text-lg tracking-[0.18em] text-slate-200">
           {{ store.championshipData.initials }}
         </p>
         <p
           v-if="store.championshipData.scoreRank >= 0"
-          class="mt-1 text-xs uppercase italic tracking-[0.18em] text-[#ffe066]"
+          class="menu-text mt-1 text-lg tracking-[0.18em] text-[#ffe066]"
         >
           ★ New High Score — #{{ store.championshipData.scoreRank + 1 }}
         </p>
       </div>
 
-      <div class="menu-panel max-h-[42vh] px-10 py-6 pointer-events-auto" :style="panelStyle" @mousedown.stop>
-        <table class="mx-auto mb-6 w-full max-w-[760px] border-collapse text-sm text-slate-200">
-          <thead>
-            <tr class="text-[11px] uppercase italic tracking-[0.2em] text-slate-400">
-              <th class="border-b border-white/10 px-3 py-2 text-left">Pos</th>
-              <th class="border-b border-white/10 px-3 py-2 text-left">Driver</th>
-              <th class="border-b border-white/10 px-3 py-2 text-right">Points</th>
-              <th class="border-b border-white/10 px-3 py-2 text-right">Winnings</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in store.championshipData.podium"
-              :key="row.id"
-              :class="{ 'bg-[#ffe066]/10 text-white': row.isPlayer }"
-            >
-              <td class="px-3 py-2 font-bold italic" :class="medalClass(row.rank)">{{ row.rank }}</td>
-              <td class="px-3 py-2">{{ row.name }}</td>
-              <td class="px-3 py-2 text-right">{{ row.points }}</td>
-              <td class="px-3 py-2 text-right">${{ row.winnings.toLocaleString() }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="menu-panel max-h-[44vh] px-8 py-5 pointer-events-auto" :style="panelStyle" @mousedown.stop>
+        <ResultsTable :columns="columns" :rows="tableRows" />
 
         <button
-          class="menu-button pointer-events-auto mx-auto block px-12 py-3 text-2xl"
+          class="menu-button pointer-events-auto mx-auto mt-4 block px-12 py-2 text-3xl"
           @click="store.championshipExit()"
         >
           Back to Menu
@@ -63,6 +42,7 @@
 import { computed } from 'vue';
 import { useMenuStore } from './store.js';
 import RacePodium3D from './RacePodium3D.vue';
+import ResultsTable from './ResultsTable.vue';
 
 const store = useMenuStore();
 
@@ -71,6 +51,23 @@ const panelStyle = {
   backgroundRepeat: 'repeat',
   backgroundSize: '220px 220px',
 };
+
+const columns = [
+  { key: 'points', label: 'Points', align: 'right' },
+  { key: 'winnings', label: 'Winnings', align: 'right' },
+];
+
+const tableRows = computed(() => (store.championshipData?.podium ?? []).map((r) => ({
+  id: r.id,
+  position: r.rank,
+  name: r.name,
+  isPlayer: r.isPlayer,
+  dnf: false,
+  values: {
+    points: String(r.points),
+    winnings: `$${r.winnings.toLocaleString()}`,
+  },
+})));
 
 // Top 3 of the final championship standings.
 const podiumEntries = computed(() => {
@@ -82,11 +79,4 @@ const podiumEntries = computed(() => {
     color: r.color ?? null,
   }));
 });
-
-function medalClass(rank) {
-  if (rank === 1) return 'text-[#ffd24a]';
-  if (rank === 2) return 'text-slate-300';
-  if (rank === 3) return 'text-[#d08a4a]';
-  return 'text-[#ff6b6b]';
-}
 </script>

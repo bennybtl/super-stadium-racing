@@ -11,45 +11,13 @@
       v-if="store.singleRaceData"
       class="fixed inset-0 z-[1101] flex flex-col items-center justify-between overflow-hidden py-8 font-sans pointer-events-none"
     >
-      <h2 class="text-3xl uppercase italic tracking-[0.2em] text-[#ffe066] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">Race Results</h2>
+      <h2 class="menu-text text-5xl tracking-[0.14em] text-[#ffe066]">Race Results</h2>
 
-      <div class="menu-panel max-h-[42vh] px-10 py-6 pointer-events-auto" :style="panelStyle" @mousedown.stop>
-        <table class="mx-auto mb-6 w-full max-w-[760px] border-collapse text-sm text-slate-200">
-          <thead>
-            <tr class="text-[11px] uppercase italic tracking-[0.2em] text-slate-400">
-              <th class="border-b border-white/10 px-3 py-2 text-left">Pos</th>
-              <th class="border-b border-white/10 px-3 py-2 text-left">Driver</th>
-              <th class="border-b border-white/10 px-3 py-2 text-left">Race Time</th>
-              <th class="border-b border-white/10 px-3 py-2 text-left">Best Lap</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in store.singleRaceData.rows"
-              :key="row.id"
-              :class="{
-                'bg-[#ffe066]/10 text-white': row.isPlayer,
-                'text-slate-500': row.dnf,
-              }"
-            >
-              <td class="px-3 py-2 font-bold italic" :class="medalClass(row.finishPosition, row.dnf)">
-                {{ row.finishPosition }}
-              </td>
-              <td class="px-3 py-2">
-                {{ row.name }}
-                <span
-                  v-if="row.dnf"
-                  class="ml-2 inline-flex items-center rounded-md bg-black/50 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-[#ff6b6b]"
-                >DNF</span>
-              </td>
-              <td class="px-3 py-2">{{ formatTime(row.totalRaceTimeMs) }}</td>
-              <td class="px-3 py-2">{{ formatTime(row.fastestLapMs) }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="menu-panel max-h-[44vh] px-8 py-5 pointer-events-auto" :style="panelStyle" @mousedown.stop>
+        <ResultsTable :columns="columns" :rows="tableRows" />
 
         <button
-          class="menu-button pointer-events-auto mx-auto block px-12 py-3 text-2xl"
+          class="menu-button pointer-events-auto mx-auto mt-4 block px-12 py-2 text-3xl"
           @click="store.singleRaceExit()"
         >
           Back to Menu
@@ -64,6 +32,7 @@ import { computed } from 'vue';
 import { useMenuStore } from './store.js';
 import { formatLapTime as formatTime } from './formatTime.js';
 import RacePodium3D from './RacePodium3D.vue';
+import ResultsTable from './ResultsTable.vue';
 
 const store = useMenuStore();
 
@@ -72,6 +41,36 @@ const panelStyle = {
   backgroundRepeat: 'repeat',
   backgroundSize: '220px 220px',
 };
+
+const columns = [
+  { key: 'time', label: 'Race Time', align: 'right' },
+  { key: 'gap', label: 'Gap', align: 'right' },
+  { key: 'best', label: 'Best Lap', align: 'right' },
+];
+
+// Behind the winner: "+4.37" under a minute, "+1:04.37" beyond.
+function formatGap(ms) {
+  if (ms == null) return '—';
+  if (ms <= 0) return 'Leader';
+  return `+${ms < 60000 ? (ms / 1000).toFixed(2) : formatTime(ms)}`;
+}
+
+const tableRows = computed(() => {
+  const rows = store.singleRaceData?.rows ?? [];
+  const winnerMs = rows.find((r) => !r.dnf && r.totalRaceTimeMs != null)?.totalRaceTimeMs ?? null;
+  return rows.map((r) => ({
+    id: r.id,
+    position: r.finishPosition,
+    name: r.name,
+    isPlayer: r.isPlayer,
+    dnf: r.dnf,
+    values: {
+      time: formatTime(r.totalRaceTimeMs),
+      gap: r.dnf || winnerMs == null || r.totalRaceTimeMs == null ? '—' : formatGap(r.totalRaceTimeMs - winnerMs),
+      best: formatTime(r.fastestLapMs),
+    },
+  }));
+});
 
 // Top 3 finishers for the podium — real finishers first; only fall back to the
 // raw order if the whole field DNF'd.
@@ -86,12 +85,4 @@ const podiumEntries = computed(() => {
     color: r.color ?? null,
   }));
 });
-
-function medalClass(pos, dnf) {
-  if (dnf) return 'text-slate-500';
-  if (pos === 1) return 'text-[#ffd24a]';
-  if (pos === 2) return 'text-slate-300';
-  if (pos === 3) return 'text-[#d08a4a]';
-  return 'text-[#ff6b6b]';
-}
 </script>
