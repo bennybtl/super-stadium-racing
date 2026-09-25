@@ -7,6 +7,10 @@ const CAN_DIAMETER_BOTTOM = 0.62;
 const CAN_DIAMETER_TOP = 0.8;
 const RIM_HEIGHT = 0.14;
 const RIM_DIAMETER = 0.95;
+/** The muzzle: a bore through the rim ring into a soot-dark shaft. */
+const BORE_DIAMETER = 0.5;
+const BORE_DEPTH = 0.9;
+const BORE_COLOR = new Color3(0.03, 0.028, 0.025);
 
 const BODY_COLOR = new Color3(0.14, 0.13, 0.17);
 /** In-race rim: a plain gunmetal band, so a can reads as a prop on the track. */
@@ -49,6 +53,9 @@ export class FireworkLaunchers {
     this._bodyMat.specularColor = new Color3(0.15, 0.15, 0.18);
 
     const tinted = options.editorTint === true;
+    this._boreMat = new StandardMaterial('fwCanBore', scene);
+    this._boreMat.diffuseColor = BORE_COLOR.clone();
+    this._boreMat.specularColor = Color3.Black();
     this._rimMat = new StandardMaterial('fwCanRim', scene);
     this._rimMat.diffuseColor = (tinted ? EDITOR_RIM_COLOR : RIM_COLOR).clone();
     this._rimMat.emissiveColor = (tinted ? EDITOR_RIM_EMISSIVE : RIM_EMISSIVE).clone();
@@ -106,6 +113,7 @@ export class FireworkLaunchers {
     this.cans = [];
     this._bodyMat?.dispose();
     this._rimMat?.dispose();
+    this._boreMat?.dispose();
     this.container?.dispose();
   }
 
@@ -118,8 +126,7 @@ export class FireworkLaunchers {
       diameterTop: CAN_DIAMETER_TOP,
       diameterBottom: CAN_DIAMETER_BOTTOM,
       tessellation: 14,
-      // No top cap: it would sit exactly coplanar with the wider rim's own top
-      // cap (both land at y = CAN_HEIGHT) and z-fight with it. The rim covers it.
+      // Open top: the rim ring covers the lip, and the bore shows through it.
       cap: Mesh.CAP_START,
     }, this._scene);
     body.position.y = CAN_HEIGHT / 2;
@@ -127,16 +134,39 @@ export class FireworkLaunchers {
     body.isPickable = false;
     body.parent = root;
 
-    const rim = MeshBuilder.CreateCylinder(`${name}Rim`, {
-      height: RIM_HEIGHT,
-      diameter: RIM_DIAMETER,
+    // Rim: a flat ring (lathed annulus) around the muzzle, not a solid disc.
+    const rIn = BORE_DIAMETER / 2;
+    const rOut = RIM_DIAMETER / 2;
+    const rim = MeshBuilder.CreateLathe(`${name}Rim`, {
+      shape: [
+        new Vector3(rIn, 0, 0),
+        new Vector3(rOut, 0, 0),
+        new Vector3(rOut, RIM_HEIGHT, 0),
+        new Vector3(rIn, RIM_HEIGHT, 0),
+        new Vector3(rIn, 0, 0),
+      ],
       tessellation: 14,
+      sideOrientation: Mesh.DOUBLESIDE,
     }, this._scene);
-    rim.position.y = CAN_HEIGHT - RIM_HEIGHT / 2;
+    rim.position.y = CAN_HEIGHT - RIM_HEIGHT;
     rim.material = this._rimMat;
     rim.isPickable = false;
     rim.parent = root;
 
-    return { root, body, rim, side };
+    // Bore: a dark shaft seen from inside (backside wall) with a floor, so the
+    // muzzle reads as a hole rather than showing the ground through the can.
+    const bore = MeshBuilder.CreateCylinder(`${name}Bore`, {
+      height: BORE_DEPTH,
+      diameter: BORE_DIAMETER,
+      tessellation: 14,
+      cap: Mesh.CAP_START,
+      sideOrientation: Mesh.BACKSIDE,
+    }, this._scene);
+    bore.position.y = CAN_HEIGHT - RIM_HEIGHT - BORE_DEPTH / 2 + 0.001;
+    bore.material = this._boreMat;
+    bore.isPickable = false;
+    bore.parent = root;
+
+    return { root, body, rim, bore, side };
   }
 }
