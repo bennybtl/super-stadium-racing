@@ -15,6 +15,11 @@ export const DEFAULT_REVERSE_CONFIG = {
   cooldownMs: 800,
   // Heading error that reaches full steering lock while reversing (rad).
   fullLockAngle: Math.PI / 4,
+  // This many reverses without a clean run between them means the truck can't
+  // reach the path from here (e.g. it jumped a wall) — give up and respawn.
+  maxAttempts: 2,
+  // Driving this long without needing to reverse clears the attempt count (ms).
+  attemptResetMs: 4000,
 };
 
 /**
@@ -35,6 +40,13 @@ export class AIReverseController {
     this._pressMs = 0;
     this._reverseMs = 0;
     this._cooldownMs = 0;
+    this._attempts = 0;
+    this._sinceReverseMs = 0;
+  }
+
+  /** True once reversing keeps failing to get the truck back to the path. */
+  get exhausted() {
+    return this._attempts > this.config.maxAttempts;
   }
 
   /**
@@ -51,6 +63,8 @@ export class AIReverseController {
     const angle = Math.atan2(tx * fz - tz * fx, tx * fx + tz * fz);
 
     if (!this.active) {
+      this._sinceReverseMs += dtMs;
+      if (this._sinceReverseMs >= c.attemptResetMs) this._attempts = 0;
       if (this._cooldownMs > 0) {
         this._cooldownMs -= dtMs;
         this._pressMs = 0;
@@ -60,6 +74,8 @@ export class AIReverseController {
       this._pressMs = pressing ? this._pressMs + dtMs : 0;
       if (this._pressMs < c.pressTriggerMs) return null;
       this.active = true;
+      this._attempts++;
+      this._sinceReverseMs = 0;
       this._pressMs = 0;
       this._reverseMs = 0;
     }

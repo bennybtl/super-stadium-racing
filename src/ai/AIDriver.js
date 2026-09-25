@@ -491,10 +491,13 @@ export class AIDriver {
       brakingToStop: this.truck?.controls?.brakingToStop ?? false,
     });
     if (reverseInput) input = reverseInput;
+    const currentPos = { x: position.x, z: position.z };
+    if (this._reverse.exhausted) {
+      this._stuckRecovery.respawnFromStuck(targetWaypoint, currentPos, { reason: 'reverse-loop', input, fwdSpeed });
+    }
 
     this._boostController.update({ position, forward, rightVec, fwdSpeed, input });
 
-    const currentPos = { x: position.x, z: position.z };
     this._stuckRecovery.update({
       dt: aiDt,
       input,

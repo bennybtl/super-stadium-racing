@@ -49,7 +49,7 @@ export class AIStuckRecoveryController {
     if (controlStall) {
       this.stuckTimer += dtMs;
       if (this.stuckTimer >= this.stuckThreshold && this.driver.truckMesh) {
-        this._respawnFromStuck(targetWaypoint, currentPos, {
+        this.respawnFromStuck(targetWaypoint, currentPos, {
           reason: 'control-stall',
           input,
           fwdSpeed,
@@ -80,7 +80,7 @@ export class AIStuckRecoveryController {
         if (moved < this.positionStuckMinDist) {
           this.positionStuckTimer += this.positionCheckInterval;
           if (this.positionStuckTimer >= this.positionStuckThreshold && this.driver.truckMesh) {
-            this._respawnFromStuck(targetWaypoint, currentPos, {
+            this.respawnFromStuck(targetWaypoint, currentPos, {
               reason: 'position-stall',
               input,
               fwdSpeed,
@@ -99,7 +99,7 @@ export class AIStuckRecoveryController {
     }
   }
 
-  _respawnFromStuck(targetWaypoint, currentPos, details = {}) {
+  respawnFromStuck(targetWaypoint, currentPos, details = {}) {
     const truckName = this.driver?.truck?.mesh?.name ?? this.driver?.truckMesh?.name ?? 'ai-truck';
     const posX = Number.isFinite(currentPos?.x) ? currentPos.x.toFixed(2) : 'n/a';
     const posZ = Number.isFinite(currentPos?.z) ? currentPos.z.toFixed(2) : 'n/a';
