@@ -11,8 +11,9 @@
 // the previous point (cm), heading as a delta (centiradians, wrapped), and
 // alpha (percent). A point's `offsetX/offsetZ` is always
 // halfWidth × (cos, −sin) of the truck heading, so one angle replaces two
-// floats. About 7 characters a point, against ~70 for the schema-1 JSON, which
-// could fill the whole localStorage quota with two or three tracks' marks.
+// floats. About 6 characters a point, against ~70 for the schema-1 JSON, which
+// could fill the whole localStorage quota with two or three tracks' marks
+// (schema-1 saves are no longer read).
 // Precision: 1 cm, 0.01 rad (≤2 mm at the mark's edge), 1% alpha.
 
 export const TIRE_MARKS_STORAGE_PREFIX = "tireMarks_";
@@ -134,17 +135,8 @@ export function loadTireMarkStreaks(trackKey) {
     const raw = localStorage.getItem(storageKey(trackKey));
     if (!raw) return [];
     const data = JSON.parse(raw);
-    if (data?.version === TIRE_MARKS_SCHEMA_VERSION && typeof data.data === "string") {
-      return decodeTireMarkStreaks(data.data).slice(-TIRE_MARKS_MAX_STREAKS);
-    }
-    // Schema 1 (plain JSON objects): convert, and rewrite it compactly now so
-    // the old save stops holding its space.
-    if (data?.version === 1 && Array.isArray(data.streaks)) {
-      const streaks = data.streaks.slice(-TIRE_MARKS_MAX_STREAKS);
-      try { localStorage.setItem(storageKey(trackKey), storedValue(streaks)); } catch {}
-      return streaks;
-    }
-    return [];
+    if (data?.version !== TIRE_MARKS_SCHEMA_VERSION || typeof data.data !== "string") return [];
+    return decodeTireMarkStreaks(data.data).slice(-TIRE_MARKS_MAX_STREAKS);
   } catch {
     return [];
   }

@@ -88,17 +88,16 @@ describe("loadTireMarkStreaks", () => {
   });
   afterEach(() => { globalThis.localStorage = saved; });
 
-  it("converts a schema-1 save and rewrites it in the compact format", () => {
-    const streaks = [makeStreak(5, 5, 1, 0.02, 20)];
-    data.set("tireMarks_oval", JSON.stringify({ version: 1, streaks }));
-    expect(loadTireMarkStreaks("oval")).toEqual(streaks);
-    const rewritten = JSON.parse(data.get("tireMarks_oval"));
-    expect(rewritten.version).toBe(2);
+  it("loads a saved track", () => {
+    const streaks = [makeStreak(5, 5, 1, 0.02, 20), makeStreak(-3, 9, 2, -0.05, 8)];
+    data.set("tireMarks_oval", JSON.stringify({ version: 2, data: encodeTireMarkStreaks(streaks) }));
     expectClose(loadTireMarkStreaks("oval"), streaks);
   });
 
-  it("returns [] for missing or corrupt saves", () => {
+  it("returns [] for missing, schema-1 or corrupt saves", () => {
     expect(loadTireMarkStreaks("none")).toEqual([]);
+    data.set("tireMarks_old", JSON.stringify({ version: 1, streaks: [makeStreak(5, 5, 1, 0.02, 20)] }));
+    expect(loadTireMarkStreaks("old")).toEqual([]);
     data.set("tireMarks_bad", JSON.stringify({ version: 2, data: "!!notbase64" }));
     expect(loadTireMarkStreaks("bad")).toEqual([]);
   });
