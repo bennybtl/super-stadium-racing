@@ -532,6 +532,7 @@ export class Truck {
       this.mesh.position.x += this.state.velocity.x * deltaTime;
       this.mesh.position.y += this.state.velocity.y * deltaTime;
       this.mesh.position.z += this.state.velocity.z * deltaTime;
+      this.terrainPhysics.clampToTunnelRoof(this.mesh);
     });
 
     // Update rotation — pivot yaw about the front axle so the rear swings out.

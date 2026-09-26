@@ -144,6 +144,22 @@ describe("SurfaceLayers.sample", () => {
     expect(layers.sample(0, 0, 10).surface).toBe(ground);
   });
 
+  it("drops ground inside a ground void, but no other surface", () => {
+    // A tunnel: the hill (ground at 12) over a floor (tunnel at 0.1), and the
+    // mesh's smear of a portal face (ground at 3) inside the bore.
+    const tunnelFloor = { surfaceId: 5, kind: "tunnel", level: -1 };
+    const layers = new SurfaceLayers();
+    layers.add(flatSquare(0, 0, 50, 12), ground);
+    layers.add(flatSquare(0, 0, 50, 3), ground);
+    layers.add(flatSquare(0, 0, 5, 0.1), tunnelFloor);
+    expect(layers.sample(0, 0, 1.5).y).toBe(0.1);
+    expect(layers.sample(0, 0, 4).y).toBe(3); // no void yet: the smear is there
+    layers.groundVoidAt = (x) => (Math.abs(x) < 5 ? { min: 0.05, max: 6 } : null);
+    expect(layers.sample(0, 0, 4).surface).toBe(tunnelFloor);
+    expect(layers.sample(0, 0, 20).y).toBe(12); // the hilltop, above the roof
+    expect(layers.sample(10, 0, 4).y).toBe(3);  // outside the bore
+  });
+
   it("downOnLevel only sees its level; remove drops a layer", () => {
     const layers = new SurfaceLayers();
     layers.add(flatSquare(0, 0, 50, 0), ground);

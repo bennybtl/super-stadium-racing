@@ -168,6 +168,12 @@ const DOWN_EXTRA_DISTANCE = 200;
 export class SurfaceLayers {
   constructor() {
     this._entries = [];
+    /**
+     * Optional `(x, z) => { min, max } | null`: a vertical band where the
+     * ground (kind 'ground') isn't there — the inside of a tunnel bore, which
+     * the ground shader also discards. Other surfaces are unaffected.
+     */
+    this.groundVoidAt = null;
   }
 
   /**
@@ -190,10 +196,14 @@ export class SurfaceLayers {
   hitsAt(x, z) {
     const hits = [];
     const ys = [];
+    const voidBand = this.groundVoidAt?.(x, z) ?? null;
     for (const { layer, surface } of this._entries) {
       ys.length = 0;
       layer.heightsAt(x, z, ys);
-      for (const y of ys) hits.push({ y, surface, layer });
+      for (const y of ys) {
+        if (voidBand && surface.kind === "ground" && y > voidBand.min && y < voidBand.max) continue;
+        hits.push({ y, surface, layer });
+      }
     }
     return hits;
   }

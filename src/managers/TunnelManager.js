@@ -13,14 +13,15 @@ import { rasterizeBores, sampleBore } from "../world/tunnel-geometry.js";
  * stay out of it. Empty on a track without tunnels.
  */
 export class TunnelManager {
-  constructor(scene, track) {
+  constructor(scene, track, driveSurfaceManager = null) {
     this.scene = scene;
     this.track = track;
+    this.driveSurfaceManager = driveSurfaceManager;
     this._tunnels = [];
   }
 
   create(feature) {
-    const tunnel = new Tunnel(feature, this.track, this.scene);
+    const tunnel = new Tunnel(feature, this.track, this.scene, this.driveSurfaceManager);
     this._tunnels.push(tunnel);
     return tunnel;
   }

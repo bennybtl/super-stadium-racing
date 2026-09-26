@@ -316,6 +316,21 @@ export class TerrainPhysics {
   }
 
   /**
+   * Keep a truck on a tunnel floor under the roof: its top no higher than the
+   * roof above its centre, and no upward speed once it gets there — jumping
+   * into the roof should land as a thud. Call after the position integrates.
+   */
+  clampToTunnelRoof(mesh) {
+    if (this.floorSurface?.kind !== "tunnel") return;
+    const ceilingY = this._terrainQuery?.tunnelCeilingAt?.(mesh.position.x, mesh.position.z);
+    if (ceilingY == null) return;
+    const maxY = ceilingY - this.halfHeight;
+    if (mesh.position.y <= maxY) return;
+    mesh.position.y = maxY;
+    if (this.state.velocity.y > 0) this.state.velocity.y = 0;
+  }
+
+  /**
    * Resolve the drivable floor for this frame: floor height, the truck's
    * surface (`_lastFloorSurface`), and its normal (`_lastFloorNormal`).
    *

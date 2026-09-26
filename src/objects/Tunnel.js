@@ -1,4 +1,4 @@
-import { Color3, Mesh, StandardMaterial, VertexData } from "@babylonjs/core";
+import { Color3, Mesh, MeshBuilder, StandardMaterial, VertexData } from "@babylonjs/core";
 import {
   deriveTunnel,
   stationsBetween,
@@ -23,7 +23,10 @@ const DEFAULT_FLOOR_COLOR = "#7a6548"; // packed-dirt brown until the floor gets
  * back into the hill, covering the face the cut leaves (and the ground mesh's
  * smear of it). Shape comes from world/tunnel-geometry.js.
  *
- * Not drivable yet (Phase 3).
+ * Driving: the floor's top is registered as a 'tunnel' drive surface (level
+ * −1) so TerrainQuery puts a truck on it inside the hill; box colliders
+ * (StaticBodyCollisionManager) line both walls and the headwall faces beside
+ * each mouth; TerrainPhysics.clampToTunnelRoof keeps a truck under the roof.
  *
  * Each part is a closed, outward-wound solid (back faces culled). None of them
  * cast shadows yet: the terrain isn't a shadow occluder, so geometry buried in
@@ -42,11 +45,12 @@ const DEFAULT_FLOOR_COLOR = "#7a6548"; // packed-dirt brown until the floor gets
  *   }
  */
 export class Tunnel {
-  constructor(feature, track, scene) {
+  constructor(feature, track, scene, driveSurfaceManager = null) {
     this.feature = feature;
     this._scene = scene;
     this._meshes = [];
     this._materials = [];
+    this._colliders = [];
 
     const tunnel = deriveTunnel(feature, (x, z) => track.getHeightAt(x, z));
     /** The derived shape (tunnel-geometry.js), or null for a degenerate feature. */
@@ -83,10 +87,59 @@ export class Tunnel {
         [span.start, Math.min(faces.in + TUNNEL_HEADWALL_EMBED, faces.out)],
         [Math.max(faces.out - TUNNEL_HEADWALL_EMBED, faces.in), span.end],
       ];
+      const top = tunnel.height + TUNNEL_CUT_CLEARANCE;
+      const reach = tunnelCutReach(feature);
       blocks.forEach(([s0, s1], i) => {
-        if (s1 - s0 > 0.05) this._addMesh(`tunnel_headwall_${key}_${i}`, sweepSection(framesBetween(s0, s1), outer, facade), lining, scene);
+        if (s1 - s0 <= 0.05) return;
+        const blockFrames = framesBetween(s0, s1);
+        this._addMesh(`tunnel_headwall_${key}_${i}`, sweepSection(blockFrames, outer, facade), lining, scene);
+        // The faces beside the mouth, as far out as the headwall reaches.
+        for (const side of [1, -1]) {
+          this._addCollider(`tunnel_headwall_collider_${key}_${i}_${side}`, blockFrames[0], blockFrames[blockFrames.length - 1],
+            side * (w + reach) / 2, reach - w, -TUNNEL_FLOOR_DEPTH, top, scene);
+        }
       });
     }
+
+    // Walls: one box per ~2 m along each side, from below the floor to the
+    // crown, just behind the inner face.
+    for (let k = 2; k < frames.length + 1; k += 2) {
+      const a = frames[k - 2], b = frames[Math.min(k, frames.length - 1)];
+      for (const side of [1, -1]) {
+        this._addCollider(`tunnel_wall_collider_${key}_${k}_${side}`, a, b,
+          side * (profile.halfWidth + TUNNEL_LINING_THICKNESS / 2), TUNNEL_LINING_THICKNESS, -1, tunnel.height, scene);
+      }
+    }
+
+    // The drivable floor: the slab's top across the bore.
+    this._driveMesh = new Mesh(`tunnel_drive_${key}`, scene);
+    floorTopVertexData(frames, profile.halfWidth, TUNNEL_FLOOR_LIFT).applyToMesh(this._driveMesh);
+    this._driveMesh.isVisible = false;
+    this._driveMesh.isPickable = false;
+    this._meshes.push(this._driveMesh);
+    driveSurfaceManager?.register(this._driveMesh, { kind: "tunnel", level: -1 });
+  }
+
+  /**
+   * An invisible box collider for trucks between frames `a` and `b`: centred
+   * `u` across (left +), `width` wide, from `v0` to `v1` over the floor (the
+   * lower floor of the two ends to the higher), with a little overlap along
+   * its length so consecutive boxes leave no seam.
+   */
+  _addCollider(name, a, b, u, width, v0, v1, scene) {
+    const dx = b.x - a.x, dz = b.z - a.z;
+    const length = Math.hypot(dx, dz);
+    if (length < 0.05 || width <= 0) return;
+    const nx = (a.nx + b.nx) / 2, nz = (a.nz + b.nz) / 2;
+    const bottom = Math.min(a.y, b.y) + v0, topY = Math.max(a.y, b.y) + v1;
+    const box = MeshBuilder.CreateBox(name, { width: length + 0.2, height: topY - bottom, depth: width }, scene);
+    // Babylon's rotation.y turns local +X to (cos θ, −sin θ) in XZ.
+    box.rotation.y = Math.atan2(-dz, dx);
+    box.position.set((a.x + b.x) / 2 + nx * u, (bottom + topY) / 2, (a.z + b.z) / 2 + nz * u);
+    box.isVisible = false;
+    box.isPickable = false;
+    box.metadata = { truckCollider: true };
+    this._colliders.push(box);
   }
 
   _material(name, hex) {
@@ -110,9 +163,38 @@ export class Tunnel {
   dispose() {
     for (const m of this._meshes) m.dispose();
     for (const m of this._materials) m.dispose();
+    for (const c of this._colliders) c.dispose();
     this._meshes = [];
     this._materials = [];
+    this._colliders = [];
   }
+}
+
+/**
+ * The floor's top surface along `frames`: a strip ±`halfWidth` across, `lift`
+ * above each frame's floor, facing up.
+ */
+function floorTopVertexData(frames, halfWidth, lift) {
+  const positions = [], indices = [], normals = [];
+  frames.forEach((f, i) => {
+    positions.push(f.x + f.nx * halfWidth, f.y + lift, f.z + f.nz * halfWidth);
+    positions.push(f.x - f.nx * halfWidth, f.y + lift, f.z - f.nz * halfWidth);
+    if (i > 0) {
+      const l0 = (i - 1) * 2, r0 = l0 + 1, l1 = i * 2, r1 = l1 + 1;
+      indices.push(l0, r0, r1, l0, r1, l1);
+    }
+  });
+  VertexData.ComputeNormals(positions, indices, normals);
+  // Wound either way depending on travel direction: make sure it faces up.
+  if (normals[1] < 0) {
+    for (let t = 0; t < indices.length; t += 3) [indices[t + 1], indices[t + 2]] = [indices[t + 2], indices[t + 1]];
+    for (let i = 0; i < normals.length; i++) normals[i] = -normals[i];
+  }
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.normals = normals;
+  return vd;
 }
 
 /**

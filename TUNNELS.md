@@ -4,8 +4,8 @@ Add a `tunnel` track feature: a drivable passage that goes *through* terrain
 (a hill, a mesa), with portals at each end, and the hill above it staying
 drivable and decorated as normal.
 
-Status: **Phase 2 done** (Sept 26 2026): tunnels render, are editable, and
-their mouths are open; not drivable yet. Phase 3 is next.
+Status: **Phase 3 done** (Sept 26 2026): tunnels render, are editable, have
+open mouths and are drivable. Phase 4 (visibility and lighting) is next.
 
 ## Why this is a new concept
 
@@ -176,7 +176,24 @@ approaches, and the editor rebuilds the ground on tunnel edits.
 
 Done when: you can fly the free camera through an open tunnel.
 
-### Phase 3: driving
+### Phase 3: driving — done
+
+- The floor's top (slab top, 10 cm over the floor line) is an invisible mesh
+  registered as `kind: 'tunnel'`, level −1.
+- **Ground void:** `SurfaceLayers.groundVoidAt` drops ground hits inside a
+  bore (the same band the shader discards, read from `scene.metadata.tunnelBore`
+  by DriveSurfaceManager), so the mesh's smear of a portal face isn't a ramp
+  inside the mouth. Other surfaces are unaffected.
+- Walls: a box per ~2 m each side; plus the headwall faces beside each mouth.
+- Roof: `TerrainPhysics.clampToTunnelRoof`, called after the position
+  integrates, against the bore's roof above the truck's centre
+  (`TerrainQuery.tunnelCeilingAt`).
+- `check:collision` scenarios: straight through (floor contact, never on the
+  hill, no wall contact), steering into a wall, launched into the roof, and the
+  headwall beside a mouth. The harness now computes world matrices after
+  building, as a rendered frame would, which the broadphase needs.
+
+The plan as written:
 
 - Register the floor as a surface layer (`kind: 'tunnel'`, level −1).
 - **Walls:** oriented box colliders along each side, spanning floor to crown,
@@ -217,7 +234,7 @@ Go through `getHeightAt` callers and pick layer-aware sampling where it matters:
 | Checkpoints | **Not allowed inside a tunnel.** `CheckpointEditor` refuses to place or move a gate inside a tunnel footprint |
 | AI path | Waypoints inside a footprint take the floor Y; the 2D blocked grid gets the tunnel walls. Known limit: hill cells directly above the walls count as blocked too |
 | Wear / tire ruts bake | Mask the tunnel footprint out of the ground wear bake (like the deck wear split in terrain-utils), or wear prints on the hilltop |
-| Decals, tire marks | Resolve the target by layer; ground decals don't project into tunnels in v1 |
+| Decals, tire marks | Resolve the target by layer; ground decals don't project into tunnels in v1. Seen in Phase 2: saved tire marks replay from the top down (`fromY: 499`), so marks laid in a tunnel land on the hill and on the portal-face smear across the mouth; save each point's Y (or layer) |
 | Grass / dirt scatter, decorations | Leave them on the hilltop (correct). The cuttings are ordinary author-shaped terrain |
 | Minimap | Draw the tunnel as a dashed corridor |
 | Water | Not supported inside tunnels in v1 |

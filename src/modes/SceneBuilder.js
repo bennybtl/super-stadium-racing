@@ -701,8 +701,8 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       ? obstacleManager.findById(attachTo.id)
       : decorationManager.findById(attachTo.id));
   // Tunnels before the steep-slope blockers, which stay out of the bores the
-  // tunnels publish (scene.metadata.tunnelBore). Not drivable yet — TUNNELS.md.
-  const tunnelManager = new TunnelManager(scene, currentTrack);
+  // tunnels publish (scene.metadata.tunnelBore).
+  const tunnelManager = new TunnelManager(scene, currentTrack, driveSurfaceManager);
   tunnelManager.rebuild();
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,

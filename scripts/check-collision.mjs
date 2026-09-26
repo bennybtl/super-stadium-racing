@@ -43,6 +43,8 @@ export { DriveSurfaceManager } from ${src('managers/DriveSurfaceManager.js')};
 export { TerrainQuery } from ${src('managers/TerrainQuery.js')};
 export { StaticBodyCollisionManager } from ${src('managers/StaticBodyCollisionManager.js')};
 export { BridgeMeshManager } from ${src('managers/BridgeMeshManager.js')};
+export { TunnelManager } from ${src('managers/TunnelManager.js')};
+export { deriveTunnel } from ${src('world/tunnel-geometry.js')};
 export { NullEngine, Scene, MeshBuilder, Vector3, Logger } from '@babylonjs/core';
 `);
 const bundlePath = join(cacheDir, 'bundle.mjs');
@@ -98,6 +100,10 @@ function makeWorld(features) {
   dsm.register(ground, { kind: 'ground', lattice });
   const bridges = new M.BridgeMeshManager(scene, track, null, dsm, null);
   for (const f of track.features) if (f.type === 'driveBox' || f.type === 'bridgeMesh') bridges.create(f);
+  new M.TunnelManager(scene, track, dsm).rebuild();
+  // A rendered frame would compute these; the collision broadphase reads the
+  // colliders' world bounds.
+  for (const mesh of scene.meshes) mesh.computeWorldMatrix(true);
   return { track, dsm, terrainQuery: new M.TerrainQuery(scene), collision: new M.StaticBodyCollisionManager(scene) };
 }
 
@@ -154,15 +160,20 @@ function makeTruck(world, { x, z, heading }) {
   return t;
 }
 
-/** Full throttle along +X from x = -20 for `seconds`; returns what happened. */
-function driveAt(features, seconds) {
+/**
+ * Full throttle for `seconds` from `start` (default: x = -20 heading +X);
+ * `setup(truck)` can adjust the truck first. Returns what happened, plus the
+ * truck's track of y against x (`path`) for the tunnel checks.
+ */
+function driveAt(features, seconds, { start = { x: -20, z: 0, heading: Math.PI / 2 }, setup = null } = {}) {
   simTimeMs = 0;
   rngState = 12345;
   const world = makeWorld(features);
-  const truck = makeTruck(world, { x: -20, z: 0, heading: Math.PI / 2 });
+  const truck = makeTruck(world, start);
+  setup?.(truck);
   const terrain = { getTerrainAt: (p) => world.track.getTerrainTypeAt(p.x, p.z) ?? world.track.defaultTerrainType };
   const gas = { forward: true, back: false, left: false, right: false };
-  const out = { pushes: 0, maxPush: 0, maxY: -Infinity, minVx: Infinity /* never rolled back */ };
+  const out = { pushes: 0, maxPush: 0, maxY: -Infinity, minVx: Infinity /* never rolled back */, maxAbsZ: 0, path: [] };
   const afterSim = new Vector3();
   for (let i = 0; i < Math.round(seconds / SIM_DT); i++) {
     truck.update(gas, SIM_DT, terrain, world.track, false, null, null);
@@ -173,6 +184,8 @@ function driveAt(features, seconds) {
     if (push > 1e-4) { out.pushes++; out.maxPush = Math.max(out.maxPush, push); }
     out.maxY = Math.max(out.maxY, truck.mesh.position.y);
     out.minVx = Math.min(out.minVx, truck.state.velocity.x);
+    out.maxAbsZ = Math.max(out.maxAbsZ, Math.abs(truck.mesh.position.z));
+    out.path.push({ x: truck.mesh.position.x, y: truck.mesh.position.y, top: truck.mesh.position.y + truck.halfHeight });
   }
   out.x = truck.mesh.position.x;
   return out;
@@ -226,9 +239,49 @@ const SCENARIOS = [
   },
 ];
 
+// A 12 m square hill across x = 0 (40 m along the tunnel), and a tunnel
+// through it along the x axis, drawn out to flat ground at both ends: floor
+// at 0, crown at 6.
+const hill = { type: 'squareHill', centerX: 0, centerZ: 0, width: 40, depth: 60, height: 12, angle: 0 };
+const tunnel = { type: 'tunnel', points: [{ x: -52, z: 0 }, { x: 52, z: 0 }], width: 10, height: 6, cover: 2 };
+const HALF_HEIGHT = M.TRUCK_HEIGHT / 2;
+const inside = (p) => Math.abs(p.x) < 18; // well inside the hill (faces at |x| ≈ 18.9)
+
+SCENARIOS.push(
+  {
+    name: 'tunnel: drives through on the floor, never onto the hill',
+    features: [hill, tunnel],
+    seconds: 6,
+    start: { x: -48, z: 0, heading: Math.PI / 2 },
+    expect: (r) => r.x > 30 && r.path.filter(inside).every((p) => p.y < HALF_HEIGHT + 0.6) && r.pushes === 0,
+  },
+  {
+    name: 'tunnel: a wall stops a truck steering into it',
+    features: [hill, tunnel],
+    seconds: 3,
+    start: { x: -12, z: 0, heading: Math.PI / 2 - 0.6 },
+    expect: (r) => r.pushes > 0 && r.maxAbsZ < 5,
+  },
+  {
+    name: 'tunnel: the roof stops a truck launched up inside',
+    features: [hill, tunnel],
+    seconds: 1.5,
+    start: { x: 0, z: 0, heading: Math.PI / 2 },
+    setup: (t) => { t.state.velocity.y = 20; },
+    expect: (r) => r.path.every((p) => p.top <= 6 + 1e-6) && r.path.some((p) => p.top > 5.9),
+  },
+  {
+    name: 'tunnel: the headwall beside the mouth blocks',
+    features: [hill, tunnel],
+    seconds: 3,
+    start: { x: -36, z: -8.5, heading: Math.PI / 2 },
+    expect: (r) => r.pushes > 0 && r.x < -20,
+  },
+);
+
 let failures = 0;
 for (const s of SCENARIOS) {
-  const r = driveAt(s.features, s.seconds);
+  const r = driveAt(s.features, s.seconds, { start: s.start, setup: s.setup });
   const detail = `end x=${r.x.toFixed(2)}, max y=${r.maxY.toFixed(2)}, pushes=${r.pushes}` +
     (r.pushes ? ` (max ${r.maxPush.toFixed(2)} m)` : '');
   if (s.expect(r)) {

@@ -44,8 +44,14 @@ const PROBE_REACH = 55;
 
 export class TerrainQuery {
   constructor(scene) {
+    this._scene = scene ?? null;
     this._layers = scene?.metadata?.driveSurfaceManager?.layers ?? null;
     this._lastResolvedSurface = null;
+  }
+
+  /** Roof height of a tunnel bore at (x, z), or null outside every tunnel. */
+  tunnelCeilingAt(x, z) {
+    return this._scene?.metadata?.tunnelBore?.sample(x, z)?.ceilingY ?? null;
   }
 
   /**

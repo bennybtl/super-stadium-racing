@@ -1,5 +1,6 @@
 import { Vector3, VertexBuffer } from "@babylonjs/core";
 import { SurfaceLayers, createGroundLayer, createTriangleLayer } from "../world/surface-layers.js";
+import { TUNNEL_BORE_DISCARD_ABOVE } from "../world/tunnel-geometry.js";
 // Side-effect import: registers AbstractMesh.prototype.createOrUpdateSubmeshesOctree
 // and the picking-octree scene component (tree-shaken out otherwise). Required by
 // _enablePickingAcceleration below.
@@ -16,7 +17,8 @@ import "@babylonjs/core/Culling/Octrees/octreeSceneComponent.js";
  *   kind   'ground' — the terrain and the outskirts plain
  *          'deck'   — a bridge deck or drive box top
  *          'seam'   — the invisible ramp from a deck edge down to the terrain
- *   level  layer number (ground 0; bridges default 1, drive boxes 0)
+ *          'tunnel' — a tunnel floor
+ *   level  layer number (ground 0; bridges default 1, drive boxes 0, tunnels -1)
  *
  * A mesh with no record is not drivable.
  *
@@ -30,6 +32,14 @@ export class DriveSurfaceManager {
     this._records = new WeakMap();
     this._nextSurfaceId = 1;
     this.layers = new SurfaceLayers();
+    // Inside a tunnel bore the ground isn't there: the ground shader discards
+    // it, and this drops it from the height layers to match (the mesh's smear
+    // of a portal face would otherwise be a ramp inside the mouth). Read live,
+    // since TunnelManager republishes the bore on every rebuild.
+    this.layers.groundVoidAt = (x, z) => {
+      const b = scene.metadata?.tunnelBore?.sample(x, z);
+      return b ? { min: b.floorY + TUNNEL_BORE_DISCARD_ABOVE, max: b.ceilingY } : null;
+    };
     // Meshes of elevated drive surfaces (bridge decks, level > 0). Used by
     // hasElevatedSurfaceNear() to gate expensive AI multi-probe sampling to
     // trucks actually near a bridge. Empty on the common no-bridge track.
