@@ -32,6 +32,7 @@ import { DecorationManager } from "../managers/DecorationManager.js";
 import { isModelFeature } from "../decorations/decorations-registry.js";
 import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
+import { TunnelManager } from "../managers/TunnelManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { DecalManager } from "../managers/DecalManager.js";
@@ -719,6 +720,10 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     }
   }
 
+  // Tunnels (visual only so far — see TUNNELS.md).
+  const tunnelManager = new TunnelManager(scene, currentTrack);
+  tunnelManager.rebuild();
+
   // Shared, persistent tire marks — one ring-buffer mesh for every truck's
   // rubber, replayed from last session's save. Built only
   // now, after ground AND bridge drive surfaces are registered, since replay
@@ -820,6 +825,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     decorationManager,
     pickupManager,
     bridgeMeshManager,
+    tunnelManager,
     steepSlopeColliderManager,
     decalManager,
     driveSurfaceManager,

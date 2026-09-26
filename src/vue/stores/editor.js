@@ -293,6 +293,20 @@ export const useEditorStore = defineStore('editor', () => {
     colors: [...DEFAULT_STRIPE_COLORS],
   });
 
+  // ── Tunnel panel ──
+  const tunnel = reactive({
+    hasSelection: false,
+    canHaveRadius: false,
+    radius: 0,
+    maxRadius: Infinity,
+    width: 10,
+    height: 6,
+    cover: 2,
+    floorAuto: true,
+    floorY: 0,
+    status: '',
+  });
+
   // ── Track defaults ──
   const trackSettingsOpen = ref(false);
   const trackSettings = reactive({
@@ -553,7 +567,7 @@ export const useEditorStore = defineStore('editor', () => {
   const _panels = {
     checkpoint, hill, squareHill, driveBox, terrainShape, obstacle,
     meshGrid, bridgeMesh, polyWall, polyHill, flag, decoration, trackSign, startPosition, trackLight,
-    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, decal,
+    bannerString, actionZone, polyCurb, aiPathWear, terrainPath, decal, tunnel,
   };
   function setFeatureProp(panelKey, prop, val) {
     const panel = _panels[panelKey];
@@ -587,7 +601,7 @@ export const useEditorStore = defineStore('editor', () => {
     setDecorationType, setDecorationProp, trackSign, startPosition, trackLight,
     bannerString,
     actionZone,
-    setActionZoneType, polyCurb,
+    setActionZoneType, polyCurb, tunnel,
     trackSettingsOpen, trackSettings,
     openTrackSettings, closeTrackSettings, toggleTrackSettings, setTrackName, setTrackId, setTrackHidden, setTrackPackId, setTrackDirtChunks, setTrackGrassBlades, setTrackOobDeadSpace, setTrackAllowReverse, setTrackStadiumLighting, setTrackWidth, setTrackDepth,
     trackDefaultTerrain, setTrackDefaultTerrain,

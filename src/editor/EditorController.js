@@ -17,6 +17,7 @@ import { StartPositionEditor } from "./StartPositionEditor.js";
 import { TrackLightEditor } from "./TrackLightEditor.js";
 import { ActionZoneEditor } from './ActionZoneEditor.js';
 import { PolyCurbEditor } from './PolyCurbEditor.js';
+import { TunnelEditor } from './TunnelEditor.js';
 import { BridgeMeshEditor } from './BridgeMeshEditor.js';
 import { AiPathEditor } from './AiPathEditor.js';
 import { TerrainPathEditor } from './TerrainPathEditor.js';
@@ -97,6 +98,7 @@ export class EditorController {
     this.polyWallEditor = new PolyWallEditor(this);
     this.polyHillEditor = new PolyHillEditor(this);
     this.polyCurbEditor = new PolyCurbEditor(this);
+    this.tunnelEditor = new TunnelEditor(this);
     this.bridgeMeshEditor = new BridgeMeshEditor(this);          // elevated mesh grid
     this.aiPathEditor = new AiPathEditor(this);
     this.terrainPathEditor = new TerrainPathEditor(this);        // terrain-painted paths
@@ -119,6 +121,7 @@ export class EditorController {
       this.polyWallEditor,
       this.polyHillEditor,
       this.polyCurbEditor,
+      this.tunnelEditor,
       this.bridgeMeshEditor,
       this.aiPathEditor,
       this.terrainPathEditor,
@@ -497,6 +500,10 @@ export class EditorController {
       return this._createPointSelectionInteraction(this.polyCurbEditor, 'moveSelectedPoint');
     }
 
+    if (this.tunnelEditor?.selectedPoint) {
+      return this._createPointSelectionInteraction(this.tunnelEditor, 'moveSelectedPoint');
+    }
+
     if (this.meshGridEditor?.selectedPoint) {
       return this._createPointSelectionInteraction(this.meshGridEditor, 'moveSelectedPoint');
     }
@@ -543,6 +550,7 @@ export class EditorController {
       { selected: () => this.polyWallEditor?.selectedPoint, delete: () => this.polyWallEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyHillEditor?.selectedPoint, delete: () => this.polyHillEditor?.deleteSelectedPoint?.() },
       { selected: () => this.polyCurbEditor?.selectedPoint, delete: () => this.polyCurbEditor?.deletePolyCurbPoint?.() },
+      { selected: () => this.tunnelEditor?.selectedPoint, delete: () => this.tunnelEditor?.deleteTunnelPoint?.() },
     ];
 
     return featureActions.find(action => action.selected()) ?? null;
@@ -646,6 +654,9 @@ export class EditorController {
       // Restore poly curb gizmos
       this.polyCurbEditor?.onSnapshotRestored();
       rebuild.polyCurb?.(null);
+      // Restore tunnel gizmos
+      this.tunnelEditor?.onSnapshotRestored();
+      rebuild.tunnel?.(null);
       // Checkpoints are managed by CheckpointManager — rebuild from features
       this.checkpointEditor.rebuildFromFeatures();
 
@@ -702,6 +713,12 @@ export class EditorController {
       }
       if (this._editorStore?.selectedType === 'polyCurb') {
         this.closePolyCurb();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (this._editorStore?.selectedType === 'tunnel') {
+        this.closeTunnel();
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -845,6 +862,9 @@ export class EditorController {
     }
     if (movKeys.includes(event.key.toLowerCase()) && this.polyCurbEditor?.selectedPoint) {
       this.polyCurbEditor.endDrag();
+    }
+    if (movKeys.includes(event.key.toLowerCase()) && this.tunnelEditor?.selectedPoint) {
+      this.tunnelEditor.endDrag();
     }
   }
 
@@ -1051,6 +1071,7 @@ export class EditorController {
         this.polyWallEditor?.endDrag?.();
         this.polyHillEditor?.endDrag?.();
         this.polyCurbEditor?.endDrag?.();
+        this.tunnelEditor?.endDrag?.();
         this.meshGridEditor?.endDrag?.();
       }
     }
@@ -1227,6 +1248,7 @@ export class EditorController {
     this.polyWallEditor?.beginDrag?.();
     this.polyHillEditor?.beginDrag?.();
     this.polyCurbEditor?.beginDrag?.();
+    this.tunnelEditor?.beginDrag?.();
     return true;
   }
 
@@ -1275,6 +1297,7 @@ export class EditorController {
     if (selectedObjectMatches(this.polyWallEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyHillEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.polyCurbEditor?.selectedPoint)) return true;
+    if (selectedObjectMatches(this.tunnelEditor?.selectedPoint)) return true;
     if (selectedObjectMatches(this.bridgeMeshEditor?.selectedCenter)) return true;
     if (selectedObjectMatches(this.bridgeMeshEditor?.selectedPoint)) return true;
 
@@ -1358,6 +1381,7 @@ export class EditorController {
     note('polyWallPoint',   this.polyWallEditor?.selectedPoint);
     note('polyHillPoint',   this.polyHillEditor?.selectedPoint);
     note('polyCurbPoint',   this.polyCurbEditor?.selectedPoint);
+    note('tunnelPoint',     this.tunnelEditor?.selectedPoint);
     return {
       selectedType:  this._editorStore?.selectedType ?? null,
       heldSelections: held,
@@ -1533,6 +1557,8 @@ export class EditorController {
         if (this._handlePolyPlacement(pickResult, pointerInfo.event.button, this.polyWallEditor)) return;
       } else if (this._editorStore?.selectedType === 'polyCurb') {
         if (this._handlePolyPlacement(pickResult, pointerInfo.event.button, this.polyCurbEditor)) return;
+      } else if (this._editorStore?.selectedType === 'tunnel') {
+        if (this._handlePolyPlacement(pickResult, pointerInfo.event.button, this.tunnelEditor)) return;
       }
 
       if (pickResult.hit && pickResult.pickedMesh) {
@@ -1556,7 +1582,7 @@ export class EditorController {
         // Poly wall / hill / curb control points. Each uses a dedicated pick
         // limited to its own spheres so the pickable ground mesh can't occlude
         // a half-buried handle.
-        for (const ed of [this.polyWallEditor, this.polyHillEditor, this.polyCurbEditor]) {
+        for (const ed of [this.polyWallEditor, this.polyHillEditor, this.polyCurbEditor, this.tunnelEditor]) {
           if (!ed) continue;
           if (this._selectViaPointEditor(ed, ed.pickControlPoint() ?? clickedMesh)) return;
         }
@@ -1633,6 +1659,7 @@ export class EditorController {
   addPolyWallEntity()   { this.polyWallEditor?.addPolyWallFeature(); this.hideAddMenu(); }
   addPolyHillEntity()   { this.polyHillEditor?.addPolyHillFeature(); this.hideAddMenu(); }
   addPolyCurbEntity()   { this.polyCurbEditor?.addPolyCurbFeature(); this.hideAddMenu(); }
+  addTunnelEntity()     { this.tunnelEditor?.addTunnelFeature(); this.hideAddMenu(); }
   
   /**
    * Add a new checkpoint at camera target position
@@ -2172,6 +2199,22 @@ export class EditorController {
   deletePolyCurb()           { this.polyCurbEditor?.deletePolyCurb(); }
   duplicatePolyCurb()        { this.polyCurbEditor?.duplicatePolyCurb(); }
   deselectPolyCurb()         { this.polyCurbEditor?.deselectPolyCurb(); }
+  changeTunnelWidth(val)     { this.tunnelEditor?.changeTunnelWidth(val); }
+  changeTunnelHeight(val)    { this.tunnelEditor?.changeTunnelHeight(val); }
+  changeTunnelCover(val)     { this.tunnelEditor?.changeTunnelCover(val); }
+  changeTunnelRadius(val)    { this.tunnelEditor?.changeTunnelRadius(val); }
+  changeTunnelFloorY(val)    { this.tunnelEditor?.changeTunnelFloorY(val); }
+  changeTunnelFloorAuto(val) { this.tunnelEditor?.changeTunnelFloorAuto(val); }
+  insertTunnelPoint()        { this.tunnelEditor?.insertTunnelPoint(); }
+  deleteTunnelPoint()        { this.tunnelEditor?.deleteTunnelPoint(); }
+  deleteTunnel()             { this.tunnelEditor?.deleteTunnel(); }
+  duplicateTunnel()          { this.tunnelEditor?.duplicateTunnel(); }
+  closeTunnel() {
+    this.tunnelEditor?.deselectPoint();
+    if (this.tunnelEditor && !this.tunnelEditor.discardActiveIfEmpty()) this.tunnelEditor.deactivate();
+    if (this._editorStore) this._editorStore.selectedType = null;
+  }
+
   closePolyCurb() {
     this.polyCurbEditor?.deselectPoint();
     // Remove the curb if empty; otherwise revert its (still-visible) points to
@@ -2654,6 +2697,7 @@ export class EditorController {
     this.polyWallEditor?.setHandlesVisible?.(visible);
     this.polyHillEditor?.setHandlesVisible?.(visible);
     this.polyCurbEditor?.setHandlesVisible?.(visible);
+    this.tunnelEditor?.setHandlesVisible?.(visible);
 
     if (this.aiPathEditor) {
       for (const h of this.aiPathEditor.handles || []) {

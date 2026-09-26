@@ -68,6 +68,7 @@ const features = [
   { label: 'Mesh Grid',        img: imgMeshGrid,      action: () => editor.featureAction('addMeshGridEntity')       },
   { label: 'Bridge Mesh',      img: imgBridgeMesh,    action: () => editor.featureAction('addBridgeMeshEntity')     },
   { label: 'Drive Box',        img: imgDriveBox,      action: () => editor.featureAction('addDriveBoxEntity')       },
+  { label: 'Tunnel',           img: null,             action: () => editor.featureAction('addTunnelEntity')         },
   { label: 'Terrain Shape',    img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')        },
   { label: 'Obstacle',         img: imgObstacle,      action: () => editor.featureAction('addObstacleEntity')       },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.featureAction('addTrackSignEntity')      },

@@ -31,6 +31,7 @@
       <TrackSettingsPanel />
       <ActionZonePanel />
       <PolyCurbPanel />
+      <TunnelPanel />
       <MeshGridPanel />
       <BridgeMeshPanel />
       <AiPathPanel />
@@ -71,6 +72,7 @@ const TrackLightPanel = defineAsyncComponent(() => import('./editor/TrackLightPa
 const TrackSettingsPanel = defineAsyncComponent(() => import('./editor/TrackSettingsPanel.vue'));
 const ActionZonePanel = defineAsyncComponent(() => import('./editor/ActionZonePanel.vue'));
 const PolyCurbPanel = defineAsyncComponent(() => import('./editor/PolyCurbPanel.vue'));
+const TunnelPanel = defineAsyncComponent(() => import('./editor/TunnelPanel.vue'));
 const MeshGridPanel = defineAsyncComponent(() => import('./editor/MeshGridPanel.vue'));
 const BridgeMeshPanel = defineAsyncComponent(() => import('./editor/BridgeMeshPanel.vue'));
 const AiPathPanel = defineAsyncComponent(() => import('./editor/AiPathPanel.vue'));

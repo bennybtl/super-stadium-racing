@@ -59,7 +59,7 @@ const GROUND_SUBDIVISIONS_MAX = 256;
 
 // Point-list feature types that are meaningless with zero points. Loaded tracks
 // strip any of these that carry an empty `points` array (see Track.fromJSON).
-const EMPTY_STRIP_TYPES = new Set(['terrainPath', 'polyWall', 'polyCurb', 'polyHill', 'aiPath']);
+const EMPTY_STRIP_TYPES = new Set(['terrainPath', 'polyWall', 'polyCurb', 'polyHill', 'aiPath', 'tunnel']);
 
 function getFeatureSerializationPriority(feature) {
   if (!feature || typeof feature !== 'object') return 10;

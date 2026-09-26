@@ -16,6 +16,7 @@ const rebuild = {
   polyWall: null,
   polyCurb: null,
   bridgeMesh: null,
+  tunnel: null,
   polyHill: null,
   quickTestTrack: null,
   testReverse: null,

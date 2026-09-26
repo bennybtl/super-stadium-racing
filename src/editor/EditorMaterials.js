@@ -12,6 +12,9 @@ export const LINE_COLOR_MESH_GRID   = basicColors.teal.diffuse; // teal
 export const LINE_COLOR_POLY_WALL   = basicColors.teal.diffuse;  // teal (matches polyCurb)
 export const LINE_COLOR_POLY_HILL   = basicColors.green.diffuse;  // green
 export const LINE_COLOR_POLY_CURB   = basicColors.teal.diffuse;  // teal (matches its nodes + polyWall)
+export const LINE_COLOR_TUNNEL      = basicColors.purple.diffuse; // purple (matches its nodes)
+export const LINE_COLOR_TUNNEL_WARN = basicColors.red.diffuse;    // stretch with too little hill above
+export const LINE_COLOR_TUNNEL_PORTAL = basicColors.white.diffuse; // portal posts
 export const LINE_COLOR_TERRAIN_SHAPE = new Color3(0.76, 0.60, 0.42); // matches terrain-shape handle hue
 export const LINE_COLOR_SURFACE_DECAL = basicColors.white.diffuse; // matches decal handle hue
 
@@ -114,6 +117,12 @@ export class EditorMaterials {
     }));
   }
 
+  get tunnelNodeSelected() {
+    return this._get('tunnelNodeSelected', s => makeSelectedMat('edTunnelNodeSel', s, {
+      diffuse: basicColors.purple.diffuse, emissive: basicColors.purple.emissive,
+    }));
+  }
+
   get polyCurbNodeSelected() {
     return this._get('polyCurbNodeSelected', s => makeSelectedMat('edPolyCurbNodeSel', s, {
       diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive,
@@ -202,6 +211,22 @@ export class EditorMaterials {
   get polyCurbNodeActive() {
     return this._get('polyCurbNodeActive', s => makeMat('edPolyCurbNodeActive', s, {
       diffuse: basicColors.teal.diffuse, emissive: basicColors.teal.emissive, alpha: 0.90,
+    }));
+  }
+
+  // ── Tunnel ────────────────────────────────────────────────────────────────
+
+  /** Purple node sphere (inactive tunnel). */
+  get tunnelNode() {
+    return this._get('tunnelNode', s => makeMat('edTunnelNode', s, {
+      diffuse: basicColors.purple.diffuse, emissive: basicColors.purple.emissive, alpha: RESTING_ALPHA,
+    }));
+  }
+
+  /** Bright purple node sphere (active tunnel). */
+  get tunnelNodeActive() {
+    return this._get('tunnelNodeActive', s => makeMat('edTunnelNodeActive', s, {
+      diffuse: basicColors.purple.diffuse, emissive: basicColors.purple.emissive, alpha: 0.90,
     }));
   }
 

@@ -49,6 +49,7 @@ export class EditorMode extends BaseMode {
       trackLightManager,
       decorationManager,
       bridgeMeshManager,
+      tunnelManager,
       steepSlopeColliderManager,
       decalManager,
       driveSurfaceManager,
@@ -290,6 +291,11 @@ export class EditorMode extends BaseMode {
     // Rebuild a specific bridgeMesh (or all bridgeMesh features if null)
     rebuild.bridgeMesh = (targetFeature = null) => {
       bridgeMeshManager.rebuild(currentTrack.features, targetFeature);
+    };
+
+    // Rebuild a specific tunnel (or all tunnels if feature is null)
+    rebuild.tunnel = (targetFeature = null) => {
+      tunnelManager.rebuild(targetFeature);
     };
 
     // Rebuild a specific polyHill (or all polyHills if feature is null)

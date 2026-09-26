@@ -4,8 +4,8 @@ Add a `tunnel` track feature: a drivable passage that goes *through* terrain
 (a hill, a mesa), with portals at each end, and the hill above it staying
 drivable and decorated as normal.
 
-Status: **Planned** (Sept 26 2026). Decisions made (see below); the
-prerequisite is done, Phase 1 is next.
+Status: **Phase 1 done** (Sept 26 2026): tunnels render and are editable;
+not drivable yet, and the terrain still covers the mouths. Phase 2 is next.
 
 ## Why this is a new concept
 
@@ -47,13 +47,12 @@ same rule that already puts a truck on or under a bridge deck.
 ```js
 {
   type: 'tunnel',
-  points: [{ x, z }, ...],   // centreline polyline (open), editor like terrainPath
+  points: [{ x, z, radius?, floorY? }, ...], // open centreline; floorY pins the floor there
   width: 10,                  // inner width (m)
   height: 6,                  // clearance, floor to crown (m)
-  floorHeights: null,         // optional per-point floor Y override; null = auto
-  cover: 2,                   // min terrain above the crown for a portal (m)
-  liningColor: '#6b6660',     // walls + arch
-  floorColor: null,           // null = terrain look, like bridge decks
+  cover: 2,                   // terrain wanted above the lining (editor warning)
+  liningColor: '#6b6660',     // walls + arch + headwalls (no panel control yet)
+  floorColor: '#7a6548',      // flat colour for now; terrain look later
 }
 ```
 
@@ -63,19 +62,24 @@ terrain tools (hills, terrain paths), then lays the tunnel's centreline from
 one cutting to the other.
 
 **Auto floor:** the floor ramps linearly between the terrain heights at the
-two ends of the centreline (which sit on the cutting floors). Per-point
-`floorHeights` override this for dips and climbs inside the tunnel. The
+two ends of the centreline (which sit on the cutting floors). A control
+point's `floorY` pins the floor there, for dips and climbs inside the tunnel.
+(Per point rather than a parallel array, so inserting and deleting points in
+the editor can't misalign them.) The
 **portals** are the stations where the terrain above the centreline first
-rises above the crown (`floor + height`); a stretch whose terrain is less than
-`cover` above the crown is shown as a warning in the editor, not fixed up.
+rises above the crown (`floor + height`). Where the hill, having risen to
+`cover` above the lining, dips below that again, the editor shows a warning
+(not a fix); the ramps up from the portals don't count.
 
-**Derived once per build** (in a `tunnel-geometry.js`, shared by rendering,
-physics and the shader):
+**Derived once per build** in `world/tunnel-geometry.js` (`deriveTunnel`),
+shared by the mesh, the editor and later physics and the shader:
 
-- the resampled centreline with stations and floor Y,
-- the portal stations and frames,
-- a `heightAt(x, z)` for the floor layer (null outside the footprint),
-- `isInsideBore(x, y, z)`.
+- stations every ~1 m along the rounded centreline, each with floor Y, ground
+  Y and a left normal (done),
+- the portal stations and the low-cover flags (done),
+- the bore profile, `archContour` (done),
+- a `heightAt(x, z)` for the floor layer, null outside the footprint (Phase 3),
+- `isInsideBore(x, y, z)` (Phase 2).
 
 Rendering, physics and the shader all read this one derivation, so they can't
 drift apart. This avoids repeating the three-copies problem the deck height
@@ -83,7 +87,17 @@ code has today.
 
 ## Phases
 
-### Phase 1: geometry and editor (visual only)
+### Phase 1: geometry and editor (visual only) — done
+
+Built as `objects/Tunnel.js` (lining, floor slab and headwalls, all closed
+outward-wound solids from one `sweepSection` helper), `TunnelManager`,
+`TunnelEditor` + `TunnelPanel` (on `PolyPointEditor`), with unit tests in
+`test/tunnel-geometry.test.js`. Differences from the plan below: nothing casts
+shadows yet (the lining is buried in the hill, and the terrain doesn't occlude,
+so it would shadow the far hillside; Phase 4 has to solve that for interior
+darkness), and the floor is a flat colour rather than the terrain look. The
+editor rebuilds tunnels on every terrain rebuild, since the portals follow the
+terrain.
 
 - `Tunnel.js`: the lining is a swept profile along the centreline (flat floor,
   vertical walls, arched roof), built as a **closed, single-sided solid** so it
