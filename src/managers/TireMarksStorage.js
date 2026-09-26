@@ -5,7 +5,8 @@
 // replay time the same way a live streak computes them (see
 // TireMarks.appendHistory's `colorForPoint`/`sampleY`).
 
-const STORAGE_PREFIX = "tireMarks_";
+export const TIRE_MARKS_STORAGE_PREFIX = "tireMarks_";
+const STORAGE_PREFIX = TIRE_MARKS_STORAGE_PREFIX;
 export const TIRE_MARKS_SCHEMA_VERSION = 1;
 // FIFO cap on saved streaks (not points) — a streak is the unit a player
 // actually perceives as "one mark", and capping at this level keeps the

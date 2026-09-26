@@ -1,3 +1,5 @@
+import { setItemEvictingCosmetics } from "../utils/storage.js";
+
 const STORAGE_KEY = 'player_upgrades';
 
 /**
@@ -83,7 +85,7 @@ export function loadPlayerUpgrades() {
 
 export function savePlayerUpgrades(upgrades) {
   const normalized = normalizeUpgradeState(upgrades);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  setItemEvictingCosmetics(STORAGE_KEY, JSON.stringify(normalized));
   return normalized;
 }
 

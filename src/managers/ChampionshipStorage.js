@@ -10,6 +10,8 @@
 // standings tiebreaks and the results board), so the two diverge as a driver
 // shops the pit.
 
+import { setItemEvictingCosmetics } from "../utils/storage.js";
+
 const ACTIVE_KEY = 'championship_active';
 const SCORES_KEY = 'championship_scores';
 export const CHAMPIONSHIP_SCHEMA_VERSION = 1;
@@ -80,7 +82,7 @@ export function loadActiveChampionship() {
 }
 
 export function saveActiveChampionship(state) {
-  localStorage.setItem(ACTIVE_KEY, JSON.stringify(state));
+  setItemEvictingCosmetics(ACTIVE_KEY, JSON.stringify(state));
   return state;
 }
 
@@ -157,7 +159,7 @@ export function saveChampionshipScore(record) {
   const capped = merged.slice(0, MAX_SCORE_RECORDS);
   const rank = capped.indexOf(record);
   if (rank !== -1) {
-    localStorage.setItem(
+    setItemEvictingCosmetics(
       SCORES_KEY,
       JSON.stringify({ version: CHAMPIONSHIP_SCHEMA_VERSION, records: capped })
     );

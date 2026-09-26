@@ -11,7 +11,8 @@
 // naturally invalidates its old wear (a differently-shaped wall is, for wear
 // purposes, a different wall).
 
-const STORAGE_PREFIX = "wallWear_";
+export const WALL_WEAR_STORAGE_PREFIX = "wallWear_";
+const STORAGE_PREFIX = WALL_WEAR_STORAGE_PREFIX;
 export const WALL_WEAR_SCHEMA_VERSION = 1;
 
 function storageKey(trackKey) {

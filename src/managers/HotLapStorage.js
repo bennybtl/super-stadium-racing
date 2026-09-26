@@ -5,6 +5,8 @@
 // self-describing (the leaderboard may mix vehicles) and its ghost can be
 // rebuilt to look like the truck that set it.
 
+import { setItemEvictingCosmetics } from "../utils/storage.js";
+
 const STORAGE_PREFIX = "hotlap_laps_";
 // Reverse laps are a distinct challenge, so they get their own leaderboard.
 // Forward keys stay bare (backward compatible); reverse keys carry this suffix.
@@ -81,14 +83,14 @@ export function saveHotLapRecords(trackKey, records, reverse = false) {
   setTimeout(() => {
     const key = storageKey(trackKey, reverse);
     try {
-      localStorage.setItem(key, JSON.stringify(payload));
+      setItemEvictingCosmetics(key, JSON.stringify(payload));
     } catch {
       try {
         const trimmed = {
           ...payload,
           records: records.map(r => ({ ...r, frames: r.frames.filter((_, i) => i % 2 === 0) })),
         };
-        localStorage.setItem(key, JSON.stringify(trimmed));
+        setItemEvictingCosmetics(key, JSON.stringify(trimmed));
         console.warn('[HotLap] Records too large; saved at reduced resolution.');
       } catch (e) {
         console.warn('[HotLap] Failed to persist hot-lap records:', e?.name ?? e);
