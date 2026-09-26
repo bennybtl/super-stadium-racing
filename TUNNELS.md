@@ -259,11 +259,12 @@ Go through `getHeightAt` callers and pick layer-aware sampling where it matters:
 
 | System | v1 decision |
 |---|---|
-| Respawn / AI recovery | `surfaceHeightAt` with the gate's or path's Y as `fromY` |
+| Respawn / AI recovery | **Done:** `TerrainQuery.respawnHeightAt` — the tunnel floor inside a tunnel's footprint (looks down from under the roof), else `surfaceHeightAt` from above; AI stuck-recovery uses it. Waypoints have no Y, so a route crossing *over* a tunnel would respawn inside it at the crossing. Player R-reset goes to checkpoints, which can't be in tunnels |
 | Checkpoints | **Not allowed inside a tunnel.** `CheckpointEditor` refuses to place or move a gate inside a tunnel footprint |
 | AI path | Waypoints inside a footprint take the floor Y; the 2D blocked grid gets the tunnel walls. Known limit: hill cells directly above the walls count as blocked too |
 | Wear / tire ruts bake | Mask the tunnel footprint out of the ground wear bake (like the deck wear split in terrain-utils), or wear prints on the hilltop |
-| Decals, tire marks | Resolve the target by layer; ground decals don't project into tunnels in v1. Seen in Phase 2: saved tire marks replay from the top down (`fromY: 499`), so marks laid in a tunnel land on the hill and on the portal-face smear across the mouth; save each point's Y (or layer) |
+| Tire marks | **Done:** saved points carry the truck's height when laid (storage schema 3, one more varint per point), and replay samples down from it, so marks land on the layer they were made on — also fixes marks under a bridge replaying onto its deck |
+| Decals | Resolve the target by layer; ground decals don't project into tunnels in v1 |
 | Grass / dirt scatter, decorations | Leave them on the hilltop (correct). The cuttings are ordinary author-shaped terrain |
 | Minimap | Draw the tunnel as a dashed corridor |
 | Water | Not supported inside tunnels in v1 |

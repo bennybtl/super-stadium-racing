@@ -19,16 +19,14 @@ export class AISpawnRecoveryController {
   }
 
   /**
-   * Ground height to respawn onto at (x, z).
-   *
-   * Raycast first: AI recovery targets path waypoints, which can sit on bridge
-   * decks, and only the raycast sees those. But a miss must not read as "sea
-   * level" — it means no registered surface covers the point, and the analytic
-   * heightfield is the right answer there.
+   * Ground height to respawn onto at (x, z): the surface lookup (which sees
+   * bridge decks, where path waypoints can sit), falling back to the analytic
+   * heightfield on a miss, and the tunnel floor inside a tunnel's footprint —
+   * see TerrainQuery.respawnHeightAt.
    */
   _respawnGroundY(x, z) {
     const d = this.driver;
-    return d._terrainQuery.surfaceHeightAt(x, z, d.track);
+    return d._terrainQuery.respawnHeightAt(x, z, d.track);
   }
 
   snapPathIndexToPosition(pos) {

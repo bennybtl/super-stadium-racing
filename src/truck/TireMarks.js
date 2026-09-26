@@ -134,7 +134,10 @@ export class TireMarks {
     const startHead = this._historyHead;
     let lastX = 0, lastY = 0, lastZ = 0, lastColor = DEFAULT_COLOR;
     for (const p of points) {
-      const y = sampleY(p.x, p.z, fromY + 1) + MARK_LIFT;
+      // Each point looks down from the truck height it was laid at (`p.y`),
+      // so it lands on the surface the truck was on: a tunnel floor, not the
+      // hill above; the ground under a bridge, not the deck.
+      const y = sampleY(p.x, p.z, (p.y ?? fromY) + 1) + MARK_LIFT;
       const color = colorForPoint?.(p.x, p.z) ?? DEFAULT_COLOR;
       this._writeNode(this._historyHead, p.x, y, p.z, p.offsetX, p.offsetZ, p.alpha, color);
       lastX = p.x; lastY = y; lastZ = p.z; lastColor = color;
@@ -330,7 +333,7 @@ export class TireMarkWriter {
       if (!streak.active) return;
       // Streak ended: taper it off so the mark fades rather than cutting hard.
       drawNow(x, z, 0);
-      streak.points.push({ x, z, offsetX, offsetZ, alpha: 0 });
+      streak.points.push({ x, z, y: fromY, offsetX, offsetZ, alpha: 0 });
       streak.active = false;
       sharedMarks.recordCompletedStreak(streak.points);
       streak.points = [];
@@ -342,7 +345,7 @@ export class TireMarkWriter {
       if (dx * dx + dz * dz < NODE_SPACING * NODE_SPACING) return;
       const alpha = strength * MAX_ALPHA;
       drawNow(x, z, alpha);
-      streak.points.push({ x, z, offsetX, offsetZ, alpha });
+      streak.points.push({ x, z, y: fromY, offsetX, offsetZ, alpha });
       streak.lastX = x;
       streak.lastZ = z;
       return;
@@ -351,7 +354,7 @@ export class TireMarkWriter {
     // Streak start: an alpha-0 node first, so the very first real quad (once
     // the truck has moved NODE_SPACING) fades in rather than popping.
     drawNow(x, z, 0);
-    streak.points.push({ x, z, offsetX, offsetZ, alpha: 0 });
+    streak.points.push({ x, z, y: fromY, offsetX, offsetZ, alpha: 0 });
     streak.active = true;
     streak.lastX = x;
     streak.lastZ = z;

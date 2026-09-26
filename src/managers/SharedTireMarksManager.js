@@ -38,10 +38,9 @@ export class SharedTireMarksManager {
     const replayColorForPoint = (x, z) => tireMarkColorForTerrain(terrainManager?.getTerrainAt?.({ x, z })?.color);
     this.ready = loadTireMarkStreaks(this._trackKey).then((saved) => {
       for (const streak of saved) {
-        // appendHistory calls sampleY(x, z, fromY + 1) — a high fromY here
-        // (there's no real truck position to take one from) so the lookup
-        // starts above anything on the track, including an elevated bridge
-        // deck, rather than punching through it from below.
+        // Each saved point carries the truck height it was laid at, which
+        // appendHistory samples down from; fromY is only the fallback for a
+        // point without one, high so the lookup starts above everything.
         this.ring.appendHistory(streak.points, { sampleY: replaySampleY, fromY: 499, colorForPoint: replayColorForPoint });
       }
       // Anything completed while loading is newer than the save.

@@ -28,6 +28,7 @@ function makeStreak(x, z, heading, turn, n) {
     z += Math.cos(heading) * 0.5;
     points.push({
       x, z,
+      y: 2 + 0.3 * i - (i > n / 2 ? 0.5 * i : 0), // climbs, then drops back
       offsetX: Math.cos(heading) * HALF,
       offsetZ: -Math.sin(heading) * HALF,
       alpha: i === 0 || i === n - 1 ? 0 : 0.75,
@@ -44,6 +45,7 @@ function expectClose(actual, expected) {
       const q = actual[si].points[pi];
       expect(Math.abs(q.x - p.x)).toBeLessThanOrEqual(0.005);
       expect(Math.abs(q.z - p.z)).toBeLessThanOrEqual(0.005);
+      expect(Math.abs(q.y - p.y)).toBeLessThanOrEqual(0.005);
       expect(Math.abs(q.offsetX - p.offsetX)).toBeLessThanOrEqual(0.002);
       expect(Math.abs(q.offsetZ - p.offsetZ)).toBeLessThanOrEqual(0.002);
       expect(Math.abs(q.alpha - p.alpha)).toBeLessThanOrEqual(0.005);
@@ -107,7 +109,9 @@ describe("tire-mark storage", () => {
     expect(await loadTireMarkStreaks("none")).toEqual([]);
     cache.set("tireMarks/old", { version: 1, streaks: [] });
     expect(await loadTireMarkStreaks("old")).toEqual([]);
-    cache.set("tireMarks/bad", { version: 2, bytes: Uint8Array.from([5, 0xff]) });
+    cache.set("tireMarks/v2", { version: 2, bytes: Uint8Array.from([0]) });
+    expect(await loadTireMarkStreaks("v2")).toEqual([]);
+    cache.set("tireMarks/bad", { version: 3, bytes: Uint8Array.from([5, 0xff]) });
     expect(await loadTireMarkStreaks("bad")).toEqual([]);
     await saveTireMarkStreaks("oval", [makeStreak(0, 0, 0, 0.02, 10)]);
     await deleteTireMarkStreaks("oval");

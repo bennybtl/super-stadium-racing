@@ -175,6 +175,21 @@ export class TerrainQuery {
   }
 
   /**
+   * Where a truck respawning at (x, z) should sit: `surfaceHeightAt` from
+   * above (so bridge decks count), except inside a tunnel's footprint, where
+   * it looks down from just under the roof and lands on the tunnel floor. A
+   * respawn point there (an AI path waypoint) is on the route through the
+   * tunnel; waypoints carry no height, so a route crossing *over* a tunnel
+   * would also land inside it where it crosses — a known limit.
+   *
+   * @returns {number}
+   */
+  respawnHeightAt(x, z, track) {
+    const bore = this.tunnelBoreAt(x, z);
+    return this.surfaceHeightAt(x, z, track, bore ? { fromY: bore.ceilingY - 0.5 } : undefined);
+  }
+
+  /**
    * Fast height-only query for high-frequency callers (e.g. wheel visuals).
    * Single surface query, without the normal-smoothing probes castDown runs.
    *

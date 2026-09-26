@@ -95,8 +95,13 @@ function makeWorld(features) {
   scene.metadata = { driveSurfaceManager: dsm };
   const lattice = track.getGroundLattice();
   const ground = M.MeshBuilder.CreateGround('ground', {
-    width: lattice.width, height: lattice.depth, subdivisions: lattice.subdivisions,
+    width: lattice.width, height: lattice.depth, subdivisions: lattice.subdivisions, updatable: true,
   }, scene);
+  // Raised to the track's heights, as SceneBuilder does.
+  const positions = ground.getVerticesData('position');
+  for (let i = 0; i < positions.length; i += 3) positions[i + 1] = track.getHeightAt(positions[i], positions[i + 2]);
+  ground.setVerticesData('position', positions);
+  ground.createNormals(true);
   dsm.register(ground, { kind: 'ground', lattice });
   const bridges = new M.BridgeMeshManager(scene, track, null, dsm, null);
   for (const f of track.features) if (f.type === 'driveBox' || f.type === 'bridgeMesh') bridges.create(f);
@@ -125,7 +130,8 @@ function makeTruck(world, { x, z, heading }) {
     offsetY: M.TRUCK_COLLISION_STEP_LIFT / 2,
   };
   t.mesh = {
-    position: new Vector3(x, track.getHeightAt(x, z) + t.halfHeight, z),
+    // Placed as a respawn would be: on a tunnel floor inside one.
+    position: new Vector3(x, terrainQuery.respawnHeightAt(x, z, track) + t.halfHeight, z),
     rotation: new Vector3(0, heading, 0),
     metadata: {},
     uniqueId: 1,
@@ -289,6 +295,22 @@ for (const s of SCENARIOS) {
   } else {
     failures++;
     console.log(`FAIL  ${s.name}\n        ${detail}`);
+  }
+}
+
+// Respawn height (AI recovery): the tunnel floor inside a tunnel's footprint,
+// the hill beside it, and the hilltop when not over the tunnel.
+{
+  const world = makeWorld([hill, tunnel]);
+  const at = (x, z) => world.terrainQuery.respawnHeightAt(x, z, world.track);
+  const checks = [
+    ['respawn inside a tunnel lands on its floor', Math.abs(at(0, 0) - 0.1) < 0.05, at(0, 0)],
+    ['respawn on the hill beside a tunnel stays on the hill', Math.abs(at(0, 20) - 12) < 0.05, at(0, 20)],
+    ['respawn in a cutting lands on its floor', Math.abs(at(-30, 0)) < 0.15, at(-30, 0)],
+  ];
+  for (const [name, ok, y] of checks) {
+    if (ok) console.log(`ok    ${name}`);
+    else { failures++; console.log(`FAIL  ${name}\n        y=${y.toFixed(2)}`); }
   }
 }
 
