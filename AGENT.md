@@ -284,6 +284,12 @@ Add to `TERRAIN_TYPES` (grip, drag, color, smokeColor). Paint via
   optional `offsetsX/Z` per control point, `smoothing` (Catmull-Rom densify),
   Havok MESH collider, terrain seams to the ground (built in the constructor for a deck end
   within 1.5 m of the terrain).
+- **`SurfaceLayers`** (`world/surface-layers.js`) — Babylon-free replacement
+  for the drive-surface raycasts, not wired in yet: a closed-form ground layer
+  on the mesh lattice, triangle layers for outskirts/decks/seams, and
+  `sample(x, z, fromY)` with the raycasts' down-then-up rule.
+  `npm run check:surface-layers` (~1 min, not in `check`) proves parity with the
+  real raycasts on every shipped track.
 - **Deck height maths** — `bridgeDeckHeightAt[Local]` in `world/feature-geometry.js`
   (control-grid bilinear) is the one sampler for BridgeMesh, DriveBox legs and
   the deck-wear bake.

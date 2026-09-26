@@ -21,7 +21,8 @@
     "check:eztree": "node scripts/check-eztree.mjs",
     "check:cactus": "node scripts/check-cactus.mjs",
     "check:rocks": "node scripts/check-rocks.mjs",
-    "check:physics": "node scripts/check-physics.mjs"
+    "check:physics": "node scripts/check-physics.mjs",
+    "check:surface-layers": "node scripts/check-surface-layers.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",
