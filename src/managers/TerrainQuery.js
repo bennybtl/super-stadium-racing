@@ -49,9 +49,12 @@ export class TerrainQuery {
     this._lastResolvedSurface = null;
   }
 
-  /** Roof height of a tunnel bore at (x, z), or null outside every tunnel. */
-  tunnelCeilingAt(x, z) {
-    return this._scene?.metadata?.tunnelBore?.sample(x, z)?.ceilingY ?? null;
+  /**
+   * The tunnel bore at (x, z) — `{ floorY, ceilingY, depth }`, see
+   * tunnel-geometry.js sampleBore — or null outside every tunnel.
+   */
+  tunnelBoreAt(x, z) {
+    return this._scene?.metadata?.tunnelBore?.sample(x, z) ?? null;
   }
 
   /**

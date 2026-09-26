@@ -1,4 +1,4 @@
-import { Color3, Mesh, MeshBuilder, StandardMaterial, VertexData } from "@babylonjs/core";
+import { Color3, Constants, Mesh, MeshBuilder, StandardMaterial, Vector3, VertexData } from "@babylonjs/core";
 import {
   deriveTunnel,
   stationsBetween,
@@ -9,10 +9,17 @@ import {
   TUNNEL_FLOOR_LIFT,
   TUNNEL_CUT_CLEARANCE,
   TUNNEL_HEADWALL_EMBED,
+  tunnelShadeAt,
 } from "../world/tunnel-geometry.js";
 
 const DEFAULT_LINING_COLOR = "#6b6660";
 const DEFAULT_FLOOR_COLOR = "#7a6548"; // packed-dirt brown until the floor gets the terrain look
+
+// Wall hint (setHintStrength): the foot of each wall drawn through the hill
+// while the player is inside, at this colour and full-strength opacity.
+const HINT_COLOR = new Color3(0.85, 0.9, 1);
+const HINT_ALPHA = 0.5;
+const HINT_LIFT = 0.15; // above the floor line, clear of the slab top
 
 
 /**
@@ -29,9 +36,10 @@ const DEFAULT_FLOOR_COLOR = "#7a6548"; // packed-dirt brown until the floor gets
  * each mouth; TerrainPhysics.clampToTunnelRoof keeps a truck under the roof.
  *
  * Each part is a closed, outward-wound solid (back faces culled). None of them
- * cast shadows yet: the terrain isn't a shadow occluder, so geometry buried in
- * the hill would throw a phantom shadow on the far hillside (see the bridge
- * double-shadow note). Interior darkness is Phase 4.
+ * cast shadows: the terrain isn't a shadow occluder, so geometry buried in the
+ * hill would throw a phantom shadow on the far hillside (see the bridge
+ * double-shadow note). Instead the lining and floor darken by vertex colour
+ * with depth into the tunnel (tunnelShadeAt); the headwalls, outside, don't.
  *
  * Feature format:
  *   {
@@ -58,25 +66,31 @@ export class Tunnel {
     if (!tunnel) return;
     const { stations, faces, span, profile } = tunnel;
     const framesBetween = (s0, s1) => stationsBetween(tunnel, s0, s1)
-      .map((st) => ({ x: st.x, y: st.floorY, z: st.z, nx: st.nx, nz: st.nz }));
+      .map((st) => ({
+        x: st.x, y: st.floorY, z: st.z, nx: st.nx, nz: st.nz,
+        shade: tunnelShadeAt(Math.min(st.s - span.start, span.end - st.s)),
+      }));
 
     // The whole centreline when the hill never clears the crown (a visibly
     // wrong placement the editor also flags).
     const frames = framesBetween(span.start, span.end);
 
     const key = `${stations[0].x.toFixed(1)}_${stations[0].z.toFixed(1)}`;
-    const lining = this._material(`tunnelLiningMat_${key}`, feature.liningColor ?? DEFAULT_LINING_COLOR);
+    const liningColor = feature.liningColor ?? DEFAULT_LINING_COLOR;
+    const lining = this._material(`tunnelLiningMat_${key}`, liningColor);
+    const headwall = this._material(`tunnelHeadwallMat_${key}`, liningColor);
     const floor = this._material(`tunnelFloorMat_${key}`, feature.floorColor ?? DEFAULT_FLOOR_COLOR);
 
     const inner = archContour(profile);
     const outer = archContour(profile, TUNNEL_LINING_THICKNESS);
-    this._addMesh(`tunnel_lining_${key}`, sweepSection(frames, inner, outer), lining, scene);
+    this._addMesh(`tunnel_lining_${key}`, sweepSection(frames, inner, outer, { shaded: true }), lining, scene);
 
     const w = profile.halfWidth + TUNNEL_LINING_THICKNESS;
     this._addMesh(`tunnel_floor_${key}`, sweepSection(
       frames,
       [{ u: w, v: TUNNEL_FLOOR_LIFT }, { u: -w, v: TUNNEL_FLOOR_LIFT }],
       [{ u: w, v: -TUNNEL_FLOOR_DEPTH }, { u: -w, v: -TUNNEL_FLOOR_DEPTH }],
+      { shaded: true },
     ), floor, scene);
 
     if (faces && faces.out > faces.in) {
@@ -92,7 +106,7 @@ export class Tunnel {
       blocks.forEach(([s0, s1], i) => {
         if (s1 - s0 <= 0.05) return;
         const blockFrames = framesBetween(s0, s1);
-        this._addMesh(`tunnel_headwall_${key}_${i}`, sweepSection(blockFrames, outer, facade), lining, scene);
+        this._addMesh(`tunnel_headwall_${key}_${i}`, sweepSection(blockFrames, outer, facade), headwall, scene);
         // The faces beside the mouth, as far out as the headwall reaches.
         for (const side of [1, -1]) {
           this._addCollider(`tunnel_headwall_collider_${key}_${i}_${side}`, blockFrames[0], blockFrames[blockFrames.length - 1],
@@ -111,6 +125,21 @@ export class Tunnel {
       }
     }
 
+    // Wall hint: a line along the foot of each wall, drawn only where something
+    // is in front of it (depth test GREATER, no depth write) — i.e. through the
+    // hill. Vertex alpha puts it in the transparent pass, after the opaque
+    // scene has filled the depth buffer; its colour/alpha come from uniforms.
+    const wallFoot = (side) => frames.map((f) => new Vector3(
+      f.x + f.nx * side * profile.halfWidth, f.y + HINT_LIFT, f.z + f.nz * side * profile.halfWidth));
+    this._hint = MeshBuilder.CreateLineSystem(`tunnel_hint_${key}`, { lines: [wallFoot(1), wallFoot(-1)], useVertexAlpha: true }, scene);
+    this._hint.color = HINT_COLOR;
+    this._hint.alpha = 0;
+    this._hint.isPickable = false;
+    this._hint.material.depthFunction = Constants.GREATER;
+    this._hint.material.disableDepthWrite = true;
+    this._hint.setEnabled(false);
+    this._meshes.push(this._hint);
+
     // The drivable floor: the slab's top across the bore.
     this._driveMesh = new Mesh(`tunnel_drive_${key}`, scene);
     floorTopVertexData(frames, profile.halfWidth, TUNNEL_FLOOR_LIFT).applyToMesh(this._driveMesh);
@@ -118,6 +147,13 @@ export class Tunnel {
     this._driveMesh.isPickable = false;
     this._meshes.push(this._driveMesh);
     driveSurfaceManager?.register(this._driveMesh, { kind: "tunnel", level: -1 });
+  }
+
+  /** Show the wall hint at `strength` (0 hides it, 1 is full opacity). */
+  setHintStrength(strength) {
+    if (!this._hint) return;
+    this._hint.setEnabled(strength > 0.001);
+    this._hint.alpha = HINT_ALPHA * strength;
   }
 
   /**
@@ -229,15 +265,18 @@ function headwallContour(opening, halfW, top) {
  * up): its boundary is `a`, then `b` backwards. Each frame places the section
  * vertically at (x, y, z), with u along its horizontal left normal (nx, nz).
  * Sides join consecutive frames; the band itself caps both ends. Flat-shaded,
- * each face wound to face out of the solid.
+ * each face wound to face out of the solid. With `shaded`, each frame's
+ * `shade` (0–1) becomes a grey vertex colour, blended along the sides.
  */
-export function sweepSection(frames, a, b) {
-  const positions = [], indices = [];
+export function sweepSection(frames, a, b, { shaded = false } = {}) {
+  const positions = [], indices = [], colors = [];
   const at = (f, p) => [f.x + f.nx * p.u, f.y + p.v, f.z + f.nz * p.u];
 
-  const quad = (p0, p1, p2, p3, out) => {
+  // `shades`: one per corner, from the frames each corner lies on.
+  const quad = (p0, p1, p2, p3, out, shades) => {
     const base = positions.length / 3;
     positions.push(...p0, ...p1, ...p2, ...p3);
+    if (shaded) for (const g of shades) colors.push(g, g, g, 1);
     for (const [i, j, k] of [[0, 1, 2], [0, 2, 3]]) {
       const P = [p0, p1, p2, p3];
       const A = P[i], B = P[j], C = P[k];
@@ -266,14 +305,14 @@ export function sweepSection(frames, a, b) {
       // Outward in the section plane is the edge rotated −90° for a CCW loop.
       const ou = (q.v - p.v) * ccw, ov = -(q.u - p.u) * ccw;
       const nx = (f0.nx + f1.nx) / 2, nz = (f0.nz + f1.nz) / 2;
-      quad(at(f0, p), at(f0, q), at(f1, q), at(f1, p), [nx * ou, ov, nz * ou]);
+      quad(at(f0, p), at(f0, q), at(f1, q), at(f1, p), [nx * ou, ov, nz * ou], [f0.shade, f0.shade, f1.shade, f1.shade]);
     }
   }
 
   const cap = (f, neighbour) => {
     const out = [f.x - neighbour.x, 0, f.z - neighbour.z];
     for (let j = 0; j < a.length - 1; j++) {
-      quad(at(f, a[j]), at(f, a[j + 1]), at(f, b[j + 1]), at(f, b[j]), out);
+      quad(at(f, a[j]), at(f, a[j + 1]), at(f, b[j + 1]), at(f, b[j]), out, [f.shade, f.shade, f.shade, f.shade]);
     }
   };
   cap(frames[0], frames[1]);
@@ -285,5 +324,6 @@ export function sweepSection(frames, a, b) {
   vd.positions = positions;
   vd.indices = indices;
   vd.normals = normals;
+  if (shaded) vd.colors = colors;
   return vd;
 }

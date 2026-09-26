@@ -1,8 +1,9 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, TransformNode, DynamicTexture } from "@babylonjs/core";
+import { MeshBuilder, StandardMaterial, Color3, Vector3, Matrix, SceneLoader, TransformNode, DynamicTexture, Constants } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import truckTireUrl  from "../assets/models/truck-tire-v2.obj?url";
 import { basicColors } from "../constants";
 import { parseColorValue } from "../utils/mesh-color.js";
+import { tunnelShadeAt } from "../world/tunnel-geometry.js";
 
 // Skip MTL lookup — materials are applied programmatically
 OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
@@ -201,6 +202,13 @@ export class TruckBody {
     };
 
     this._parts = [];   // all meshes — for disposal
+    // Tunnel interior (setTunnelDepth): each part material's own colours, the
+    // shade currently applied, and the see-through-the-hill silhouettes.
+    this._baseLook = new Map();   // material → { diffuse, specular }
+    this._tunnelShade = 1;
+    this._silhouettes = new Map(); // part mesh → silhouette clone
+    this._silhouetteMat = null;
+    this._silhouetteOn = false;
     this._wheels = [];  // { mesh, isFront, side: 'L'|'R', baseLocalY }
     this._sampledWheelBaseY = [];
     this._hasWheelSamples = false;
@@ -690,6 +698,8 @@ export class TruckBody {
       mat.disableLighting = true;
     }
     mesh.material     = mat;
+    this._baseLook.set(mat, { diffuse: mat.diffuseColor.clone(), specular: mat.specularColor.clone() });
+    if (this._tunnelShade !== 1) this._shadeMaterial(mat, this._tunnelShade);
     mesh.receiveShadows = !this._disableDynamicShadows && !this._ghost;
     if (this._ghost) mesh.isPickable = false;
     if (this._castShadows) {
@@ -711,6 +721,72 @@ export class TruckBody {
     }
   }
 
+  // ─── Tunnels ──────────────────────────────────────────────────────────────
+
+  /**
+   * Called every frame with how far into a tunnel the truck is (null outside
+   * one; see TUNNELS.md Phase 4). The terrain doesn't block light, so the truck
+   * is darkened by hand with depth (tunnelShadeAt); and since the hill hides it
+   * from the camera, a flat silhouette draws wherever something is in front.
+   */
+  setTunnelDepth(depth) {
+    if (this._ghost) return;
+    const shade = depth == null ? 1 : tunnelShadeAt(depth);
+    if (shade !== this._tunnelShade && (Math.abs(shade - this._tunnelShade) > 0.01 || shade === 1)) {
+      this._tunnelShade = shade;
+      for (const mat of this._baseLook.keys()) this._shadeMaterial(mat, shade);
+    }
+    const show = depth != null;
+    // Parts load asynchronously, so silhouette any that arrived since.
+    if (show && this._silhouettes.size < this._parts.length) this._buildSilhouettes();
+    if (show !== this._silhouetteOn) {
+      this._silhouetteOn = show;
+      for (const clone of this._silhouettes.values()) clone.setEnabled(show);
+    }
+  }
+
+  _shadeMaterial(mat, shade) {
+    const base = this._baseLook.get(mat);
+    if (!base) return;
+    base.diffuse.scaleToRef(shade, mat.diffuseColor);
+    base.specular.scaleToRef(shade, mat.specularColor);
+  }
+
+  /**
+   * A silhouette per part: a child sharing the part's geometry, drawn flat and
+   * translucent only where it lies behind what's already drawn (depth test
+   * GREATER, no depth write) — i.e. where the hill or the lining hides it.
+   * Transparent, so it renders after the opaque scene.
+   */
+  _buildSilhouettes() {
+    if (!this._silhouetteMat) {
+      const mat = new StandardMaterial("truckSilhouetteMat", this.scene);
+      const color = Color3.Lerp(this.colors.body, Color3.White(), 0.45);
+      mat.disableLighting = true;
+      mat.emissiveColor = color;
+      mat.diffuseColor = Color3.Black();
+      mat.specularColor = Color3.Black();
+      mat.alpha = 0.6;
+      mat.depthFunction = Constants.GREATER;
+      mat.disableDepthWrite = true;
+      mat.backFaceCulling = true;
+      this._silhouetteMat = mat;
+    }
+    for (const part of this._parts) {
+      if (this._silhouettes.has(part)) continue;
+      const clone = part.clone(`${part.name}_silhouette`, part, true);
+      clone.position.setAll(0);
+      clone.rotationQuaternion = null;
+      clone.rotation.setAll(0);
+      clone.scaling.setAll(1);
+      clone.material = this._silhouetteMat;
+      clone.isPickable = false;
+      clone.receiveShadows = false;
+      clone.setEnabled(this._silhouetteOn);
+      this._silhouettes.set(part, clone);
+    }
+  }
+
   // ─── Disposal ─────────────────────────────────────────────────────────────
 
   dispose() {
@@ -718,7 +794,10 @@ export class TruckBody {
       window.removeEventListener('offroad:display-settings-changed', this._onDisplaySettingsChanged);
       this._onDisplaySettingsChanged = null;
     }
-    for (const mesh of this._parts) mesh.dispose();
+    for (const mesh of this._parts) mesh.dispose(); // takes the silhouette children with it
+    this._silhouettes.clear();
+    this._silhouetteMat?.dispose();
+    this._silhouetteMat = null;
     this._contactShadow?.dispose();
     this._contactShadowMat?.dispose();
     this._contactShadowTex?.dispose();

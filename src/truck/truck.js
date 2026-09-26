@@ -583,6 +583,12 @@ export class Truck {
       );
     }
 
+    // Inside a tunnel: darken the truck and show it through the hill; the
+    // player's truck also brings up that tunnel's wall hint.
+    const bore = this.terrainPhysics.tunnelBore(this.mesh);
+    this.body.setTunnelDepth?.(bore?.depth ?? null);
+    if (!this.driver) this.scene?.metadata?.tunnelBore?.setFocus(bore);
+
     profile('truck.audio', () => {
       this.audioController?.update({
         state: this.state,

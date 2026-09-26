@@ -318,12 +318,35 @@ function _nearestArc(path, arc, p) {
 }
 
 
+// ─── Interior darkening ──────────────────────────────────────────────────────
+// The terrain doesn't occlude light and the lining can't cast (see Tunnel.js),
+// so the inside of a tunnel is darkened by hand: the lining and floor by vertex
+// colour, and trucks by tinting their materials, both by depth into the tunnel.
+
+/** Depth (m) over which the inside goes from daylight to fully dark. */
+export const TUNNEL_DARK_RAMP = 6;
+/** Brightness at full depth. */
+export const TUNNEL_DARK_FLOOR = 0.25;
+
+/** How far through the darkening ramp `depth` is: 0 at the end, 1 fully in (smoothstep). */
+export function tunnelDarkness(depth) {
+  const t = Math.min(1, Math.max(0, depth / TUNNEL_DARK_RAMP));
+  return t * t * (3 - 2 * t);
+}
+
+/** Brightness multiplier at `depth` metres into a tunnel. */
+export function tunnelShadeAt(depth) {
+  return 1 - (1 - TUNNEL_DARK_FLOOR) * tunnelDarkness(depth);
+}
+
 // ─── Bore raster ─────────────────────────────────────────────────────────────
 // The open volume inside the tunnels, as a grid over their bounding box: what
 // the ground shader discards (terrain between the floor and the roof, which is
 // only ever the terrain across the mouths) and what keeps steep-slope blockers
-// out of the bore. Texel = [floorY, ceilingY, inside (0/1), distance from the
-// centreline]. The shader only discards ground clearly above the floor: the cut
+// out of the bore. Texel = [floorY, ceilingY, inside, distance from the
+// centreline]; `inside` is 0 outside and 1 + depth inside, where depth is the
+// distance along the tunnel to the nearer end of the lining (for the interior
+// darkening), so "> 0.5" still reads as inside. The shader only discards ground clearly above the floor: the cut
 // ground at the floor is kept, under the (lifted) slab inside the tunnel and as
 // the cutting's floor in front of it.
 
@@ -353,12 +376,15 @@ export function rasterizeBores(tunnels, texelsPerMetre = BORE_TEXELS_PER_METRE) 
   let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
   for (const t of tunnels) {
     if (!t) continue;
-    const pts = stationsBetween(t, t.span.start, t.span.end).map((st) => ({ x: st.x, z: st.z, floorY: st.floorY }));
+    const { start, end } = t.span;
+    const pts = stationsBetween(t, start, end).map((st) => ({
+      x: st.x, z: st.z, floorY: st.floorY, depth: Math.min(st.s - start, end - st.s),
+    }));
     if (pts.length < 2) continue;
     const extend = (from, towards) => {
       const dx = from.x - towards.x, dz = from.z - towards.z;
       const len = Math.hypot(dx, dz) || 1;
-      return { x: from.x + (dx / len) * BORE_END_EXTENSION, z: from.z + (dz / len) * BORE_END_EXTENSION, floorY: from.floorY };
+      return { x: from.x + (dx / len) * BORE_END_EXTENSION, z: from.z + (dz / len) * BORE_END_EXTENSION, floorY: from.floorY, depth: 0 };
     };
     pts.unshift(extend(pts[0], pts[1]));
     pts.push(extend(pts[pts.length - 1], pts[pts.length - 2]));
@@ -367,7 +393,7 @@ export function rasterizeBores(tunnels, texelsPerMetre = BORE_TEXELS_PER_METRE) 
       minX = Math.min(minX, p.x - reach); maxX = Math.max(maxX, p.x + reach);
       minZ = Math.min(minZ, p.z - reach); maxZ = Math.max(maxZ, p.z + reach);
     }
-    bores.push({ pts, reach, profile: t.profile });
+    bores.push({ pts, reach, profile: t.profile, index: tunnels.indexOf(t) });
   }
   if (!bores.length) return null;
 
@@ -380,17 +406,20 @@ export function rasterizeBores(tunnels, texelsPerMetre = BORE_TEXELS_PER_METRE) 
   const originX = minX - 1 / tpm, originZ = minZ - 1 / tpm;
   const sizeX = width / tpm, sizeZ = height / tpm;
   const data = new Float32Array(width * height * 4);
+  // Which of `tunnels` each texel belongs to (JS only, not in the texture).
+  const owner = new Int32Array(width * height).fill(-1);
 
   const texelRange = (x0, x1, z0, z1) => [
     Math.max(1, Math.floor((x0 - originX) * tpm)), Math.min(width - 2, Math.ceil((x1 - originX) * tpm)),
     Math.max(1, Math.floor((z0 - originZ) * tpm)), Math.min(height - 2, Math.ceil((z1 - originZ) * tpm)),
   ];
-  const write = (r, c, d, floorY, profile) => {
+  const write = (r, c, d, floorY, depth, profile, index) => {
     const o = (r * width + c) * 4;
     if (data[o + 2] > 0 && data[o + 3] <= d) return; // a nearer segment is already there
+    owner[r * width + c] = index;
     data[o] = floorY;
     data[o + 1] = floorY + _ceilingAbove(profile, d);
-    data[o + 2] = 1;
+    data[o + 2] = 1 + depth;
     data[o + 3] = d;
   };
   // Projection of (x, z) onto segment i (pts[i-1] → pts[i]): t along it, 0..1 on it.
@@ -400,7 +429,7 @@ export function rasterizeBores(tunnels, texelsPerMetre = BORE_TEXELS_PER_METRE) 
     return ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1);
   };
 
-  for (const { pts, reach, profile } of bores) {
+  for (const { pts, reach, profile, index } of bores) {
     // Each segment's strip, cut square at both ends…
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1], b = pts[i];
@@ -412,7 +441,7 @@ export function rasterizeBores(tunnels, texelsPerMetre = BORE_TEXELS_PER_METRE) 
           const t = along(pts, i, x, z);
           if (t < 0 || t > 1) continue;
           const d = Math.hypot(x - (a.x + t * (b.x - a.x)), z - (a.z + t * (b.z - a.z)));
-          if (d <= reach) write(r, c, d, a.floorY + t * (b.floorY - a.floorY), profile);
+          if (d <= reach) write(r, c, d, a.floorY + t * (b.floorY - a.floorY), a.depth + t * (b.depth - a.depth), profile, index);
         }
       }
     }
@@ -426,20 +455,26 @@ export function rasterizeBores(tunnels, texelsPerMetre = BORE_TEXELS_PER_METRE) 
         for (let c = c0; c <= c1; c++) {
           const x = originX + (c + 0.5) / tpm;
           const d = Math.hypot(x - j.x, z - j.z);
-          if (d <= reach && along(pts, i, x, z) > 1 && along(pts, i + 1, x, z) < 0) write(r, c, d, j.floorY, profile);
+          if (d <= reach && along(pts, i, x, z) > 1 && along(pts, i + 1, x, z) < 0) write(r, c, d, j.floorY, j.depth, profile, index);
         }
       }
     }
   }
-  return { minX: originX, minZ: originZ, sizeX, sizeZ, width, height, data };
+  return { minX: originX, minZ: originZ, sizeX, sizeZ, width, height, data, owner };
 }
 
-/** The bore at (x, z) — `{ floorY, ceilingY }` — or null outside every tunnel. */
+/**
+ * The bore at (x, z) — `{ floorY, ceilingY, depth, tunnel }` (depth: along the
+ * tunnel from the nearer end of the lining; tunnel: its index in the list
+ * given to rasterizeBores) — or null outside every tunnel.
+ */
 export function sampleBore(raster, x, z) {
   if (!raster) return null;
   const c = Math.floor(((x - raster.minX) / raster.sizeX) * raster.width);
   const r = Math.floor(((z - raster.minZ) / raster.sizeZ) * raster.height);
   if (c < 0 || r < 0 || c >= raster.width || r >= raster.height) return null;
   const o = (r * raster.width + c) * 4;
-  return raster.data[o + 2] > 0 ? { floorY: raster.data[o], ceilingY: raster.data[o + 1] } : null;
+  return raster.data[o + 2] > 0
+    ? { floorY: raster.data[o], ceilingY: raster.data[o + 1], depth: raster.data[o + 2] - 1, tunnel: raster.owner[r * raster.width + c] }
+    : null;
 }

@@ -5,6 +5,10 @@ import {
   archContour,
   stationsBetween,
   TUNNEL_PORTAL_SETBACK,
+  tunnelShadeAt,
+  tunnelDarkness,
+  TUNNEL_DARK_RAMP,
+  TUNNEL_DARK_FLOOR,
   rasterizeBores,
   sampleBore,
   tunnelPath,
@@ -279,5 +283,39 @@ describe("Track with a tunnel", () => {
     const b = t.getFeatureHeightBounds(t.features[1]);
     const r = tunnelCutReach(t.features[1]);
     expect(b).toEqual({ minX: -50 - r, maxX: 50 + r, minZ: -r, maxZ: r });
+  });
+});
+
+describe("interior darkening", () => {
+  it("records depth into the tunnel in the bore raster", () => {
+    const t = deriveTunnel(straight(), heightAt);
+    const r = rasterizeBores([t]);
+    const xin = -50 + t.span.start;
+    expect(sampleBore(r, xin + 0.1, 0).depth).toBeLessThan(0.3);
+    expect(sampleBore(r, xin + 4, 0).depth).toBeCloseTo(4, 0);
+    expect(sampleBore(r, 0, 0).depth).toBeCloseTo((t.span.end - t.span.start) / 2, 0);
+  });
+
+  it("says which tunnel a point is in", () => {
+    const a = deriveTunnel(straight(), heightAt);
+    const b = deriveTunnel(straight({ points: [{ x: 0, z: -50 }, { x: 0, z: -40 }] }), () => 20); // no portals: whole line
+    const r = rasterizeBores([null, a, b]);
+    expect(sampleBore(r, 0, 0).tunnel).toBe(1);
+    expect(sampleBore(r, 0, -45).tunnel).toBe(2);
+  });
+
+  it("darkness runs 0 → 1 over the ramp", () => {
+    expect(tunnelDarkness(0)).toBe(0);
+    expect(tunnelDarkness(TUNNEL_DARK_RAMP)).toBe(1);
+    expect(tunnelDarkness(TUNNEL_DARK_RAMP / 2)).toBeCloseTo(0.5);
+  });
+
+  it("ramps from daylight at the end to dark a few metres in", () => {
+    expect(tunnelShadeAt(0)).toBe(1);
+    expect(tunnelShadeAt(-1)).toBe(1);
+    expect(tunnelShadeAt(TUNNEL_DARK_RAMP)).toBeCloseTo(TUNNEL_DARK_FLOOR);
+    expect(tunnelShadeAt(100)).toBeCloseTo(TUNNEL_DARK_FLOOR);
+    expect(tunnelShadeAt(TUNNEL_DARK_RAMP / 2)).toBeLessThan(1);
+    expect(tunnelShadeAt(TUNNEL_DARK_RAMP / 2)).toBeGreaterThan(TUNNEL_DARK_FLOOR);
   });
 });

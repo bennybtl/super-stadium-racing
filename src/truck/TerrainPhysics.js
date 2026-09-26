@@ -322,12 +322,23 @@ export class TerrainPhysics {
    */
   clampToTunnelRoof(mesh) {
     if (this.floorSurface?.kind !== "tunnel") return;
-    const ceilingY = this._terrainQuery?.tunnelCeilingAt?.(mesh.position.x, mesh.position.z);
+    const ceilingY = this._terrainQuery?.tunnelBoreAt?.(mesh.position.x, mesh.position.z)?.ceilingY;
     if (ceilingY == null) return;
     const maxY = ceilingY - this.halfHeight;
     if (mesh.position.y <= maxY) return;
     mesh.position.y = maxY;
     if (this.state.velocity.y > 0) this.state.velocity.y = 0;
+  }
+
+  /**
+   * The tunnel bore the truck is in (`{ floorY, ceilingY, depth, tunnel }`,
+   * depth in m along it from the nearer end of the lining), or null when it
+   * isn't in one — inside a bore's footprint and under its roof, so a truck on
+   * the hill above doesn't count.
+   */
+  tunnelBore(mesh) {
+    const bore = this._terrainQuery?.tunnelBoreAt?.(mesh.position.x, mesh.position.z);
+    return bore && mesh.position.y < bore.ceilingY ? bore : null;
   }
 
   /**

@@ -4,8 +4,9 @@ Add a `tunnel` track feature: a drivable passage that goes *through* terrain
 (a hill, a mesa), with portals at each end, and the hill above it staying
 drivable and decorated as normal.
 
-Status: **Phase 3 done** (Sept 26 2026): tunnels render, are editable, have
-open mouths and are drivable. Phase 4 (visibility and lighting) is next.
+Status: **Phase 4 done** (Sept 26 2026): tunnels render, are editable, have
+open mouths, are drivable, darken inside, and trucks show through the hill.
+Phase 5 (game systems audit) is next.
 
 ## Why this is a new concept
 
@@ -210,7 +211,35 @@ The plan as written:
 
 Done when: the player can drive through.
 
-### Phase 4: visibility and lighting
+### Phase 4: visibility and lighting — done
+
+- **Depth into the tunnel** is stored in the bore raster (channel B = 1 +
+  distance to the nearer end of the lining), so any system can ask how deep a
+  point is; `tunnelShadeAt(depth)` ramps brightness from 1 at the lining's end
+  to `TUNNEL_DARK_FLOOR` (0.25) over `TUNNEL_DARK_RAMP` (6 m).
+- **Lining and floor** darken by vertex colour along that ramp (sweepSection's
+  `shaded` option); the headwalls have their own, unshaded material. The
+  lining still casts no shadows (buried caster → phantom shadow on the far
+  hillside), which is why the darkness is painted rather than shadowed.
+- **Trucks:** `TerrainPhysics.tunnelDepth` (inside the footprint and under
+  the roof, so the hill above doesn't count) feeds `TruckBody.setTunnelDepth`
+  every frame, which scales each part material's diffuse/specular by the
+  shade.
+- **Silhouette:** each truck part gets a child clone sharing its geometry, with
+  a flat translucent material drawn with depth test GREATER and no depth
+  write, enabled only while the truck is in a tunnel. It shows the truck
+  wherever the hill or lining is in front of it; parts hidden behind the
+  truck's own body also show through while it's inside (acceptable, as the
+  truck is itself hidden then). Ghost trucks are skipped.
+- **Wall hint:** each tunnel has a line along the foot of each wall, drawn
+  through the hill (depth GREATER, transparent pass via vertex alpha). The
+  player's truck passes its bore sample to `tunnelBore.setFocus` each frame
+  (the raster records which tunnel owns each texel); that tunnel's hint fades
+  in with `tunnelDarkness(depth)`. Edges only; arch ribs every few metres were
+  the considered extra.
+- Not done: light strips, audio reverb.
+
+The plan as written:
 
 - **Seeing the truck: silhouette.** Draw trucks a second time with an
   inverted depth test (depth-func GREATER) as a flat outline colour, so they

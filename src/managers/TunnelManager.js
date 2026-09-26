@@ -1,6 +1,6 @@
 import { Constants, RawTexture, Texture } from "@babylonjs/core";
 import { Tunnel } from "../objects/Tunnel.js";
-import { rasterizeBores, sampleBore } from "../world/tunnel-geometry.js";
+import { rasterizeBores, sampleBore, tunnelDarkness } from "../world/tunnel-geometry.js";
 
 /**
  * TunnelManager — builds a Tunnel for each `tunnel` feature and rebuilds them
@@ -10,7 +10,9 @@ import { rasterizeBores, sampleBore } from "../world/tunnel-geometry.js";
  * Also publishes the tunnels' open volume as `scene.metadata.tunnelBore`
  * (`{ texture, bounds, sample(x, z) }`, see rasterizeBores): the ground shader
  * discards terrain inside it, which opens the mouths, and steep-slope blockers
- * stay out of it. Empty on a track without tunnels.
+ * stay out of it. Empty on a track without tunnels. Its `setFocus(bore)` takes
+ * the player's bore sample each frame (null outside) and fades in that
+ * tunnel's wall hint with depth.
  */
 export class TunnelManager {
   constructor(scene, track, driveSurfaceManager = null) {
@@ -51,10 +53,17 @@ export class TunnelManager {
     texture.wrapU = Texture.CLAMP_ADDRESSMODE;
     texture.wrapV = Texture.CLAMP_ADDRESSMODE;
     const { minX, minZ, sizeX, sizeZ } = raster;
+    let focused = null;
     this.scene.metadata.tunnelBore = {
       texture,
       bounds: { minX, minZ, sizeX, sizeZ },
       sample: (x, z) => sampleBore(raster, x, z),
+      setFocus: (bore) => {
+        const tunnel = bore ? this._tunnels[bore.tunnel] ?? null : null;
+        if (focused && focused !== tunnel) focused.setHintStrength(0);
+        focused = tunnel;
+        tunnel?.setHintStrength(tunnelDarkness(bore.depth));
+      },
     };
   }
 
