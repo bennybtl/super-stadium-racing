@@ -706,12 +706,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   tunnelManager.rebuild();
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
-    sampleStep: 3,
     maxSlopeDeg: 60,
-    wallAbove: 4,
-    wallBelow: 1,
-    // Negative = inset: thinner slab that hugs the steep band (see manager).
-    padding: -0.5,
   });
   steepSlopeColliderManager.rebuild();
   checkpointManager.createCheckpoints();

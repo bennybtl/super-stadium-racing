@@ -44,6 +44,7 @@ export { TerrainQuery } from ${src('managers/TerrainQuery.js')};
 export { StaticBodyCollisionManager } from ${src('managers/StaticBodyCollisionManager.js')};
 export { BridgeMeshManager } from ${src('managers/BridgeMeshManager.js')};
 export { TunnelManager } from ${src('managers/TunnelManager.js')};
+export { SteepSlopeColliderManager } from ${src('managers/SteepSlopeColliderManager.js')};
 export { deriveTunnel } from ${src('world/tunnel-geometry.js')};
 export { NullEngine, Scene, MeshBuilder, Vector3, Logger } from '@babylonjs/core';
 `);
@@ -106,10 +107,12 @@ function makeWorld(features) {
   const bridges = new M.BridgeMeshManager(scene, track, null, dsm, null);
   for (const f of track.features) if (f.type === 'driveBox' || f.type === 'bridgeMesh') bridges.create(f);
   new M.TunnelManager(scene, track, dsm).rebuild();
+  const steep = new M.SteepSlopeColliderManager(scene, track, { enabled: true, maxSlopeDeg: 60 });
+  steep.rebuild();
   // A rendered frame would compute these; the collision broadphase reads the
   // colliders' world bounds.
   for (const mesh of scene.meshes) mesh.computeWorldMatrix(true);
-  return { track, dsm, terrainQuery: new M.TerrainQuery(scene), collision: new M.StaticBodyCollisionManager(scene) };
+  return { track, dsm, steep, terrainQuery: new M.TerrainQuery(scene), collision: new M.StaticBodyCollisionManager(scene) };
 }
 
 /**
@@ -191,9 +194,10 @@ function driveAt(features, seconds, { start = { x: -20, z: 0, heading: Math.PI /
     out.maxY = Math.max(out.maxY, truck.mesh.position.y);
     out.minVx = Math.min(out.minVx, truck.state.velocity.x);
     out.maxAbsZ = Math.max(out.maxAbsZ, Math.abs(truck.mesh.position.z));
-    out.path.push({ x: truck.mesh.position.x, y: truck.mesh.position.y, top: truck.mesh.position.y + truck.halfHeight });
+    out.path.push({ x: truck.mesh.position.x, z: truck.mesh.position.z, y: truck.mesh.position.y, top: truck.mesh.position.y + truck.halfHeight });
   }
   out.x = truck.mesh.position.x;
+  out.z = truck.mesh.position.z;
   return out;
 }
 
@@ -282,6 +286,38 @@ SCENARIOS.push(
     seconds: 3,
     start: { x: -36, z: -8.5, heading: Math.PI / 2 },
     expect: (r) => r.pushes > 0 && r.x < -20,
+  },
+);
+
+// A steep square hill (10 m, drops to the ground within ~3 m) turned 45°, so
+// its faces run diagonally across the grid the old blocker boxes sat on. The
+// face toward −x+z... here: the face between (1, −25) and (23.5, −3) runs
+// along x − z ≈ 26.5, outward normal (1, −1)/√2.
+const diamond = { type: 'squareHill', centerX: 0, centerZ: 0, width: 30, depth: 30, height: 10, angle: 45 };
+const offFace = (p) => (p.x - p.z - 26.5) / Math.SQRT2; // + outside the face
+
+SCENARIOS.push(
+  {
+    name: 'steep hill: a truck driving at the face is stopped at its foot',
+    features: [diamond],
+    seconds: 3,
+    start: { x: 22.9, z: -24.4, heading: -Math.PI / 4 },
+    expect: (r) => r.pushes > 0 && r.maxY < 2,
+  },
+  {
+    name: 'steep hill: driving alongside a diagonal face 0.5 m clear never catches',
+    features: [diamond],
+    seconds: 3,
+    // Centre half a truck width + the wall + 0.5 m off the face line.
+    start: { x: -2, z: -2 - (26.5 + (M.TRUCK_WIDTH / 2 + 0.15 + 0.5) * Math.SQRT2), heading: Math.PI / 4 },
+    expect: (r) => r.pushes === 0 && r.x > 20,
+  },
+  {
+    name: 'steep hill: a truck can drive off the top',
+    features: [diamond],
+    seconds: 3,
+    start: { x: 0, z: 0, heading: (3 * Math.PI) / 4 },
+    expect: (r) => r.pushes === 0 && offFace(r) > 2 && r.path[r.path.length - 1].y < 1.5,
   },
 );
 

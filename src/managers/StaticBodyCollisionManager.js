@@ -439,6 +439,9 @@ export class StaticBodyCollisionManager {
     const curSide = Math.sign(dx * lnx + dz * lnz);
     const crossed =
       !atOpenEnd && prevSide !== 0 && curSide !== 0 && prevSide !== curSide;
+    // One-way walls (`blockFrom`: +1 blocks trucks on the segments' left, −1
+    // on their right) let a truck coming from the other side pass.
+    if (c.blockFrom && (crossed ? prevSide : curSide) !== c.blockFrom) return;
     if (crossed) {
       // Resolve back to the side the truck came from.
       dx = lnx * prevSide;
@@ -470,7 +473,8 @@ export class StaticBodyCollisionManager {
     c.onContact?.(i, j, t, curSide || 1, penLateral);
     this._applyContactResponse(truck, this._normal.set(dx, 0, dz), dt, frame, {
       allowBounce: true,
-      retain: c.retain ?? DEFAULT_FRICTION,
+      // null: no along-wall scrub at all.
+      retain: c.retain === undefined ? DEFAULT_FRICTION : c.retain,
     });
   }
 
