@@ -5,19 +5,18 @@
 // replay time the same way a live streak computes them (see
 // TireMarks.appendHistory's `colorForPoint`/`sampleY`).
 //
-// Stored compactly (schema 2): every number is quantized to an integer and
-// written as a varint, and the byte string is base64'd into localStorage.
-// Per streak: point count, half-width (mm); per point: x and z as deltas from
+// Saved per track in IndexedDB (CacheStore), compactly (schema 2): every
+// number is quantized to an integer and written as a varint. Per streak: point count, half-width (mm); per point: x and z as deltas from
 // the previous point (cm), heading as a delta (centiradians, wrapped), and
 // alpha (percent). A point's `offsetX/offsetZ` is always
 // halfWidth × (cos, −sin) of the truck heading, so one angle replaces two
-// floats. About 6 characters a point, against ~70 for the schema-1 JSON, which
-// could fill the whole localStorage quota with two or three tracks' marks
-// (schema-1 saves are no longer read).
+// floats. About 4 bytes a point, against ~70 characters for the schema-1 JSON
+// that used to live in localStorage and could fill its whole quota with two or
+// three tracks' marks (those saves are no longer read).
 // Precision: 1 cm, 0.01 rad (≤2 mm at the mark's edge), 1% alpha.
 
-export const TIRE_MARKS_STORAGE_PREFIX = "tireMarks_";
-const STORAGE_PREFIX = TIRE_MARKS_STORAGE_PREFIX;
+import { TIRE_MARKS_STORE, cacheDelete, cacheGet, cachePut } from "./CacheStore.js";
+
 export const TIRE_MARKS_SCHEMA_VERSION = 2;
 // FIFO cap on saved streaks (not points) — a streak is the unit a player
 // actually perceives as "one mark", and capping at this level keeps the
@@ -25,10 +24,6 @@ export const TIRE_MARKS_SCHEMA_VERSION = 2;
 export const TIRE_MARKS_MAX_STREAKS = 600;
 
 const ANGLE_STEPS = Math.round(2 * Math.PI * 100); // centiradians per turn
-
-function storageKey(trackKey) {
-  return STORAGE_PREFIX + trackKey;
-}
 
 // ─── Encoding ────────────────────────────────────────────────────────────────
 
@@ -50,7 +45,7 @@ function wrapAngle(steps) {
   return ((((steps + half) % ANGLE_STEPS) + ANGLE_STEPS) % ANGLE_STEPS) - half;
 }
 
-/** Streaks → base64 string (schema 2). */
+/** Streaks → bytes (schema 2). */
 export function encodeTireMarkStreaks(streaks) {
   const bytes = [];
   writeUint(bytes, streaks.length);
@@ -71,23 +66,17 @@ export function encodeTireMarkStreaks(streaks) {
       px = x; pz = z; pa = a;
     }
   }
-  let binary = "";
-  const CHUNK = 0x8000; // keep String.fromCharCode's argument count in bounds
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode.apply(null, bytes.slice(i, i + CHUNK));
-  }
-  return btoa(binary);
+  return Uint8Array.from(bytes);
 }
 
-/** base64 string (schema 2) → streaks. Throws on malformed input. */
-export function decodeTireMarkStreaks(base64) {
-  const binary = atob(base64);
+/** Bytes (schema 2) → streaks. Throws on malformed input. */
+export function decodeTireMarkStreaks(bytes) {
   let i = 0;
   const readUint = () => {
     let u = 0, shift = 0, b;
     do {
-      if (i >= binary.length) throw new Error("truncated tire-mark data");
-      b = binary.charCodeAt(i++);
+      if (i >= bytes.length) throw new Error("truncated tire-mark data");
+      b = bytes[i++];
       u += (b & 0x7f) * 2 ** shift;
       shift += 7;
     } while (b & 0x80);
@@ -125,18 +114,15 @@ export function decodeTireMarkStreaks(base64) {
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
-function storedValue(streaks) {
-  return JSON.stringify({ version: TIRE_MARKS_SCHEMA_VERSION, data: encodeTireMarkStreaks(streaks) });
-}
-
-/** Saved streaks for a track — [{points:[{x,z,offsetX,offsetZ,alpha}]}], oldest first. [] if none/invalid. */
-export function loadTireMarkStreaks(trackKey) {
+/**
+ * Saved streaks for a track — [{points:[{x,z,offsetX,offsetZ,alpha}]}], oldest
+ * first. Resolves [] if none/invalid; never rejects.
+ */
+export async function loadTireMarkStreaks(trackKey) {
+  const record = await cacheGet(TIRE_MARKS_STORE, trackKey);
+  if (record?.version !== TIRE_MARKS_SCHEMA_VERSION || !(record.bytes instanceof Uint8Array)) return [];
   try {
-    const raw = localStorage.getItem(storageKey(trackKey));
-    if (!raw) return [];
-    const data = JSON.parse(raw);
-    if (data?.version !== TIRE_MARKS_SCHEMA_VERSION || typeof data.data !== "string") return [];
-    return decodeTireMarkStreaks(data.data).slice(-TIRE_MARKS_MAX_STREAKS);
+    return decodeTireMarkStreaks(record.bytes).slice(-TIRE_MARKS_MAX_STREAKS);
   } catch {
     return [];
   }
@@ -144,23 +130,14 @@ export function loadTireMarkStreaks(trackKey) {
 
 /**
  * Persist a track's tire-mark streaks. Encoded now (a snapshot: the caller
- * keeps appending to its streaks), written deferred off the caller's frame
- * (same pattern as the other *Storage modules) so a periodic save never hitches.
+ * keeps appending to its streaks); the IndexedDB write itself is async.
  */
 export function saveTireMarkStreaks(trackKey, streaks) {
-  const value = storedValue(streaks.slice(-TIRE_MARKS_MAX_STREAKS));
-  setTimeout(() => {
-    try {
-      localStorage.setItem(storageKey(trackKey), value);
-    } catch (e) {
-      console.warn("[TireMarksStorage] Failed to persist tire marks:", e?.name ?? e);
-    }
-  }, 0);
+  const bytes = encodeTireMarkStreaks(streaks.slice(-TIRE_MARKS_MAX_STREAKS));
+  return cachePut(TIRE_MARKS_STORE, trackKey, { version: TIRE_MARKS_SCHEMA_VERSION, bytes });
 }
 
 /** Delete all saved tire marks for a track. */
 export function deleteTireMarkStreaks(trackKey) {
-  try {
-    localStorage.removeItem(storageKey(trackKey));
-  } catch {}
+  return cacheDelete(TIRE_MARKS_STORE, trackKey);
 }

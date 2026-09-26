@@ -740,7 +740,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   bridgeMeshManager.rebuildAutoConnectorLinks();
 
   // Shared, persistent tire marks — one ring-buffer mesh for every truck's
-  // rubber, replayed from last session's save at construction. Built only
+  // rubber, replayed from last session's save. Built only
   // now, after ground AND bridge drive surfaces are registered, since replay
   // resolves each saved point's height via a raycast against those surfaces
   // (TerrainQuery) — any earlier and every point would miss and fall back to
@@ -748,6 +748,8 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // track object so truck.js can reach it through the `track` reference it
   // already receives every frame.
   currentTrack._sharedTireMarks = new SharedTireMarksManager(scene, currentTrack.id, terrainManager);
+  // Saved marks load from IndexedDB; have them replayed before the race starts.
+  await currentTrack._sharedTireMarks.ready;
 
   // Create movable obstacles, walls, flags, and track signs from track features.
   for (const feature of currentTrack.getFeatures()) {

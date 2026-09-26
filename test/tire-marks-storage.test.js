@@ -1,9 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   encodeTireMarkStreaks,
   decodeTireMarkStreaks,
   loadTireMarkStreaks,
+  saveTireMarkStreaks,
+  deleteTireMarkStreaks,
 } from "../src/managers/TireMarksStorage.js";
+
+// IndexedDB stand-in: CacheStore's API over one in-memory map.
+const cache = new Map();
+vi.mock("../src/managers/CacheStore.js", () => ({
+  TIRE_MARKS_STORE: "tireMarks",
+  cacheGet: async (store, key) => cache.get(`${store}/${key}`),
+  cachePut: async (store, key, value) => { cache.set(`${store}/${key}`, value); },
+  cacheDelete: async (store, key) => { cache.delete(`${store}/${key}`); },
+}));
 
 const HALF = 0.18;
 
@@ -74,31 +85,32 @@ describe("tire-mark encoding", () => {
   });
 });
 
-describe("loadTireMarkStreaks", () => {
-  let saved;
-  const data = new Map();
-  beforeEach(() => {
-    saved = globalThis.localStorage;
-    data.clear();
-    globalThis.localStorage = {
-      getItem: (k) => (data.has(k) ? data.get(k) : null),
-      setItem: (k, v) => data.set(k, String(v)),
-      removeItem: (k) => data.delete(k),
-    };
-  });
-  afterEach(() => { globalThis.localStorage = saved; });
+describe("tire-mark storage", () => {
+  beforeEach(() => cache.clear());
 
-  it("loads a saved track", () => {
+  it("saves and loads a track", async () => {
     const streaks = [makeStreak(5, 5, 1, 0.02, 20), makeStreak(-3, 9, 2, -0.05, 8)];
-    data.set("tireMarks_oval", JSON.stringify({ version: 2, data: encodeTireMarkStreaks(streaks) }));
-    expectClose(loadTireMarkStreaks("oval"), streaks);
+    await saveTireMarkStreaks("oval", streaks);
+    expect(cache.get("tireMarks/oval").bytes).toBeInstanceOf(Uint8Array);
+    expectClose(await loadTireMarkStreaks("oval"), streaks);
   });
 
-  it("returns [] for missing, schema-1 or corrupt saves", () => {
-    expect(loadTireMarkStreaks("none")).toEqual([]);
-    data.set("tireMarks_old", JSON.stringify({ version: 1, streaks: [makeStreak(5, 5, 1, 0.02, 20)] }));
-    expect(loadTireMarkStreaks("old")).toEqual([]);
-    data.set("tireMarks_bad", JSON.stringify({ version: 2, data: "!!notbase64" }));
-    expect(loadTireMarkStreaks("bad")).toEqual([]);
+  it("snapshots the streaks when saving", async () => {
+    const streaks = [makeStreak(0, 0, 0, 0.02, 10)];
+    const saving = saveTireMarkStreaks("oval", streaks);
+    streaks.push(makeStreak(9, 9, 1, 0.02, 10));
+    await saving;
+    expect(await loadTireMarkStreaks("oval")).toHaveLength(1);
+  });
+
+  it("resolves [] for missing, unknown-schema or corrupt saves, and after delete", async () => {
+    expect(await loadTireMarkStreaks("none")).toEqual([]);
+    cache.set("tireMarks/old", { version: 1, streaks: [] });
+    expect(await loadTireMarkStreaks("old")).toEqual([]);
+    cache.set("tireMarks/bad", { version: 2, bytes: Uint8Array.from([5, 0xff]) });
+    expect(await loadTireMarkStreaks("bad")).toEqual([]);
+    await saveTireMarkStreaks("oval", [makeStreak(0, 0, 0, 0.02, 10)]);
+    await deleteTireMarkStreaks("oval");
+    expect(await loadTireMarkStreaks("oval")).toEqual([]);
   });
 });

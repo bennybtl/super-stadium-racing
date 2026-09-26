@@ -1,10 +1,11 @@
-import { TIRE_MARKS_STORAGE_PREFIX } from "../managers/TireMarksStorage.js";
 import { WALL_WEAR_STORAGE_PREFIX } from "../managers/WallWearStorage.js";
 
-// Cosmetic data that regrows as you drive, dropped (in this order) to make room
-// when localStorage is full. Tire marks can grow to fill the whole ~5 MB quota
-// across tracks; after that, every other write threw QuotaExceededError.
-const EVICTABLE_PREFIXES = [TIRE_MARKS_STORAGE_PREFIX, WALL_WEAR_STORAGE_PREFIX];
+// Data that's safe to drop (in this order) to make room when localStorage is
+// full: tire marks saved there before they moved to IndexedDB (they could fill
+// the whole ~5 MB quota, after which every other write threw
+// QuotaExceededError), then wall wear, which regrows as you drive.
+const LEGACY_TIRE_MARKS_PREFIX = "tireMarks_";
+const EVICTABLE_PREFIXES = [LEGACY_TIRE_MARKS_PREFIX, WALL_WEAR_STORAGE_PREFIX];
 
 const isQuotaError = (e) => e?.name === "QuotaExceededError";
 
