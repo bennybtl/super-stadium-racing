@@ -1,3 +1,5 @@
+import { setItemEvictingCosmetics } from "./utils/storage.js";
+
 const STORAGE_KEYS = {
   controls: 'settings.controls',
   audio: 'settings.audio',
@@ -155,7 +157,7 @@ function normalizeGameplaySettings(candidate) {
 }
 
 function writeStorageObject(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  setItemEvictingCosmetics(key, JSON.stringify(value));
 }
 
 export function loadControlsSettings() {

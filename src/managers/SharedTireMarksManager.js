@@ -7,8 +7,9 @@ const SAVE_INTERVAL_MS = 15000;
 /**
  * Owns the scene's one shared TireMarks ring plus its persistence.
  *
- * At construction, replays whatever streaks were saved last session straight
- * into the ring's history region (see TireMarks.appendHistory), using a
+ * At construction, loads whatever streaks were saved last session (async,
+ * from IndexedDB) and replays them into the ring's history region (see
+ * TireMarks.appendHistory); `ready` resolves once that's done. Replay uses a
  * generic terrain-height/colour sampler since there's no real truck to ask
  * yet. During play, drawing itself is real-time and happens directly on the
  * ring (see TireMarkWriter.writeLiveNode) — this manager only hears about a
@@ -25,7 +26,7 @@ export class SharedTireMarksManager {
   constructor(scene, track, terrainManager, ringOptions = {}) {
     this._trackKey = track.id;
     this.ring = new TireMarks(scene, ringOptions);
-    this._streaks = loadTireMarkStreaks(this._trackKey);
+    this._streaks = [];
     this._unsaved = false;
     this._lastSaveAt = performance.now();
 
@@ -35,13 +36,17 @@ export class SharedTireMarksManager {
     const terrainQuery = new TerrainQuery(scene);
     const replaySampleY = (x, z, fromY) => terrainQuery.surfaceHeightAt(x, z, track, { fromY });
     const replayColorForPoint = (x, z) => tireMarkColorForTerrain(terrainManager?.getTerrainAt?.({ x, z })?.color);
-    for (const streak of this._streaks) {
-      // appendHistory calls sampleY(x, z, fromY + 1) — a high fromY here
-      // (there's no real truck position to take one from) so the lookup
-      // starts above anything on the track, including an elevated bridge
-      // deck, rather than punching through it from below.
-      this.ring.appendHistory(streak.points, { sampleY: replaySampleY, fromY: 499, colorForPoint: replayColorForPoint });
-    }
+    this.ready = loadTireMarkStreaks(this._trackKey).then((saved) => {
+      for (const streak of saved) {
+        // appendHistory calls sampleY(x, z, fromY + 1) — a high fromY here
+        // (there's no real truck position to take one from) so the lookup
+        // starts above anything on the track, including an elevated bridge
+        // deck, rather than punching through it from below.
+        this.ring.appendHistory(streak.points, { sampleY: replaySampleY, fromY: 499, colorForPoint: replayColorForPoint });
+      }
+      // Anything completed while loading is newer than the save.
+      this._streaks = [...saved, ...this._streaks].slice(-TIRE_MARKS_MAX_STREAKS);
+    });
   }
 
   /** Called by TireMarkWriter once a truck's streak ends — persistence bookkeeping only, already drawn live. */

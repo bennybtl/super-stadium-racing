@@ -102,7 +102,9 @@ offroad/
     │   ├── ghost/hotlap: GhostRecorder, GhostPlayer, HotLapTracker
     │   ├── telemetry: TelemetryRecorder, TelemetryPlayer
     │   ├── persistence: TrackLoader, TrackStore, TrackPackLoader, VehicleLoader, DecorationLoader,
-    │   │   ObstacleLoader, UpgradeStorage, ChampionshipStorage, HotLapStorage
+    │   │   ObstacleLoader, UpgradeStorage, ChampionshipStorage, HotLapStorage, WallWearStorage,
+    │   │   TireMarksStorage + CacheStore (compact tire marks in the 'offroad-cache'
+    │   │   IndexedDB; progress saves use utils/storage.js setItemEvictingCosmetics)
     │   └── render helpers (lowercase): billboardText.js, decalShapes.js, groundDecal.js
     ├── objects/                     # visual + physics track entities
     │   ├── BridgeMesh.js, Checkpoint.js, Obstacle.js, Pickup.js, PolyWall.js, PolyCurb.js,
