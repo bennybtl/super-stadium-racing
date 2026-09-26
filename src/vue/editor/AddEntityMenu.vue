@@ -54,7 +54,7 @@ import imgAiPath        from '../assets/ai_path.feature.png';
 import imgDecal         from '../assets/decals.feature.png';
 import imgTerrainPath   from '../assets/terrain_path.feature.png';
 import imgStartingGrid  from '../assets/starting_grid.feature.png';
-
+import imgTrackLight    from '../assets/track_light.feature.png';
 const editor = useEditorStore();
 
 const features = [
@@ -72,7 +72,7 @@ const features = [
   { label: 'Terrain Shape',    img: imgTerrain,       action: () => editor.featureAction('addTerrainEntity')        },
   { label: 'Obstacle',         img: imgObstacle,      action: () => editor.featureAction('addObstacleEntity')       },
   { label: 'Track Sign',       img: imgTrackSign,     action: () => editor.featureAction('addTrackSignEntity')      },
-  { label: 'Track Light',      img: null,             action: () => editor.featureAction('addTrackLightEntity')     },
+  { label: 'Track Light',      img: imgTrackLight,    action: () => editor.featureAction('addTrackLightEntity')     },
   { label: 'Decoration',       img: imgDecorations,   action: () => editor.featureAction('addDecorationEntity')     },
   { label: 'Action Zone',      img: imgActionZone,    action: () => editor.featureAction('addActionZoneEntity')     },
   { label: 'AI Path',          img: imgAiPath,        action: () => editor.openAiPath()                             },

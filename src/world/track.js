@@ -30,6 +30,14 @@ const GROUND_BORDER = 10;
 // "rough ground" at the same knob value.
 const ROUGHNESS_JITTER_AMPLITUDE = 1.0;
 
+// Outside-border strip between the track edge and the perimeter wall: the
+// breakup there is a fraction of full roughness, and the ground rises into a
+// berm against the wall. BERM_START is the fraction of the strip (0 = track
+// edge, 1 = wall) where the rise begins.
+const BORDER_JITTER_SCALE = 0.35;
+const BORDER_BERM_HEIGHT = 1.5;
+const BORDER_BERM_START = 0.3;
+
 // Deterministic pseudo-noise in [-1, 1], world-space so it holds still under
 // re-bakes. Two offset sine lattices avoid the axis-aligned banding a single
 // one shows.
@@ -695,7 +703,11 @@ export class Track {
     if (signedDistToEdge < 0 && this.borderWall?.enabled !== false) {
       const borderT = Math.max(0, Math.min(1, -signedDistToEdge / HEIGHT_BLEND_OUTER));
       const jitterMask = Math.max(0, Math.min(1, (borderT - 0.2) / 0.8));
-      blendedHeight += ROUGHNESS_NOISE(x, z) * ROUGHNESS_JITTER_AMPLITUDE * jitterMask;
+      blendedHeight += ROUGHNESS_NOISE(x, z) * ROUGHNESS_JITTER_AMPLITUDE * BORDER_JITTER_SCALE * jitterMask;
+      // Dirt piled against the wall: flat at the track edge, curving up to
+      // BORDER_BERM_HEIGHT where the ground meets the wall.
+      const bermT = Math.max(0, Math.min(1, (borderT - BORDER_BERM_START) / (1 - BORDER_BERM_START)));
+      blendedHeight += BORDER_BERM_HEIGHT * bermT * bermT;
     }
 
     return blendedHeight;

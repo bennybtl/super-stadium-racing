@@ -16,6 +16,19 @@ import { TUNNEL_BORE_DISCARD_ABOVE } from "../world/tunnel-geometry.js";
 const _terrainTypeList = Object.values(TERRAIN_TYPES);
 const _terrainTypeIndexByName = new Map(_terrainTypeList.map((terrainType, index) => [terrainType?.name, index]));
 
+// Albedo detail layers. A type's `diffuseTexture` may be an array of variants:
+// its first image sits at the type's own index (so a terrain id still doubles as
+// the layer index), the rest are appended after the last type.
+const _diffuseVariants = _terrainTypeList.map((terrainType) => {
+  const d = terrainType?.diffuseTexture;
+  return Array.isArray(d) ? d : (d ? [d] : []);
+});
+const _detailLayerSources = _diffuseVariants.map((variants) => variants[0] ?? null);
+const _detailVariantLayers = _diffuseVariants.map((variants, index) => [
+  index,
+  ...variants.slice(1).map((name) => _detailLayerSources.push(name) - 1),
+]);
+
 export function getTerrainTypeIndexByName(name) {
   if (typeof name !== 'string' || name.length === 0) return -1;
   return _terrainTypeIndexByName.get(name) ?? -1;
@@ -373,14 +386,14 @@ const DETAIL_TILE_PIXELS = 1024;
 const DETAIL_NORMAL_TILE_PIXELS = 512;
 
 /**
- * Pack one image per terrain type into a texture array, index-aligned with
- * TERRAIN_TYPES so a terrain id doubles as the layer index. Types with no image
- * (or a file that failed to load) get `emptyFill`, chosen so the shader's use of
- * that layer is a no-op.
+ * Pack one image per entry of `sources` into a texture array; the first
+ * TERRAIN_TYPES.length entries are index-aligned with the types so a terrain id
+ * doubles as the layer index. Missing images (or files that failed to load) get
+ * `emptyFill`, chosen so the shader's use of that layer is a no-op.
  * @private
  */
-async function _buildTypeTextureArray(scene, { size, sourceName, loadImage, emptyFill }) {
-  const layers = _terrainTypeList.length;
+async function _buildTypeTextureArray(scene, { size, sources, loadImage, emptyFill }) {
+  const layers = sources.length;
   const bytesPerLayer = size * size * 4;
   const data = new Uint8Array(layers * bytesPerLayer);
 
@@ -394,7 +407,7 @@ async function _buildTypeTextureArray(scene, { size, sourceName, loadImage, empt
     ctx.fillStyle = emptyFill;
     ctx.fillRect(0, 0, size, size);
 
-    const name = sourceName(_terrainTypeList[i]);
+    const name = sources[i];
     if (name) {
       const img = await loadImage(name);
       if (img && img.naturalWidth > 0) ctx.drawImage(img, 0, 0, size, size);
@@ -431,7 +444,7 @@ async function _buildTypeTextureArray(scene, { size, sourceName, loadImage, empt
 export async function createTerrainDetailTextureArray(scene) {
   return _buildTypeTextureArray(scene, {
     size: DETAIL_TILE_PIXELS,
-    sourceName: (terrainType) => terrainType?.diffuseTexture,
+    sources: _detailLayerSources,
     loadImage: _loadTextureMap,
     // White is the identity for the multiply the shader does, so a type with no
     // texture renders as its flat colour.
@@ -449,7 +462,7 @@ export async function createTerrainDetailTextureArray(scene) {
 export async function createTerrainDetailNormalArray(scene) {
   return _buildTypeTextureArray(scene, {
     size: DETAIL_NORMAL_TILE_PIXELS,
-    sourceName: (terrainType) => terrainType?.normalMap,
+    sources: _terrainTypeList.map((terrainType) => terrainType?.normalMap),
     loadImage: _loadNormalMap,
     // Flat normal: decodes to (0,0,1), i.e. no perturbation at all.
     emptyFill: 'rgb(128,128,255)',
@@ -474,6 +487,45 @@ function _buildDetailParamsGlsl() {
     return `      if (typeIndex < ${(index + 0.5).toFixed(1)}) return vec4(${tile}, ${opacity}, ${normalTile}, ${normalIntensity});`;
   });
   lines.push('      return vec4(20.0, 0.0, 10.0, 0.0);');
+  return lines.join('\n');
+}
+
+// Half-width, in noise units (0–1), of the crossfade between two variants.
+const DETAIL_VARIANT_FADE = 0.03;
+
+/**
+ * GLSL for picking a type's albedo variant from a 0–1 noise value: returns
+ * (layer A, layer B, mix t). Each variant owns a band of the noise range sized by
+ * its weight (n - i for index i, so earlier images are more common), and
+ * neighbouring bands crossfade. The noise is smooth value noise, which clusters
+ * around 0.5, so bands are laid out middle-out — the most likely variant in the
+ * middle — and the clustering further favours it.
+ * @private
+ */
+function _buildDetailVariantGlsl() {
+  const f = DETAIL_VARIANT_FADE;
+  const lines = [];
+  _detailVariantLayers.forEach((layers, index) => {
+    if (layers.length < 2) return;
+    const n = layers.length;
+    const order = [0];
+    for (let i = 1; i < n; i++) i % 2 ? order.push(i) : order.unshift(i);
+    const total = n * (n + 1) / 2;
+    const bounds = [];
+    let acc = 0;
+    for (let j = 0; j < n - 1; j++) bounds.push(acc += (n - order[j]) / total);
+    const layer = (j) => layers[order[j]].toFixed(1);
+    lines.push(`      if (abs(typeIndex - ${index.toFixed(1)}) < 0.5) {`);
+    for (let j = 0; j < n - 1; j++) {
+      const c = bounds[j];
+      const pair = `vec3(${layer(j)}, ${layer(j + 1)}, smoothstep(${(c - f).toFixed(4)}, ${(c + f).toFixed(4)}, noise))`;
+      // Switch pairs halfway through the band between this boundary and the next.
+      if (j < n - 2) lines.push(`        if (noise < ${((c + bounds[j + 1]) / 2).toFixed(4)}) return ${pair};`);
+      else lines.push(`        return ${pair};`);
+    }
+    lines.push('      }');
+  });
+  lines.push('      return vec3(typeIndex, typeIndex, 0.0);');
   return lines.join('\n');
 }
 
@@ -731,6 +783,10 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   // type's own normalMapIntensity. Turn down if the ground reads too crunchy.
   const float terrainDetailNormalStrength = 0.4;
 
+  // Size of the patches a type's diffuse variants are mixed in, in texture
+  // tiles. Around a tile or two breaks up the repeat without looking blotchy.
+  const float terrainDetailVariantScale = 1.5;
+
   // Compile-time constants injected from JS.
   const float terrainTypeCount = __TERRAIN_TYPE_COUNT__;
   const float terrainCellCount = __TERRAIN_CELL_COUNT__;
@@ -775,9 +831,34 @@ __TERRAIN_DETAIL_PARAMS__
   // Never write the literal version pragma in here, not even in a comment:
   // ProcessShaderConversion treats any source containing it as already migrated
   // and skips the pass entirely, after which the varyings fail to compile.
+  // Albedo variant for a type (see _buildDetailVariantGlsl): layer A, layer B,
+  // and how far to mix toward B. Single-image types return their own layer twice.
+  vec3 _detailVariant(float typeIndex, float noise) {
+__TERRAIN_DETAIL_VARIANTS__
+  }
+  float _variantHash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+  // Smooth 0–1 value noise on a lattice of terrainDetailVariantScale tiles,
+  // decorrelated per type, choosing which variant shows where.
+  float _variantNoise(vec2 p, float typeIndex) {
+      vec2 i = floor(p);
+      vec2 f = p - i;
+      f = f * f * (3.0 - 2.0 * f);
+      vec2 o = vec2(typeIndex * 17.0, typeIndex * 31.0);
+      return mix(
+          mix(_variantHash(i + o), _variantHash(i + o + vec2(1.0, 0.0)), f.x),
+          mix(_variantHash(i + o + vec2(0.0, 1.0)), _variantHash(i + o + vec2(1.0, 1.0)), f.x),
+          f.y);
+  }
   vec4 _sampleDetail(float typeIndex, vec2 worldXZ) {
       vec4 params = _detailParams(typeIndex);
-      vec3 rgb = texture(terrainDetailSampler, vec3(worldXZ / params.x, typeIndex)).rgb;
+      vec2 uv = worldXZ / params.x;
+      vec3 v = _detailVariant(typeIndex, _variantNoise(uv / terrainDetailVariantScale, typeIndex));
+      vec3 rgb = mix(
+          texture(terrainDetailSampler, vec3(uv, v.x)).rgb,
+          texture(terrainDetailSampler, vec3(uv, v.y)).rgb,
+          v.z);
       return vec4(rgb, params.y);
   }
   // Tangent-space slope from the type's normal map, tiled in world XZ. Because
@@ -1106,7 +1187,8 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       .replace("__TERRAIN_WORLD_HALF_DEPTH__", terrainWorldHalfDepth)
       .replace("__TERRAIN_FORCED_TYPE_INDEX__", terrainForcedTypeIndex)
       .replace("__TERRAIN_OUTSIDE_TYPE_INDEX__", Number(this._outsideTerrainTypeIndex ?? 0).toFixed(1))
-      .replace("__TERRAIN_DETAIL_PARAMS__", _buildDetailParamsGlsl());
+      .replace("__TERRAIN_DETAIL_PARAMS__", _buildDetailParamsGlsl())
+      .replace("__TERRAIN_DETAIL_VARIANTS__", _buildDetailVariantGlsl());
 
     return {
       "CUSTOM_FRAGMENT_DEFINITIONS": defs,

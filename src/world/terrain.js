@@ -116,7 +116,15 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.15,     // Slippery, especially when wet
     color: TERRAIN_COLORS.grass, // Green grass
     dustIntensity: 0.12,     // Light clippings/haze
-    diffuseTexture: 'textures/grass_1.texture.jpg',
+    // An array mixes the images across the ground in soft patches to break up
+    // the tiling, weighted toward the front: the first is most common.
+    diffuseTexture: [
+      'textures/grass_1.texture.jpg',
+      'textures/grass_4.texture.jpg',
+      'textures/grass_5.texture.jpg',
+      'textures/grass_2.texture.jpg',
+      'textures/grass_3.texture.jpg',
+    ],
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 1.2,     // Slightly slows down

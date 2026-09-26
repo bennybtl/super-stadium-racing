@@ -224,7 +224,7 @@ export class BridgeMesh {
         material.specularColor = Color3.White();
         material.specularPower = 48;
       } else {
-        const diffuseUrl = _resolveBridgeAssetUrl(terrainType.diffuseTexture, _bridgeTextureUrls);
+        const diffuseUrl = _resolveBridgeAssetUrl([terrainType.diffuseTexture].flat()[0], _bridgeTextureUrls);
         if (diffuseUrl) {
           const diffuseTexture = new Texture(diffuseUrl, scene, true, false);
           diffuseTexture.uScale = diffuseTilesU;
