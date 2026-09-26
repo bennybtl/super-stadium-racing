@@ -1,17 +1,18 @@
 import { Vector3 } from "@babylonjs/core";
 
 /**
- * TerrainQuery — hybrid raycast + cross-pattern mesh sampler.
+ * TerrainQuery — layered surface lookup + cross-pattern normal sampler.
  *
  * Combines two complementary techniques for robust terrain detection on uneven
  * ground:
  *
- * 1. DUAL-DIRECTION RAYCASTING
- *    A primary downward ray resolves the correct surface layer (deck vs ground,
- *    bridge vs open terrain).  An upward fallback fires when the caller's Y has
- *    penetrated the mesh — this catches the common case where the truck sinks
- *    slightly into a steep slope face and the downward ray overshoots, returning
- *    null or a wildly deep hit.
+ * 1. DOWN-THEN-UP SURFACE LOOKUP
+ *    The surface at or below the caller's Y wins (deck vs ground, bridge vs
+ *    open terrain). An upward fallback applies when the caller's Y has
+ *    penetrated the surface — this catches the common case where the truck
+ *    sinks slightly into a steep slope face. Answered from the
+ *    DriveSurfaceManager's height layers (world/surface-layers.js); the old
+ *    raycast path is kept behind `{ raycast: true }` until it's deleted.
  *
  * 2. CROSS-PATTERN NORMAL SAMPLING
  *    A single triangle's hit normal is unreliable on vertex-displaced terrain —
@@ -22,12 +23,12 @@ import { Vector3 } from "@babylonjs/core";
  *    blended 50/50 with the ray's own interpolated vertex normal so fine surface
  *    detail is still captured.
  *
- * All raycasting is delegated to the scene's DriveSurfaceManager; without one
- * every query resolves to null/fallback.
+ * Surfaces come from the scene's DriveSurfaceManager; without one every query
+ * resolves to null/fallback.
  *
  * MISSES ARE EXPLICIT. `castDown`, `tryHeightAt` and `tryHeightAtFast` return
  * null when no drivable surface exists at the point — which is a different
- * statement from "the ground is at y = 0". This matters because a raycast only
+ * statement from "the ground is at y = 0". This matters because a lookup only
  * finds *registered surface meshes*, so it legitimately misses open terrain that
  * the analytic heightfield (`track.getHeightAt`) knows about. The `heightAt`
  * wrapper collapses that distinction into a caller-supplied number; reach for it
@@ -43,9 +44,16 @@ const MIN_DRIVABLE_NORMAL_Y = 0.15;
 const MAX_UPWARD_FALLBACK_RISE = 1.0;
 
 export class TerrainQuery {
-  constructor(scene) {
+  /**
+   * @param {BABYLON.Scene} scene
+   * @param {{ raycast?: boolean }} [options]  `raycast: true` answers with the
+   *   old Babylon raycasts instead of the height layers — for the parity check
+   *   and A/B testing only; deleted once the layers have proven out.
+   */
+  constructor(scene, { raycast = false } = {}) {
     this._scene = scene;
     this._driveSurfaceManager = scene?.metadata?.driveSurfaceManager ?? null;
+    this._raycast = raycast;
     this._lastResolvedSurface = null;
   }
 
@@ -59,43 +67,17 @@ export class TerrainQuery {
    * @returns {{ y: number, normal: Vector3 } | null}
    */
   castDown(x, z, fromY = 500, options = {}) {
-    const continuityOptions = this._buildContinuityOptions(options);
-    if (!this._driveSurfaceManager?.queryDriveSurfaceAt) {
+    const found = this._raycast
+      ? this._resolveByRaycast(x, z, fromY, options)
+      : this._resolveByLayers(x, z, fromY, options);
+    if (!found) {
       this._lastResolvedSurface = null;
       return null;
     }
-
-    const queryOptions = {
-      ...(continuityOptions ?? {}),
-      maxDistance: fromY + 200,
-      minNormalY: MIN_DRIVABLE_NORMAL_Y,
-      penetrationThreshold: 1.5,
-      maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
-    };
-    let resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, queryOptions);
-    let hit = resolved?.pickInfo ?? null;
-    // Steep terrain faces fail the minNormalY drivability filter, leaving
-    // callers (object placement: flags, obstacles, pickups, and the truck on
-    // very steep ground) with no height at all.  Retry once without the
-    // normal filter so we still resolve a surface height to sit on.
-    if (!hit?.hit || !hit.pickedPoint) {
-      resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
-        ...queryOptions,
-        minNormalY: 0,
-      });
-      hit = resolved?.pickInfo ?? null;
-    }
-    if (!hit?.hit || !hit.pickedPoint) {
-      this._lastResolvedSurface = null;
-      return null;
-    }
-    // getNormal() on a back-face (upward hit) returns a downward-pointing normal,
-    // so skip normal blending when queryDriveSurfaceAt resolved from upward fallback.
-    const usedUpward = (hit.pickedPoint.y - fromY) > 1e-4;
-
-    const hitY = hit.pickedPoint.y;
-    const resolvedSurface = this._resolveSurfaceInfo(hit);
-    const probeLayer = resolvedSurface?.level;
+    const { y: hitY, surface: resolvedSurface, probe, rayNormalAt } = found;
+    // A back-face (upward) hit's vertex normal points down, so skip normal
+    // blending when the lookup resolved from the upward fallback.
+    const usedUpward = (hitY - fromY) > 1e-4;
 
     // -------------------------------------------------------------------------
     // Normal computation — cross-pattern height sampling.
@@ -109,10 +91,10 @@ export class TerrainQuery {
     //       yPZ
     // -------------------------------------------------------------------------
     const probeFromY = hitY + 5; // always above the surface
-    const yPX = this._probeHeight(x + SAMPLE_DIST, z,               probeFromY, probeLayer) ?? hitY;
-    const yNX = this._probeHeight(x - SAMPLE_DIST, z,               probeFromY, probeLayer) ?? hitY;
-    const yPZ = this._probeHeight(x,               z + SAMPLE_DIST, probeFromY, probeLayer) ?? hitY;
-    const yNZ = this._probeHeight(x,               z - SAMPLE_DIST, probeFromY, probeLayer) ?? hitY;
+    const yPX = probe(x + SAMPLE_DIST, z,               probeFromY) ?? hitY;
+    const yNX = probe(x - SAMPLE_DIST, z,               probeFromY) ?? hitY;
+    const yPZ = probe(x,               z + SAMPLE_DIST, probeFromY) ?? hitY;
+    const yNZ = probe(x,               z - SAMPLE_DIST, probeFromY) ?? hitY;
 
     // tanX points in the +X direction across the surface.
     // tanZ points in the +Z direction across the surface.
@@ -129,9 +111,9 @@ export class TerrainQuery {
     // Blend cross-pattern normal with the ray's interpolated vertex normal.
     // The vertex normal captures sub-triangle surface detail; the cross-pattern
     // suppresses per-triangle faceting artifacts over bumpy displacement.
-    // Skip the blend when the hit came from the upward fallback — getNormal() on
-    // a back-face returns a downward-pointing normal that corrupts the result.
-    let rayNormal = usedUpward ? null : hit.getNormal(true, true);
+    // Skip the blend when the hit came from the upward fallback — a back-face
+    // vertex normal points down and corrupts the result.
+    let rayNormal = usedUpward ? null : rayNormalAt();
     if (rayNormal && Vector3.Dot(rayNormal, crossNormal) < 0) {
       // Some custom meshes can report opposite-facing triangle normals.
       // Flip to match the sampled slope frame so pitch/roll remain correct.
@@ -144,6 +126,55 @@ export class TerrainQuery {
     this._lastResolvedSurface = resolvedSurface;
 
     return { y: hitY, normal };
+  }
+
+  /**
+   * The surface hit for castDown from the height layers: its height, surface
+   * record, a same-level downward probe for the cross-pattern normal, and the
+   * hit's interpolated vertex normal.
+   */
+  _resolveByLayers(x, z, fromY, options) {
+    const layers = this._driveSurfaceManager?.layers;
+    const hit = layers?.sample(x, z, fromY, this._preferredSurface(options));
+    if (!hit) return null;
+    const level = hit.surface.level;
+    return {
+      y: hit.y,
+      surface: hit.surface,
+      probe: (px, pz, probeFromY) => layers.downOnLevel(px, pz, probeFromY, level, probeFromY + 50),
+      rayNormalAt: () => layers.normalAt(hit, x, z, new Vector3()),
+    };
+  }
+
+  /** As _resolveByLayers, from the old Babylon raycasts. */
+  _resolveByRaycast(x, z, fromY, options) {
+    if (!this._driveSurfaceManager?.queryDriveSurfaceAt) return null;
+    const queryOptions = {
+      ...this._buildContinuityOptions(options),
+      maxDistance: fromY + 200,
+      minNormalY: MIN_DRIVABLE_NORMAL_Y,
+      penetrationThreshold: 1.5,
+      maxUpwardRise: MAX_UPWARD_FALLBACK_RISE,
+    };
+    let hit = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, queryOptions)?.pickInfo ?? null;
+    // Steep terrain faces fail the minNormalY drivability filter, leaving
+    // callers (object placement: flags, obstacles, pickups, and the truck on
+    // very steep ground) with no height at all.  Retry once without the
+    // normal filter so we still resolve a surface height to sit on.
+    if (!hit?.hit || !hit.pickedPoint) {
+      hit = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
+        ...queryOptions,
+        minNormalY: 0,
+      })?.pickInfo ?? null;
+    }
+    if (!hit?.hit || !hit.pickedPoint) return null;
+    const surface = this._resolveSurfaceInfo(hit);
+    return {
+      y: hit.pickedPoint.y,
+      surface,
+      probe: (px, pz, probeFromY) => this._probeHeight(px, pz, probeFromY, surface?.level),
+      rayNormalAt: () => hit.getNormal(true, true),
+    };
   }
 
   getLastResolvedSurface() {
@@ -213,6 +244,12 @@ export class TerrainQuery {
    */
   tryHeightAtFast(x, z, fromY = 500, options = {}) {
     this._lastResolvedSurface = null;
+    if (!this._raycast) {
+      const hit = this._driveSurfaceManager?.layers.sample(x, z, fromY, this._preferredSurface(options));
+      if (!hit) return null;
+      this._lastResolvedSurface = hit.surface;
+      return hit.y;
+    }
     if (!this._driveSurfaceManager?.queryDriveSurfaceAt) return null;
 
     const resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
@@ -253,6 +290,16 @@ export class TerrainQuery {
       return res?.pickInfo ?? null;
     }
     return null;
+  }
+
+  /**
+   * The continuity hint as SurfaceLayers.sample takes it: prefer the truck's
+   * current surface when it's nearly tied with the nearest one.
+   */
+  _preferredSurface(options) {
+    const lock = options?.transitionLock;
+    if (!Number.isFinite(lock?.surfaceId)) return null;
+    return { surfaceId: lock.surfaceId, maxDistanceDelta: lock.maxDistanceDelta ?? 0.75 };
   }
 
   /**

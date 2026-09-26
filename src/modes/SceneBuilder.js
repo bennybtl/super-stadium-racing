@@ -651,7 +651,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // and unresponsive to that light.
   ground.receiveShadows = true;
   // Register as canonical drivable surface for TerrainQuery and nav layers.
-  driveSurfaceManager.register(ground, { kind: "ground" });
+  driveSurfaceManager.register(ground, { kind: "ground", lattice: currentTrack.getGroundLattice() });
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 

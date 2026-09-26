@@ -100,17 +100,18 @@ export class EditorMode extends BaseMode {
     //    + mesh churn) mid-drag is wasted work; the fresh race/test scene
     //    rebuilds its own colliders regardless.
     //  • The ground's picking acceleration describes the shape it had when the
-    //    track loaded. Until it is rebuilt, `scene.pick` and every TerrainQuery
-    //    raycast cull against the old terrain, so a ray aimed at a hill raised
-    //    this session passes through it and reports the ground behind it — that
-    //    is what dropped right-click-placed poly points past a slope.
+    //    track loaded. Until it is rebuilt, `scene.pick` culls against the old
+    //    terrain, so a ray aimed at a hill raised this session passes through
+    //    it and reports the ground behind it — that is what dropped
+    //    right-click-placed poly points past a slope. (TerrainQuery's height
+    //    layer is refreshed on every rebuild instead; see rebuild.terrain.)
     let _postTerrainEditTimer = null;
     this._clearSlopeColliderTimer = () => { clearTimeout(_postTerrainEditTimer); _postTerrainEditTimer = null; };
     const refreshAfterTerrainEditDebounced = () => {
       clearTimeout(_postTerrainEditTimer);
       _postTerrainEditTimer = setTimeout(() => {
         _postTerrainEditTimer = null;
-        driveSurfaceManager.refreshPickingAcceleration(ground);
+        driveSurfaceManager.refreshSurface(ground);
         steepSlopeColliderManager.rebuild();
         // Steep-slope normal overlays are baked from heights, so any height
         // edit stales them — not just the editors that remembered to ask.
@@ -150,6 +151,7 @@ export class EditorMode extends BaseMode {
       }
       ground.setVerticesData(VertexBuffer.PositionKind, positions);
       ground.createNormals(true);
+      driveSurfaceManager.refreshLayer(ground);
       refreshAfterTerrainEditDebounced();
       // The ground just moved under every gizmo placed against the old heights —
       // lift the handles back out (debounced; this runs on every slider tick).

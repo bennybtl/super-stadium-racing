@@ -5,59 +5,66 @@
  *
  * A layer answers "how high is this surface at (x, z)?" by pushing its height
  * (or heights, where its triangles overlap) onto an array, and nothing where it
- * doesn't reach. SurfaceLayers stacks them and picks one per query with the
- * same down-then-up rule the raycasts use, so a truck on a deck gets the deck
- * and a truck under it gets the ground.
+ * doesn't reach; `normalAt` gives the interpolated vertex normal there.
+ * SurfaceLayers stacks them and picks one per query with the same down-then-up
+ * rule the raycasts use, so a truck on a deck gets the deck and a truck under it
+ * gets the ground.
  *
- * Nothing in the game uses this yet: `npm run check:surface-layers` compares it
- * against the real raycasts on every shipped track (phase 2a of the surface
- * plan). Switching TerrainQuery over comes after that agrees.
+ * DriveSurfaceManager builds a layer for every surface it registers, and
+ * TerrainQuery answers from these. `npm run check:surface-layers` checks them
+ * against the old raycasts on every shipped track.
  */
+
+// Interpolated, normalized vertex normal → `out` (any {x, y, z}); the same
+// thing Babylon's PickingInfo.getNormal(true, true) returns for a hit.
+function _blendNormal(normals, a, b, c, wa, wb, wc, out) {
+  const x = normals[a] * wa + normals[b] * wb + normals[c] * wc;
+  const y = normals[a + 1] * wa + normals[b + 1] * wb + normals[c + 1] * wc;
+  const z = normals[a + 2] * wa + normals[b + 2] * wb + normals[c + 2] * wc;
+  const len = Math.hypot(x, y, z) || 1;
+  out.x = x / len; out.y = y / len; out.z = z / len;
+  return out;
+}
 
 // ─── Layers ─────────────────────────────────────────────────────────────────
 
 /**
- * The ground mesh, sampled in closed form. Same lattice as SceneBuilder's
- * CreateGround (Track.getGroundLattice) and the same diagonal per cell, so this
- * matches the drawn triangles exactly, not the smooth analytic field between
- * vertices. Nodes are filled lazily from `heightAt` (the call SceneBuilder uses
- * to displace the vertices). Nothing outside the lattice.
+ * The ground mesh, sampled in closed form: SceneBuilder's CreateGround lattice
+ * (Track.getGroundLattice) read straight from the mesh's position and normal
+ * buffers, with the same diagonal per cell, so it matches the drawn triangles
+ * exactly. Nothing outside the lattice.
  */
-export function createGroundLayer({ width, depth, subdivisions }, heightAt) {
+export function createGroundLayer({ width, depth, subdivisions }, positions, normals) {
   const n = subdivisions + 1;
-  const nodes = new Float64Array(n * n);
-  const known = new Uint8Array(n * n);
   const halfW = width / 2;
   const halfD = depth / 2;
+  // Buffer offset of lattice node (i along +X, j along +Z). CreateGround's row 0
+  // is the +Z edge.
+  const at = (i, j) => ((subdivisions - j) * n + i) * 3;
 
-  // i runs along +X, j along +Z. Positions use CreateGround's own arithmetic so
-  // node heights match the mesh vertices bit for bit.
-  const node = (i, j) => {
-    const k = j * n + i;
-    if (!known[k]) {
-      nodes[k] = heightAt((i * width) / subdivisions - halfW, (j * depth) / subdivisions - halfD);
-      known[k] = 1;
-    }
-    return nodes[k];
+  // The cell and triangle under (x, z): three node offsets and their weights.
+  const locate = (x, z) => {
+    if (x < -halfW || x > halfW || z < -halfD || z > halfD) return null;
+    const fx = ((x + halfW) / width) * subdivisions;
+    const fz = ((z + halfD) / depth) * subdivisions;
+    const i = Math.min(Math.floor(fx), subdivisions - 1);
+    const j = Math.min(Math.floor(fz), subdivisions - 1);
+    const tx = fx - i;
+    const tz = fz - j;
+    // CreateGround splits every cell along the (i, j+1)–(i+1, j) diagonal.
+    return tx + tz <= 1
+      ? [at(i, j), at(i + 1, j), at(i, j + 1), 1 - tx - tz, tx, tz]
+      : [at(i + 1, j + 1), at(i, j + 1), at(i + 1, j), tx + tz - 1, 1 - tx, 1 - tz];
   };
 
   return {
     heightsAt(x, z, out) {
-      if (x < -halfW || x > halfW || z < -halfD || z > halfD) return;
-      const fx = ((x + halfW) / width) * subdivisions;
-      const fz = ((z + halfD) / depth) * subdivisions;
-      const i = Math.min(Math.floor(fx), subdivisions - 1);
-      const j = Math.min(Math.floor(fz), subdivisions - 1);
-      const tx = fx - i;
-      const tz = fz - j;
-      // CreateGround splits every cell along the (i, j+1)–(i+1, j) diagonal.
-      if (tx + tz <= 1) {
-        const h00 = node(i, j);
-        out.push(h00 + (node(i + 1, j) - h00) * tx + (node(i, j + 1) - h00) * tz);
-      } else {
-        const h11 = node(i + 1, j + 1);
-        out.push(h11 + (node(i, j + 1) - h11) * (1 - tx) + (node(i + 1, j) - h11) * (1 - tz));
-      }
+      const t = locate(x, z);
+      if (t) out.push(positions[t[0] + 1] * t[3] + positions[t[1] + 1] * t[4] + positions[t[2] + 1] * t[5]);
+    },
+    normalAt(x, z, _y, out) {
+      const t = locate(x, z);
+      return t ? _blendNormal(normals, t[0], t[1], t[2], t[3], t[4], t[5], out) : null;
     },
   };
 }
@@ -69,19 +76,19 @@ const TRI_INDEX_TARGET = 4;
 // as on it, extrapolating the triangle's plane. Matches Babylon's
 // Ray.intersectsTriangle epsilon, which is what the drive-surface raycasts
 // answer with: a ~1 cm skirt around a 10 m deck triangle, clipped to the mesh's
-// bounding box (see heightAt). Kept for exact parity
-// while both systems exist; 0 is the clean value once the raycasts are gone.
+// bounding box (see heightsAt). Kept for exact parity while both systems exist;
+// 0 is the clean value once the raycasts are gone.
 const EDGE_TOLERANCE = 1e-3;
 
 /**
- * Any triangle mesh (world-space `positions`, `indices`), sampled from above:
- * the height of every triangle over (x, z). Triangles with no XZ extent
- * (vertical faces) are skipped.
+ * Any triangle mesh (world-space `positions`, `indices`, `normals`), sampled
+ * from above: the height of every triangle over (x, z). Triangles with no XZ
+ * extent (vertical faces) are skipped.
  *
  * Built from the same vertex arrays as the mesh, so deck smoothing, per-point
  * offsets and the drive-mesh overlap all come for free.
  */
-export function createTriangleLayer(positions, indices) {
+export function createTriangleLayer(positions, indices, normals = null) {
   const tris = [];
   let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
   for (let t = 0; t < indices.length; t += 3) {
@@ -92,7 +99,7 @@ export function createTriangleLayer(positions, indices) {
     const det = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz);
     if (Math.abs(det) < 1e-12) continue;
     const tri = {
-      ax, ay, az, by, cy, cx, cz, bx, bz, det,
+      a, b, c, ax, ay, az, by, cy, cx, cz, bx, bz, det,
       minX: Math.min(ax, bx, cx), maxX: Math.max(ax, bx, cx),
       minZ: Math.min(az, bz, cz), maxZ: Math.max(az, bz, cz),
     };
@@ -100,7 +107,7 @@ export function createTriangleLayer(positions, indices) {
     minX = Math.min(minX, tri.minX); maxX = Math.max(maxX, tri.maxX);
     minZ = Math.min(minZ, tri.minZ); maxZ = Math.max(maxZ, tri.maxZ);
   }
-  if (tris.length === 0) return { heightsAt() {} };
+  if (tris.length === 0) return { heightsAt() {}, normalAt: () => null };
 
   // Uniform grid over the XZ bounds; each cell lists the triangles whose XZ box
   // overlaps it.
@@ -123,20 +130,38 @@ export function createTriangleLayer(positions, indices) {
     }
   }
 
+  // Calls visit(tri, wa, wb, wc, y) for every triangle over (x, z); stops
+  // early when visit returns true.
+  const forEachHit = (x, z, visit) => {
+    // Exact bounds, no skirt: Babylon tests the mesh's bounding box before any
+    // triangle, so the skirt never reaches past the mesh's own extent.
+    if (x < minX || x > maxX || z < minZ || z > maxZ) return;
+    for (const tri of cells[cellOf(z, minZ, cellD) * cellsPerSide + cellOf(x, minX, cellW)]) {
+      if (x < tri.minX - skirt || x > tri.maxX + skirt || z < tri.minZ - skirt || z > tri.maxZ + skirt) continue;
+      // Barycentric weights of (x, z) in the triangle's XZ projection.
+      const wa = ((tri.bz - tri.cz) * (x - tri.cx) + (tri.cx - tri.bx) * (z - tri.cz)) / tri.det;
+      const wb = ((tri.cz - tri.az) * (x - tri.cx) + (tri.ax - tri.cx) * (z - tri.cz)) / tri.det;
+      const wc = 1 - wa - wb;
+      if (wa < -EDGE_TOLERANCE || wb < -EDGE_TOLERANCE || wc < -EDGE_TOLERANCE) continue;
+      if (visit(tri, wa, wb, wc, wa * tri.ay + wb * tri.by + wc * tri.cy)) return;
+    }
+  };
+
   return {
     heightsAt(x, z, out) {
-      // Exact bounds, no skirt: Babylon tests the mesh's bounding box before
-      // any triangle, so the skirt never reaches past the mesh's own extent.
-      if (x < minX || x > maxX || z < minZ || z > maxZ) return;
-      for (const tri of cells[cellOf(z, minZ, cellD) * cellsPerSide + cellOf(x, minX, cellW)]) {
-        if (x < tri.minX - skirt || x > tri.maxX + skirt || z < tri.minZ - skirt || z > tri.maxZ + skirt) continue;
-        // Barycentric weights of (x, z) in the triangle's XZ projection.
-        const wa = ((tri.bz - tri.cz) * (x - tri.cx) + (tri.cx - tri.bx) * (z - tri.cz)) / tri.det;
-        const wb = ((tri.cz - tri.az) * (x - tri.cx) + (tri.ax - tri.cx) * (z - tri.cz)) / tri.det;
-        const wc = 1 - wa - wb;
-        if (wa < -EDGE_TOLERANCE || wb < -EDGE_TOLERANCE || wc < -EDGE_TOLERANCE) continue;
-        out.push(wa * tri.ay + wb * tri.by + wc * tri.cy);
-      }
+      forEachHit(x, z, (_tri, _wa, _wb, _wc, y) => { out.push(y); });
+    },
+    // Normal of the triangle whose height at (x, z) is `y` (one heightsAt hit).
+    normalAt(x, z, y, out) {
+      let result = null;
+      forEachHit(x, z, (tri, wa, wb, wc, ty) => {
+        if (Math.abs(ty - y) > 1e-9) return false;
+        result = normals
+          ? _blendNormal(normals, tri.a, tri.b, tri.c, wa, wb, wc, out)
+          : null;
+        return true;
+      });
+      return result;
     },
   };
 }
@@ -151,7 +176,9 @@ const UP_MAX_DISTANCE_NO_DOWN = 50;
 const DOWN_EXTRA_DISTANCE = 200;
 
 /**
- * Every drivable layer, and the rule for picking one at a point.
+ * Every drivable layer, and the rule for picking one at a point. Each layer is
+ * added with a `surface` (DriveSurfaceManager's record, `{ surfaceId, kind,
+ * level, ... }`), which every hit carries back.
  */
 export class SurfaceLayers {
   constructor() {
@@ -159,12 +186,12 @@ export class SurfaceLayers {
   }
 
   /**
-   * @param {{ heightsAt(x: number, z: number, out: number[]): void }} layer
-   * @param {{ kind?: 'ground'|'deck'|'seam', level?: number }} [info]
+   * @param {{ heightsAt(x, z, out: number[]): void, normalAt(x, z, y, out): object|null }} layer
+   * @param {{ surfaceId?: number, kind?: string, level?: number }} surface
    * @returns {object} the entry, for `remove`
    */
-  add(layer, { kind = 'ground', level = 0 } = {}) {
-    const entry = { layer, kind, level };
+  add(layer, surface) {
+    const entry = { layer, surface };
     this._entries.push(entry);
     return entry;
   }
@@ -174,14 +201,14 @@ export class SurfaceLayers {
     if (i !== -1) this._entries.splice(i, 1);
   }
 
-  /** Every surface height at (x, z): `[{ y, kind, level }]`, unordered. */
+  /** Every surface height at (x, z): `[{ y, surface, layer }]`, unordered. */
   hitsAt(x, z) {
     const hits = [];
     const ys = [];
-    for (const { layer, kind, level } of this._entries) {
+    for (const { layer, surface } of this._entries) {
       ys.length = 0;
       layer.heightsAt(x, z, ys);
-      for (const y of ys) hits.push({ y, kind, level });
+      for (const y of ys) hits.push({ y, surface, layer });
     }
     return hits;
   }
@@ -197,23 +224,61 @@ export class SurfaceLayers {
    *     truck under a bridge never snaps onto the deck;
    *  3. otherwise the down hit.
    *
-   * @returns {{ y: number, kind: string, level: number } | null}
+   * `prefer` is TerrainPhysics' continuity hint: in each direction, a hit on
+   * surface `surfaceId` beats the nearest hit when it's within
+   * `maxDistanceDelta` of it, so a truck doesn't flip between two nearly
+   * level surfaces.
+   *
+   * @param {{ surfaceId: number, maxDistanceDelta?: number } | null} [prefer]
+   * @returns {{ y: number, surface: object, layer: object } | null}
    */
-  sample(x, z, fromY) {
+  sample(x, z, fromY, prefer = null) {
     const hits = this.hitsAt(x, z);
-    let down = null;
-    for (const h of hits) {
-      if (h.y <= fromY && h.y >= -DOWN_EXTRA_DISTANCE && (down === null || h.y > down.y)) down = h;
-    }
+    const down = this._pick(hits, h => h.y <= fromY && h.y >= -DOWN_EXTRA_DISTANCE, h => fromY - h.y, prefer);
     if (down && fromY - down.y <= PENETRATION_THRESHOLD) return down;
 
     const upOrigin = fromY - UP_ORIGIN_DROP;
     const upMax = down ? fromY - down.y + 1 : UP_MAX_DISTANCE_NO_DOWN;
-    let up = null;
-    for (const h of hits) {
-      if (h.y >= upOrigin && h.y - upOrigin <= upMax && (up === null || h.y < up.y)) up = h;
-    }
+    const up = this._pick(hits, h => h.y >= upOrigin && h.y - upOrigin <= upMax, h => h.y - upOrigin, prefer);
     if (up && up.y - fromY <= MAX_UPWARD_RISE) return up;
     return down;
+  }
+
+  /**
+   * Highest hit on `level` at or below `fromY`, within `maxDistance` (a
+   * level-locked downward probe, as TerrainQuery's normal sampling uses).
+   * @returns {number|null}
+   */
+  downOnLevel(x, z, fromY, level, maxDistance) {
+    let best = null;
+    for (const h of this.hitsAt(x, z)) {
+      if (h.surface.level !== level || h.y > fromY || fromY - h.y > maxDistance) continue;
+      if (best === null || h.y > best) best = h.y;
+    }
+    return best;
+  }
+
+  /** Interpolated vertex normal of a `sample` hit → `out`, or null. */
+  normalAt(hit, x, z, out) {
+    return hit.layer.normalAt(x, z, hit.y, out);
+  }
+
+  // The nearest hit passing `accept` (by `distance`), or the preferred
+  // surface's nearest hit when it's within maxDistanceDelta of that. An exact
+  // tie (a seam's foot lying on the ground) goes to the first-added surface,
+  // i.e. the ground; the raycasts settled ties by float noise either way.
+  _pick(hits, accept, distance, prefer) {
+    let nearest = null;
+    let preferred = null;
+    for (const h of hits) {
+      if (!accept(h)) continue;
+      const d = distance(h);
+      if (nearest === null || d < distance(nearest)) nearest = h;
+      if (prefer && h.surface.surfaceId === prefer.surfaceId && (preferred === null || d < distance(preferred))) {
+        preferred = h;
+      }
+    }
+    if (preferred && distance(preferred) - distance(nearest) <= (prefer.maxDistanceDelta ?? 0.75)) return preferred;
+    return nearest;
   }
 }

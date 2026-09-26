@@ -1,4 +1,5 @@
-import { Ray, Vector3 } from "@babylonjs/core";
+import { Ray, Vector3, VertexBuffer } from "@babylonjs/core";
+import { SurfaceLayers, createGroundLayer, createTriangleLayer } from "../world/surface-layers.js";
 // Side-effect import: registers AbstractMesh.prototype.createOrUpdateSubmeshesOctree
 // and the picking-octree scene component (tree-shaken out otherwise). Required by
 // _enablePickingAcceleration below.
@@ -18,12 +19,18 @@ import "@babylonjs/core/Culling/Octrees/octreeSceneComponent.js";
  *   level  layer number (ground 0; bridges default 1, drive boxes 0)
  *
  * A mesh with no record is not drivable.
+ *
+ * Every registered mesh also gets a height layer in `this.layers` (see
+ * world/surface-layers.js), built from the mesh's own vertex data; that is what
+ * TerrainQuery answers from. The raycast methods below are the old path, kept
+ * for the parity check until they're deleted.
  */
 export class DriveSurfaceManager {
   constructor(scene) {
     this.scene = scene;
     this._records = new WeakMap();
     this._nextSurfaceId = 1;
+    this.layers = new SurfaceLayers();
     this._rayDown = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 2000);
     this._rayUp = new Ray(Vector3.Zero(), new Vector3(0, 1, 0), 2000);
     // Meshes of elevated drive surfaces (bridge decks, level > 0). Used by
@@ -35,14 +42,21 @@ export class DriveSurfaceManager {
   /**
    * Register a mesh as a drive surface. Re-registering a mesh keeps its id.
    * @param {BABYLON.AbstractMesh} mesh
-   * @param {{ kind?: 'ground'|'deck'|'seam', level?: number }} [options]
+   * @param {object} [options]
+   * @param {'ground'|'deck'|'seam'} [options.kind='ground']
+   * @param {number} [options.level=0]
+   * @param {{ width: number, depth: number, subdivisions: number }} [options.lattice]
+   *   The ground mesh passes its CreateGround lattice (Track.getGroundLattice)
+   *   so its layer is sampled in closed form instead of as loose triangles.
    * @returns {number|null} surfaceId
    */
-  register(mesh, { kind = "ground", level = 0 } = {}) {
+  register(mesh, { kind = "ground", level = 0, lattice = null } = {}) {
     if (!mesh) return null;
     const existing = this._records.get(mesh);
-    const surfaceId = existing?.surfaceId ?? this._nextSurfaceId++;
-    this._records.set(mesh, { surfaceId, mesh, kind, level });
+    if (existing) this.layers.remove(existing.layerEntry);
+    const record = { surfaceId: existing?.surfaceId ?? this._nextSurfaceId++, mesh, kind, level, lattice };
+    record.layerEntry = this.layers.add(this._buildLayer(mesh, kind, lattice), record);
+    this._records.set(mesh, record);
     if (!existing) mesh.onDisposeObservable.addOnce(() => this.unregisterByMesh(mesh));
 
     // Drive surfaces are raycast many times per frame by terrain physics and AI
@@ -59,7 +73,43 @@ export class DriveSurfaceManager {
     if ((kind === "deck" || level > 0) && !this._elevatedSurfaceMeshes.includes(mesh)) {
       this._elevatedSurfaceMeshes.push(mesh);
     }
-    return surfaceId;
+    return record.surfaceId;
+  }
+
+  /**
+   * A height layer from the mesh's current vertex data, in world space.
+   * Ground-kind triangles only count when they face up (the outskirt slabs are
+   * boxes; their bottoms are not a surface), matching the raycasts' upward-only
+   * normal filter for ground.
+   */
+  _buildLayer(mesh, kind, lattice) {
+    const positions = mesh.getVerticesData(VertexBuffer.PositionKind);
+    const normals = mesh.getVerticesData(VertexBuffer.NormalKind);
+    // CreateGround's mesh sits untransformed at the origin.
+    if (lattice) return createGroundLayer(lattice, positions, normals);
+
+    const m = mesh.computeWorldMatrix(true);
+    const worldPositions = new Float64Array(positions.length);
+    const worldNormals = new Float64Array(positions.length);
+    const v = new Vector3();
+    for (let i = 0; i < positions.length; i += 3) {
+      Vector3.TransformCoordinatesFromFloatsToRef(positions[i], positions[i + 1], positions[i + 2], m, v);
+      worldPositions[i] = v.x; worldPositions[i + 1] = v.y; worldPositions[i + 2] = v.z;
+      Vector3.TransformNormalFromFloatsToRef(normals[i], normals[i + 1], normals[i + 2], m, v);
+      worldNormals[i] = v.x; worldNormals[i + 1] = v.y; worldNormals[i + 2] = v.z;
+    }
+    let indices = mesh.getIndices();
+    if (kind === "ground") {
+      const up = [];
+      for (let t = 0; t < indices.length; t += 3) {
+        const a = indices[t], b = indices[t + 1], c = indices[t + 2];
+        if (worldNormals[a * 3 + 1] >= 0 && worldNormals[b * 3 + 1] >= 0 && worldNormals[c * 3 + 1] >= 0) {
+          up.push(a, b, c);
+        }
+      }
+      indices = up;
+    }
+    return createTriangleLayer(worldPositions, indices, worldNormals);
   }
 
   /**
@@ -118,27 +168,40 @@ export class DriveSurfaceManager {
   }
 
   /**
-   * Rebuild a registered mesh's picking data after its vertices moved.
-   *
-   * Displacing the ground (an editor terrain edit) invalidates everything the
-   * pick path culls against: `setVerticesData` collapses the subdivided
-   * submeshes back into one global submesh, and `_submeshesOctree` keeps the
-   * bounding boxes of the terrain as it was when the track loaded. Rays then get
-   * culled where a newly raised hill stands and hit whatever lies beyond it —
-   * the ground *looks* right but picks (and every TerrainQuery raycast) answer
-   * for the old shape.
-   *
+   * Rebuild a registered mesh's height layer from its current vertex data, so
+   * TerrainQuery answers for the new shape. Cheap for the ground (the lattice
+   * layer just wraps the buffers), so the editor calls it on every terrain
+   * rebuild.
    * @param {BABYLON.AbstractMesh} mesh
    */
-  refreshPickingAcceleration(mesh) {
-    if (!mesh) return;
+  refreshLayer(mesh) {
+    const record = this.getSurfaceByMesh(mesh);
+    if (!record) return;
+    this.layers.remove(record.layerEntry);
+    record.layerEntry = this.layers.add(this._buildLayer(mesh, record.kind, record.lattice), record);
+  }
+
+  /**
+   * refreshLayer plus the picking data, after a mesh's vertices moved (an editor
+   * terrain edit displacing the ground). `setVerticesData` collapses the
+   * subdivided submeshes back into one global submesh, and `_submeshesOctree`
+   * keeps the terrain's old bounding boxes, so `scene.pick` rays get culled
+   * where a newly raised hill stands until this runs.
+   * @param {BABYLON.AbstractMesh} mesh
+   */
+  refreshSurface(mesh) {
+    const record = this.getSurfaceByMesh(mesh);
+    if (!record) return;
+    this.refreshLayer(mesh);
     // Refreshes the mesh bbox *and* every submesh's, from the current positions.
     mesh.refreshBoundingInfo();
-    this._enablePickingAcceleration(mesh);
+    if (record.kind === "ground") this._enablePickingAcceleration(mesh);
   }
 
   unregisterByMesh(mesh) {
-    if (!mesh) return;
+    const record = this.getSurfaceByMesh(mesh);
+    if (!record) return;
+    this.layers.remove(record.layerEntry);
     this._records.delete(mesh);
     const idx = this._elevatedSurfaceMeshes.indexOf(mesh);
     if (idx !== -1) this._elevatedSurfaceMeshes.splice(idx, 1);

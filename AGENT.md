@@ -276,20 +276,22 @@ Add to `TERRAIN_TYPES` (grip, drag, color, smokeColor). Paint via
   mesh, `{ surfaceId, mesh, kind, level }`, with `kind` `ground` | `deck` |
   `seam` (nothing is written to `mesh.metadata`). Builds a submesh octree on the
   ground for fast downward picks (see below).
-- **`TerrainQuery`** — hybrid raycast + cross-pattern normal sampler. Downward
-  ray filtered to drive surfaces, upward fallback on penetration, 4 short probes
-  for a smooth averaged normal, `_lastResolvedSurface` continuity hint so the
-  truck stays on the deck vs. the ground under it.
+- **`TerrainQuery`** — surface lookup + cross-pattern normal sampler, answered
+  from `DriveSurfaceManager.layers`: down-then-up surface pick, 4 short
+  same-level probes for a smooth averaged normal, continuity hint so the truck
+  stays on the deck vs. the ground under it. `{ raycast: true }` still runs the
+  old Babylon raycasts (parity check / A-B only, to be deleted).
 - **`BridgeMesh`** — solid elevated mesh; `heights[]` row-major absolute Y,
   optional `offsetsX/Z` per control point, `smoothing` (Catmull-Rom densify),
   Havok MESH collider, terrain seams to the ground (built in the constructor for a deck end
   within 1.5 m of the terrain).
-- **`SurfaceLayers`** (`world/surface-layers.js`) — Babylon-free replacement
-  for the drive-surface raycasts, not wired in yet: a closed-form ground layer
-  on the mesh lattice, triangle layers for outskirts/decks/seams, and
-  `sample(x, z, fromY)` with the raycasts' down-then-up rule.
-  `npm run check:surface-layers` (~1 min, not in `check`) proves parity with the
-  real raycasts on every shipped track.
+- **`SurfaceLayers`** (`world/surface-layers.js`) — Babylon-free height layers
+  that replaced the drive-surface raycasts. `DriveSurfaceManager.register`
+  builds one per mesh from its vertex data (closed-form lattice layer for the
+  ground, triangle layers for outskirts/decks/seams); `refreshLayer(mesh)` after
+  vertices move (the editor does it on every terrain rebuild).
+  `npm run check:surface-layers` (~30 s, not in `check`) compares TerrainQuery's
+  layers mode against its raycast mode on every shipped track.
 - **Deck height maths** — `bridgeDeckHeightAt[Local]` in `world/feature-geometry.js`
   (control-grid bilinear) is the one sampler for BridgeMesh, DriveBox legs and
   the deck-wear bake.
