@@ -29,6 +29,7 @@ export class StaticBodyCollisionManager {
     this._proxyCur = new Vector3();
     this._proxyPrev = new Vector3();
     this._proxyOffset = new Vector3();
+    this._colliderCenter = new Vector3();
     this._truckRot = new Matrix();
     this._axes = { right: new Vector3(), up: new Vector3(), fwd: new Vector3() };
   }
@@ -212,32 +213,18 @@ export class StaticBodyCollisionManager {
     const isElongated =
       Math.max(halfExtX, halfExtZ) >= 2 * Math.max(1e-6, Math.min(halfExtX, halfExtZ));
 
-    // For bridge drive meshes, top-face support is provided by TerrainPhysics.
-    // Ignore static-body resolution while the truck is on/above the top plane.
-    // Tested against the RAW box top (max.y), not the Minkowski-inflated maxY
-    // below: eY folds in the truck's horizontal footprint via its dot with the
-    // collider's local Y axis, which is fine while that axis is ~world-up (a
-    // wall, a flat box) but balloons once the collider is rolled/pitched to
-    // hug a ramp (DriveBox) — a horizontal extent leaking onto a now-tilted
-    // axis. The raw top is a plain point-vs-plane test and has no such issue.
-    if (mesh.metadata?.truckColliderIgnoreTop === true) {
-      const TOP_EPS = 0.05;
-      if (prevLocal.y >= max.y - TOP_EPS && curLocal.y >= max.y - TOP_EPS) {
-        if (mesh.metadata?.truckColliderDebug) {
-          console.debug(`[StaticBodyCollisionManager] ignore top skip`, mesh.name, {
-            prevLocalY: prevLocal.y,
-            curLocalY: curLocal.y,
-            rawMaxY: max.y,
-          });
-        }
-        return;
-      }
-    }
-
     const inBox =
       curLocal.x >= minX && curLocal.x <= maxX &&
       curLocal.y >= minY && curLocal.y <= maxY &&
       curLocal.z >= minZ && curLocal.z <= maxZ;
+
+    // The test above only separates along the collider's own axes, so a truck
+    // tilted relative to the collider counts as its whole bounding box there —
+    // on a ramp running into a flat box, the low rear corner and the front end
+    // together "overlap" the box's face before the nose reaches it. Finish the
+    // box-vs-box test with the truck's axes. Only for a current overlap: a
+    // sweep that passed clean through a thin wall must still resolve.
+    if (inBox && this._separatedOnTruckAxes(truck, axes, halfHeight, mesh, world)) return;
 
     let axis = null;
     let sign = 1;
@@ -290,6 +277,13 @@ export class StaticBodyCollisionManager {
     } else {
       return;
     }
+
+    // A collider whose top is a drive surface (DriveBox) never pushes a truck
+    // out through that top: supporting a truck there is TerrainPhysics' job, as
+    // on any terrain slope. Pushing too — while the truck's smoothed pitch lags
+    // a steep ramp, or as it crests the end — bled off climbing speed and
+    // popped it into the air.
+    if (axis === "y" && sign > 0 && mesh.metadata?.truckColliderTopIsSurface) return;
 
     // Still in proxy space (pose + offsetY) — un-shifted at the writeback below.
     const newWorld = Vector3.TransformCoordinates(curLocal, world);
@@ -556,6 +550,34 @@ export class StaticBodyCollisionManager {
       out["s" + keys[i].toLowerCase()] = scale;
     }
     return out;
+  }
+
+  /**
+   * True when one of the truck proxy's own axes separates it from the collider
+   * box (the proxy centre is this._proxyCur).
+   */
+  _separatedOnTruckAxes(truck, axes, halfHeight, mesh, world) {
+    const bb = mesh.getBoundingInfo().boundingBox;
+    const m = world.m;
+    // Collider axes scaled to half extents, and its centre, in world space.
+    const hx = (bb.maximum.x - bb.minimum.x) / 2;
+    const hy = (bb.maximum.y - bb.minimum.y) / 2;
+    const hz = (bb.maximum.z - bb.minimum.z) / 2;
+    const c = Vector3.TransformCoordinatesToRef(bb.center, world, this._colliderCenter);
+    const dx = c.x - this._proxyCur.x, dy = c.y - this._proxyCur.y, dz = c.z - this._proxyCur.z;
+    const reach = [
+      [axes.right, (truck.width ?? TRUCK_WIDTH) / 2],
+      [axes.up, halfHeight],
+      [axes.fwd, (truck.depth ?? TRUCK_DEPTH) / 2],
+    ];
+    for (const [u, truckHalf] of reach) {
+      const colliderHalf =
+        hx * Math.abs(u.x * m[0] + u.y * m[1] + u.z * m[2]) +
+        hy * Math.abs(u.x * m[4] + u.y * m[5] + u.z * m[6]) +
+        hz * Math.abs(u.x * m[8] + u.y * m[9] + u.z * m[10]);
+      if (Math.abs(dx * u.x + dy * u.y + dz * u.z) > truckHalf + colliderHalf) return true;
+    }
+    return false;
   }
 
   /**
