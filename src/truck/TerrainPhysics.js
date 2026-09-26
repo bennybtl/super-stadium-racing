@@ -610,7 +610,7 @@ export class TerrainPhysics {
       return center;
     }
 
-    const allowFullRise = highest.surface?.surfaceType === "bridgeMesh";
+    const allowFullRise = highest.surface?.kind === "deck";
     const targetY = allowFullRise
       ? highest.y
       : Math.min(highest.y, center.y + this._multiProbeMaxLift);

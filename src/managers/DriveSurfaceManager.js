@@ -1,4 +1,3 @@
-import { SurfaceRegistry } from "./SurfaceRegistry.js";
 import { Ray, Vector3 } from "@babylonjs/core";
 // Side-effect import: registers AbstractMesh.prototype.createOrUpdateSubmeshesOctree
 // and the picking-octree scene component (tree-shaken out otherwise). Required by
@@ -8,15 +7,23 @@ import "@babylonjs/core/Culling/Octrees/octreeSceneComponent.js";
 /**
  * DriveSurfaceManager
  *
- * Central registry for all drivable world surfaces (ground, bridges, ramps,
- * overpasses, etc). Registration standardizes mesh metadata so runtime systems
- * (raycasts, physics helpers, AI/nav in later phases) can treat every drive
- * surface through one common path.
+ * Central registry for all drivable world surfaces, and the raycasts that
+ * resolve them. Each registered mesh gets one record:
+ *
+ *   { surfaceId, mesh, kind, level }
+ *
+ *   kind   'ground' — the terrain and the outskirts plain
+ *          'deck'   — a bridge deck or drive box top
+ *          'seam'   — the invisible ramp from a deck edge down to the terrain
+ *   level  layer number (ground 0; bridges default 1, drive boxes 0)
+ *
+ * A mesh with no record is not drivable.
  */
 export class DriveSurfaceManager {
   constructor(scene) {
     this.scene = scene;
-    this._surfaceRegistry = new SurfaceRegistry(scene);
+    this._records = new WeakMap();
+    this._nextSurfaceId = 1;
     this._rayDown = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 2000);
     this._rayUp = new Ray(Vector3.Zero(), new Vector3(0, 1, 0), 2000);
     // Meshes of elevated drive surfaces (bridge decks, level > 0). Used by
@@ -26,37 +33,31 @@ export class DriveSurfaceManager {
   }
 
   /**
-   * Register a mesh as a drive surface.
+   * Register a mesh as a drive surface. Re-registering a mesh keeps its id.
    * @param {BABYLON.AbstractMesh} mesh
-   * @param {object} [options]
-   * @param {string} [options.surfaceType='generic']
-   * @param {number} [options.level=0]
-   * @param {object} [options.tags]
+   * @param {{ kind?: 'ground'|'deck'|'seam', level?: number }} [options]
    * @returns {number|null} surfaceId
    */
-  register(mesh, options = {}) {
-    const surfaceId = this._surfaceRegistry.registerSurface(mesh, {
-      ...options,
-      role: "drive",
-    });
+  register(mesh, { kind = "ground", level = 0 } = {}) {
+    if (!mesh) return null;
+    const existing = this._records.get(mesh);
+    const surfaceId = existing?.surfaceId ?? this._nextSurfaceId++;
+    this._records.set(mesh, { surfaceId, mesh, kind, level });
+    if (!existing) mesh.onDisposeObservable.addOnce(() => this.unregisterByMesh(mesh));
+
     // Drive surfaces are raycast many times per frame by terrain physics and AI
     // (one ray per truck per probe). Partition large STATIC meshes (the ground)
     // into submeshes so each pick tests only the triangles under the ray instead
     // of the whole mesh. See AGENT.md "Performance".
     //
-    // Only ground-level static surfaces are accelerated. Bridge decks/seams are
-    // small (so brute-force picking is already cheap) and dynamic.
-    const isBridgeSurface = String(options.surfaceType ?? "").startsWith("bridge");
-    if (mesh && (options.level ?? 0) === 0 && !isBridgeSurface) {
-      this._enablePickingAcceleration(mesh);
-    }
+    // Only the ground is accelerated. Decks/seams are small (so brute-force
+    // picking is already cheap) and dynamic.
+    if (kind === "ground") this._enablePickingAcceleration(mesh);
 
-    // Track elevated decks so AI multi-probe sampling can be gated to bridge
-    // proximity (see hasElevatedSurfaceNear).
-    if (mesh && ((options.level ?? 0) > 0 || options.surfaceType === "bridgeMesh")) {
-      if (!this._elevatedSurfaceMeshes.includes(mesh)) {
-        this._elevatedSurfaceMeshes.push(mesh);
-      }
+    // Track decks and anything above ground level so AI multi-probe sampling
+    // can be gated to bridge proximity (see hasElevatedSurfaceNear).
+    if ((kind === "deck" || level > 0) && !this._elevatedSurfaceMeshes.includes(mesh)) {
+      this._elevatedSurfaceMeshes.push(mesh);
     }
     return surfaceId;
   }
@@ -137,13 +138,14 @@ export class DriveSurfaceManager {
   }
 
   unregisterByMesh(mesh) {
-    this._surfaceRegistry.unregisterByMesh(mesh);
+    if (!mesh) return;
+    this._records.delete(mesh);
     const idx = this._elevatedSurfaceMeshes.indexOf(mesh);
     if (idx !== -1) this._elevatedSurfaceMeshes.splice(idx, 1);
   }
 
   getSurfaceByMesh(mesh) {
-    return this._surfaceRegistry.getSurfaceByMesh(mesh);
+    return (mesh && this._records.get(mesh)) ?? null;
   }
 
   /**
@@ -247,28 +249,9 @@ export class DriveSurfaceManager {
   }
 
   _isMeshEligible(mesh, options = {}) {
-    if (!mesh) return false;
-
-    const requestedLayer = options.layer;
-    const requestedRole = options.role ?? "drive";
-    const requestedSurfaceFace = options.surfaceFace;
     const record = this.getSurfaceByMesh(mesh);
-
-    if (record) {
-      if (requestedRole && record.role !== requestedRole) return false;
-      if (Number.isFinite(requestedLayer) && record.level !== requestedLayer) return false;
-      if (requestedSurfaceFace) {
-        const face = record.tags?.surfaceFace ?? "top";
-        if (face !== requestedSurfaceFace) return false;
-      }
-      return true;
-    }
-
-    // A mesh with no surface record is not drivable. (There used to be a
-    // migration fallback here that read `isDriveSurface`/`isTerrain` metadata
-    // while the registry was empty — unreachable in practice: SceneBuilder
-    // registers the ground synchronously before anything that can query.)
-    return false;
+    if (!record) return false;
+    return !Number.isFinite(options.layer) || record.level === options.layer;
   }
 
   _isHitAllowed(hit, options = {}) {
@@ -280,16 +263,12 @@ export class DriveSurfaceManager {
     const normal = hit.getNormal?.(true, true);
     if (!normal) return true;
 
+    // Deck and seam meshes can report opposite-facing triangle normals, so
+    // they're filtered on |normal.y|; the ground's normals are reliable.
     const record = this.getSurfaceByMesh(hit.pickedMesh);
-    const normalFilterMode =
-      record?.tags?.normalFilterMode ??
-      hit.pickedMesh?.metadata?.normalFilterMode ??
-      "upwardY";
-
-    if (normalFilterMode === "absoluteY") {
+    if (record && record.kind !== "ground") {
       return Math.abs(normal.y) >= minNormalY;
     }
-
     return normal.y >= minNormalY;
   }
 
@@ -362,8 +341,8 @@ export class DriveSurfaceManager {
     if (!mesh) return false;
 
     const record = this.getSurfaceByMesh(mesh);
-    const surfaceId = record?.surfaceId ?? mesh.metadata?.surfaceId ?? null;
-    const layer = record?.level ?? mesh.metadata?.level ?? null;
+    const surfaceId = record?.surfaceId ?? null;
+    const layer = record?.level ?? null;
 
     if (Number.isFinite(continuity.preferredSurfaceId) && surfaceId !== continuity.preferredSurfaceId) {
       return false;
@@ -373,9 +352,5 @@ export class DriveSurfaceManager {
     }
 
     return true;
-  }
-
-  get count() {
-    return this._surfaceRegistry.count;
   }
 }

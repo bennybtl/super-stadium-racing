@@ -59,5 +59,5 @@ export function deckTopY(terrainQuery, x, z) {
   const y = terrainQuery?.tryHeightAtFast?.(x, z);
   if (y == null) return null;
   const surface = terrainQuery.getLastResolvedSurface?.();
-  return surface && surface.surfaceType !== 'ground' ? y : null;
+  return surface && surface.kind !== 'ground' ? y : null;
 }

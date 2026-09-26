@@ -94,7 +94,7 @@ offroad/
     │   ├── SceneBuilder-wired managers: CheckpointManager, WallManager, ObstacleManager,
     │   │   DecorationManager, PickupManager, BridgeMeshManager, TrackSignManager,
     │   │   SurfaceDecalManager, StaticBodyCollisionManager, SteepSlopeColliderManager,
-    │   │   DriveSurfaceManager, SurfaceRegistry, TerrainQuery
+    │   │   DriveSurfaceManager, TerrainQuery
     │   ├── race-time: GameState, CheckpointArrow, RacePositionLabels, FloatingTextManager,
     │   │   FireworksManager, TruckCollisionManager, CameraController, UIManager, InputManager,
     │   │   DebugManager, FrameProfiler
@@ -272,10 +272,10 @@ Add to `TERRAIN_TYPES` (grip, drag, color, smokeColor). Paint via
 
 ## Multi-Level Surfaces (bridges / overpasses)
 
-- **`SurfaceRegistry`** — every gameplay surface gets `mesh.metadata` with
-  `surfaceId`, `surfaceType`, `level`, `surfaceRole` (`drive` | `boundary`).
-- **`DriveSurfaceManager`** — register/query drive surfaces; builds a submesh
-  octree on large static meshes for fast downward picks (see below).
+- **`DriveSurfaceManager`** — register/query drive surfaces. One record per
+  mesh, `{ surfaceId, mesh, kind, level }`, with `kind` `ground` | `deck` |
+  `seam` (nothing is written to `mesh.metadata`). Builds a submesh octree on the
+  ground for fast downward picks (see below).
 - **`TerrainQuery`** — hybrid raycast + cross-pattern normal sampler. Downward
   ray filtered to drive surfaces, upward fallback on penetration, 4 short probes
   for a smooth averaged normal, `_lastResolvedSurface` continuity hint so the

@@ -63,7 +63,7 @@ export class RibbonHeightSampler {
   get lastSampleOnBridge() {
     return (
       this._useBridgeSurface &&
-      this._terrainQuery.getLastResolvedSurface?.()?.surfaceType === "bridgeMesh"
+      this._terrainQuery.getLastResolvedSurface?.()?.kind === "deck"
     );
   }
 
@@ -77,10 +77,7 @@ export class RibbonHeightSampler {
     if (!Array.isArray(points) || points.length === 0) return false;
     return points.some((pt) => {
       this._terrainQuery.heightAt(pt.x, pt.z);
-      return (
-        this._terrainQuery.getLastResolvedSurface?.()?.surfaceType ===
-        "bridgeMesh"
-      );
+      return this._terrainQuery.getLastResolvedSurface?.()?.kind === "deck";
     });
   }
 }

@@ -134,8 +134,7 @@ export class BridgeMesh {
       rotation,
     });
 
-    const bridgeMeshKey = `${centerX}_${centerZ}`;
-    this._bridgeMeshKey = bridgeMeshKey;
+    this._bridgeMeshKey = `${centerX}_${centerZ}`;
     this._resolvedLayerId = resolvedLayerId;
     this._geometryState = {
       centerX,
@@ -316,16 +315,7 @@ export class BridgeMesh {
     this._driveMeshPhysics = new PhysicsAggregate(this._driveMesh, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
     if (driveSurfaceManager) {
-      driveSurfaceManager.register(this._driveMesh, {
-        surfaceType: 'bridgeMesh',
-        level: resolvedLayerId,
-        tags: {
-          surfaceKind: 'bridge-mesh',
-          surfaceFace: 'top',
-          normalFilterMode: 'absoluteY',
-          bridgeMeshKey,
-        },
-      });
+      driveSurfaceManager.register(this._driveMesh, { kind: 'deck', level: resolvedLayerId });
     }
 
     this._buildTerrainSeams(seamSides);
@@ -358,17 +348,7 @@ export class BridgeMesh {
       this._terrainSeamPhysics.push(seamPhysics);
 
       if (this._driveSurfaceManager) {
-        this._driveSurfaceManager.register(seamMesh, {
-          surfaceType: 'bridgeMeshSeam',
-          level: this._resolvedLayerId,
-          tags: {
-            surfaceKind: 'bridge-mesh-seam',
-            surfaceFace: 'top',
-            normalFilterMode: 'absoluteY',
-            bridgeMeshKey: this._bridgeMeshKey,
-            seamSide: side,
-          },
-        });
+        this._driveSurfaceManager.register(seamMesh, { kind: 'seam', level: this._resolvedLayerId });
       }
     }
   }

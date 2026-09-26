@@ -28,7 +28,7 @@ const LOG_CAPACITY = 1200;
  *   Columns: t, x, y, z, fromY, floorY, rayDepth, nx, ny, nz,
  *            penetration, vx, vvel, vz, heading, throttle,
  *            groundedness, controlGroundedness, speed, slope,
- *            surfaceId, surfaceType, surfaceKind, surfaceLevel
+ *            surfaceId, surfaceKind, surfaceLevel
  */
 export class DebugManager {
   /** @param {import('@babylonjs/core').Scene} scene */
@@ -642,7 +642,6 @@ export class DebugManager {
     d.ny           = (normal?.y ?? 1).toFixed(3);
     d.nz           = (normal?.z ?? 0).toFixed(3);
     d.surfaceId    = String(debugInfo.surfaceId ?? '-');
-    d.surfaceType  = String(debugInfo.surfaceType ?? '-');
     d.surfaceKind  = String(debugInfo.surfaceKind ?? '-');
     d.surfaceLevel = String(debugInfo.surfaceLevel ?? '-');
 
@@ -672,7 +671,6 @@ export class DebugManager {
         speed:        +(debugInfo.speed            ?? 0).toFixed(2),
         slope:        slopeDeg !== null ? +slopeDeg.toFixed(2) : 0,
         surfaceId:    debugInfo.surfaceId ?? '-',
-        surfaceType:  debugInfo.surfaceType ?? '-',
         surfaceKind:  debugInfo.surfaceKind ?? '-',
         surfaceLevel: debugInfo.surfaceLevel ?? '-',
       };

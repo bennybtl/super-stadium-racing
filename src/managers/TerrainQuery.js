@@ -66,8 +66,6 @@ export class TerrainQuery {
     }
 
     const queryOptions = {
-      role: "drive",
-      surfaceFace: "top",
       ...(continuityOptions ?? {}),
       maxDistance: fromY + 200,
       minNormalY: MIN_DRIVABLE_NORMAL_Y,
@@ -97,9 +95,7 @@ export class TerrainQuery {
 
     const hitY = hit.pickedPoint.y;
     const resolvedSurface = this._resolveSurfaceInfo(hit);
-    const probeLayer = Number.isFinite(resolvedSurface?.surfaceLevel)
-      ? resolvedSurface.surfaceLevel
-      : undefined;
+    const probeLayer = resolvedSurface?.level;
 
     // -------------------------------------------------------------------------
     // Normal computation — cross-pattern height sampling.
@@ -220,8 +216,6 @@ export class TerrainQuery {
     if (!this._driveSurfaceManager?.queryDriveSurfaceAt) return null;
 
     const resolved = this._driveSurfaceManager.queryDriveSurfaceAt(x, z, fromY, {
-      role: "drive",
-      surfaceFace: "top",
       ...this._buildContinuityOptions(options),
       maxDistance: fromY + 200,
       minNormalY: MIN_DRIVABLE_NORMAL_Y,
@@ -252,8 +246,6 @@ export class TerrainQuery {
   _pickDown(x, z, fromY, maxDistance, layer = undefined) {
     if (this._driveSurfaceManager?.castDownToDriveSurface) {
       const res = this._driveSurfaceManager.castDownToDriveSurface(x, z, fromY, {
-        role: "drive",
-        surfaceFace: "top",
         ...(Number.isFinite(layer) ? { layer } : {}),
         maxDistance,
         minNormalY: MIN_DRIVABLE_NORMAL_Y,
@@ -273,27 +265,8 @@ export class TerrainQuery {
     return transitionLock ? { transitionLock } : {};
   }
 
+  /** The hit mesh's surface record: `{ surfaceId, mesh, kind, level }`. */
   _resolveSurfaceInfo(hit) {
-    const mesh = hit?.pickedMesh;
-    if (!mesh) return null;
-
-    const record = this._driveSurfaceManager?.getSurfaceByMesh?.(mesh) ?? null;
-    if (record) {
-      return {
-        surfaceId: record.surfaceId,
-        surfaceType: record.surfaceType ?? "generic",
-        surfaceKind: record.tags?.surfaceKind ?? "unknown",
-        surfaceFace: record.tags?.surfaceFace ?? "top",
-        surfaceLevel: record.level ?? 0,
-      };
-    }
-
-    return {
-      surfaceId: mesh.metadata?.surfaceId ?? null,
-      surfaceType: mesh.metadata?.surfaceType ?? "generic",
-      surfaceKind: mesh.metadata?.surfaceKind ?? "unknown",
-      surfaceFace: mesh.metadata?.surfaceFace ?? "top",
-      surfaceLevel: mesh.metadata?.level ?? 0,
-    };
+    return this._driveSurfaceManager?.getSurfaceByMesh(hit?.pickedMesh) ?? null;
   }
 }

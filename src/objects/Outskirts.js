@@ -86,11 +86,7 @@ export function buildOutskirts(scene, track, driveSurfaceManager = null, materia
     new PhysicsAggregate(slab, PhysicsShapeType.BOX, { mass: 0 }, scene);
     // Registering makes the plain a real drive surface: TerrainQuery's raycasts
     // resolve height on it, so trucks drive out here instead of falling through.
-    driveSurfaceManager?.register(slab, {
-      surfaceType: "ground",
-      level: 0,
-      tags: { surfaceKind: "ground-outskirts" },
-    });
+    driveSurfaceManager?.register(slab, { kind: "ground" });
   };
 
   const spanX = groundWidth + ext * 2;

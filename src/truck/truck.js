@@ -150,9 +150,7 @@ export class Truck {
       y: 0,
       z: 0,
       surfaceId: '-',
-      surfaceType: '-',
       surfaceKind: '-',
-      surfaceFace: '-',
       surfaceLevel: '-',
     };
 
@@ -415,7 +413,7 @@ export class Truck {
       // edge/ramp capture matters; on open ground a single probe is reliable and
       // far cheaper. Enable it when on or near a bridge, with a sticky timer so it
       // stays on briefly through approaches and exits.
-      const onElevated = (this.terrainPhysics.floorSurface?.surfaceLevel ?? 0) > 0;
+      const onElevated = (this.terrainPhysics.floorSurface?.level ?? 0) > 0;
       const nearBridge = onElevated || (
         this._driveSurfaceManager?.hasElevatedSurfaceNear(
           this.mesh.position.x,
@@ -452,11 +450,10 @@ export class Truck {
     // painted on the ground below even when the truck is actually riding a
     // built surface (driveBox ramp, bridge deck) well above it.
     //
-    // Asked by surface *type*, not by layer: a driveBox registers its deck at
+    // Asked by surface *kind*, not by layer: a driveBox registers its deck at
     // level 0 (deriveDriveBoxGrid defaults layerId to 0), so a level test reads
     // a ramp as natural ground and hands back whatever is painted underneath it.
-    const floorSurfaceType = this.terrainPhysics.floorSurface?.surfaceType ?? 'ground';
-    const onNaturalGround = floorSurfaceType === 'ground';
+    const onNaturalGround = (this.terrainPhysics.floorSurface?.kind ?? 'ground') === 'ground';
 
     // Get terrain modifiers — only apply when wheels are actually on or near the ground
     let terrainGripMultiplier = 1.0;
@@ -717,10 +714,8 @@ export class Truck {
       payload.z = this.mesh.position.z;
       const floorSurface = this.terrainPhysics.floorSurface;
       payload.surfaceId = floorSurface?.surfaceId ?? '-';
-      payload.surfaceType = floorSurface?.surfaceType ?? '-';
-      payload.surfaceKind = floorSurface?.surfaceKind ?? '-';
-      payload.surfaceFace = floorSurface?.surfaceFace ?? '-';
-      payload.surfaceLevel = floorSurface?.surfaceLevel ?? '-';
+      payload.surfaceKind = floorSurface?.kind ?? '-';
+      payload.surfaceLevel = floorSurface?.level ?? '-';
       return payload;
     });
     return debug;

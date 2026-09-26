@@ -14,7 +14,6 @@
     <div class="mb-1">Y: {{ debug.data.y }}</div>
     <div class="mb-1">Z: {{ debug.data.z }}</div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Surface Id:</span><span class="text-emerald-400">{{ debug.data.surfaceId }}</span></div>
-    <div class="flex justify-between mb-1"><span class="text-slate-400">Surface Type:</span><span class="text-emerald-400">{{ debug.data.surfaceType }}</span></div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Surface Kind:</span><span class="text-emerald-400">{{ debug.data.surfaceKind }}</span></div>
     <div class="flex justify-between mb-2"><span class="text-slate-400">Surface Level:</span><span class="text-emerald-400">{{ debug.data.surfaceLevel }}</span></div>
     <div class="flex justify-between mb-2"><span class="text-slate-400">Normal:</span><span class="text-emerald-400">{{ debug.data.nx }}, {{ debug.data.ny }}, {{ debug.data.nz }}</span></div>
