@@ -28,6 +28,9 @@ export class StaticBodyCollisionManager {
     this._normal = new Vector3();
     this._proxyCur = new Vector3();
     this._proxyPrev = new Vector3();
+    this._proxyOffset = new Vector3();
+    this._truckRot = new Matrix();
+    this._axes = { right: new Vector3(), up: new Vector3(), fwd: new Vector3() };
   }
 
   dispose() {
@@ -164,12 +167,17 @@ export class StaticBodyCollisionManager {
     // Resolve against the collision proxy, not the pose: its bottom is lifted
     // TRUCK_COLLISION_STEP_LIFT off the ride datum (box top unchanged), so a
     // truck rides up a low lip/seam instead of the flat bottom catching it.
-    const offsetY = truck.chassisBox?.offsetY ?? 0;
+    // The proxy is oriented like the chassis — heading plus the slope pitch and
+    // roll DriftPhysics.updateRoll puts on the mesh — so on a ramp it lies along
+    // the surface instead of a level box poking its nose/tail into it; the lift
+    // runs along the chassis up axis for the same reason.
+    const axes = this._truckAxes(truck);
+    const lift = truck.chassisBox?.offsetY ?? 0;
+    const offset = this._proxyOffset.copyFrom(axes.up).scaleInPlace(lift);
+    const offsetY = offset.y;
     const halfHeight = truck.chassisBox?.halfHeight ?? truck.halfHeight ?? TRUCK_HALF_HEIGHT;
-    this._proxyCur.copyFrom(truck.mesh.position);
-    this._proxyCur.y += offsetY;
-    this._proxyPrev.copyFrom(prevPos);
-    this._proxyPrev.y += offsetY;
+    this._proxyCur.copyFrom(truck.mesh.position).addInPlace(offset);
+    this._proxyPrev.copyFrom(prevPos).addInPlace(offset);
 
     const curLocal = Vector3.TransformCoordinates(this._proxyCur, this._invWorld);
     const prevLocal = Vector3.TransformCoordinates(this._proxyPrev, this._invWorld);
@@ -182,7 +190,7 @@ export class StaticBodyCollisionManager {
     // each collider axis (Minkowski sum), not by its circumradius. Using the
     // circumradius made a 1.5×3.0 truck collide as a 3.35×3.35 square, so
     // driving parallel to a wall "hit" it while still ~0.9 units clear.
-    const { eX, eY, eZ, sx, sy, sz } = this._truckExtentsInColliderSpace(truck, world, halfHeight);
+    const { eX, eY, eZ, sx, sy, sz } = this._truckExtentsInColliderSpace(truck, axes, world, halfHeight);
 
     const minX = min.x - eX / sx;
     const maxX = max.x + eX / sx;
@@ -307,7 +315,7 @@ export class StaticBodyCollisionManager {
       }
     }
 
-    newWorld.y -= offsetY;
+    newWorld.subtractInPlace(offset);
     truck.mesh.position.copyFrom(newWorld);
 
     if (mesh.metadata?.truckColliderDebug) {
@@ -529,13 +537,10 @@ export class StaticBodyCollisionManager {
    * Also returns each axis' world scale, taken from the world matrix so parented
    * colliders are handled as well as `mesh.scaling` ones.
    */
-  _truckExtentsInColliderSpace(truck, world, halfHeight) {
+  _truckExtentsInColliderSpace(truck, axes, world, halfHeight) {
     const halfDepth = (truck.depth ?? TRUCK_DEPTH) / 2;   // along truck forward
     const halfWidth = (truck.width ?? TRUCK_WIDTH) / 2;   // along truck right
-
-    const h = truck.state.heading;
-    const fwdX = Math.sin(h), fwdZ = Math.cos(h);
-    const rightX = Math.cos(h), rightZ = -Math.sin(h);
+    const { right, up, fwd } = axes;
 
     const m = world.m;
     const out = {};
@@ -545,12 +550,27 @@ export class StaticBodyCollisionManager {
       const scale = Math.max(1e-6, Math.hypot(ax, ay, az));
       const nx = ax / scale, ny = ay / scale, nz = az / scale;
       out["e" + keys[i]] =
-        halfDepth * Math.abs(fwdX * nx + fwdZ * nz) +
-        halfWidth * Math.abs(rightX * nx + rightZ * nz) +
-        halfHeight * Math.abs(ny);
+        halfDepth * Math.abs(fwd.x * nx + fwd.y * ny + fwd.z * nz) +
+        halfWidth * Math.abs(right.x * nx + right.y * ny + right.z * nz) +
+        halfHeight * Math.abs(up.x * nx + up.y * ny + up.z * nz);
       out["s" + keys[i].toLowerCase()] = scale;
     }
     return out;
+  }
+
+  /**
+   * The chassis' world axes: heading (rotation.y) plus the slope pitch/roll
+   * DriftPhysics.updateRoll writes to rotation.x/z. Shared scratch, valid until
+   * the next call.
+   */
+  _truckAxes(truck) {
+    const r = truck.mesh.rotation;
+    const m = Matrix.RotationYawPitchRollToRef(r.y, r.x, r.z, this._truckRot).m;
+    const { right, up, fwd } = this._axes;
+    right.set(m[0], m[1], m[2]);
+    up.set(m[4], m[5], m[6]);
+    fwd.set(m[8], m[9], m[10]);
+    return this._axes;
   }
 
   _sweptHitAABB(prev, cur, minX, maxX, minY, maxY, minZ, maxZ) {
