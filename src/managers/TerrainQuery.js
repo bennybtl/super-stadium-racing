@@ -31,7 +31,8 @@ import { Vector3 } from "@babylonjs/core";
  * finds *registered surface meshes*, so it legitimately misses open terrain that
  * the analytic heightfield (`track.getHeightAt`) knows about. The `heightAt`
  * wrapper collapses that distinction into a caller-supplied number; reach for it
- * only when its fallback really is an acceptable answer.
+ * only when its fallback really is an acceptable answer. `surfaceHeightAt` is
+ * the usual combination: raycast first, analytic heightfield on a miss.
  */
 
 // Distance between opposing cross-pattern probes (metres).
@@ -166,6 +167,32 @@ export class TerrainQuery {
    */
   tryHeightAt(x, z, fromY = 500, options = {}) {
     return this.castDown(x, z, fromY, options)?.y ?? null;
+  }
+
+  /**
+   * Where something sits at (x, z): the raycast (sees bridge decks and other
+   * registered surfaces), falling back to the analytic heightfield where no
+   * registered surface covers the point. This is the default answer — reach for
+   * `tryHeightAt` only when a miss needs different handling (e.g. the wheel
+   * probes, which must inherit the centre height rather than drop to the ground
+   * under a deck).
+   *
+   * @param {Track|null} track  Analytic fallback; `fallback` is used without one.
+   * @param {object} [opts]
+   * @param {number} [opts.fromY=500]  Ray origin — pass a truck's own Y so the
+   *   ray picks its layer (on a deck vs under it).
+   * @param {boolean} [opts.fast=false]  Height-only query (`tryHeightAtFast`),
+   *   for per-frame callers.
+   * @param {number} [opts.fallback=0]  Only when there is no track either.
+   * @param {object} [opts.continuity]  Surface continuity hint (TerrainPhysics).
+   * @returns {number}
+   */
+  surfaceHeightAt(x, z, track, { fromY = 500, fast = false, fallback = 0, continuity } = {}) {
+    const y = fast
+      ? this.tryHeightAtFast(x, z, fromY, continuity)
+      : this.tryHeightAt(x, z, fromY, continuity);
+    if (y != null) return y;
+    return track ? track.getHeightAt(x, z) : fallback;
   }
 
   /**

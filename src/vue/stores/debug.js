@@ -11,9 +11,6 @@ export const useDebugStore = defineStore('debug', () => {
     terrain: '-', slope: '-', x: '0.00', y: '0.00', z: '0.00',
     nx: '0.000', ny: '1.000', nz: '0.000',
     surfaceId: '-', surfaceType: '-', surfaceKind: '-', surfaceLevel: '-',
-    topologyNodes: '-', topologyConnectors: '-', topologySummary: '-',
-    topologyAutoLinked: '-', topologyAutoUnlinked: '-',
-    topologyTerrainLinks: '-', topologyBridgeLinks: '-',
   });
   const recording  = ref(false);
   const frameCount = ref(0);

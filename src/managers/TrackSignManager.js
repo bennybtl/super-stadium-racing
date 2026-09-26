@@ -15,7 +15,7 @@ export class TrackSignManager {
   }
 
   createSign(feature) {
-    const groundY = this._terrainQuery.heightAt(feature.x, feature.z);
+    const groundY = this._terrainQuery.surfaceHeightAt(feature.x, feature.z, this.track);
     const sign = new TrackSign(feature, groundY, this.scene, this.shadows);
     this._signs.push(sign);
   }

@@ -260,6 +260,60 @@ export function rotateToLocal(wx, wz, angleRad) {
   };
 }
 
+/**
+ * Deck height of a bridgeMesh-shaped grid at a deck-local point: bilinear over
+ * the control heights (absolute world Y, row-major rows × cols), clamped to the
+ * footprint edge. A driveBox's derived 2×2 grid is planar-plus-wedge, which
+ * bilinear reproduces exactly.
+ *
+ * This is the control grid, not the Catmull-Rom surface `smoothing` builds —
+ * the two agree at every control point and differ slightly in between.
+ */
+export function bridgeDeckHeightAtLocal({ cols, rows, width, depth, heights }, lx, lz) {
+  if (!Array.isArray(heights) || heights.length === 0) return 0;
+
+  const maxCol = Math.max(0, cols - 1);
+  const maxRow = Math.max(0, rows - 1);
+  const u = width > 0 ? Math.max(0, Math.min(1, (lx + width / 2) / width)) : 0;
+  const v = depth > 0 ? Math.max(0, Math.min(1, (lz + depth / 2) / depth)) : 0;
+  const col = u * maxCol;
+  const row = v * maxRow;
+  const c0 = Math.min(Math.floor(col), maxCol);
+  const r0 = Math.min(Math.floor(row), maxRow);
+  const c1 = Math.min(c0 + 1, maxCol);
+  const r1 = Math.min(r0 + 1, maxRow);
+  const tc = col - c0;
+  const tr = row - r0;
+
+  const h00 = heights[r0 * cols + c0] ?? 0;
+  const h10 = heights[r0 * cols + c1] ?? h00;
+  const h01 = heights[r1 * cols + c0] ?? h00;
+  const h11 = heights[r1 * cols + c1] ?? h10;
+  return (
+    h00 * (1 - tc) * (1 - tr) +
+    h10 * tc * (1 - tr) +
+    h01 * (1 - tc) * tr +
+    h11 * tc * tr
+  );
+}
+
+/**
+ * World-space {@link bridgeDeckHeightAtLocal}: deck height at (x, z), or null
+ * when the point is outside the deck footprint. `deck` is a bridgeMesh feature
+ * (or the grid a driveBox derives) — `rotation` in degrees.
+ */
+export function bridgeDeckHeightAt(deck, x, z) {
+  const { lx, lz } = rotateToLocal(
+    x - deck.centerX,
+    z - deck.centerZ,
+    ((deck.rotation ?? 0) * Math.PI) / 180,
+  );
+  const halfW = deck.width / 2;
+  const halfD = deck.depth / 2;
+  if (lx < -halfW || lx > halfW || lz < -halfD || lz > halfD) return null;
+  return bridgeDeckHeightAtLocal(deck, lx, lz);
+}
+
 // ─── Footprints ────────────────────────────────────────────────────────────
 
 /**

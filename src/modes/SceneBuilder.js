@@ -33,7 +33,6 @@ import { isModelFeature } from "../decorations/decorations-registry.js";
 import { PickupManager } from "../managers/PickupManager.js";
 import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
 import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
-import { SurfaceTopologyGraph } from "../managers/SurfaceTopologyGraph.js";
 import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { DecalManager } from "../managers/DecalManager.js";
 import { buildWaterBodies } from "../objects/Water.js";
@@ -105,11 +104,9 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
 
   // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
   const driveSurfaceManager = new DriveSurfaceManager(scene);
-  const surfaceTopologyGraph = new SurfaceTopologyGraph(scene);
   scene.metadata = {
     ...(scene.metadata ?? {}),
     driveSurfaceManager,
-    surfaceTopologyGraph,
   };
 
   // -- Physics --
@@ -661,16 +658,6 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       surfaceKind: "ground-base",
     },
   });
-  surfaceTopologyGraph.registerNode(ground, {
-    mesh: ground,
-    surfaceId: ground.metadata?.surfaceId ?? null,
-    layerId: 0,
-    role: 'drive',
-    kind: 'ground-base',
-    tags: {
-      surfaceKind: 'ground-base',
-    },
-  });
   // MESH shape follows displaced vertices so dynamic objects land on real terrain
   new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
@@ -737,7 +724,6 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       bridgeMeshManager.create(feature);
     }
   }
-  bridgeMeshManager.rebuildAutoConnectorLinks();
 
   // Shared, persistent tire marks — one ring-buffer mesh for every truck's
   // rubber, replayed from last session's save at construction. Built only
@@ -841,6 +827,5 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     steepSlopeColliderManager,
     decalManager,
     driveSurfaceManager,
-    surfaceTopologyGraph,
   };
 }

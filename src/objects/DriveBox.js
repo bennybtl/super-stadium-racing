@@ -1,5 +1,6 @@
 import { Matrix, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, Quaternion, StandardMaterial, Color3 } from "@babylonjs/core";
 import { BridgeMesh } from "./BridgeMesh.js";
+import { bridgeDeckHeightAtLocal } from "../world/feature-geometry.js";
 
 // Extra depth below the lowest terrain corner so a solid-base box never shows
 // a gap between its sides and the ground.
@@ -99,15 +100,6 @@ export function deriveDriveBoxGrid(feature, track) {
     resolvedThickness = Math.max(0.1, maxDrop + SOLID_BASE_MARGIN);
   }
 
-  // Absolute world-Y of the top surface at an arbitrary local point (not just
-  // the 4 corners `heights` covers) — same terrain-plane-plus-wedge-rise
-  // formula, with the rise linearly interpolated across the wedge instead of
-  // stepping at the centerline. Used to size the support legs below.
-  const heightAt = (lx, lz) => {
-    const t = width > 0 ? Math.min(1, Math.max(0, (lx + halfW) / width)) : 0.5;
-    return baseY + terrainGradX * lx + terrainGradZ * lz + hLo + (hHi - hLo) * t;
-  };
-
   return {
     type: 'bridgeMesh',
     centerX, centerZ,
@@ -119,17 +111,16 @@ export function deriveDriveBoxGrid(feature, track) {
     layerId,
     color: feature.color,
     sideColor: feature.sideColor,
-    heightAt,
   };
 }
 
 /**
  * DriveBox — a parametric drivable box or wedge (ramps, boxes, thin flat
  * bridges). Internally composes a BridgeMesh built from a derived 2×2 grid,
- * inheriting its material, drive-surface registration, topology nodes, and
- * terrain seams — plus an invisible side collider (see _buildCollider) matching
- * the slab, so trucks bump off the faces instead of being lifted onto the top
- * by the floor raycast.
+ * inheriting its material, drive-surface registration and terrain seams —
+ * plus an invisible side collider (see _buildCollider) matching the slab, so
+ * trucks bump off the faces instead of being lifted onto the top by the floor
+ * raycast.
  *
  * Feature format:
  *   {
@@ -158,14 +149,6 @@ export class DriveBox {
     this._bridge = new BridgeMesh(derived, track, scene, shadows, driveSurfaceManager, terrainBlendConfig);
     this._buildCollider(feature, derived, scene);
     this._buildLegs(feature, derived, track, scene, shadows);
-  }
-
-  get _bridgeMeshKey() {
-    return this._bridge._bridgeMeshKey;
-  }
-
-  updateTerrainSeamSurfaces(sides) {
-    this._bridge.updateTerrainSeamSurfaces(sides);
   }
 
   /**
@@ -246,7 +229,7 @@ export class DriveBox {
    * loading ramp looks. One thin-instanced post per spot, so any number of
    * legs costs a single draw call.
    *
-   * Each post spans from the actual ground to `derived.heightAt` at that
+   * Each post spans from the actual ground to the deck height at that
    * point, so a wedge's low tip (near-zero clearance) naturally skips legs
    * via LEG_MIN_HEIGHT instead of needing separate wedge-vs-flat handling.
    */
@@ -282,7 +265,7 @@ export class DriveBox {
     for (let i = 0; i < count; i++) {
       const lx = -halfW + (width * i) / (count - 1);
       for (const lz of rowZs) {
-        const topY = derived.heightAt(lx, lz) - LEG_TOP_MARGIN;
+        const topY = bridgeDeckHeightAtLocal(derived, lx, lz) - LEG_TOP_MARGIN;
         const world = _rotateVector(lx, lz, rotation);
         const worldX = centerX + world.x;
         const worldZ = centerZ + world.z;

@@ -24,7 +24,7 @@ export class DecorationManager {
   createDecoration(feature) {
     const def = defForFeature(feature);
     if (!def) return null;
-    const groundY = this._terrainQuery.heightAt(feature.x, feature.z);
+    const groundY = this._terrainQuery.surfaceHeightAt(feature.x, feature.z, this._track);
     const deco = createDecoration(feature, def, groundY, this._scene, this._shadows);
     if (!deco) return null;
     this._decorations.push(deco);

@@ -1,6 +1,7 @@
 import { Mesh, VertexData, StandardMaterial, MultiMaterial, SubMesh, Color3, PhysicsAggregate, PhysicsShapeType, Texture } from "@babylonjs/core";
 import { TERRAIN_TYPES } from "../world/terrain.js";
 import { _lerp, _clamp } from "../world/terrain-utils.js";
+import { bridgeDeckHeightAtLocal } from "../world/feature-geometry.js";
 import { resolveSurfaceTexture, surfaceTextureUrl } from "../world/surface-textures.js";
 
 const _bridgeTextureModules = import.meta.glob('../assets/textures/*', { eager: true, query: '?url', import: 'default' });
@@ -56,6 +57,8 @@ const DRIVE_COLLIDER_OVERLAP = 0.35;
 // toward the key light. An elevated bridge keeps its full nominal thickness.
 const BRIDGE_UNDERGRADE_EMBED = 0.3;
 const BRIDGE_MIN_SLAB = 0.1; // never thin the slab below this (keeps it solid)
+// A deck end (edge midpoint) within this of the terrain height gets a seam ramp.
+const TERRAIN_SEAM_MAX_DY = 1.5;
 const TERRAIN_SEAM_MIN_LENGTH = 0.75;
 const TERRAIN_SEAM_MAX_LENGTH = 3.0;
 const TERRAIN_SEAM_SLOPE_LENGTH_SCALE = 1.5;
@@ -90,9 +93,6 @@ export class BridgeMesh {
     this._track = track;
     this._scene = scene;
     this._driveSurfaceManager = driveSurfaceManager;
-    this._surfaceTopologyGraph = scene?.metadata?.surfaceTopologyGraph ?? null;
-    this._terrainSeamMeshes = [];
-    this._terrainSeamPhysics = [];
 
     const {
       centerX, centerZ,
@@ -122,7 +122,7 @@ export class BridgeMesh {
       offsetsZ: safeOffsetsZ,
       smoothing,
     });
-    const connectorEndpoints = _buildAutoBridgeMeshConnectorEndpoints({
+    const seamSides = _terrainSeamSides({
       track,
       centerX,
       centerZ,
@@ -315,9 +315,8 @@ export class BridgeMesh {
     this._driveMesh.receiveShadows = false;
     this._driveMeshPhysics = new PhysicsAggregate(this._driveMesh, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
-    let deckSurfaceId = null;
     if (driveSurfaceManager) {
-      deckSurfaceId = driveSurfaceManager.register(this._driveMesh, {
+      driveSurfaceManager.register(this._driveMesh, {
         surfaceType: 'bridgeMesh',
         level: resolvedLayerId,
         tags: {
@@ -329,31 +328,17 @@ export class BridgeMesh {
       });
     }
 
-    this._registerTopologyGraph({
-      bridgeMeshKey,
-      level: resolvedLayerId,
-      deckSurfaceId,
-      connectorEndpoints,
-      centerX,
-      centerZ,
-      cols,
-      rows,
-      width,
-      depth,
-      heights: safeHeights,
-      rotation,
-    });
+    this._buildTerrainSeams(seamSides);
   }
 
-  updateTerrainSeamSurfaces(sides = []) {
-    this._disposeTerrainSeamSurfaces();
-
-    const uniqueSides = [...new Set((Array.isArray(sides) ? sides : []).filter(side =>
-      side === 'north' || side === 'south' || side === 'east' || side === 'west'
-    ))];
-    if (uniqueSides.length === 0 || !this._track || !this._scene) return;
-
-    for (const side of uniqueSides) {
+  /**
+   * Invisible drivable ramps from the given deck edges down to the terrain, so
+   * a truck rolls onto the deck instead of hitting its edge.
+   */
+  _buildTerrainSeams(sides) {
+    this._terrainSeamMeshes = [];
+    this._terrainSeamPhysics = [];
+    for (const side of sides) {
       const seamVD = _buildTerrainSeamVD({
         track: this._track,
         ...this._geometryState,
@@ -388,118 +373,14 @@ export class BridgeMesh {
     }
   }
 
-  _disposeTerrainSeamSurfaces() {
+  dispose() {
     for (const mesh of this._terrainSeamMeshes) {
       this._driveSurfaceManager?.unregisterByMesh?.(mesh);
-      mesh?.dispose?.();
+      mesh.dispose();
     }
-    for (const aggregate of this._terrainSeamPhysics) {
-      aggregate?.dispose?.();
-    }
+    for (const aggregate of this._terrainSeamPhysics) aggregate.dispose();
     this._terrainSeamMeshes = [];
     this._terrainSeamPhysics = [];
-  }
-
-  _registerTopologyGraph({
-    bridgeMeshKey,
-    level,
-    deckSurfaceId,
-    connectorEndpoints,
-    centerX,
-    centerZ,
-    cols,
-    rows,
-    width,
-    depth,
-    heights,
-    rotation,
-  }) {
-    if (!this._surfaceTopologyGraph) return;
-
-    const resolvedDeckSurfaceId = deckSurfaceId ?? this._driveMesh?.metadata?.surfaceId ?? null;
-    const deckNodeId = this._surfaceTopologyGraph.registerNode(this, {
-      mesh: this._driveMesh,
-      surfaceId: resolvedDeckSurfaceId,
-      layerId: level,
-      role: 'drive',
-      kind: 'bridge-mesh-deck',
-      tags: {
-        bridgeMeshKey,
-      },
-    });
-
-    if (!Number.isFinite(deckNodeId)) return;
-
-    for (let index = 0; index < (connectorEndpoints?.length ?? 0); index++) {
-      const endpoint = connectorEndpoints[index];
-      const endpointWorld = _computeBridgeMeshEndpointWorldPosition({
-        centerX,
-        centerZ,
-        cols,
-        rows,
-        width,
-        depth,
-        heights,
-        rotation,
-        side: endpoint.side,
-        offset: endpoint.offset,
-      });
-
-      const endpointNodeId = this._surfaceTopologyGraph.registerNode(this, {
-        mesh: null,
-        surfaceId: null,
-        layerId: level,
-        role: 'drive',
-        kind: 'bridge-mesh-connector-endpoint',
-        connectorType: 'DeckJoin',
-        tags: {
-          bridgeMeshKey,
-          endpointIndex: index,
-          endpointSide: endpoint.side,
-          endpointOffset: endpoint.offset,
-          targetLayerId: endpoint.targetLayerId,
-          endpointAutoTerrainDy: endpoint.autoTerrainDy,
-          endpointWorldX: endpointWorld.x,
-          endpointWorldY: endpointWorld.y,
-          endpointWorldZ: endpointWorld.z,
-        },
-      });
-
-      if (!Number.isFinite(endpointNodeId)) continue;
-
-      this._surfaceTopologyGraph.registerConnector(this, {
-        fromNodeId: deckNodeId,
-        toNodeId: endpointNodeId,
-        fromSurfaceId: resolvedDeckSurfaceId,
-        toSurfaceId: null,
-        type: 'DeckJoin',
-        oneWay: true,
-        tags: {
-          bridgeMeshKey,
-          endpointIndex: index,
-          direction: 'deck-to-endpoint',
-        },
-      });
-
-      this._surfaceTopologyGraph.registerConnector(this, {
-        fromNodeId: endpointNodeId,
-        toNodeId: deckNodeId,
-        fromSurfaceId: null,
-        toSurfaceId: resolvedDeckSurfaceId,
-        type: 'DeckJoin',
-        oneWay: true,
-        tags: {
-          bridgeMeshKey,
-          endpointIndex: index,
-          direction: 'endpoint-to-deck',
-        },
-      });
-    }
-  }
-
-  dispose() {
-    this._disposeTerrainSeamSurfaces();
-    this._surfaceTopologyGraph?.removeByOwner?.(this);
     this._driveSurfaceManager?.unregisterByMesh?.(this._driveMesh);
     this._driveMeshPhysics?.dispose?.();
     this._driveMeshPhysics = null;
@@ -516,7 +397,11 @@ export class BridgeMesh {
   }
 }
 
-function _buildAutoBridgeMeshConnectorEndpoints({
+/**
+ * Deck edges that get a terrain seam: of the two edge midpoints nearest the
+ * terrain, those within TERRAIN_SEAM_MAX_DY of it.
+ */
+function _terrainSeamSides({
   track,
   centerX,
   centerZ,
@@ -527,113 +412,29 @@ function _buildAutoBridgeMeshConnectorEndpoints({
   heights,
   rotation,
 }) {
-  const candidateSides = ['north', 'south', 'east', 'west'];
-  const candidates = candidateSides.map(side => {
-    const endpointWorld = _computeBridgeMeshEndpointWorldPosition({
-      centerX,
-      centerZ,
-      cols,
-      rows,
-      width,
-      depth,
-      heights,
-      rotation,
-      side,
-      offset: 0,
-    });
-
-    const terrainY = track?.getHeightAt?.(endpointWorld.x, endpointWorld.z);
-    const dy = Number.isFinite(terrainY)
-      ? Math.abs(endpointWorld.y - terrainY)
-      : Infinity;
-
-    return {
-      enabled: true,
-      side,
-      offset: 0,
-      targetLayerId: 0,
-      autoTerrainDy: dy,
-    };
-  });
-
-  candidates.sort((a, b) => a.autoTerrainDy - b.autoTerrainDy);
-  return candidates.slice(0, 2);
-}
-
-function _computeBridgeMeshEndpointWorldPosition({
-  centerX,
-  centerZ,
-  cols,
-  rows,
-  width,
-  depth,
-  heights,
-  rotation,
-  side,
-  offset,
-}) {
   const halfW = width / 2;
   const halfD = depth / 2;
-  const safeOffset = Number.isFinite(offset) ? Math.max(-1, Math.min(1, offset)) : 0;
-
-  let localX = 0;
-  let localZ = 0;
-  switch (side) {
-    case 'south':
-      localX = safeOffset * halfW;
-      localZ = halfD;
-      break;
-    case 'east':
-      localX = halfW;
-      localZ = safeOffset * halfD;
-      break;
-    case 'west':
-      localX = -halfW;
-      localZ = safeOffset * halfD;
-      break;
-    case 'north':
-    default:
-      localX = safeOffset * halfW;
-      localZ = -halfD;
-      break;
-  }
-
-  const rotated = _rotateVector(localX, localZ, rotation);
-  return {
-    x: centerX + rotated.x,
-    y: _sampleBridgeHeightAtLocal({ cols, rows, width, depth, heights, localX, localZ }),
-    z: centerZ + rotated.z,
+  const sideLocal = {
+    north: [0, -halfD],
+    south: [0, halfD],
+    east: [halfW, 0],
+    west: [-halfW, 0],
   };
-}
+  const candidates = Object.entries(sideLocal).map(([side, [localX, localZ]]) => {
+    const rotated = _rotateVector(localX, localZ, rotation);
+    const x = centerX + rotated.x;
+    const z = centerZ + rotated.z;
+    const y = bridgeDeckHeightAtLocal({ cols, rows, width, depth, heights }, localX, localZ);
+    const terrainY = track?.getHeightAt?.(x, z);
+    const terrainDy = Number.isFinite(terrainY) ? Math.abs(y - terrainY) : Infinity;
+    return { side, terrainDy };
+  });
 
-function _sampleBridgeHeightAtLocal({ cols, rows, width, depth, heights, localX, localZ }) {
-  if (!Array.isArray(heights) || heights.length === 0) return 0;
-
-  const maxCol = Math.max(0, cols - 1);
-  const maxRow = Math.max(0, rows - 1);
-  const u = width > 0 ? Math.max(0, Math.min(1, (localX + width / 2) / width)) : 0;
-  const v = depth > 0 ? Math.max(0, Math.min(1, (localZ + depth / 2) / depth)) : 0;
-  const col = u * maxCol;
-  const row = v * maxRow;
-
-  const c0 = Math.max(0, Math.min(Math.floor(col), maxCol));
-  const r0 = Math.max(0, Math.min(Math.floor(row), maxRow));
-  const c1 = Math.max(0, Math.min(c0 + 1, maxCol));
-  const r1 = Math.max(0, Math.min(r0 + 1, maxRow));
-  const tc = col - c0;
-  const tr = row - r0;
-
-  const h00 = heights[r0 * cols + c0] ?? 0;
-  const h10 = heights[r0 * cols + c1] ?? h00;
-  const h01 = heights[r1 * cols + c0] ?? h00;
-  const h11 = heights[r1 * cols + c1] ?? h10;
-
-  return (
-    h00 * (1 - tc) * (1 - tr) +
-    h10 * tc * (1 - tr) +
-    h01 * (1 - tc) * tr +
-    h11 * tc * tr
-  );
+  candidates.sort((a, b) => a.terrainDy - b.terrainDy);
+  return candidates
+    .slice(0, 2)
+    .filter(c => c.terrainDy <= TERRAIN_SEAM_MAX_DY)
+    .map(c => c.side);
 }
 
 // ── Private mesh-building helpers ─────────────────────────────────────────────

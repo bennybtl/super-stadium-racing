@@ -16,7 +16,7 @@ export class TrackLightManager {
   }
 
   createLight(feature) {
-    const groundY = this._terrainQuery.heightAt(feature.x, feature.z);
+    const groundY = this._terrainQuery.surfaceHeightAt(feature.x, feature.z, this.track);
     const light = new TrackLight(feature, groundY, this.scene, this.shadows);
     // Stadium-lighting tracks (Track.stadiumLighting) reuse these poles for
     // the daytime look too — see SceneBuilder's applyDisplaySettings, which

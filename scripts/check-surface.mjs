@@ -19,10 +19,14 @@
 //   2. respawn    — AI recovery placed the truck at fallback 0 (+0.6) wherever
 //                   the raycast missed, regardless of the real ground height.
 //
-// The wheel-probe sampler deliberately does NOT fall through — see below.
-// Pure arithmetic against stubbed samplers. Exits non-zero on any failure.
+// Both now go through TerrainQuery.surfaceHeightAt, the one place that
+// combines the two. The wheel-probe sampler deliberately does NOT fall
+// through — see below. A real TerrainQuery with its raycast primitives stubbed,
+// so the combination logic under test is the shipped one. Exits non-zero on any
+// failure.
 
 import { TerrainPhysics } from '../src/truck/TerrainPhysics.js';
+import { TerrainQuery } from '../src/managers/TerrainQuery.js';
 import { AISpawnRecoveryController } from '../src/ai/controllers/AISpawnRecoveryController.js';
 
 let failures = 0;
@@ -35,13 +39,35 @@ const check = (label, actual, expected) => {
 const ANALYTIC_Y = 12; // open terrain height reported by the heightfield
 const DECK_Y = 30;     // a registered surface (bridge deck) above it
 
+// TerrainQuery whose raycasts (full and fast) all answer `rayResult`.
+const stubQuery = (rayResult) => {
+  const q = new TerrainQuery(null);
+  q.tryHeightAt = () => rayResult;
+  q.tryHeightAtFast = () => rayResult;
+  q.getLastResolvedSurface = () => null;
+  return q;
+};
+
+// ── 0. TerrainQuery.surfaceHeightAt ─────────────────────────────────────────
+{
+  const track = { getHeightAt: () => ANALYTIC_Y };
+  check('surface: registered surface beats the heightfield',
+    stubQuery(DECK_Y).surfaceHeightAt(0, 0, track), DECK_Y);
+  check('surface: a miss falls through to the heightfield',
+    stubQuery(null).surfaceHeightAt(0, 0, track), ANALYTIC_Y);
+  check('surface: a surface at y=0 is a hit, not a miss',
+    stubQuery(0).surfaceHeightAt(0, 0, track, { fallback: 99 }), 0);
+  check('surface: fallback only when there is no track at all',
+    stubQuery(null).surfaceHeightAt(0, 0, null, { fallback: -7 }), -7);
+}
+
 // ── 1. TerrainPhysics floor sampling ────────────────────────────────────────
 {
   const track = { getHeightAt: () => ANALYTIC_Y };
   const makePhysics = (rayResult) => new TerrainPhysics(
     { heading: 0, velocity: { x: 0, y: 0, z: 0 } },
     0.75,
-    { tryHeightAtFast: () => rayResult, getLastResolvedSurface: () => null },
+    stubQuery(rayResult),
   );
 
   check('floor: registered surface beats the heightfield',
@@ -69,11 +95,11 @@ const DECK_Y = 30;     // a registered surface (bridge deck) above it
 }
 
 // ── 2. AI respawn placement ─────────────────────────────────────────────────
-// Raycast-first is correct here (recovery targets path waypoints and topology
-// connectors, which can sit on decks) — but a miss must not read as sea level.
+// Raycast-first is correct here (recovery targets path waypoints, which can sit
+// on decks) — but a miss must not read as sea level.
 {
   const makeCtrl = (rayY, analyticY) => new AISpawnRecoveryController({
-    _terrainQuery: { tryHeightAt: () => rayY },
+    _terrainQuery: stubQuery(rayY),
     track: analyticY == null ? null : { getHeightAt: () => analyticY },
   });
 

@@ -17,13 +17,6 @@
     <div class="flex justify-between mb-1"><span class="text-slate-400">Surface Type:</span><span class="text-emerald-400">{{ debug.data.surfaceType }}</span></div>
     <div class="flex justify-between mb-1"><span class="text-slate-400">Surface Kind:</span><span class="text-emerald-400">{{ debug.data.surfaceKind }}</span></div>
     <div class="flex justify-between mb-2"><span class="text-slate-400">Surface Level:</span><span class="text-emerald-400">{{ debug.data.surfaceLevel }}</span></div>
-    <div class="flex justify-between mb-1"><span class="text-slate-400">Topology Nodes:</span><span class="text-emerald-400">{{ debug.data.topologyNodes }}</span></div>
-    <div class="flex justify-between mb-1"><span class="text-slate-400">Topology Edges:</span><span class="text-emerald-400">{{ debug.data.topologyConnectors }}</span></div>
-    <div class="flex justify-between mb-1"><span class="text-slate-400">Auto Links (+):</span><span class="text-emerald-400">{{ debug.data.topologyAutoLinked }}</span></div>
-    <div class="flex justify-between mb-1"><span class="text-slate-400">No Link (-):</span><span class="text-red-400">{{ debug.data.topologyAutoUnlinked }}</span></div>
-    <div class="flex justify-between mb-1"><span class="text-slate-400">Terrain Seam:</span><span class="text-emerald-400">{{ debug.data.topologyTerrainLinks }}</span></div>
-    <div class="flex justify-between mb-1"><span class="text-slate-400">Bridge Join:</span><span class="text-emerald-400">{{ debug.data.topologyBridgeLinks }}</span></div>
-    <div class="flex justify-between mb-2"><span class="text-slate-400">Connectors:</span><span class="text-emerald-400 text-right max-w-[170px] truncate">{{ debug.data.topologySummary }}</span></div>
     <div class="flex justify-between mb-2"><span class="text-slate-400">Normal:</span><span class="text-emerald-400">{{ debug.data.nx }}, {{ debug.data.ny }}, {{ debug.data.nz }}</span></div>
     <div class="flex items-center gap-2 mt-2 pointer-events-auto">
       <button v-if="!debug.recording" @click="debug.startRecording()" class="rounded border border-emerald-400 bg-slate-900 px-2 py-1 text-[11px] text-emerald-400 hover:bg-slate-800">⏺ Record</button>

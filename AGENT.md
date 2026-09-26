@@ -94,7 +94,7 @@ offroad/
     │   ├── SceneBuilder-wired managers: CheckpointManager, WallManager, ObstacleManager,
     │   │   DecorationManager, PickupManager, BridgeMeshManager, TrackSignManager,
     │   │   SurfaceDecalManager, StaticBodyCollisionManager, SteepSlopeColliderManager,
-    │   │   DriveSurfaceManager, SurfaceRegistry, SurfaceTopologyGraph, TerrainQuery
+    │   │   DriveSurfaceManager, SurfaceRegistry, TerrainQuery
     │   ├── race-time: GameState, CheckpointArrow, RacePositionLabels, FloatingTextManager,
     │   │   FireworksManager, TruckCollisionManager, CameraController, UIManager, InputManager,
     │   │   DebugManager, FrameProfiler
@@ -280,10 +280,13 @@ Add to `TERRAIN_TYPES` (grip, drag, color, smokeColor). Paint via
   ray filtered to drive surfaces, upward fallback on penetration, 4 short probes
   for a smooth averaged normal, `_lastResolvedSurface` continuity hint so the
   truck stays on the deck vs. the ground under it.
-- **`SurfaceTopologyGraph`** — surface connectivity for AI routing / recovery.
 - **`BridgeMesh`** — solid elevated mesh; `heights[]` row-major absolute Y,
   optional `offsetsX/Z` per control point, `smoothing` (Catmull-Rom densify),
-  Havok MESH collider, terrain seams to the ground.
+  Havok MESH collider, terrain seams to the ground (built in the constructor for a deck end
+  within 1.5 m of the terrain).
+- **Deck height maths** — `bridgeDeckHeightAt[Local]` in `world/feature-geometry.js`
+  (control-grid bilinear) is the one sampler for BridgeMesh, DriveBox legs and
+  the deck-wear bake.
 
 ### Drive-surface picking performance
 Terrain physics + AI floor detection fire many downward `multiPickWithRay`s per

@@ -23,7 +23,7 @@ export class ObstacleManager {
   // ─── Creation ────────────────────────────────────────────────────────────
   createStack(feature) {
     const { x, z } = feature;
-    const groundY = this._terrainQuery.heightAt(x, z);
+    const groundY = this._terrainQuery.surfaceHeightAt(x, z, this.track);
     const obstacleType = normalizeObstacleType(feature.obstacleType);
     const angle = typeof feature.angle === 'number' ? feature.angle : 0;
     const rawScale = typeof feature.scale === 'number' ? feature.scale : 1;

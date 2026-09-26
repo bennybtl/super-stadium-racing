@@ -570,62 +570,6 @@ export class DebugManager {
     this._updatePolylineColliderDebugMeshes();
     this._updateTruckBoxDebugMeshes();
     this._updateBridgeDriveDebugMeshes();
-    this._updateTopologyDebugFields();
-  }
-
-  _updateTopologyDebugFields() {
-    const d = this._store.data;
-    const topologyGraph = this._scene?.metadata?.surfaceTopologyGraph ?? null;
-    const topologyNodes = topologyGraph?.getAllNodes?.() ?? [];
-    const topologyConnectors = topologyGraph?.getAllConnectors?.() ?? [];
-    const topologyValidation = topologyGraph?.validate?.() ?? { issues: [], valid: true };
-    const connectorEndpointNodes = topologyNodes.filter(node => node?.kind === 'bridge-mesh-connector-endpoint');
-    const autoLinkedNodeIds = new Set();
-    let terrainLinkCount = 0;
-    let bridgeLinkCount = 0;
-    for (const connector of topologyConnectors) {
-      if (connector?.tags?.autoLinked !== true) continue;
-      if (Number.isFinite(connector.fromNodeId)) autoLinkedNodeIds.add(connector.fromNodeId);
-      if (Number.isFinite(connector.toNodeId)) autoLinkedNodeIds.add(connector.toNodeId);
-      const autoLinkMode = String(connector?.tags?.autoLinkMode ?? '');
-      if (autoLinkMode.startsWith('terrain-')) {
-        terrainLinkCount += 1;
-      } else if (autoLinkMode === 'proximity') {
-        bridgeLinkCount += 1;
-      }
-    }
-    const linkedEndpointCount = connectorEndpointNodes.reduce((count, node) => (
-      autoLinkedNodeIds.has(node.nodeId) ? count + 1 : count
-    ), 0);
-    const unlinkedEndpointCount = Math.max(0, connectorEndpointNodes.length - linkedEndpointCount);
-    const connectorSummary = topologyConnectors.length > 0
-      ? Object.entries(topologyConnectors.reduce((counts, connector) => {
-          const type = String(connector?.type ?? 'unknown');
-          counts[type] = (counts[type] ?? 0) + 1;
-          return counts;
-        }, {}))
-        .map(([type, count]) => `${type}:${count}`)
-        .join(' ')
-      : '-';
-    const issueSummary = topologyValidation.issues.length > 0
-      ? Object.entries(topologyValidation.issues.reduce((counts, issue) => {
-          const type = String(issue?.type ?? 'unknown');
-          counts[type] = (counts[type] ?? 0) + 1;
-          return counts;
-        }, {}))
-        .map(([type, count]) => `${type}:${count}`)
-        .join(' ')
-      : '-';
-
-    d.topologyNodes = String(topologyNodes.length);
-    d.topologyConnectors = String(topologyConnectors.length);
-    d.topologyAutoLinked = `${linkedEndpointCount}`;
-    d.topologyAutoUnlinked = `${unlinkedEndpointCount}`;
-    d.topologyTerrainLinks = `${terrainLinkCount}`;
-    d.topologyBridgeLinks = `${bridgeLinkCount}`;
-    d.topologySummary = topologyValidation.issues.length > 0
-      ? `issues:${topologyValidation.issues.length} ${issueSummary} ${connectorSummary}`
-      : connectorSummary;
   }
 
   /**
@@ -648,7 +592,6 @@ export class DebugManager {
     this._updatePolylineColliderDebugMeshes();
     this._updateTruckBoxDebugMeshes();
     this._updateBridgeDriveDebugMeshes();
-    this._updateTopologyDebugFields();
 
     if (!debugInfo) return;
 

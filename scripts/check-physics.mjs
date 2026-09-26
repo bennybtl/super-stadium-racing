@@ -99,6 +99,8 @@ function terrainQueryFor(track) {
   const e = 0.25;
   return {
     tryHeightAtFast: (x, z) => track.getHeightAt(x, z),
+    // Rays always hit here, so the analytic fallback never comes into play.
+    surfaceHeightAt: (x, z) => track.getHeightAt(x, z),
     castDown: (x, z) => {
       const nx = track.getHeightAt(x - e, z) - track.getHeightAt(x + e, z);
       const nz = track.getHeightAt(x, z - e) - track.getHeightAt(x, z + e);

@@ -279,7 +279,7 @@ export class PickupManager {
    */
   _spawnPickup(pos, lapCount) {
     const tier = this._rollValue(lapCount);
-    const groundY = this._terrainQuery.heightAt(pos.x, pos.z);
+    const groundY = this._terrainQuery.surfaceHeightAt(pos.x, pos.z, this.track);
 
     let type = 'boost';
     let value = tier;

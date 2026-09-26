@@ -6,6 +6,7 @@ import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline } from "../utils/polyline-utils.js";
 import { createWaterDepthSampler } from "../objects/water-field.js";
 import { clamp, lerp, smoothstep } from "../utils/math-utils.js";
+import { bridgeDeckHeightAt } from "./feature-geometry.js";
 
 const TERRAIN_TYPE_LIST = Object.values(TERRAIN_TYPES);
 // Keyed by name rather than object identity: a terrain-region feature with a
@@ -276,9 +277,8 @@ export function buildTerrainTypePropertyTexturePixelData() {
 }
 
 /**
- * Bridge decks, each with a bilinear world-Y sampler over its control grid.
- * `heightAt(x, z)` returns the deck surface height at a world point, or null
- * when the point is outside the deck footprint. Used to tell whether a wear
+ * Bridge decks as sanitized grids for `bridgeDeckHeightAt` (deck height at a
+ * world point, or null outside the footprint). Used to tell whether a wear
  * stamp belongs on a deck (racing line crosses it) or on the ground below.
  */
 function _collectBridgeDecks(track) {
@@ -291,27 +291,12 @@ function _collectBridgeDecks(track) {
     const rows = Math.max(2, f.rows | 0);
     const heights = Array.isArray(f.heights) ? f.heights : null;
     if (!heights || heights.length < cols * rows) continue;
-    const w = Math.max(0.1, f.width);
-    const d = Math.max(0.1, f.depth ?? f.width);
-    const ang = (f.rotation ?? 0) * Math.PI / 180;
-    const cos = Math.cos(ang), sin = Math.sin(ang);
-    const cx = f.centerX, cz = f.centerZ;
-    const halfW = w / 2, halfD = d / 2;
     decks.push({
-      heightAt(x, z) {
-        const dx = x - cx, dz = z - cz;
-        const lx =  dx * cos + dz * sin;   // world → deck-local (yaw inverse)
-        const lz = -dx * sin + dz * cos;
-        if (lx < -halfW || lx > halfW || lz < -halfD || lz > halfD) return null;
-        const u = ((lx + halfW) / w) * (cols - 1);
-        const v = ((lz + halfD) / d) * (rows - 1);
-        const c0 = clamp(Math.floor(u), 0, cols - 1), c1 = Math.min(c0 + 1, cols - 1);
-        const r0 = clamp(Math.floor(v), 0, rows - 1), r1 = Math.min(r0 + 1, rows - 1);
-        const fu = u - c0, fv = v - r0;
-        const h0 = heights[r0 * cols + c0] * (1 - fu) + heights[r0 * cols + c1] * fu;
-        const h1 = heights[r1 * cols + c0] * (1 - fu) + heights[r1 * cols + c1] * fu;
-        return h0 * (1 - fv) + h1 * fv;
-      },
+      centerX: f.centerX, centerZ: f.centerZ,
+      width: Math.max(0.1, f.width),
+      depth: Math.max(0.1, f.depth ?? f.width),
+      rotation: f.rotation ?? 0,
+      cols, rows, heights,
     });
   }
   return decks;
@@ -369,7 +354,7 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
         let inDeck = -1;
         let deckY = 0;
         for (let di = 0; di < decks.length; di++) {
-          const dy = decks[di].heightAt(s.x, s.z);
+          const dy = bridgeDeckHeightAt(decks[di], s.x, s.z);
           if (dy != null) { inDeck = di; deckY = dy; break; }
         }
         if (inDeck === -1) {

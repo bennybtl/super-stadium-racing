@@ -111,6 +111,11 @@ Status:
 2. Remaining: if future layered feature types need non-drivable sides/ceilings, handle those as explicit authored blockers rather than relying on the visual mesh.
 
 ### Phase 4: Layer Connectivity Topology
+
+> **Removed (Sept 2026).** `SurfaceTopologyGraph` was deleted: its only runtime
+> effect was choosing which deck ends get terrain seams (now
+> `BridgeMeshManager.updateTerrainSeams`), and its one AI consumer never
+> matched a node. The notes below are kept for history.
 Add explicit graph connectivity between drivable layers.
 
 Deliverables:

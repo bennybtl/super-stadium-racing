@@ -39,7 +39,7 @@ export class AIDebugRenderer {
     }
     this.debugTarget.position.x = targetWaypoint.x;
     this.debugTarget.position.z = targetWaypoint.z;
-    this.debugTarget.position.y = this.driver._terrainQuery.heightAt(targetWaypoint.x, targetWaypoint.z) + 2;
+    this.debugTarget.position.y = this.driver._terrainQuery.surfaceHeightAt(targetWaypoint.x, targetWaypoint.z, this.driver.track) + 2;
   }
 
   updateVisualization() {
@@ -54,7 +54,7 @@ export class AIDebugRenderer {
         const wp = d.path[i];
         const sphere = MeshBuilder.CreateSphere(`pathDebug${i}`, { diameter: 0.5 }, d.scene);
         sphere.position.x = wp.x;
-        sphere.position.y = d._terrainQuery.heightAt(wp.x, wp.z) + 1;
+        sphere.position.y = d._terrainQuery.surfaceHeightAt(wp.x, wp.z, d.track) + 1;
         sphere.position.z = wp.z;
 
         const mat = new StandardMaterial(`pathDebugMat${i}`, d.scene);

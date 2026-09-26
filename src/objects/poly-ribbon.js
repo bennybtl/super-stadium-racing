@@ -68,7 +68,7 @@ export class RibbonHeightSampler {
   }
 
   sample(track, x, z) {
-    if (this._useBridgeSurface) return this._terrainQuery.heightAt(x, z);
+    if (this._useBridgeSurface) return this._terrainQuery.surfaceHeightAt(x, z, track);
     return track.getHeightAt(x, z);
   }
 

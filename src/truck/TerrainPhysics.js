@@ -515,21 +515,17 @@ export class TerrainPhysics {
    * heightfield where no registered surface covers the point.
    *
    * The fallback is the point of this function: raycasts only find registered
-   * surface meshes, so open terrain misses. Until TerrainQuery could report a
-   * miss, that case silently returned `fallback` and the analytic path below was
-   * reachable only when there was no terrainQuery at all — i.e. never.
+   * surface meshes, so open terrain misses (TerrainQuery.surfaceHeightAt owns
+   * that decision). `fallback` only applies when there is no track either.
    */
   _sampleFloorYAt(x, z, fromY, track, fallback = 0) {
-    const y = this._terrainQuery?.tryHeightAtFast(
-      x,
-      z,
+    if (!this._terrainQuery) return track ? track.getHeightAt(x, z) : fallback;
+    return this._terrainQuery.surfaceHeightAt(x, z, track, {
       fromY,
-      this._buildSurfaceContinuityOptions()
-    );
-    if (y != null) return y;
-
-    if (!track) return fallback;
-    return track.getHeightAt(x, z);
+      fast: true,
+      fallback,
+      continuity: this._buildSurfaceContinuityOptions(),
+    });
   }
 
   _buildSurfaceContinuityOptions() {
