@@ -1,22 +1,20 @@
 /**
- * Drivable surface layers: Babylon-free height queries that give the same
- * answer as the drive-surface raycasts (TerrainQuery → DriveSurfaceManager),
- * without meshes, picking or octrees.
+ * Drivable surface layers: Babylon-free height queries for every drive
+ * surface, without picking or octrees. (They replaced Babylon raycasts, and
+ * matched them on every shipped track before the switch.)
  *
  * A layer answers "how high is this surface at (x, z)?" by pushing its height
  * (or heights, where its triangles overlap) onto an array, and nothing where it
  * doesn't reach; `normalAt` gives the interpolated vertex normal there.
- * SurfaceLayers stacks them and picks one per query with the same down-then-up
- * rule the raycasts use, so a truck on a deck gets the deck and a truck under it
- * gets the ground.
+ * SurfaceLayers stacks them and picks one per query with a down-then-up rule,
+ * so a truck on a deck gets the deck and a truck under it gets the ground.
  *
  * DriveSurfaceManager builds a layer for every surface it registers, and
- * TerrainQuery answers from these. `npm run check:surface-layers` checks them
- * against the old raycasts on every shipped track.
+ * TerrainQuery answers from these.
  */
 
-// Interpolated, normalized vertex normal → `out` (any {x, y, z}); the same
-// thing Babylon's PickingInfo.getNormal(true, true) returns for a hit.
+// Interpolated, normalized vertex normal → `out` (any {x, y, z}), as Babylon's
+// PickingInfo.getNormal(true, true) computes it for a hit.
 function _blendNormal(normals, a, b, c, wa, wb, wc, out) {
   const x = normals[a] * wa + normals[b] * wb + normals[c] * wc;
   const y = normals[a + 1] * wa + normals[b + 1] * wb + normals[c + 1] * wc;
@@ -72,13 +70,8 @@ export function createGroundLayer({ width, depth, subdivisions }, positions, nor
 // Target triangles per grid cell for the triangle-layer index.
 const TRI_INDEX_TARGET = 4;
 
-// How far past a triangle's edges (in barycentric units) a point still counts
-// as on it, extrapolating the triangle's plane. Matches Babylon's
-// Ray.intersectsTriangle epsilon, which is what the drive-surface raycasts
-// answer with: a ~1 cm skirt around a 10 m deck triangle, clipped to the mesh's
-// bounding box (see heightsAt). Kept for exact parity while both systems exist;
-// 0 is the clean value once the raycasts are gone.
-const EDGE_TOLERANCE = 1e-3;
+// Barycentric slack so a point exactly on a shared edge isn't lost to rounding.
+const EDGE_EPSILON = 1e-9;
 
 /**
  * Any triangle mesh (world-space `positions`, `indices`, `normals`), sampled
@@ -115,16 +108,10 @@ export function createTriangleLayer(positions, indices, normals = null) {
   const cellW = Math.max((maxX - minX) / cellsPerSide, 1e-9);
   const cellD = Math.max((maxZ - minZ) / cellsPerSide, 1e-9);
   const cells = Array.from({ length: cellsPerSide * cellsPerSide }, () => []);
-  // EDGE_TOLERANCE in world units for the largest triangle: every box test is
-  // widened by this so a point on a skirt still reaches its triangle.
-  let skirt = 0;
-  for (const tri of tris) {
-    skirt = Math.max(skirt, (tri.maxX - tri.minX + tri.maxZ - tri.minZ) * EDGE_TOLERANCE);
-  }
   const cellOf = (v, min, size) => Math.min(cellsPerSide - 1, Math.max(0, Math.floor((v - min) / size)));
   for (const tri of tris) {
-    const c0 = cellOf(tri.minX - skirt, minX, cellW), c1 = cellOf(tri.maxX + skirt, minX, cellW);
-    const r0 = cellOf(tri.minZ - skirt, minZ, cellD), r1 = cellOf(tri.maxZ + skirt, minZ, cellD);
+    const c0 = cellOf(tri.minX, minX, cellW), c1 = cellOf(tri.maxX, minX, cellW);
+    const r0 = cellOf(tri.minZ, minZ, cellD), r1 = cellOf(tri.maxZ, minZ, cellD);
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) cells[r * cellsPerSide + c].push(tri);
     }
@@ -133,16 +120,14 @@ export function createTriangleLayer(positions, indices, normals = null) {
   // Calls visit(tri, wa, wb, wc, y) for every triangle over (x, z); stops
   // early when visit returns true.
   const forEachHit = (x, z, visit) => {
-    // Exact bounds, no skirt: Babylon tests the mesh's bounding box before any
-    // triangle, so the skirt never reaches past the mesh's own extent.
     if (x < minX || x > maxX || z < minZ || z > maxZ) return;
     for (const tri of cells[cellOf(z, minZ, cellD) * cellsPerSide + cellOf(x, minX, cellW)]) {
-      if (x < tri.minX - skirt || x > tri.maxX + skirt || z < tri.minZ - skirt || z > tri.maxZ + skirt) continue;
+      if (x < tri.minX || x > tri.maxX || z < tri.minZ || z > tri.maxZ) continue;
       // Barycentric weights of (x, z) in the triangle's XZ projection.
       const wa = ((tri.bz - tri.cz) * (x - tri.cx) + (tri.cx - tri.bx) * (z - tri.cz)) / tri.det;
       const wb = ((tri.cz - tri.az) * (x - tri.cx) + (tri.ax - tri.cx) * (z - tri.cz)) / tri.det;
       const wc = 1 - wa - wb;
-      if (wa < -EDGE_TOLERANCE || wb < -EDGE_TOLERANCE || wc < -EDGE_TOLERANCE) continue;
+      if (wa < -EDGE_EPSILON || wb < -EDGE_EPSILON || wc < -EDGE_EPSILON) continue;
       if (visit(tri, wa, wb, wc, wa * tri.ay + wb * tri.by + wc * tri.cy)) return;
     }
   };
@@ -168,7 +153,7 @@ export function createTriangleLayer(positions, indices, normals = null) {
 
 // ─── The stack ──────────────────────────────────────────────────────────────
 
-// Mirrors the options TerrainQuery passes to DriveSurfaceManager.queryDriveSurfaceAt.
+// The surface-pick rule's distances (see SurfaceLayers.sample).
 const PENETRATION_THRESHOLD = 1.5;
 const MAX_UPWARD_RISE = 1.0;
 const UP_ORIGIN_DROP = 0.05;
@@ -214,8 +199,7 @@ export class SurfaceLayers {
   }
 
   /**
-   * The surface under a point at height `fromY`, chosen the way
-   * `DriveSurfaceManager.queryDriveSurfaceAt` chooses it:
+   * The surface under a point at height `fromY`:
    *
    *  1. down: the highest surface at or below `fromY`;
    *  2. if that's more than 1.5 below (the truck has sunk into something),
@@ -266,7 +250,7 @@ export class SurfaceLayers {
   // The nearest hit passing `accept` (by `distance`), or the preferred
   // surface's nearest hit when it's within maxDistanceDelta of that. An exact
   // tie (a seam's foot lying on the ground) goes to the first-added surface,
-  // i.e. the ground; the raycasts settled ties by float noise either way.
+  // i.e. the ground.
   _pick(hits, accept, distance, prefer) {
     let nearest = null;
     let preferred = null;

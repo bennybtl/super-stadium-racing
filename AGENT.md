@@ -274,45 +274,41 @@ Add to `TERRAIN_TYPES` (grip, drag, color, smokeColor). Paint via
 
 - **`DriveSurfaceManager`** — register/query drive surfaces. One record per
   mesh, `{ surfaceId, mesh, kind, level }`, with `kind` `ground` | `deck` |
-  `seam` (nothing is written to `mesh.metadata`). Builds a submesh octree on the
-  ground for fast downward picks (see below).
+  `seam` (nothing is written to `mesh.metadata`), plus a height layer in
+  `layers`. Builds a submesh octree on the ground for `scene.pick` (see below).
 - **`TerrainQuery`** — surface lookup + cross-pattern normal sampler, answered
   from `DriveSurfaceManager.layers`: down-then-up surface pick, 4 short
   same-level probes for a smooth averaged normal, continuity hint so the truck
-  stays on the deck vs. the ground under it. `{ raycast: true }` still runs the
-  old Babylon raycasts (parity check / A-B only, to be deleted).
+  stays on the deck vs. the ground under it. No Babylon picking involved.
 - **`BridgeMesh`** — solid elevated mesh; `heights[]` row-major absolute Y,
   optional `offsetsX/Z` per control point, `smoothing` (Catmull-Rom densify),
-  Havok MESH collider, terrain seams to the ground (built in the constructor for a deck end
-  within 1.5 m of the terrain).
+  Havok MESH collider, terrain seams to the ground (built in the constructor for
+  a deck end within 1.5 m of the terrain).
 - **`SurfaceLayers`** (`world/surface-layers.js`) — Babylon-free height layers
-  that replaced the drive-surface raycasts. `DriveSurfaceManager.register`
-  builds one per mesh from its vertex data (closed-form lattice layer for the
-  ground, triangle layers for outskirts/decks/seams); `refreshLayer(mesh)` after
-  vertices move (the editor does it on every terrain rebuild).
-  `npm run check:surface-layers` (~30 s, not in `check`) compares TerrainQuery's
-  layers mode against its raycast mode on every shipped track.
+  (Sept 2026, replacing the drive-surface raycasts after matching them on every
+  shipped track). `DriveSurfaceManager.register` builds one per mesh from its
+  vertex data (closed-form lattice layer for the ground, triangle layers for
+  outskirts/decks/seams); call `refreshLayer(mesh)` after vertices move (the
+  editor does it on every terrain rebuild). Unit tests:
+  `test/surface-layers.test.js`.
 - **Deck height maths** — `bridgeDeckHeightAt[Local]` in `world/feature-geometry.js`
   (control-grid bilinear) is the one sampler for BridgeMesh, DriveBox legs and
   the deck-wear bake.
 
-### Drive-surface picking performance
-Terrain physics + AI floor detection fire many downward `multiPickWithRay`s per
-truck per frame; cost scales with AI count.
-- `DriveSurfaceManager.register()` subdivides + octrees meshes > ~512 tris (the
-  ground). Requires the side-effect import
-  `@babylonjs/core/Culling/Octrees/octreeSceneComponent.js` — without it the
-  octree method is `undefined` and acceleration silently no-ops.
-- Bridge decks/seams are excluded (coarse + dynamic).
+### Surface query performance
+Terrain physics + AI floor detection query surfaces many times per truck per
+frame; cost scales with AI count. The layer lookups are cheap (a grid-indexed
+triangle or closed-form lattice cell, ~12× cheaper than the raycasts they
+replaced).
+- `DriveSurfaceManager.register()` still subdivides + octrees the ground, now
+  only for `scene.pick` (editor placement, decal projection). Requires the
+  side-effect import `@babylonjs/core/Culling/Octrees/octreeSceneComponent.js` —
+  without it the octree method is `undefined` and acceleration silently no-ops.
 - AI multi-probe floor sampling is gated to elevated surfaces / bridge proximity
   (`hasElevatedSurfaceNear` + a sticky timer); flat tracks use the cheap
-  single-probe `heightAtFast` path. AI normals sample at ~1/30 s except near
+  single-probe `tryHeightAtFast` path. AI normals sample at ~1/30 s except near
   bridges. AI beyond `AI_TERRAIN_LOW_DETAIL_DIST` (75 m) run `TerrainPhysics` in
   `lowDetail`.
-- **Do not** replace `multiPickWithRay` with a single `pickWithRay` in
-  `_castRayToSurface` — tried and reverted; a single pick returns only the
-  nearest triangle, which on a steep face is a vertical sliver that fails the
-  normal filter → null floor → truck tunnels through.
 
 ### FPS overlay (`AppShell.vue`)
 `<avg> (min <worst>)`. The average is a vsync-capped frame *count* over 500 ms —
