@@ -1,6 +1,6 @@
 {
   "apple_river": {
-    "hash": "f73e6a540c8e6bec",
+    "hash": "20c48d238135c9c2",
     "spots": [
       "0,0 h=-2.513010 t=loamy_dirt",
       "-30,-30 h=-0.261311 t=loamy_dirt",
@@ -10,7 +10,7 @@
     ]
   },
   "chihuahua_flats": {
-    "hash": "fc11d67266c2df3d",
+    "hash": "3f5d645cc4de015e",
     "spots": [
       "0,0 h=-2.537349 t=loose_dirt",
       "-30,-30 h=-0.306542 t=loose_dirt",
@@ -20,27 +20,27 @@
     ]
   },
   "cranville_rush": {
-    "hash": "dd5764e7db1499b4",
+    "hash": "73f20734cac529ad",
     "spots": [
       "0,0 h=4.045975 t=loamy_dirt",
       "-30,-30 h=7.119067 t=loamy_dirt",
       "30,30 h=3.773585 t=grass",
       "-55,40 h=0.270115 t=packed_dirt",
-      "48,-52 h=-4.760303 t=water"
+      "48,-52 h=-4.788837 t=water"
     ]
   },
   "cross_country": {
-    "hash": "7e406311859d6989",
+    "hash": "487187d8fa26bd26",
     "spots": [
-      "0,0 h=-1.530000 t=grass",
-      "-30,-30 h=-1.124298 t=mud",
+      "0,0 h=-1.530000 t=mud",
+      "-30,-30 h=-1.137008 t=mud",
       "30,30 h=-2.931034 t=grass",
       "-55,40 h=0.000000 t=grass",
       "48,-52 h=0.000000 t=asphalt"
     ]
   },
   "crossfire_canyon": {
-    "hash": "85de1a4907388206",
+    "hash": "8c4722edd2f15c84",
     "spots": [
       "0,0 h=6.850746 t=packed_dirt",
       "-30,-30 h=-0.010579 t=packed_dirt",
@@ -60,12 +60,12 @@
     ]
   },
   "dust_devil": {
-    "hash": "a0afd6afdbcc309b",
+    "hash": "93a3836eab69bd82",
     "spots": [
       "0,0 h=4.385139 t=loose_dirt",
       "-30,-30 h=8.974425 t=packed_dirt",
       "30,30 h=5.877847 t=loose_dirt",
-      "-55,40 h=3.190182 t=water",
+      "-55,40 h=3.088738 t=water",
       "48,-52 h=3.188092 t=packed_dirt"
     ]
   },
@@ -80,11 +80,11 @@
     ]
   },
   "hot_shot": {
-    "hash": "d47a347146b972b5",
+    "hash": "1743619e63560c13",
     "spots": [
       "0,0 h=3.500000 t=grass",
       "-30,-30 h=1.755306 t=grass",
-      "30,30 h=-1.708704 t=water",
+      "30,30 h=-1.962002 t=water",
       "-55,40 h=0.000828 t=grass",
       "48,-52 h=0.007884 t=grass"
     ]
@@ -110,7 +110,7 @@
     ]
   },
   "over_rush": {
-    "hash": "3ced70e86d956541",
+    "hash": "dbe0eb5641438f1e",
     "spots": [
       "0,0 h=-10.000000 t=loamy_dirt",
       "-30,-30 h=-10.198657 t=loamy_dirt",
@@ -140,7 +140,7 @@
     ]
   },
   "quarry_run": {
-    "hash": "a7ecc1a82d1fdd9c",
+    "hash": "27878e5e1da65584",
     "spots": [
       "0,0 h=-1.400000 t=water",
       "-30,-30 h=-0.109436 t=rocky",
@@ -180,22 +180,22 @@
     ]
   },
   "surfs_up": {
-    "hash": "2a3d0f2fb4a0eacb",
+    "hash": "7caa1dc76a39ca55",
     "spots": [
       "0,0 h=0.000000 t=packed_dirt",
-      "-30,-30 h=-1.543701 t=water",
+      "-30,-30 h=-1.326246 t=water",
       "30,30 h=7.421814 t=packed_dirt",
       "-55,40 h=-0.219727 t=packed_dirt",
-      "48,-52 h=-1.922320 t=water"
+      "48,-52 h=-1.923115 t=water"
     ]
   },
   "switchback": {
-    "hash": "8e18695b6317affc",
+    "hash": "63d0a167cd5d1e0d",
     "spots": [
       "0,0 h=0.000000 t=asphalt",
       "-30,-30 h=1.189173 t=grass",
       "30,30 h=0.000000 t=asphalt",
-      "-55,40 h=2.995857 t=grass",
+      "-55,40 h=3.999975 t=grass",
       "48,-52 h=0.000000 t=grass"
     ]
   },
