@@ -11,6 +11,7 @@ import { TERRAIN_TYPES } from "../world/terrain.js";
 import { _smoothstep, _getTerrainSlopeDegAt as _getTerrainSlopeDeg } from "../world/terrain-utils.js";
 import { bakeAiPathWear } from "../world/terrain-utils.js";
 import { resampleWrapped } from "../world/terrain-blend-utils.js";
+import { TUNNEL_BORE_DISCARD_ABOVE } from "../world/tunnel-geometry.js";
 
 const _terrainTypeList = Object.values(TERRAIN_TYPES);
 const _terrainTypeIndexByName = new Map(_terrainTypeList.map((terrainType, index) => [terrainType?.name, index]));
@@ -709,6 +710,9 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   // see terrainWakeBounds below and _TERRAIN_BLEND_UPDATE_DIFFUSE's lakebed
   // shimmer for how it's used.
   uniform sampler2D terrainWakeSampler;
+  // Tunnel bores (TunnelManager): RGBA float texels over the tunnels' bounding
+  // box, r = floor Y, g = roof Y, b = inside; see terrainBoreBounds below.
+  uniform sampler2D terrainBoreSampler;
   // Per-type detail textures, one layer per terrain type, tiled in world space.
   // The precision qualifier is required: ESSL3 gives sampler2DArray no default
   // one (unlike sampler2D), and omitting it fails to compile.
@@ -857,6 +861,18 @@ __TERRAIN_DETAIL_PARAMS__
 // terrain UV from world position: maps [-halfSize, +halfSize] → [0, 1]
 // Uses vPositionW (always available in StandardMaterial fragment shader).
 const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
+  // Tunnel mouths: drop the ground inside a tunnel bore, between its floor and
+  // its roof. Inside the hill the terrain is above the roof, so this only ever
+  // removes the ground across each portal — the mesh's smear of the cut's
+  // vertical portal face, behind the headwall. Ground at the floor itself (the
+  // cutting, and under the tunnel's lifted slab) is kept; see
+  // TUNNEL_BORE_DISCARD_ABOVE in tunnel-geometry.js.
+  // Ground only — bridge decks share this plugin as a forced-type surface.
+  // Outside the bores' box the lookup clamps to an empty border texel.
+  if (terrainForcedTypeIndex < 0.0) {
+    vec4 _bore = texture2D(terrainBoreSampler, (vPositionW.xz - terrainBoreBounds.xy) * terrainBoreBounds.zw);
+    if (_bore.b > 0.5 && vPositionW.y > _bore.r + ${TUNNEL_BORE_DISCARD_ABOVE.toFixed(3)} && vPositionW.y < _bore.g) discard;
+  }
   vec2 _tUV = vec2(
     vPositionW.x / (terrainWorldHalfWidth * 2.0) + 0.5,
     vPositionW.z / (terrainWorldHalfDepth * 2.0) + 0.5
@@ -964,6 +980,14 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     this._emptyWake.wrapU = Texture.CLAMP_ADDRESSMODE;
     this._emptyWake.wrapV = Texture.CLAMP_ADDRESSMODE;
     this._emptyWake.gammaSpace = false;
+    // Same stand-in for the tunnel bore texture (scene.metadata.tunnelBore) on a
+    // track without tunnels: one empty texel, so nothing is ever discarded.
+    this._emptyBore = RawTexture.CreateRGBATexture(
+      new Float32Array(4), 1, 1, scene, false, false,
+      Texture.NEAREST_SAMPLINGMODE, Constants.TEXTURETYPE_FLOAT
+    );
+    this._emptyBore.wrapU = Texture.CLAMP_ADDRESSMODE;
+    this._emptyBore.wrapV = Texture.CLAMP_ADDRESSMODE;
     // Passed via options rather than another positional argument — the list is
     // long enough. Falls back to the albedo array so an un-updated caller binds
     // *something* rather than leaving the sampler unbound (which reads black,
@@ -1007,7 +1031,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
   }
 
   getSamplers(samplers) {
-    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler", "terrainDetailSampler", "terrainDetailNormalSampler", "terrainWakeSampler");
+    samplers.push("terrainIdSampler", "terrainPropertySampler", "terrainWaterOverlaySampler", "terrainWearOverlaySampler", "terrainDetailSampler", "terrainDetailNormalSampler", "terrainWakeSampler", "terrainBoreSampler");
   }
 
   // terrainWakeBounds is a genuine uniform, not baked source — see the note on
@@ -1019,8 +1043,9 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     return {
       ubo: [
         { name: "terrainWakeBounds", size: 4, type: "vec4" },
+        { name: "terrainBoreBounds", size: 4, type: "vec4" },
       ],
-      fragment: "uniform vec4 terrainWakeBounds;",
+      fragment: "uniform vec4 terrainWakeBounds;\nuniform vec4 terrainBoreBounds;",
     };
   }
 
@@ -1029,6 +1054,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     // the scene, while an editor water edit disposes the field and builds a
     // new one with different bounds — a stored reference would go dangling.
     const wake = scene.metadata?.wakeField;
+    const bore = scene.metadata?.tunnelBore;
 
     if (scene.texturesEnabled) {
       uniformBuffer.setTexture("terrainIdSampler", this._terrainIdTex);
@@ -1038,6 +1064,14 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       uniformBuffer.setTexture("terrainDetailSampler", this._terrainDetailTex);
       uniformBuffer.setTexture("terrainDetailNormalSampler", this._terrainDetailNormalTex);
       uniformBuffer.setTexture("terrainWakeSampler", wake?.texture ?? this._emptyWake);
+      uniformBuffer.setTexture("terrainBoreSampler", bore?.texture ?? this._emptyBore);
+    }
+
+    if (bore) {
+      const { minX, minZ, sizeX, sizeZ } = bore.bounds;
+      uniformBuffer.updateFloat4("terrainBoreBounds", minX, minZ, 1 / sizeX, 1 / sizeZ);
+    } else {
+      uniformBuffer.updateFloat4("terrainBoreBounds", 0, 0, 0, 0);
     }
 
     if (wake) {
@@ -1053,6 +1087,8 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     // scene-owned (WakeFieldManager) and not this plugin's to dispose.
     this._emptyWake?.dispose();
     this._emptyWake = null;
+    this._emptyBore?.dispose();
+    this._emptyBore = null;
   }
 
   getCustomCode(shaderType) {

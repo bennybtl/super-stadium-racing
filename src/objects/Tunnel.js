@@ -1,27 +1,29 @@
 import { Color3, Mesh, StandardMaterial, VertexData } from "@babylonjs/core";
 import {
   deriveTunnel,
+  stationsBetween,
   archContour,
+  tunnelCutReach,
   TUNNEL_LINING_THICKNESS,
   TUNNEL_FLOOR_DEPTH,
+  TUNNEL_FLOOR_LIFT,
+  TUNNEL_CUT_CLEARANCE,
+  TUNNEL_HEADWALL_EMBED,
 } from "../world/tunnel-geometry.js";
 
 const DEFAULT_LINING_COLOR = "#6b6660";
 const DEFAULT_FLOOR_COLOR = "#7a6548"; // packed-dirt brown until the floor gets the terrain look
 
-// Portal headwall: how far it reaches past the lining at the sides, above the
-// crown, and out from the portal toward the cutting.
-const HEADWALL_SIDE = 1.5;
-const HEADWALL_PARAPET = 1.2;
-const HEADWALL_DEPTH = 0.4;
 
 /**
  * Tunnel — the visible parts of a `tunnel` feature (see TUNNELS.md): the lining
- * (walls + arch) and floor slab swept along the centreline between the two
- * portals, and a flat headwall facade at each portal. Shape comes from
- * world/tunnel-geometry.js.
+ * (walls + arch) and floor slab swept along the centreline over the derived
+ * span, and a headwall block at each portal: its face stands
+ * TUNNEL_PORTAL_SETBACK out in front of the hill's portal face and it reaches
+ * back into the hill, covering the face the cut leaves (and the ground mesh's
+ * smear of it). Shape comes from world/tunnel-geometry.js.
  *
- * Phase 1 is visual only: not drivable, and the terrain still covers the mouths.
+ * Not drivable yet (Phase 3).
  *
  * Each part is a closed, outward-wound solid (back faces culled). None of them
  * cast shadows yet: the terrain isn't a shadow occluder, so geometry buried in
@@ -47,14 +49,16 @@ export class Tunnel {
     this._materials = [];
 
     const tunnel = deriveTunnel(feature, (x, z) => track.getHeightAt(x, z));
+    /** The derived shape (tunnel-geometry.js), or null for a degenerate feature. */
+    this.derived = tunnel;
     if (!tunnel) return;
-    const { stations, portals, profile } = tunnel;
+    const { stations, faces, span, profile } = tunnel;
+    const framesBetween = (s0, s1) => stationsBetween(tunnel, s0, s1)
+      .map((st) => ({ x: st.x, y: st.floorY, z: st.z, nx: st.nx, nz: st.nz }));
 
-    // Between the portals; the whole centreline when the hill never clears the
-    // crown (a visibly wrong placement the editor also flags).
-    let first = 0, last = stations.length - 1;
-    if (portals && portals.out > portals.in) ({ in: first, out: last } = portals);
-    const frames = stations.slice(first, last + 1).map((st) => ({ x: st.x, y: st.floorY, z: st.z, nx: st.nx, nz: st.nz }));
+    // The whole centreline when the hill never clears the crown (a visibly
+    // wrong placement the editor also flags).
+    const frames = framesBetween(span.start, span.end);
 
     const key = `${stations[0].x.toFixed(1)}_${stations[0].z.toFixed(1)}`;
     const lining = this._material(`tunnelLiningMat_${key}`, feature.liningColor ?? DEFAULT_LINING_COLOR);
@@ -67,18 +71,21 @@ export class Tunnel {
     const w = profile.halfWidth + TUNNEL_LINING_THICKNESS;
     this._addMesh(`tunnel_floor_${key}`, sweepSection(
       frames,
-      [{ u: w, v: 0 }, { u: -w, v: 0 }],
+      [{ u: w, v: TUNNEL_FLOOR_LIFT }, { u: -w, v: TUNNEL_FLOOR_LIFT }],
       [{ u: w, v: -TUNNEL_FLOOR_DEPTH }, { u: -w, v: -TUNNEL_FLOOR_DEPTH }],
     ), floor, scene);
 
-    if (portals) {
-      const facade = headwallContour(inner, w + HEADWALL_SIDE, tunnel.height + TUNNEL_LINING_THICKNESS + HEADWALL_PARAPET);
-      for (const [end, outward] of [[frames[0], -1], [frames[frames.length - 1], 1]]) {
-        // Tangent (direction of travel) is the left normal rotated −90°.
-        const tx = end.nz, tz = -end.nx;
-        const out = { ...end, x: end.x + tx * outward * HEADWALL_DEPTH, z: end.z + tz * outward * HEADWALL_DEPTH };
-        this._addMesh(`tunnel_headwall_${key}_${outward}`, sweepSection([end, out], inner, facade), lining, scene);
-      }
+    if (faces && faces.out > faces.in) {
+      // Wrapped around the lining (its opening is the lining's outer face, so
+      // no surface doubles the lining's inside), as wide and tall as the cut.
+      const facade = headwallContour(outer, tunnelCutReach(feature), tunnel.height + TUNNEL_CUT_CLEARANCE);
+      const blocks = [
+        [span.start, Math.min(faces.in + TUNNEL_HEADWALL_EMBED, faces.out)],
+        [Math.max(faces.out - TUNNEL_HEADWALL_EMBED, faces.in), span.end],
+      ];
+      blocks.forEach(([s0, s1], i) => {
+        if (s1 - s0 > 0.05) this._addMesh(`tunnel_headwall_${key}_${i}`, sweepSection(framesBetween(s0, s1), outer, facade), lining, scene);
+      });
     }
   }
 

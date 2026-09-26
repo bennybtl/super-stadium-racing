@@ -700,6 +700,10 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     attachTo?.kind === "obstacle"
       ? obstacleManager.findById(attachTo.id)
       : decorationManager.findById(attachTo.id));
+  // Tunnels before the steep-slope blockers, which stay out of the bores the
+  // tunnels publish (scene.metadata.tunnelBore). Not drivable yet — TUNNELS.md.
+  const tunnelManager = new TunnelManager(scene, currentTrack);
+  tunnelManager.rebuild();
   const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
     enabled: true,
     sampleStep: 3,
@@ -719,10 +723,6 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       bridgeMeshManager.create(feature);
     }
   }
-
-  // Tunnels (visual only so far — see TUNNELS.md).
-  const tunnelManager = new TunnelManager(scene, currentTrack);
-  tunnelManager.rebuild();
 
   // Shared, persistent tire marks — one ring-buffer mesh for every truck's
   // rubber, replayed from last session's save. Built only

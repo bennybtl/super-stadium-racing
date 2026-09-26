@@ -14,6 +14,7 @@ import {
   getEdgeShape,
 } from "./feature-geometry.js";
 import { usePrimaryTerrainWithBlend } from "./terrain-blend-utils.js";
+import { tunnelPath, tunnelCutReach, cutTunnelHeight } from "./tunnel-geometry.js";
 import { DEFAULT_BORDER_WALL } from "../objects/BorderWall.js";
 
 const TRACK_SCHEMA_VERSION = 3;
@@ -125,6 +126,8 @@ function invBilinear(px, pz, ax, az, bx, bz, cx, cz, dx, dz) {
 // track is discarded and nothing leaks into toJSON (unlike a property on the
 // feature). See _getExpandedPolyline.
 const _polylineExpansionCache = new WeakMap();
+// Same, for a tunnel's centreline path (tunnelPath) and its bounding box.
+const _tunnelPathCache = new WeakMap();
 
 // Cheap fingerprint of a control-point list. Changes whenever any coordinate,
 // per-point radius, uniform radius, point count, or closed-ness changes, so the
@@ -286,7 +289,48 @@ export class Track {
   // Get the height at a world position. `skip` optionally drops features from the
   // sum — the water builder uses it to read the ambient ground under a pool with
   // the pool itself, and anything sitting inside it, taken out.
+  //
+  // The additive features' sum (_uncutHeightAt), then each tunnel's cuttings,
+  // which cap it rather than add to it (see tunnel-geometry.js).
   getHeightAt(x, z, skip = null) {
+    let h = this._uncutHeightAt(x, z, skip);
+    for (const feature of this.features) {
+      if (feature?.type !== "tunnel") continue;
+      if (skip !== null && skip(feature)) continue;
+      const tp = this._getTunnelPath(feature);
+      if (!tp) continue;
+      const reach = tunnelCutReach(feature);
+      if (x < tp.minX - reach || x > tp.maxX + reach || z < tp.minZ - reach || z > tp.maxZ + reach) continue;
+      h = cutTunnelHeight(tp, feature, x, z, h, () => {
+        const { path } = tp;
+        const end = path[path.length - 1];
+        return [this._uncutHeightAt(path[0].x, path[0].z, skip), this._uncutHeightAt(end.x, end.z, skip)];
+      });
+    }
+    return h;
+  }
+
+  // Cached tunnelPath + its bounding box, keyed on the feature and invalidated
+  // by a fingerprint of its points (including their pinned floor heights).
+  _getTunnelPath(feature) {
+    const points = feature.points ?? [];
+    let pinned = 0;
+    for (let i = 0; i < points.length; i++) {
+      if (Number.isFinite(points[i].floorY)) pinned += (points[i].floorY + 1000) * (1.37 + i * 0.011);
+    }
+    const key = _polylineFingerprint(points, false, pinned);
+    const cached = _tunnelPathCache.get(feature);
+    if (cached && cached.key === key) return cached.tp;
+    const tp = tunnelPath(feature);
+    if (tp) {
+      tp.minX = Math.min(...tp.path.map((p) => p.x)); tp.maxX = Math.max(...tp.path.map((p) => p.x));
+      tp.minZ = Math.min(...tp.path.map((p) => p.z)); tp.maxZ = Math.max(...tp.path.map((p) => p.z));
+    }
+    _tunnelPathCache.set(feature, { key, tp });
+    return tp;
+  }
+
+  _uncutHeightAt(x, z, skip = null) {
     let totalHeight = 0;
 
     for (const raw of this.features) {
@@ -927,6 +971,12 @@ export class Track {
   // non-height feature types) — callers must treat null as "everywhere".
   getFeatureHeightBounds(feature) {
     switch (feature?.type) {
+      case "tunnel": {
+        const tp = this._getTunnelPath(feature);
+        if (!tp) return null;
+        const r = tunnelCutReach(feature);
+        return { minX: tp.minX - r, maxX: tp.maxX + r, minZ: tp.minZ - r, maxZ: tp.maxZ + r };
+      }
       case "hill": {
         const { radiusX, radiusZ, jitter } = getHillEllipseParams(feature);
         const r = Math.max(radiusX, radiusZ) * (1 + jitter);

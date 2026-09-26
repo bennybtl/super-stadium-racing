@@ -5,7 +5,7 @@
     @close="editor.featureAction('closeTunnel')"
   >
     <div class="text-[10px] text-slate-400 mb-3 max-w-48">
-      Shape the hill and the cuttings into it first, then right-click to lay the centreline from one cutting floor to the other. Press <kbd>Esc</kbd> to close the panel.
+      Right-click to lay the centreline through the hill. The line drawn outside the hill at each end is cut down to the tunnel floor, which meets the ground at the two end points. Press <kbd>Esc</kbd> to close the panel.
     </div>
 
     <div v-if="editor.tunnel.status" class="text-[10px] mb-3 max-w-48" style="color: #ff9800;">

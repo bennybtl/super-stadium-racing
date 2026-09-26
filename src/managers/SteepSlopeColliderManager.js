@@ -22,6 +22,11 @@ const MIN_FOOTPRINT = 0.5;
  *
  * These colliders are consumed by StaticBodyCollisionManager via metadata:
  *   mesh.metadata.truckCollider = true
+ *
+ * Cells whose blocker would reach down into a tunnel bore
+ * (`scene.metadata.tunnelBore`, published by TunnelManager — build tunnels
+ * first) are skipped, or the steep hill face around a portal would wall off
+ * the mouth.
  */
 export class SteepSlopeColliderManager {
   constructor(scene, track, options = {}) {
@@ -52,16 +57,32 @@ export class SteepSlopeColliderManager {
     const steep = Array.from({ length: rows }, () => Array(cols).fill(false));
     const heights = Array.from({ length: rows }, () => Array(cols).fill(0));
 
+    const bore = this.scene.metadata?.tunnelBore ?? null;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const x = originX + c * step;
         const z = originZ + r * step;
         heights[r][c] = this.track.getHeightAt(x, z);
-        steep[r][c] = this._slopeDegAt(x, z, step * 0.5) > this.options.maxSlopeDeg;
+        steep[r][c] = this._slopeDegAt(x, z, step * 0.5) > this.options.maxSlopeDeg &&
+          !(bore && this._reachesIntoBore(bore, x, z, heights[r][c] - this.options.wallBelow, step));
       }
     }
 
     this._buildMergedBlockers(steep, heights, originX, originZ, step);
+  }
+
+  /**
+   * True when a blocker over the cell centred on (x, z), with its bottom at
+   * `bottomY`, would dip below a tunnel roof — sampled at the centre and the
+   * (padded) corners, since the cell is wider than the bore raster's texels.
+   */
+  _reachesIntoBore(bore, x, z, bottomY, step) {
+    const h = Math.max(MIN_FOOTPRINT, step + this.options.padding * 2) / 2;
+    for (const [dx, dz] of [[0, 0], [-h, -h], [h, -h], [-h, h], [h, h]]) {
+      const b = bore.sample(x + dx, z + dz);
+      if (b && bottomY < b.ceilingY) return true;
+    }
+    return false;
   }
 
   _slopeDegAt(x, z, d) {

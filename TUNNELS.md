@@ -4,8 +4,8 @@ Add a `tunnel` track feature: a drivable passage that goes *through* terrain
 (a hill, a mesa), with portals at each end, and the hill above it staying
 drivable and decorated as normal.
 
-Status: **Phase 1 done** (Sept 26 2026): tunnels render and are editable;
-not drivable yet, and the terrain still covers the mouths. Phase 2 is next.
+Status: **Phase 2 done** (Sept 26 2026): tunnels render, are editable, and
+their mouths are open; not drivable yet. Phase 3 is next.
 
 ## Why this is a new concept
 
@@ -56,13 +56,15 @@ same rule that already puts a truck on or under a bridge deck.
 }
 ```
 
-**The author shapes the terrain.** There is no automatic trench: the author
-builds the hill and the cuttings leading to each portal with the existing
-terrain tools (hills, terrain paths), then lays the tunnel's centreline from
-one cutting to the other.
+**The author shapes the hill; the tunnel cuts the approaches.** The author
+builds the hill with the existing terrain tools and draws the centreline
+through it; the stretch drawn outside the hill at each end becomes a cutting.
+(The original plan left the cuttings to the author too, but the terrain is a
+sum of additive features, which can't carve a level floor into a slope — see
+Cuttings below.)
 
 **Auto floor:** the floor ramps linearly between the terrain heights at the
-two ends of the centreline (which sit on the cutting floors). A control
+two ends of the centreline (the uncut terrain, where each cutting meets it). A control
 point's `floorY` pins the floor there, for dips and climbs inside the tunnel.
 (Per point rather than a parallel array, so inserting and deleting points in
 the editor can't misalign them.) The
@@ -70,6 +72,37 @@ the editor can't misalign them.) The
 rises above the crown (`floor + height`). Where the hill, having risen to
 `cover` above the lining, dips below that again, the editor shows a warning
 (not a fix); the ramps up from the portals don't count.
+
+**Cuttings.** `Track.getHeightAt` is the additive features' sum
+(`_uncutHeightAt`), then each tunnel's cut (`cutTunnelHeight`), which caps it
+instead of adding to it: along the drawn centreline, ground lower than the
+headwall top (crown + `TUNNEL_CUT_CLEARANCE`) is capped to a trench, level at
+the floor across the bore, sides rising at `TUNNEL_CUT_SIDE_SLOPE`. Ground
+already above the headwall top is left alone, which keeps the hill over the
+tunnel and leaves a vertical portal face where the hill rises past it; the
+headwall is sized to cover exactly that face. Capping never raises ground, and
+at the drawn ends the floor meets the terrain, so each cutting blends out.
+Being in `getHeightAt`, the mesh, physics, wear and the steep-slope blockers all
+see it. The portals the geometry finds (on the cut terrain) land where the cut
+makes the face, with no feedback loop: the floor comes from the uncut terrain.
+**Portal setback.** That face is a vertical step in the height field, but the
+ground mesh has a vertex only every metre or so, which smears it into a steep
+ramp up to a cell diagonal wide; left in front of the headwall it covered the
+bottom of the mouth, and the steep-slope blockers walled it off. So the faces
+are found exactly (bisection between stations), and the lining and headwall
+start `TUNNEL_PORTAL_SETBACK` (2 m) out in front of each face; the headwall is
+a block reaching back into the hill past the face, and the cut carries on
+under it to the face, so the smear sits inside the bore (hidden, discarded,
+no blockers). The slab top is lifted 10 cm over the floor and the shader
+discards ground more than 5 cm above it, overlapping so no band of ground is
+neither covered nor discarded (the mesh rises a little off the floor near the
+walls, and the bore texture's floor steps by slope × half a texel); ground
+exactly at the floor, the cutting in front of the headwall, is kept. Phase 3's
+floor layer should sit at the slab top, a 10 cm lip at the lining's start.
+
+Known gap: the editor's dirty-region terrain rebuild won't redo a whole cutting
+when another feature moves the terrain under a tunnel's *end* (the floor
+changes); a full rebuild or a tunnel edit fixes it.
 
 **Derived once per build** in `world/tunnel-geometry.js` (`deriveTunnel`),
 shared by the mesh, the editor and later physics and the shader:
@@ -79,7 +112,8 @@ shared by the mesh, the editor and later physics and the shader:
 - the portal stations and the low-cover flags (done),
 - the bore profile, `archContour` (done),
 - a `heightAt(x, z)` for the floor layer, null outside the footprint (Phase 3),
-- `isInsideBore(x, y, z)` (Phase 2).
+- the bore raster, `rasterizeBores` / `sampleBore` (Phase 2, done): floor Y,
+  roof Y and an inside flag on a 4-per-metre grid over the tunnels' box.
 
 Rendering, physics and the shader all read this one derivation, so they can't
 drift apart. This avoids repeating the three-copies problem the deck height
@@ -117,7 +151,16 @@ terrain.
 Done when: tunnels render and are editable, but the terrain still covers the
 mouth.
 
-### Phase 2: open the terrain
+### Phase 2: open the terrain — done
+
+`TunnelManager` rasterizes the bores (between the portals, plus the headwall
+depth) and publishes them as `scene.metadata.tunnelBore`, a float texture with
+world bounds, the same pattern as the wake field. The ground shader does one
+lookup per fragment and discards ground between the floor and the roof; bridge
+decks, which share the plugin, don't. `SteepSlopeColliderManager` skips cells
+whose blocker would dip below a tunnel roof (tunnels are now built before it).
+Plus the cuttings (above): the tunnel caps the terrain along its drawn
+approaches, and the editor rebuilds the ground on tunnel edits.
 
 - **Bore discard in the ground shader.** Pass the tunnel segments to the ground
   shader (as a uniform array with a small cap, or a baked texture if tracks
@@ -183,7 +226,10 @@ Go through `getHeightAt` callers and pick layer-aware sampling where it matters:
 
 1. **Visibility:** silhouette first.
 2. **Prerequisite:** the full surface-layer refactor (done).
-3. **Approach cuttings:** the author shapes the terrain; no automatic trench.
+3. **Approach cuttings:** first "the author shapes the terrain", revised the
+   same day once it was clear the additive terrain can't carve a level floor:
+   the tunnel cuts its approaches along the stretch the author draws outside
+   the hill.
 4. **Checkpoints:** none inside tunnels.
 
 ## Risks

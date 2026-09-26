@@ -3,7 +3,7 @@ import rebuild from './editor-rebuild.js';
 import { LINE_COLOR_TUNNEL, LINE_COLOR_TUNNEL_WARN, LINE_COLOR_TUNNEL_PORTAL } from './EditorMaterials.js';
 import { gizmoY, gizmoLineY } from './gizmo-height.js';
 import { PolyPointEditor } from './PolyPointEditor.js';
-import { deriveTunnel, TUNNEL_DEFAULTS } from '../world/tunnel-geometry.js';
+import { deriveTunnel, stationsBetween, TUNNEL_DEFAULTS } from '../world/tunnel-geometry.js';
 
 const toColor4 = (c) => new Color4(c.r, c.g, c.b, 1);
 const LINE = toColor4(LINE_COLOR_TUNNEL);
@@ -13,8 +13,8 @@ const PORTAL = toColor4(LINE_COLOR_TUNNEL_PORTAL);
 /**
  * TunnelEditor — place and edit tunnel features (see TUNNELS.md). The shared
  * control-point machinery lives in PolyPointEditor; right-click terrain to add
- * centreline points, starting and ending on the floors of the cuttings you
- * shaped leading into the hill.
+ * centreline points. The stretch drawn outside the hill at each end becomes a
+ * cutting, carved down to the floor, which meets the terrain at the two ends.
  *
  * The preview line follows the tunnel's real (corner-rounded) centreline and
  * shows what the geometry derivation found: red where the hill above is less
@@ -43,7 +43,7 @@ export class TunnelEditor extends PolyPointEditor {
   _buildLine(feature) {
     const tunnel = feature.points?.length >= 2 ? this._derive(feature) : null;
     if (!tunnel) return super._buildLine(feature);
-    const { stations, portals, lowCover } = tunnel;
+    const { stations, portals, faces, lowCover } = tunnel;
     const lines = [], colors = [];
     const lineY = (st) => gizmoLineY(this.track, st.x, st.z);
     for (let k = 1; k < stations.length; k++) {
@@ -52,9 +52,8 @@ export class TunnelEditor extends PolyPointEditor {
       lines.push([new Vector3(a.x, lineY(a), a.z), new Vector3(b.x, lineY(b), b.z)]);
       colors.push([c, c]);
     }
-    if (portals) {
-      for (const k of [portals.in, portals.out]) {
-        const st = stations[k];
+    if (faces) {
+      for (const st of [stationsBetween(tunnel, faces.in, faces.in)[0], stationsBetween(tunnel, faces.out, faces.out)[0]]) {
         lines.push([new Vector3(st.x, st.floorY, st.z), new Vector3(st.x, gizmoY(this.track, st.x, st.z), st.z)]);
         colors.push([PORTAL, PORTAL]);
       }
@@ -64,7 +63,14 @@ export class TunnelEditor extends PolyPointEditor {
     return ls;
   }
 
+  // The tunnel cuts its approaches into the terrain (tunnel-geometry.js), so an
+  // edit rebuilds the ground like any height feature, then the tunnel itself.
   _rebuildGeometry(feature) {
+    rebuild.terrain?.(feature ?? null);
+    rebuild.terrainGrid?.();
+    rebuild.terrainTexture?.();
+    rebuild.normalMap?.();
+    rebuild.water?.();
     rebuild.tunnel?.(feature ?? null);
   }
 
