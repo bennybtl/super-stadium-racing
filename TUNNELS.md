@@ -4,7 +4,8 @@ Add a `tunnel` track feature: a drivable passage that goes *through* terrain
 (a hill, a mesa), with portals at each end, and the hill above it staying
 drivable and decorated as normal.
 
-Status: **Proposed** (Sept 25 2026). Nothing implemented.
+Status: **Planned** (Sept 26 2026). Decisions made (see below); the
+prerequisite is done, Phase 1 is next.
 
 ## Why this is a new concept
 
@@ -28,31 +29,18 @@ assumptions:
 - **Terrain side systems.** `SteepSlopeColliderManager` would put blockers on
   the portal face, and the AI blocked grid is 2D only.
 
-## Prerequisite: layered surface sampling
+## Prerequisite: layered surface sampling (done)
 
-The tunnel should be built on the "surface layers" refactor from the surface
-review (suggestion A): a list of drivable layers, each with a flat footprint
-and a `heightAt(x, z)`, and one query:
-
-```js
-surfaces.sample(x, z, refY) // → { y, normal, layer } | null
-// = the highest layer at or below refY + stepTolerance
-```
+Landed as the surface-layer refactor (plan A, Sept 2026): `TerrainQuery`
+answers from `DriveSurfaceManager.layers` (`world/surface-layers.js`), with no
+raycasts. `SurfaceLayers.sample(x, z, fromY)` takes the surface at or below
+`fromY` (allowing a small penetration), with a limited upward fallback (at most
+1 m) for a truck that has sunk into a slope.
 
 A tunnel floor is then just another layer. Inside the tunnel the truck's
-`refY` is far below the hilltop, so the ground layer is skipped and the floor
+`fromY` is far below the hilltop, so the ground is out of reach and the floor
 wins, with no special casing. On the hill above, the ground wins. This is the
 same rule that already puts a truck on or under a bridge deck.
-
-**Alternative (not recommended):** register the tunnel floor as a raycast
-drive mesh in `DriveSurfaceManager`. The down-ray from just above the truck
-would find it, but every `getHeightAt` caller would still be wrong, and the
-upward-fallback / `maxUpwardRise` logic would be one more thing to reason
-about under a roof.
-
-Deliverable for this phase: `surfaces.sample` exists, `TerrainPhysics` and
-respawn use it, and `check:surface` / `check:physics` goldens are unchanged on
-existing tracks.
 
 ## Data model
 
@@ -64,17 +52,22 @@ existing tracks.
   height: 6,                  // clearance, floor to crown (m)
   floorHeights: null,         // optional per-point floor Y override; null = auto
   cover: 2,                   // min terrain above the crown for a portal (m)
-  approach: true,             // carve an open trench out to each portal
-  approachLength: 12,
   liningColor: '#6b6660',     // walls + arch
   floorColor: null,           // null = terrain look, like bridge decks
 }
 ```
 
-**Auto floor:** find the two portal stations where the terrain above the
-centreline first rises above `floor + height + cover`, and ramp the floor
-linearly between the terrain heights there. Per-point `floorHeights` override
-this for dips and climbs inside the tunnel.
+**The author shapes the terrain.** There is no automatic trench: the author
+builds the hill and the cuttings leading to each portal with the existing
+terrain tools (hills, terrain paths), then lays the tunnel's centreline from
+one cutting to the other.
+
+**Auto floor:** the floor ramps linearly between the terrain heights at the
+two ends of the centreline (which sit on the cutting floors). Per-point
+`floorHeights` override this for dips and climbs inside the tunnel. The
+**portals** are the stations where the terrain above the centreline first
+rises above the crown (`floor + height`); a stretch whose terrain is less than
+`cover` above the crown is shown as a warning in the editor, not fixed up.
 
 **Derived once per build** (in a `tunnel-geometry.js`, shared by rendering,
 physics and the shader):
@@ -118,11 +111,6 @@ mouth.
   the centreline under half the width, and height between floor and crown.
   Inside the hill the terrain is above the crown, so this only ever removes the
   triangles across each mouth. Portal headwalls hide the uneven edge.
-- **Approach trench.** A negative-height polyline contribution in
-  `getHeightAt`, from each portal outward over `approachLength`, blended with
-  `blendWidth` like the polyHill falloff. It lowers the terrain to the floor
-  line so the tunnel has a cutting leading into it, instead of a hole halfway
-  up a slope.
 - `SteepSlopeColliderManager`: skip cells inside the tunnel footprint near the
   portals.
 - Ground Havok MESH (obstacles only): the portal-face triangles still block
@@ -141,21 +129,20 @@ Done when: you can fly the free camera through an open tunnel.
   while on a tunnel layer, and kill upward velocity. It's cheaper and more
   predictable than roof colliders, and jumping into the roof should feel like
   a thud.
-- Headless check: add a `check:physics` scenario that drives straight through a
-  tunnel under a hill, asserting the floor contact, no snap to the hilltop at
+- Headless check: add a `check:collision` scenario (it already builds real
+  surface layers and colliders) that drives straight through a tunnel under a
+  hill, asserting the floor contact, no snap to the hilltop at
   the portals, and no wall clipping.
 
 Done when: the player can drive through.
 
 ### Phase 4: visibility and lighting
 
-- **Seeing the truck.** Two options (see open questions):
-  1. **Silhouette:** draw trucks a second time with an inverted depth test
-     (depth-func GREATER) as a flat outline colour, so they show through the
-     hill. Cheap, easy to read, standard in isometric games.
-  2. **Cutaway:** in the ground and lining shaders, dither out a screen-space
-     circle around each truck that's inside a tunnel. It looks nicer and shows
-     the interior, but costs more and cuts holes in the hill decorations too.
+- **Seeing the truck: silhouette.** Draw trucks a second time with an
+  inverted depth test (depth-func GREATER) as a flat outline colour, so they
+  show through the hill. Cheap, easy to read, standard in isometric games. (A
+  cutaway, a dithered screen-space hole in the hill around the truck, was the
+  alternative; it can come later if the silhouette isn't enough.)
 - **Interior darkness.** The lining roof casts onto the floor under the sun
   shadow. Ambient still leaks, so add a per-truck `tunnelDarkness` (0 at a
   portal, rising to 1 a few metres in) that tints the truck materials, plus a
@@ -169,30 +156,25 @@ Go through `getHeightAt` callers and pick layer-aware sampling where it matters:
 
 | System | v1 decision |
 |---|---|
-| Respawn / AI recovery | `surfaces.sample` with the gate's or path's `refY` |
-| Checkpoints | Give features an optional `layer`/`refY`; simplest v1 is to **block gates inside a tunnel footprint** in `CheckpointEditor` |
+| Respawn / AI recovery | `surfaceHeightAt` with the gate's or path's Y as `fromY` |
+| Checkpoints | **Not allowed inside a tunnel.** `CheckpointEditor` refuses to place or move a gate inside a tunnel footprint |
 | AI path | Waypoints inside a footprint take the floor Y; the 2D blocked grid gets the tunnel walls. Known limit: hill cells directly above the walls count as blocked too |
 | Wear / tire ruts bake | Mask the tunnel footprint out of the ground wear bake (like the deck wear split in terrain-utils), or wear prints on the hilltop |
 | Decals, tire marks | Resolve the target by layer; ground decals don't project into tunnels in v1 |
-| Grass / dirt scatter, decorations | Leave them on the hilltop (correct). Keep them off the approach trench |
+| Grass / dirt scatter, decorations | Leave them on the hilltop (correct). The cuttings are ordinary author-shaped terrain |
 | Minimap | Draw the tunnel as a dashed corridor |
 | Water | Not supported inside tunnels in v1 |
 
-## Open questions for Ben
+## Decisions (Ben, Sept 26 2026)
 
-1. **Visibility:** silhouette (cheap, clear) or cutaway (prettier, costlier)?
-   I'd start with the silhouette.
-2. **Scope of the prerequisite:** do the full surface-layer refactor first, or
-   a minimal `surfaces.sample` covering ground + decks + tunnels behind the
-   existing `TerrainQuery` API?
-3. **Should the approach trench be automatic**, or should tunnels require the
-   author to shape the hill and cutting with existing hills/paths?
-4. **Checkpoints inside tunnels:** block them for v1, or add a `layer` to
-   checkpoint features now?
+1. **Visibility:** silhouette first.
+2. **Prerequisite:** the full surface-layer refactor (done).
+3. **Approach cuttings:** the author shapes the terrain; no automatic trench.
+4. **Checkpoints:** none inside tunnels.
 
 ## Risks
 
-- Portal transitions are the most fragile part: the approach trench, the bore
+- Portal transitions are the most fragile part: the cutting, the bore
   discard, the headwall and the layer switch all meet there. Build the Phase 3
   headless scenario early and keep it in CI.
 - The bore discard costs a per-fragment test on the whole ground. Early-out on

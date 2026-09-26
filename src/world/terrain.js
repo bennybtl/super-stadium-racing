@@ -116,7 +116,7 @@ export const TERRAIN_TYPES = {
     gripMultiplier: 0.15,     // Slippery, especially when wet
     color: TERRAIN_COLORS.grass, // Green grass
     dustIntensity: 0.12,     // Light clippings/haze
-    diffuseTexture: 'textures/grass.texture.jpg',
+    diffuseTexture: 'textures/grass_1.texture.jpg',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 1.2,     // Slightly slows down
@@ -131,7 +131,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.loose_dirt,
     dustIntensity: 0.25,     // Light clippings/haze
     roosterTail: 0.5,        // Tires throw a rooster tail under throttle
-    diffuseTexture: 'textures/grass_2.texture.jpg',
+    diffuseTexture: 'textures/weeds.texture.jpg',
     diffuseTextureWorldUnitsPerTile: 40,
     diffuseTextureOpacity: 0.9,
     dustIntensity: 0.35,      // Loose — kicks up readily
