@@ -499,7 +499,9 @@
       "terrainType": "water",
       "edgeShape": 1.15,
       "flatTop": 0.4,
-      "blendWidth": 1
+      "blendWidth": 1,
+      "jitter": 0.15,
+      "jitterSeed": 3443
     },
     {
       "type": "hill",
@@ -512,7 +514,9 @@
       "waterLevelOffset": 0.9,
       "terrainType": "water",
       "edgeShape": 1.15,
-      "flatTop": 0.4
+      "flatTop": 0.4,
+      "jitter": 0.1,
+      "jitterSeed": 122
     },
     {
       "type": "hill",
@@ -525,7 +529,9 @@
       "waterLevelOffset": 2,
       "terrainType": "water",
       "edgeShape": 1.15,
-      "flatTop": 0.4
+      "flatTop": 0.4,
+      "jitter": 0.14,
+      "jitterSeed": 5437
     },
     {
       "type": "squareHill",
@@ -539,7 +545,9 @@
       "transition": 15,
       "terrainType": "water",
       "edgeShape": 0.8,
-      "blendWidth": 3.5
+      "blendWidth": 3.5,
+      "jitter": 0.15,
+      "jitterSeed": 7287
     },
     {
       "type": "squareHill",
@@ -2150,39 +2158,6 @@
       "scale": 1,
       "height": 7.5,
       "heading": 2.530727415391778
-    },
-    {
-      "type": "obstacle",
-      "obstacleType": "barrel",
-      "x": -28.32138079733792,
-      "z": 20.76480037589052,
-      "angle": 1.9547687622336491,
-      "scale": 1,
-      "count": 1,
-      "weight": 20,
-      "color": "black"
-    },
-    {
-      "type": "obstacle",
-      "obstacleType": "barrel",
-      "x": 38.43398729216362,
-      "z": 25.762462832473734,
-      "angle": 1.9547687622336491,
-      "scale": 1,
-      "count": 1,
-      "weight": 20,
-      "color": "black"
-    },
-    {
-      "type": "obstacle",
-      "obstacleType": "barrel",
-      "x": 44.49481071229551,
-      "z": -35.21622709841746,
-      "angle": 1.9547687622336491,
-      "scale": 1,
-      "count": 1,
-      "weight": 20,
-      "color": "black"
     },
     {
       "type": "model",

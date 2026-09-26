@@ -3,7 +3,7 @@ import rebuild from './editor-rebuild.js';
 import { EditorMaterials } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../world/terrain.js";
 import { gizmoY } from './gizmo-height.js';
-import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../world/feature-geometry.js';
+import { clampEdgeShape, EDGE_SHAPE_DEFAULT, HILL_JITTER_MAX } from '../world/feature-geometry.js';
 
 /**
  * SquareHillEditor – encapsulates all square-hill editing logic that was
@@ -304,6 +304,7 @@ export class SquareHillEditor {
     s.squareHill.depth       = feature.depth ?? feature.width;
     s.squareHill.transition  = feature.transition ?? 8;
     s.squareHill.edgeShape   = feature.edgeShape ?? EDGE_SHAPE_DEFAULT;
+    s.squareHill.jitter      = feature.jitter ?? 0;
     s.squareHill.angle       = feature.angle ?? 0;
     s.squareHill.waterLevelOffset = feature.waterLevelOffset ?? 1;
     s.squareHill.slopeMode   = sloped;
@@ -384,6 +385,25 @@ export class SquareHillEditor {
     if (!this.selected) return;
     this.editor.saveSnapshot(true);
     this.selected.feature.edgeShape = clampEdgeShape(val);
+    this.rebuildTerrain();
+  }
+
+  /** Radial wobble of the outline, as a fraction of the half extents. */
+  changeJitter(val) {
+    if (!this.selected) return;
+    this.editor.saveSnapshot(true);
+    const f = this.selected.feature;
+    f.jitter = Math.min(HILL_JITTER_MAX, Math.max(0, val));
+    // Seed once so each hill gets its own outline that survives moves/resizes.
+    if (f.jitter > 0 && f.jitterSeed === undefined) f.jitterSeed = Math.floor(Math.random() * 10000);
+    this.rebuildTerrain();
+  }
+
+  /** New random outline at the same jitter amount. */
+  rerollJitter() {
+    if (!this.selected) return;
+    this.editor.saveSnapshot();
+    this.selected.feature.jitterSeed = Math.floor(Math.random() * 10000);
     this.rebuildTerrain();
   }
 

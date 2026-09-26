@@ -7,6 +7,7 @@
   "grassBlades": true,
   "oobDeadSpace": true,
   "allowReverse": true,
+  "stadiumLighting": false,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
@@ -533,8 +534,8 @@
           "z": -41.75
         },
         {
-          "x": -15.379999999999999,
-          "z": 7.350000000000001
+          "x": -14.379999999999999,
+          "z": 5.850000000000001
         },
         {
           "x": 9.870000000000001,
@@ -737,7 +738,9 @@
       "transition": 3,
       "terrainType": "water",
       "edgeShape": 0.8,
-      "blendWidth": 3
+      "blendWidth": 3,
+      "jitter": 0.29,
+      "jitterSeed": 1258
     },
     {
       "type": "hill",
@@ -749,7 +752,9 @@
       "height": -2,
       "waterLevelOffset": 2,
       "terrainType": "water",
-      "blendWidth": 2.5
+      "blendWidth": 2.5,
+      "jitter": 0.32,
+      "jitterSeed": 349
     },
     {
       "type": "hill",
@@ -761,7 +766,9 @@
       "height": -2,
       "waterLevelOffset": 2,
       "terrainType": "water",
-      "blendWidth": 3.5
+      "blendWidth": 3.5,
+      "jitter": 0.12,
+      "jitterSeed": 4863
     },
     {
       "type": "model",
@@ -826,7 +833,9 @@
       "blendWidth": 1.5,
       "reverseOverride": {
         "angle": 0
-      }
+      },
+      "jitter": 0.22,
+      "jitterSeed": 5909
     },
     {
       "type": "hill",
@@ -890,7 +899,7 @@
       "centerZ": -24.23094058290997,
       "width": 18,
       "depth": 18,
-      "angle": 90,
+      "angle": 81,
       "waterLevelOffset": 0,
       "transition": 4,
       "terrainType": "rocky",
@@ -898,7 +907,8 @@
       "heightAtMax": 2,
       "reverseOverride": {
         "angle": 270
-      }
+      },
+      "blendWidth": 1.5
     },
     {
       "type": "squareHill",
@@ -906,7 +916,7 @@
       "centerZ": 3.7690594170900305,
       "width": 18,
       "depth": 18,
-      "angle": 89,
+      "angle": 102,
       "waterLevelOffset": 0,
       "transition": 4,
       "terrainType": "rocky",
@@ -914,15 +924,16 @@
       "heightAtMax": 2,
       "reverseOverride": {
         "angle": 269
-      }
+      },
+      "blendWidth": 1.5
     },
     {
       "type": "squareHill",
-      "centerX": -68.45119009008427,
+      "centerX": -69.95119009008427,
       "centerZ": 32.26905941709003,
       "width": 18,
       "depth": 18,
-      "angle": 90,
+      "angle": 78,
       "waterLevelOffset": 0,
       "transition": 4,
       "terrainType": "rocky",
@@ -930,7 +941,8 @@
       "heightAtMax": 2,
       "reverseOverride": {
         "angle": 270
-      }
+      },
+      "blendWidth": 1
     },
     {
       "type": "hill",
@@ -1424,7 +1436,9 @@
       "height": -2,
       "waterLevelOffset": 0,
       "transition": 5,
-      "terrainType": "rocky"
+      "terrainType": "rocky",
+      "jitter": 0.33,
+      "jitterSeed": 1259
     },
     {
       "type": "polyHill",
@@ -1552,13 +1566,14 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 37.14080855469059,
-      "z": -79.4610188998573,
+      "x": 49.27474112633154,
+      "z": -55.372992576489565,
       "color": "yellow",
       "scale": 1,
       "seed": 21,
       "radius": 0.6,
-      "collider": true
+      "collider": false,
+      "preset": "outcrop"
     },
     {
       "type": "model",
@@ -1569,18 +1584,20 @@
       "scale": 1,
       "seed": 21,
       "radius": 0.6,
-      "collider": false
+      "collider": false,
+      "preset": "slab"
     },
     {
       "type": "model",
       "model": "rock",
-      "x": 31.288297962731008,
+      "x": 30.788297962731008,
       "z": -79.27594433284978,
       "color": "yellow",
-      "scale": 1,
+      "scale": 1.4,
       "seed": 10,
       "radius": 0.6,
-      "collider": true
+      "collider": true,
+      "preset": "granite"
     },
     {
       "type": "model",
@@ -1597,14 +1614,15 @@
     {
       "type": "model",
       "model": "rock",
-      "x": -2.0639472664735905,
-      "z": -46.961324070085865,
+      "x": -1.0639472664735905,
+      "z": -45.461324070085865,
       "color": "yellow",
       "scale": 2.6,
       "seed": 8,
       "radius": 0.6,
       "collider": true,
-      "heading": 1.710422666954443
+      "heading": 1.710422666954443,
+      "preset": "outcrop"
     },
     {
       "type": "model",
@@ -1633,8 +1651,8 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 0.9360527335264095,
-      "z": -36.961324070085865,
+      "x": -0.5639472664735905,
+      "z": -38.461324070085865,
       "color": "yellow",
       "scale": 1.4,
       "seed": 3,
@@ -1645,7 +1663,7 @@
     {
       "type": "model",
       "model": "rock",
-      "x": -7.56515852181628,
+      "x": -10.56515852181628,
       "z": -50.23361031476889,
       "color": "yellow",
       "scale": 1.4,
@@ -1657,18 +1675,6 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 54.20927726457914,
-      "z": 30.31079597486102,
-      "color": "yellow",
-      "scale": 1.2,
-      "seed": 14,
-      "radius": 0.6,
-      "collider": true,
-      "heading": 1.710422666954443
-    },
-    {
-      "type": "model",
-      "model": "rock",
       "x": 56.029686794759584,
       "z": 25.628819047019526,
       "color": "yellow",
@@ -1676,19 +1682,21 @@
       "seed": 15,
       "radius": 0.6,
       "collider": true,
-      "heading": 0.8028514559173916
+      "heading": 0.8028514559173916,
+      "preset": "outcrop"
     },
     {
       "type": "model",
       "model": "rock",
-      "x": 57.029686794759584,
-      "z": 32.128819047019526,
+      "x": 56.529686794759584,
+      "z": 40.628819047019526,
       "color": "yellow",
       "scale": 2.6,
       "seed": 15,
       "radius": 0.6,
       "collider": true,
-      "heading": 1.9722220547535925
+      "heading": 1.9722220547535925,
+      "preset": "outcrop"
     },
     {
       "type": "model",
@@ -1755,6 +1763,239 @@
       "depth": 20,
       "rotation": 0,
       "blendWidth": 2.5
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 31.452650122150075,
+      "z": -77.91659374642096,
+      "color": "yellow",
+      "scale": 1.32,
+      "seed": 29,
+      "radius": 0.6,
+      "collider": true,
+      "preset": "granite",
+      "heading": 3.2416647486112757
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 33.05595556975335,
+      "z": -79.66268104594019,
+      "color": "yellow",
+      "scale": 1.53,
+      "seed": 32,
+      "radius": 0.6,
+      "collider": true,
+      "preset": "granite",
+      "heading": 3.441395637979959
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 25.37587000578062,
+      "z": -79.00319745033488,
+      "color": "yellow",
+      "scale": 1.8,
+      "seed": 27,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "slab",
+      "heading": 3.6838896365379923
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 26.78802630649022,
+      "z": -81.93338396410141,
+      "color": "yellow",
+      "scale": 1.6,
+      "seed": 15,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "slab",
+      "heading": 2.5473368928920572
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 44.74786716241712,
+      "z": -54.42306147942379,
+      "color": "yellow",
+      "scale": 1.11,
+      "seed": 14,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 0.39226363049765123
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 47.520126001931104,
+      "z": -52.45675486733331,
+      "color": "yellow",
+      "scale": 2,
+      "seed": 21,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 3.527576821588531
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 45.650351066432854,
+      "z": -51.32190905472275,
+      "color": "yellow",
+      "scale": 1.8,
+      "seed": 10,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 3.141592653589793
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 49.84425309948344,
+      "z": -52.25918196099369,
+      "color": "yellow",
+      "scale": 1.6,
+      "seed": 18,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 3.3111363872089563
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 52.42343558742464,
+      "z": -51.06114056344136,
+      "color": "yellow",
+      "scale": 1.66,
+      "seed": 3,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 2.154248194480912
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 50.04120324575827,
+      "z": -50.19195060706218,
+      "color": "yellow",
+      "scale": 1.92,
+      "seed": 34,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 1.8804374872994751
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 56.850688181730995,
+      "z": 22.71391379980147,
+      "color": "yellow",
+      "scale": 3.08,
+      "seed": 32,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 0.46599391436919324,
+      "preset": "outcrop"
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -45.59705389811506,
+      "z": 59.13158472204161,
+      "color": "yellow",
+      "scale": 2.24,
+      "seed": 12,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 5.308913319506921,
+      "preset": "outcrop"
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -48.29367305356783,
+      "z": 55.39270562062334,
+      "color": "yellow",
+      "scale": 1.95,
+      "seed": 31,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 5.948366373216434,
+      "preset": "outcrop"
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -51.20304866909247,
+      "z": 56.10103042760787,
+      "color": "yellow",
+      "scale": 1.77,
+      "seed": 2,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 3.2366959939705047,
+      "preset": "outcrop"
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -50.417893942100314,
+      "z": 53.36216445108498,
+      "color": "yellow",
+      "scale": 2.02,
+      "seed": 31,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 0.4183598541420118,
+      "preset": "outcrop"
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -41.60447156577133,
+      "z": 56.69979580510578,
+      "color": "yellow",
+      "scale": 2.37,
+      "seed": 35,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.7153368844731542,
+      "preset": "outcrop"
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 2.752331235112194,
+      "z": -47.199284752288065,
+      "color": "yellow",
+      "scale": 2.61,
+      "seed": 12,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.7387770593728433,
+      "preset": "outcrop"
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -18.59842411024514,
+      "z": -51.725134514723486,
+      "color": "yellow",
+      "scale": 1.45,
+      "seed": 12,
+      "radius": 0.6,
+      "collider": true,
+      "heading": 1.526381883992626
     }
   ]
 }

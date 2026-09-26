@@ -2,7 +2,7 @@ import rebuild, { REBUILD_DEBOUNCE_MS } from './editor-rebuild.js';
 import { LINE_COLOR_POLY_HILL } from './EditorMaterials.js';
 import { TERRAIN_TYPES } from "../world/terrain.js";
 import { gizmoY } from './gizmo-height.js';
-import { clampEdgeShape, EDGE_SHAPE_DEFAULT } from '../world/feature-geometry.js';
+import { clampEdgeShape, EDGE_SHAPE_DEFAULT, HILL_JITTER_MAX } from '../world/feature-geometry.js';
 import { DEFAULT_CORNER_RADIUS } from '../utils/polyline-utils.js';
 import { PolyPointEditor } from './PolyPointEditor.js';
 
@@ -93,6 +93,7 @@ export class PolyHillEditor extends PolyPointEditor {
     s.terrainType = feature.terrainType?.name || 'none';
     s.blendWidth = feature.blendWidth ?? 0;
     s.edgeShape = feature.edgeShape ?? EDGE_SHAPE_DEFAULT;
+    s.jitter = feature.jitter ?? 0;
     s.closed = feature.closed ?? false;
     s.filled = feature.filled ?? false;
     s.endTaper = feature.endTaper ?? false;
@@ -139,6 +140,25 @@ export class PolyHillEditor extends PolyPointEditor {
     if (!this._active) return;
     this.ec.saveSnapshot(true);
     this._active.feature.edgeShape = clampEdgeShape(val);
+    this._rebuildDeferred(this._active);
+  }
+
+  /** Wobble of the outline (a domain warp), as a fraction of the hill's size. */
+  setJitter(val) {
+    if (!this._active) return;
+    this.ec.saveSnapshot(true);
+    const f = this._active.feature;
+    f.jitter = Math.min(HILL_JITTER_MAX, Math.max(0, val));
+    // Seed once so each hill gets its own outline that survives edits.
+    if (f.jitter > 0 && f.jitterSeed === undefined) f.jitterSeed = Math.floor(Math.random() * 10000);
+    this._rebuildDeferred(this._active);
+  }
+
+  /** New random outline at the same jitter amount. */
+  rerollJitter() {
+    if (!this._active) return;
+    this.ec.saveSnapshot();
+    this._active.feature.jitterSeed = Math.floor(Math.random() * 10000);
     this._rebuildDeferred(this._active);
   }
 

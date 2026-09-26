@@ -86,6 +86,25 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Jitter: irregular, organic outline -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Jitter</span>
+      <span class="flex items-center gap-2">
+        <button
+          v-if="editor.polyHill.jitter > 0"
+          class="text-[10px] uppercase tracking-[1px] text-slate-400 hover:text-slate-100"
+          @click="editor.featureAction('rerollPolyHillJitter')"
+        >Reroll</button>
+        {{ (editor.polyHill.jitter * 100).toFixed(0) }}%
+      </span>
+    </div>
+    <input
+      type="range" min="0" max="0.5" step="0.01"
+      :value="editor.polyHill.jitter"
+      @input="editor.setFeatureProp('polyHill', 'jitter', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <!-- Closed toggle -->
     <div class="flex justify-between mb-3 text-[12px]">
       <span>Closed Loop</span>

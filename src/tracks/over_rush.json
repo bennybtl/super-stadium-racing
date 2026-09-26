@@ -72,7 +72,7 @@
         0
       ],
       "offsetsX": [
-        0,
+        1.5,
         -8,
         0,
         0,
@@ -307,6 +307,11 @@
           "x": 44.361297413874276,
           "z": 28.090183115120098,
           "radius": 2
+        },
+        {
+          "x": 35.73229340456061,
+          "z": 15.796897872312062,
+          "radius": 10
         },
         {
           "x": -2.8967106047530544,
@@ -559,7 +564,7 @@
           "smoothing": 0
         },
         {
-          "x": 41.37452635375443,
+          "x": 42.37452635375443,
           "z": -2.0187454419666544,
           "radius": 10
         },
@@ -621,7 +626,7 @@
       "model": "tree",
       "x": 21.551206595580233,
       "z": -47.90029153950599,
-      "color": "green",
+      "color": "forest",
       "scale": 2,
       "seed": 26,
       "trunkHeight": 4,
@@ -635,7 +640,7 @@
       "model": "tree",
       "x": 72.17150249090209,
       "z": -26.81034149391374,
-      "color": "green",
+      "color": "forest",
       "scale": 2,
       "seed": 20,
       "trunkHeight": 4,
@@ -650,7 +655,7 @@
       "model": "tree",
       "x": -18.00826654792305,
       "z": 46.644469077723556,
-      "color": "green",
+      "color": "forest",
       "scale": 2,
       "seed": 4,
       "trunkHeight": 4,
@@ -693,8 +698,8 @@
     {
       "type": "model",
       "model": "tree",
-      "x": 37.035925868417024,
-      "z": 49.408103689246374,
+      "x": 30.035925868417024,
+      "z": 50.908103689246374,
       "color": "green",
       "scale": 1.5,
       "seed": 20,
@@ -957,28 +962,32 @@
           "z": -35.948423797187814
         },
         {
-          "x": -4.08488125626773,
-          "z": 34.682081236643796
+          "x": -5.58488125626773,
+          "z": 39.182081236643796
         },
         {
-          "x": 14.48,
-          "z": 29.560000000000002
+          "x": 18.48,
+          "z": 33.06
         },
         {
           "x": 19.825550282190278,
-          "z": 16.65661500901321
+          "z": 21.15661500901321
         },
         {
           "x": -15.308461770474661,
           "z": -14.12309629327726
         },
         {
-          "x": -5.710000000000001,
-          "z": -27.700000000000003
+          "x": -12.21,
+          "z": -32.7
         },
         {
-          "x": 9.99,
-          "z": -28.6
+          "x": 12.99,
+          "z": -32.1
+        },
+        {
+          "x": 34.38,
+          "z": 0.96
         },
         {
           "x": 64.77149561309494,
@@ -1024,33 +1033,14 @@
     },
     {
       "type": "model",
-      "model": "tree",
-      "x": 61.143302537704585,
-      "z": -21.204116591897147,
+      "model": "bush",
+      "x": 61.643302537704585,
+      "z": -18.204116591897147,
       "color": "green",
-      "scale": 0.9,
-      "seed": 11,
-      "trunkHeight": 4,
-      "trunkRadius": 0.5,
-      "maxDepth": 3,
-      "radialSegments": 6,
-      "collider": false,
+      "scale": 1.9,
+      "preset": "bush_1",
+      "seed": 33,
       "heading": 0
-    },
-    {
-      "type": "model",
-      "model": "tree",
-      "x": 56.143302537704585,
-      "z": -16.204116591897147,
-      "color": "green",
-      "scale": 0.9,
-      "seed": 11,
-      "trunkHeight": 4,
-      "trunkRadius": 0.5,
-      "maxDepth": 3,
-      "radialSegments": 6,
-      "collider": false,
-      "heading": 1.3264502315156905
     },
     {
       "type": "trackSign",
@@ -1250,45 +1240,13 @@
     },
     {
       "type": "model",
-      "model": "tree",
-      "x": -19.35715295597158,
-      "z": -52.84472545870901,
-      "color": "green",
-      "scale": 0.7,
-      "seed": 12,
-      "trunkHeight": 4,
-      "trunkRadius": 0.5,
-      "maxDepth": 3,
-      "radialSegments": 6,
-      "collider": false
-    },
-    {
-      "type": "model",
-      "model": "tree",
-      "x": -13.045942563484159,
-      "z": -51.03087098134592,
-      "color": "green",
-      "scale": 0.7,
-      "seed": 16,
-      "trunkHeight": 4,
-      "trunkRadius": 0.5,
-      "maxDepth": 3,
-      "radialSegments": 6,
-      "collider": false
-    },
-    {
-      "type": "model",
-      "model": "tree",
-      "x": -2.9287128948469094,
-      "z": -52.25806506008658,
-      "color": "green",
-      "scale": 0.7,
-      "seed": 20,
-      "trunkHeight": 4,
-      "trunkRadius": 0.5,
-      "maxDepth": 3,
-      "radialSegments": 6,
-      "collider": false
+      "model": "bush",
+      "x": -4.428712894846909,
+      "z": -50.75806506008658,
+      "color": "olive",
+      "scale": 2.3,
+      "preset": "bush_1",
+      "seed": 18
     },
     {
       "type": "decal",
@@ -1498,6 +1456,145 @@
       "depth": 19.5,
       "rotation": 0,
       "blendWidth": 1.5
+    },
+    {
+      "type": "polyWall",
+      "points": [
+        {
+          "x": -42.1,
+          "z": 15.67,
+          "radius": 10
+        },
+        {
+          "x": -34.96,
+          "z": 17.25,
+          "radius": 10
+        },
+        {
+          "x": -33.4,
+          "z": 10.33,
+          "radius": 10
+        }
+      ],
+      "height": 2,
+      "collisionHeight": 2,
+      "thickness": 0.5,
+      "friction": 0.05,
+      "closed": false,
+      "fence": false,
+      "colors": [
+        "white"
+      ]
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -11.384481851106388,
+      "z": -49.596459773939436,
+      "color": "olive",
+      "scale": 2.44,
+      "preset": "bush_1",
+      "seed": 7,
+      "heading": 3.6700033235837974
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -21.959050389215157,
+      "z": -53.91093600628036,
+      "color": "olive",
+      "scale": 2.92,
+      "preset": "bush_1",
+      "seed": 14,
+      "heading": 2.129301687433082
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -34.6517518591086,
+      "z": -52.213137577725746,
+      "color": "olive",
+      "scale": 1.8,
+      "preset": "bush_1",
+      "seed": 22,
+      "heading": 0.5273824012924576
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 55.62912531898736,
+      "z": -15.789826279426634,
+      "color": "green",
+      "scale": 2.3,
+      "preset": "bush_1",
+      "seed": 17,
+      "heading": 1.2779652297463693
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 69.04062746629907,
+      "z": -6.18262372280668,
+      "color": "green",
+      "scale": 2.27,
+      "preset": "bush_1",
+      "seed": 28,
+      "heading": 5.347409030607152
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -72.27241162316052,
+      "z": -80,
+      "color": "olive",
+      "scale": 1.8,
+      "preset": "bush_1",
+      "seed": 17,
+      "heading": 5.382394043738747
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -65.61562668025249,
+      "z": -80,
+      "color": "olive",
+      "scale": 2.03,
+      "preset": "bush_1",
+      "seed": 36,
+      "heading": 2.1488343542113197
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -57.81879303101604,
+      "z": -80,
+      "color": "olive",
+      "scale": 2.13,
+      "preset": "bush_1",
+      "seed": 15,
+      "heading": 4.241150082346221
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -80,
+      "z": -72.34851811240284,
+      "color": "olive",
+      "scale": 2.33,
+      "preset": "bush_1",
+      "seed": 17,
+      "heading": 5.275360789034064
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -80,
+      "z": -78.97010831333397,
+      "color": "olive",
+      "scale": 2.74,
+      "preset": "bush_1",
+      "seed": 39,
+      "heading": 3.4159659984123927
     }
   ]
 }

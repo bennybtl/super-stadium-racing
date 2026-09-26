@@ -7,6 +7,7 @@
   "grassBlades": true,
   "oobDeadSpace": false,
   "allowReverse": true,
+  "stadiumLighting": false,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
@@ -1018,7 +1019,9 @@
       "height": -1.8,
       "waterLevelOffset": 1.8,
       "terrainType": "mud",
-      "blendWidth": 2
+      "blendWidth": 2,
+      "jitter": 0.18,
+      "jitterSeed": 6297
     },
     {
       "type": "terrain",
@@ -1280,7 +1283,9 @@
       "filled": true,
       "waterLevelOffset": 5,
       "edgeShape": 0.8,
-      "blendWidth": 3
+      "blendWidth": 3,
+      "jitter": 0.18,
+      "jitterSeed": 4004
     },
     {
       "type": "hill",

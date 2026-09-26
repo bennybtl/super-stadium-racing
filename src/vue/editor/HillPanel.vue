@@ -78,6 +78,25 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Jitter: irregular outline instead of a perfect ellipse -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Jitter</span>
+      <span class="flex items-center gap-2">
+        <button
+          v-if="editor.hill.jitter > 0"
+          class="text-[10px] uppercase tracking-[1px] text-slate-400 hover:text-slate-100"
+          @click="editor.featureAction('rerollHillJitter')"
+        >Reroll</button>
+        {{ (editor.hill.jitter * 100).toFixed(0) }}%
+      </span>
+    </div>
+    <input
+      type="range" min="0" max="0.5" step="0.01"
+      :value="editor.hill.jitter"
+      @input="editor.setFeatureProp('hill', 'jitter', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
       <!-- Terrain Type -->
     <TerrainTypeSelect
       :model-value="editor.hill.terrainType"

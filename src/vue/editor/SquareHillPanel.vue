@@ -113,6 +113,25 @@
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
     />
 
+    <!-- Jitter: irregular outline instead of a perfect rect -->
+    <div class="flex justify-between mb-1 text-[12px]">
+      <span>Jitter</span>
+      <span class="flex items-center gap-2">
+        <button
+          v-if="editor.squareHill.jitter > 0"
+          class="text-[10px] uppercase tracking-[1px] text-slate-400 hover:text-slate-100"
+          @click="editor.featureAction('rerollSquareHillJitter')"
+        >Reroll</button>
+        {{ (editor.squareHill.jitter * 100).toFixed(0) }}%
+      </span>
+    </div>
+    <input
+      type="range" min="0" max="0.5" step="0.01"
+      :value="editor.squareHill.jitter"
+      @input="editor.setFeatureProp('squareHill', 'jitter', +$event.target.value)"
+      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+    />
+
     <TerrainTypeSelect
       :model-value="editor.squareHill.terrainType"
       @update:modelValue="v => editor.setFeatureProp('squareHill', 'terrainType', v)"

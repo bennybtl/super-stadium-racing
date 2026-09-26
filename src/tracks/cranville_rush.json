@@ -801,7 +801,9 @@
       "height": -3.5,
       "waterLevelOffset": 2.9,
       "terrainType": "water",
-      "blendWidth": 0
+      "blendWidth": 0,
+      "jitter": 0.24,
+      "jitterSeed": 6475
     },
     {
       "type": "squareHill",
@@ -1540,7 +1542,9 @@
       "filled": true,
       "edgeShape": 0.8,
       "waterLevelOffset": 0.8,
-      "blendWidth": 2
+      "blendWidth": 2,
+      "jitter": 0.11,
+      "jitterSeed": 2864
     },
     {
       "type": "model",
@@ -1729,7 +1733,9 @@
       "angle": 0,
       "height": -1,
       "waterLevelOffset": 1,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "jitter": 0.09,
+      "jitterSeed": 8231
     },
     {
       "type": "hill",
@@ -1740,7 +1746,9 @@
       "angle": 0,
       "height": -1,
       "waterLevelOffset": 1,
-      "terrainType": "mud"
+      "terrainType": "mud",
+      "jitter": 0.26,
+      "jitterSeed": 616
     },
     {
       "type": "squareHill",
@@ -1975,6 +1983,60 @@
       "color": "warm",
       "tilt": 90,
       "rotation": 301
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 49.999824414962546,
+      "z": 1.5000638144889322,
+      "color": "green",
+      "scale": 1.6,
+      "preset": "bush_2",
+      "seed": 30
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 51.326708803333666,
+      "z": -3.3524275432749038,
+      "color": "green",
+      "scale": 1.65,
+      "preset": "bush_2",
+      "seed": 40,
+      "heading": 0.11812900598866019
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 54.60682537858193,
+      "z": -4.584444947344938,
+      "color": "forest",
+      "scale": 1.52,
+      "preset": "bush_2",
+      "seed": 23,
+      "heading": 0.746332402433448
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 52.83751905159789,
+      "z": -0.2817609587089196,
+      "color": "forest",
+      "scale": 1.28,
+      "preset": "bush_2",
+      "seed": 30,
+      "heading": 0.8425425788563526
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 45.43196315065978,
+      "z": -2.759065998072545,
+      "color": "forest",
+      "scale": 1.03,
+      "preset": "bush_2",
+      "seed": 28,
+      "heading": 2.5385605534729145
     }
   ]
 }

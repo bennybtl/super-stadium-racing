@@ -7,6 +7,7 @@
   "grassBlades": true,
   "oobDeadSpace": false,
   "allowReverse": true,
+  "stadiumLighting": false,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
@@ -55,7 +56,7 @@
     {
       "type": "driveBox",
       "centerX": -57.57628117896432,
-      "centerZ": -27.702342775263148,
+      "centerZ": -36.70234277526315,
       "width": 10.5,
       "depth": 12.5,
       "rotation": 91,
@@ -106,8 +107,8 @@
           "z": 15.493550229189687
         },
         {
-          "x": -9.9014703574099,
-          "z": 29.297039111596774
+          "x": -7.401470357409901,
+          "z": 29.797039111596774
         },
         {
           "x": 2.5700000000000003,
@@ -152,16 +153,12 @@
       "width": 19.5,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "polyWall",
       "points": [
-        {
-          "x": -11.332188527667022,
-          "z": -28.257756281169776,
-          "radius": 6.5
-        },
         {
           "x": -24.032933815322224,
           "z": 2.6671332402596093,
@@ -198,14 +195,15 @@
           "radius": 0
         }
       ],
-      "height": 3,
-      "collisionHeight": 3,
+      "height": 0.5,
+      "collisionHeight": 5.5,
       "thickness": 1,
       "friction": 0.05,
       "closed": false,
       "colors": [
-        "grey"
-      ]
+        "gray"
+      ],
+      "fence": true
     },
     {
       "type": "polyCurb",
@@ -266,8 +264,8 @@
           "radius": 7
         }
       ],
-      "height": 0.36,
-      "width": 1.5,
+      "height": 0.22,
+      "width": 1,
       "closed": true,
       "colors": [
         "black",
@@ -314,7 +312,7 @@
         }
       ],
       "height": 0.22,
-      "width": 0.9,
+      "width": 1,
       "closed": false,
       "colors": [
         "black",
@@ -345,9 +343,9 @@
           "radius": 0
         }
       ],
-      "height": 2,
-      "collisionHeight": 2,
-      "thickness": 1,
+      "height": 3,
+      "collisionHeight": 5,
+      "thickness": 0.6,
       "friction": 0.05,
       "closed": false,
       "colors": [
@@ -362,7 +360,8 @@
       "width": 19.5,
       "checkpointNumber": 2,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -372,7 +371,8 @@
       "width": 19.5,
       "checkpointNumber": 3,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -382,7 +382,8 @@
       "width": 19.5,
       "checkpointNumber": 4,
       "_altIndex": 0,
-      "_altCount": 1
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "flag",
@@ -446,12 +447,12 @@
       "type": "polyHill",
       "points": [
         {
-          "x": 1.2340785773096279,
+          "x": 4.234078577309628,
           "z": 38.50745108973841,
           "radius": 10
         },
         {
-          "x": -19.8020157123952,
+          "x": -18.8020157123952,
           "z": 51.11502139973152,
           "radius": 14.5
         },
@@ -466,13 +467,14 @@
           "radius": 10
         }
       ],
-      "height": 3,
-      "width": 12,
+      "height": 4,
+      "width": 27.5,
       "terrainType": "grass",
       "closed": false,
       "filled": false,
       "endTaper": true,
-      "blendWidth": 4.5
+      "blendWidth": 6.5,
+      "edgeShape": 2.1
     },
     {
       "type": "polyHill",
@@ -625,7 +627,8 @@
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false
+      "collider": false,
+      "preset": "aspen_medium"
     },
     {
       "type": "model",
@@ -639,21 +642,23 @@
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false
+      "collider": false,
+      "preset": "aspen_medium"
     },
     {
       "type": "model",
       "model": "tree",
       "x": 2.2414453759719724,
       "z": 61.5399513244415,
-      "color": "green",
+      "color": "forest",
       "scale": 1,
       "seed": 10,
       "trunkHeight": 4,
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false
+      "collider": false,
+      "preset": "aspen_large"
     },
     {
       "type": "model",
@@ -661,13 +666,14 @@
       "x": -36.75855462402803,
       "z": 59.0399513244415,
       "color": "green",
-      "scale": 1,
+      "scale": 2.5,
       "seed": 24,
       "trunkHeight": 4,
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false
+      "collider": false,
+      "preset": "pine_large"
     },
     {
       "type": "model",
@@ -687,7 +693,7 @@
       "type": "model",
       "model": "tree",
       "x": -64.25855462402802,
-      "z": 50.0399513244415,
+      "z": 50.5399513244415,
       "color": "green",
       "scale": 1,
       "seed": 26,
@@ -701,56 +707,64 @@
       "type": "aiPath",
       "points": [
         {
-          "x": -15.72,
-          "z": -72.32
+          "x": -19.62252715225528,
+          "z": -78.28245761130306
         },
         {
-          "x": -42.86,
-          "z": -68.83
+          "x": -38.19802591937729,
+          "z": -73.80572872963653
         },
         {
-          "x": -54.7,
-          "z": -53.12
+          "x": -53.9809615472099,
+          "z": -54.79173930225591
         },
         {
-          "x": -58.58,
-          "z": -1.96
+          "x": -67.58,
+          "z": -12.96
         },
         {
-          "x": -50.681835691493646,
-          "z": 17.00463263696251
+          "x": -51.681835691493646,
+          "z": 7.0046326369625085
         },
         {
-          "x": -23.38,
-          "z": 24
+          "x": -20.88,
+          "z": 17
         },
         {
-          "x": 8.92,
-          "z": -13.55
+          "x": -6.701944486350387,
+          "z": -2.4975441659099857
         },
         {
-          "x": 21.12,
-          "z": -11.879999999999999
+          "x": 14.256947541269005,
+          "z": -15.076559406502398
         },
         {
-          "x": 35.71,
-          "z": 52.84
+          "x": 34.3044943207793,
+          "z": 0.19305118693774048
         },
         {
-          "x": 54.867983048072695,
-          "z": 53.160848338489586
+          "x": 22.065968596703005,
+          "z": 40.18722175860538
         },
         {
-          "x": 68.66,
-          "z": 9.65
+          "x": 44.81684004450721,
+          "z": 54.667416552703735
         },
         {
-          "x": 60.37,
-          "z": -50.2
+          "x": 73.70040425862247,
+          "z": 41.983184208571245
         },
         {
-          "x": 34.4,
-          "z": -69.88
+          "x": 65.2183814522079,
+          "z": 10.185982344070913
+        },
+        {
+          "x": 59.20010882363442,
+          "z": -53.468018791200286
+        },
+        {
+          "x": 29.98249074737398,
+          "z": -67.0898747093533
         }
       ],
       "branches": []
@@ -826,6 +840,789 @@
       "count": 4,
       "weight": 80,
       "color": "black"
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -31.797063785078755,
+      "z": -14.648481699661769,
+      "color": "yellow",
+      "scale": 1.4,
+      "preset": "bush_1",
+      "seed": 29
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -6.04081672399391,
+      "z": -45.52147356776741,
+      "color": "forest",
+      "scale": 2.2,
+      "preset": "bush_1",
+      "seed": 1,
+      "heading": 2.289737871216057
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -23.284966127474377,
+      "z": -39.41548323912002,
+      "color": "yellow",
+      "scale": 1.99,
+      "preset": "bush_1",
+      "seed": 19,
+      "heading": 1.2415804213405792
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -18.174602395253462,
+      "z": -47.662993775594316,
+      "color": "forest",
+      "scale": 1.74,
+      "preset": "bush_1",
+      "seed": 37,
+      "heading": 5.477668792130097
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -27.74945887554326,
+      "z": -14.343766856453058,
+      "color": "yellow",
+      "scale": 1.85,
+      "preset": "bush_1",
+      "seed": 3,
+      "heading": 0.39679455764997296
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -1.6338280805406002,
+      "z": -48.92922900805449,
+      "color": "yellow",
+      "scale": 1.83,
+      "preset": "bush_1",
+      "seed": 20,
+      "heading": 1.7565838444647233
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -28.406534348238093,
+      "z": -34.99374463447539,
+      "color": "yellow",
+      "scale": 1.98,
+      "preset": "bush_1",
+      "seed": 12,
+      "heading": 0.8068688415463993
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -34.61273833315649,
+      "z": -52.22408531069815,
+      "color": "yellow",
+      "scale": 2.1,
+      "preset": "bush_1",
+      "seed": 27,
+      "heading": 0.7745787349670784
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -35.7653170242358,
+      "z": -14.399439607515493,
+      "color": "yellow",
+      "scale": 1.29,
+      "preset": "bush_1",
+      "seed": 6,
+      "heading": 1.5137395516013559
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -39.58940342502363,
+      "z": -13.586306339743519,
+      "color": "yellow",
+      "scale": 1.27,
+      "preset": "bush_1",
+      "seed": 33,
+      "heading": 2.5441503323998007
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 15.778663356727584,
+      "z": -43.77362582496375,
+      "color": "yellow",
+      "scale": 1.16,
+      "preset": "bush_1",
+      "seed": 24,
+      "heading": 0.6714040556103811
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 28.753181878871946,
+      "z": -55.48769883912434,
+      "color": "yellow",
+      "scale": 2.5,
+      "preset": "bush_1",
+      "seed": 40,
+      "heading": 2.95208092601391
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 46.88736196277531,
+      "z": -35.357988210016174,
+      "color": "yellow",
+      "scale": 1.41,
+      "preset": "bush_1",
+      "seed": 6,
+      "heading": 4.988989123906474
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 29.0602082475451,
+      "z": -49.23098266360049,
+      "color": "yellow",
+      "scale": 1.41,
+      "preset": "bush_1",
+      "seed": 38,
+      "heading": 1.390560477962494
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 44.39054285578602,
+      "z": -39.62788622112711,
+      "color": "yellow",
+      "scale": 1.41,
+      "preset": "bush_1",
+      "seed": 36,
+      "heading": 5.806709982658363
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 23.042878477230154,
+      "z": -43.40621089502364,
+      "color": "yellow",
+      "scale": 2.1,
+      "preset": "bush_1",
+      "seed": 40,
+      "heading": 2.8674624436908216
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 22.823076633946936,
+      "z": -36.4838273725623,
+      "color": "yellow",
+      "scale": 1.41,
+      "preset": "bush_1",
+      "seed": 18,
+      "heading": 5.7118728742946425
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 19.533832699801074,
+      "z": -39.51968769008743,
+      "color": "yellow",
+      "scale": 1.32,
+      "preset": "bush_1",
+      "seed": 39,
+      "heading": 5.488350369506922
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 17.021240326508757,
+      "z": -54.855079303068976,
+      "color": "yellow",
+      "scale": 1.1,
+      "preset": "bush_1",
+      "seed": 33,
+      "heading": 3.651632652457814
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 21.95099117067096,
+      "z": -55.33783391677758,
+      "color": "yellow",
+      "scale": 1.7,
+      "preset": "bush_1",
+      "seed": 26,
+      "heading": 5.760644117254243
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -49.34292263190274,
+      "z": 42.197632490211106,
+      "color": "green",
+      "scale": 1.04,
+      "seed": 21,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 4.955937244643417
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 4.490292293687206,
+      "z": 55.79771897317272,
+      "color": "green",
+      "scale": 0.98,
+      "seed": 6,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 5.36433116515353
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -10.553170078870064,
+      "z": 64.2345334228832,
+      "color": "green",
+      "scale": 0.99,
+      "seed": 36,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_large",
+      "heading": 3.685205783718209
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -9.172536878954912,
+      "z": 51.01318630340272,
+      "color": "green",
+      "scale": 0.84,
+      "seed": 10,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 5.600714867265723
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 7.634790653196693,
+      "z": 31.62496763567534,
+      "color": "green",
+      "scale": 1.1,
+      "seed": 17,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 1.6156687979840674
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 3.219809551797577,
+      "z": 47.52039282419664,
+      "color": "green",
+      "scale": 0.76,
+      "seed": 19,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_large",
+      "heading": 3.380628459280327
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -4.00772754684738,
+      "z": 57.07876942206097,
+      "color": "green",
+      "scale": 0.75,
+      "seed": 13,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 5.478491607838443
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -0.7064386608246127,
+      "z": 57.581045451592395,
+      "color": "green",
+      "scale": 0.71,
+      "seed": 36,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 0.453361565159478
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -13.878562969206323,
+      "z": 53.42250431064197,
+      "color": "green",
+      "scale": 0.78,
+      "seed": 1,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 0.08226876402169243
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -49.010255102141,
+      "z": 60.815560166965994,
+      "color": "green",
+      "scale": 1.4,
+      "seed": 9,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "pine_large",
+      "heading": 6.147092576569148
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 25.916567984602672,
+      "z": 75.50336436143779,
+      "color": "green",
+      "scale": 1.43,
+      "seed": 2,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "pine_large",
+      "heading": 6.268279137313668
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -71.85407674095582,
+      "z": 81.64483216365815,
+      "color": "green",
+      "scale": 1.15,
+      "seed": 36,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 1.5031500371120663
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -64.97129842814749,
+      "z": 76.53403319891841,
+      "color": "green",
+      "scale": 1.33,
+      "seed": 31,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 2.3098592631019974
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -66.68041669098233,
+      "z": 86.07770922573643,
+      "color": "green",
+      "scale": 1.59,
+      "seed": 29,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 6.124603825818994
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -74.19808245085314,
+      "z": 90,
+      "color": "forest",
+      "scale": 1.77,
+      "seed": 40,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 5.600759696843469
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -53.127139172481776,
+      "z": 75.31174323439365,
+      "color": "green",
+      "scale": 1.67,
+      "seed": 10,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 1.9087310038076417
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -71.14639477731453,
+      "z": 58.14127815623353,
+      "color": "green",
+      "scale": 1.78,
+      "seed": 25,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 2.5648677063300234
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 11.824355314715945,
+      "z": 82.71256139204857,
+      "color": "green",
+      "scale": 1.92,
+      "seed": 35,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 2.8872776747482036
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -27.738230106125428,
+      "z": 75.30686375834175,
+      "color": "green",
+      "scale": 1.99,
+      "seed": 34,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 4.386760744602274
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -17.81745167017209,
+      "z": 89.5,
+      "color": "forest",
+      "scale": 2.1,
+      "seed": 14,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 6.196271597758205
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -55.74594432017522,
+      "z": 90,
+      "color": "green",
+      "scale": 1.76,
+      "seed": 37,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 1.2633288151917763
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -65.17901310167865,
+      "z": 34.194281076741305,
+      "color": "green",
+      "scale": 1.55,
+      "seed": 13,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 2.985070884055972
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -4.19515836874492,
+      "z": 79.16894666475625,
+      "color": "green",
+      "scale": 1.53,
+      "seed": 37,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 3.2858153052350696
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -43.14643921795224,
+      "z": 90,
+      "color": "forest",
+      "scale": 1.76,
+      "seed": 23,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 0.5763093810518016
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 73.98842384884512,
+      "z": 81.78639073918607,
+      "color": "green",
+      "scale": 2.2,
+      "seed": 14,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 2.241008368858794
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 82.83320802610204,
+      "z": 73.63222207932684,
+      "color": "green",
+      "scale": 1.7,
+      "seed": 25,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 0.6503094041357185
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 80.70932942245202,
+      "z": 83.744319855841,
+      "color": "green",
+      "scale": 1.54,
+      "seed": 37,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "preset": "aspen_medium",
+      "heading": 4.308769876351331
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -27.379728574799653,
+      "z": -23.576941548096336,
+      "color": "yellow",
+      "scale": 3,
+      "preset": "bush_1",
+      "seed": 40,
+      "heading": 5.684943113859784
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -32.47823261297062,
+      "z": -38.16755393380288,
+      "color": "yellow",
+      "scale": 1.2,
+      "preset": "bush_1",
+      "seed": 13,
+      "heading": 6.247339088447627
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -34.288905410010294,
+      "z": -35.97342485690757,
+      "color": "yellow",
+      "scale": 0.99,
+      "preset": "bush_1",
+      "seed": 9,
+      "heading": 0.4366571140519765
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -13.794828901952584,
+      "z": -42.74572364422172,
+      "color": "sage",
+      "scale": 2.4,
+      "preset": "bush_1",
+      "seed": 37,
+      "heading": 5.04307732468709
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -29.340263529117784,
+      "z": -34.025601332686044,
+      "color": "yellow",
+      "scale": 0.77,
+      "preset": "bush_1",
+      "seed": 25,
+      "heading": 5.991750195645607
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -34.65582735519855,
+      "z": -25.79264586100164,
+      "color": "yellow",
+      "scale": 1.6,
+      "preset": "bush_1",
+      "seed": 37,
+      "heading": 4.730645582463972
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 63.37649985015594,
+      "z": -80.0760643507873,
+      "color": "green",
+      "scale": 1.8,
+      "seed": 27,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 0.9983133491549478,
+      "preset": "pine_large"
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -25.279933007337753,
+      "z": -17.11334932710587,
+      "color": "green",
+      "scale": 1.49,
+      "seed": 7,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 5.970764081835438
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 72.3504824364386,
+      "z": -76.44027103342927,
+      "color": "green",
+      "scale": 1.93,
+      "seed": 19,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 1.3997233202512978,
+      "preset": "pine_large"
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 47.97609675476063,
+      "z": -88.75569896608798,
+      "color": "forest",
+      "scale": 1.2,
+      "seed": 2,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 2.5600253690305985,
+      "preset": "pine_large"
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": 79.85438629173596,
+      "z": -60.706702341711505,
+      "color": "green",
+      "scale": 1.5,
+      "seed": 40,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 1.0271764535577064,
+      "preset": "pine_large"
     }
   ]
 }

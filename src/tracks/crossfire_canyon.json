@@ -1092,7 +1092,9 @@
       "closed": true,
       "filled": true,
       "waterLevelOffset": 1.7,
-      "blendWidth": 4
+      "blendWidth": 4,
+      "jitter": 0.07,
+      "jitterSeed": 3274
     },
     {
       "type": "hill",

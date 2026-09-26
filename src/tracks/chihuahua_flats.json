@@ -585,7 +585,9 @@
       "terrainType": null,
       "heightAtMin": 2.5,
       "heightAtMax": 0,
-      "edgeShape": 1.75
+      "edgeShape": 1.75,
+      "jitter": 0.23,
+      "jitterSeed": 9292
     },
     {
       "type": "squareHill",
@@ -1125,7 +1127,9 @@
       "heightAtMax": 5.5,
       "reverseOverride": {
         "angle": 339
-      }
+      },
+      "jitter": 0.2,
+      "jitterSeed": 1487
     },
     {
       "type": "squareHill",
@@ -1170,7 +1174,9 @@
       "heightAtMax": 3.5,
       "reverseOverride": {
         "angle": 180
-      }
+      },
+      "jitter": 0.21,
+      "jitterSeed": 8575
     },
     {
       "type": "trackSign",
@@ -1414,7 +1420,9 @@
       "heightAtMax": 4,
       "reverseOverride": {
         "angle": 180
-      }
+      },
+      "jitter": 0.1,
+      "jitterSeed": 8744
     },
     {
       "type": "squareHill",
@@ -1431,7 +1439,9 @@
       "edgeShape": 1.35,
       "reverseOverride": {
         "angle": 180
-      }
+      },
+      "jitter": 0.15,
+      "jitterSeed": 2106
     },
     {
       "type": "actionZone",

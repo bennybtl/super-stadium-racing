@@ -238,7 +238,7 @@
       "centerX": -23.414456714503455,
       "centerZ": -23.071328498923652,
       "heading": 1.38352986419518,
-      "width": 23,
+      "width": 21.5,
       "checkpointNumber": 1,
       "_altIndex": 0,
       "_altCount": 1,
@@ -627,7 +627,7 @@
       "centerX": -28.70534946076,
       "centerZ": 4.0972309660670945,
       "heading": -2.024532925199434,
-      "width": 21.5,
+      "width": 20,
       "checkpointNumber": 2,
       "_altIndex": 0,
       "_altCount": 1,
@@ -984,25 +984,26 @@
     {
       "type": "model",
       "model": "bush",
-      "x": -28.39548426143339,
+      "x": -35.89548426143339,
       "z": 22.929571957471595,
       "heading": 0
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -24.819841819055025,
+      "x": -30.81984181905503,
       "z": 21.86568176948128,
-      "heading": 0.6457718232379019,
-      "scale": 1.3
+      "heading": 0.6632251157578453,
+      "scale": 1.9
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -26.773548195950145,
+      "x": -32.77354819595014,
       "z": 27.682407931234057,
       "heading": 1.6580627893946132,
-      "scale": 1.1
+      "scale": 1.1,
+      "color": "forest"
     },
     {
       "type": "model",
@@ -1130,37 +1131,39 @@
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false
+      "collider": true
     },
     {
       "type": "model",
       "model": "tree",
       "x": 48.50087397177759,
       "z": -29.564860889445697,
-      "color": "green",
+      "color": "forest",
       "scale": 1.6,
       "seed": 2,
       "trunkHeight": 4,
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false,
-      "heading": 1.117010721276371
+      "collider": true,
+      "heading": 1.117010721276371,
+      "preset": "pine_medium"
     },
     {
       "type": "model",
       "model": "tree",
-      "x": 38.35041687989526,
+      "x": 35.35041687989526,
       "z": -34.524571721574844,
-      "color": "green",
+      "color": "forest",
       "scale": 1.3,
-      "seed": 22,
+      "seed": 6,
       "trunkHeight": 4,
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false,
-      "heading": 2.8099800957108707
+      "collider": true,
+      "heading": 2.8099800957108707,
+      "preset": "ash_medium"
     },
     {
       "type": "model",
@@ -1174,7 +1177,7 @@
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false,
+      "collider": true,
       "heading": 1.0122909661567112,
       "mirrorX": true
     },
@@ -1280,16 +1283,16 @@
       "model": "tent",
       "x": -7.0182150301174815,
       "z": -90,
-      "color": "white",
+      "color": "gray",
       "scale": 1.5,
       "heading": 0
     },
     {
       "type": "model",
       "model": "tent",
-      "x": 1.4817849698825185,
-      "z": -90,
-      "color": "white",
+      "x": 1.8432032156620957,
+      "z": -89.59756501444828,
+      "color": "gray",
       "scale": 1.5,
       "heading": 0
     },
@@ -1512,7 +1515,7 @@
     {
       "type": "trackLight",
       "x": 2.021780505254876,
-      "z": -61.56245339410323,
+      "z": -60.06245339410323,
       "height": 19,
       "spread": 100,
       "intensity": 9,
@@ -1521,33 +1524,203 @@
       "rotation": 271
     },
     {
-      "type": "polyWall",
-      "points": [
-        {
-          "x": -1.2519671123928804,
-          "z": -60.685505005400245,
-          "radius": 10
-        },
-        {
-          "x": 4.572066761261452,
-          "z": -62.54295457602046,
-          "radius": 10
-        },
-        {
-          "x": 1.5786799245863945,
-          "z": -57.65231873087659,
-          "radius": 10
-        }
-      ],
-      "height": 2,
-      "collisionHeight": 2,
-      "thickness": 0.5,
-      "friction": 0.05,
-      "closed": true,
-      "fence": false,
-      "colors": [
-        "red"
-      ]
+      "type": "model",
+      "model": "tree",
+      "x": 22.1105130367416,
+      "z": -51.862167597231576,
+      "color": "forest",
+      "scale": 1.6,
+      "seed": 11,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": true,
+      "heading": 1.117010721276371,
+      "preset": "pine_medium"
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 50.49996554514121,
+      "z": -89.10016185049676,
+      "color": "green",
+      "scale": 1.4,
+      "preset": "bush_1",
+      "seed": 6
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 47.03057503092985,
+      "z": -85.40891911853667,
+      "color": "green",
+      "scale": 1.6,
+      "preset": "bush_1",
+      "seed": 2,
+      "heading": 1.819405019091226
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 51.86327642399748,
+      "z": -84.85177050113299,
+      "color": "green",
+      "scale": 0.98,
+      "preset": "bush_1",
+      "seed": 19,
+      "heading": 2.1619846941647403
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 53.78378261938329,
+      "z": -83.0511457373202,
+      "color": "green",
+      "scale": 1.8,
+      "preset": "bush_1",
+      "seed": 12,
+      "heading": 1.0300110658279642
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 39.01761452456988,
+      "z": -90,
+      "color": "green",
+      "scale": 1.31,
+      "preset": "bush_1",
+      "seed": 17,
+      "heading": 5.624346855902327
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 29.864018680930847,
+      "z": -88.51107435964992,
+      "color": "green",
+      "scale": 1.21,
+      "preset": "bush_1",
+      "seed": 10,
+      "heading": 5.020012045289352
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 27.078676630866045,
+      "z": -88.51284769953783,
+      "color": "green",
+      "scale": 1.44,
+      "preset": "bush_1",
+      "seed": 1,
+      "heading": 0.6037078631166056
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 25.87357648962429,
+      "z": -85.69583260876193,
+      "color": "green",
+      "scale": 1.46,
+      "preset": "bush_1",
+      "seed": 12,
+      "heading": 0.20302645151615617
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 18.789449446631235,
+      "z": -88.52803634163482,
+      "color": "green",
+      "scale": 1.73,
+      "preset": "bush_1",
+      "seed": 6,
+      "heading": 2.4612191640817507
+    },
+    {
+      "type": "hill",
+      "centerX": 4.964563493528072,
+      "centerZ": 10.771206289251353,
+      "radiusX": 7.5,
+      "radiusZ": 6.5,
+      "angle": 0,
+      "height": -0.2,
+      "waterLevelOffset": 0,
+      "terrainType": "mud"
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -65.23710530407642,
+      "z": -11.92187891001279,
+      "color": "green",
+      "scale": 0.8,
+      "seed": 10,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 2.633292069901367
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -81.19501635655831,
+      "z": -19.855369878683433,
+      "color": "green",
+      "scale": 0.85,
+      "seed": 33,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 5.195067901499012,
+      "preset": "ash_medium"
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -83.42390342249178,
+      "z": -29.116052181419036,
+      "color": "green",
+      "scale": 0.7,
+      "seed": 10,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 3.7839034964865217,
+      "preset": "ash_medium"
+    },
+    {
+      "type": "model",
+      "model": "tree",
+      "x": -48.99533520490512,
+      "z": -42.28943236373571,
+      "color": "green",
+      "scale": 0.64,
+      "seed": 23,
+      "trunkHeight": 4,
+      "trunkRadius": 0.5,
+      "maxDepth": 3,
+      "radialSegments": 6,
+      "collider": false,
+      "heading": 0.17673406881736684,
+      "preset": "ash_medium"
+    },
+    {
+      "type": "hill",
+      "centerX": -39.393824768191976,
+      "centerZ": 9.930261476309575,
+      "radiusX": 13,
+      "radiusZ": 4.5,
+      "angle": -15,
+      "height": -0.2,
+      "waterLevelOffset": 0,
+      "terrainType": "mud"
     }
   ]
 }

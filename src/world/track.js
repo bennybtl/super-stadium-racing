@@ -2,6 +2,10 @@ import { TERRAIN_TYPES } from "./terrain.js";
 import { expandPolyline, isPointInPolygon, distToPolyline, polylineEndTaper } from "../utils/polyline-utils.js";
 import {
   getHillEllipseParams,
+  hillRadiusScale,
+  toSquareHillLocal,
+  getPolyHillWarp,
+  warpPolyHillPoint,
   getSquareHillParams,
   getPolyHillHalfWidth,
   toFeatureLocal as getHillLocalCoords,
@@ -291,16 +295,19 @@ export class Track {
       if (skip !== null && skip(feature)) continue;
       switch (feature.type) {
         case "hill": {
-          const { radiusX, radiusZ, flatTop } = getHillEllipseParams(feature);
-          // AABB early-out: the ellipse fits inside a circle of radius max(rX,rZ).
+          const { radiusX, radiusZ, flatTop, jitter } = getHillEllipseParams(feature);
+          // AABB early-out: the (jittered) ellipse fits inside a circle of
+          // radius max(rX,rZ)·(1+jitter).
           const dhx = x - feature.centerX;
           const dhz = z - feature.centerZ;
-          const rMax = Math.max(radiusX, radiusZ);
+          const rMax = Math.max(radiusX, radiusZ) * (1 + jitter);
           if (dhx * dhx + dhz * dhz > rMax * rMax) break;
           const { lx, lz } = getHillLocalCoords(feature, x, z);
-          const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
-          if (t2 < 1) {
-            const t = Math.sqrt(t2);
+          const nx = lx / radiusX;
+          const nz = lz / radiusZ;
+          const t = Math.sqrt(nx * nx + nz * nz)
+            / hillRadiusScale(jitter, feature.jitterSeed ?? 0, nx, nz);
+          if (t < 1) {
             // Falloff spans the radius outside the flat top; flatTop = 0 (the
             // default) makes that the whole radius, i.e. a plain dome.
             const u = Math.max(0, (t - flatTop) / (1 - flatTop));
@@ -310,14 +317,15 @@ export class Track {
         }
 
         case "squareHill": {
-          const { halfWidth: hw, halfDepth: hd, band, innerHalfWidth, innerHalfDepth } =
+          const { halfWidth: hw, halfDepth: hd, band, innerHalfWidth, innerHalfDepth, jitter } =
             getSquareHillParams(feature);
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
           // AABB early-out: the feature stops at the rect (the band is inset), so
-          // the rotation-invariant circumscribed circle bounds it.
-          if (wx * wx + wz * wz > hw * hw + hd * hd) break;
-          const { lx, lz } = getHillLocalCoords(feature, x, z);
+          // the rotation-invariant circumscribed circle, grown by jitter, bounds it.
+          const jr = (1 + jitter) ** 2;
+          if (wx * wx + wz * wz > (hw * hw + hd * hd) * jr) break;
+          const { lx, lz } = toSquareHillLocal(feature, x, z);
           // Distance out from the flat top; the band runs from there to the rect
           // edge, so a point past the rect is already beyond the band.
           const edgeDx = Math.max(0, Math.abs(lx) - innerHalfWidth);
@@ -499,32 +507,37 @@ export class Track {
           const halfWidth = getPolyHillHalfWidth(feature);
           const exp = this._getExpandedPolyline(feature, points, closed);
           const expandedPoints = exp.points;
-          // AABB early-out: contribution stays within halfWidth of the polyline
-          // (filled interiors sit inside the same box).
-          if (x < exp.minX - halfWidth || x > exp.maxX + halfWidth ||
-              z < exp.minZ - halfWidth || z > exp.maxZ + halfWidth) break;
+          const warp = getPolyHillWarp(feature, exp.minX, exp.maxX, exp.minZ, exp.maxZ);
+          // AABB early-out: contribution stays within halfWidth (+ the jitter
+          // warp's reach) of the polyline; filled interiors sit inside the box.
+          const reach = halfWidth + (warp ? warp.amp : 0);
+          if (x < exp.minX - reach || x > exp.maxX + reach ||
+              z < exp.minZ - reach || z > exp.maxZ + reach) break;
+          // Shape tests use the warped point; x/z stay put for later features.
+          const wp = warpPolyHillPoint(warp, x, z);
+          const px = wp.x, pz = wp.z;
 
           // Filled mode: uniform height inside polygon, falloff at edges
           if (filled && closed) {
-            if (isPointInPolygon(x, z, expandedPoints)) {
+            if (isPointInPolygon(px, pz, expandedPoints)) {
               totalHeight += height;
             } else {
               // Falloff zone outside polygon boundary
-              const minDist = distToPolyline(x, z, expandedPoints, true);
+              const minDist = distToPolyline(px, pz, expandedPoints, true);
               if (minDist < halfWidth) {
                 totalHeight += height * edgeFalloff(minDist / halfWidth, getEdgeShape(feature));
               }
             }
           } else {
             // Original behavior: distance-based falloff from centerline
-            const minDist = distToPolyline(x, z, expandedPoints, closed);
+            const minDist = distToPolyline(px, pz, expandedPoints, closed);
             if (minDist < halfWidth) {
               let contribution = edgeFalloff(minDist / halfWidth, getEdgeShape(feature));
               // Open + endTaper: fade to the ground toward each end node, with
               // the ramp starting at the midpoint of the end segments — so a
               // two-node poly hill reads as a mound, not a flat-topped ridge.
               if (feature.endTaper && !closed) {
-                contribution *= edgeFalloff(polylineEndTaper(x, z, points), getEdgeShape(feature));
+                contribution *= edgeFalloff(polylineEndTaper(px, pz, points), getEdgeShape(feature));
               }
               totalHeight += height * contribution;
             }
@@ -666,24 +679,27 @@ export class Track {
 
       switch (feature.type) {
         case "hill": {
-          const { radiusX, radiusZ } = getHillEllipseParams(feature);
+          const { radiusX, radiusZ, jitter } = getHillEllipseParams(feature);
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           // AABB early-out: the dithered band reaches ellipse-scale
-          // (1 + blendWidth/minR); bound its circumscribed circle.
+          // (1 + jitter + blendWidth/minR); bound its circumscribed circle.
           const dhx = x - feature.centerX;
           const dhz = z - feature.centerZ;
           const rBound = Math.max(radiusX, radiusZ)
-            * (1 + blendWidth / Math.max(1e-6, Math.min(radiusX, radiusZ)));
+            * (1 + jitter + blendWidth / Math.max(1e-6, Math.min(radiusX, radiusZ)));
           if (dhx * dhx + dhz * dhz > rBound * rBound) break;
           const { lx, lz } = getHillLocalCoords(feature, x, z);
-          const t2 = (lx * lx) / (radiusX * radiusX) + (lz * lz) / (radiusZ * radiusZ);
+          const nx = lx / radiusX;
+          const nz = lz / radiusZ;
+          const t = Math.sqrt(nx * nx + nz * nz)
+            / hillRadiusScale(jitter, feature.jitterSeed ?? 0, nx, nz);
           if (blendWidth <= 0) {
-            if (t2 < 1) return feature.terrainType;
+            if (t < 1) return feature.terrainType;
             break;
           }
           // Dither the terrain boundary across the blend band straddling the
           // ellipse edge. signedDistToEdge > 0 inside, < 0 outside.
-          const signedDistToEdge = (1 - Math.sqrt(t2)) * Math.min(radiusX, radiusZ);
+          const signedDistToEdge = (1 - t) * Math.min(radiusX, radiusZ);
           if (usePrimaryTerrainWithBlend(x, z, signedDistToEdge, blendWidth, blendWidth)) {
             return feature.terrainType;
           }
@@ -756,17 +772,17 @@ export class Track {
         }
 
         case "squareHill": {
-          const { halfWidth: hw, halfDepth: hd } = getSquareHillParams(feature);
+          const { halfWidth: hw, halfDepth: hd, jitter } = getSquareHillParams(feature);
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const wx = x - feature.centerX;
           const wz = z - feature.centerZ;
-          // AABB early-out: the dithered band reaches blendWidth past the rect
-          // (the height falloff is inset and adds nothing); bound its
-          // rotation-invariant circumscribed circle.
-          const shBoundX = hw + blendWidth;
-          const shBoundZ = hd + blendWidth;
+          // AABB early-out: the dithered band reaches blendWidth past the
+          // (jittered) rect (the height falloff is inset and adds nothing);
+          // bound its rotation-invariant circumscribed circle.
+          const shBoundX = hw * (1 + jitter) + blendWidth;
+          const shBoundZ = hd * (1 + jitter) + blendWidth;
           if (wx * wx + wz * wz > shBoundX * shBoundX + shBoundZ * shBoundZ) break;
-          const { lx, lz } = getHillLocalCoords(feature, x, z);
+          const { lx, lz } = toSquareHillLocal(feature, x, z);
           const outDx = Math.max(0, Math.abs(lx) - hw);
           const outDz = Math.max(0, Math.abs(lz) - hd);
           const outside = Math.sqrt(outDx * outDx + outDz * outDz);
@@ -818,14 +834,18 @@ export class Track {
           const blendWidth = Math.max(0, feature.blendWidth ?? 0);
           const exp = this._getExpandedPolyline(feature, points, closed);
           const expandedPoints = exp.points;
+          const warp = getPolyHillWarp(feature, exp.minX, exp.maxX, exp.minZ, exp.maxZ);
           // AABB early-out: contribution/dither reaches halfWidth + blendWidth
-          // of the polyline (filled interiors sit inside the same box).
-          const reach = halfWidth + blendWidth;
+          // (+ the jitter warp's reach) of the polyline.
+          const reach = halfWidth + blendWidth + (warp ? warp.amp : 0);
           if (x < exp.minX - reach || x > exp.maxX + reach ||
               z < exp.minZ - reach || z > exp.maxZ + reach) break;
+          // Dither noise keeps the real point; only the shape tests are warped.
+          const wp = warpPolyHillPoint(warp, x, z);
+          const px = wp.x, pz = wp.z;
 
           // Distance to the polyline boundary.
-          const minDist = distToPolyline(x, z, expandedPoints, closed);
+          const minDist = distToPolyline(px, pz, expandedPoints, closed);
           if (!Number.isFinite(minDist)) break;
 
           // Signed distance to the terrain edge (>0 inside the terrain region).
@@ -834,7 +854,7 @@ export class Track {
           //   Otherwise: a centreline strip of total width `width`.
           let signedDistToEdge;
           if (filled && closed) {
-            const inside = isPointInPolygon(x, z, expandedPoints);
+            const inside = isPointInPolygon(px, pz, expandedPoints);
             signedDistToEdge = (inside ? minDist : -minDist) + halfWidth;
           } else {
             signedDistToEdge = halfWidth - minDist;
@@ -908,19 +928,19 @@ export class Track {
   getFeatureHeightBounds(feature) {
     switch (feature?.type) {
       case "hill": {
-        const { radiusX, radiusZ } = getHillEllipseParams(feature);
-        const r = Math.max(radiusX, radiusZ);
+        const { radiusX, radiusZ, jitter } = getHillEllipseParams(feature);
+        const r = Math.max(radiusX, radiusZ) * (1 + jitter);
         return {
           minX: feature.centerX - r, maxX: feature.centerX + r,
           minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
         };
       }
       case "squareHill": {
-        const { halfWidth: hw, halfDepth: hd } = getSquareHillParams(feature);
-        // Rotation-invariant circumscribed circle of the rect. The falloff band
-        // is inset, so the rect is the whole reach; blendWidth only tints
-        // terrain type and never moves height.
-        const r = Math.sqrt(hw ** 2 + hd ** 2);
+        const { halfWidth: hw, halfDepth: hd, jitter } = getSquareHillParams(feature);
+        // Rotation-invariant circumscribed circle of the (jittered) rect. The
+        // falloff band is inset, so the rect is the whole reach; blendWidth only
+        // tints terrain type and never moves height.
+        const r = Math.sqrt(hw ** 2 + hd ** 2) * (1 + jitter);
         return {
           minX: feature.centerX - r, maxX: feature.centerX + r,
           minZ: feature.centerZ - r, maxZ: feature.centerZ + r,
@@ -945,11 +965,12 @@ export class Track {
         if (!points || points.length < 2) {
           return { minX: 0, maxX: 0, minZ: 0, maxZ: 0 }; // contributes nothing
         }
-        const halfWidth = getPolyHillHalfWidth(feature);
         const exp = this._getExpandedPolyline(feature, points, closed);
+        const warp = getPolyHillWarp(feature, exp.minX, exp.maxX, exp.minZ, exp.maxZ);
+        const reach = getPolyHillHalfWidth(feature) + (warp ? warp.amp : 0);
         return {
-          minX: exp.minX - halfWidth, maxX: exp.maxX + halfWidth,
-          minZ: exp.minZ - halfWidth, maxZ: exp.maxZ + halfWidth,
+          minX: exp.minX - reach, maxX: exp.maxX + reach,
+          minZ: exp.minZ - reach, maxZ: exp.maxZ + reach,
         };
       }
       case "terrain": {

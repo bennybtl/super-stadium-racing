@@ -198,7 +198,9 @@
       "filled": true,
       "blendWidth": 2.5,
       "waterLevelOffset": 1.2,
-      "edgeShape": 2.35
+      "edgeShape": 2.35,
+      "jitter": 0.12,
+      "jitterSeed": 140
     },
     {
       "type": "polyHill",
@@ -246,7 +248,9 @@
       "transition": 6.5,
       "terrainType": null,
       "heightAtMin": 3.5,
-      "heightAtMax": 0
+      "heightAtMax": 0,
+      "jitter": 0.13,
+      "jitterSeed": 2915
     },
     {
       "type": "squareHill",
@@ -259,7 +263,9 @@
       "transition": 7,
       "terrainType": null,
       "heightAtMin": 6.5,
-      "heightAtMax": 0
+      "heightAtMax": 0,
+      "jitter": 0.2,
+      "jitterSeed": 5906
     },
     {
       "type": "polyHill",
@@ -295,7 +301,9 @@
       "terrainType": null,
       "closed": false,
       "filled": false,
-      "endTaper": true
+      "endTaper": true,
+      "jitter": 0.09,
+      "jitterSeed": 7033
     },
     {
       "type": "terrainPath",
@@ -403,7 +411,9 @@
       "angle": 0,
       "height": 5,
       "waterLevelOffset": 2,
-      "terrainType": null
+      "terrainType": null,
+      "jitter": 0.17,
+      "jitterSeed": 7290
     },
     {
       "type": "hill",
@@ -415,7 +425,9 @@
       "height": 5,
       "waterLevelOffset": 2,
       "terrainType": "loose_dirt",
-      "blendWidth": 3
+      "blendWidth": 3,
+      "jitter": 0.17,
+      "jitterSeed": 2356
     },
     {
       "type": "hill",
@@ -431,24 +443,24 @@
     },
     {
       "type": "tent",
-      "x": -38.1192383793993,
-      "z": -4.520366219208643,
+      "x": -39.00074639759566,
+      "z": -5.399456465196376,
       "heading": 1.9373154697137058,
       "scale": 1.6,
       "color": "black"
     },
     {
       "type": "tent",
-      "x": -27.813084210457962,
-      "z": -10.191177302612754,
+      "x": -28.430670741078647,
+      "z": -9.915375262236513,
       "heading": 1.7802358370342162,
       "scale": 1.6,
       "color": "white"
     },
     {
       "type": "tent",
-      "x": -11.97611134922814,
-      "z": -15.79523240474315,
+      "x": -30.78170411544638,
+      "z": -19.62391220515832,
       "heading": 1.9373154697137058,
       "scale": 1.6,
       "color": "red"
@@ -1222,7 +1234,9 @@
       "terrainType": "loose_dirt",
       "heightAtMin": 3,
       "heightAtMax": -1,
-      "blendWidth": 2.5
+      "blendWidth": 2.5,
+      "jitter": 0.08,
+      "jitterSeed": 72
     },
     {
       "type": "squareHill",
