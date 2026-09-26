@@ -727,7 +727,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // y=0, floating the marks above real terrain. Attached directly to the
   // track object so truck.js can reach it through the `track` reference it
   // already receives every frame.
-  currentTrack._sharedTireMarks = new SharedTireMarksManager(scene, currentTrack.id, terrainManager);
+  currentTrack._sharedTireMarks = new SharedTireMarksManager(scene, currentTrack, terrainManager);
 
   // Create movable obstacles, walls, flags, and track signs from track features.
   for (const feature of currentTrack.getFeatures()) {

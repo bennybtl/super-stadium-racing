@@ -76,7 +76,7 @@ export class RibbonHeightSampler {
     const points = feature?.points;
     if (!Array.isArray(points) || points.length === 0) return false;
     return points.some((pt) => {
-      this._terrainQuery.heightAt(pt.x, pt.z);
+      this._terrainQuery.tryHeightAtFast(pt.x, pt.z);
       return this._terrainQuery.getLastResolvedSurface?.()?.kind === "deck";
     });
   }

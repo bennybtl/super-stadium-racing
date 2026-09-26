@@ -76,9 +76,7 @@ export class SquareHillEditor {
   createVisual(feature) {
     const scene = this.editor.scene;
     const track = this.editor.currentTrack;
-    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ)
-      ?? this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ)
-      ?? 0;
+    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ) ?? 0;
     const absH = feature.heightAtMin !== undefined
       ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
       : Math.max(0.5, Math.abs(feature.height ?? 5));
@@ -109,12 +107,10 @@ export class SquareHillEditor {
   updateVisual(hillData) {
     const { feature, node, sphere } = hillData;
     const track = this.editor.currentTrack;
-    // Mirror createVisual: use the deterministic track.getHeightAt rather than a
-    // ground-mesh raycast, which runs before the terrain rebuild and falls back
-    // to 0 on a miss — that buried the sphere and made the gizmo vanish on edit.
-    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ)
-      ?? this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ)
-      ?? 0;
+    // Mirror createVisual: the deterministic track.getHeightAt, not a surface
+    // lookup, which runs before the terrain rebuild and would answer for the
+    // old ground (a squareHill is ground, so the analytic field is the answer).
+    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ) ?? 0;
     const absH = feature.heightAtMin !== undefined
       ? Math.max(0.5, Math.abs(feature.heightAtMin ?? 0), Math.abs(feature.heightAtMax ?? 0))
       : Math.max(0.5, Math.abs(feature.height ?? 5));
@@ -141,9 +137,7 @@ export class SquareHillEditor {
    */
   _handleY(feature) {
     const track = this.editor.currentTrack;
-    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ)
-      ?? this.editor.terrainQuery.heightAt(feature.centerX, feature.centerZ)
-      ?? 0;
+    const terrainH = track?.getHeightAt?.(feature.centerX, feature.centerZ) ?? 0;
     const sloped = feature.heightAtMin !== undefined;
     const lo = sloped ? (feature.heightAtMin ?? 0) : (feature.height ?? 5);
     const hi = sloped ? (feature.heightAtMax ?? 0) : (feature.height ?? 5);

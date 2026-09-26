@@ -147,7 +147,7 @@ export class ObstacleEditor {
           }
         }
         stackData.decalMeshes = stackData.visualMeshes;
-        const terrainNow = this.editor.terrainQuery.heightAt(feature.x, feature.z);
+        const terrainNow = this._surfaceY(feature);
         const offset = this._syncHandleYOffsetFromVisual(stackData, spec, terrainNow);
         if (stackData.mesh) stackData.mesh.position.y = terrainNow + offset;
         this._syncDecalAnchor(stackData, spec, terrainNow);
@@ -182,7 +182,7 @@ export class ObstacleEditor {
   _rebuildNodeVisual(stackData) {
     const { feature } = stackData;
     const { type, spec } = this._ensureObstacleDefaults(feature);
-    const terrainH = this.editor.terrainQuery.heightAt(feature.x, feature.z);
+    const terrainH = this._surfaceY(feature);
 
     stackData.node?.dispose();
 
@@ -201,7 +201,7 @@ export class ObstacleEditor {
     const { type, spec } = this._ensureObstacleDefaults(feature);
     const SPHERE_Y_ABOVE = this._computeHandleYOffset(feature, spec);
 
-    const terrainH = this.editor.terrainQuery.heightAt(feature.x, feature.z);
+    const terrainH = this._surfaceY(feature);
 
     // TransformNode holds the OBJ visual at ground level.
     const node = new TransformNode('tireStackNode', this.scene);
@@ -228,6 +228,15 @@ export class ObstacleEditor {
   }
 
   /**
+   * Height an obstacle rests at: the surface under it (terrain, bridge, drive
+   * box), as ObstacleManager places it in the game, with the analytic terrain
+   * where no surface covers the point.
+   */
+  _surfaceY(feature) {
+    return this.editor.terrainQuery.surfaceHeightAt(feature.x, feature.z, this.editor.currentTrack);
+  }
+
+  /**
    * Re-sample obstacle + handle heights after a terrain rebuild. Obstacles rest
    * on whatever surface is under them (terrain, bridge, drive box), so this
    * re-runs the same surface query the visual was placed with.
@@ -238,7 +247,7 @@ export class ObstacleEditor {
 
   updateVisual(stackData) {
     const { feature, node, mesh } = stackData;
-    const terrainH = this.editor.terrainQuery.heightAt(feature.x, feature.z);
+    const terrainH = this._surfaceY(feature);
     const { spec } = this._ensureObstacleDefaults(feature);
     const SPHERE_Y_ABOVE = this._syncHandleYOffsetFromVisual(stackData, spec, terrainH);
 

@@ -22,22 +22,22 @@ const SAVE_INTERVAL_MS = 15000;
  * every frame.
  */
 export class SharedTireMarksManager {
-  constructor(scene, trackKey, terrainManager, ringOptions = {}) {
-    this._trackKey = trackKey;
+  constructor(scene, track, terrainManager, ringOptions = {}) {
+    this._trackKey = track.id;
     this.ring = new TireMarks(scene, ringOptions);
-    this._streaks = loadTireMarkStreaks(trackKey);
+    this._streaks = loadTireMarkStreaks(this._trackKey);
     this._unsaved = false;
     this._lastSaveAt = performance.now();
 
     // Generic (non-truck) samplers for replaying last session's marks: the
-    // analytic/raycast height a truck would have sat at, and the same
+    // surface height a truck would have sat at, and the same
     // terrain-matched colour a live mark would pick.
     const terrainQuery = new TerrainQuery(scene);
-    const replaySampleY = (x, z, fromY) => terrainQuery.heightAt(x, z, fromY);
+    const replaySampleY = (x, z, fromY) => terrainQuery.surfaceHeightAt(x, z, track, { fromY });
     const replayColorForPoint = (x, z) => tireMarkColorForTerrain(terrainManager?.getTerrainAt?.({ x, z })?.color);
     for (const streak of this._streaks) {
       // appendHistory calls sampleY(x, z, fromY + 1) — a high fromY here
-      // (there's no real truck position to take one from) so the raycast
+      // (there's no real truck position to take one from) so the lookup
       // starts above anything on the track, including an elevated bridge
       // deck, rather than punching through it from below.
       this.ring.appendHistory(streak.points, { sampleY: replaySampleY, fromY: 499, colorForPoint: replayColorForPoint });

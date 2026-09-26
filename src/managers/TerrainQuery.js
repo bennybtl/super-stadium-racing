@@ -29,10 +29,9 @@ import { Vector3 } from "@babylonjs/core";
  * null when no drivable surface exists at the point — which is a different
  * statement from "the ground is at y = 0". This matters because a lookup only
  * finds *registered surface meshes*, so it legitimately misses open terrain that
- * the analytic heightfield (`track.getHeightAt`) knows about. The `heightAt`
- * wrapper collapses that distinction into a caller-supplied number; reach for it
- * only when its fallback really is an acceptable answer. `surfaceHeightAt` is
- * the usual combination: raycast first, analytic heightfield on a miss.
+ * the analytic heightfield (`track.getHeightAt`) knows about.
+ * `surfaceHeightAt` is the usual combination: surface lookup first, analytic
+ * heightfield on a miss.
  */
 
 // Distance between opposing cross-pattern probes (metres).
@@ -164,20 +163,6 @@ export class TerrainQuery {
       : this.tryHeightAt(x, z, fromY, continuity);
     if (y != null) return y;
     return track ? track.getHeightAt(x, z) : fallback;
-  }
-
-  /**
-   * Convenience wrapper over {@link tryHeightAt} for callers that genuinely have
-   * a sensible default. `fallback` is returned on a miss and is indistinguishable
-   * from a real hit at that height, so a caller passing the default 0 is
-   * asserting "sea level is a fine answer here" — if that isn't true, use
-   * `tryHeightAt` and decide.
-   *
-   * @param {number} fallback  Value returned when no surface is found.
-   * @returns {number}
-   */
-  heightAt(x, z, fromY = 500, fallback = 0, options = {}) {
-    return this.tryHeightAt(x, z, fromY, options) ?? fallback;
   }
 
   /**

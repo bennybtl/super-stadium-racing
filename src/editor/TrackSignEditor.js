@@ -49,7 +49,7 @@ export class TrackSignEditor {
   }
 
   createVisual(feature) {
-    const groundY = this._track.getHeightAt(feature.x, feature.z);
+    const groundY = this._groundY(feature.x, feature.z);
     const sign = new TrackSign(feature, groundY, this._scene);
     this._signs.push(sign);
 
@@ -132,7 +132,7 @@ export class TrackSignEditor {
     const prevZ   = feature.z;
     const newX    = e._snap(e._rawDragPos.x);
     const newZ    = e._snap(e._rawDragPos.z);
-    const groundY = this._track.getHeightAt(newX, newZ);
+    const groundY = this._groundY(newX, newZ);
     this._selected.moveTo(newX, newZ, groundY);
     this._positionHandle(this._selected);
     return new Vector3(newX - prevX, 0, newZ - prevZ);
@@ -246,9 +246,17 @@ export class TrackSignEditor {
     this.editor.saveSnapshot(true);
   }
 
+  /**
+   * Height a sign stands at: the surface under it (terrain, bridge, drive box),
+   * as TrackSignManager places it in the game.
+   */
+  _groundY(x, z) {
+    return this.editor.terrainQuery.surfaceHeightAt(x, z, this._track);
+  }
+
   changeHeightOffset(val) {
     if (!this._selected) return;
-    const g = this.editor.terrainQuery.heightAt(this._selected.feature.x, this._selected.feature.z);
+    const g = this._groundY(this._selected.feature.x, this._selected.feature.z);
     this._selected.setHeightOffset(val, g);
     this._positionHandle(this._selected);
     this.editor._editorStore.trackSign.heightOffset = val;
