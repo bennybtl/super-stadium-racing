@@ -7,6 +7,7 @@
   "grassBlades": true,
   "oobDeadSpace": false,
   "allowReverse": true,
+  "stadiumLighting": false,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
@@ -915,19 +916,23 @@
       "height": -2.5,
       "waterLevelOffset": 1.5,
       "terrainType": "water",
-      "blendWidth": 2
+      "blendWidth": 2,
+      "jitter": 0.33,
+      "jitterSeed": 224
     },
     {
       "type": "hill",
-      "centerX": -57.5,
-      "centerZ": -6.000508959260955,
+      "centerX": -61.07546826822424,
+      "centerZ": -2.4662344806578957,
       "radiusX": 10,
       "radiusZ": 11.5,
       "angle": 28,
       "height": -2.5,
       "waterLevelOffset": 1.5,
       "terrainType": "water",
-      "blendWidth": 3.5
+      "blendWidth": 3.5,
+      "jitter": 0.21,
+      "jitterSeed": 9908
     },
     {
       "type": "terrain",
@@ -1161,8 +1166,8 @@
           "z": -55.739999999999995
         },
         {
-          "x": -63.67968642664298,
-          "z": -62.552189949558624
+          "x": -63.284895372091185,
+          "z": -59.03876711374085
         },
         {
           "x": -93.5013291777537,
@@ -1306,7 +1311,9 @@
       "height": 1.2,
       "waterLevelOffset": 0,
       "terrainType": "rocky",
-      "flatTop": 0.25
+      "flatTop": 0.25,
+      "jitter": 0.28,
+      "jitterSeed": 7591
     },
     {
       "type": "hill",
@@ -1368,30 +1375,39 @@
       "height": -2.5,
       "waterLevelOffset": 1.5,
       "terrainType": "water",
-      "blendWidth": 2
+      "blendWidth": 2,
+      "jitter": 0.3,
+      "jitterSeed": 4824
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -76.40089809335413,
-      "z": -3.1196246529296374
+      "x": -70.7171184492359,
+      "z": 4.217051595474335,
+      "scale": 1.7,
+      "color": "forest",
+      "preset": "bush_3"
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -74.90483385500053,
-      "z": -13.849444752394316,
+      "x": -78.1064213029619,
+      "z": 9.95165692994561,
       "heading": 1.361356816555577,
       "seed": 14,
-      "scale": 2
+      "scale": 2.3,
+      "color": "forest",
+      "preset": "bush_3"
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -77.7510160340568,
-      "z": -9.502868338516311,
+      "x": -78.96802077610455,
+      "z": -17.425550930784727,
       "heading": 1.361356816555577,
-      "mirrorZ": true
+      "mirrorZ": true,
+      "color": "sage",
+      "scale": 1.5
     },
     {
       "type": "model",
@@ -1399,27 +1415,31 @@
       "x": -44.36361044010925,
       "z": -36.92238890315424,
       "heading": 1.361356816555577,
-      "mirrorZ": true
+      "mirrorZ": true,
+      "scale": 2.2
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -48.56198334559886,
-      "z": -34.078398784551815,
+      "x": -52.15371913666748,
+      "z": -34.391491007806245,
       "heading": 1.361356816555577,
       "mirrorZ": true,
       "mirrorX": true,
-      "scale": 0.8
+      "scale": 1.5,
+      "seed": 25,
+      "color": "sage"
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -40.85398383329089,
-      "z": -33.61602923232447,
+      "x": -40.539408919036106,
+      "z": -30.130194666066117,
       "heading": 1.361356816555577,
       "mirrorZ": false,
       "mirrorX": false,
-      "scale": 0.8
+      "scale": 2.1,
+      "color": "sage"
     },
     {
       "type": "model",
@@ -1469,40 +1489,44 @@
       "model": "bush",
       "x": -20.320172882541442,
       "z": 53.06233114081,
-      "scale": 0.8,
+      "scale": 2,
       "heading": 1.5707963267948966
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -24.729525756839855,
-      "z": 55.189551768079255,
-      "scale": 0.8,
-      "heading": 1.5707963267948966
+      "x": -28.33124038778418,
+      "z": 62.7318675117339,
+      "scale": 3,
+      "heading": 1.5707963267948966,
+      "seed": 16
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -25.755089867762273,
-      "z": 53.07597147473262,
-      "scale": 0.8,
-      "heading": 1.5707963267948966
+      "x": -30.417599995638785,
+      "z": 53.846636348594295,
+      "scale": 1.4,
+      "heading": 1.5707963267948966,
+      "seed": 14
     },
     {
       "type": "model",
       "model": "bush",
       "x": -59.23389528061268,
       "z": 67.5783818919053,
-      "scale": 0.8,
+      "scale": 1.9,
       "heading": 1.5707963267948966
     },
     {
       "type": "model",
       "model": "bush",
-      "x": -62.69500732631445,
-      "z": 70.6818745383593,
-      "scale": 0.8,
-      "heading": 1.5707963267948966
+      "x": -89.67654318335933,
+      "z": 70.24012116051406,
+      "scale": 1.7,
+      "heading": 1.5707963267948966,
+      "seed": 25,
+      "color": "forest"
     },
     {
       "type": "model",
@@ -1553,17 +1577,18 @@
     {
       "type": "model",
       "model": "bush",
-      "x": 111.34269702984245,
-      "z": 64.00390871315325,
-      "scale": 0.8,
-      "heading": 1.5707963267948966
+      "x": 107.2112265449174,
+      "z": 68.5104399036695,
+      "scale": 2.4,
+      "heading": 1.5707963267948966,
+      "seed": 33
     },
     {
       "type": "model",
       "model": "bush",
       "x": 115.48017364126399,
       "z": 59.17691527449295,
-      "scale": 0.8,
+      "scale": 2.6,
       "heading": 1.5707963267948966,
       "mirrorX": true
     },
@@ -1623,14 +1648,14 @@
     },
     {
       "type": "startPosition",
-      "x": 21.406181239772557,
-      "z": -41.3102324195255,
+      "x": 20.478813747961123,
+      "z": -39.275535994458465,
       "heading": -1.3089969389957472,
       "mode": "grid",
       "poleIndex": 0,
       "columns": 4,
-      "colSpacing": 5.5,
-      "rowSpacing": 12.5
+      "colSpacing": 4.5,
+      "rowSpacing": 7.5
     },
     {
       "type": "model",
@@ -1651,20 +1676,20 @@
     {
       "type": "model",
       "model": "forest_mushroom_1",
-      "x": 63.935572582785156,
-      "z": -3.271319553763057
+      "x": 87.81458228026806,
+      "z": 0.9612087557473501
     },
     {
       "type": "model",
       "model": "forest_mushroom_1",
-      "x": 60.935572582785156,
-      "z": -4.271319553763057
+      "x": 88.5294941253303,
+      "z": -19.19417511428954
     },
     {
       "type": "model",
       "model": "forest_mushroom_1",
-      "x": 62.435572582785156,
-      "z": -5.271319553763057,
+      "x": 89.6850496709243,
+      "z": -5.577388942829444,
       "scale": 0.7
     },
     {
@@ -1699,69 +1724,75 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 45.495072937621586,
-      "z": -4.690414854520384,
-      "color": "green",
+      "x": -51.43779730908525,
+      "z": -6.758679100465461,
+      "color": "slate",
       "scale": 3.3,
       "seed": 14,
       "radius": 0.6,
-      "collider": false
+      "collider": false,
+      "preset": "slab"
     },
     {
       "type": "model",
       "model": "rock",
       "x": 42.61790049209856,
       "z": 22.89378878202457,
-      "color": "green",
+      "color": "slate",
       "scale": 4,
       "seed": 14,
       "radius": 0.6,
       "collider": false,
-      "heading": 1.2740903539558606
+      "heading": 1.2740903539558606,
+      "preset": "outcrop"
     },
     {
       "type": "model",
       "model": "rock",
-      "x": 56.79203426387107,
-      "z": -3.284381809560692,
-      "color": "green",
+      "x": -38.27857425296407,
+      "z": -11.680810066389348,
+      "color": "slate",
       "scale": 3.3,
       "seed": 10,
       "radius": 0.6,
-      "collider": false
+      "collider": false,
+      "preset": "slab"
     },
     {
       "type": "model",
       "model": "rock",
-      "x": 71.79269391018525,
-      "z": 10.566730150930113,
-      "color": "green",
+      "x": 70.656903479784,
+      "z": 5.865083352409897,
+      "color": "slate",
       "scale": 4,
-      "seed": 8,
+      "seed": 16,
       "radius": 0.6,
-      "collider": false
+      "collider": false,
+      "preset": "slab"
     },
     {
       "type": "model",
       "model": "rock",
-      "x": 57.495072937621586,
-      "z": 7.309585145479616,
-      "color": "green",
-      "scale": 2.2,
+      "x": 56.995072937621586,
+      "z": 1.8095851454796161,
+      "color": "slate",
+      "scale": 1.4,
       "seed": 26,
       "radius": 0.6,
-      "collider": false
+      "collider": false,
+      "preset": "outcrop"
     },
     {
       "type": "model",
       "model": "rock",
       "x": 74.79269391018525,
       "z": 13.566730150930113,
-      "color": "green",
-      "scale": 4,
+      "color": "gray",
+      "scale": 2.1,
       "seed": 18,
       "radius": 0.6,
-      "collider": false
+      "collider": false,
+      "preset": "slab"
     },
     {
       "type": "model",
@@ -1824,6 +1855,222 @@
       "width": 10,
       "primaryColor": "red",
       "logoScale": 1.3
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 56.77831110615219,
+      "z": 5.494797065099733,
+      "color": "slate",
+      "scale": 1.76,
+      "seed": 25,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 3.651465978346845
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 54.48016762946246,
+      "z": 4.210317318362115,
+      "color": "slate",
+      "scale": 1.61,
+      "seed": 17,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 4.1850014634356
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 51.63228777149039,
+      "z": 7.865723474055622,
+      "color": "slate",
+      "scale": 1.8,
+      "seed": 5,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 6.245757763656052
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 45.549269815813034,
+      "z": 6.829922444218857,
+      "color": "slate",
+      "scale": 2.15,
+      "seed": 21,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 3.811139150915793
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 52.86935039151909,
+      "z": 5.032373388337973,
+      "color": "slate",
+      "scale": 2.8,
+      "seed": 24,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 0.13348611849175557
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 34.837816046605944,
+      "z": 8.96372935017711,
+      "color": "slate",
+      "scale": 4,
+      "seed": 35,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 0.1496599437170447
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 75.44253987063883,
+      "z": 9.800742728149512,
+      "color": "slate",
+      "scale": 2.25,
+      "seed": 19,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 0.3070322909689498
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 45.70495880480009,
+      "z": 26.029513680012585,
+      "color": "slate",
+      "scale": 2.6,
+      "seed": 37,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 1.0127918714161732
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 69.69343777311227,
+      "z": 20.270233057210366,
+      "color": "slate",
+      "scale": 4,
+      "seed": 2,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 2.148902558021339
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -41.56005805637913,
+      "z": -10.690994127356625,
+      "color": "slate",
+      "scale": 1.61,
+      "seed": 23,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 1.2244053732487243
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 32.50988685567915,
+      "z": 7.0631881334799935,
+      "color": "slate",
+      "scale": 1.78,
+      "seed": 30,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 5.1783267402280515
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": 32.25757390403292,
+      "z": 12.230704325980998,
+      "color": "slate",
+      "scale": 4,
+      "seed": 36,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 0.22689031191494474
+    },
+    {
+      "type": "model",
+      "model": "rock",
+      "x": -52.25931653852384,
+      "z": -26.271269202901067,
+      "color": "slate",
+      "scale": 1.54,
+      "seed": 26,
+      "radius": 0.6,
+      "collider": false,
+      "preset": "outcrop",
+      "heading": 0.034597801621180514
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": 115.93605612743995,
+      "z": 73.01946821960448,
+      "scale": 2.59,
+      "heading": 4.26569407826304,
+      "seed": 15
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -17.62952256810937,
+      "z": 61.14908242279841,
+      "scale": 1.64,
+      "heading": 5.593580871464178,
+      "seed": 11
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -14.590305506628587,
+      "z": 68.05474235319994,
+      "scale": 2.8,
+      "heading": 3.343071191145958,
+      "seed": 29
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -7.2316581876436565,
+      "z": 74.98931175257552,
+      "scale": 2.88,
+      "heading": 2.524788057391392,
+      "seed": 22
+    },
+    {
+      "type": "model",
+      "model": "bush",
+      "x": -64.43515518760623,
+      "z": 6.643533742296887,
+      "scale": 2.4,
+      "color": "forest",
+      "preset": "bush_3",
+      "seed": 27,
+      "heading": 1.9198621771937625
     }
   ]
 }

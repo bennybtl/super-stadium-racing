@@ -571,14 +571,14 @@
           "radius": 9
         },
         {
-          "x": 73.79,
+          "x": 72.79,
           "z": -73.82,
           "radius": 10.5
         },
         {
-          "x": 54.081035145571605,
-          "z": -97.61182107881991,
-          "radius": 14.5
+          "x": 53.581035145571605,
+          "z": -97.11182107881991,
+          "radius": 14
         },
         {
           "x": -38.5310009185209,
@@ -1156,31 +1156,37 @@
       "depth": 18,
       "angle": 97,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 0.5,
       "terrainType": "packed_dirt",
       "heightAtMin": 3,
       "heightAtMax": -0.5,
-      "blendWidth": 1.5,
+      "blendWidth": 2,
       "reverseOverride": {
         "angle": 277
-      }
+      },
+      "jitter": 0.16,
+      "jitterSeed": 8601,
+      "edgeShape": 3
     },
     {
       "type": "squareHill",
       "centerX": -70.06211536537006,
       "centerZ": -6.3458470293454,
-      "width": 18,
-      "depth": 23.5,
+      "width": 16.5,
+      "depth": 18,
       "angle": 86,
       "waterLevelOffset": 0,
-      "transition": 4,
+      "transition": 2.5,
       "terrainType": "packed_dirt",
       "heightAtMin": 3,
       "heightAtMax": -0.5,
       "blendWidth": 3,
       "reverseOverride": {
         "angle": 266
-      }
+      },
+      "jitter": 0.23,
+      "jitterSeed": 6434,
+      "edgeShape": 1.85
     },
     {
       "type": "trackSign",
@@ -1734,7 +1740,7 @@
       "height": -1,
       "waterLevelOffset": 1,
       "terrainType": "mud",
-      "jitter": 0.09,
+      "jitter": 0.23,
       "jitterSeed": 8231
     },
     {
@@ -1856,20 +1862,20 @@
     {
       "type": "model",
       "model": "tent",
-      "x": -73.02182118937702,
-      "z": 33.62017714269882,
-      "color": "white",
+      "x": -73.52182118937702,
+      "z": 34.12017714269882,
+      "color": "orange",
       "scale": 1.5,
-      "heading": 2.530727415391778
+      "heading": 2.862339973270697
     },
     {
       "type": "model",
       "model": "tent",
-      "x": -73.54485079810983,
-      "z": 22.77973119508197,
-      "color": "white",
+      "x": -74.04485079810983,
+      "z": 23.27973119508197,
+      "color": "brown",
       "scale": 1.5,
-      "heading": 2.530727415391778
+      "heading": 3.159045946109733
     },
     {
       "type": "model",
@@ -1898,21 +1904,24 @@
       "terrainType": "mud",
       "blendWidth": 4.5,
       "edgeShape": 2.7,
-      "flatTop": 0
+      "flatTop": 0,
+      "jitter": 0.21,
+      "jitterSeed": 4853
     },
     {
       "type": "model",
       "model": "tree",
-      "x": 14.318857135216023,
-      "z": -2.477548626275686,
-      "color": "green",
-      "scale": 0.8,
+      "x": 13.318857135216023,
+      "z": -1.477548626275686,
+      "color": "forest",
+      "scale": 1.6,
       "seed": 1,
       "trunkHeight": 4,
       "trunkRadius": 0.5,
       "maxDepth": 3,
       "radialSegments": 6,
-      "collider": false
+      "collider": false,
+      "preset": "pine_medium"
     },
     {
       "type": "model",
@@ -1987,8 +1996,8 @@
     {
       "type": "model",
       "model": "bush",
-      "x": 49.999824414962546,
-      "z": 1.5000638144889322,
+      "x": 47.999824414962546,
+      "z": -7.999936185511068,
       "color": "green",
       "scale": 1.6,
       "preset": "bush_2",
@@ -2008,7 +2017,7 @@
     {
       "type": "model",
       "model": "bush",
-      "x": 54.60682537858193,
+      "x": 56.60682537858193,
       "z": -4.584444947344938,
       "color": "forest",
       "scale": 1.52,
@@ -2019,7 +2028,7 @@
     {
       "type": "model",
       "model": "bush",
-      "x": 52.83751905159789,
+      "x": 54.83751905159789,
       "z": -0.2817609587089196,
       "color": "forest",
       "scale": 1.28,
@@ -2030,7 +2039,7 @@
     {
       "type": "model",
       "model": "bush",
-      "x": 45.43196315065978,
+      "x": 44.43196315065978,
       "z": -2.759065998072545,
       "color": "forest",
       "scale": 1.03,

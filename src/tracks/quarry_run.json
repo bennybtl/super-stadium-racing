@@ -412,7 +412,8 @@
         0,
         0,
         0
-      ]
+      ],
+      "smoothing": 0.5
     },
     {
       "type": "driveBox",
@@ -810,7 +811,7 @@
       "type": "model",
       "model": "arrow_sign",
       "x": 0.9499794892931451,
-      "z": 21.188397098100907,
+      "z": 23.688397098100907,
       "color": "orange",
       "scale": 1.1,
       "heading": 0,
@@ -1027,16 +1028,16 @@
     },
     {
       "type": "trackSign",
-      "x": -18.997000000411084,
-      "z": 20.499990999921465,
+      "x": -17.773791786845454,
+      "z": 23.367048207118373,
       "name": "Quarry Run",
-      "rotation": -0.5235987755982988,
+      "rotation": 6.265732014659643,
       "contentType": "brand",
       "brandImage": "power-lube.png",
       "background": "yellow",
       "primaryColor": "orange",
       "scale": 1.6,
-      "heightOffset": 1.8,
+      "heightOffset": 4,
       "width": 8.5,
       "logoScale": 1
     },
@@ -1068,7 +1069,7 @@
     },
     {
       "type": "checkpoint",
-      "centerX": 30.87012586207395,
+      "centerX": 50.87012586207395,
       "centerZ": -39.11732568795995,
       "heading": 1.5707963267948966,
       "width": 17,
@@ -1175,8 +1176,8 @@
           "z": -37.84
         },
         {
-          "x": -15.57,
-          "z": 1.99
+          "x": -16.07,
+          "z": 2.49
         },
         {
           "x": 11.48,
@@ -1602,14 +1603,15 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 0.4360527335264095,
-      "z": -50.461324070085865,
-      "color": "yellow",
+      "x": -8.991695415509922,
+      "z": -46.97180690471478,
+      "color": "slate",
       "scale": 2.9,
       "seed": 11,
       "radius": 0.6,
       "collider": true,
-      "heading": 1.710422666954443
+      "heading": 2.5132741228718345,
+      "preset": "slab"
     },
     {
       "type": "model",
@@ -1996,6 +1998,53 @@
       "radius": 0.6,
       "collider": true,
       "heading": 1.526381883992626
+    },
+    {
+      "type": "hill",
+      "centerX": -2.396731974585275,
+      "centerZ": -2.9429340501128642,
+      "radiusX": 16,
+      "radiusZ": 10,
+      "angle": 0,
+      "height": 2.8,
+      "waterLevelOffset": 0,
+      "terrainType": "rocky",
+      "blendWidth": 3.5,
+      "jitter": 0.23,
+      "jitterSeed": 4863
+    },
+    {
+      "type": "tunnel",
+      "points": [
+        {
+          "x": -17.85,
+          "z": 10.149999999999999,
+          "radius": 10
+        },
+        {
+          "x": -17.96,
+          "z": 42.72,
+          "radius": 21.5
+        },
+        {
+          "x": 38.53,
+          "z": 31.97,
+          "radius": 22.5
+        },
+        {
+          "x": 39.08147393722837,
+          "z": -5.350483330803076,
+          "radius": 10
+        },
+        {
+          "x": 45.132947874456725,
+          "z": -32.17096666160615,
+          "radius": 10
+        }
+      ],
+      "width": 10,
+      "height": 6,
+      "cover": 2
     }
   ]
 }

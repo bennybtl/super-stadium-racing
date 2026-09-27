@@ -7,6 +7,7 @@
   "grassBlades": true,
   "oobDeadSpace": false,
   "allowReverse": true,
+  "stadiumLighting": false,
   "borderWall": {
     "enabled": true,
     "thickness": 3,
@@ -1994,40 +1995,6 @@
       "rotation": 235
     },
     {
-      "type": "polyWall",
-      "points": [
-        {
-          "x": 48.81206105431408,
-          "z": -23.199535249350767,
-          "radius": 10
-        },
-        {
-          "x": 55.20556354387329,
-          "z": -19.66920623998986,
-          "radius": 10
-        },
-        {
-          "x": 63.726603977485176,
-          "z": -19.001921046736562,
-          "radius": 10
-        },
-        {
-          "x": 68.95698463827753,
-          "z": -22.088619141429966,
-          "radius": 10
-        }
-      ],
-      "height": 0.5,
-      "collisionHeight": 3.5,
-      "thickness": 0.5,
-      "friction": 0.05,
-      "closed": false,
-      "fence": false,
-      "colors": [
-        "gray"
-      ]
-    },
-    {
       "type": "trackLight",
       "x": 22.052381488820323,
       "z": 27.423146561169155,
@@ -2037,50 +2004,6 @@
       "color": "cool",
       "tilt": 22,
       "rotation": 26
-    },
-    {
-      "type": "polyWall",
-      "points": [
-        {
-          "x": -49.631673006616566,
-          "z": -46.8147850540727,
-          "radius": 10
-        },
-        {
-          "x": -50.38491882084493,
-          "z": -41.66982453038695,
-          "radius": 10
-        },
-        {
-          "x": -56.29024704455698,
-          "z": -37.35155140681554,
-          "radius": 10
-        },
-        {
-          "x": -68.55836630007148,
-          "z": -37.97169351284214,
-          "radius": 10
-        },
-        {
-          "x": -75.6508860516985,
-          "z": -49.30636744125683,
-          "radius": 10
-        },
-        {
-          "x": -73.6391623401765,
-          "z": -57.03233532795637,
-          "radius": 10
-        }
-      ],
-      "height": 0.5,
-      "collisionHeight": 3,
-      "thickness": 0.5,
-      "friction": 0.05,
-      "closed": false,
-      "fence": false,
-      "colors": [
-        "gray"
-      ]
     },
     {
       "type": "squareHill",
