@@ -34,7 +34,7 @@ bucket, 30/s sustained, burst 10); names/keys are type- and length-checked;
 **Still trusted (i.e. cheatable):** position (teleporting/speed hacks are
 invisible to the server), lap *timing*, and checkpoint order — the server only
 checks that laps arrive in sequence. Acceptable for friendly lobbies; the
-server-authoritative plan below is the fix if that stops being true.
+server-authoritative plan below is the fix if that stops being true. Work on it lives on the `mp-server` branch (Phase 0 done).
 
 **Since this plan was written:** the fixed 60 Hz sim step from Phase 2 has
 landed client-side (`src/modes/fixed-step.js`, max 5 steps/frame), and the game
@@ -48,7 +48,7 @@ in sim paths) still stand.
 # Future plan: server-authoritative simulation
 
 Server-authoritative racing over WebSockets. Clients send inputs; the server runs
-the real simulation and broadcasts state. Not started.
+the real simulation and broadcasts state. Phase 0 done; Phase 1 next.
 
 ## Architecture decisions (locked)
 
@@ -144,6 +144,27 @@ steps under Node — plus a first read on per-lobby memory and per-tick cost.
 
 Fall back to `scripts/babylon-stub.mjs`-style stubbing only if `NullEngine`
 proves unusable; prefer the real engine so there is one physics codebase.
+
+**Result (2026-09-27): viable.** `node scripts/spike-headless.mjs [track] [trucks]`
+— NullEngine + Havok WASM (`HavokPhysics({ wasmBinary })` from the package file)
++ real track JSON + displaced ground (MESH body, drive-surface registry, real
+`TerrainQuery`) + real `new Truck(scene, null)`, 600 ticks at SIM_DT.
+
+- Same-machine determinism: identical state hashes across runs (1 and 8 trucks,
+  apple_river and cross_country), with `Math.random`/`Date.now`/`performance.now`
+  shimmed to a seeded PRNG + sim clock — i.e. the Phase 2 work is required.
+- Cost, 8 trucks (ground only, no walls/collision/checkpoints yet): median
+  0.2–0.27 ms/tick, p99 ~1 ms, one ~10 ms outlier (JIT warm-up). 60 Hz budget is
+  16.7 ms — CPU is not the constraint.
+- Init: Havok 13 ms, track + ground ~400 ms, 8 trucks ~35 ms.
+- Memory: ~260–285 MB RSS per process, of which ~140 MB is Node + the bundled
+  Babylon before any scene exists. That's the per-child floor → ~3–4 lobbies/GB.
+  A leaner server bundle (sim modules only) is the lever if density matters.
+- `Truck`'s constructor builds visuals regardless (`TruckBody` canvas texture →
+  needed an `OffscreenCanvas` stub; tire OBJ load fails → cylinder fallback).
+  Confirms the Phase 1 `updateSim`/presentation split.
+- Shared `Math.random` couples trucks: truck 0 ends somewhere different in an
+  8-truck run than alone. Per-truck RNG streams in Phase 2 would decouple them.
 
 ### Phase 1 — Extract the simulation step
 
