@@ -90,10 +90,10 @@ function checkPatchInvariant(track, fail) {
     const bounds = track.getFeatureHeightBounds(f);
     const prev = lastBounds.get(f);
     if (bounds) lastBounds.set(f, bounds);
-    const region = bounds && prev ? {
+    const region = track.expandHeightRegionForTunnels(bounds && prev ? {
       minX: Math.min(prev.minX, bounds.minX), maxX: Math.max(prev.maxX, bounds.maxX),
       minZ: Math.min(prev.minZ, bounds.minZ), maxZ: Math.max(prev.maxZ, bounds.maxZ),
-    } : null;
+    } : null);
     for (const p of pts) {
       if (region && (p.x < region.minX || p.x > region.maxX || p.z < region.minZ || p.z > region.maxZ)) continue;
       p.y = track.getHeightAt(p.x, p.z);
