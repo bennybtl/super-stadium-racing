@@ -981,6 +981,30 @@ export class Track {
   // getHeightAt early-out bounds. Returns { minX, maxX, minZ, maxZ }, or null
   // when the feature's reach can't be bounded (legacy full-track meshGrids,
   // non-height feature types) — callers must treat null as "everywhere".
+  /**
+   * Widen a dirty-height region (e.g. the union of a feature's
+   * getFeatureHeightBounds before and after an edit) for tunnels: a tunnel's
+   * floor follows the ground at its two ends, so an edit touching either end
+   * re-cuts the whole tunnel. Tunnels read the uncut ground there, so one pass
+   * is enough. Returns `region` itself when nothing needs widening.
+   */
+  expandHeightRegionForTunnels(region) {
+    if (!region) return region;
+    let out = region;
+    const inside = (p) => p.x >= region.minX && p.x <= region.maxX && p.z >= region.minZ && p.z <= region.maxZ;
+    for (const feature of this.features) {
+      if (feature?.type !== "tunnel") continue;
+      const path = this._getTunnelPath(feature)?.path;
+      if (!path || !(inside(path[0]) || inside(path[path.length - 1]))) continue;
+      const b = this.getFeatureHeightBounds(feature);
+      out = {
+        minX: Math.min(out.minX, b.minX), maxX: Math.max(out.maxX, b.maxX),
+        minZ: Math.min(out.minZ, b.minZ), maxZ: Math.max(out.maxZ, b.maxZ),
+      };
+    }
+    return out;
+  }
+
   getFeatureHeightBounds(feature) {
     switch (feature?.type) {
       case "tunnel": {

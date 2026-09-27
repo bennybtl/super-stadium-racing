@@ -140,6 +140,7 @@ export class EditorMode extends BaseMode {
             minZ: Math.min(prev.minZ, bounds.minZ),
             maxZ: Math.max(prev.maxZ, bounds.maxZ),
           };
+          region = currentTrack.expandHeightRegionForTunnels(region);
         }
       }
       const positions = ground.getVerticesData(VertexBuffer.PositionKind);
