@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 3,
+  "id": "onroad_7",
+  "packId": "onroad_pack_1",
+  "hidden": true,
+  "dirtChunks": true,
+  "grassBlades": true,
+  "oobDeadSpace": false,
+  "allowReverse": true,
+  "stadiumLighting": false,
+  "borderWall": {
+    "enabled": true,
+    "thickness": 2,
+    "height": 12
+  },
+  "name": "onroad 7",
+  "image": "onroad_7.jpg",
+  "width": 160,
+  "depth": 160,
+  "defaultTerrainType": "loose_dirt",
+  "borderTerrainType": "packed_dirt",
+  "wear": {
+    "enabled": true,
+    "source": "aiPath",
+    "alphaBreakup": 0.28,
+    "width": 4,
+    "intensity": 0.8,
+    "laneSpacing": 2,
+    "pathWander": 0.7,
+    "edgeSoftness": 1,
+    "secondaryPathCount": 60,
+    "secondaryPathStrength": 0.8,
+    "secondaryPathSpacing": 0.04,
+    "seed": 1337
+  },
+  "features": [
+    {
+      "type": "meshGrid",
+      "regional": false,
+      "centerX": 0,
+      "centerZ": 0,
+      "angle": 0,
+      "width": 160,
+      "depth": 160,
+      "cols": 5,
+      "rows": 5,
+      "heights": [
+        0,
+        0,
+        4,
+        5,
+        0,
+        2.5,
+        0,
+        4,
+        3.5,
+        3.5,
+        5,
+        6,
+        7,
+        7,
+        7,
+        7.5,
+        9.25,
+        14,
+        11,
+        14,
+        10,
+        12.5,
+        15,
+        15,
+        15
+      ],
+      "smoothing": 0.55,
+      "offsetsX": [
+        0,
+        0,
+        0,
+        8.5,
+        -6,
+        0,
+        -0.5,
+        0,
+        0,
+        -3.5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "offsetsZ": [
+        0,
+        0,
+        10.5,
+        9,
+        10,
+        0,
+        10,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": 30.69,
+          "z": -47.64
+        },
+        {
+          "x": -7.08,
+          "z": -33.39
+        },
+        {
+          "x": -43.29,
+          "z": -27.41
+        },
+        {
+          "x": -55.34,
+          "z": -9.59
+        }
+      ],
+      "width": 16,
+      "blendWidth": 2,
+      "cornerRadius": 5,
+      "closed": false,
+      "terrainType": "weedy_grass"
+    },
+    {
+      "type": "terrainPath",
+      "points": [
+        {
+          "x": -13.579999999999998,
+          "z": -47.58
+        },
+        {
+          "x": -46.94,
+          "z": -42.72
+        },
+        {
+          "x": -64.16,
+          "z": -26.11
+        },
+        {
+          "x": -67.64,
+          "z": 13.34
+        },
+        {
+          "x": -65.78,
+          "z": 62.32
+        },
+        {
+          "x": -40.16,
+          "z": 65.36
+        },
+        {
+          "x": -36.739999999999995,
+          "z": 41.21
+        },
+        {
+          "x": -17.44,
+          "z": 27.2
+        },
+        {
+          "x": -21.41,
+          "z": 5.42
+        },
+        {
+          "x": -1.5151665826341136,
+          "z": -2.4490161494866456
+        },
+        {
+          "x": -1.7568570813317215,
+          "z": -25.11359175587819
+        },
+        {
+          "x": 30.56,
+          "z": -25.26
+        },
+        {
+          "x": 23.773175078958275,
+          "z": 35.749752906235045
+        },
+        {
+          "x": 40.74597894203081,
+          "z": 59.61978036583168
+        },
+        {
+          "x": 60.620000000000005,
+          "z": 43.01
+        },
+        {
+          "x": 62.69,
+          "z": -27.35
+        },
+        {
+          "x": 50.23,
+          "z": -53.43
+        },
+        {
+          "x": 27.54,
+          "z": -62.67
+        }
+      ],
+      "width": 20,
+      "blendWidth": 0.5,
+      "cornerRadius": 13,
+      "closed": true,
+      "terrainType": "asphalt"
+    },
+    {
+      "type": "terrain",
+      "shape": "rect",
+      "centerX": 44.30228713375301,
+      "centerZ": -8.313279657088898,
+      "terrainType": "asphalt",
+      "roughness": 0,
+      "width": 31,
+      "depth": 21,
+      "rotation": 0,
+      "blendWidth": 0
+    }
+
+  ]
+}

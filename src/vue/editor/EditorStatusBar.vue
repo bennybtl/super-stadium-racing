@@ -3,10 +3,16 @@
     <div v-if="editor.isEditorActive" class="fixed bottom-0 left-0 right-0 h-11 flex items-center gap-3 px-4 bg-black/80 border-t border-slate-900 z-[999] pointer-events-auto select-none box-border">
 
       <!-- Left: track settings button -->
-      <button 
+      <button
           class="rounded-full border border-slate-700 bg-white/5 text-slate-400  hover:text-white text-[12px] font-sans px-3 py-1 whitespace-nowrap transition duration-150 ease-in-out hover:bg-white/10"
           @click="editor.toggleTrackSettings()">
         Track Settings
+      </button>
+      <button
+          class="rounded-full border border-slate-700 bg-white/5 text-slate-400 hover:text-white text-[12px] font-sans px-3 py-1 whitespace-nowrap transition duration-150 ease-in-out hover:bg-white/10"
+          @click="editor.toggleReorderFeatures()"
+          title="Reorder features — controls terrain/hill overlap priority">
+        <i class="bi bi-list-ol mr-1"></i>Reorder Features
       </button>
 
       <div class="text-slate-400 text-[11px] font-sans">

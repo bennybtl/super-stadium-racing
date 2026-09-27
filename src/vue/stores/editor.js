@@ -576,6 +576,22 @@ export const useEditorStore = defineStore('editor', () => {
   }
   function featureAction(method, ...args) { _bridge.value?.[method]?.(...args); }
 
+  // ── Reorder Features panel ──
+  const reorderFeaturesOpen = ref(false);
+  // shallowRef, not ref: a deep ref would recursively proxy each row's
+  // featureRefs — the actual track.features objects — breaking every === /
+  // indexOf identity check elsewhere in the editor (delete, selection, ...)
+  // that expects the raw, un-proxied feature reference.
+  const featureOrderRows = shallowRef([]); // display rows built by EditorController.refreshFeatureOrderRows
+  // The feature object currently selected in the editor (any type), kept in
+  // sync by EditorController so the panel can highlight its row. shallowRef —
+  // it only ever holds an opaque reference, compared by identity.
+  const selectedFeatureRef = shallowRef(null);
+  function openReorderFeatures() { reorderFeaturesOpen.value = true; _bridge.value?.refreshFeatureOrderRows?.(); }
+  function closeReorderFeatures() { reorderFeaturesOpen.value = false; _bridge.value?.flushFeatureOrderRebuild?.(); }
+  function toggleReorderFeatures() { reorderFeaturesOpen.value ? closeReorderFeatures() : openReorderFeatures(); }
+  function previewReorderFeatures(rows) { _bridge.value?.previewReorderFeatures?.(rows); }
+
   return {
     setFeatureProp, featureAction,
     selectedType,
@@ -621,5 +637,8 @@ export const useEditorStore = defineStore('editor', () => {
     setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,
     applyMeshGridSettings, setBridgeMeshPointHeight, setBridgeMeshThickness, setBridgeMeshLayerId,
-    applyBridgeMeshSettings, };
+    applyBridgeMeshSettings,
+    reorderFeaturesOpen, featureOrderRows, selectedFeatureRef,
+    openReorderFeatures, closeReorderFeatures, toggleReorderFeatures, previewReorderFeatures,
+  };
 });

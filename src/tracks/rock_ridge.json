@@ -1443,49 +1443,6 @@
     },
     {
       "type": "model",
-      "model": "forest_tree_1",
-      "x": -35.32938873650769,
-      "z": -6.48068631426279,
-      "heading": 1.361356816555577,
-      "scale": 0.8
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_2",
-      "x": -36.51472551939977,
-      "z": -18.14383141360016,
-      "heading": 1.361356816555577,
-      "scale": 0.7
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_2",
-      "x": 24.978621944020425,
-      "z": -7.300315592015611,
-      "heading": 1.2566370614359172,
-      "scale": 0.7,
-      "mirrorX": false,
-      "mirrorZ": true
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_3",
-      "x": 103.63210400406174,
-      "z": 65.49249856499276,
-      "heading": 1.2566370614359172,
-      "mirrorZ": true
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_4",
-      "x": 12.00154208398084,
-      "z": -11.357752515383456,
-      "heading": 5.253441048502932,
-      "mirrorZ": false,
-      "scale": 0.8
-    },
-    {
-      "type": "model",
       "model": "bush",
       "x": -20.320172882541442,
       "z": 53.06233114081,
@@ -1527,52 +1484,6 @@
       "heading": 1.5707963267948966,
       "seed": 25,
       "color": "forest"
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_5",
-      "x": -2.820172882541442,
-      "z": 70.06233114081,
-      "heading": 1.5707963267948966
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_5",
-      "x": 11.179827117458558,
-      "z": 77.56233114081,
-      "heading": 0,
-      "collider": false
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_2",
-      "x": -7.190730917172852,
-      "z": -80.49720439990173,
-      "heading": 1.2566370614359172,
-      "scale": 0.7,
-      "mirrorX": false,
-      "mirrorZ": true
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_2",
-      "x": 3.037331352251009,
-      "z": -82.03517838799218,
-      "heading": 0.7330382858376184,
-      "scale": 0.8,
-      "mirrorX": false,
-      "mirrorZ": false
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_2",
-      "x": 30.449187964173873,
-      "z": -82.08696485311326,
-      "heading": 1.7278759594743862,
-      "scale": 0.8,
-      "mirrorX": true,
-      "mirrorZ": false,
-      "collider": true
     },
     {
       "type": "model",
@@ -1656,14 +1567,6 @@
       "columns": 4,
       "colSpacing": 4.5,
       "rowSpacing": 7.5
-    },
-    {
-      "type": "model",
-      "model": "forest_tree_2",
-      "x": -116.00369586479705,
-      "z": -76.50139809294666,
-      "heading": 2.548180707911721,
-      "scale": 0.7
     },
     {
       "type": "model",

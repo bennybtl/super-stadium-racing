@@ -29,6 +29,7 @@
       <StartPositionPanel />
       <TrackLightPanel />
       <TrackSettingsPanel />
+      <ReorderFeaturesPanel />
       <ActionZonePanel />
       <PolyCurbPanel />
       <TunnelPanel />
@@ -70,6 +71,7 @@ const TrackSignPanel = defineAsyncComponent(() => import('./editor/TrackSignPane
 const StartPositionPanel = defineAsyncComponent(() => import('./editor/StartPositionPanel.vue'));
 const TrackLightPanel = defineAsyncComponent(() => import('./editor/TrackLightPanel.vue'));
 const TrackSettingsPanel = defineAsyncComponent(() => import('./editor/TrackSettingsPanel.vue'));
+const ReorderFeaturesPanel = defineAsyncComponent(() => import('./editor/ReorderFeaturesPanel.vue'));
 const ActionZonePanel = defineAsyncComponent(() => import('./editor/ActionZonePanel.vue'));
 const PolyCurbPanel = defineAsyncComponent(() => import('./editor/PolyCurbPanel.vue'));
 const TunnelPanel = defineAsyncComponent(() => import('./editor/TunnelPanel.vue'));

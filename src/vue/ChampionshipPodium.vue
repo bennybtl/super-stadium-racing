@@ -29,15 +29,16 @@
           🔓 Unlocked: {{ unlockMessage }}
         </p>
 
-      <div class="menu-panel max-h-[44vh] px-8 py-5 pointer-events-auto" :style="panelStyle" @mousedown.stop>
-        <ResultsTable :columns="columns" :rows="tableRows" />
+        <div class="menu-panel max-h-[44vh] px-8 py-5 pointer-events-auto" :style="panelStyle" @mousedown.stop>
+          <ResultsTable :columns="columns" :rows="tableRows" />
 
-        <button
-          class="menu-button pointer-events-auto mx-auto mt-4 block px-12 py-2 text-3xl"
-          @click="store.championshipExit()"
-        >
-          Back to Menu
-        </button>
+          <button
+            class="menu-button pointer-events-auto mx-auto mt-4 block px-12 py-2 text-3xl"
+            @click="store.championshipExit()"
+          >
+            Back to Menu
+          </button>
+        </div>
       </div>
     </div>
   </Transition>

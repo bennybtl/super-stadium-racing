@@ -1,5 +1,6 @@
 import { Vector3, PointerEventTypes, Tools } from "@babylonjs/core";
-import rebuild from './editor-rebuild.js';
+import rebuild, { REBUILD_DEBOUNCE_MS } from './editor-rebuild.js';
+import { buildFeatureOrderRows, flattenFeatureOrderRows, layeredOrderChanged } from './featureOrderRows.js';
 import { EditorHistory } from './EditorHistory.js';
 import { TerrainQuery } from "../managers/TerrainQuery.js";
 import { MeshGridEditor } from "./MeshGridEditor.js";
@@ -47,7 +48,8 @@ export class EditorController {
     this._shadows = null;
     // Shared raycast-based terrain height service used by all sub-editors.
     this.terrainQuery = new TerrainQuery(scene);
-    
+    this._featureOrderRebuildTimer = null;
+
     // Camera movement state
     this.moveSpeed = 0.5;
     this.fastSpeed = 1.5;
@@ -285,6 +287,97 @@ export class EditorController {
       features: this.currentTrack.features,
       wear: this.currentTrack.wear ?? null,
     });
+  }
+
+  // ── Reorder Features panel ────────────────────────────────────────────────
+
+  /** Rebuild the panel's display rows from the current track (called on open). */
+  refreshFeatureOrderRows() {
+    if (!this._editorStore || !this.currentTrack) return;
+    this._editorStore.featureOrderRows = buildFeatureOrderRows(this.currentTrack.features);
+    this._syncReorderSelection();
+  }
+
+  /**
+   * The feature object behind whichever gizmo is currently selected (any
+   * type), or null — every sub-editor's selection tracks back to a `.feature`
+   * (or, for the terrain-path/mesh-grid/bridge-mesh point editors, an
+   * `.activeFeature` that already IS the feature). Keyed off `selectedType`,
+   * which every sub-editor's own select()/showProperties() already sets.
+   */
+  getSelectedFeature() {
+    const type = this._editorStore?.selectedType;
+    switch (type) {
+      case 'terrainShape': return this.terrainShapeEditor.selected?.feature ?? null;
+      case 'terrainPath':  return this.terrainPathEditor.activeFeature ?? null;
+      case 'hill':          return this.hillEditor.selected?.feature ?? null;
+      case 'squareHill':    return this.squareHillEditor.selected?.feature ?? null;
+      case 'polyHill':      return this.polyHillEditor._active?.feature ?? null;
+      case 'checkpoint':    return this.checkpointEditor.selected?.feature ?? null;
+      case 'obstacle':      return this.obstacleEditor.selected?.feature ?? null;
+      case 'decoration':    return this.decorationsEditor._selected?.feature ?? null;
+      case 'driveBox':      return this.driveBoxEditor.selected?.feature ?? null;
+      case 'trackSign':     return this.trackSignEditor._selected?.feature ?? null;
+      case 'trackLight':    return this.trackLightEditor._selected?.feature ?? null;
+      case 'startPosition': return this.startPositionEditor._selected?.feature ?? null;
+      case 'actionZone':    return this.actionZoneEditor._selected?.feature ?? null;
+      case 'polyWall':      return this.polyWallEditor._active?.feature ?? null;
+      case 'polyCurb':      return this.polyCurbEditor._active?.feature ?? null;
+      case 'tunnel':        return this.tunnelEditor._active?.feature ?? null;
+      case 'meshGrid':      return this.meshGridEditor.activeFeature ?? null;
+      case 'bridgeMesh':    return this.bridgeMeshEditor.activeFeature ?? null;
+      case 'decal':
+      case 'decalEdit':     return this.decalEditor.selected?.feature ?? null;
+      default: return null;
+    }
+  }
+
+  /** Keep the Reorder Features panel's highlighted row in sync with the live editor selection. */
+  _syncReorderSelection() {
+    if (!this._editorStore?.reorderFeaturesOpen) return;
+    this._editorStore.selectedFeatureRef = this.getSelectedFeature();
+  }
+
+  /**
+   * Apply a drag-reorder immediately (so the list and the 3D view stay in
+   * sync) and debounce the terrain rebuild — but only when the drag actually
+   * changed a layered (terrain/hill-overlap) feature's relative order; moving
+   * checkpoints, decorations, obstacles, etc. around needs no rebuild at all.
+   * Mirrors the continuous-slider convention: saveSnapshot(true) coalesces
+   * the whole drag into one undo entry.
+   */
+  previewReorderFeatures(rows) {
+    if (!this.currentTrack) return;
+    this.saveSnapshot(true);
+    const prevFeatures = this.currentTrack.features;
+    const nextFeatures = flattenFeatureOrderRows(rows);
+    this.currentTrack.features = nextFeatures;
+    if (this._editorStore) this._editorStore.featureOrderRows = rows;
+    if (layeredOrderChanged(prevFeatures, nextFeatures)) {
+      this._scheduleFeatureOrderRebuild();
+    }
+  }
+
+  _scheduleFeatureOrderRebuild() {
+    clearTimeout(this._featureOrderRebuildTimer);
+    this._featureOrderRebuildTimer = setTimeout(() => {
+      this._featureOrderRebuildTimer = null;
+      rebuild.terrainGrid?.();
+      rebuild.terrain?.();
+      rebuild.terrainTexture?.(false, { wear: false, normals: false });
+      rebuild.normalMap?.();
+    }, REBUILD_DEBOUNCE_MS);
+  }
+
+  /** Settle any pending debounced rebuild right away (called when the panel closes). */
+  flushFeatureOrderRebuild() {
+    if (!this._featureOrderRebuildTimer) return;
+    clearTimeout(this._featureOrderRebuildTimer);
+    this._featureOrderRebuildTimer = null;
+    rebuild.terrainGrid?.();
+    rebuild.terrain?.();
+    rebuild.terrainTexture?.(false, { wear: false, normals: false });
+    rebuild.normalMap?.();
   }
 
   _syncTrackSettingsPanel() {
@@ -960,6 +1053,7 @@ export class EditorController {
       this._clearDragHoldTimer();
       this._panState = null;
       this.handlePointerDown(pointerInfo);
+      this._syncReorderSelection();
 
       if (wasSelectedTarget && this._hasDraggableSelection()) {
         this._dragHoldTarget = clickedMesh;
