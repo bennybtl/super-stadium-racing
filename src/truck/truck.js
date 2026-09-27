@@ -121,6 +121,7 @@ export class Truck {
 
     // Reused hot-path temporaries (avoid per-frame allocations)
     this._forward = new Vector3();
+    this._simFrame = {}; // last updateSim() result, reused (see updateSim)
     this._surfaceSampleTrack = null;
     this._surfaceSampleFallback = 0;
     this._surfaceSampler = (x, z, fromY, fallback = this._surfaceSampleFallback) =>
@@ -386,7 +387,53 @@ export class Truck {
 
 
 
+  /**
+   * One step of the truck: simulation, then presentation. Callers that only
+   * need the simulation (headless / server) call updateSim() alone.
+   */
   update(input, deltaTime, terrainManager = null, track = null, collectDebugInfo = true, effectsFocusPosition = null, profiler = null) {
+    this.updateSim(input, deltaTime, terrainManager, track, effectsFocusPosition, profiler);
+    this.updatePresentation(deltaTime, terrainManager, track, effectsFocusPosition, profiler);
+
+    if (!collectDebugInfo) return null;
+    return profiler ? profiler.measure('truck.debugPayload', () => this.getDebugInfo()) : this.getDebugInfo();
+  }
+
+  /** The last updateSim()'s derived values (reused object — read, don't keep). */
+  get simFrame() {
+    return this._simFrame;
+  }
+
+  /** Debug-overlay payload for the last updateSim() (reused object). */
+  getDebugInfo() {
+    const f = this._simFrame;
+    const payload = this._debugInfo;
+    payload.compression = this.state.suspensionCompression;
+    payload.groundedness = f.groundedness;
+    payload.controlGroundedness = f.controlGroundedness;
+    payload.penetration = f.penetration;
+    payload.verticalVelocity = this.state.velocity.y;
+    payload.speed = f.speed;
+    payload.effectiveGrip = f.effectiveGrip;
+    payload.slipAngle = this.state.slipAngle;
+    payload.terrainGripMultiplier = f.terrainGripMultiplier;
+    payload.x = this.mesh.position.x;
+    payload.y = this.mesh.position.y;
+    payload.z = this.mesh.position.z;
+    const floorSurface = this.terrainPhysics.floorSurface;
+    payload.surfaceId = floorSurface?.surfaceId ?? '-';
+    payload.surfaceKind = floorSurface?.kind ?? '-';
+    payload.surfaceLevel = floorSurface?.level ?? '-';
+    return payload;
+  }
+
+  /**
+   * Advance the truck's physical state one step: AI input, terrain, controls,
+   * drag/drift, integration, rotation, physics-body sync. Touches nothing
+   * visual. Returns the step's derived values (also kept on `_simFrame`) for
+   * updatePresentation() and the debug payload.
+   */
+  updateSim(input, deltaTime, terrainManager = null, track = null, effectsFocusPosition = null, profiler = null) {
     const profile = (label, fn) => {
       if (!profiler) return fn();
       return profiler.measure(label, fn);
@@ -552,6 +599,38 @@ export class Truck {
       this.driftPhysics.updateRoll(this.mesh)
     );
 
+    // Sync physics body
+    profile('truck.syncPhysics', () => this.syncPhysicsBody());
+
+    const f = this._simFrame;
+    f.input = input;
+    f.speed = speed;
+    f.hSpeed = hSpeed;
+    f.groundedness = groundedness;
+    f.controlGroundedness = controlGroundedness;
+    f.penetration = penetration;
+    f.isGrounded = isGrounded;
+    f.onNaturalGround = onNaturalGround;
+    f.terrain = terrain;
+    f.effectsTerrain = effectsTerrain;
+    f.effectiveGrip = effectiveGrip;
+    f.terrainGripMultiplier = terrainGripMultiplier;
+    return f;
+  }
+
+  /**
+   * Visual/audio side of a step, driven by the last updateSim(): body puppet,
+   * tunnel darkening, engine audio, particles, tire marks, wake.
+   */
+  updatePresentation(deltaTime, terrainManager = null, track = null, effectsFocusPosition = null, profiler = null) {
+    const profile = (label, fn) => {
+      if (!profiler) return fn();
+      return profiler.measure(label, fn);
+    };
+    const {
+      input, speed, hSpeed, groundedness, penetration, isGrounded, onNaturalGround, terrain, effectsTerrain,
+    } = this._simFrame;
+
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
@@ -604,8 +683,6 @@ export class Truck {
       });
     });
 
-    // Sync physics body
-    profile('truck.syncPhysics', () => this.syncPhysicsBody());
     this._particleUpdateAccumulator += deltaTime;
     if (
       this._particleUpdateInterval <= 0 ||
@@ -702,30 +779,6 @@ export class Truck {
       this._particleUpdateAccumulator = 0;
     }
 
-    if (!collectDebugInfo) return null;
-
-    // Return debug info
-    const debug = profile('truck.debugPayload', () => {
-      const payload = this._debugInfo;
-      payload.compression = this.state.suspensionCompression;
-      payload.groundedness = groundedness;
-      payload.controlGroundedness = controlGroundedness;
-      payload.penetration = penetration;
-      payload.verticalVelocity = this.state.velocity.y;
-      payload.speed = speed;
-      payload.effectiveGrip = effectiveGrip;
-      payload.slipAngle = this.state.slipAngle;
-      payload.terrainGripMultiplier = terrainGripMultiplier;
-      payload.x = this.mesh.position.x;
-      payload.y = this.mesh.position.y;
-      payload.z = this.mesh.position.z;
-      const floorSurface = this.terrainPhysics.floorSurface;
-      payload.surfaceId = floorSurface?.surfaceId ?? '-';
-      payload.surfaceKind = floorSurface?.kind ?? '-';
-      payload.surfaceLevel = floorSurface?.level ?? '-';
-      return payload;
-    });
-    return debug;
   }
 
   syncPhysicsBody() {

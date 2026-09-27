@@ -1,4 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
+import { respawnTruck } from "../sim/race-rules.js";
 
 /**
  * BaseMode - Abstract base class for all game modes.
@@ -50,8 +51,7 @@ export class BaseMode {
    * @param {StaticBodyCollisionManager} [staticBodyCollisionManager]
    */
   respawnTruck(truck, position, heading, staticBodyCollisionManager) {
-    truck.teleportTo(position, heading);
-    staticBodyCollisionManager?.notifyTeleport(truck);
+    respawnTruck(truck, position, heading, staticBodyCollisionManager);
   }
 
   /**

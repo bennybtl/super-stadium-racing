@@ -185,6 +185,17 @@ Pure refactor, no behaviour change, client still single-player.
 - `RaceMode` becomes: build both, own `InputManager`/camera/UI, call
   `sim.step(dt, {local: input})` then `updatePresentation()`.
 
+**Progress (2026-09-27):**
+- ✅ `Truck.update()` = `updateSim()` + `updatePresentation()` (+ `getDebugInfo()`).
+  Physics golden and spike hash unchanged.
+- ✅ `src/sim/race-rules.js`: zones, out-of-bounds tracker (sim-time grace, was
+  `performance.now`), respawn — pure; DriveMode/BaseMode methods delegate.
+- ✅ `src/sim/RaceSimulation.js`: race state + `step(dt, inputsById)` + events;
+  RaceMode drives it (`test/race-simulation.test.js`). Truck presentation now runs
+  after the whole sim step instead of interleaved per truck. Other modes
+  (HotLap/Practice/Multiplayer/Menu) still call `truck.update()` directly.
+- ⬜ `buildSimScene()` / `buildVisuals()` split.
+
 Verify: `npm run build:raw` clean, then drive a race and confirm handling,
 collisions, laps, and effects are unchanged. This phase is where feel can
 silently regress — bisect by reverting one extraction at a time if it does.
