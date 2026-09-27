@@ -39,7 +39,9 @@ export const useMenuStore = defineStore('menu', () => {
 
   // Championship setup selections
   const champInitials   = ref('');
-  const champTrackCount = ref(5);
+  const champPackId     = ref(null);
+  // Packs currently open for a championship run (grows as packs are unlocked).
+  const activePackIds   = ref([]);
   // True when a saved in-progress cup exists (drives the Resume button).
   const hasActiveChampionship = ref(false);
   const loadingVisible = ref(false);
@@ -131,7 +133,7 @@ export const useMenuStore = defineStore('menu', () => {
   // ── Championship actions ───────────────────────────────────────────────────
   function showChampionshipSetup() { _bridge.value?.onShowChampionshipSetup(); }
   function setChampInitials(v)     { champInitials.value = String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); }
-  function setChampTrackCount(n)   { champTrackCount.value = Number(n); }
+  function setChampPackId(id)      { champPackId.value = id; }
   function startChampionship()     { mode.value = 'championship'; _bridge.value?.onStartChampionship(); }
   function continueChampionship()  { _bridge.value?.onContinueChampionship(); }
   function resumeChampionship()    { mode.value = 'championship'; _bridge.value?.onResumeChampionship(); }
@@ -147,7 +149,7 @@ export const useMenuStore = defineStore('menu', () => {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
     selectedReverse, selectedNight, navDirection, setNavDirection, liveBackdrop,
     pitData, singleRaceData, championshipData, upgrades,
-    champInitials, champTrackCount, hasActiveChampionship,
+    champInitials, champPackId, activePackIds, hasActiveChampionship,
     loadingVisible, loadingMessage,
     settingsReturnScreen,
     setBridge,
@@ -162,7 +164,7 @@ export const useMenuStore = defineStore('menu', () => {
     editorResume, editorSave, editorLoad, editorExit,
     settings, back, refreshTrackList,
     purchaseUpgrade, resetUpgrades, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
-    showChampionshipSetup, setChampInitials, setChampTrackCount, startChampionship, continueChampionship, resumeChampionship, retireChampionship, championshipExit,
+    showChampionshipSetup, setChampInitials, setChampPackId, startChampionship, continueChampionship, resumeChampionship, retireChampionship, championshipExit,
     setMode,
     setLoading,
   };

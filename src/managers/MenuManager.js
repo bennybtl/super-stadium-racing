@@ -1,6 +1,8 @@
 import { useMenuStore } from '../vue/store.js';
 import { getUpgradeCatalog } from './UpgradeStorage.js';
 import { loadActiveChampionship } from './ChampionshipStorage.js';
+import { getUnlockedTruckKeys, getFreePlayTrackKeys, getActivePackIds, getPackTracks } from './ProgressStorage.js';
+import { REMIX_PACK_ID } from '../config/progression.js';
 
 /**
  * MenuManager – thin bridge between game logic (ModeController / modes) and
@@ -96,7 +98,8 @@ export class MenuManager {
     const nextTrackName = this._store.trackList.find(t => t.key === this.selectedTrack)?.name ?? this.selectedTrack;
 
     if (!this.selectedTrack && this._store.trackList.length > 0) {
-      this.selectedTrack = this._store.trackList[0]?.key ?? null;
+      const firstUnlocked = this._store.trackList.find(t => !t.locked) ?? this._store.trackList[0];
+      this.selectedTrack = firstUnlocked?.key ?? null;
       this._store.selectedTrack = this.selectedTrack;
     }
 
@@ -184,6 +187,18 @@ export class MenuManager {
     this.currentMenu = 'championshipSetup';
     this._refreshTrackList();
     this._refreshVehicleList();
+    // A pack can be unlocked before its tracks are bundled (see progression.js
+    // TODOs) — keep those out of the picker until they actually have content.
+    this._store.activePackIds = getActivePackIds().filter(id => {
+      if (id === REMIX_PACK_ID) return true;
+      const { starters, rest } = getPackTracks(id);
+      return starters.length + rest.length > 0;
+    });
+    // Default to the most recently unlocked pack; fall back to it if a stale
+    // selection points at a pack that's no longer active.
+    if (!this._store.champPackId || !this._store.activePackIds.includes(this._store.champPackId)) {
+      this._store.champPackId = this._store.activePackIds[this._store.activePackIds.length - 1] ?? null;
+    }
     // Preselect a colour so the player has a visible, persisted identity even if
     // they don't touch the swatches.
     if (!this.selectedPlayerColor) {
@@ -277,14 +292,26 @@ export class MenuManager {
 
   _refreshTrackList() {
     if (!window.trackLoader) return;
+    const unlockedTrackKeys = getFreePlayTrackKeys();
     this._store.trackList = window.trackLoader.getTrackList().map(key => {
       const track = window.trackLoader.getTrack(key);
-      return { key, name: track?.name ?? key, image: track?.image ?? null, packId: track?.packId ?? null, allowReverse: track?.allowReverse !== false };
+      return {
+        key,
+        name: track?.name ?? key,
+        image: track?.image ?? null,
+        packId: track?.packId ?? null,
+        allowReverse: track?.allowReverse !== false,
+        locked: !unlockedTrackKeys.includes(key),
+      };
     });
   }
 
   _refreshVehicleList() {
     if (!window.vehicleLoader) return;
-    this._store.vehicleList = window.vehicleLoader.getVehicleList();
+    const unlockedTruckKeys = getUnlockedTruckKeys();
+    this._store.vehicleList = window.vehicleLoader.getVehicleList().map(vehicle => ({
+      ...vehicle,
+      locked: !unlockedTruckKeys.includes(vehicle.key),
+    }));
   }
 }

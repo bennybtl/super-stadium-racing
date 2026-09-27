@@ -36,17 +36,24 @@
           type="button"
           :data-track-key="track.key"
           class="min-w-[160px] max-w-[180px] rounded-2xl transition"
-          :class="track.key === modelValue ? ' border-2 border-amber-400' : ''"
+          :class="[
+            track.key === modelValue ? ' border-2 border-amber-400' : '',
+            track.locked ? 'cursor-not-allowed' : '',
+          ]"
           @click="selectTrack(track.key)"
         >
-          <div class="h-32 overflow-hidden rounded-2xl">
+          <div class="relative h-32 overflow-hidden rounded-2xl">
             <img
               v-if="track.image"
               :src="track.image"
               :alt="track.name"
               class="h-full w-full object-cover"
+              :class="track.locked ? 'grayscale opacity-60' : ''"
             />
             <div v-else class="flex h-full items-center justify-center bg-slate-800 text-slate-500 text-xs uppercase tracking-[0.15em]">No image</div>
+            <div v-if="track.locked" class="absolute inset-0 flex items-center justify-center bg-black/50">
+              <i class="bi bi-lock-fill text-3xl text-white"></i>
+            </div>
           </div>
           <div class="mt-2 truncate text-sm font-semibold text-white text-center">{{ track.name }}</div>
         </button>
@@ -131,43 +138,48 @@ const displayTracks = computed(() => {
     image: trackData?.image
       ? (getImageUrl(trackData.image) ?? trackImageUrl(trackData.image))
       : null,
+    // The editor (showHidden) ignores player-facing lock state entirely.
+    locked: !props.showHidden && !!trackData.locked,
   }));
 });
 
+// Locked tracks stay visible (with a padlock) but can't become the selection.
+const selectableTracks = computed(() => displayTracks.value.filter(track => !track.locked));
+
 const selectedIndex = computed(() => {
-  return displayTracks.value.findIndex(track => track.key === props.modelValue);
+  return selectableTracks.value.findIndex(track => track.key === props.modelValue);
 });
 
 const canSelectLeft = computed(() => selectedIndex.value > 0);
-const canSelectRight = computed(() => selectedIndex.value >= 0 && selectedIndex.value < displayTracks.value.length - 1);
+const canSelectRight = computed(() => selectedIndex.value >= 0 && selectedIndex.value < selectableTracks.value.length - 1);
 
 function selectTrack(key) {
+  const track = displayTracks.value.find(t => t.key === key);
+  if (track?.locked) return;
   emit('update:modelValue', key);
 }
 
 function selectAdjacent(direction) {
   const index = selectedIndex.value;
   if (index === -1) {
-    if (direction > 0 && displayTracks.value.length > 0) {
-      selectTrack(displayTracks.value[0].key);
+    if (direction > 0 && selectableTracks.value.length > 0) {
+      selectTrack(selectableTracks.value[0].key);
     }
     return;
   }
   const nextIndex = index + direction;
-  if (nextIndex < 0 || nextIndex >= displayTracks.value.length) return;
-  selectTrack(displayTracks.value[nextIndex].key);
+  if (nextIndex < 0 || nextIndex >= selectableTracks.value.length) return;
+  selectTrack(selectableTracks.value[nextIndex].key);
 }
 
 function ensureValidSelection() {
-  const activeTracks = displayTracks.value.length > 0
-    ? displayTracks.value
-    : visibleTracks.value;
+  const activeTracks = selectableTracks.value;
   if (activeTracks.length === 0) return;
 
-  const hasVisibleSelection = !!props.modelValue
+  const hasValidSelection = !!props.modelValue
     && activeTracks.some(track => track.key === props.modelValue);
 
-  if (!hasVisibleSelection) {
+  if (!hasValidSelection) {
     emit('update:modelValue', activeTracks[0].key);
   }
 }

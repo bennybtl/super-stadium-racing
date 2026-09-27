@@ -169,6 +169,21 @@
               <div class="text-[10px] text-left uppercase italic tracking-[0.14em] text-slate-400 max-w-32">Enter your initials to track progress</div>
             </div>
           </div>
+          <div v-if="packOptions.length > 1" class="flex flex-col items-center gap-2">
+            <h3 class="mb-1 text-xs uppercase italic tracking-[0.14em] text-white">Select Pack</h3>
+            <div class="flex justify-center gap-2 flex-wrap">
+              <button
+                v-for="pack in packOptions"
+                :key="pack.value"
+                type="button"
+                class="px-3 py-1 text-xs rounded-full border transition duration-150"
+                :class="store.champPackId === pack.value
+                  ? 'border-amber-400 bg-amber-400 text-black font-bold'
+                  : 'border-[#555] bg-[#1a1a1a] text-slate-300 hover:border-white hover:text-white'"
+                @click="store.setChampPackId(pack.value)"
+              >{{ pack.label }}</button>
+            </div>
+          </div>
           <TruckSelection
             :vehicles="store.vehicleList"
             :selectedVehicle="store.selectedVehicle"
@@ -177,7 +192,7 @@
             @update:selectedVehicle="store.selectPlayerVehicle($event)"
             @update:selectedColor="store.selectPlayerColor($event)"
           />
-          <RaceConfig :show-race-count="true" :show-reverse="false" :show-night="false" />
+          <RaceConfig :show-reverse="false" :show-night="store.champPackId === REMIX_PACK_ID" />
           <div class="flex flex-row gap-2">
             <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
             <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" @click="store.startChampionship()">Start Cup</button>
@@ -341,6 +356,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useMenuStore } from './store.js';
 import { basicColors } from '../constants.js';
+import { REMIX_PACK_ID } from '../config/progression.js';
 import { loadControlsSettings } from '../settingsStorage.js';
 import { isSafari } from '../utils/browserSupport.js';
 import { version as appVersion } from '../../package.json';
@@ -377,6 +393,10 @@ const champPodiumEntries = computed(() => {
   }));
 });
 const showSafariWarning = isSafari();
+const packOptions = computed(() => store.activePackIds.map(id => ({
+  value: id,
+  label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+})));
 const setupStep = ref('selectTruck');
 // Each fresh pit-menu visit should start at vehicle selection, not wherever
 // the previous visit left off.

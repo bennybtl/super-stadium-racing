@@ -19,6 +19,15 @@ import {
   standings,
   saveChampionshipScore,
 } from "../managers/ChampionshipStorage.js";
+import { PACK_PROGRESSION, REMIX_PACK_ID, REMIX_TRACK_COUNT } from "../config/progression.js";
+import {
+  getUnlockedTruckKeys,
+  getPackTracks,
+  isPackStarterTrack,
+  unlockTrackForFreePlay,
+  applyChampionshipCompletion,
+  getCompletedPackIds,
+} from "../managers/ProgressStorage.js";
 
 /** Fisher-Yates shuffle; returns a new array. */
 function shuffle(arr) {
@@ -28,6 +37,11 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+/** 'offroad_pack_3' -> 'Offroad Pack 3' (also covers the remix sentinel id). */
+function formatPackName(id) {
+  return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 /**
@@ -128,29 +142,30 @@ export class ModeController {
   }
 
   /**
-   * Draw a calendar of `count` distinct track keys from the loaded track list,
-   * in random order. Falls back to whatever tracks exist if fewer than `count`.
+   * Build a championship calendar for `packId`: its starter tracks first (a
+   * fixed order), then its remaining tracks shuffled. Remix Championship
+   * instead draws REMIX_TRACK_COUNT random tracks from everything loaded.
    */
-  _drawCalendar(count) {
-    const keys = (this.menuManager._store.trackList ?? []).map(t => t.key);
-    for (let i = keys.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [keys[i], keys[j]] = [keys[j], keys[i]];
+  _drawCalendar(packId) {
+    if (packId === REMIX_PACK_ID) {
+      const keys = shuffle((this.menuManager._store.trackList ?? []).map(t => t.key));
+      return keys.slice(0, Math.min(REMIX_TRACK_COUNT, keys.length));
     }
-    return keys.slice(0, Math.min(count, keys.length));
+    const { starters, rest } = getPackTracks(packId);
+    return [...starters, ...shuffle(rest)];
   }
 
   /**
    * Begin a fresh championship. Roster ids/names mirror what RaceMode assigns
    * (`player`, `ai1..aiN`) so finish-order ids map straight onto cup drivers.
    */
-  startChampionship({ initials, trackCount = 5, aiCount, laps, aiVehicleKey, reverse, vehicleKey, playerColorKey }) {
+  startChampionship({ initials, packId, aiCount, laps, aiVehicleKey, reverse, night, vehicleKey, playerColorKey }) {
     const drivers = this._buildRoster({ aiCount, vehicleKey, playerColorKey, aiVehicleKey });
     this.championship = createChampionship({
       initials,
-      calendar: this._drawCalendar(trackCount),
+      calendar: this._drawCalendar(packId),
       drivers,
-      settings: { aiCount, laps, aiVehicleKey, reverse },
+      settings: { packId, aiCount, laps, aiVehicleKey, reverse, night },
     });
     saveActiveChampionship(this.championship);
     return this._runChampionshipRace();
@@ -169,7 +184,9 @@ export class ModeController {
     // player's colour and any keys not in basicColors, shuffled so each cup's
     // field looks varied. Assigned once here and persisted with the roster.
     const aiPalette = shuffle(AI_COLOR_KEYS.filter(k => k !== playerColor && basicColors[k]));
-    const vehicleKeys = window.vehicleLoader?.getVehicleList?.().map(v => v.key) ?? [vehicleKey];
+    const unlockedTruckKeys = getUnlockedTruckKeys();
+    const vehicleKeys = (window.vehicleLoader?.getVehicleList?.().map(v => v.key) ?? [vehicleKey])
+      .filter(k => unlockedTruckKeys.includes(k));
 
     const skillKeys = Object.keys(AI_SKILL_PRESETS);
     const aiNames = generateDriverNames(aiCount);
@@ -229,6 +246,7 @@ export class ModeController {
       vehicleKey:     player.vehicleKey,
       playerColorKey: player.colorKey,
       reverse:        champ.settings.reverse,
+      night:          champ.settings.night,
       championship: {
         playerUpgrades: player.upgrades,
         playerGridSlot: gridSlot.get(player.id),
@@ -247,6 +265,7 @@ export class ModeController {
 
   /** Award the just-finished race and route to the pit or the final podium. */
   _onChampionshipRaceComplete(finishOrderIds, meta) {
+    const raceTrackKey = this.championship.calendar[this.championship.currentRaceIndex];
     const state = applyRaceResult(this.championship, finishOrderIds);
     // Fold in per-driver post-race adjustments:
     //  • leftover nitro carries into the next race (consumable, not a refill),
@@ -261,6 +280,15 @@ export class ModeController {
       return next;
     });
     this.championship = state;
+
+    // A win on a track that isn't its pack's starter unlocks it for free play.
+    if (finishOrderIds[0] === 'player') {
+      const trackPackId = window.trackLoader?.getTrack(raceTrackKey)?.packId;
+      if (trackPackId && !isPackStarterTrack(trackPackId, raceTrackKey)) {
+        unlockTrackForFreePlay(raceTrackKey);
+      }
+    }
+
     if (isChampionshipComplete(this.championship)) {
       saveActiveChampionship(this.championship);
       this._finishChampionship(meta);
@@ -348,10 +376,19 @@ export class ModeController {
     this.championship = null;
   }
 
-  /** Final race done: record the result, clear the cup, show the podium. */
+  /** Final race done: record the result, apply unlocks, clear the cup, show the podium. */
   _finishChampionship(_meta) {
     const champ = this.championship;
     const player = champ.drivers.find(d => d.isPlayer);
+    const packId = champ.settings.packId;
+    const playerPosition = standings(champ.drivers).findIndex(d => d.isPlayer) + 1;
+
+    // Only a pack's first top-3 finish is announced as a new unlock; replays
+    // still count towards the score board but grant nothing further.
+    const isNewCompletion = !getCompletedPackIds().includes(packId);
+    applyChampionshipCompletion(packId, playerPosition);
+    const reward = (isNewCompletion && playerPosition <= 3) ? PACK_PROGRESSION[packId] : null;
+
     const { rank } = saveChampionshipScore({
       initials:   champ.initials,
       points:     player.points,
@@ -366,6 +403,12 @@ export class ModeController {
       initials:     champ.initials,
       podium,
       scoreRank:    rank,
+      unlock: reward ? {
+        truckKey:  reward.rewardTruck ?? null,
+        truckName: reward.rewardTruck ? (window.vehicleLoader?.getVehicle(reward.rewardTruck)?.name ?? reward.rewardTruck) : null,
+        packId:    reward.rewardPack ?? null,
+        packName:  reward.rewardPack ? formatPackName(reward.rewardPack) : null,
+      } : null,
     });
   }
 

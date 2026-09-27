@@ -8,6 +8,7 @@ import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManag
 import { AudioManager } from "../managers/AudioManager.js";
 import { playTheme } from "../managers/MusicManager.js";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
+import { REMIX_PACK_ID } from "../config/progression.js";
 
 /** Size of the attract-mode field. */
 const DEMO_AI_COUNT = 4;
@@ -69,11 +70,13 @@ export class MenuMode extends DriveMode {
       menuManager.hideMenu();
       this.controller.startChampionship({
         initials:       store.champInitials || 'AAA',
-        trackCount:     store.champTrackCount,
+        packId:         store.champPackId,
         aiCount:        menuManager.selectedAIDrivers,
         laps:           menuManager.selectedLaps,
         aiVehicleKey:   menuManager.selectedAIVehicleType,
         reverse:        false, // cups are forward-only for now (reverse UI hidden)
+        // Night is only offered once Remix Championship is unlocked.
+        night:          store.champPackId === REMIX_PACK_ID ? menuManager.selectedNight : false,
         vehicleKey:     menuManager.selectedVehicle,
         playerColorKey: menuManager.selectedPlayerColor,
       });

@@ -22,7 +22,12 @@
         >
           ★ New High Score — #{{ store.championshipData.scoreRank + 1 }}
         </p>
-      </div>
+        <p
+          v-if="store.championshipData.unlock"
+          class="mt-1 text-center text-sm uppercase italic tracking-[0.18em] text-[#4ade80]"
+        >
+          🔓 Unlocked: {{ unlockMessage }}
+        </p>
 
       <div class="menu-panel max-h-[44vh] px-8 py-5 pointer-events-auto" :style="panelStyle" @mousedown.stop>
         <ResultsTable :columns="columns" :rows="tableRows" />
@@ -79,4 +84,18 @@ const podiumEntries = computed(() => {
     color: r.color ?? null,
   }));
 });
+
+const unlockMessage = computed(() => {
+  const unlock = store.championshipData?.unlock;
+  if (!unlock) return '';
+  const parts = [unlock.truckName, unlock.packName].filter(Boolean);
+  return parts.join(' + ');
+});
+
+function medalClass(rank) {
+  if (rank === 1) return 'text-[#ffd24a]';
+  if (rank === 2) return 'text-slate-300';
+  if (rank === 3) return 'text-[#d08a4a]';
+  return 'text-[#ff6b6b]';
+}
 </script>

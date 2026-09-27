@@ -22,7 +22,7 @@
             :value="selectedVehicle"
             @change="$emit('update:selectedVehicle', $event.target.value)"
           >
-            <option v-for="vehicle in sortedVehicles" :key="vehicle.key" :value="vehicle.key">{{ vehicle.name }}</option>
+            <option v-for="vehicle in sortedVehicles" :key="vehicle.key" :value="vehicle.key" :disabled="vehicle.locked">{{ vehicle.locked ? '🔒 ' : '' }}{{ vehicle.name }}</option>
           </select>
         </div>
         <div class="flex flex-row flex-wrap gap-3">

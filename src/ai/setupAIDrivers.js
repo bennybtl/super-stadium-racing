@@ -1,6 +1,7 @@
 import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { basicColors } from "../constants.js";
+import { getUnlockedTruckKeys } from "../managers/ProgressStorage.js";
 /**
  * AI driver colour palette keys — cycled through for each AI slot.
  */
@@ -65,7 +66,9 @@ export function setupAIDrivers({
     .map(key => basicColors[key]?.diffuse)
     .filter(Boolean);
 
-  const availableAIVehicleKeys = window.vehicleLoader?.getVehicleList?.().map(vehicle => vehicle.key) ?? [];
+  const unlockedTruckKeys = getUnlockedTruckKeys();
+  const availableAIVehicleKeys = (window.vehicleLoader?.getVehicleList?.().map(vehicle => vehicle.key) ?? [])
+    .filter(key => unlockedTruckKeys.includes(key));
   const selectedAIVehicleDef = aiVehicleKey !== 'random'
     ? window.vehicleLoader?.getVehicle(aiVehicleKey) ?? null
     : null;
