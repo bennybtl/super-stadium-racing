@@ -4,15 +4,15 @@
     title="Poly Curb"
     @close="editor.featureAction('closePolyCurb')"
   >
-    <div class="text-[10px] text-slate-400 mb-3 max-w-48">
+    <div class="ed-hint">
       Right-click terrain to add points. Select a point to edit it. Press <kbd>Esc</kbd> to close the panel.
     </div>
 
     <!-- Selected Point Section -->
-    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Selected Point</div>
+    <div class="ed-heading">Selected Point</div>
 
     <!-- Radius -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Corner Radius</span>
       <span :style="editor.polyCurb.radius > editor.polyCurb.maxRadius ? { color: '#ff4444' } : {}">{{ radiusDisplay }}</span>
     </div>
@@ -21,43 +21,30 @@
       :value="editor.polyCurb.radius"
       :disabled="!editor.polyCurb.canHaveRadius"
       @input="editor.setFeatureProp('polyCurb', 'radius', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
-    <div v-if="!editor.polyCurb.canHaveRadius && editor.polyCurb.hasSelection" class="text-[10px] text-slate-400 mb-3" style="color: #ff9800;">
+    <div v-if="!editor.polyCurb.canHaveRadius && editor.polyCurb.hasSelection" class="ed-hint" style="color: #ff9800;">
       First and last points cannot be rounded (unless closed loop is enabled)
     </div>
 
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move selected point</div>
+    <div class="ed-hint">WASD to move selected point</div>
 
-    <div class="flex gap-2 mb-3">
-      <button 
-          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+    <div class="ed-btn-row">
+      <button
+        class="ed-btn-danger"
         @click="editor.featureAction('deletePolyCurbPoint')"
       >Delete Point</button>
-      <button 
-          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+      <button
+        class="ed-btn"
         @click="editor.featureAction('insertPolyCurbPoint')"
-      >Insert After</button>
+      >Insert Point</button>
     </div>
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
-    <!-- Curb Properties Section -->
-    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Curb Properties</div>
-
-    <!-- Height (bump height) -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Height</span>
-      <span>{{ editor.polyCurb.height.toFixed(2) }} m</span>
-    </div>
-    <input
-      type="range" min="0.08" max="0.5" step="0.02"
-      :value="editor.polyCurb.height"
-      @input="editor.setFeatureProp('polyCurb', 'height', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
+    <div class="ed-heading">Shape</div>
 
     <!-- Width (lateral strip width) -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Width</span>
       <span>{{ editor.polyCurb.width.toFixed(1) }} m</span>
     </div>
@@ -65,19 +52,34 @@
       type="range" min="0.25" max="2.5" step="0.25"
       :value="editor.polyCurb.width"
       @input="editor.setFeatureProp('polyCurb', 'width', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
+    />
+
+    <!-- Height (bump height) -->
+    <div class="ed-label">
+      <span>Height</span>
+      <span>{{ editor.polyCurb.height.toFixed(2) }} m</span>
+    </div>
+    <input
+      type="range" min="0.08" max="0.5" step="0.02"
+      :value="editor.polyCurb.height"
+      @input="editor.setFeatureProp('polyCurb', 'height', +$event.target.value)"
+      class="ed-slider"
     />
 
     <!-- Closed toggle -->
-    <div class="flex justify-between mb-3 text-[12px]">
+    <div class="ed-row">
       <span>Closed Loop</span>
       <input
         type="checkbox"
         :checked="editor.polyCurb.closed"
         @change="editor.setFeatureProp('polyCurb', 'closed', $event.target.checked)"
-        class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+        class="ed-checkbox"
       />
     </div>
+
+    <hr class="ed-divider" />
+    <div class="ed-heading">Appearance</div>
 
     <!-- Stripe colours (1–3, any combination) -->
     <StripeColorPicker
@@ -85,16 +87,16 @@
       @update:model-value="editor.setFeatureProp('polyCurb', 'colors', $event)"
     />
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
     <button 
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
       @click="editor.featureAction('deletePolyCurb')"
     >Delete</button>
     <button 
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
       @click="editor.featureAction('duplicatePolyCurb')"
     >Duplicate</button>
 

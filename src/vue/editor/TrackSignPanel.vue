@@ -5,25 +5,78 @@
     @close="editor.featureAction('deselectTrackSign')"
   >
     <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+    <div class="ed-hint">WASD to move · QE to rotate · Del to delete</div>
 
     <!-- Content type -->
-    <div class="flex justify-between items-center mb-3 text-[12px]">
+    <div class="ed-row">
       <span>Type</span>
       <select
         :value="editor.trackSign.contentType"
         @change="editor.setFeatureProp('trackSign', 'contentType', $event.target.value)"
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        class="ed-select-inline"
       >
         <option value="text">Custom Text</option>
         <option value="brand">Logo</option>
       </select>
     </div>
 
+    <div class="ed-heading">Shape</div>
+
+    <!-- Width -->
+    <div class="ed-label">
+      <span>Width</span>
+      <span>{{ editor.trackSign.width.toFixed(1) }} m</span>
+    </div>
+    <input
+      type="range" min="4" max="30" step="0.5"
+      :value="editor.trackSign.width"
+      @input="editor.setFeatureProp('trackSign', 'width', +$event.target.value)"
+      class="ed-slider"
+    />
+
+    <!-- Scale -->
+    <div class="ed-label">
+      <span>Scale</span>
+      <span>{{ editor.trackSign.scale.toFixed(2) }}x</span>
+    </div>
+    <input
+      type="range" min="0.8" max="4" step="0.05"
+      :value="editor.trackSign.scale"
+      @input="editor.setFeatureProp('trackSign', 'scale', +$event.target.value)"
+      class="ed-slider"
+    />
+
+    <!-- Rotation -->
+    <div class="ed-label">
+      <span>Rotation</span>
+      <span>{{ editor.trackSign.rotation }}°</span>
+    </div>
+    <input
+      type="range" min="-180" max="180" step="1"
+      :value="editor.trackSign.rotation"
+      @input="editor.setFeatureProp('trackSign', 'rotation', +$event.target.value)"
+      class="ed-slider"
+    />
+
+    <!-- Height -->
+    <div class="ed-label">
+      <span>Height</span>
+      <span>{{ editor.trackSign.heightOffset.toFixed(1) }} m</span>
+    </div>
+    <input
+      type="range" min="0" max="10" step="0.2"
+      :value="editor.trackSign.heightOffset"
+      @input="editor.setFeatureProp('trackSign', 'heightOffset', +$event.target.value)"
+      class="ed-slider"
+    />
+
+    <hr class="ed-divider" />
+    <div class="ed-heading">Appearance</div>
+
     <!-- Name -->
     <template v-if="editor.trackSign.contentType === 'text'">
 
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Sign Text</span>
       </div>
       <input
@@ -36,11 +89,11 @@
     </template>
 
     <!-- Logo -->
-     <template v-if="editor.trackSign.contentType === 'brand'">
-      <div class="flex justify-between items-center mb-3 text-[12px]">
+    <template v-if="editor.trackSign.contentType === 'brand'">
+      <div class="ed-row">
         <span>Logo</span>
         <select
-          class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+          class="ed-select-inline"
           :value="editor.trackSign.brandImage"
           @change="editor.setFeatureProp('trackSign', 'brandImage', $event.target.value)"
         >
@@ -49,7 +102,7 @@
       </div>
 
       <!-- Logo size -->
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Logo Size</span>
         <span>{{ editor.trackSign.logoScale.toFixed(2) }}x</span>
       </div>
@@ -57,15 +110,15 @@
         type="range" min="0.5" max="2" step="0.05"
         :value="editor.trackSign.logoScale"
         @input="editor.setFeatureProp('trackSign', 'logoScale', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
     <!-- Background -->
-    <div class="flex justify-between items-center mb-3 text-[12px]">
+    <div class="ed-row">
       <span>Background</span>
       <select
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        class="ed-select-inline"
         :value="editor.trackSign.background"
         @change="editor.setFeatureProp('trackSign', 'background', $event.target.value)"
       >
@@ -74,11 +127,11 @@
     </div>
 
     <!-- Primary color (text + border) -->
-    <div class="flex justify-between items-center mb-3 text-[12px]">
+    <div class="ed-row">
       <span>Primary Color</span>
 
       <select
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        class="ed-select-inline"
         :value="editor.trackSign.primaryColor"
         @change="editor.setFeatureProp('trackSign', 'primaryColor', $event.target.value)"
       >
@@ -86,66 +139,16 @@
     </select>
     </div>
 
-    <hr class="border-t border-slate-700 my-4" />
-
-    <!-- Width -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Width</span>
-      <span>{{ editor.trackSign.width.toFixed(1) }} m</span>
-    </div>
-    <input
-      type="range" min="4" max="30" step="0.5"
-      :value="editor.trackSign.width"
-      @input="editor.setFeatureProp('trackSign', 'width', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-
-    <!-- Height -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Height</span>
-      <span>{{ editor.trackSign.heightOffset.toFixed(1) }} m</span>
-    </div>
-    <input
-      type="range" min="0" max="10" step="0.2"
-      :value="editor.trackSign.heightOffset"
-      @input="editor.setFeatureProp('trackSign', 'heightOffset', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-
-    <!-- Rotation -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Rotation</span>
-      <span>{{ editor.trackSign.rotation }}°</span>
-    </div>
-    <input
-      type="range" min="-180" max="180" step="1"
-      :value="editor.trackSign.rotation"
-      @input="editor.setFeatureProp('trackSign', 'rotation', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
-
-    <!-- Scale -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Scale</span>
-      <span>{{ editor.trackSign.scale.toFixed(2) }}x</span>
-    </div>
-    <input
-      type="range" min="0.8" max="4" step="0.05"
-      :value="editor.trackSign.scale"
-      @input="editor.setFeatureProp('trackSign', 'scale', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-1 cursor-pointer"
-    />
-
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button 
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deleteTrackSign')"
       >Delete</button>
       <button 
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('duplicateTrackSign')"
       >Duplicate</button>
     </div>

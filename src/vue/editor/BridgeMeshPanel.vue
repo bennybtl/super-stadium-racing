@@ -8,12 +8,14 @@
     @close="editor.featureAction('closeBridgeMesh')"
   >
 
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="ed-hint">
       Click a control sphere to select it · scroll / ↑ ↓ / [ ] set height · drag or WASD moves it in the plane.
     </div>
 
+    <div class="ed-heading">Selected Point</div>
+
     <!-- Point Height -->
-    <div class="text-[12px] mb-1">Point Height</div>
+    <div class="ed-label">Point Height</div>
     <input
       class="mg-height-input"
       type="number"
@@ -32,7 +34,7 @@
 
 
     <!-- Step Size -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Step Size</span>
       <span>{{ editor.bridgeMesh.stepSize.toFixed(1) }}</span>
     </div>
@@ -40,14 +42,14 @@
       type="range" min="0.1" max="2" step="0.1"
       :value="editor.bridgeMesh.stepSize"
       @input="editor.setFeatureProp('bridgeMesh', 'stepSize', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
-    <hr class="border-t border-slate-700 my-4" />
-    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Grid Settings</div>
+    <hr class="ed-divider" />
+    <div class="ed-heading">Shape</div>
 
-        <!-- Width -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <!-- Width -->
+    <div class="ed-label">
       <span>Width</span>
       <span>{{ editor.bridgeMesh.width }}</span>
     </div>
@@ -55,11 +57,11 @@
       type="range" min="10" max="150" step="2"
       :value="editor.bridgeMesh.width"
       @input="editor.bridgeMesh.width = +$event.target.value"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Depth -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Depth</span>
       <span>{{ editor.bridgeMesh.depth }}</span>
     </div>
@@ -67,11 +69,11 @@
       type="range" min="10" max="60" step="2"
       :value="editor.bridgeMesh.depth"
       @input="editor.bridgeMesh.depth = +$event.target.value"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Roation -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Rotation</span>
       <span>{{ editor.bridgeMesh.rotation.toFixed(0) }}°</span>
     </div>
@@ -79,12 +81,12 @@
       type="range" min="-180" max="180" step="5"
       :value="editor.bridgeMesh.rotation"
       @input="editor.setFeatureProp('bridgeMesh', 'rotation', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
 
     <!-- Cols -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Columns</span>
       <span>{{ editor.bridgeMesh.cols }}</span>
     </div>
@@ -92,11 +94,11 @@
       type="range" min="2" max="10" step="1"
       :value="editor.bridgeMesh.cols"
       @input="editor.bridgeMesh.cols = +$event.target.value"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Rows -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Rows</span>
       <span>{{ editor.bridgeMesh.rows }}</span>
     </div>
@@ -104,25 +106,25 @@
       type="range" min="2" max="10" step="1"
       :value="editor.bridgeMesh.rows"
       @input="editor.bridgeMesh.rows = +$event.target.value"
-      class="w-full accent-[var(--accent)] mb-6 cursor-pointer"
+      class="ed-slider"
     />
 
-    <div class="flex gap-2 mb-6">
+    <div class="ed-btn-row">
       <button
-        class="flex-2 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('flattenBridgeMesh')"
       >
         Flatten
       </button>
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.applyBridgeMeshSettings()"
       >
         Apply
       </button>
     </div>
 
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Mesh Thickness</span>
       <span>{{ editor.bridgeMesh.thickness.toFixed(2) }}</span>
     </div>
@@ -130,11 +132,11 @@
       type="range" min="0.1" max="5" step="0.05"
       :value="editor.bridgeMesh.thickness"
       @input="editor.setBridgeMeshThickness(+$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Smoothing (live) — rounds the deck between control points -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Smoothing</span>
       <span>{{ editor.bridgeMesh.smoothing.toFixed(2) }}</span>
     </div>
@@ -142,12 +144,12 @@
       type="range" min="0" max="1" step="0.05"
       :value="editor.bridgeMesh.smoothing"
       @input="editor.setFeatureProp('bridgeMesh', 'smoothing', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
-    <!-- <div class="text-[12px] mb-1">Layer Id</div>
+    <!-- <div class="ed-label">Layer Id</div>
     <input
-      class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+      class="ed-btn"
       type="number"
       min="0"
       max="20"
@@ -158,8 +160,11 @@
       @mousedown.stop
     /> -->
 
-    <!-- Surface colors: terrain-blend look or flat diffuse, top and sides separately -->
-    <div class="flex justify-between items-center mb-3 text-[12px]">
+    <hr class="ed-divider" />
+    <div class="ed-heading">Appearance</div>
+
+    <!-- Colors: terrain-blend look or flat diffuse, top and sides separately -->
+    <div class="ed-row">
       <span class="flex items-center gap-2">
         <span
           class="inline-block w-3 h-3 rounded-sm border border-slate-500"
@@ -170,13 +175,13 @@
       <select
         :value="editor.bridgeMesh.color"
         @change="editor.setFeatureProp('bridgeMesh', 'color', $event.target.value)"
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        class="ed-select-inline"
       >
         <option v-for="opt in colorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
       </select>
     </div>
 
-    <div class="flex justify-between items-center mb-3 text-[12px]">
+    <div class="ed-row">
       <span class="flex items-center gap-2">
         <span
           class="inline-block w-3 h-3 rounded-sm border border-slate-500"
@@ -187,23 +192,23 @@
       <select
         :value="editor.bridgeMesh.sideColor"
         @change="editor.setFeatureProp('bridgeMesh', 'sideColor', $event.target.value)"
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        class="ed-select-inline"
       >
         <option v-for="opt in colorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
       </select>
     </div>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <!-- Reverse-race override -->
-    <div class="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">Reverse</div>
+    <div class="ed-heading">Reverse</div>
 
-    <div class="flex justify-between items-center mb-1 text-[12px]">
+    <div class="ed-row">
       <span>Reverse Mode</span>
       <select
         :value="editor.bridgeMesh.reverseMode"
         @change="editor.setFeatureProp('bridgeMesh', 'reverseMode', $event.target.value)"
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        class="ed-select-inline"
       >
         <option value="active">Active</option>
         <option value="rotate180">Rotate 180</option>
@@ -211,17 +216,17 @@
         <option value="only">Only</option>
       </select>
     </div>
-    <div class="text-[10px] text-slate-400 mb-3">Only takes effect when racing in reverse — use "Test Reverse" in the status bar to preview. Doesn't change how this mesh looks here.</div>
+    <div class="ed-hint">Only takes effect when racing in reverse — use "Test Reverse" in the status bar to preview. Doesn't change how this mesh looks here.</div>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deleteBridgeMesh')"
       >Delete</button>
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('duplicateBridgeMesh')"
       >Duplicate</button>
     </div>

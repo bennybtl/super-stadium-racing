@@ -21,31 +21,32 @@
       </button>
     </div>
 
-      <template v-if="activeTab === 'path'">
-      <div class="text-[10px] text-slate-400 mb-3">Right-Click terrain to add waypoints. Select a node to edit it. WASD to move selected point</div>
+    <template v-if="activeTab === 'path'">
+      <div class="ed-hint">Right-Click terrain to add waypoints. Select a node to edit it. WASD to move selected point</div>
+      <div class="ed-heading">Selected Point</div>
 
-      <div class="flex gap-2 mb-3">
+      <div class="ed-btn-row">
         <button
-          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+          class="ed-btn-danger"
           @click="editor.featureAction('deleteAiWaypoint')"
         >
           Delete Point
         </button>
         <button
-          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+          class="ed-btn"
           @click="editor.featureAction('insertAiWaypointEntity')"
         >
-          Insert After
+          Insert Point
         </button>
       </div>
 
-      <hr class="border-t border-slate-700 my-4" />
-      <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Branches</div>
-      <div class="text-[11px] text-slate-400 mb-3">Select a main waypoint and click "Create branch" to add an alternate route.</div>
+      <hr class="ed-divider" />
+      <div class="ed-heading">Branches</div>
+      <div class="ed-hint">Select a main waypoint and click "Create branch" to add an alternate route.</div>
 
-      <label class="block text-[12px] text-slate-200 mb-1">Active Branch</label>
+      <label class="ed-label">Active Branch</label>
       <select
-        class="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-[12px] text-slate-100 mb-3"
+        class="ed-select"
         :value="editor.aiPathBranch.activeBranchId ?? ''"
         @change="editor.selectAiPathBranch($event.target.value || null)"
       >
@@ -59,7 +60,7 @@
         </option>
       </select>
 
-        <div class="flex justify-between mb-1 text-[12px]" :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'">
+        <div class="ed-label" :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'">
           <span>Branch Weight</span>
           <span>{{ editor.aiPathBranch.activeBranchWeight.toFixed(2) }}</span>
         </div>
@@ -68,12 +69,12 @@
           :disabled="!editor.aiPathBranch.activeBranchId"
           :value="editor.aiPathBranch.activeBranchWeight"
           @input="editor.setActiveAiPathBranchWeight(+$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <label class="block text-[12px] text-slate-200 mb-1" :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'">Rejoin Main Waypoint</label>
+        <label class="ed-label" :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'">Rejoin Main Waypoint</label>
         <select
-          class="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-[12px] text-slate-100 mb-3"
+          class="ed-select"
           :disabled="!editor.aiPathBranch.activeBranchId"
           :value="editor.aiPathBranch.activeBranchToMainIndex ?? ''"
           @change="editor.setActiveAiPathBranchRejoinIndex(+$event.target.value)"
@@ -88,27 +89,26 @@
           </option>
         </select>
 
-      <div class="flex gap-2">
+      <div class="ed-btn-row">
         <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-          :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'"
+          class="ed-btn-danger"
           :disabled="!editor.aiPathBranch.activeBranchId"
           @click="editor.featureAction('deleteActiveAiPathBranch')"
         >
           Delete Active Branch
         </button>
         <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+          class="ed-btn"
           @click="editor.featureAction('createAiPathBranchFromSelected')"
         >
           Create Branch
         </button>
       </div>
 
-      <hr class="border-t border-slate-700 my-4" />
-      <div class="flex gap-2">
+      <hr class="ed-divider" />
+      <div class="ed-btn-row">
         <button
-          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+          class="ed-btn-danger"
           @click="editor.featureAction('clearAiPath')"
         >
           Clear AI path
@@ -118,17 +118,17 @@
 
     <template v-else>
       <div class="rounded-xl border border-slate-700 bg-slate-950/50 p-3">
-        <label class="flex items-center justify-between gap-3 text-[12px] text-slate-200 mb-3">
+        <label class="ed-row cursor-pointer">
           <span>Wear Overlay</span>
           <input
             type="checkbox"
-            class="h-4 w-4 accent-[var(--accent)]"
+            class="ed-checkbox"
             :checked="editor.aiPathWear.enabled"
             @change="editor.setFeatureProp('aiPathWear', 'enabled', $event.target.checked)"
           />
         </label>
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Wear Width</span>
           <span>{{ editor.aiPathWear.width.toFixed(1) }}</span>
         </div>
@@ -136,10 +136,10 @@
           type="range" min="2" max="8" step="0.5"
           :value="editor.aiPathWear.width"
           @input="editor.setFeatureProp('aiPathWear', 'width', +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Intensity</span>
           <span>{{ editor.aiPathWear.intensity.toFixed(2) }}</span>
         </div>
@@ -147,10 +147,10 @@
           type="range" min="0.2" max="2" step="0.1"
           :value="editor.aiPathWear.intensity"
           @input="editor.setFeatureProp('aiPathWear', 'intensity', +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Lane Spacing</span>
           <span>{{ editor.aiPathWear.laneSpacing.toFixed(1) }}</span>
         </div>
@@ -158,10 +158,10 @@
           type="range" min="0.5" max="4" step="0.1"
           :value="editor.aiPathWear.laneSpacing"
           @input="editor.setFeatureProp('aiPathWear', 'laneSpacing', +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Path Wander</span>
           <span>{{ editor.aiPathWear.pathWander.toFixed(2) }}</span>
         </div>
@@ -169,10 +169,10 @@
           type="range" min="0" max="1.5" step="0.1"
           :value="editor.aiPathWear.pathWander"
           @input="editor.setFeatureProp('aiPathWear', 'pathWander', +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Edge Softness</span>
           <span>{{ editor.aiPathWear.edgeSoftness.toFixed(2) }}</span>
         </div>
@@ -180,10 +180,10 @@
           type="range" min="0.0" max="1.5" step="0.1"
           :value="editor.aiPathWear.edgeSoftness"
           @input="editor.setFeatureProp('aiPathWear', 'edgeSoftness', +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Secondary Paths</span>
           <span>{{ editor.aiPathWear.secondaryPathCount.toFixed(0) }}</span>
         </div>
@@ -191,10 +191,10 @@
           type="range" min="20" max="80" step="5"
           :value="editor.aiPathWear.secondaryPathCount"
           @input="editor.setFeatureProp('aiPathWear', 'secondaryPathCount', +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Secondary Intensity</span>
           <span>{{ editor.aiPathWear.secondaryPathStrength.toFixed(2) }}</span>
         </div>
@@ -202,10 +202,10 @@
           type="range" min="0.4" max="2" step="0.1"
           :value="editor.aiPathWear.secondaryPathStrength"
           @input="editor.setFeatureProp('aiPathWear', 'secondaryPathStrength', +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
 
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Secondary Spacing</span>
           <span>{{ editor.aiPathWear.secondaryPathSpacing.toFixed(2) }}</span>
         </div>
@@ -213,7 +213,7 @@
           type="range" min="0" max="0.15" step="0.01"
           :value="editor.aiPathWear.secondaryPathSpacing"
           @input="editor.setFeatureProp('aiPathWear', 'secondaryPathSpacing', +$event.target.value)"
-          class="w-full accent-[var(--accent)] cursor-pointer"
+          class="ed-slider"
         />
       </div>
     </template>

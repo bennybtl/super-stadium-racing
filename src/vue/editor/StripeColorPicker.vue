@@ -1,11 +1,11 @@
 <template>
   <!-- Stripe count -->
-  <div class="flex justify-between items-center mb-3 text-[12px]">
+  <div class="ed-row">
     <span>Stripe Colors</span>
     <select
       :value="count"
       @change="setCount(+$event.target.value)"
-      class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+      class="ed-select-inline"
     >
       <option :value="1">1 color</option>
       <option :value="2">2 colors</option>
@@ -17,7 +17,7 @@
   <div
     v-for="(name, i) in colors"
     :key="i"
-    class="flex justify-between items-center mb-2 text-[12px]"
+    class="ed-row"
   >
     <span class="flex items-center gap-2">
       <span
@@ -29,7 +29,7 @@
     <select
       :value="name"
       @change="setColorAt(i, $event.target.value)"
-      class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer capitalize"
+      class="ed-select-inline capitalize"
     >
       <option v-for="opt in options" :key="opt" :value="opt">{{ opt }}</option>
     </select>

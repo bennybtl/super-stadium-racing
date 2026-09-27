@@ -4,11 +4,13 @@
     title="Hill"
     @close="editor.featureAction('deselectHill')"
   >
-  <!-- Hint -->
-  <div class="text-[10px] text-slate-400 mb-3">WASD to move · QE to rotate · Del to delete</div>
+    <!-- Hint -->
+    <div class="ed-hint">WASD to move · QE to rotate · Del to delete</div>
 
-  <!-- Width Radius -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-heading">Shape</div>
+
+    <!-- Width Radius -->
+    <div class="ed-label">
       <span>Width</span>
       <span>{{ editor.hill.radiusX.toFixed(1) }}</span>
     </div>
@@ -16,11 +18,11 @@
       type="range" min="1" max="30" step="0.5"
       :value="editor.hill.radiusX"
       @input="editor.setFeatureProp('hill', 'radiusX', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Depth Radius -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Depth</span>
       <span>{{ editor.hill.radiusZ.toFixed(1) }}</span>
     </div>
@@ -28,10 +30,10 @@
       type="range" min="1" max="30" step="0.5"
       :value="editor.hill.radiusZ"
       @input="editor.setFeatureProp('hill', 'radiusZ', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Rotation</span>
       <span>{{ editor.hill.rotation.toFixed(0) }}°</span>
     </div>
@@ -39,11 +41,11 @@
       type="range" min="-180" max="180" step="5"
       :value="editor.hill.rotation"
       @input="editor.setFeatureProp('hill', 'rotation', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Height -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Height</span>
       <span>{{ editor.hill.height.toFixed(1) }}</span>
     </div>
@@ -51,11 +53,11 @@
       type="range" min="-10" max="10" step="0.2"
       :value="editor.hill.height"
       @input="editor.setFeatureProp('hill', 'height', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Flat Top: fraction of the radius held flat before the slope starts -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Flat Top</span>
       <span>{{ (editor.hill.flatTop * 100).toFixed(0) }}%</span>
     </div>
@@ -63,11 +65,11 @@
       type="range" min="0" max="0.95" step="0.05"
       :value="editor.hill.flatTop"
       @input="editor.setFeatureProp('hill', 'flatTop', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Edge: falloff profile — low = gentle toe, high = mesa-like -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Edge</span>
       <span>{{ editor.hill.edgeShape.toFixed(2) }}</span>
     </div>
@@ -75,16 +77,16 @@
       type="range" min="0.6" max="3" step="0.05"
       :value="editor.hill.edgeShape"
       @input="editor.setFeatureProp('hill', 'edgeShape', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Jitter: irregular outline instead of a perfect ellipse -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Jitter</span>
       <span class="flex items-center gap-2">
         <button
           v-if="editor.hill.jitter > 0"
-          class="text-[10px] uppercase tracking-[1px] text-slate-400 hover:text-slate-100"
+          class="ed-link"
           @click="editor.featureAction('rerollHillJitter')"
         >Reroll</button>
         {{ (editor.hill.jitter * 100).toFixed(0) }}%
@@ -94,10 +96,13 @@
       type="range" min="0" max="0.5" step="0.01"
       :value="editor.hill.jitter"
       @input="editor.setFeatureProp('hill', 'jitter', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
-      <!-- Terrain Type -->
+    <hr class="ed-divider" />
+    <div class="ed-heading">Surface</div>
+
+    <!-- Terrain Type -->
     <TerrainTypeSelect
       :model-value="editor.hill.terrainType"
       @update:modelValue="v => editor.setFeatureProp('hill', 'terrainType', v)"
@@ -105,7 +110,7 @@
 
     <!-- Edge Blend: dithers the terrain-type boundary into surrounding terrain -->
     <template v-if="editor.hill.terrainType !== 'none'">
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+      <div class="ed-label">
         <span>Edge Blend</span>
         <span>{{ editor.hill.blendWidth.toFixed(1) }}</span>
       </div>
@@ -113,13 +118,13 @@
         type="range" min="0" max="10" step="0.5"
         :value="editor.hill.blendWidth"
         @input="editor.setFeatureProp('hill', 'blendWidth', +$event.target.value)"
-        class="w-full accent-[var(--accent)] cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
     <!-- Water Level (also fills a mud-painted depression with muddy water) -->
-     <template v-if="editor.hill.terrainType == 'water' || editor.hill.terrainType == 'mud'">
-      <div class="flex justify-between mb-1 text-[12px]">
+    <template v-if="editor.hill.terrainType == 'water' || editor.hill.terrainType == 'mud'">
+      <div class="ed-label">
         <span>{{ editor.hill.terrainType == 'mud' ? 'Mud Level' : 'Water Level' }}</span>
         <span>{{ editor.hill.waterLevelOffset.toFixed(1) }}</span>
       </div>
@@ -127,20 +132,20 @@
         type="range" min="0" max="5" step="0.1"
         :value="editor.hill.waterLevelOffset"
         @input="editor.setFeatureProp('hill', 'waterLevelOffset', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button 
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deleteSelectedHill')"
       >Delete</button>
       <button 
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('duplicateSelectedHill')"
       >Duplicate</button>
     </div>

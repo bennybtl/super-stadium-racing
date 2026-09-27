@@ -4,10 +4,13 @@
     title="Action Zone"
     @close="editor.featureAction('deselectActionZone')"
   >
+    <!-- Hint -->
+    <div class="ed-hint">WASD to move · Del to delete{{ editor.actionZone.shape === 'polygon' ? ' point/zone' : '' }}</div>
+
     <!-- Zone type -->
-    <div class="text-[12px] mb-1">Zone Type</div>
+    <div class="ed-label">Zone Type</div>
     <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+      class="ed-select"
       :value="editor.actionZone.zoneType"
       @change="editor.setActionZoneType($event.target.value)"
     >
@@ -18,41 +21,94 @@
       <option value="fireworks">Fireworks</option>
     </select>
 
+    <div class="ed-heading">Shape</div>
+
+    <!-- Zone shape -->
+    <select
+      class="ed-select"
+      :value="editor.actionZone.shape"
+      @change="editor.setFeatureProp('actionZone', 'shape', $event.target.value)"
+    >
+      <option value="circle">Circle</option>
+      <option value="polygon">Polygon</option>
+    </select>
+
+    <!-- Circle controls -->
+    <div v-if="editor.actionZone.shape === 'circle'" class="ed-label">
+      <span>Radius</span>
+      <span>{{ editor.actionZone.radius }} m</span>
+    </div>
+    <input
+      v-if="editor.actionZone.shape === 'circle'"
+      type="range"
+      class="ed-slider"
+      min="4" max="30" step="0.5"
+      :value="editor.actionZone.radius"
+      @input="editor.setFeatureProp('actionZone', 'radius', +$event.target.value)"
+    />
+
+    <!-- Polygon controls -->
+    <template v-else>
+      <div class="ed-label">
+        <span>Points</span>
+        <span>{{ editor.actionZone.pointCount }}</span>
+      </div>
+      <div class="ed-label">
+        <span>Selected Point</span>
+        <span>{{ editor.actionZone.selectedPointIndex >= 0 ? editor.actionZone.selectedPointIndex + 1 : 'Center' }}</span>
+      </div>
+      <div class="ed-btn-row">
+        <button
+          class="ed-btn-danger"
+          @click="editor.featureAction('deleteActionZonePoint')"
+        >Delete Point</button>
+        <button
+          class="ed-btn"
+          @click="editor.featureAction('insertActionZonePoint')"
+        >Insert Point</button>
+      </div>
+    </template>
+
+    <template v-if="['speedBoost', 'slowZone', 'fireworks'].includes(editor.actionZone.zoneType)">
+      <hr class="ed-divider" />
+      <div class="ed-heading">Effect</div>
+    </template>
+
     <!-- Speed boost controls -->
     <template v-if="editor.actionZone.zoneType === 'speedBoost'">
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Boost Strength</span>
         <span>{{ editor.actionZone.boostStrength.toFixed(2) }}×</span>
       </div>
       <input
         type="range"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
         min="1.1" max="2.5" step="0.05"
         :value="editor.actionZone.boostStrength"
         @input="editor.setFeatureProp('actionZone', 'boostStrength', +$event.target.value)"
       />
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Boost Duration</span>
         <span>{{ editor.actionZone.boostDuration.toFixed(1) }}s</span>
       </div>
       <input
         type="range"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
         min="0.2" max="4" step="0.1"
         :value="editor.actionZone.boostDuration"
         @input="editor.setFeatureProp('actionZone', 'boostDuration', +$event.target.value)"
       />
-      <div class="text-[10px] text-slate-400 mb-3">Multiplies top speed &amp; acceleration. Duration is how long the boost lingers after leaving the zone.</div>
+      <div class="ed-hint">Multiplies top speed &amp; acceleration. Duration is how long the boost lingers after leaving the zone.</div>
     </template>
 
     <template v-if="editor.actionZone.zoneType === 'slowZone'">
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Slow Strength</span>
         <span>{{ editor.actionZone.slowStrength * 10 }}%</span>
       </div>
       <input
         type="range"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
         min="0.5" max="6" step="0.5"
         :value="editor.actionZone.slowStrength"
         @input="editor.setFeatureProp('actionZone', 'slowStrength', +$event.target.value)"
@@ -60,9 +116,9 @@
     </template>
     <!-- Firework controls -->
     <template v-if="editor.actionZone.zoneType === 'fireworks'">
-      <div class="text-[12px] mb-1">Effect</div>
+      <div class="ed-label">Firework</div>
       <select
-        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+        class="ed-select"
         :value="editor.actionZone.fireworkMode"
         @change="editor.setFeatureProp('actionZone', 'fireworkMode', $event.target.value)"
       >
@@ -73,13 +129,13 @@
 
       <!-- Shell count -->
       <template v-if="editor.actionZone.fireworkMode === 'shell'">
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Shells</span>
           <span>{{ editor.actionZone.fireworkCount }}</span>
         </div>
         <input
           type="range"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
           min="1" max="6" step="1"
           :value="editor.actionZone.fireworkCount"
           @input="editor.setFeatureProp('actionZone', 'fireworkCount', +$event.target.value)"
@@ -88,9 +144,9 @@
 
       <!-- Fountain colour -->
       <template v-if="editor.actionZone.fireworkMode === 'sparks'">
-        <div class="text-[12px] mb-1">Spark Color</div>
+        <div class="ed-label">Spark Color</div>
         <select
-          class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3 capitalize"
+          class="ed-select capitalize"
           :value="editor.actionZone.fireworkColor"
           @change="editor.setFeatureProp('actionZone', 'fireworkColor', $event.target.value)"
         >
@@ -100,38 +156,38 @@
 
       <!-- Burn time for the sustained modes -->
       <template v-if="editor.actionZone.fireworkMode !== 'shell'">
-        <div class="flex justify-between mb-1 text-[12px]">
+        <div class="ed-label">
           <span>Duration</span>
           <span>{{ editor.actionZone.fireworkDuration.toFixed(1) }}s</span>
         </div>
         <input
           type="range"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
           min="0.3" max="6" step="0.1"
           :value="editor.actionZone.fireworkDuration"
           @input="editor.setFeatureProp('actionZone', 'fireworkDuration', +$event.target.value)"
         />
       </template>
 
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>{{ heightLabel }}</span>
         <span>{{ editor.actionZone.fireworkHeight }} m</span>
       </div>
       <input
         type="range"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
         :min="heightRange.min" :max="heightRange.max" step="1"
         :value="editor.actionZone.fireworkHeight"
         @input="editor.setFeatureProp('actionZone', 'fireworkHeight', +$event.target.value)"
       />
 
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Can Rotation</span>
         <span>{{ editor.actionZone.heading.toFixed(0) }}°</span>
       </div>
       <input
         type="range" min="-180" max="180" step="5"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
         :value="editor.actionZone.heading"
         @input="editor.setFeatureProp('actionZone', 'heading', +$event.target.value)"
       />
@@ -140,67 +196,21 @@
         @click="editor.featureAction('previewActionZoneFireworks')"
       ><i class="bi bi-play-fill"></i> Preview</button>
 
-      <div class="text-[10px] text-slate-400 mb-3">{{ modeHint }} Q/E also turns the cans. The zone re-arms once the effect finishes.</div>
+      <div class="ed-hint">{{ modeHint }} Q/E also turns the cans. The zone re-arms once the effect finishes.</div>
     </template>
 
-    <!-- Zone shape -->
-    <div class="text-[12px] mb-1">Shape</div>
-    <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
-      :value="editor.actionZone.shape"
-      @change="editor.setFeatureProp('actionZone', 'shape', $event.target.value)"
-    >
-      <option value="circle">Circle</option>
-      <option value="polygon">Polygon</option>
-    </select>
-
-    <!-- Circle controls -->
-    <div v-if="editor.actionZone.shape === 'circle'" class="flex justify-between mb-1 text-[12px]">
-      <span>Radius</span>
-      <span>{{ editor.actionZone.radius }} m</span>
-    </div>
-    <input
-      v-if="editor.actionZone.shape === 'circle'"
-      type="range"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      min="4" max="30" step="0.5"
-      :value="editor.actionZone.radius"
-      @input="editor.setFeatureProp('actionZone', 'radius', +$event.target.value)"
-    />
-
-    <!-- Polygon controls -->
-    <template v-else>
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Points</span>
-        <span>{{ editor.actionZone.pointCount }}</span>
-      </div>
-      <div class="flex justify-between mb-1 text-[12px]">
-        <span>Selected Point</span>
-        <span>{{ editor.actionZone.selectedPointIndex >= 0 ? editor.actionZone.selectedPointIndex + 1 : 'Center' }}</span>
-      </div>
-      <div class="flex gap-2 mb-3">
-        <button 
-          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-          @click="editor.featureAction('deleteActionZonePoint')"
-        >Delete Point</button>
-        <button 
-          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-          @click="editor.featureAction('insertActionZonePoint')"
-        >Insert Point</button>
-      </div>
-    </template>
-
-    <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Del to delete{{ editor.actionZone.shape === 'polygon' ? ' point/zone' : '' }}</div>
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
-      <button 
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900" 
-        @click="editor.featureAction('deleteActionZone')">Delete</button>
-      <button 
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.featureAction('duplicateActionZone')">Duplicate</button>
+    <div class="ed-btn-row">
+      <button
+        class="ed-btn-danger"
+        @click="editor.featureAction('deleteActionZone')"
+      >Delete</button>
+      <button
+        class="ed-btn"
+        @click="editor.featureAction('duplicateActionZone')"
+      >Duplicate</button>
     </div>
   </EditorPanel>
 </template>

@@ -5,17 +5,19 @@
     @close="editor.featureAction('deselectSquareHill')"
   >
     <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
+    <div class="ed-hint">WASD to move · Q/E to rotate · Del to delete</div>
+
+    <div class="ed-heading">Shape</div>
 
     <!-- Mode toggle: Flat | Sloped -->
-    <div class="text-[12px] mb-1">Mode</div>
-    <div class="flex gap-2 mb-3">
-      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(false)" @click="editor.setSquareHillMode(false)">Flat</button>
-      <button class="flex-1 rounded px-2 py-1 text-[12px] font-sans transition" :style="modeStyle(true)"  @click="editor.setSquareHillMode(true)">Sloped</button>
+    <div class="ed-label">Mode</div>
+    <div class="ed-btn-row">
+      <button class="ed-seg" :style="modeStyle(false)" @click="editor.setSquareHillMode(false)">Flat</button>
+      <button class="ed-seg" :style="modeStyle(true)"  @click="editor.setSquareHillMode(true)">Sloped</button>
     </div>
 
     <!-- Width -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Width</span>
       <span>{{ editor.squareHill.width.toFixed(1) }}</span>
     </div>
@@ -23,11 +25,11 @@
       type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.width"
       @input="editor.setFeatureProp('squareHill', 'width', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Depth -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Depth</span>
       <span>{{ editor.squareHill.depth.toFixed(1) }}</span>
     </div>
@@ -35,11 +37,11 @@
       type="range" min="0.5" max="60" step="0.5"
       :value="editor.squareHill.depth"
       @input="editor.setFeatureProp('squareHill', 'depth', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Angle -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Rotation</span>
       <span>{{ editor.squareHill.angle.toFixed(0) }}°</span>
     </div>
@@ -47,12 +49,12 @@
       type="range" min="-180" max="180" step="5"
       :value="editor.squareHill.angle"
       @input="editor.setFeatureProp('squareHill', 'angle', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Flat section -->
     <template v-if="!editor.squareHill.slopeMode">
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Height</span>
         <span>{{ editor.squareHill.height.toFixed(1) }}</span>
       </div>
@@ -60,13 +62,13 @@
         type="range" min="-10" max="10" step="0.2"
         :value="editor.squareHill.height"
         @input="editor.setFeatureProp('squareHill', 'height', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
     <!-- Sloped section -->
     <template v-else>
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Height (− edge)</span>
         <span>{{ editor.squareHill.heightAtMin.toFixed(1) }}</span>
       </div>
@@ -74,9 +76,9 @@
         type="range" min="-10" max="10" step="0.5"
         :value="editor.squareHill.heightAtMin"
         @input="editor.setSquareHillHeightMin(+$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Height (+ edge)</span>
         <span>{{ editor.squareHill.heightAtMax.toFixed(1) }}</span>
       </div>
@@ -84,25 +86,25 @@
         type="range" min="-10" max="10" step="0.5"
         :value="editor.squareHill.heightAtMax"
         @input="editor.setSquareHillHeightMax(+$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
-    <!-- Smoothing -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Smoothing</span>
+    <!-- Transition -->
+    <div class="ed-label">
+      <span>Transition</span>
       <span>{{ editor.squareHill.transition.toFixed(1) }}</span>
     </div>
     <input
       type="range" min="0.5" max="15" step="0.5"
       :value="editor.squareHill.transition"
       @input="editor.setFeatureProp('squareHill', 'transition', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Edge: falloff profile across the smoothing band — low = gentle toe,
          high = holds height then drops late (mesa) -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Edge</span>
       <span>{{ editor.squareHill.edgeShape.toFixed(2) }}</span>
     </div>
@@ -110,16 +112,16 @@
       type="range" min="0.6" max="3" step="0.05"
       :value="editor.squareHill.edgeShape"
       @input="editor.setFeatureProp('squareHill', 'edgeShape', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Jitter: irregular outline instead of a perfect rect -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Jitter</span>
       <span class="flex items-center gap-2">
         <button
           v-if="editor.squareHill.jitter > 0"
-          class="text-[10px] uppercase tracking-[1px] text-slate-400 hover:text-slate-100"
+          class="ed-link"
           @click="editor.featureAction('rerollSquareHillJitter')"
         >Reroll</button>
         {{ (editor.squareHill.jitter * 100).toFixed(0) }}%
@@ -129,8 +131,11 @@
       type="range" min="0" max="0.5" step="0.01"
       :value="editor.squareHill.jitter"
       @input="editor.setFeatureProp('squareHill', 'jitter', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
+
+    <hr class="ed-divider" />
+    <div class="ed-heading">Surface</div>
 
     <TerrainTypeSelect
       :model-value="editor.squareHill.terrainType"
@@ -139,7 +144,7 @@
 
     <!-- Edge Blend: dithers the terrain-type boundary into surrounding terrain -->
     <template v-if="editor.squareHill.terrainType !== 'none'">
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+      <div class="ed-label">
         <span>Edge Blend</span>
         <span>{{ editor.squareHill.blendWidth.toFixed(1) }}</span>
       </div>
@@ -147,13 +152,13 @@
         type="range" min="0" max="10" step="0.5"
         :value="editor.squareHill.blendWidth"
         @input="editor.setFeatureProp('squareHill', 'blendWidth', +$event.target.value)"
-        class="w-full accent-[var(--accent)] cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
     <!-- Water Level (also fills a mud-painted depression with muddy water) -->
     <template v-if="editor.squareHill.terrainType == 'water' || editor.squareHill.terrainType == 'mud'" >
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>{{ editor.squareHill.terrainType == 'mud' ? 'Mud Level' : 'Water Level' }}</span>
         <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
       </div>
@@ -161,20 +166,21 @@
         type="range" min="0" max="5" step="0.5"
         :value="editor.squareHill.waterLevelOffset"
         @input="editor.setFeatureProp('squareHill', 'waterLevelOffset', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
-    <hr class="border-t border-slate-700 my-4" />
+
+    <hr class="ed-divider" />
 
     <!-- Reverse-race override -->
-    <div class="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">Reverse</div>
+    <div class="ed-heading">Reverse</div>
 
-    <div class="flex justify-between items-center mb-1 text-[12px]">
+    <div class="ed-row">
       <span>Reverse Mode</span>
       <select
         :value="editor.squareHill.reverseMode"
         @change="editor.setFeatureProp('squareHill', 'reverseMode', $event.target.value)"
-        class="bg-slate-700 text-white text-[12px] rounded px-2 py-0.5 cursor-pointer"
+        class="ed-select-inline"
       >
         <option value="active">Active</option>
         <option value="rotate180">Rotate 180</option>
@@ -182,19 +188,19 @@
         <option value="only">Only</option>
       </select>
     </div>
-    <div class="text-[10px] text-slate-400 mb-3">What happens to this hill in reverse mode?</div>
+    <div class="ed-hint">What happens to this hill in reverse mode?</div>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deleteSelectedSquareHill')"
       >Delete</button>
 
       <button 
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('duplicateSelectedSquareHill')"
       >Duplicate</button>
     </div>

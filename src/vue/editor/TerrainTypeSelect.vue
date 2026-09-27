@@ -1,7 +1,7 @@
 <template>
-  <div class="text-[12px] mb-1">{{ label }}</div>
+  <div class="ed-label">{{ label }}</div>
   <select
-    class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+    class="ed-select"
     :value="modelValue"
     v-bind="$attrs"
     @change="$emit('update:modelValue', $event.target.value)"

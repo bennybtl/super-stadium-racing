@@ -4,12 +4,12 @@
     title="Decoration"
     @close="editor.featureAction('deselectDecoration')"
   >
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move · Q/E to rotate · Del to delete</div>
+    <div class="ed-hint">WASD to move · Q/E to rotate · Del to delete</div>
 
     <!-- Kind: packs collapse to one entry; standalone decorations list individually -->
-    <div class="text-[12px] mb-1">Type</div>
+    <div class="ed-label">Type</div>
     <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+      class="ed-select"
       :value="currentGroupKey"
       @change="selectGroup($event.target.value)"
     >
@@ -18,9 +18,9 @@
 
     <!-- Variation: only for the selected pack -->
     <template v-if="currentGroup && currentGroup.members.length > 1">
-      <div class="text-[12px] mb-1">Variation</div>
+      <div class="ed-label">Variation</div>
       <select
-        class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+        class="ed-select"
         :value="editor.decoration.model"
         @change="editor.setDecorationType($event.target.value)"
       >
@@ -32,9 +32,9 @@
     <template v-for="(ctl, prop) in editor.decoration.controls" :key="prop">
       <!-- Colour / generic dropdown -->
       <template v-if="ctl.type === 'color' || ctl.type === 'select'">
-        <div class="text-[12px] mb-1 mt-3">{{ ctl.label ?? 'Color' }}</div>
+        <div class="ed-label">{{ ctl.label ?? 'Color' }}</div>
         <select
-          class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+          class="ed-select"
           :value="editor.decoration[prop]"
           @change="editor.setDecorationProp(prop, $event.target.value)"
         >
@@ -44,7 +44,7 @@
 
       <!-- Numeric slider -->
       <template v-else-if="ctl.type === 'range'">
-        <div class="flex justify-between mb-1 mt-1 text-[12px]">
+        <div class="ed-label">
           <span>{{ ctl.label ?? prop }}</span>
           <span>{{ editor.decoration[prop] }}{{ ctl.unit ?? '' }}</span>
         </div>
@@ -55,16 +55,17 @@
           :step="ctl.step ?? 1"
           :value="editor.decoration[prop]"
           @input="editor.setDecorationProp(prop, +$event.target.value)"
-          class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+          class="ed-slider"
         />
       </template>
 
       <!-- Checkbox -->
       <template v-else-if="ctl.type === 'toggle'">
-        <label class="flex items-center justify-between text-[12px] text-slate-200 mb-1 mt-3">
+        <label class="ed-row cursor-pointer">
           <span>{{ ctl.label ?? prop }}</span>
           <input
             type="checkbox"
+            class="ed-checkbox"
             :checked="!!editor.decoration[prop]"
             @change="editor.setDecorationProp(prop, $event.target.checked)"
           />
@@ -73,8 +74,8 @@
 
       <!-- Mirror pair -->
       <template v-else-if="ctl.type === 'mirror'">
-        <div class="text-[12px] mb-1 mt-3">{{ ctl.label ?? 'Mirror' }}</div>
-        <div class="flex gap-2 mb-3">
+        <div class="ed-label">{{ ctl.label ?? 'Mirror' }}</div>
+        <div class="ed-btn-row">
           <button
             class="flex-1 rounded border px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider transition duration-150"
             :class="editor.decoration.mirrorX ? 'border-sky-500 bg-sky-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'"
@@ -89,15 +90,17 @@
       </template>
     </template>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        @click="editor.featureAction('deleteSelectedDecoration')">Delete</button>
+        class="ed-btn-danger"
+        @click="editor.featureAction('deleteSelectedDecoration')"
+      >Delete</button>
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        @click="editor.featureAction('duplicateSelectedDecoration')">Duplicate</button>
+        class="ed-btn"
+        @click="editor.featureAction('duplicateSelectedDecoration')"
+      >Duplicate</button>
     </div>
   </EditorPanel>
 </template>

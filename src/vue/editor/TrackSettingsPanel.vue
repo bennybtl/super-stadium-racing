@@ -10,7 +10,7 @@
       <div>
         <label>Track Name</label>
         <input
-          class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+          class="ed-input"
           type="text"
           :value="editor.trackSettings.name"
           @input="editor.setTrackName($event.target.value)"
@@ -20,7 +20,7 @@
       <div>
         <label>Track ID</label>
         <input
-          class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+          class="ed-input"
           type="text"
           :value="editor.trackSettings.id"
           @input="editor.setTrackId($event.target.value)"
@@ -34,7 +34,7 @@
         <div>
           <label>Pack ID</label>
           <input
-            class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+            class="ed-input"
             type="text"
             :value="editor.trackSettings.packId"
             @input="editor.setTrackPackId($event.target.value)"
@@ -49,9 +49,9 @@
     </div>
     <div class="mt-2 grid grid-cols-2 gap-2">
       <div>
-        <div class="text-[12px] mb-1">Width</div>
+        <div class="ed-label">Width</div>
         <input
-          class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+          class="ed-input"
           type="number"
           min="80"
           max="320"
@@ -61,9 +61,9 @@
         />
       </div>
       <div>
-        <div class="text-[12px] mb-1">Depth</div>
+        <div class="ed-label">Depth</div>
         <input
-          class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-[13px] text-white outline-none transition focus:border-slate-500"
+          class="ed-input"
           type="number"
           min="80"
           max="320"
@@ -92,14 +92,14 @@
       </div>
     </div>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <div class="mt-2 grid grid-cols-3 gap-2 max-w-[36rem]">
       <div>
         <label class="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
-            class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+            class="ed-checkbox"
             :checked="editor.trackSettings.hidden"
             @change="editor.setTrackHidden($event.target.checked)"
           />
@@ -111,7 +111,7 @@
         <label class="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
-            class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+            class="ed-checkbox"
             :checked="editor.trackSettings.oobDeadSpace"
             @change="editor.setTrackOobDeadSpace($event.target.checked)"
           />
@@ -123,7 +123,7 @@
         <label class="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
-            class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+            class="ed-checkbox"
             :checked="editor.trackSettings.allowReverse"
             @change="editor.setTrackAllowReverse($event.target.checked)"
           />
@@ -135,7 +135,7 @@
         <label class="flex items-center gap-2 cursor-pointer select-none">
         <input
           type="checkbox"
-          class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+          class="ed-checkbox"
           :checked="editor.trackSettings.dirtChunks"
           @change="editor.setTrackDirtChunks($event.target.checked)"
         />
@@ -147,7 +147,7 @@
         <label class="flex items-center gap-2 cursor-pointer select-none">
         <input
           type="checkbox"
-          class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+          class="ed-checkbox"
           :checked="editor.trackSettings.grassBlades"
           @change="editor.setTrackGrassBlades($event.target.checked)"
         />
@@ -159,7 +159,7 @@
         <label class="flex items-center gap-2 cursor-pointer select-none">
         <input
           type="checkbox"
-          class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+          class="ed-checkbox"
           :checked="editor.trackSettings.stadiumLighting"
           @change="editor.setTrackStadiumLighting($event.target.checked)"
         />
@@ -168,14 +168,14 @@
         <div class="mt-2 text-[10px] text-slate-400">Lights the placed Track Light poles for the day look too (ambient floor + poles, no sun) — for arena-style tracks. Needs Track Light features placed to have any effect. Off (default) uses a single directional sun, which reads better on open outdoor terrain.</div>
       </div>
     </div>
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
-    <div class="mt-5 text-[12px] font-semibold text-slate-200">Perimeter Wall</div>
+    <div class="ed-heading">Perimeter Wall</div>
 
     <label class="mt-2 flex items-center gap-2 cursor-pointer select-none">
       <input
         type="checkbox"
-        class="h-4 w-4 accent-[var(--accent)] cursor-pointer"
+        class="ed-checkbox"
         :checked="editor.trackBorderWall.enabled"
         @change="editor.setTrackBorderWall('enabled', $event.target.checked)"
       />
@@ -184,7 +184,7 @@
     <div class="mt-2 text-[10px] text-slate-400 max-w-96">The boxes sealing the track edge. Off leaves the perimeter open and carries the border terrain out to the horizon instead — pair with Reset in Dead Space to keep trucks on the track.</div>
 
     <template v-if="editor.trackBorderWall.enabled">
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+      <div class="ed-label">
         <span>Thickness</span>
         <span>{{ editor.trackBorderWall.thickness }}m</span>
       </div>
@@ -195,10 +195,10 @@
         step="0.5"
         :value="editor.trackBorderWall.thickness"
         @input="editor.setTrackBorderWall('thickness', +$event.target.value)"
-        class="w-full accent-[var(--accent)] cursor-pointer"
+        class="ed-slider"
       />
 
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+      <div class="ed-label">
         <span>Height</span>
         <span>{{ editor.trackBorderWall.height }}m</span>
       </div>
@@ -209,7 +209,7 @@
         step="1"
         :value="editor.trackBorderWall.height"
         @input="editor.setTrackBorderWall('height', +$event.target.value)"
-        class="w-full accent-[var(--accent)] cursor-pointer"
+        class="ed-slider"
       />
     </template>
 

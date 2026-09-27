@@ -5,12 +5,13 @@
     @close="editor.featureAction('deselectTerrainShape')"
   >
     <!-- Hint -->
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move{{ editor.terrainShape.shape === 'polygon' ? '' : ' · QE to rotate' }} · Del to delete{{ editor.terrainShape.shape === 'polygon' ? ' point/shape' : '' }}</div>
+    <div class="ed-hint">WASD to move{{ editor.terrainShape.shape === 'polygon' ? '' : ' · QE to rotate' }} · Del to delete{{ editor.terrainShape.shape === 'polygon' ? ' point/shape' : '' }}</div>
+
+    <div class="ed-heading">Shape</div>
 
     <!-- Shape selector -->
-    <div class="text-[12px] mb-1">Shape</div>
     <select
-      class="w-full px-2 py-1 bg-slate-800 text-white border border-slate-700 rounded text-[12px] mb-3"
+      class="ed-select"
       :value="editor.terrainShape.shape"
       @change="editor.setFeatureProp('terrainShape', 'shape', $event.target.value)"
     >
@@ -21,7 +22,7 @@
 
     <!-- Geometry controls (rect/ellipse) -->
     <template v-if="editor.terrainShape.shape !== 'polygon'">
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Width</span>
         <span>{{ editor.terrainShape.width.toFixed(1) }}</span>
       </div>
@@ -29,10 +30,10 @@
         type="range" min="1" max="80" step="0.5"
         :value="editor.terrainShape.width"
         @input="editor.setFeatureProp('terrainShape', 'width', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
 
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Depth</span>
         <span>{{ editor.terrainShape.depth.toFixed(1) }}</span>
       </div>
@@ -40,10 +41,10 @@
         type="range" min="1" max="80" step="0.5"
         :value="editor.terrainShape.depth"
         @input="editor.setFeatureProp('terrainShape', 'depth', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
 
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Rotation</span>
         <span>{{ editor.terrainShape.rotation.toFixed(0) }}°</span>
       </div>
@@ -51,38 +52,41 @@
         type="range" min="-180" max="180" step="2"
         :value="editor.terrainShape.rotation"
         @input="editor.setFeatureProp('terrainShape', 'rotation', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
     <!-- Polygon controls -->
     <template v-else>
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Points</span>
         <span>{{ editor.terrainShape.pointCount }}</span>
       </div>
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Selected Point</span>
         <span>{{ editor.terrainShape.selectedPointIndex >= 0 ? editor.terrainShape.selectedPointIndex + 1 : 'Center' }}</span>
       </div>
-      <div class="flex gap-2 mb-3">
+      <div class="ed-btn-row">
         <button
-          class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+          class="ed-btn-danger"
           @click="editor.featureAction('deleteTerrainShapePoint')"
         >Delete Point</button>
         <button
-          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+          class="ed-btn"
           @click="editor.featureAction('insertTerrainShapePoint')"
         >Insert Point</button>
       </div>
     </template>
+    <hr class="ed-divider" />
+    <div class="ed-heading">Surface</div>
+
     <TerrainTypeSelect
       :model-value="editor.terrainShape.terrainType"
       @update:modelValue="v => editor.setFeatureProp('terrainShape', 'terrainType', v)"
     />
 
     <template v-if="editor.terrainShape.terrainType != 'none'">
-      <div class="flex justify-between mb-3 text-[12px]">
+      <div class="ed-label">
         <span>Edge Blend</span>
         <span>{{ editor.terrainShape.blendWidth.toFixed(1) }}</span>
       </div>
@@ -90,10 +94,10 @@
         type="range" min="0" max="20" step="0.5"
         :value="editor.terrainShape.blendWidth"
         @input="editor.setFeatureProp('terrainShape', 'blendWidth', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
 
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Roughness</span>
         <span>{{ editor.terrainShape.roughness.toFixed(2) }}</span>
       </div>
@@ -101,20 +105,20 @@
         type="range" min="0" max="1" step="0.05"
         :value="editor.terrainShape.roughness"
         @input="editor.setFeatureProp('terrainShape', 'roughness', +$event.target.value)"
-        class="w-full accent-[var(--accent)] cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
-    <hr class="border-t border-slate-700 mb-3" />
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
-      <button 
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+    <div class="ed-btn-row">
+      <button
+        class="ed-btn-danger"
         @click="editor.featureAction('deleteSelectedTerrainShape')"
       >Delete</button>
-      <button 
-          class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+      <button
+        class="ed-btn"
         @click="editor.featureAction('duplicateSelectedTerrainShape')"
       >Duplicate</button>
     </div>

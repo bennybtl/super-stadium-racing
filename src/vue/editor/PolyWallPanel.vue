@@ -4,19 +4,15 @@
     title="Poly Wall"
     @close="editor.featureAction('closePolyWall')"
   >
-    <div class="text-[10px] text-slate-400 mb-3 max-w-48">
+    <div class="ed-hint">
       Right-click terrain to add points. Select a point to edit it. Press <kbd>Esc</kbd> to close the panel.
     </div>
 
     <!-- Selected Point Section -->
-    <div
-      class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2"
-    >
-      Selected Point
-    </div>
+    <div class="ed-heading">Selected Point</div>
 
     <!-- Radius -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Corner Radius</span>
       <span
         :style="
@@ -35,11 +31,11 @@
       :value="editor.polyWall.radius"
       :disabled="!editor.polyWall.canHaveRadius"
       @input="editor.setFeatureProp('polyWall', 'radius', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
     <div
       v-if="!editor.polyWall.canHaveRadius && editor.polyWall.hasSelection"
-      class="text-[10px] text-slate-400 mb-3  max-w-48"
+      class="ed-hint"
       style="color: #ff9800"
     >
       First and last points cannot be rounded (unless closed loop is enabled)
@@ -47,7 +43,7 @@
 
     <!-- Terrain Smoothing: how closely the wall top follows the terrain at this node.
          Most (1) = flat, slowly-changing top; Least (0) = follows terrain exactly. -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Terrain Smoothing</span>
       <span>{{ smoothingDisplay }}</span>
     </div>
@@ -61,55 +57,35 @@
       @input="
         editor.setFeatureProp('polyWall', 'smoothing', +$event.target.value)
       "
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="ed-hint">
       WASD to move selected point
     </div>
 
-    <div class="flex gap-2 mb-3">
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deletePolyWallPoint')"
       >
         Delete Point
       </button>
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('insertPolyWallPoint')"
       >
-        Insert After
+        Insert Point
       </button>
     </div>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
-    <!-- Wall Properties Section -->
-    <div
-      class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2"
-    >
-      Wall Properties
-    </div>
-
-    <!-- Height -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Height</span>
-      <span>{{ editor.polyWall.height.toFixed(1) }}</span>
-    </div>
-    <input
-      type="range"
-      min="0.5"
-      max="8"
-      step="0.5"
-      :value="editor.polyWall.height"
-      @input="editor.setFeatureProp('polyWall', 'height', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
+    <div class="ed-heading">Shape</div>
 
     <!-- Thickness -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Width</span>
+    <div class="ed-label">
+      <span>Thickness</span>
       <span>{{ editor.polyWall.thickness.toFixed(1) }}</span>
     </div>
     <input
@@ -121,11 +97,26 @@
       @input="
         editor.setFeatureProp('polyWall', 'thickness', +$event.target.value)
       "
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
+    />
+
+    <!-- Height -->
+    <div class="ed-label">
+      <span>Height</span>
+      <span>{{ editor.polyWall.height.toFixed(1) }}</span>
+    </div>
+    <input
+      type="range"
+      min="0.5"
+      max="8"
+      step="0.5"
+      :value="editor.polyWall.height"
+      @input="editor.setFeatureProp('polyWall', 'height', +$event.target.value)"
+      class="ed-slider"
     />
 
     <!-- Collision Barrier Height -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Collision Height</span>
       <span>{{ editor.polyWall.collisionHeight.toFixed(1) }}</span>
     </div>
@@ -142,14 +133,14 @@
           +$event.target.value,
         )
       "
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
-    <div class="text-[10px] text-slate-400 mb-3  max-w-48">
+    <div class="ed-hint">
       Collision height defaults to the visual height unless adjusted separately.
     </div>
 
     <!-- Closed toggle -->
-    <div class="flex justify-between mb-3 text-[12px]">
+    <div class="ed-row">
       <span>Closed Loop</span>
       <input
         type="checkbox"
@@ -157,12 +148,15 @@
         @change="
           editor.setFeatureProp('polyWall', 'closed', $event.target.checked)
         "
-        class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+        class="ed-checkbox"
       />
     </div>
 
+    <hr class="ed-divider" />
+    <div class="ed-heading">Appearance</div>
+
     <!-- Chain-link fence: metal tubing from the wall top up to the collision top -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-row">
       <span>Chain-Link Fence</span>
       <input
         type="checkbox"
@@ -170,10 +164,10 @@
         @change="
           editor.setFeatureProp('polyWall', 'fence', $event.target.checked)
         "
-        class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+        class="ed-checkbox"
       />
     </div>
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="ed-hint">
       <template v-if="editor.polyWall.fence">
         Fence fills {{ fenceHeightDisplay }} between the wall top and the
         collision height — raise Collision Height for a taller fence.
@@ -189,18 +183,18 @@
       @update:model-value="editor.setFeatureProp('polyWall', 'colors', $event)"
     />
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deletePolyWall')"
       >
         Delete
       </button>
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('duplicatePolyWall')"
       >
         Duplicate

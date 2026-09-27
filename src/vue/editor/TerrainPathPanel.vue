@@ -4,35 +4,34 @@
     title="Terrain Path"
     @close="editor.featureAction('closeTerrainPath')"
   >
-    <div class="text-[10px] text-slate-400 mb-3">
+    <div class="ed-hint">
       Right-click terrain to add waypoints. Select a node to edit it. Press <kbd>Esc</kbd> to close the panel.
     </div>
 
     <!-- Selected Point Section -->
-    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Selected Point</div>
-    <div class="text-[10px] text-slate-400 mb-2">WASD to move selected waypoint</div>
-    <div class="flex gap-2 mb-3">
+    <div class="ed-heading">Selected Point</div>
+    <div class="ed-hint">WASD to move selected waypoint</div>
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deleteTerrainPathWaypoint')"
       >
         Delete Point
       </button>
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('insertTerrainPathWaypoint')"
       >
-        Insert After
+        Insert Point
       </button>
     </div>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
-    <!-- Path Properties Section -->
-    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Path Properties</div>
+    <div class="ed-heading">Shape</div>
 
     <!-- Width -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Width</span>
       <span>{{ editor.terrainPath.width.toFixed(1) }}</span>
     </div>
@@ -40,11 +39,11 @@
       type="range" min="1" max="40" step="0.5"
       :value="editor.terrainPath.width"
       @input="editor.setFeatureProp('terrainPath', 'width', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Corner radius -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Corner Radius</span>
       <span>{{ editor.terrainPath.cornerRadius.toFixed(1) }}</span>
     </div>
@@ -52,28 +51,32 @@
       type="range" min="0" max="20" step="0.5"
       :value="editor.terrainPath.cornerRadius"
       @input="editor.setFeatureProp('terrainPath', 'cornerRadius', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
+
+    <!-- Closed toggle -->
+    <div class="ed-row">
+      <span>Closed Loop</span>
+      <input
+        type="checkbox"
+        :checked="editor.terrainPath.closed"
+        @change="editor.setFeatureProp('terrainPath', 'closed', $event.target.checked)"
+        class="ed-checkbox"
+      />
+    </div>
+
+
+    <hr class="ed-divider" />
+    <div class="ed-heading">Surface</div>
 
     <TerrainTypeSelect
       :model-value="editor.terrainPath.terrainType"
       @update:modelValue="v => editor.setFeatureProp('terrainPath', 'terrainType', v)"
     />
 
-    <!-- Closed toggle -->
-    <div class="flex justify-between mt-3 mb-3 text-[12px]">
-      <span>Closed Loop</span>
-      <input
-        type="checkbox"
-        :checked="editor.terrainPath.closed"
-        @change="editor.setFeatureProp('terrainPath', 'closed', $event.target.checked)"
-        class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
-      />
-    </div>
-
     <!-- Edge blend -->
     <template v-if="editor.terrainPath.terrainType !== 'none'">
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Edge Blend</span>
         <span>{{ editor.terrainPath.blendWidth.toFixed(1) }}</span>
       </div>
@@ -81,10 +84,10 @@
         type="range" min="0" max="10" step="0.5"
         :value="editor.terrainPath.blendWidth"
         @input="editor.setFeatureProp('terrainPath', 'blendWidth', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
 
-      <div class="flex justify-between mb-1 text-[12px]">
+      <div class="ed-label">
         <span>Roughness</span>
         <span>{{ editor.terrainPath.roughness.toFixed(2) }}</span>
       </div>
@@ -92,22 +95,22 @@
         type="range" min="0" max="1" step="0.05"
         :value="editor.terrainPath.roughness"
         @input="editor.setFeatureProp('terrainPath', 'roughness', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deleteTerrainPath')"
       >
         Delete
       </button>
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('duplicateTerrainPath')"
       >
         Duplicate

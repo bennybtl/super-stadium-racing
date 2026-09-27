@@ -5,10 +5,10 @@
     @close="editor.featureAction('deselectPolyHill')"
   >
     <!-- Selected Point Section -->
-    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Selected Point</div>
+    <div class="ed-heading">Selected Point</div>
 
     <!-- Radius -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Corner Radius</span>
       <span>{{ radiusDisplay }}</span>
     </div>
@@ -17,18 +17,17 @@
       :value="editor.polyHill.radius"
       :disabled="!editor.polyHill.canHaveRadius"
       @input="editor.setFeatureProp('polyHill', 'radius', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
-    <div v-if="!editor.polyHill.canHaveRadius && editor.polyHill.hasSelection" class="text-[10px] text-slate-400 mb-3" style="color: #ff9800;">
+    <div v-if="!editor.polyHill.canHaveRadius && editor.polyHill.hasSelection" class="ed-hint" style="color: #ff9800;">
       First and last points cannot be rounded (unless closed loop is enabled)
     </div>
 
-    <div class="text-[10px] text-slate-400 mb-3">WASD to move selected point</div>
+    <div class="ed-hint">WASD to move selected point</div>
 
-    <div class="flex gap-2 mb-3">
+    <div class="ed-btn-row">
       <button
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
-        :class="{ 'cursor-not-allowed opacity-50': !editor.polyHill.canDeletePoint }"
+        class="ed-btn-danger"
         :disabled="!editor.polyHill.canDeletePoint"
         @click="editor.featureAction('deletePolyHillPoint')"
       >
@@ -36,34 +35,20 @@
       </button>
 
       <button
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
-        :class="{ 'cursor-not-allowed opacity-50': !editor.polyHill.hasSelection }"
+        class="ed-btn"
         :disabled="!editor.polyHill.hasSelection"
         @click="editor.featureAction('insertPolyHillPoint')"
       >
-        Insert After
+        Insert Point
       </button>
     </div>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <hr class="ed-divider" />
 
-    <!-- Hill Properties Section -->
-    <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Hill Properties</div>
-
-    <!-- Height -->
-    <div class="flex justify-between mb-1 text-[12px]">
-      <span>Height</span>
-      <span>{{ editor.polyHill.height.toFixed(1) }}</span>
-    </div>
-    <input
-      type="range" min="-10" max="10" step="0.2"
-      :value="editor.polyHill.height"
-      @input="editor.setFeatureProp('polyHill', 'height', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-    />
+    <div class="ed-heading">Shape</div>
 
     <!-- Width -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Width</span>
       <span>{{ editor.polyHill.width.toFixed(1) }}</span>
     </div>
@@ -71,11 +56,23 @@
       type="range" min="2" max="50" step="0.5"
       :value="editor.polyHill.width"
       @input="editor.setFeatureProp('polyHill', 'width', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
+    />
+
+    <!-- Height -->
+    <div class="ed-label">
+      <span>Height</span>
+      <span>{{ editor.polyHill.height.toFixed(1) }}</span>
+    </div>
+    <input
+      type="range" min="-10" max="10" step="0.2"
+      :value="editor.polyHill.height"
+      @input="editor.setFeatureProp('polyHill', 'height', +$event.target.value)"
+      class="ed-slider"
     />
 
     <!-- Edge: falloff profile — low = gentle toe, high = mesa-like -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Edge</span>
       <span>{{ editor.polyHill.edgeShape.toFixed(2) }}</span>
     </div>
@@ -83,16 +80,16 @@
       type="range" min="0.6" max="3" step="0.05"
       :value="editor.polyHill.edgeShape"
       @input="editor.setFeatureProp('polyHill', 'edgeShape', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Jitter: irregular, organic outline -->
-    <div class="flex justify-between mb-1 text-[12px]">
+    <div class="ed-label">
       <span>Jitter</span>
       <span class="flex items-center gap-2">
         <button
           v-if="editor.polyHill.jitter > 0"
-          class="text-[10px] uppercase tracking-[1px] text-slate-400 hover:text-slate-100"
+          class="ed-link"
           @click="editor.featureAction('rerollPolyHillJitter')"
         >Reroll</button>
         {{ (editor.polyHill.jitter * 100).toFixed(0) }}%
@@ -102,60 +99,49 @@
       type="range" min="0" max="0.5" step="0.01"
       :value="editor.polyHill.jitter"
       @input="editor.setFeatureProp('polyHill', 'jitter', +$event.target.value)"
-      class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+      class="ed-slider"
     />
 
     <!-- Closed toggle -->
-    <div class="flex justify-between mb-3 text-[12px]">
+    <div class="ed-row">
       <span>Closed Loop</span>
       <input
         type="checkbox"
         :checked="editor.polyHill.closed"
         @change="editor.setFeatureProp('polyHill', 'closed', $event.target.checked)"
-        class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+        class="ed-checkbox"
       />
     </div>
 
     <!-- End Taper toggle — open hills only: fade the ends down to the ground -->
     <template v-if="!editor.polyHill.closed">
-      <div class="flex justify-between mb-3 text-[12px]">
+      <div class="ed-row">
         <span>End Taper</span>
         <input
           type="checkbox"
           :checked="editor.polyHill.endTaper"
           @change="editor.setFeatureProp('polyHill', 'endTaper', $event.target.checked)"
-          class="w-4 h-4 accent-[var(--accent)] cursor-pointer"
+          class="ed-checkbox"
         />
       </div>
     </template>
 
     <!-- Filled toggle -->
      <template v-if="editor.polyHill.closed">
-      <div class="flex justify-between mb-3 text-[12px]">
+      <div class="ed-row">
         <span>Filled</span>
         <input
           type="checkbox"
           :checked="editor.polyHill.filled"
           :disabled="!editor.polyHill.closed"
           @change="editor.setFeatureProp('polyHill', 'filled', $event.target.checked)"
-          class="w-4 h-4 accent-[var(--accent)] cursor-pointer disabled:opacity-50"
+          class="ed-checkbox"
         />
       </div>
     </template>
 
-    <!-- Water Level — only for a closed, filled, water- or mud-type depression -->
-    <template v-if="editor.polyHill.canHaveWater">
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
-        <span>{{ editor.polyHill.isMudWater ? 'Mud Level' : 'Water Level' }}</span>
-        <span>{{ editor.polyHill.waterLevelOffset.toFixed(1) }}</span>
-      </div>
-      <input
-        type="range" min="0" max="5" step="0.1"
-        :value="editor.polyHill.waterLevelOffset"
-        @input="editor.setFeatureProp('polyHill', 'waterLevelOffset', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
-      />
-    </template>
+    <hr class="ed-divider" />
+    <div class="ed-heading">Surface</div>
 
     <!-- Terrain Type -->
     <TerrainTypeSelect
@@ -165,7 +151,7 @@
 
     <!-- Edge Blend: dithers the terrain-type boundary into surrounding terrain -->
     <template v-if="editor.polyHill.terrainType !== 'none'">
-      <div class="flex justify-between mb-1 mt-3 text-[12px]">
+      <div class="ed-label">
         <span>Edge Blend</span>
         <span>{{ editor.polyHill.blendWidth.toFixed(1) }}</span>
       </div>
@@ -173,20 +159,34 @@
         type="range" min="0" max="10" step="0.5"
         :value="editor.polyHill.blendWidth"
         @input="editor.setFeatureProp('polyHill', 'blendWidth', +$event.target.value)"
-        class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
+        class="ed-slider"
       />
     </template>
 
-    <hr class="border-t border-slate-700 my-4" />
+    <!-- Water Level — only for a closed, filled, water- or mud-type depression -->
+    <template v-if="editor.polyHill.canHaveWater">
+      <div class="ed-label">
+        <span>{{ editor.polyHill.isMudWater ? 'Mud Level' : 'Water Level' }}</span>
+        <span>{{ editor.polyHill.waterLevelOffset.toFixed(1) }}</span>
+      </div>
+      <input
+        type="range" min="0" max="5" step="0.1"
+        :value="editor.polyHill.waterLevelOffset"
+        @input="editor.setFeatureProp('polyHill', 'waterLevelOffset', +$event.target.value)"
+        class="ed-slider"
+      />
+    </template>
+
+    <hr class="ed-divider" />
 
     <!-- Actions -->
-    <div class="flex gap-2">
+    <div class="ed-btn-row">
       <button 
-        class="flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100 transition duration-150 hover:bg-red-900"
+        class="ed-btn-danger"
         @click="editor.featureAction('deletePolyHill')"
       >Delete</button>
       <button 
-        class="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100 transition duration-150 hover:bg-slate-700"
+        class="ed-btn"
         @click="editor.featureAction('duplicatePolyHill')"
       >Duplicate</button>
     </div>
