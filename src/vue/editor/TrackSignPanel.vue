@@ -54,7 +54,7 @@
         <span>{{ editor.trackSign.logoScale.toFixed(2) }}x</span>
       </div>
       <input
-        type="range" min="0.2" max="2" step="0.05"
+        type="range" min="0.5" max="2" step="0.05"
         :value="editor.trackSign.logoScale"
         @input="editor.setFeatureProp('trackSign', 'logoScale', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -130,7 +130,7 @@
       <span>{{ editor.trackSign.scale.toFixed(2) }}x</span>
     </div>
     <input
-      type="range" min="0.4" max="2.5" step="0.05"
+      type="range" min="0.8" max="4" step="0.05"
       :value="editor.trackSign.scale"
       @input="editor.setFeatureProp('trackSign', 'scale', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-1 cursor-pointer"

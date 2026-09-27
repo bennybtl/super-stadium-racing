@@ -62,7 +62,7 @@
       <span>{{ editor.polyCurb.width.toFixed(1) }} m</span>
     </div>
     <input
-      type="range" min="0.25" max="5.0" step="0.25"
+      type="range" min="0.25" max="2.5" step="0.25"
       :value="editor.polyCurb.width"
       @input="editor.setFeatureProp('polyCurb', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

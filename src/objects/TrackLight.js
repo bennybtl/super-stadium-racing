@@ -279,7 +279,7 @@ export class TrackLight {
   /** Re-apply cone angle, edge softness, shadow cone, range and intensity. */
   _applyLight() {
     const h = Math.max(1, this.feature.height ?? TRACK_LIGHT_DEFAULTS.height);
-    const spreadDeg = Math.max(5, Math.min(120, this.feature.spread ?? TRACK_LIGHT_DEFAULTS.spread));
+    const spreadDeg = Math.max(5, Math.min(150, this.feature.spread ?? TRACK_LIGHT_DEFAULTS.spread));
 
     // `spread` is the intended visible pool angle. StandardMaterial's spotlight
     // has a hard geometric cutoff at `angle` and only feathers via

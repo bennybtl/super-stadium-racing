@@ -20,7 +20,7 @@
       <span>{{ editor.driveBox.width.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="0.5" max="60" step="0.5"
+      type="range" min="1" max="40" step="0.5"
       :value="editor.driveBox.width"
       @input="editor.setFeatureProp('driveBox', 'width', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -32,7 +32,7 @@
       <span>{{ editor.driveBox.depth.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="0.5" max="60" step="0.5"
+      type="range" min="1" max="40" step="0.5"
       :value="editor.driveBox.depth"
       @input="editor.setFeatureProp('driveBox', 'depth', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -57,7 +57,7 @@
         <span>{{ editor.driveBox.height.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="-10" max="20" step="0.5"
+        type="range" min="-2" max="8" step="0.5"
         :value="editor.driveBox.height"
         @input="editor.setFeatureProp('driveBox', 'height', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -71,7 +71,7 @@
         <span>{{ editor.driveBox.heightAtMin.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="20" step="0.5"
+        type="range" min="0" max="8" step="0.5"
         :value="editor.driveBox.heightAtMin"
         @input="editor.setFeatureProp('driveBox', 'heightAtMin', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -81,7 +81,7 @@
         <span>{{ editor.driveBox.heightAtMax.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="20" step="0.5"
+        type="range" min="0" max="8" step="0.5"
         :value="editor.driveBox.heightAtMax"
         @input="editor.setFeatureProp('driveBox', 'heightAtMax', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

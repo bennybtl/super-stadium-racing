@@ -57,7 +57,7 @@
         <span>{{ editor.squareHill.height.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="-15" max="20" step="0.2"
+        type="range" min="-10" max="10" step="0.2"
         :value="editor.squareHill.height"
         @input="editor.setFeatureProp('squareHill', 'height', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -71,7 +71,7 @@
         <span>{{ editor.squareHill.heightAtMin.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="-15" max="20" step="0.5"
+        type="range" min="-10" max="10" step="0.5"
         :value="editor.squareHill.heightAtMin"
         @input="editor.setSquareHillHeightMin(+$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -81,7 +81,7 @@
         <span>{{ editor.squareHill.heightAtMax.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="-15" max="20" step="0.5"
+        type="range" min="-10" max="10" step="0.5"
         :value="editor.squareHill.heightAtMax"
         @input="editor.setSquareHillHeightMax(+$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -107,7 +107,7 @@
       <span>{{ editor.squareHill.edgeShape.toFixed(2) }}</span>
     </div>
     <input
-      type="range" min="0.8" max="4" step="0.05"
+      type="range" min="0.6" max="3" step="0.05"
       :value="editor.squareHill.edgeShape"
       @input="editor.setFeatureProp('squareHill', 'edgeShape', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -144,7 +144,7 @@
         <span>{{ editor.squareHill.blendWidth.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="20" step="0.5"
+        type="range" min="0" max="10" step="0.5"
         :value="editor.squareHill.blendWidth"
         @input="editor.setFeatureProp('squareHill', 'blendWidth', +$event.target.value)"
         class="w-full accent-[var(--accent)] cursor-pointer"
@@ -158,7 +158,7 @@
         <span>{{ editor.squareHill.waterLevelOffset.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="15" step="0.5"
+        type="range" min="0" max="5" step="0.5"
         :value="editor.squareHill.waterLevelOffset"
         @input="editor.setFeatureProp('squareHill', 'waterLevelOffset', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

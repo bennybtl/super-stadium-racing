@@ -52,7 +52,7 @@
       <span>{{ editor.bridgeMesh.width }}</span>
     </div>
     <input
-      type="range" min="4" max="200" step="2"
+      type="range" min="10" max="150" step="2"
       :value="editor.bridgeMesh.width"
       @input="editor.bridgeMesh.width = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -64,7 +64,7 @@
       <span>{{ editor.bridgeMesh.depth }}</span>
     </div>
     <input
-      type="range" min="4" max="200" step="2"
+      type="range" min="10" max="60" step="2"
       :value="editor.bridgeMesh.depth"
       @input="editor.bridgeMesh.depth = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -89,7 +89,7 @@
       <span>{{ editor.bridgeMesh.cols }}</span>
     </div>
     <input
-      type="range" min="2" max="16" step="1"
+      type="range" min="2" max="10" step="1"
       :value="editor.bridgeMesh.cols"
       @input="editor.bridgeMesh.cols = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -101,7 +101,7 @@
       <span>{{ editor.bridgeMesh.rows }}</span>
     </div>
     <input
-      type="range" min="2" max="16" step="1"
+      type="range" min="2" max="10" step="1"
       :value="editor.bridgeMesh.rows"
       @input="editor.bridgeMesh.rows = +$event.target.value"
       class="w-full accent-[var(--accent)] mb-6 cursor-pointer"

@@ -61,7 +61,7 @@
         <span>{{ sp.colSpacing.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="2.5" max="20" step="0.5"
+        type="range" min="2.5" max="10" step="0.5"
         :value="sp.colSpacing"
         @input="editor.setFeatureProp('startPosition', 'colSpacing', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -72,7 +72,7 @@
         <span>{{ sp.rowSpacing.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="4" max="25" step="0.5"
+        type="range" min="4" max="16" step="0.5"
         :value="sp.rowSpacing"
         @input="editor.setFeatureProp('startPosition', 'rowSpacing', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

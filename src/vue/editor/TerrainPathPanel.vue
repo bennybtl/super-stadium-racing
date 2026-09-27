@@ -78,7 +78,7 @@
         <span>{{ editor.terrainPath.blendWidth.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="20" step="0.5"
+        type="range" min="0" max="10" step="0.5"
         :value="editor.terrainPath.blendWidth"
         @input="editor.setFeatureProp('terrainPath', 'blendWidth', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

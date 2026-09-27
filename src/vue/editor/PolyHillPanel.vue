@@ -56,7 +56,7 @@
       <span>{{ editor.polyHill.height.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="-16" max="16" step="0.2"
+      type="range" min="-10" max="10" step="0.2"
       :value="editor.polyHill.height"
       @input="editor.setFeatureProp('polyHill', 'height', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -80,7 +80,7 @@
       <span>{{ editor.polyHill.edgeShape.toFixed(2) }}</span>
     </div>
     <input
-      type="range" min="0.8" max="4" step="0.05"
+      type="range" min="0.6" max="3" step="0.05"
       :value="editor.polyHill.edgeShape"
       @input="editor.setFeatureProp('polyHill', 'edgeShape', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -150,7 +150,7 @@
         <span>{{ editor.polyHill.waterLevelOffset.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="15" step="0.1"
+        type="range" min="0" max="5" step="0.1"
         :value="editor.polyHill.waterLevelOffset"
         @input="editor.setFeatureProp('polyHill', 'waterLevelOffset', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -170,7 +170,7 @@
         <span>{{ editor.polyHill.blendWidth.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="20" step="0.5"
+        type="range" min="0" max="10" step="0.5"
         :value="editor.polyHill.blendWidth"
         @input="editor.setFeatureProp('polyHill', 'blendWidth', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

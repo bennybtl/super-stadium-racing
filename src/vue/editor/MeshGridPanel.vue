@@ -87,7 +87,7 @@
       <span>{{ editor.meshGrid.cols }} × {{ editor.meshGrid.rows }}</span>
     </div>
     <input
-      type="range" min="3" max="25" step="2"
+      type="range" min="3" max="15" step="2"
       :value="editor.meshGrid.cols"
       @input="editor.setMeshGridDensity(+$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

@@ -50,8 +50,8 @@ export default {
 
   edit: {
     controls: () => ({
-      width:      { type: 'range', label: 'Width',       min: 5, max: 50, step: 1, unit: 'm' },
-      poleHeight: { type: 'range', label: 'Pole Height', min: 3, max: 24, step: 1, unit: 'm' },
+      width:      { type: 'range', label: 'Width',       min: 5, max: 40, step: 1, unit: 'm' },
+      poleHeight: { type: 'range', label: 'Pole Height', min: 3, max: 16, step: 1, unit: 'm' },
       heading:    { type: 'range', label: 'Rotation',    min: 0, max: 180, step: 1, unit: '°' },
     }),
   },

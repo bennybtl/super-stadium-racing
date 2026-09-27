@@ -18,7 +18,7 @@ export default {
     controls: () => ({
       color:   { type: 'color', label: 'Color' },
       width:   { type: 'range', label: 'Width',    min: 1,   max: 20,  step: 1, unit: ' rows' },
-      height:  { type: 'range', label: 'Height',   min: 1,   max: 10,  step: 1, unit: ' tiers' },
+      height:  { type: 'range', label: 'Height',   min: 1,   max: 6,   step: 1, unit: ' tiers' },
       heading: { type: 'range', label: 'Rotation', min: 0,   max: 360, step: 1, unit: '°' },
     }),
   },

@@ -191,7 +191,7 @@
       <input
         type="range"
         min="0.5"
-        max="20"
+        max="8"
         step="0.5"
         :value="editor.trackBorderWall.thickness"
         @input="editor.setTrackBorderWall('thickness', +$event.target.value)"
@@ -205,7 +205,7 @@
       <input
         type="range"
         min="1"
-        max="40"
+        max="20"
         step="1"
         :value="editor.trackBorderWall.height"
         @input="editor.setTrackBorderWall('height', +$event.target.value)"

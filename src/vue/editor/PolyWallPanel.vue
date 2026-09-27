@@ -115,7 +115,7 @@
     <input
       type="range"
       min="0.2"
-      max="3"
+      max="2"
       step="0.1"
       :value="editor.polyWall.thickness"
       @input="

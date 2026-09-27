@@ -45,7 +45,7 @@
       <span>{{ editor.obstacle.scale.toFixed(2) }}x</span>
     </div>
     <input
-      type="range" min="0.5" max="5" step="0.1"
+      type="range" min="0.5" max="2.5" step="0.1"
       :value="editor.obstacle.scale"
       @input="editor.setFeatureProp('obstacle', 'scale', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

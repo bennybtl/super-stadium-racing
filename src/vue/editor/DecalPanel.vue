@@ -54,7 +54,7 @@
         <span>Repeats</span>
         <span>{{ s.count }}</span>
       </div>
-      <input type="range" min="1" max="20" step="1"
+      <input type="range" min="1" max="12" step="1"
         :value="s.count"
         @input="set('count', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-1 cursor-pointer"

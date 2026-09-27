@@ -49,7 +49,7 @@ export function edgeFalloff(u, shape = 1) {
   return 1 + v * v * (2 * v - 3);
 }
 
-export const EDGE_SHAPE_MIN = 0.8;
+export const EDGE_SHAPE_MIN = 0.6;
 export const EDGE_SHAPE_MAX = 4;
 
 /**

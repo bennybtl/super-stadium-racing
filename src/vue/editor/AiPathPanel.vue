@@ -64,7 +64,7 @@
           <span>{{ editor.aiPathBranch.activeBranchWeight.toFixed(2) }}</span>
         </div>
         <input
-          type="range" min="0" max="3" step="0.1"
+          type="range" min="0" max="2" step="0.1"
           :disabled="!editor.aiPathBranch.activeBranchId"
           :value="editor.aiPathBranch.activeBranchWeight"
           @input="editor.setActiveAiPathBranchWeight(+$event.target.value)"
@@ -144,7 +144,7 @@
           <span>{{ editor.aiPathWear.intensity.toFixed(2) }}</span>
         </div>
         <input
-          type="range" min="0.1" max="1.0" step="0.1"
+          type="range" min="0.2" max="2" step="0.1"
           :value="editor.aiPathWear.intensity"
           @input="editor.setFeatureProp('aiPathWear', 'intensity', +$event.target.value)"
           class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -199,7 +199,7 @@
           <span>{{ editor.aiPathWear.secondaryPathStrength.toFixed(2) }}</span>
         </div>
         <input
-          type="range" min="0" max="1.0" step="0.1"
+          type="range" min="0.4" max="2" step="0.1"
           :value="editor.aiPathWear.secondaryPathStrength"
           @input="editor.setFeatureProp('aiPathWear', 'secondaryPathStrength', +$event.target.value)"
           class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -210,7 +210,7 @@
           <span>{{ editor.aiPathWear.secondaryPathSpacing.toFixed(2) }}</span>
         </div>
         <input
-          type="range" min="0" max="0.10" step="0.01"
+          type="range" min="0" max="0.15" step="0.01"
           :value="editor.aiPathWear.secondaryPathSpacing"
           @input="editor.setFeatureProp('aiPathWear', 'secondaryPathSpacing', +$event.target.value)"
           class="w-full accent-[var(--accent)] cursor-pointer"

@@ -13,7 +13,7 @@
       <span>{{ editor.hill.radiusX.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="1" max="40" step="0.5"
+      type="range" min="1" max="30" step="0.5"
       :value="editor.hill.radiusX"
       @input="editor.setFeatureProp('hill', 'radiusX', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -25,7 +25,7 @@
       <span>{{ editor.hill.radiusZ.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="1" max="40" step="0.5"
+      type="range" min="1" max="30" step="0.5"
       :value="editor.hill.radiusZ"
       @input="editor.setFeatureProp('hill', 'radiusZ', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -48,7 +48,7 @@
       <span>{{ editor.hill.height.toFixed(1) }}</span>
     </div>
     <input
-      type="range" min="-15" max="20" step="0.2"
+      type="range" min="-10" max="10" step="0.2"
       :value="editor.hill.height"
       @input="editor.setFeatureProp('hill', 'height', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -72,7 +72,7 @@
       <span>{{ editor.hill.edgeShape.toFixed(2) }}</span>
     </div>
     <input
-      type="range" min="0.8" max="4" step="0.05"
+      type="range" min="0.6" max="3" step="0.05"
       :value="editor.hill.edgeShape"
       @input="editor.setFeatureProp('hill', 'edgeShape', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -110,7 +110,7 @@
         <span>{{ editor.hill.blendWidth.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="20" step="0.5"
+        type="range" min="0" max="10" step="0.5"
         :value="editor.hill.blendWidth"
         @input="editor.setFeatureProp('hill', 'blendWidth', +$event.target.value)"
         class="w-full accent-[var(--accent)] cursor-pointer"
@@ -124,7 +124,7 @@
         <span>{{ editor.hill.waterLevelOffset.toFixed(1) }}</span>
       </div>
       <input
-        type="range" min="0" max="15" step="0.1"
+        type="range" min="0" max="5" step="0.1"
         :value="editor.hill.waterLevelOffset"
         @input="editor.setFeatureProp('hill', 'waterLevelOffset', +$event.target.value)"
         class="w-full accent-[var(--accent)] mb-3 cursor-pointer"

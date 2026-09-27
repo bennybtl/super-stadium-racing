@@ -73,7 +73,7 @@
       <span>{{ editor.trackLight.spread }}°</span>
     </div>
     <input
-      type="range" min="10" max="120" step="1"
+      type="range" min="40" max="150" step="1"
       :value="editor.trackLight.spread"
       @input="editor.setFeatureProp('trackLight', 'spread', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-3 cursor-pointer"
@@ -85,7 +85,7 @@
       <span>{{ editor.trackLight.intensity.toFixed(0) }}</span>
     </div>
     <input
-      type="range" min="0" max="120" step="1"
+      type="range" min="0" max="50" step="1"
       :value="editor.trackLight.intensity"
       @input="editor.setFeatureProp('trackLight', 'intensity', +$event.target.value)"
       class="w-full accent-[var(--accent)] mb-1 cursor-pointer"
