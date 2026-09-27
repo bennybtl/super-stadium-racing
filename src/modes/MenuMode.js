@@ -17,6 +17,11 @@ const DEMO_FOCUS_SWITCH_SEC = 14;
 /** AI drivers never take input, so their update call gets a frozen stick. */
 const NO_INPUT = Object.freeze({ forward: false, back: false, left: false, right: false });
 
+/** Resolve a 'off' | 'on' | 'random' pick to a concrete boolean, once. */
+function resolveTriState(mode) {
+  return mode === 'random' ? Math.random() < 0.5 : mode === 'on';
+}
+
 /**
  * MenuMode – the scene that lives behind the start-screen DOM overlay
  * (managed by MenuManager).
@@ -68,15 +73,20 @@ export class MenuMode extends DriveMode {
       const store = menuManager._store;
       menuManager.gameStarted = true;
       menuManager.hideMenu();
+      // Reverse/Night are only offered for Remix Championship; every other
+      // pack is forward-only, daytime (their UI is hidden, so there's no
+      // player pick to read here). Remix resolves its Random pick once, for
+      // the whole cup, the same way an AI's 'random' vehicle is pinned once
+      // for the whole series.
+      const isRemix = store.champPackId === REMIX_PACK_ID;
       this.controller.startChampionship({
         initials:       store.champInitials || 'AAA',
         packId:         store.champPackId,
         aiCount:        menuManager.selectedAIDrivers,
         laps:           menuManager.selectedLaps,
         aiVehicleKey:   menuManager.selectedAIVehicleType,
-        reverse:        false, // cups are forward-only for now (reverse UI hidden)
-        // Night is only offered once Remix Championship is unlocked.
-        night:          store.champPackId === REMIX_PACK_ID ? menuManager.selectedNight : false,
+        reverse:        isRemix ? resolveTriState(store.champReverseMode) : false,
+        night:          isRemix ? resolveTriState(store.champNightMode) : false,
         vehicleKey:     menuManager.selectedVehicle,
         playerColorKey: menuManager.selectedPlayerColor,
       });

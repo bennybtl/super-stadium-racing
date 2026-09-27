@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "id": "onroad_7",
   "packId": "onroad_pack_1",
-  "hidden": true,
+  "hidden": false,
   "dirtChunks": true,
   "grassBlades": true,
   "oobDeadSpace": false,

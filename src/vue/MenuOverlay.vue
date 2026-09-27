@@ -192,7 +192,27 @@
             @update:selectedVehicle="store.selectPlayerVehicle($event)"
             @update:selectedColor="store.selectPlayerColor($event)"
           />
-          <RaceConfig :show-reverse="false" :show-night="store.champPackId === REMIX_PACK_ID" />
+          <RaceConfig :show-reverse="false" :show-night="false" />
+          <div v-if="store.champPackId === REMIX_PACK_ID" class="mb-6 flex flex-row justify-center gap-8">
+            <select
+              class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
+              :value="store.champReverseMode"
+              @change="store.setChampReverseMode($event.target.value)"
+            >
+              <option value="random">Reverse: Random</option>
+              <option value="off">Reverse: Off</option>
+              <option value="on">Reverse: On</option>
+            </select>
+            <select
+              class="rounded-[10px] border-2 border-[#444] bg-[#101010] px-3 py-2.5 text-base font-bold uppercase italic tracking-[0.1em] text-white transition duration-200 hover:scale-[1.01] hover:border-white hover:text-[#ffe066]"
+              :value="store.champNightMode"
+              @change="store.setChampNightMode($event.target.value)"
+            >
+              <option value="random">Night: Random</option>
+              <option value="off">Night: Off</option>
+              <option value="on">Night: On</option>
+            </select>
+          </div>
           <div class="flex flex-row gap-2">
             <button class="menu-button menu-button-muted pointer-events-auto px-10 flex-grow py-4 text-2xl" @click="store.back('start')">Back</button>
             <button class="menu-button pointer-events-auto px-10 py-4 text-2xl flex-grow" @click="store.startChampionship()">Start Cup</button>

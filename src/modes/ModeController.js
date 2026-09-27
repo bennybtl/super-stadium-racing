@@ -144,11 +144,14 @@ export class ModeController {
   /**
    * Build a championship calendar for `packId`: its starter tracks first (a
    * fixed order), then its remaining tracks shuffled. Remix Championship
-   * instead draws REMIX_TRACK_COUNT random tracks from everything loaded.
+   * instead draws REMIX_TRACK_COUNT random tracks from everything loaded,
+   * restricted to reverse-capable tracks when the cup is running reversed.
    */
-  _drawCalendar(packId) {
+  _drawCalendar(packId, reverse = false) {
     if (packId === REMIX_PACK_ID) {
-      const keys = shuffle((this.menuManager._store.trackList ?? []).map(t => t.key));
+      let pool = this.menuManager._store.trackList ?? [];
+      if (reverse) pool = pool.filter(t => t.allowReverse !== false);
+      const keys = shuffle(pool.map(t => t.key));
       return keys.slice(0, Math.min(REMIX_TRACK_COUNT, keys.length));
     }
     const { starters, rest } = getPackTracks(packId);
@@ -163,7 +166,7 @@ export class ModeController {
     const drivers = this._buildRoster({ aiCount, vehicleKey, playerColorKey, aiVehicleKey });
     this.championship = createChampionship({
       initials,
-      calendar: this._drawCalendar(packId),
+      calendar: this._drawCalendar(packId, reverse),
       drivers,
       settings: { packId, aiCount, laps, aiVehicleKey, reverse, night },
     });
@@ -362,7 +365,11 @@ export class ModeController {
     player.money = res.money;
     saveActiveChampionship(this.championship);
     this.menuManager._store.upgrades = getUpgradeCatalog({ balance: player.money, upgrades: player.upgrades });
-    this.menuManager._store.pitData = { ...this.menuManager._store.pitData, balance: player.money };
+    // Mutate in place rather than replacing pitData wholesale: swapping the
+    // object made the podium-entries computed re-derive a new (if equal)
+    // array on every purchase, which re-triggered RacePodium3D's deep watch
+    // and replayed the whole entrance/fireworks show after buying an upgrade.
+    this.menuManager._store.pitData.balance = player.money;
   }
 
   /** Pit "Next Race" button → run the next calendar race. */

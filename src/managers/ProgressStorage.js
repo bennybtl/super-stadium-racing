@@ -90,13 +90,18 @@ export function isTrackFreePlayUnlocked(key) {
 
 /**
  * A pack's tracks split into its fixed starter order and the rest (in
- * track-loader order — caller shuffles if desired). Only tracks actually
- * loaded are returned, so an unbundled pack yields both lists empty.
+ * track-loader order — caller shuffles if desired). Only loaded, non-hidden
+ * tracks are returned, so an unbundled pack (or one that's all WIP) yields
+ * both lists empty — a hidden track can't be raced in a championship any
+ * more than it can be picked in free play.
  */
 export function getPackTracks(packId) {
   const starters = starterTracksOf(packId);
   const allInPack = (window.trackLoader?.getTrackList?.() ?? [])
-    .filter(key => window.trackLoader.getTrack(key)?.packId === packId);
+    .filter(key => {
+      const track = window.trackLoader.getTrack(key);
+      return track?.packId === packId && track?.hidden !== true;
+    });
   const starterSet = new Set(starters);
   return {
     starters: starters.filter(key => allInPack.includes(key)),

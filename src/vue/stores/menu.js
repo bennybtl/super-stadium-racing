@@ -42,6 +42,10 @@ export const useMenuStore = defineStore('menu', () => {
   const champPackId     = ref(null);
   // Packs currently open for a championship run (grows as packs are unlocked).
   const activePackIds   = ref([]);
+  // Remix Championship's per-cup Reverse/Night pick: 'off' | 'on' | 'random'.
+  // Resolved to a concrete boolean once, at cup start (see MenuMode.js).
+  const champReverseMode = ref('random');
+  const champNightMode   = ref('random');
   // True when a saved in-progress cup exists (drives the Resume button).
   const hasActiveChampionship = ref(false);
   const loadingVisible = ref(false);
@@ -134,6 +138,8 @@ export const useMenuStore = defineStore('menu', () => {
   function showChampionshipSetup() { _bridge.value?.onShowChampionshipSetup(); }
   function setChampInitials(v)     { champInitials.value = String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); }
   function setChampPackId(id)      { champPackId.value = id; }
+  function setChampReverseMode(v)  { champReverseMode.value = v; }
+  function setChampNightMode(v)    { champNightMode.value = v; }
   function startChampionship()     { mode.value = 'championship'; _bridge.value?.onStartChampionship(); }
   function continueChampionship()  { _bridge.value?.onContinueChampionship(); }
   function resumeChampionship()    { mode.value = 'championship'; _bridge.value?.onResumeChampionship(); }
@@ -149,7 +155,7 @@ export const useMenuStore = defineStore('menu', () => {
     screen, isPaused, trackList, vehicleList, selectedTrack, selectedLaps, selectedAIDrivers, selectedAIVehicleType, selectedVehicle, selectedPlayerColor, mode,
     selectedReverse, selectedNight, navDirection, setNavDirection, liveBackdrop,
     pitData, singleRaceData, championshipData, upgrades,
-    champInitials, champPackId, activePackIds, hasActiveChampionship,
+    champInitials, champPackId, activePackIds, champReverseMode, champNightMode, hasActiveChampionship,
     loadingVisible, loadingMessage,
     settingsReturnScreen,
     setBridge,
@@ -164,7 +170,7 @@ export const useMenuStore = defineStore('menu', () => {
     editorResume, editorSave, editorLoad, editorExit,
     settings, back, refreshTrackList,
     purchaseUpgrade, resetUpgrades, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
-    showChampionshipSetup, setChampInitials, setChampPackId, startChampionship, continueChampionship, resumeChampionship, retireChampionship, championshipExit,
+    showChampionshipSetup, setChampInitials, setChampPackId, setChampReverseMode, setChampNightMode, startChampionship, continueChampionship, resumeChampionship, retireChampionship, championshipExit,
     setMode,
     setLoading,
   };
