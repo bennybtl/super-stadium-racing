@@ -4,6 +4,7 @@ import {
   OutOfBoundsTracker, getActionZones, isPointInActionZone, applySlowZones, applySpeedBoostZones,
   getStartFinishCheckpoint, respawnAtLastCheckpoint,
 } from "../sim/race-rules.js";
+import { rngStream } from "../sim/rng.js";
 import { gridSlotXZ, startGridSlot, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../utils/start-grid.js";
 import { AIDriver, AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { BaseMode } from "./BaseMode.js";
@@ -325,7 +326,7 @@ export class DriveMode extends BaseMode {
    *
    * Returns a `(index) => AIDriver` suitable for `setupAIDrivers({ getAIDriver })`.
    */
-  makeAIDriverFactory({ currentTrack, checkpointManager, wallManager, scene, terrainManager, championship = null }) {
+  makeAIDriverFactory({ currentTrack, checkpointManager, wallManager, scene, terrainManager, championship = null, seed = null }) {
     return (i) => {
       let driver;
       if (championship?.aiSkills) {
@@ -338,6 +339,8 @@ export class DriveMode extends BaseMode {
         else driver = AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
       }
       driver.setTerrainManager(terrainManager);
+      // Seeded race: each driver draws from its own stream (sim/rng.js).
+      if (seed != null) driver.random = rngStream(seed, `ai:${i}`);
       return driver;
     };
   }

@@ -162,6 +162,8 @@ export class TerrainPhysics {
     this.halfHeight = halfHeight;
     this.gravity = GRAVITY;
     this._bumpAccumulator = 0;
+    // Roughness-bump randomness; RaceSimulation swaps in a seeded stream (sim/rng.js).
+    this.random = Math.random;
     this._terrainQuery    = terrainQuery;
     // Cached results from the most recent castDown — used by updateTerrainOrientation
     // so the normal is available without a second raycast.
@@ -461,7 +463,7 @@ export class TerrainPhysics {
     // and turns bumps into coherent bounce. (Roll jitter used to be injected into
     // terrainRoll here, but that shook the chassis/wheels incoherently and fought
     // the sprung-mass roll; removed in favour of the acceleration-driven model.)
-    this.state.velocity.y += roughness * ROUGHNESS.vertImpulseScale * (0.5 + Math.random() * 0.5);
+    this.state.velocity.y += roughness * ROUGHNESS.vertImpulseScale * (0.5 + this.random() * 0.5);
   }
 
   // ---------------------------------------------------------------------------

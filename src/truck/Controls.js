@@ -119,7 +119,7 @@ export class Controls {
 
       // After a head-on collision the truck bounces straight back; ignore steering
       // during that window so held input can't curve the rebound off-line.
-      const steerSuppressed = !!this.state.noSteerUntil && Date.now() < this.state.noSteerUntil;
+      const steerSuppressed = this.state.noSteerTimer > 0;
 
       // Ease the steer amount toward the input target so turn-in ramps up
       // instead of snapping to full rate; taps produce small corrections.
@@ -185,7 +185,7 @@ export class Controls {
   }
 
   handleForwardInput(forward, deltaTime) {
-    if (this.state.noDriveUntil && Date.now() < this.state.noDriveUntil) {
+    if (this.state.noDriveTimer > 0) {
       // Currently in no-drive cooldown (e.g. after head-on collision), skip applying drive force
       return;
     }
@@ -284,6 +284,12 @@ export class Controls {
         this.state.velocity.z -= forward.z * excess;
       }
     }
+  }
+
+  /** Count down the head-on-collision drive/steer lockouts (sim seconds). */
+  updateLockouts(deltaTime) {
+    if (this.state.noDriveTimer > 0) this.state.noDriveTimer = Math.max(0, this.state.noDriveTimer - deltaTime);
+    if (this.state.noSteerTimer > 0) this.state.noSteerTimer = Math.max(0, this.state.noSteerTimer - deltaTime);
   }
 
   updateBoost(deltaTime) {

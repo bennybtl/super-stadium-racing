@@ -3,6 +3,7 @@ import {
   respawnTruck, respawnAtLastCheckpoint,
 } from "./race-rules.js";
 import { stepRubberBandMultiplier } from "../ai/RubberBand.js";
+import { rngStream } from "./rng.js";
 
 /**
  * RaceSimulation — the rules-and-physics side of a race, with no UI, audio,
@@ -53,6 +54,11 @@ export class RaceSimulation {
    * @param {string}   [o.rubberBandLevel]
    * @param {object}   [o.profiler]  FrameProfiler-like `{ measure(label, fn) }`
    * @param {object}   [o.events]
+   * @param {number}   [o.seed]    race seed: each truck's roughness bumps and the
+   *                               pickup spawns draw from their own stream of it
+   *                               (AI drivers get theirs at construction — see
+   *                               DriveMode.makeAIDriverFactory). Omitted =
+   *                               Math.random, as before.
    */
   constructor(o) {
     Object.assign(this, {
@@ -73,7 +79,13 @@ export class RaceSimulation {
       rubberBandLevel: o.rubberBandLevel ?? 'off',
       profiler: o.profiler ?? null,
       events: o.events ?? {},
+      seed: o.seed ?? null,
     });
+
+    if (this.seed != null) {
+      this.trucks.forEach(td => { td.truck.terrainPhysics.random = rngStream(this.seed, `truck:${td.id}`); });
+      this.pickupManager.random = rngStream(this.seed, 'pickups');
+    }
 
     this.slowZones = getActionZones(this.track, 'slowZone');
     this.speedBoostZones = getActionZones(this.track, 'speedBoost');
@@ -219,8 +231,9 @@ export class RaceSimulation {
 
   /**
    * One fixed step. `inputsById[id]` is that truck's input this step; missing
-   * means no input. AI trucks take their input from their driver inside
-   * Truck.updateSim(), and finished trucks coast with none.
+   * means no input. Any number of trucks can be human-driven; AI trucks (with a
+   * `truck.driver`) take their input from it inside Truck.updateSim(), and
+   * finished trucks coast with none.
    */
   step(dt, inputsById = {}) {
     const { trucks, track } = this;
@@ -235,7 +248,7 @@ export class RaceSimulation {
     this._measure('collision.truck.pre', () => this.truckCollisionManager.preUpdate(trucks, dt));
 
     this._measure('trucks.update', () => trucks.forEach((td) => {
-      const input = (td.gameState.raceFinished || !td.isPlayer) ? NO_INPUT : (inputsById[td.id] ?? NO_INPUT);
+      const input = (td.gameState.raceFinished || td.truck.driver) ? NO_INPUT : (inputsById[td.id] ?? NO_INPUT);
       td.truck.updateSim(input, dt, this.terrainManager, track, focusPos, this.profiler);
     }));
 

@@ -16,9 +16,19 @@ OBJFileLoader.SKIP_MATERIALS = true;
 
 const DEFAULT_OBSTACLE_TYPE = "tireStack";
 
-/** The obstacle loader, exposed on window by main.js. */
+let _obstacleLoader = null;
+
+/**
+ * Supply the obstacle definitions explicitly — `{ getObstacle(id), obstacleList }`
+ * (an ObstacleLoader, or any object shaped like one). The browser needn't: it
+ * falls back to window.obstacleLoader, set by main.js. A headless race does.
+ */
+export function setObstacleLoader(loader) {
+  _obstacleLoader = loader;
+}
+
 function getObstacleLoader() {
-  return typeof window !== "undefined" ? window.obstacleLoader : null;
+  return _obstacleLoader ?? globalThis.window?.obstacleLoader ?? null;
 }
 
 /**
@@ -283,6 +293,8 @@ export class Obstacle {
       || cached.scene !== scene
       || cachedSceneDisposed;
     if (shouldReload) {
+      // No model to show (a headless race's bare definitions): physics only.
+      if (!spec?.modelUrl) return Promise.resolve([]);
       const url = spec.modelUrl;
       const lastSlash = url.lastIndexOf('/');
       const rootUrl   = url.substring(0, lastSlash + 1);

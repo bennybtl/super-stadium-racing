@@ -18,6 +18,7 @@ import { FloatingTextManager } from "../managers/FloatingTextManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { loadGameplaySettings } from "../settingsStorage.js";
 import { RaceSimulation } from "../sim/RaceSimulation.js";
+import { randomSeed, rngStream } from "../sim/rng.js";
 import { buildRaceResultRows } from "./race-results.js";
 
 /**
@@ -90,6 +91,8 @@ export class RaceMode extends DriveMode {
       ...built,                   // scene, cameraController, currentTrack, managers…
       trackKey,
       championship,
+      // Seeds every random draw in the race's sim (sim/rng.js).
+      seed: randomSeed(),
       totalLaps: laps || 3,
       frameProfiler,
       audioManager,
@@ -138,6 +141,7 @@ export class RaceMode extends DriveMode {
       rubberBandLevel: r.rubberBandLevel,
       profiler: frameProfiler,
       events: this._simEvents(),
+      seed: r.seed,
     });
     checkpointManager.updatePlayerCheckpointHighlight(r.playerTruckData.gameState.lastCheckpointPassed);
 
@@ -209,6 +213,7 @@ export class RaceMode extends DriveMode {
       scene,
       terrainManager: r.terrainManager,
       championship,
+      seed: r.seed,
     });
 
     // In a championship, AI colour/vehicle come from the persisted roster so a
@@ -238,6 +243,7 @@ export class RaceMode extends DriveMode {
       getAIGridSlot,
       aiVehicleKey,
       excludeColorKey: playerColorKey,
+      random: rngStream(r.seed, 'grid'),
     });
     r.aiDrivers = aiDrivers;
 

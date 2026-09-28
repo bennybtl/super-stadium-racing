@@ -365,9 +365,10 @@ export class StaticBodyCollisionManager {
     // If head-on, suppress forward drive force AND steering for 500ms so neither
     // overrides the bounce — the truck rebounds straight back along the normal.
     if (isHeadOn && truck.state) {
-      // Set cooldown timestamps; drive + steering logic check these and skip while active.
-      truck.state.noDriveUntil = Date.now() + 500;
-      truck.state.noSteerUntil = Date.now() + 500;
+      // Countdown seconds; Controls skips drive + steering while they run
+      // (Truck.updateSim counts them down in sim time).
+      truck.state.noDriveTimer = 0.5;
+      truck.state.noSteerTimer = 0.5;
     }
 
     if (retain != null && !frame.frictionApplied && Math.abs(worldNormal.y) < 0.2) {

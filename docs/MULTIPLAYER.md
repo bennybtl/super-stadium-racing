@@ -230,6 +230,36 @@ Verify: extend the Phase 0 spike into a repeatable check script
 (`scripts/check-sim-determinism.mjs`) — same seed and input log must produce the
 same final state across runs. Wire it up like the existing `check:*` scripts.
 
+**Progress (2026-09-27):**
+- ✅ Fixed 60 Hz step + catch-up cap — landed earlier (C1, `modes/fixed-step.js`).
+- ✅ `src/sim/rng.js`: mulberry32 + `rngStream(seed, label)`, one stream per
+  consumer so trucks don't couple. Seeded: roughness bumps
+  (`TerrainPhysics.random`, stream `truck:<id>`), pickup spawns
+  (`PickupManager.random`, `pickups`), AI line choice + boost rolls
+  (`AIDriver.random`, `ai:<i>`, set by `makeAIDriverFactory({ seed })` before the
+  grid-time path bake), AI random vehicle pick (`setupAIDrivers({ random })`,
+  `grid`). Each defaults to Math.random; RaceMode draws a race seed and passes
+  it to both the AI factory and `RaceSimulation({ seed })`.
+- ✅ Wall clock out of the sim: head-on lockouts are countdown seconds
+  (`state.noDriveTimer`/`noSteerTimer`, counted down in `updateSim`); the AI boost
+  controller runs on `AIDriver.clockMs`; PolyWall's scuff repaint moved from the
+  contact callback to a render hook.
+- ✅ Injectable definitions: `setObstacleLoader()` (falls back to
+  `window.obstacleLoader`); obstacles without a `modelUrl` are physics-only.
+  `setupAIDrivers({ vehicleLoader })`.
+- ✅ `RaceSimulation.step` takes input for any number of human trucks (AI =
+  trucks with a `driver`).
+- ✅ `npm run check:determinism` (`scripts/check-sim-determinism.mjs`): 4 human
+  trucks × 15 s on apple_river / quarry_run / the_road, twice per seed →
+  identical; `Math.random`, `Date.now` and `performance.now` throw during steps.
+- ⬜ AI headless: `AIDriver` imports the Vue debug store (`useDebugStore`), so it
+  doesn't construct in Node. Needed only if lobbies get AI fillers.
+- ⬜ `Truck` still builds its visual body at construction (needs a canvas and a
+  `window` stub headless). A `{ headless }` option, or moving `TruckBody` out of
+  the constructor, would drop both stubs.
+- Not needed: a Node `TrackLoader` — `Track.fromJSON(readFileSync(...))` is it.
+  Settings already arrive as arguments (`rubberBandLevel`, upgrades).
+
 ### Phase 3 — Lobby child process
 
 - `server/lobby/index.js`: the child. Argv/env carries `{trackKey, seed, players,

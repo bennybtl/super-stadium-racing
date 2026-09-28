@@ -89,7 +89,7 @@ export class AIBoostController {
 
     // Sampled before every other gate so the trend is continuous — the checks
     // below bail on most ticks, and a rate measured across those gaps is noise.
-    const now = Date.now();
+    const now = this.driver.clockMs;
     const slipAngle = this._sampleSlip(truck.state, now);
 
     if (this.gameState.boostCount <= 0) {
@@ -159,7 +159,7 @@ export class AIBoostController {
       this.stockWeight * stockFactor,
       this.maxChance
     );
-    const roll = Math.random();
+    const roll = this.driver.random();
 
     this._debug(
       'decision',
@@ -271,7 +271,7 @@ export class AIBoostController {
   _debug(key, message, force = false) {
     if (!this.debug) return;
 
-    const now = Date.now();
+    const now = this.driver.clockMs;
     if (!force && this.debugLogIntervalMs > 0) {
       const last = this._lastDebugAtByKey.get(key) ?? 0;
       if (now - last < this.debugLogIntervalMs) return;

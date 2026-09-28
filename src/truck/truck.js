@@ -358,8 +358,9 @@ export class Truck {
 
       // suspend driving / steering (set on head-on collisions so the truck
       // bounces straight back without drive force or steering overriding it)
-      noDriveUntil: false,
-      noSteerUntil: false,
+      // (seconds remaining; counted down each updateSim)
+      noDriveTimer: 0,
+      noSteerTimer: 0,
 
       // Handbrake hold — set true while grid-lined up pre-race so a sloped
       // start doesn't let gravity's along-slope component (never cancelled by
@@ -450,6 +451,7 @@ export class Truck {
     
     // Update boost timer
     profile('truck.controls.boost', () => this.controls.updateBoost(deltaTime));
+    this.controls.updateLockouts(deltaTime);
     
     // Terrain physics (gravity, suspension, slopes)
     let terrainLowDetail = false;

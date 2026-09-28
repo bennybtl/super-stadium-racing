@@ -102,6 +102,7 @@ describe('RaceSimulation', () => {
   it('passes the player input through and gives AI / finished trucks none', () => {
     const player = makeTruckData('player', true);
     const ai = makeTruckData('ai1');
+    ai.truck.driver = {};
     const { sim } = makeSim([player, ai]);
     const gas = { forward: true, back: false, left: false, right: false };
     sim.step(DT, { player: gas });
