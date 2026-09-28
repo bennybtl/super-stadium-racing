@@ -137,7 +137,6 @@ export const TERRAIN_TYPES = {
     name: "weedy_grass",
     gripMultiplier: 1.00,     // Not as slick as grass.
     color: TERRAIN_COLORS.loose_dirt,
-    dustIntensity: 0.25,     // Light clippings/haze
     roosterTail: 0.5,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/weeds.texture.jpg',
     diffuseTextureWorldUnitsPerTile: 40,
