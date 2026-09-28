@@ -44,7 +44,6 @@ await new Promise((resolve, reject) => {
   const t = setTimeout(() => reject(new Error('child never became ready')), 30_000);
   child.on('message', (msg) => { if (msg.type === 'ready') { clearTimeout(t); resolve(); } });
 });
-await new Promise((r) => setTimeout(r, 200)); // let the socket start listening
 
 // ── A client with a wrong token gets closed ──────────────────────────────────
 const badClose = await new Promise((resolve) => {

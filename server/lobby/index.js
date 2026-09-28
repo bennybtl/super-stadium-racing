@@ -127,7 +127,6 @@ const { sim } = await m.createRace({
 });
 console.debug = quietDebug;
 log(`race ready: ${trackKey}, ${laps} laps, ${players.length} players, seed ${seed}`);
-process.send?.({ type: 'ready' });
 
 // ── Networking ───────────────────────────────────────────────────────────────
 let phase = 'waiting';        // waiting → countdown → racing → done
@@ -185,7 +184,12 @@ wss.on('connection', (ws) => {
     }
   });
 });
-wss.on('listening', () => log(`listening on :${port}`));
+// 'ready' only once clients can actually connect — the parent hands out the
+// port as soon as it hears it.
+wss.on('listening', () => {
+  log(`listening on :${port}`);
+  process.send?.({ type: 'ready' });
+});
 wss.on('error', (err) => fail(`ws server: ${err.message}`));
 
 const joinTimer = setTimeout(() => startCountdown('join timeout'), joinTimeoutMs);

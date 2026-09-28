@@ -321,7 +321,7 @@ Open for later phases:
   ahead to cover latency (Phase 5/6) — expect to widen it.
 - **Grid** is behind the start/finish gate in join order; a track's
   `startPosition` marker isn't applied headless yet.
-- **Deployment**: the Dockerfile copies only `server/` and omits dev deps, but
+- ~~**Deployment**~~ (done in Phase 4): the Dockerfile copied only `server/` and omitted dev deps, but
   the child needs `src/tracks|vehicles|obstacles` and a built bundle (esbuild is
   a dev dep) — a build stage is Phase 4 work.
 - Binary snapshots; surface id in `flags`; reconnect/rejoin semantics.
@@ -342,6 +342,44 @@ Deployment note: the child port range has to be reachable. Fine for a single
 box; if that becomes a problem later, front it with a proxy that reads the lobby
 registry — that change is invisible to the client, which already receives its
 endpoint at runtime.
+
+**Progress (2026-09-27): built.** Lives beside the colyseus relay (unchanged)
+on the same port, mounted by `server/index.js` via `server/lobbies/index.js`.
+- **HTTP API** (not a WebSocket — lobby state is polled, ~1 s is plenty):
+  `GET/POST /race-lobbies`, `GET /race-lobbies/:code`, `POST …/join`,
+  `…/leave`, `…/start`, `PATCH …` (host settings), `PATCH …/me` (name/vehicle),
+  `GET /races`, `GET /races/:raceId`. Each player's `secret` goes in
+  `Authorization: Bearer` — never a URL. Polling with it is also presence; once
+  racing, the view carries that player's own `race: { host, port, token }`.
+  Create/join rate-limited per IP.
+- `LobbyRegistry` — pure state machine (waiting → starting → racing →
+  finished | failed), 5-char codes without 0/O/1/I, host-only settings/start,
+  host handover, idle players dropped after 30 s, idle lobbies expire after
+  30 min, closed ones readable 10 min. A spawn failure (no free port) puts the
+  lobby back to waiting with a 503. 9 unit tests.
+- `RaceSupervisor` — forks `server/lobby/index.js` per race, port pool
+  (`RACE_PORT_MIN..MAX`, default 22000–22099), kills on: no ready in 30 s,
+  heartbeat lapse > 5 s, tick frozen > 5 s during countdown/racing. Every exit
+  path releases the port and reports once. 5 tests against a fake race process
+  (`test/fixtures/fake-race.mjs`). The child now sends `ready` only once its
+  WebSocket is listening.
+- `ResultStore` — one JSON per race (`RACE_DATA_DIR`, default
+  `server/data/races`, git-ignored): rows, seed, track, reason and the input
+  log; temp-file + rename writes. The API never serves input logs.
+- **Docker** — `server/Dockerfile` is multi-stage: a build stage bundles the sim
+  (esbuild is a dev dep); the runtime copies the bundle plus the track/vehicle/
+  obstacle JSON. Build from the repo root: `docker build -f server/Dockerfile .`.
+  Publish 2567 **and** the race port range; `PUBLIC_HOST` sets the host clients
+  are told to connect races to. `/data` is a volume for results.
+- `npm run check:lobbies` (`scripts/lobbies-smoke.mjs`, in CI): the whole flow
+  against the real server — create, join, vehicle pick, host-only start, forged
+  secret refused, per-player tokens, two ws clients race, stored result. Also
+  run against the Docker image (`LOBBIES_URL=http://127.0.0.1:<port>`): passes.
+
+Not done / later: leaderboards (results are stored; nothing aggregates them
+yet); `/races` reads every file per call (fine until there are many); lobbies
+live in memory, so a server restart drops open lobbies and running races; only
+`src/tracks` tracks are raceable (not track packs).
 
 ### Phase 5 — Client: remote trucks, no prediction
 
