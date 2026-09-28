@@ -47,8 +47,15 @@ const TIRE_MARK_BRAKE_SPEED = 7;
  * Main Truck class that coordinates all truck subsystems
  */
 export class Truck {
-  constructor(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null, upgrades = null) {
+  /**
+   * @param {object} [options]
+   * @param {boolean} [options.headless]  simulation only: no particles, lights,
+   *   body puppet, tire marks or wake (a server race — docs/MULTIPLAYER.md).
+   *   updatePresentation() is then a no-op.
+   */
+  constructor(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null, upgrades = null, options = {}) {
     this.scene = scene;
+    this.headless = options.headless === true;
     this.shadows = shadows;
     this.driver = driver; // Optional AI driver
     this.vehicleDef = vehicleDef; // Optional vehicle definition from VehicleLoader
@@ -93,9 +100,6 @@ export class Truck {
     this.state = this.createState();
     
     // Initialize subsystems
-    this.particles = new ParticleEffects(this.mesh, scene, {
-      qualityScale: this.driver ? 0.45 : 1,
-    });
     this.audioController = null;
     const terrainQuery = new TerrainQuery(scene);
     // Multi-probe geometry is always derived from this truck's footprint so the
@@ -155,6 +159,23 @@ export class Truck {
       surfaceLevel: '-',
     };
 
+    this.headlights = [];
+    if (this.headless) {
+      this.particles = null;
+      this.body = null;
+      this.tireMarks = null;
+      this.wakeRibbon = null;
+    } else {
+      this._buildVisuals(scene, shadows, vehicleDef);
+    }
+  }
+
+  /** Particles, headlights, body puppet, tire-mark writer, wake — presentation only. */
+  _buildVisuals(scene, shadows, vehicleDef) {
+    this.particles = new ParticleEffects(this.mesh, scene, {
+      qualityScale: this.driver ? 0.45 : 1,
+    });
+
     // Night races: every truck gets a pair of forward headlights, parented to
     // the physics box (whose rotation.y tracks heading) so they sweep for
     // free. These are bundled into the scene's ClusteredLightContainer (see
@@ -163,7 +184,6 @@ export class Truck {
     // maxSimultaneousLights budget. Clustered lights can't cast shadows, so
     // these are never registered with the ShadowCasterGroup. If clustering
     // isn't supported on this GPU, only the player gets a real headlight.
-    this.headlights = [];
     const vehicleLights = scene?.metadata?.vehicleLights ?? null;
     if (scene?.metadata?.night === true && (vehicleLights || !this.driver)) {
       const sideOffset = this.width * 0.45;
@@ -625,6 +645,7 @@ export class Truck {
    * tunnel darkening, engine audio, particles, tire marks, wake.
    */
   updatePresentation(deltaTime, terrainManager = null, track = null, effectsFocusPosition = null, profiler = null) {
+    if (this.headless) return;
     const profile = (label, fn) => {
       if (!profiler) return fn();
       return profiler.measure(label, fn);

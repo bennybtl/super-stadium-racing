@@ -18,6 +18,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
+import { installHeadlessEnv } from '../server/lobby/headless-env.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -31,19 +32,11 @@ mkdirSync(cacheDir, { recursive: true });
 const entry = join(cacheDir, 'entry.mjs');
 const src = (p) => JSON.stringify(join(root, 'src', p));
 writeFileSync(entry, `
-export { Truck } from ${src('truck/truck.js')};
 export { Track } from ${src('world/track.js')};
-export { GameState } from ${src('managers/GameState.js')};
-export { TruckCollisionManager } from ${src('managers/TruckCollisionManager.js')};
-export { StaticBodyCollisionManager } from ${src('managers/StaticBodyCollisionManager.js')};
-export { buildSimScene } from ${src('sim/sim-scene.js')};
-export { RaceSimulation } from ${src('sim/RaceSimulation.js')};
-export { getStartFinishCheckpoint } from ${src('sim/race-rules.js')};
+export { createRace } from ${src('sim/headless-race.js')};
 export { setObstacleLoader } from ${src('objects/Obstacle.js')};
 export { SIM_DT } from ${src('modes/fixed-step.js')};
-export { gridSlotXZ, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from ${src('utils/start-grid.js')};
-export { TRUCK_HALF_HEIGHT } from ${src('constants.js')};
-export { NullEngine, Scene, Vector3 } from '@babylonjs/core';
+export { NullEngine, Scene } from '@babylonjs/core';
 `);
 const bundlePath = join(cacheDir, 'bundle.mjs');
 await esbuild.build({
@@ -61,15 +54,9 @@ await esbuild.build({
 });
 
 // ── Headless environment ─────────────────────────────────────────────────────
-// Truck's visual body still builds at construction (a canvas texture, a
-// display-settings listener); give it a no-op canvas and window.
-const noop = new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => 0 : noop), apply: () => noop });
-globalThis.OffscreenCanvas = class { constructor(w, h) { this.width = w; this.height = h; } getContext() { return noop; } };
-globalThis.window = { addEventListener() {}, removeEventListener() {}, dispatchEvent() {} };
+installHeadlessEnv();
 const quietDebug = console.debug;
 console.debug = () => {};
-const quietWarn = console.warn;
-console.warn = (...a) => { if (!String(a[0]).startsWith('[TruckBody]')) quietWarn(...a); };
 
 const m = await import(pathToFileURL(bundlePath).href);
 const { default: HavokPhysics } = await import('@babylonjs/havok');
@@ -108,36 +95,8 @@ async function runRace(trackKey, seed) {
   const scene = new m.Scene(engine);
   const track = m.Track.fromJSON(readFileSync(join(root, 'src', 'tracks', `${trackKey}.json`), 'utf8'));
   track.setReverse(false);
-  const world = await m.buildSimScene(scene, track, { havokOptions: { wasmBinary } });
-
-  const gate = m.getStartFinishCheckpoint(world.checkpointManager);
-  const getGridSpawn = (index) => {
-    const { x, z } = gate
-      ? m.gridSlotXZ(index, { x: gate.centerX, z: gate.centerZ, heading: gate.heading, ...m.DEFAULT_START_GRID, backOffset: m.CHECKPOINT_GRID_BACK_OFFSET })
-      : { x: (index % 2) * 3, z: Math.floor(index / 2) * 3 };
-    return { pos: new m.Vector3(x, track.getHeightAt(x, z) + m.TRUCK_HALF_HEIGHT, z), heading: gate?.heading ?? 0 };
-  };
-
-  const trucks = [];
-  for (let i = 0; i < TRUCKS; i++) {
-    const truck = new m.Truck(scene, null);
-    trucks.push({ id: `p${i}`, name: `p${i}`, isPlayer: i === 0, truck, gameState: new m.GameState(truck.state.maxBoosts), gridSlot: i, hasStarted: false });
-  }
-  const maxCheckpointNumber = world.checkpointManager.checkpointMeshes
-    .reduce((mx, cp) => Math.max(mx, cp.feature.checkpointNumber ?? 0), 0);
-  const sim = new m.RaceSimulation({
-    ...world,
-    trucks,
-    track,
-    truckCollisionManager: new m.TruckCollisionManager(),
-    staticBodyCollisionManager: new m.StaticBodyCollisionManager(scene),
-    totalLaps: 3,
-    maxCheckpointNumber,
-    startFinishCp: gate,
-    getGridSpawn,
-    seed,
-  });
-  sim.placeOnGrid();
+  const players = Array.from({ length: TRUCKS }, (_, i) => ({ id: `p${i}` }));
+  const { sim, trucks } = await m.createRace({ scene, track, players, laps: 3, seed, havokOptions: { wasmBinary } });
   sim.go();
 
   const steps = Math.round(SECONDS / m.SIM_DT);

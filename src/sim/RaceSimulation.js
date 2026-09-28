@@ -59,6 +59,8 @@ export class RaceSimulation {
    *                               (AI drivers get theirs at construction — see
    *                               DriveMode.makeAIDriverFactory). Omitted =
    *                               Math.random, as before.
+   * @param {number}   [o.respawnCooldownSec]  minimum sim time between a truck's
+   *                               requested respawns (0 = none, single-player)
    */
   constructor(o) {
     Object.assign(this, {
@@ -80,7 +82,9 @@ export class RaceSimulation {
       profiler: o.profiler ?? null,
       events: o.events ?? {},
       seed: o.seed ?? null,
+      respawnCooldownSec: o.respawnCooldownSec ?? 0,
     });
+    this._lastRespawnMs = new Map(); // truck id → clockMs of its last requested respawn
 
     if (this.seed != null) {
       this.trucks.forEach(td => { td.truck.terrainPhysics.random = rngStream(this.seed, `truck:${td.id}`); });
@@ -201,6 +205,61 @@ export class RaceSimulation {
       fallbackCheckpoint: this.startFinishCp,
       fallbackSpawn: () => this.getGridSpawn(td.gridSlot ?? (td.isPlayer ? 0 : 1)),
     });
+  }
+
+  /**
+   * Fire a truck's nitro if it has one left and isn't already boosting.
+   * Returns true when it fired.
+   */
+  requestBoost(id) {
+    const td = this.trucks.find(t => t.id === id);
+    if (!td || td.gameState.raceFinished || td.truck.state.boostActive) return false;
+    if (!td.gameState.useBoost()) return false;
+    td.truck.state.boostActive = true;
+    td.truck.state.boostTimer = td.truck.state.boostDuration;
+    return true;
+  }
+
+  /**
+   * A driver-requested reset to the last checkpoint the truck actually passed
+   * (validated here, never client-reported). Refused within
+   * `respawnCooldownSec` of the previous one. Returns true when it respawned.
+   */
+  requestRespawn(id) {
+    const td = this.trucks.find(t => t.id === id);
+    if (!td || td.gameState.raceFinished) return false;
+    const last = this._lastRespawnMs.get(id);
+    if (last != null && this.clockMs - last < this.respawnCooldownSec * 1000) return false;
+    this._lastRespawnMs.set(id, this.clockMs);
+    this.respawnToLastCheckpoint(td);
+    return true;
+  }
+
+  /**
+   * Flat, serializable race state: clock, race flags, and per truck its pose,
+   * velocity, progress and a flags bitfield (1 grounded, 2 boosting,
+   * 4 finished).
+   */
+  getSnapshot() {
+    return {
+      clockMs: this.clockMs,
+      started: this.started,
+      ended: this.ended,
+      trucks: this.trucks.map((td) => {
+        const { position: p } = td.truck.mesh;
+        const { velocity: v, heading, boostActive } = td.truck.state;
+        const gs = td.gameState;
+        return {
+          id: td.id,
+          x: p.x, y: p.y, z: p.z, h: heading,
+          vx: v.x, vy: v.y, vz: v.z,
+          lap: gs.lapCount,
+          cp: gs.checkpointCount,
+          boosts: gs.boostCount,
+          flags: (td.truck.simFrame.isGrounded ? 1 : 0) | (boostActive ? 2 : 0) | (gs.raceFinished ? 4 : 0),
+        };
+      }),
+    };
   }
 
   /** Grace since the first finish ran out: every truck still racing is

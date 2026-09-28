@@ -339,13 +339,9 @@ export class RaceMode extends DriveMode {
     this.setupDebugToggle(this.inputManager, r.debugManager);
 
     this.inputManager.onBoost(() => {
-      if (player.gameState.useBoost() && !player.truck.state.boostActive) {
-        player.truck.state.boostActive = true;
-        player.truck.state.boostTimer = player.truck.state.boostDuration;
-        r.uiManager.updateBoosts(player.gameState.boostCount);
-      }
+      if (r.sim.requestBoost(player.id)) r.uiManager.updateBoosts(player.gameState.boostCount);
     });
-    this.inputManager.onReset(() => r.sim.respawnToLastCheckpoint(player));
+    this.inputManager.onReset(() => r.sim.requestRespawn(player.id));
 
     menuManager.onResume = () => menuManager.hideMenu();
     menuManager.onReset = () => {

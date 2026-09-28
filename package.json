@@ -23,7 +23,10 @@
     "check:rocks": "node scripts/check-rocks.mjs",
     "check:physics": "node scripts/check-physics.mjs",
     "check:collision": "node scripts/check-collision.mjs",
-    "check:determinism": "node scripts/check-sim-determinism.mjs"
+    "check:determinism": "node scripts/check-sim-determinism.mjs",
+    "check:lobby": "node scripts/lobby-smoke.mjs",
+    "build:server-sim": "node scripts/build-server-sim.mjs",
+    "lobby": "node server/lobby/index.js"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",
@@ -38,7 +41,8 @@
     "express": "^5.2.1",
     "fflate": "^0.8.3",
     "pinia": "^3.0.4",
-    "vue": "^3.5.31"
+    "vue": "^3.5.31",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.19",

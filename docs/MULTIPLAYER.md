@@ -288,6 +288,44 @@ Wire format: start with JSON to get it working, then move snapshots to a binary
 (fixed field order, analog `steer`/`throttle` as `i8` rather than the current
 boolean left/right, so gamepads and mobile need no protocol change later).
 
+**Progress (2026-09-27): built, JSON wire format.**
+- `server/lobby/index.js` — the child. Config via `LOBBY_CONFIG` env (JSON:
+  `trackKey, reverse, laps, seed, port, players[{id,name,vehicleKey,token}],
+  joinTimeoutMs, maxRaceMs`) — env, not argv, so tokens stay out of `ps`.
+  Token auth by first message (`hello`, constant-time compare; never in the URL);
+  a reconnect with the same token replaces the old socket. Countdown when all
+  joined or on join timeout; 60 Hz drift-corrected loop, ≤5 catch-up steps then
+  drop time; snapshots every 3 ticks; sim events forwarded as `event` messages;
+  `results` to clients and `{ result, inputLog, seed, … }` to the parent, then
+  exit. Heartbeat `{ tick, phase }` over IPC each second; exits if the parent goes.
+  Ends on race end, `maxRaceMs`, SIGTERM, or everyone disconnecting.
+- `server/lobby/inputs.js` — ingest (unit-tested): sanitise/clamp, window
+  `[tick, tick + 4]` (late frames dropped — no rewind, so the plan's `- 8` is
+  moot), one frame per tick, extrapolate last frame, boost/respawn on rising
+  edge. Per-connection token bucket (120 msg/s) on top.
+- Sim side: `RaceSimulation.requestBoost` / `requestRespawn` (3 s cooldown on
+  the server, last *validated* checkpoint) / `getSnapshot()`;
+  `src/sim/headless-race.js` `createRace()` (shared with check:determinism);
+  `new Truck(…, { headless: true })` skips all visuals.
+- Node runs a bundle of the sim: `npm run build:server-sim` →
+  `server/build/sim.mjs` (git-ignored). `server/lobby/headless-env.js` stubs
+  `OffscreenCanvas` (checkpoint decals still draw into one).
+- Input log: `[tick, playerIndex, s, g, b, r]` whenever a player's applied frame
+  changes — hold-until-next replays it exactly.
+- `npm run check:lobby` (`scripts/lobby-smoke.mjs`, in CI via `npm run check`):
+  forks a real child, two ws clients + a bad-token one, checks welcome,
+  countdown, 20 Hz snapshots, acks, extrapolation, results, IPC, clean exit.
+
+Open for later phases:
+- **Input lead window.** `+4` ticks (67 ms) is tight once clients stamp inputs
+  ahead to cover latency (Phase 5/6) — expect to widen it.
+- **Grid** is behind the start/finish gate in join order; a track's
+  `startPosition` marker isn't applied headless yet.
+- **Deployment**: the Dockerfile copies only `server/` and omits dev deps, but
+  the child needs `src/tracks|vehicles|obstacles` and a built bundle (esbuild is
+  a dev dep) — a build stage is Phase 4 work.
+- Binary snapshots; surface id in `flags`; reconnect/rejoin semantics.
+
 ### Phase 4 — Parent process
 
 - `server/index.js`: HTTP + WebSocket on one public port.
