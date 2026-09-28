@@ -194,7 +194,17 @@ Pure refactor, no behaviour change, client still single-player.
   RaceMode drives it (`test/race-simulation.test.js`). Truck presentation now runs
   after the whole sim step instead of interleaved per truck. Other modes
   (HotLap/Practice/Multiplayer/Menu) still call `truck.update()` directly.
-- ⬜ `buildSimScene()` / `buildVisuals()` split.
+- ✅ Scene split: `src/sim/sim-scene.js` — `enableSimPhysics`, `buildSimTerrain`
+  (terrain grid, ground geometry + MESH body, drive surfaces), `buildSimFeatures`
+  (walls, border, outskirts, checkpoints, obstacles, pickups, tunnels, steep-slope
+  blockers, bridges), `buildSimScene` (both, headless). `buildScene` interleaves
+  them with its visuals (lights/shadows → terrain textures → sim features with
+  visual hooks → signs, lights, decorations, decals, tire marks, water, scatter).
+  Sim managers still make meshes/materials (fine under NullEngine); visual args
+  (`shadows`, bridge blend textures, outskirts material) are optional.
+  `scripts/spike-headless.mjs` now builds the real sim scene + `updateSim()`:
+  deterministic on apple_river / quarry_run (tunnel) / the_road, ~0.6–0.9 s build.
+  Headless needs `window.obstacleLoader` stubbed — a Phase 2 browser-global item.
 
 Verify: `npm run build:raw` clean, then drive a race and confirm handling,
 collisions, laps, and effects are unchanged. This phase is where feel can

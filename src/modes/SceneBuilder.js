@@ -1,59 +1,42 @@
 import {
   Scene,
-  HavokPlugin,
   Vector3,
   HemisphericLight,
   DirectionalLight,
   PointLight,
-  MeshBuilder,
   StandardMaterial,
   Color3,
   Color4,
-  PhysicsAggregate,
-  PhysicsShapeType,
   FreeCamera,
   Texture,
-  VertexBuffer,
   RawTexture,
   ClusteredLightContainer,
   SSAO2RenderingPipeline,
   ShadowGenerator,
 } from "@babylonjs/core";
-import HavokPhysics from "@babylonjs/havok";
-import { TerrainManager, TERRAIN_TYPES } from "../world/terrain.js";
 import { Track } from "../world/track.js";
 import { CameraController } from "../managers/CameraController.js";
-import { CheckpointManager } from "../managers/CheckpointManager.js";
-import { WallManager } from "../managers/WallManager.js";
-import { ObstacleManager } from "../managers/ObstacleManager.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
 import { TrackLightManager } from "../managers/TrackLightManager.js";
 import { DecorationManager } from "../managers/DecorationManager.js";
 import { isModelFeature } from "../decorations/decorations-registry.js";
-import { PickupManager } from "../managers/PickupManager.js";
-import { BridgeMeshManager } from "../managers/BridgeMeshManager.js";
-import { TunnelManager } from "../managers/TunnelManager.js";
-import { DriveSurfaceManager } from "../managers/DriveSurfaceManager.js";
-import { SteepSlopeColliderManager } from "../managers/SteepSlopeColliderManager.js";
 import { DecalManager } from "../managers/DecalManager.js";
 import { buildWaterBodies } from "../objects/Water.js";
 import { createWakeField } from "../managers/WakeFieldManager.js";
 import { createWaterDepthSampler, createMudDepthSampler } from "../objects/water-field.js";
 import { scatterDirtChunks } from "../objects/DirtChunks.js";
 import { scatterGrassBlades } from "../objects/GrassBlades.js";
-import { buildBorderWalls } from "../objects/BorderWall.js";
-import { buildOutskirts, OUTSKIRTS_MATERIAL_NAME } from "../objects/Outskirts.js";
+import { OUTSKIRTS_MATERIAL_NAME } from "../objects/Outskirts.js";
 import {
   buildTerrainIdTexturePixelData,
   buildTerrainWearOverlayPixelData,
   buildBridgeDeckWearOverlayPixelData,
   buildTerrainTypePropertyTexturePixelData,
-  applySteepGrassTerrainRemap,
-  applySteepWaterTerrainRemap,
 } from "../world/terrain-utils.js";
 import { loadDisplaySettings } from "../settingsStorage.js";
 import { ShadowCasterGroup } from "./ShadowCasterGroup.js";
 import { SharedTireMarksManager } from "../managers/SharedTireMarksManager.js";
+import { enableSimPhysics, buildSimTerrain, buildSimFeatures } from "../sim/sim-scene.js";
 
 /**
  * Toggle a live scene between day and night lighting. Stashes the flag on
@@ -102,17 +85,6 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   scene.onNewMaterialAddedObservable.add((mat) => {
     if ('maxSimultaneousLights' in mat) mat.maxSimultaneousLights = 9;
   });
-
-  // Shared registry for all drivable surfaces (ground, bridges, ramps, etc.).
-  const driveSurfaceManager = new DriveSurfaceManager(scene);
-  scene.metadata = {
-    ...(scene.metadata ?? {}),
-    driveSurfaceManager,
-  };
-
-  // -- Physics --
-  const havok = await HavokPhysics();
-  scene.enablePhysics(new Vector3(0, -9.81, 0), new HavokPlugin(true, havok));
 
   // -- Camera --
   const camera = new FreeCamera("cam", new Vector3(0, 28, -20), scene);
@@ -163,19 +135,14 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // regardless of what the caller asks for.
   currentTrack.setReverse(opts.reverse === true && currentTrack.allowReverse !== false);
 
+  // -- Simulation: physics, terrain grid, ground geometry, drive surfaces --
+  await enableSimPhysics(scene);
+  const simTerrain = buildSimTerrain(scene, currentTrack);
+  const { driveSurfaceManager, terrainManager, ground, terrainSize, groundWidth, groundDepth } = simTerrain;
+
   const trackWidth = currentTrack.width ?? 160;
   const trackDepth = currentTrack.depth ?? 160;
   const maxTrackDim = Math.max(trackWidth, trackDepth);
-  const terrainSize = maxTrackDim + 20;
-  const {
-    width: groundWidth,
-    depth: groundDepth,
-    subdivisions: groundSubdivisions,
-  } = currentTrack.getGroundLattice();
-  const terrainResolutionTarget = 192;
-  const terrainCellSize = terrainSize <= terrainResolutionTarget
-    ? 1
-    : Math.max(2, Math.ceil(terrainSize / terrainResolutionTarget));
 
   // -- Stadium lights (unused day/night, kept as the primary shadow group's
   // fixed key light — see ShadowCasterGroup below) --
@@ -438,37 +405,6 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     ssaoPipeline?.dispose();
   });
 
-  // -- Terrain manager --
-  // Use 1m terrain cells for the common case, then scale the cell size up for
-  // larger tracks so terrain baking and lookup work do not grow without bound.
-  const terrainManager = new TerrainManager(terrainSize, terrainCellSize, groundWidth, groundDepth);
-  for (let row = 0; row < terrainManager.cellsPerSide; row++) {
-    for (let col = 0; col < terrainManager.cellsPerSide; col++) {
-      const worldX = ((col + 0.5) / terrainManager.cellsPerSide) * groundWidth - groundWidth / 2;
-      const worldZ = ((row + 0.5) / terrainManager.cellsPerSide) * groundDepth - groundDepth / 2;
-      const terrainType = currentTrack.getTerrainTypeAt(worldX, worldZ);
-      terrainManager.setTerrainCell(col, row, terrainType);
-    }
-  }
-
-  applySteepGrassTerrainRemap(terrainManager, currentTrack);
-  applySteepWaterTerrainRemap(terrainManager, currentTrack);
-
-  // -- Ground mesh --
-  const ground = MeshBuilder.CreateGround(
-    "ground",
-    { width: groundWidth, height: groundDepth, subdivisions: groundSubdivisions },
-    scene
-  );
-  const positions = ground.getVerticesData(VertexBuffer.PositionKind);
-  for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i];
-    const z = positions[i + 2];
-    positions[i + 1] = currentTrack.getHeightAt(x, z);
-  }
-  ground.setVerticesData(VertexBuffer.PositionKind, positions);
-  ground.createNormals(true);
-
   // -- Ground texture --
   // Need not divide evenly by terrainManager.cellsPerSide — that count varies
   // per track anyway, so it rarely did. The cell painters snap their rects to
@@ -651,34 +587,13 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // shadow-casting key light, which left the terrain stuck in its own shadow
   // and unresponsive to that light.
   ground.receiveShadows = true;
-  // Register as canonical drivable surface for TerrainQuery and nav layers.
-  driveSurfaceManager.register(ground, { kind: "ground", lattice: currentTrack.getGroundLattice() });
-  // MESH shape follows displaced vertices so dynamic objects land on real terrain
-  new PhysicsAggregate(ground, PhysicsShapeType.MESH, { mass: 0 }, scene);
 
-  // Ensure rigid wall boundaries block driving off-grid
-  const wallManager = new WallManager(scene, currentTrack, shadows);
-
-  // Perimeter walls follow the track's borderWall settings (on/off, thickness,
-  // height, colour) — see src/objects/BorderWall.js. With the wall off, the
-  // border terrain carries on to the horizon instead of ending at a visible edge.
-  buildBorderWalls(scene, currentTrack, wallManager);
-  buildOutskirts(scene, currentTrack, driveSurfaceManager, outskirtsMat);
-
-  // -- Feature managers --
-  const checkpointManager = new CheckpointManager(scene, currentTrack, shadows);
-  // wallManager already created above
-  const obstacleManager = new ObstacleManager(scene, currentTrack, shadows);
-  const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
-  const trackLightManager = new TrackLightManager(scene, currentTrack, shadows);
-  const decorationManager = new DecorationManager(scene, currentTrack, shadows);
-  const pickupManager = new PickupManager(scene, currentTrack, shadows); // Pickups spawn lap-by-lap in RaceMode
-  const bridgeMeshManager = new BridgeMeshManager(
-    scene,
-    currentTrack,
+  // -- Simulation features: walls, checkpoints, obstacles, pickups, tunnels,
+  // steep-slope blockers, bridge/driveBox decks (visual hooks passed in) --
+  const simFeatures = buildSimFeatures(scene, currentTrack, simTerrain, {
     shadows,
-    driveSurfaceManager,
-    {
+    outskirtsMaterial: outskirtsMat,
+    bridgeBlendConfig: {
       pluginClass: TerrainBlendPlugin,
       resolveTerrainTypeIndex: getTerrainTypeIndexByName,
       terrainIdTexture: terrainIdTex,
@@ -692,32 +607,20 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
       terrainCellCount: terrainManager.cellsPerSide,
       terrainWorldHalfWidth: groundWidth / 2,
       terrainWorldHalfDepth: groundDepth / 2,
-    }
-  );
+    },
+  });
+  const { obstacleManager } = simFeatures;
+
+  // -- Visual features --
+  const trackSignManager = new TrackSignManager(scene, currentTrack, shadows);
+  const trackLightManager = new TrackLightManager(scene, currentTrack, shadows);
+  const decorationManager = new DecorationManager(scene, currentTrack, shadows);
   const decalManager = new DecalManager(scene, currentTrack, ground);
   // Stuck-on decals resolve their parent decoration / obstacle by feature id.
   decalManager.setAttachResolver((attachTo) =>
     attachTo?.kind === "obstacle"
       ? obstacleManager.findById(attachTo.id)
       : decorationManager.findById(attachTo.id));
-  // Tunnels before the steep-slope blockers, which stay out of the bores the
-  // tunnels publish (scene.metadata.tunnelBore).
-  const tunnelManager = new TunnelManager(scene, currentTrack, driveSurfaceManager);
-  tunnelManager.rebuild();
-  const steepSlopeColliderManager = new SteepSlopeColliderManager(scene, currentTrack, {
-    enabled: true,
-    maxSlopeDeg: 60,
-  });
-  steepSlopeColliderManager.rebuild();
-  checkpointManager.createCheckpoints();
-
-  // Build bridge drive surfaces first so downstream terrain-following features
-  // (poly walls/curbs) can sample across all bridge meshes in one pass.
-  for (const feature of currentTrack.getFeatures()) {
-    if (feature.type === "bridgeMesh" || feature.type === "driveBox") {
-      bridgeMeshManager.create(feature);
-    }
-  }
 
   // Shared, persistent tire marks — one ring-buffer mesh for every truck's
   // rubber, replayed from last session's save. Built only
@@ -731,15 +634,8 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // Saved marks load from IndexedDB; have them replayed before the race starts.
   await currentTrack._sharedTireMarks.ready;
 
-  // Create movable obstacles, walls, flags, and track signs from track features.
   for (const feature of currentTrack.getFeatures()) {
-    if (feature.type === "obstacle") {
-      obstacleManager.createStack(feature);
-    } else if (feature.type === "polyWall") {
-      wallManager.createPolyWall(feature);
-    } else if (feature.type === "polyCurb") {
-      wallManager.createPolyCurb(feature);
-    } else if (feature.type === "trackSign") {
+    if (feature.type === "trackSign") {
       trackSignManager.createSign(feature);
     } else if (feature.type === "trackLight") {
       trackLightManager.createLight(feature);
@@ -812,16 +708,10 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
     bridgeDeckWearOverlayTex,
     pixelsPerCell,
     compositeNormalMap,
-    checkpointManager,
-    wallManager,
-    obstacleManager,
+    ...simFeatures,
     trackSignManager,
     trackLightManager,
     decorationManager,
-    pickupManager,
-    bridgeMeshManager,
-    tunnelManager,
-    steepSlopeColliderManager,
     decalManager,
     driveSurfaceManager,
   };

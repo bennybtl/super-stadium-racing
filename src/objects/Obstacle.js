@@ -222,7 +222,7 @@ export class Obstacle {
             // A decal can be stuck to the obstacle (see DecalManager); the ray
             // predicate matches on this tag and ignores isPickable.
             m.metadata = { ...(m.metadata ?? {}), decalTarget: true };
-            shadows.addShadowCaster(m);
+            shadows?.addShadowCaster(m);
             m.receiveShadows = true;
             this._loadedMeshes.push(m);
           }

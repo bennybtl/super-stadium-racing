@@ -76,7 +76,7 @@ export class Pickup {
     coreMat.specularColor = new Color3(1.0, 1.0, 0.5);
     coreMat.specularPower = 16;
     this._core.material = coreMat;
-    shadows.addShadowCaster(this._core);
+    shadows?.addShadowCaster(this._core);
 
     // ── Outer ring ───────────────────────────────────────────────────────
     this._ring = MeshBuilder.CreateTorus(
@@ -90,7 +90,7 @@ export class Pickup {
     ringMat.diffuseColor  = diffuse;
     ringMat.emissiveColor = emissive;
     this._ring.material = ringMat;
-    shadows.addShadowCaster(this._ring);
+    shadows?.addShadowCaster(this._ring);
 
     // Persistent visibility ring that stays even when custom pickup meshes load.
     this._aura = MeshBuilder.CreateTorus(
@@ -132,7 +132,7 @@ export class Pickup {
           bottle0.parent = this._core;
           for (const m of result.meshes) {
             m.parent = bottle0;
-            shadows.addShadowCaster(m);
+            shadows?.addShadowCaster(m);
             if (!m.material || m.material.name === "default material") {
               m.material = coreMat;
             }
@@ -143,7 +143,7 @@ export class Pickup {
             const clone = bottle0.clone(`pickup_bottle${i}_${x}_${z}`, this._core);
             if (!clone) continue;
             this._bottles.push(clone);
-            for (const cm of clone.getChildMeshes()) shadows.addShadowCaster(cm);
+            for (const cm of clone.getChildMeshes()) shadows?.addShadowCaster(cm);
           }
           // Tilt each bottle here (not on the parent) so update()'s rotation.y
           // spins it around the world-vertical axis — tilting the parent instead
