@@ -67,13 +67,21 @@ export class PickupManager {
     /** Rolled spawns waiting out their random delay before appearing.
      *  @type {{ pos: {x:number,z:number}, lapCount: number, zone: object|null, remainingSec: number }[]} */
     this._pendingSpawns = [];
+    this._nextId = 1; // pickup ids, unique per race — the server tells clients by id
 
     /**
-     * Assigned by the owning mode. Called with (type, truckData, value)
+     * Assigned by the owning mode. Called with (type, truckData, value, id)
      * whenever a truck drives through a pickup.
-     * @type {((type: string, truckData: object, value: number) => void) | null}
+     * @type {((type: string, truckData: object, value: number, id: number) => void) | null}
      */
     this.onPickupCollected = null;
+
+    /**
+     * Optional. Called with the new Pickup (`id`, `type`, `value`, `position`)
+     * when one appears.
+     * @type {((pickup: object) => void) | null}
+     */
+    this.onPickupSpawned = null;
 
     /** @type {import('./AudioManager.js').AudioManager|null} */
     this.audioManager = audioManager;
@@ -209,7 +217,7 @@ export class PickupManager {
           }
           // Lap-spawned pickups are one-time: collecting removes them (a new one
           // appears when a truck completes another lap).
-          this.onPickupCollected?.(pickup.type, truckData, pickup.value);
+          this.onPickupCollected?.(pickup.type, truckData, pickup.value, pickup.id);
           break; // only one truck can collect per pickup per frame
         }
       }
@@ -291,7 +299,9 @@ export class PickupManager {
     }
 
     const pickup = new Pickup(pos.x, pos.z, groundY, type, this.scene, this.shadows, value);
+    pickup.id = this._nextId++;
     this._pickups.push(pickup);
+    this.onPickupSpawned?.(pickup);
     return pickup;
   }
 
@@ -310,5 +320,31 @@ export class PickupManager {
     this._pickups.forEach(p => p.dispose());
     this._pickups = [];
     this._pendingSpawns = [];
+  }
+
+  // ── Mirrored pickups (online client) ───────────────────────────────────────
+  // An online race's pickups live on the server; the client shows copies it is
+  // told about and never collects anything itself (see NetRaceMode).
+
+  /** Show a pickup the server spawned. */
+  addMirrored({ id, x, z, type, value }) {
+    if (this._pickups.some((p) => p.id === id)) return;
+    const groundY = this._terrainQuery.surfaceHeightAt(x, z, this.track);
+    const pickup = new Pickup(x, z, groundY, type, this.scene, this.shadows, value);
+    pickup.id = id;
+    this._pickups.push(pickup);
+  }
+
+  /** Remove a pickup the server says was collected. */
+  removeMirrored(id) {
+    const pickup = this._pickups.find((p) => p.id === id);
+    if (!pickup) return;
+    pickup.dispose();
+    this._pickups = this._pickups.filter((p) => p !== pickup);
+  }
+
+  /** Bob/spin the pickups without testing for collection. */
+  animate(dt) {
+    for (const pickup of this._pickups) pickup.update(dt);
   }
 }

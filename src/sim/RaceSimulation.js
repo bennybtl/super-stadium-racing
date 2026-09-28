@@ -24,6 +24,8 @@ import { rngStream } from "./rng.js";
  *   onLap(td, lapCount, lapTime)           lap completed (ms)
  *   onFinish(td, totalTime)                truck finished (ms)
  *   onOutOfBounds(td, remainingSec|null)   countdown tick (null = not counting)
+ *   onPickupSpawn({ id, x, z, type, value })  a pickup appeared
+ *   onPickup(td, type, value, id)          a truck collected one (nitro already granted)
  *   onRaceEnd(finishOrder)                 everyone finished or the DNF grace ran out
  */
 
@@ -85,6 +87,16 @@ export class RaceSimulation {
       respawnCooldownSec: o.respawnCooldownSec ?? 0,
     });
     this._lastRespawnMs = new Map(); // truck id → clockMs of its last requested respawn
+
+    // Pickups are the sim's: a collected nitro is granted here, and spawns and
+    // collections go out as events (a server tells its clients).
+    this.pickupManager.onPickupCollected = (type, td, value, id) => {
+      if (type === 'boost' && td.gameState) td.gameState.boostCount += value;
+      this._emit('onPickup', td, type, value, id);
+    };
+    this.pickupManager.onPickupSpawned = (p) => this._emit('onPickupSpawn', {
+      id: p.id, x: p.position.x, z: p.position.z, type: p.type, value: p.value,
+    });
 
     if (this.seed != null) {
       this.trucks.forEach(td => { td.truck.terrainPhysics.random = rngStream(this.seed, `truck:${td.id}`); });
@@ -237,17 +249,20 @@ export class RaceSimulation {
 
   /**
    * Flat, serializable race state: clock, race flags, and per truck its pose,
-   * velocity, progress and a flags bitfield (1 grounded, 2 boosting,
-   * 4 finished).
+   * velocity, progress, a flags bitfield (1 grounded, 2 nitro, 4 finished,
+   * 8 speed pad) and the few sim values clients need to present a truck they
+   * don't simulate: chassis pitch/roll, slip angle, throttle, steer.
    */
   getSnapshot() {
     return {
       clockMs: this.clockMs,
       started: this.started,
       ended: this.ended,
+      obstacles: this.obstacleManager.activePoses?.() ?? [],
       trucks: this.trucks.map((td) => {
         const { position: p } = td.truck.mesh;
-        const { velocity: v, heading, boostActive } = td.truck.state;
+        const { velocity: v, heading, boostActive, speedBoostActive } = td.truck.state;
+        const st = td.truck.state;
         const gs = td.gameState;
         return {
           id: td.id,
@@ -256,7 +271,13 @@ export class RaceSimulation {
           lap: gs.lapCount,
           cp: gs.checkpointCount,
           boosts: gs.boostCount,
-          flags: (td.truck.simFrame.isGrounded ? 1 : 0) | (boostActive ? 2 : 0) | (gs.raceFinished ? 4 : 0),
+          pitch: st.flightPitch ?? 0,
+          roll: st.terrainRoll ?? 0,
+          slip: st.slipAngle ?? 0,
+          throttle: st.throttle ?? 0,
+          steer: td.truck.controls.steerAmount,
+          flags: (td.truck.simFrame.isGrounded ? 1 : 0) | (boostActive ? 2 : 0)
+            | (gs.raceFinished ? 4 : 0) | (speedBoostActive ? 8 : 0),
         };
       }),
     };

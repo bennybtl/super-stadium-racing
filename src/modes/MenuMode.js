@@ -148,6 +148,13 @@ export class MenuMode extends DriveMode {
       });
     };
 
+    menuManager.onStartOnlineRace = (config) => {
+      menuManager.gameStarted = true;
+      menuManager._store.pitData = null;
+      menuManager.hideMenu();
+      this.controller.goToOnlineRace(config);
+    };
+
     menuManager.onStartMultiplayer = (config) => {
       menuManager.gameStarted = true;
       menuManager._store.pitData = null;

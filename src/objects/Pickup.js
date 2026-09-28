@@ -52,7 +52,9 @@ export class Pickup {
     this.value  = value; // nitro count granted on collect (1x / 2x / 3x)
     this.scene  = scene;
     this._baseY = groundY + 1.2;
-    this._time  = Math.random() * Math.PI * 2; // random phase so pickups don't all bob in sync
+    // Phase from the spawn spot so pickups don't all bob in sync — derived, not
+    // random, since pickups spawn inside the (deterministic) sim step.
+    this._time  = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1 + 1) * Math.PI;
     this._aura  = null;
     this._bottles = null; // loaded-model groups (one per value: 1x/2x/3x nitro)
 
@@ -109,6 +111,9 @@ export class Pickup {
     this._aura.material = auraMat;
 
     const loadObjModel = (url, { tiltX = 0, count = 1, spacing = 0.8 } = {}) => {
+      // No model URL (a headless server race bundles assets as empty): keep
+      // the primitive core/ring.
+      if (typeof url !== "string" || !url) return;
       const lastSlash = url.lastIndexOf("/");
       const rootUrl = url.substring(0, lastSlash + 1);
       const fileName = url.substring(lastSlash + 1);

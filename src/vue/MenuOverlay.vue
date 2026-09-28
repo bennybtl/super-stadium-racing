@@ -68,6 +68,7 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('single race')">Single Race</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showChampionshipSetup()">Championship</button>
           <button v-if="isDev" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showMultiplayerLobby()">Multiplayer</button>
+          <button v-if="isDev" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showOnlineLobby()">Online (beta)</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
@@ -151,6 +152,14 @@
         <!-- ── Multiplayer waiting room ── -->
         <template v-else-if="store.screen === 'multiplayerRoom'">
           <MultiplayerRoom />
+        </template>
+
+        <!-- ── Online (server-authoritative) race lobby ── -->
+        <template v-else-if="store.screen === 'online'">
+          <OnlineLobby />
+        </template>
+        <template v-else-if="store.screen === 'onlineRoom'">
+          <OnlineRoom />
         </template>
 
         <!-- ── Championship setup ── -->
@@ -397,6 +406,8 @@ import TruckSetup from './TruckSetup.vue';
 import RacePodium3D from './RacePodium3D.vue';
 import MultiplayerLobby from './MultiplayerLobby.vue';
 import MultiplayerRoom from './MultiplayerRoom.vue';
+import OnlineLobby from './OnlineLobby.vue';
+import OnlineRoom from './OnlineRoom.vue';
 
 const store = useMenuStore();
 

@@ -425,6 +425,48 @@ export class Truck {
     return this._simFrame;
   }
 
+  /**
+   * Take the truck's state from a server snapshot sample (src/net/NetClient.js)
+   * instead of simulating it: pose, velocity, chassis pitch/roll and the
+   * handful of values the presentation reads (slip, throttle, steer, boost).
+   * Fills `_simFrame` the way updateSim() would, so updatePresentation() runs
+   * as normal afterwards. `s` uses the snapshot's short keys.
+   */
+  applyNetState(s, terrainManager = null) {
+    const st = this.state;
+    this.mesh.position.set(s.x, s.y, s.z);
+    this.mesh.rotation.y = s.h;
+    st.heading = s.h;
+    st.velocity.set(s.vx, s.vy, s.vz);
+    st.flightPitch = s.p ?? 0;
+    st.terrainRoll = s.rl ?? 0;
+    st.slipAngle = s.sl ?? 0;
+    st.throttle = s.th ?? 0;
+    st.boostActive = (s.flags & 2) !== 0;
+    st.speedBoostActive = (s.flags & 8) !== 0;
+    this.driftPhysics.updateRoll(this.mesh);
+    this.syncPhysicsBody();
+
+    const grounded = (s.flags & 1) !== 0;
+    const hSpeed = Math.hypot(s.vx, s.vz);
+    const terrain = grounded ? (terrainManager?.getTerrainAt(this.mesh.position) ?? null) : null;
+    // The body puppet anchors to the floor under the truck.
+    this.terrainPhysics.lastFloorY = s.y - this.halfHeight;
+    const f = this._simFrame;
+    f.input = { forward: st.throttle > 0, back: false, left: s.st < -0.1, right: s.st > 0.1 };
+    f.speed = Math.hypot(hSpeed, s.vy);
+    f.hSpeed = hSpeed;
+    f.groundedness = grounded ? 1 : 0;
+    f.controlGroundedness = f.groundedness;
+    f.penetration = grounded ? 0 : -1;
+    f.isGrounded = grounded;
+    f.onNaturalGround = true;
+    f.terrain = terrain;
+    f.effectsTerrain = terrain;
+    f.effectiveGrip = 1;
+    f.terrainGripMultiplier = terrain?.gripMultiplier ?? 1;
+  }
+
   /** Debug-overlay payload for the last updateSim() (reused object). */
   getDebugInfo() {
     const f = this._simFrame;

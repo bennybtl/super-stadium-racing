@@ -6,6 +6,7 @@ import { LobbyRegistry, LobbyError } from "./LobbyRegistry.js";
 import { RaceSupervisor } from "./RaceSupervisor.js";
 import { ResultStore } from "./ResultStore.js";
 import { takeToken } from "../validate.js";
+import { trackFiles } from "../tracks.js";
 
 /**
  * Server-authoritative race lobbies over HTTP (docs/MULTIPLAYER.md, Phase 4),
@@ -23,6 +24,7 @@ import { takeToken } from "../validate.js";
  *   PATCH  /race-lobbies/:code/me        { name, vehicleKey }
  *   POST   /race-lobbies/:code/start     host
  *   GET    /races  ·  GET /races/:raceId  stored results (no input logs)
+ *   GET    /race-tracks                  keys of the tracks races can use
  *
  * The secret travels as `Authorization: Bearer <secret>` — never in a URL.
  * Players connect to their race at ws://<host>:<port> and send
@@ -56,7 +58,7 @@ export function mountRaceLobbies(app, {
   publicHost = null,
   raceOptions = {},
 } = {}) {
-  const tracks = catalog("tracks");
+  const tracks = new Set(trackFiles().keys());
   const vehicles = catalog("vehicles");
   const store = new ResultStore(dataDir);
 
@@ -112,6 +114,7 @@ export function mountRaceLobbies(app, {
   };
 
   const router = express.Router();
+  router.get("/race-tracks", handle(() => [...tracks].sort()));
   router.get("/race-lobbies", handle(() => registry.list()));
   router.post("/race-lobbies", handle((req, res) => {
     if (rateLimited(req)) throw new LobbyError(429, "slow down");

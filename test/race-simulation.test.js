@@ -129,6 +129,19 @@ describe('RaceSimulation', () => {
     expect(player.gameState.totalRaceTime).toBeNull();
   });
 
+  it('grants a collected nitro and announces pickups', () => {
+    const player = makeTruckData('player', true);
+    const onPickup = vi.fn();
+    const onPickupSpawn = vi.fn();
+    const { sim } = makeSim([player], { onPickup, onPickupSpawn });
+    const before = player.gameState.boostCount;
+    sim.pickupManager.onPickupCollected('boost', player, 2, 7);
+    expect(player.gameState.boostCount).toBe(before + 2);
+    expect(onPickup).toHaveBeenCalledWith(player, 'boost', 2, 7);
+    sim.pickupManager.onPickupSpawned({ id: 8, position: { x: 1, z: 2 }, type: 'boost', value: 1 });
+    expect(onPickupSpawn).toHaveBeenCalledWith({ id: 8, x: 1, z: 2, type: 'boost', value: 1 });
+  });
+
   it('reset clears the race and re-primes the grid', () => {
     const player = makeTruckData('player', true);
     const { sim, checkpoints } = makeSim([player]);

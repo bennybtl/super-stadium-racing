@@ -13,10 +13,14 @@ import { getStartFinishCheckpoint } from "./race-rules.js";
  * A complete race with no rendering: sim scene + headless trucks on the grid +
  * a RaceSimulation. Used by the lobby server (server/lobby) and
  * `npm run check:determinism`. Every truck is human-driven — inputs arrive
- * through `sim.step(dt, inputsById)`.
+ * through `step(dt, inputsById)`.
  *
  * Grid: behind the start/finish gate in `players` order (a track's
  * startPosition marker isn't applied yet), trucks placed and parked.
+ *
+ * Drive it with the returned `step(dt, inputsById)`, not `sim.step` alone: with
+ * no renderer nothing else advances Havok, which moves knocked-loose obstacles
+ * (in the browser, scene.render() steps it each frame).
  *
  * @param {object} o
  * @param {import('@babylonjs/core').Scene} o.scene   an empty scene (NullEngine)
@@ -27,7 +31,8 @@ import { getStartFinishCheckpoint } from "./race-rules.js";
  * @param {object}   [o.havokOptions]   passed to HavokPhysics() — `{ wasmBinary }` in Node
  * @param {number}   [o.respawnCooldownSec]
  * @param {object}   [o.events]         RaceSimulation event callbacks
- * @returns {Promise<{ sim: RaceSimulation, trucks: object[], world: object }>}
+ * @returns {Promise<{ sim: RaceSimulation, trucks: object[], world: object,
+ *   step: (dt: number, inputsById?: object) => void }>}
  */
 export async function createRace({
   scene, track, players, laps, seed, havokOptions, respawnCooldownSec = 0, events = {},
@@ -78,5 +83,10 @@ export async function createRace({
   });
   sim.placeOnGrid({ parked: true });
 
-  return { sim, trucks, world };
+  const physics = scene.getPhysicsEngine();
+  const step = (dt, inputsById = {}) => {
+    sim.step(dt, inputsById);
+    physics._step(dt);
+  };
+  return { sim, trucks, world, step };
 }

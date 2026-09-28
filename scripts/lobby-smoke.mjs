@@ -22,6 +22,7 @@ const RACE_MS = 8000;
 const players = [
   { id: 'a', name: 'Alice', vehicleKey: 'baja', token: randomBytes(16).toString('hex') },
   { id: 'b', name: 'Bob', vehicleKey: 'gila', token: randomBytes(16).toString('hex') },
+  { id: 'c', name: 'Cat', vehicleKey: 'coati', token: randomBytes(16).toString('hex') },
 ];
 
 const failures = [];
@@ -86,9 +87,47 @@ function client(p, { quietAfterMs = Infinity } = {}) {
   return state;
 }
 
+// ── The game's own client (src/net/NetClient.js) over a laggy socket ────────
+// 50 ms each way + up to 20 ms jitter: its inputs must still land on their
+// ticks, and it must still be interpolating (not extrapolating) when it draws.
+globalThis.window = { location: { protocol: 'http:' } };
+const { NetClient } = await import('../src/net/NetClient.js');
+const LAG_MS = 50;
+const JITTER_MS = 20;
+class LaggySocket {
+  constructor(url) {
+    const later = (fn) => setTimeout(fn, LAG_MS + Math.random() * JITTER_MS);
+    this.ws = new WebSocket(url);
+    this.ws.on('open', () => later(() => this.onopen?.()));
+    this.ws.on('message', (d) => { const text = d.toString(); later(() => this.onmessage?.({ data: text })); });
+    this.ws.on('close', (code) => later(() => this.onclose?.({ code })));
+    this._later = later;
+  }
+  get readyState() { return this.ws.readyState; }
+  send(data) { this._later(() => { if (this.ws.readyState === 1) this.ws.send(data); }); }
+  close(...args) { this.ws.close(...args); }
+}
+function netClient(p) {
+  const net = new NetClient({ host: '127.0.0.1', port: PORT, token: p.token, WebSocketImpl: LaggySocket });
+  const stats = { missed: [], margin: [] };
+  let over = false;
+  net.on('results', () => { over = true; }); // snapshots stop; stop measuring
+  const frame = setInterval(() => {
+    net.sendInput({ s: 0.3, g: 1, b: false, r: false });
+    const latest = net.snapshots.latest;
+    if (over || !latest || latest.t < 120) return; // let the clock settle
+    stats.missed.push(latest.t - (net.acks[p.id] ?? -1));
+    if (net.snapshots.sample(p.id, net.renderTick(), {})) stats.margin.push(latest.t - net.renderTick());
+  }, 1000 / 60);
+  stats.closed = new Promise((resolve) => net.on('close', () => { clearInterval(frame); resolve(); }));
+  stats.net = net;
+  return stats;
+}
+
 const a = client(players[0]);
 const b = client(players[1], { quietAfterMs: 3000 });
-await Promise.race([Promise.all([a.closed, b.closed]), new Promise((r) => setTimeout(r, RACE_MS + 20_000))]);
+const c = netClient(players[2]);
+await Promise.race([Promise.all([a.closed, b.closed, c.closed]), new Promise((r) => setTimeout(r, RACE_MS + 20_000))]);
 const code = await Promise.race([exited, new Promise((r) => setTimeout(() => r('timeout'), 5000))]);
 
 // ── Checks ───────────────────────────────────────────────────────────────────
@@ -98,7 +137,8 @@ const snaps = a.snapshots;
 const span = snaps.length > 1 ? (snaps.at(-1).t - snaps[0].t) / 60 : 0;
 check('snapshots ~20 Hz', snaps.length > 1 && Math.abs(snaps.length / span - 20) < 2, `(${snaps.length} over ${span.toFixed(1)} s sim)`);
 const last = snaps.at(-1);
-check('snapshot carries every truck', last?.trucks?.length === 2 && last.trucks.every((t) => Number.isFinite(t.x)));
+check('snapshot carries every truck', last?.trucks?.length === 3 && last.trucks.every((t) => Number.isFinite(t.x)));
+check('snapshot carries obstacle poses', Array.isArray(last?.obs));
 check('acks track a live player', last?.ack?.a > last.t - 10, `(ack ${last?.ack?.a} at t ${last?.t})`);
 check('quiet player acks stall', last?.ack?.b < last.t - 60, `(ack ${last?.ack?.b})`);
 // Distance along the path, not start-to-end: a truck holding one steer input circles.
@@ -114,11 +154,19 @@ const moved = (id) => {
 };
 check('player A drove', moved('a') > 20, `(${moved('a').toFixed(1)} m)`);
 check('quiet player B kept driving (extrapolated)', moved('b') > 20, `(${moved('b').toFixed(1)} m)`);
-check('results sent', a.results?.rows?.length === 2 && a.results.reason === 'time limit', `(${a.results?.reason})`);
+check('results sent', a.results?.rows?.length === 3 && a.results.reason === 'time limit', `(${a.results?.reason})`);
 const result = ipc.find((m) => m.type === 'result');
 check('IPC: heartbeats', ipc.filter((m) => m.type === 'heartbeat').length >= 3);
 check('IPC: result with input log', result?.inputLog?.length > 0 && result.seed === 42, `(${result?.inputLog?.length} entries)`);
 check('child exited cleanly', code === 0, `(exit ${code})`);
+
+const sorted = (xs) => [...xs].sort((x, y) => x - y);
+const missed = sorted(c.missed);
+const margin = sorted(c.margin);
+const pct = (xs, q) => xs[Math.min(xs.length - 1, Math.floor(xs.length * q))];
+check('NetClient: clock synced over lag', Math.abs(c.net.clock.rttMs - 2 * LAG_MS) < 2 * JITTER_MS + 10, `(rtt ${c.net.clock.rttMs?.toFixed(0)} ms)`);
+check('NetClient: inputs land on their ticks', missed.length > 100 && pct(missed, 0.95) <= 1, `(95th pct ${pct(missed, 0.95)} ticks behind)`);
+check('NetClient: draws by interpolation', margin.length > 100 && pct(margin, 0.05) > 0, `(5th pct ${pct(margin, 0.05)?.toFixed(1)} ticks of margin)`);
 
 console.log(failures.length ? `\n${failures.length} check(s) failed` : '\nlobby smoke test passed');
 if (code === 'timeout') child.kill();

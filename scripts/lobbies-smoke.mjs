@@ -83,6 +83,8 @@ try {
   const { code } = created.body;
   const alice = created.body;
   check('bad track refused', (await api('POST', '/race-lobbies', { body: { trackKey: 'nope' } })).status === 400);
+  const raceTracks = (await api('GET', '/race-tracks')).body ?? [];
+  check('race tracks include built-ins and packs', raceTracks.includes('apple_river') && raceTracks.includes('big_dukes'), `(${raceTracks.length} tracks)`);
 
   const joined = await api('POST', `/race-lobbies/${code}/join`, { body: { player: { name: 'Bob' } } });
   check('join lobby', joined.status === 200 && joined.body.playerId === 'p2');

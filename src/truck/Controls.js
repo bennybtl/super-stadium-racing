@@ -286,6 +286,11 @@ export class Controls {
     }
   }
 
+  /** Eased steering position, -1 (left) .. 1 (right). */
+  get steerAmount() {
+    return this._steerAmount;
+  }
+
   /** Count down the head-on-collision drive/steer lockouts (sim seconds). */
   updateLockouts(deltaTime) {
     if (this.state.noDriveTimer > 0) this.state.noDriveTimer = Math.max(0, this.state.noDriveTimer - deltaTime);

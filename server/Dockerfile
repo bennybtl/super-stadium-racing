@@ -24,6 +24,7 @@ COPY server ./server
 COPY --from=build /app/server/build ./server/build
 # The race process reads track / vehicle / obstacle definitions as JSON.
 COPY src/tracks/*.json ./src/tracks/
+COPY track-packs ./track-packs
 COPY src/vehicles/*.json ./src/vehicles/
 COPY src/obstacles/*.json ./src/obstacles/
 

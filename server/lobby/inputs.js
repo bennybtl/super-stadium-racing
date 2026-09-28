@@ -20,7 +20,9 @@
  *     so a repeated or extrapolated frame can't fire them twice.
  */
 
-export const WINDOW_AHEAD = 4;
+// Inputs may arrive up to this many ticks early (clients stamp ahead by their
+// latency; the slack absorbs jitter).
+export const WINDOW_AHEAD = 8;
 
 // Analog → the truck's digital controls (throttle is on/off in the sim today).
 const THROTTLE_DEADZONE = 0.1;

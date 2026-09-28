@@ -4,3 +4,4 @@ export { useRaceStore } from './stores/race.js';
 export { useDebugStore } from './stores/debug.js';
 export { useEditorStore } from './stores/editor.js';
 export { useMultiplayerStore } from './stores/multiplayer.js';
+export { useOnlineStore } from './stores/online.js';

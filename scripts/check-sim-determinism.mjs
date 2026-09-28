@@ -73,11 +73,13 @@ m.setObstacleLoader({ getObstacle: (id) => obstacleDefs.get(id) ?? null, obstacl
 // ── Forbid unseeded time/randomness while stepping ───────────────────────────
 const real = { random: Math.random, dateNow: Date.now, perfNow: performance.now.bind(performance) };
 let forbidden = null;
-const guard = (name, fn) => (...a) => {
-  if (forbidden) throw new Error(`${name} called inside a sim step`);
+const guard = (name, fn, allowed = null) => (...a) => {
+  if (forbidden && !(allowed && allowed.test(new Error().stack))) throw new Error(`${name} called inside a sim step`);
   return fn(...a);
 };
-Math.random = guard('Math.random', real.random);
+// Babylon's RandomGUID names objects built mid-step (a spawned pickup's
+// meshes) — an id, never race state, so it's the one caller let through.
+Math.random = guard('Math.random', real.random, /RandomGUID/);
 Date.now = guard('Date.now', real.dateNow);
 performance.now = guard('performance.now', real.perfNow);
 
@@ -90,14 +92,20 @@ function inputFor(i, n) {
   return { forward: !brake, back: brake, left, right: !left };
 }
 
+let pickupCount = 0;
+let looseObstacles = 0;
+let movedObstacles = 0;
 async function runRace(trackKey, seed) {
   const engine = new m.NullEngine();
   const scene = new m.Scene(engine);
   const track = m.Track.fromJSON(readFileSync(join(root, 'src', 'tracks', `${trackKey}.json`), 'utf8'));
   track.setReverse(false);
   const players = Array.from({ length: TRUCKS }, (_, i) => ({ id: `p${i}` }));
-  const { sim, trucks } = await m.createRace({ scene, track, players, laps: 3, seed, havokOptions: { wasmBinary } });
+  const { sim, trucks, step } = await m.createRace({ scene, track, players, laps: 3, seed, havokOptions: { wasmBinary } });
   sim.go();
+  // What finishing laps does: queue pickups (they appear 1.5–4.5 s later,
+  // inside the steps) — covers the headless Pickup path and its seeded rolls.
+  for (let lap = 1; lap <= 6; lap++) sim.pickupManager.spawnForLap(lap);
 
   const steps = Math.round(SECONDS / m.SIM_DT);
   forbidden = true;
@@ -105,13 +113,23 @@ async function runRace(trackKey, seed) {
     for (let n = 0; n < steps; n++) {
       const inputs = {};
       trucks.forEach((td, i) => { inputs[td.id] = inputFor(i, n); });
-      sim.step(m.SIM_DT, inputs);
+      step(m.SIM_DT, inputs);
     }
   } finally {
     forbidden = null;
   }
 
   const hash = createHash('sha256');
+  pickupCount = sim.pickupManager._pickups.length;
+  const obstacles = sim.getSnapshot().obstacles;
+  looseObstacles = obstacles.length;
+  // Hit obstacles must actually move — Havok only advances if something steps it.
+  movedObstacles = obstacles.filter((o) => {
+    const f = sim.obstacleManager._stacks[o.i].feature;
+    return Math.hypot(o.x - f.x, o.z - f.z) > 0.05;
+  }).length;
+  // Knocked-loose obstacles are Havok's — hashing them checks its determinism too.
+  for (const o of obstacles) hash.update(new Float64Array([o.i, o.x, o.y, o.z, o.qx, o.qy, o.qz, o.qw]));
   for (const td of trucks) {
     const p = td.truck.mesh.position, v = td.truck.state.velocity;
     hash.update(new Float64Array([p.x, p.y, p.z, v.x, v.y, v.z, td.truck.state.heading, td.gameState.checkpointCount]));
@@ -129,11 +147,14 @@ for (const trackKey of TRACKS) {
     if (a !== b) {
       failures++;
       console.log(`FAIL  ${trackKey}: same seed diverged (${a} vs ${b})`);
+    } else if (looseObstacles > 0 && movedObstacles === 0) {
+      failures++;
+      console.log(`FAIL  ${trackKey}: ${looseObstacles} obstacles hit but none moved (is Havok being stepped?)`);
     } else {
       // Informational: a different seed should usually differ (roughness bumps
       // draw from it); a track with no rough ground legitimately won't.
       const other = await runRace(trackKey, 99);
-      console.log(`ok    ${trackKey}  ${a}${other === a ? '  (seed-independent: no rough ground hit)' : ''}`);
+      console.log(`ok    ${trackKey}  ${a}  (${pickupCount} pickups, ${looseObstacles} obstacles hit, ${movedObstacles} moved)${other === a ? '  (seed-independent: no rough ground hit)' : ''}`);
     }
   } catch (err) {
     failures++;

@@ -6,6 +6,7 @@ import {
   PhysicsMotionType,
   SceneLoader,
   TransformNode,
+  Quaternion,
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import { MeshMaterialResolver } from "../utils/mesh-materials.js";
@@ -264,9 +265,25 @@ export class Obstacle {
     body.setMassProperties({ mass: this.mass });
   }
 
+  /**
+   * Online client: take the pose from the server instead of local physics. The
+   * local body is dropped the first time — the server simulates the obstacle,
+   * and a second simulation here would only fight the pose.
+   */
+  setNetPose({ x, y, z, qx, qy, qz, qw }) {
+    if (this._disposed) return;
+    if (this.aggregate) {
+      this.aggregate.dispose();
+      this.aggregate = null;
+    }
+    this.body.position.set(x, y, z);
+    if (!this.body.rotationQuaternion) this.body.rotationQuaternion = new Quaternion();
+    this.body.rotationQuaternion.set(qx, qy, qz, qw);
+  }
+
   dispose() {
     this._disposed = true;
-    this.aggregate.dispose();
+    this.aggregate?.dispose();
     for (const m of this._loadedMeshes) m.dispose();
     this._matRes?.dispose();
     this._pivot?.dispose();

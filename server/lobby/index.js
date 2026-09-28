@@ -15,10 +15,16 @@
 // replace the snapshot later without touching the flow):
 //   client → { type: 'hello', token }
 //            { type: 'input', t, s, g, b, r }            see inputs.js
+//            { type: 'ping', c }                         clock sync / RTT
 //   server → { type: 'welcome', playerId, tick, tickRate, snapshotRate, seed, trackKey, laps, players }
 //            { type: 'countdown', goTick }
-//            { type: 'snapshot', t, ack: { [playerId]: lastInputTick }, trucks: [{ id, x, y, z, h, vx, vy, vz, flags }] }
-//            { type: 'event', event: 'raceStart'|'checkpoint'|'lap'|'finish', …, t }
+//            { type: 'pong', c, t }                      echoes c, with the server tick
+//            { type: 'snapshot', t, ack: { [playerId]: lastInputTick },
+//              trucks: [{ id, x, y, z, h, vx, vy, vz, flags, lap, cp, n, p, rl, sl, th, st }] }
+//              (n nitros left; p/rl chassis pitch/roll; sl slip; th throttle; st steer),
+//              obs: [{ i, x, y, z, qx, qy, qz, qw }] }   knocked-loose obstacles, by build index
+//            { type: 'event', event: 'raceStart'|'startLine'|'checkpoint'|'lap'|'finish'
+//                             |'pickupSpawn'|'pickup', …, t }
 //            { type: 'results', rows: [{ id, name, position, timeMs, dnf, bestLapMs }] }
 // IPC to the parent: { type: 'ready' | 'heartbeat' | 'result' | 'error', … }.
 
@@ -30,6 +36,7 @@ import { WebSocketServer } from 'ws';
 import { installHeadlessEnv } from './headless-env.js';
 import { PlayerInputs, toTruckInput, NEUTRAL_FRAME } from './inputs.js';
 import { takeToken } from '../validate.js';
+import { trackFiles } from '../tracks.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -91,7 +98,9 @@ const vehicleDef = (key) => {
   return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
 };
 
-const track = m.Track.fromJSON(readFileSync(join(root, 'src', 'tracks', `${trackKey}.json`), 'utf8'));
+const trackFile = trackFiles().get(trackKey);
+if (!trackFile) fail(`unknown track ${trackKey}`);
+const track = m.Track.fromJSON(readFileSync(trackFile, 'utf8'));
 track.setReverse(reverse && track.allowReverse !== false);
 
 const players = playerConfig.map((p) => ({
@@ -109,7 +118,7 @@ let tick = 0;                 // next tick to simulate
 const pendingEvents = [];     // sim events raised during a step, sent after it
 const engine = new m.NullEngine();
 const scene = new m.Scene(engine);
-const { sim } = await m.createRace({
+const race = await m.createRace({
   scene,
   track,
   players: players.map((p) => ({ id: p.id, name: p.name, vehicleDef: vehicleDef(p.vehicleKey) })),
@@ -119,12 +128,18 @@ const { sim } = await m.createRace({
   respawnCooldownSec: RESPAWN_COOLDOWN_SEC,
   events: {
     onRaceStart: () => pendingEvents.push({ event: 'raceStart' }),
+    onStartLine: (td) => pendingEvents.push({ event: 'startLine', id: td.id }),
     onCheckpoint: (td, index, count) => pendingEvents.push({ event: 'checkpoint', id: td.id, index, count }),
     onLap: (td, lap, lapTimeMs) => pendingEvents.push({ event: 'lap', id: td.id, lap, lapTimeMs }),
     onFinish: (td, timeMs) => pendingEvents.push({ event: 'finish', id: td.id, timeMs }),
+    // `kind`, not `type`: event fields are spread into the message, whose own
+    // `type` is 'event'.
+    onPickupSpawn: (p) => pendingEvents.push({ event: 'pickupSpawn', id: p.id, x: p.x, z: p.z, kind: p.type, value: p.value }),
+    onPickup: (td, type, value, pickupId) => pendingEvents.push({ event: 'pickup', id: td.id, kind: type, value, pickupId }),
     onRaceEnd: () => { raceOver = true; },
   },
 });
+const { sim } = race;
 console.debug = quietDebug;
 log(`race ready: ${trackKey}, ${laps} laps, ${players.length} players, seed ${seed}`);
 
@@ -172,6 +187,7 @@ wss.on('connection', (ws) => {
     }
     if (!takeToken(player.msgBucket, Date.now(), MSG_RATE, MSG_BURST)) return;
     if (msg?.type === 'input') player.inputs.offer(msg, tick);
+    else if (msg?.type === 'ping' && Number.isFinite(msg.c)) send(ws, { type: 'pong', c: msg.c, t: tick });
   });
 
   ws.on('close', () => {
@@ -232,8 +248,8 @@ function stepOnce() {
     sim.go();
     phase = 'racing';
   }
-  sim.step(1 / TICK_RATE, inputs);
-  for (const e of pendingEvents.splice(0)) broadcast({ type: 'event', ...e, t: tick });
+  race.step(1 / TICK_RATE, inputs);
+  for (const e of pendingEvents.splice(0)) broadcast({ ...e, type: 'event', t: tick });
   if (tick % SNAPSHOT_EVERY === 0) broadcastSnapshot();
   tick++;
   if (raceOver) endRace('finished');
@@ -247,7 +263,11 @@ function broadcastSnapshot() {
     type: 'snapshot',
     t: tick,
     ack,
-    trucks: snap.trucks.map(({ id, x, y, z, h, vx, vy, vz, flags }) => ({ id, x, y, z, h, vx, vy, vz, flags })),
+    obs: snap.obstacles,
+    trucks: snap.trucks.map((s) => ({
+      id: s.id, x: s.x, y: s.y, z: s.z, h: s.h, vx: s.vx, vy: s.vy, vz: s.vz, flags: s.flags,
+      lap: s.lap, cp: s.cp, n: s.boosts, p: s.pitch, rl: s.roll, sl: s.slip, th: s.throttle, st: s.steer,
+    })),
   });
 }
 
@@ -259,10 +279,18 @@ function startTicking() {
     if (phase === 'done') return;
     const now = performance.now();
     let steps = 0;
-    while (now >= nextAt && steps < MAX_CATCHUP_STEPS && phase !== 'done') {
-      stepOnce();
-      nextAt += stepMs;
-      steps++;
+    try {
+      while (now >= nextAt && steps < MAX_CATCHUP_STEPS && phase !== 'done') {
+        stepOnce();
+        nextAt += stepMs;
+        steps++;
+      }
+    } catch (err) {
+      // A sim bug shouldn't leave players staring at a frozen race: end it
+      // normally (results to everyone, recorded by the parent) with the reason.
+      console.error(`[lobby ${config.lobbyId}] sim error at tick ${tick}:`, err);
+      endRace('server error');
+      return;
     }
     if (now - nextAt > stepMs * MAX_CATCHUP_STEPS) {
       log(`behind by ${(now - nextAt).toFixed(0)} ms — dropping time`);

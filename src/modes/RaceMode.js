@@ -121,7 +121,6 @@ export class RaceMode extends DriveMode {
     await this._createTrucks({ vehicleKey, aiVehicleKey, aiCount, playerColorKey });
     this._createRaceUi();
     this._wireInputAndMenus(menuManager);
-    this._wirePickups();
 
     r.sim = new RaceSimulation({
       trucks: r.trucks,
@@ -365,29 +364,29 @@ export class RaceMode extends DriveMode {
     };
   }
 
-  /** Pickups are spawned as trucks complete laps (see RaceSimulation), not up
-   *  front. Value scales with the lap, so grant it in full. */
-  _wirePickups() {
+  /**
+   * A truck collected a pickup (RaceSimulation has already granted nitro).
+   * Pickups spawn as trucks complete laps, valued by the lap.
+   */
+  _onPickup(truckData, type, value = 1) {
     const r = this._race;
-    r.pickupManager.onPickupCollected = (type, truckData, value = 1) => {
-      if (type === 'boost' && truckData.gameState) {
-        truckData.gameState.boostCount += value;
-        if (truckData.isPlayer) {
-          r.uiManager.updateBoosts(truckData.gameState.boostCount);
-          this.floatingText.spawn(`+${value.toLocaleString()} nitro${value > 1 ? 's' : ''}`, truckData.truck.mesh.position);
-        }
-        return;
+    if (type === 'boost' && truckData.gameState) {
+      if (truckData.isPlayer) {
+        r.uiManager.updateBoosts(truckData.gameState.boostCount);
+        this.floatingText.spawn(`+${value.toLocaleString()} nitro${value > 1 ? 's' : ''}`, truckData.truck.mesh.position);
       }
-      if (type === 'coin') {
-        // Bank the cash for this driver; applied to their cup wallet at race end.
-        r.moneyCollected[truckData.id] = (r.moneyCollected[truckData.id] ?? 0) + value;
-        if (truckData.isPlayer) {
-          truckData.truck.audioController?.playReload?.();
-          this.floatingText.spawn(`+$${value.toLocaleString()}`, truckData.truck.mesh.position);
-        }
+      return;
+    }
+    if (type === 'coin') {
+      // Bank the cash for this driver; applied to their cup wallet at race end.
+      r.moneyCollected[truckData.id] = (r.moneyCollected[truckData.id] ?? 0) + value;
+      if (truckData.isPlayer) {
+        truckData.truck.audioController?.playReload?.();
+        this.floatingText.spawn(`+$${value.toLocaleString()}`, truckData.truck.mesh.position);
       }
-    };
+    }
   }
+
 
   // ── Race flow ──────────────────────────────────────────────────────────────
 
@@ -590,6 +589,8 @@ export class RaceMode extends DriveMode {
         if (remaining == null) r().uiManager.hideOutOfBoundsCountdown();
         else r().uiManager.showOutOfBoundsCountdown(remaining);
       },
+
+      onPickup: (td, type, value) => this._onPickup(td, type, value),
 
       onRaceEnd: (finishOrder) => this._onRaceEnd(finishOrder),
     };

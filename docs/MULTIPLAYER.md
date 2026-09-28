@@ -317,8 +317,8 @@ boolean left/right, so gamepads and mobile need no protocol change later).
   countdown, 20 Hz snapshots, acks, extrapolation, results, IPC, clean exit.
 
 Open for later phases:
-- **Input lead window.** `+4` ticks (67 ms) is tight once clients stamp inputs
-  ahead to cover latency (Phase 5/6) — expect to widen it.
+- ~~**Input lead window.**~~ Widened to `+8` in Phase 5; clients stamp inputs
+  one-way latency + 2 ahead.
 - **Grid** is behind the start/finish gate in join order; a track's
   `startPosition` marker isn't applied headless yet.
 - ~~**Deployment**~~ (done in Phase 4): the Dockerfile copied only `server/` and omitted dev deps, but
@@ -395,6 +395,52 @@ Get a correct race on screen before making it feel good.
 
 This will feel laggy on the local truck. That is expected and correct — it
 proves the pipeline before prediction can hide bugs in it.
+
+**Progress (2026-09-27): built — dev-only "Online (beta)" on the start menu,
+beside the colyseus Multiplayer (unchanged).**
+- `src/net/LobbyApi.js` — REST client (same host as the page, port 2567).
+- `src/net/NetClient.js` — race socket. `ServerClock` (ping/pong every 1 s,
+  lowest-RTT sample, NTP-style), `InputStamper` (one frame per tick, stamped
+  one-way latency + 2 ahead, skips stale ticks after a stall),
+  `SnapshotBuffer` (interpolation, short-way heading, ≤6-tick extrapolation).
+  Draws at *server clock − one-way latency − 6 ticks* — the jitter buffer sits
+  behind the newest state that can have arrived; measured to stay interpolating
+  (≥ ~2 ticks margin at p5) at 0, 50±20 and 100±30 ms one-way.
+- Server additions: `ping`/`pong`; snapshots also carry lap, checkpoint, nitros
+  left, chassis pitch/roll, slip, throttle, steer, speed-pad flag (what a client
+  needs to *present* a truck it doesn't simulate); `startLine` event; input
+  window `+8`.
+- `Truck.applyNetState(sample)` poses a truck from a snapshot and fills its sim
+  frame so the normal `updatePresentation()` runs (body, dust, marks, wake,
+  audio).
+- `NetRaceMode` — full visual scene, no local sim: every truck (own included)
+  from snapshots; HUD, checkpoint highlight, timer, laps and results from server
+  events; countdown aligned to the server's GO tick; nitro / R reset as short
+  held flags (one rising edge server-side). Pausing sends *neutral* input — the
+  server repeats the last frame, so a held throttle would keep driving.
+- UI: `OnlineLobby.vue` (join by code, open races, create), `OnlineRoom.vue`
+  (code, host track/laps/reverse, vehicle pick, players, start),
+  `stores/online.js` (polls the lobby at 1 Hz; hands off to NetRaceMode when
+  the view carries the race endpoint).
+- `check:lobby` now also runs the game's real `NetClient` over a 50 ms ± 20 ms
+  socket: clock sync, inputs landing on their ticks (p95 0 behind),
+  interpolation margin.
+
+- Pickups and obstacles are mirrored. `RaceSimulation` owns pickup collection
+  (grants the nitro; `onPickupSpawn` / `onPickup` events — RaceMode keeps only its
+  UI part); the child forwards them as `pickupSpawn` / `pickup` events and the
+  client shows copies (`PickupManager.addMirrored` / `removeMirrored` / `animate`,
+  never collects). Knocked-loose obstacles ride in snapshots as `obs` (by build
+  index — identical on every client); the client drops its own obstacle physics
+  and interpolates the pose (`Obstacle.setNetPose`). check:determinism now hashes
+  obstacle poses too: Havok is deterministic across fresh instances.
+- Fixed on first real use: a pickup spawning mid-race crashed the race process
+  (model import is empty server-side); a sim error now ends the race with
+  reason "server error" instead of dropping everyone. Track packs are raceable
+  (`server/tracks.js`, `GET /race-tracks`); editor-only tracks aren't.
+
+Still: truck colours are by join order; a locally edited copy of a built-in
+track is drawn but the server races the original file.
 
 ### Phase 6 — Client prediction and reconciliation
 
