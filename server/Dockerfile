@@ -22,7 +22,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY server ./server
 COPY --from=build /app/server/build ./server/build
-# The race process reads track / vehicle / obstacle definitions as JSON.
+# The race process reads track / vehicle / obstacle definitions as JSON, and
+# shares the input mapping with the game client.
+COPY src/sim/input-frame.js src/sim/snapshot-wire.js ./src/sim/
 COPY src/tracks/*.json ./src/tracks/
 COPY track-packs ./track-packs
 COPY src/vehicles/*.json ./src/vehicles/

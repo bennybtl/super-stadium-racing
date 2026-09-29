@@ -20,8 +20,7 @@
 //            { type: 'countdown', goTick }
 //            { type: 'pong', c, t }                      echoes c, with the server tick
 //            { type: 'snapshot', t, ack: { [playerId]: lastInputTick },
-//              trucks: [{ id, x, y, z, h, vx, vy, vz, flags, lap, cp, n, p, rl, sl, th, st }] }
-//              (n nitros left; p/rl chassis pitch/roll; sl slip; th throttle; st steer),
+//              trucks: [short-key trucks — src/sim/snapshot-wire.js],
 //              obs: [{ i, x, y, z, qx, qy, qz, qw }] }   knocked-loose obstacles, by build index
 //            { type: 'event', event: 'raceStart'|'startLine'|'checkpoint'|'lap'|'finish'
 //                             |'pickupSpawn'|'pickup', …, t }
@@ -37,6 +36,7 @@ import { installHeadlessEnv } from './headless-env.js';
 import { PlayerInputs, toTruckInput, NEUTRAL_FRAME } from './inputs.js';
 import { takeToken } from '../validate.js';
 import { trackFiles } from '../tracks.js';
+import { wireTruck } from '../../src/sim/snapshot-wire.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -264,10 +264,7 @@ function broadcastSnapshot() {
     t: tick,
     ack,
     obs: snap.obstacles,
-    trucks: snap.trucks.map((s) => ({
-      id: s.id, x: s.x, y: s.y, z: s.z, h: s.h, vx: s.vx, vy: s.vy, vz: s.vz, flags: s.flags,
-      lap: s.lap, cp: s.cp, n: s.boosts, p: s.pitch, rl: s.roll, sl: s.slip, th: s.throttle, st: s.steer,
-    })),
+    trucks: snap.trucks.map(wireTruck),
   });
 }
 

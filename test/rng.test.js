@@ -25,6 +25,15 @@ describe('sim rng', () => {
     expect(draw(a2, 5)).toEqual(draw(rngStream(1234, 'truck:p0'), 5));
   });
 
+  it('rewinds to a saved state', () => {
+    const r = createRng(9);
+    draw(r, 3);
+    const saved = r.getState();
+    const ahead = draw(r, 5);
+    r.setState(saved);
+    expect(draw(r, 5)).toEqual(ahead);
+  });
+
   it('derives different seeds for different races and labels', () => {
     expect(deriveSeed(1, 'pickups')).not.toBe(deriveSeed(2, 'pickups'));
     expect(deriveSeed(1, 'pickups')).not.toBe(deriveSeed(1, 'grid'));

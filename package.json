@@ -24,6 +24,7 @@
     "check:physics": "node scripts/check-physics.mjs",
     "check:collision": "node scripts/check-collision.mjs",
     "check:determinism": "node scripts/check-sim-determinism.mjs",
+    "check:prediction": "node scripts/check-prediction.mjs",
     "check:lobby": "node scripts/lobby-smoke.mjs",
     "check:lobbies": "node scripts/lobbies-smoke.mjs",
     "build:server-sim": "node scripts/build-server-sim.mjs",

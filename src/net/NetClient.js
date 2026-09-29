@@ -272,13 +272,24 @@ export class NetClient {
 
   /**
    * Send `frame` ({ s, g, b, r }) for every tick that's now due. Call once per
-   * rendered frame; the same held input covers each tick in between.
+   * rendered frame; the same held input covers each tick in between. Returns
+   * the ticks sent (a predicting client simulates exactly these).
    */
   sendInput(frame) {
-    if (!this.welcome || !this.clock.ready) return;
-    for (const t of this.stamper.ticksToSend(this.clock, this._now())) {
+    if (!this.welcome || !this.clock.ready) return [];
+    const ticks = this.stamper.ticksToSend(this.clock, this._now());
+    for (const t of ticks) {
       this._send({ type: 'input', t, s: frame.s, g: frame.g, b: frame.b, r: frame.r });
     }
+    return ticks;
+  }
+
+  /**
+   * Where a predicting client is in time: the (fractional) tick its inputs
+   * are currently being sent for. Its newest predicted tick is the floor.
+   */
+  predictionTick() {
+    return this.clock.tickAt(this._now()) + this.clock.oneWayTicks + INPUT_LEAD_TICKS;
   }
 
   close() {

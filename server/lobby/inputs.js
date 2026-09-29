@@ -20,15 +20,14 @@
  *     so a repeated or extrapolated frame can't fire them twice.
  */
 
+import { NEUTRAL_FRAME, toTruckInput } from '../../src/sim/input-frame.js';
+
 // Inputs may arrive up to this many ticks early (clients stamp ahead by their
 // latency; the slack absorbs jitter).
 export const WINDOW_AHEAD = 8;
 
-// Analog → the truck's digital controls (throttle is on/off in the sim today).
-const THROTTLE_DEADZONE = 0.1;
-const STEER_DEADZONE = 0.1;
-
-export const NEUTRAL_FRAME = Object.freeze({ s: 0, g: 0, b: false, r: false });
+// The frame → truck-controls mapping is shared with predicting clients.
+export { NEUTRAL_FRAME, toTruckInput };
 
 const clampUnit = (v) => (Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
 
@@ -38,17 +37,6 @@ export function sanitizeFrame(raw) {
   const t = raw.t;
   if (!Number.isInteger(t) || t < 0) return null;
   return { t, s: clampUnit(raw.s), g: clampUnit(raw.g), b: raw.b === true, r: raw.r === true };
-}
-
-/** The truck-input object Truck.updateSim expects, from a frame. */
-export function toTruckInput(frame) {
-  return {
-    forward: frame.g > THROTTLE_DEADZONE,
-    back: frame.g < -THROTTLE_DEADZONE,
-    left: frame.s < -STEER_DEADZONE,
-    right: frame.s > STEER_DEADZONE,
-    steer: Math.abs(frame.s) > STEER_DEADZONE ? frame.s : 0,
-  };
 }
 
 /** One player's pending frames and last applied input. */

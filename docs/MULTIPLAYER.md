@@ -461,6 +461,40 @@ height. Analytic terrain sampling is the safe path here; divergence between the
 raycast and analytic paths shows up as visible snapping. This is the piece most
 likely to need iteration.
 
+**Progress (2026-09-27): built.**
+- `src/net/Prediction.js` — the player's truck simulates each tick it sends
+  input for: the per-truck part of `RaceSimulation.step` (updateSim, wall
+  collisions, slow / speed-pad zones, nitro on the rising edge, grid handbrake
+  until GO), recording `Truck.captureSimState()` per tick. A snapshot for tick t
+  is compared with the record for t (1 cm / 0.002 rad / 0.05 m/s / nitro count);
+  on a mismatch the truck is restored to t, given the server's pose, velocity,
+  pitch/roll, timers and suspension, and the stored inputs replayed (≤ 30 ticks).
+  Corrections glide out over ~0.1 s (a > 3 m jump — a respawn — cuts). Rendered
+  between the last two predicted ticks, like FixedStepLoop.
+- Shared so client and server can't drift: `src/sim/input-frame.js` (frame →
+  truck controls) and `src/sim/snapshot-wire.js` (snapshot short keys). The
+  truck's own roughness RNG stream is seeded identically and is rewindable
+  (`getState` / `setState`). Snapshots gained `bt sbt nd ns sc`.
+- `Truck.captureSimState` / `restoreSimState` (`src/sim/sim-state.js`): pose,
+  `state`, terrain/controls/drift internals, the surface-continuity lock, the
+  terrain query's last surface, RNG position. Verified complete: after a
+  respawn correction the full state diff between server and client is empty.
+- **Found and fixed:** Havok wrote each truck's body back onto its mesh after
+  every physics step, float32-rounded — the server and client step Havok on
+  different schedules, so that alone broke exact prediction. Truck bodies now
+  have `disableSync` (the mesh is the sole authority; affects single-player only
+  by removing that rounding).
+- `npm run check:prediction`: server race + predicting client side by side —
+  exact match tick for tick (1200 ticks on apple_river, until an out-of-bounds
+  respawn elsewhere); late snapshots need no correction beyond ≤ 2 per server
+  respawn; a knocked-off prediction recovers (last 3 s: p90 ≤ 6 mm).
+- NetRaceMode logs `rtt · corrections · resets` to the console every 5 s.
+
+Not predicted (the snapshot corrects them): other trucks, obstacle hits,
+pickups, out-of-bounds and requested respawns. A snapshot only carries the
+pose, not the truck's internal smoothing, so after a real misprediction the
+internals can differ slightly and a landing may need one more small correction.
+
 ### Phase 7 — Replay archive and bot detection
 
 - The input log is nearly free: a few bytes per player per tick. The child streams

@@ -20,6 +20,7 @@ import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH, TRUCK_COLLISION_STEP_LIFT } fro
 import { SPLASH_MIN_DEPTH } from "../constants.js";
 import { UPGRADES } from "../managers/UpgradeStorage.js";
 import { TERRAIN_TYPES } from "../world/terrain.js";
+import { captureFields, restoreFields } from "../sim/sim-state.js";
 
 // --- AI terrain-sampling LOD -------------------------------------------------
 // AI trucks only need the expensive multi-probe floor sampling near bridges,
@@ -42,6 +43,8 @@ const AI_TERRAIN_LOW_DETAIL_DIST = 75; // metres
 const YAW_PIVOT_FORWARD = 1.5; // ≈ front axle (TruckBody frontAxle)
 // Forward speed above which stamping on the brakes starts laying rubber (m/s).
 const TIRE_MARK_BRAKE_SPEED = 7;
+// Fixed wiring on the sim subsystems — never part of a captured state.
+const SIM_STATE_SKIP = new Set(["state", "random", "_terrainQuery", "_continuityOptions"]);
 
 /**
  * Main Truck class that coordinates all truck subsystems
@@ -305,6 +308,12 @@ export class Truck {
     }, this.scene);
     physics.body.setMotionType(PhysicsMotionType.ANIMATED);
     physics.body.disablePreStep = false;
+    // The mesh is the sole authority on the truck's pose (updateSim integrates
+    // it; preStep pushes it to Havok). Without this Havok writes the body back
+    // onto the mesh after every physics step, float32-rounded — noise that made
+    // a predicting client drift from the server, which steps Havok on a
+    // different schedule (docs/MULTIPLAYER.md, Phase 6).
+    physics.body.disableSync = true;
     
     return physics;
   }
@@ -465,6 +474,45 @@ export class Truck {
     f.effectsTerrain = terrain;
     f.effectiveGrip = 1;
     f.terrainGripMultiplier = terrain?.gripMultiplier ?? 1;
+  }
+
+  /**
+   * Everything updateSim() reads and writes about this truck, so a client can
+   * rewind its predicted truck and replay inputs (src/net/Prediction.js).
+   * Covers the pose, `state`, and the terrain / controls / drift internals —
+   * including the two nested values mutated in place (the surface-continuity
+   * lock and the terrain query's last surface) and the roughness RNG position.
+   */
+  captureSimState() {
+    const tp = this.terrainPhysics;
+    return {
+      position: this.mesh.position.clone(),
+      rotation: this.mesh.rotation.clone(),
+      state: captureFields(this.state),
+      terrain: captureFields(tp, SIM_STATE_SKIP),
+      lockSurfaceId: tp._continuityOptions.transitionLock.surfaceId,
+      querySurface: tp._terrainQuery?._lastResolvedSurface ?? null,
+      rng: tp.random.getState?.() ?? null,
+      controls: captureFields(this.controls, SIM_STATE_SKIP),
+      drift: captureFields(this.driftPhysics, SIM_STATE_SKIP),
+      aiMultiProbeSticky: this._aiMultiProbeSticky,
+    };
+  }
+
+  /** Put back a captureSimState() result (and re-sync the physics body). */
+  restoreSimState(s) {
+    const tp = this.terrainPhysics;
+    this.mesh.position.copyFrom(s.position);
+    this.mesh.rotation.copyFrom(s.rotation);
+    restoreFields(this.state, s.state);
+    restoreFields(tp, s.terrain);
+    tp._continuityOptions.transitionLock.surfaceId = s.lockSurfaceId;
+    if (tp._terrainQuery) tp._terrainQuery._lastResolvedSurface = s.querySurface;
+    if (s.rng !== null) tp.random.setState?.(s.rng);
+    restoreFields(this.controls, s.controls);
+    restoreFields(this.driftPhysics, s.drift);
+    this._aiMultiProbeSticky = s.aiMultiProbeSticky;
+    this.syncPhysicsBody();
   }
 
   /** Debug-overlay payload for the last updateSim() (reused object). */

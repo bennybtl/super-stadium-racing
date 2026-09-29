@@ -276,6 +276,11 @@ export class RaceSimulation {
           slip: st.slipAngle ?? 0,
           throttle: st.throttle ?? 0,
           steer: td.truck.controls.steerAmount,
+          boostTimer: st.boostActive ? st.boostTimer : 0,
+          speedBoostTimer: st.speedBoostActive ? st.speedBoostTimer : 0,
+          noDriveTimer: st.noDriveTimer ?? 0,
+          noSteerTimer: st.noSteerTimer ?? 0,
+          suspension: st.suspensionCompression ?? 0,
           flags: (td.truck.simFrame.isGrounded ? 1 : 0) | (boostActive ? 2 : 0)
             | (gs.raceFinished ? 4 : 0) | (speedBoostActive ? 8 : 0),
         };

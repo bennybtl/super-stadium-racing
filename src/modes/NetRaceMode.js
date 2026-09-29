@@ -8,6 +8,9 @@ import { DriveMode } from "./DriveMode.js";
 import { basicColors } from "../constants.js";
 import { AI_COLOR_KEYS } from "../ai/setupAIDrivers.js";
 import { NetClient, TICK_RATE } from "../net/NetClient.js";
+import { Prediction } from "../net/Prediction.js";
+import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
+import { rngStream } from "../sim/rng.js";
 
 // How many rendered frames a tapped nitro / reset key stays "held" in the
 // input stream — enough to survive a dropped packet, one rising edge server-side.
@@ -117,8 +120,24 @@ export class NetRaceMode extends DriveMode {
     let selfFinishMs = null;
     let resultsShown = false;
 
+    // -- Prediction: our own truck simulates locally, reconciled to the server --
+    const prediction = new Prediction({
+      truck: self.truck,
+      track: currentTrack,
+      terrainManager,
+      staticBodyCollisionManager: new StaticBodyCollisionManager(scene),
+    });
+    this.prediction = prediction;
+    const pendingSnapshots = [];
+
     this._unsubscribers.push(
+      net.on('welcome', ({ seed }) => {
+        // The same seeded roughness stream the server gives our truck.
+        self.truck.terrainPhysics.random = rngStream(seed, `truck:${selfId}`);
+      }),
+      net.on('snapshot', (snap) => pendingSnapshots.push(snap)),
       net.on('countdown', ({ goTick }) => {
+        prediction.goTick = goTick;
         // Line the 3-2-1 up with the server's GO tick.
         const msToGo = ((goTick - net.serverTick()) / TICK_RATE) * 1000;
         const t = setTimeout(() => this.runCountdownSequence(uiManager, () => {
@@ -208,6 +227,7 @@ export class NetRaceMode extends DriveMode {
     // -- Frame loop: send input, pose trucks from snapshots, present --
     const sample = {};
     let statusElapsedMs = 0;
+    let statsElapsedMs = 0;
     scene.onBeforeRenderObservable.add(() => {
       if (document.hidden) return;
       const dt = this.getClampedDeltaTime(engine, 0.1);
@@ -226,10 +246,30 @@ export class NetRaceMode extends DriveMode {
       }
       if (boostFrames > 0) boostFrames--;
       if (resetFrames > 0) resetFrames--;
-      net.sendInput(frame);
+
+      // Our truck: back onto its sim pose, reconcile with any new snapshots,
+      // then simulate the ticks we're sending input for now.
+      prediction.restorePose();
+      for (const snap of pendingSnapshots.splice(0)) {
+        const mine = snap.trucks.find((t) => t.id === selfId);
+        if (!mine) continue;
+        if (!prediction.started) prediction.start(mine, snap.t);
+        else prediction.reconcile(mine, snap.t);
+        self.lap = mine.lap ?? self.lap;
+        self.finished = (mine.flags & 4) !== 0;
+      }
+      const ticks = net.sendInput(frame);
+      prediction.predictTo(ticks.at(-1) ?? prediction.lastTick ?? -1, ticks.map((t) => [t, frame]));
+      if (prediction.started) {
+        if (!self.seen) self.seen = true;
+        prediction.present(Math.min(1, Math.max(0, net.predictionTick() - prediction.lastTick)), dt);
+        self.truck.updatePresentation(dt, terrainManager, currentTrack, self.truck.mesh.position);
+        self.boosts = prediction.boosts;
+      }
 
       const renderTick = net.renderTick();
       for (const r of racers) {
+        if (r.isSelf && prediction.started) continue;
         if (!net.snapshots.sample(r.id, renderTick, sample)) continue;
         if (!r.seen) {
           r.seen = true;
@@ -251,6 +291,12 @@ export class NetRaceMode extends DriveMode {
       }
       uiManager.updateBoosts(self.boosts ?? 0);
       uiManager.setBoostActive(self.truck.state.boostActive);
+      statsElapsedMs += dt * 1000;
+      if (statsElapsedMs >= 5000) {
+        statsElapsedMs = 0;
+        const s = prediction.stats;
+        console.info(`[NetRaceMode] rtt ${net.clock.rttMs?.toFixed(0)} ms · corrections ${s.corrections} (last ${s.lastError.toFixed(3)} m, replayed ${s.replayed}) · resets ${s.resets}`);
+      }
       statusElapsedMs += dt * 1000;
       if (statusElapsedMs >= TRUCK_STATUS_UI_INTERVAL_MS) {
         statusElapsedMs = 0;
