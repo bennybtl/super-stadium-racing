@@ -51,7 +51,7 @@ import {
   applySteepGrassTerrainRemap,
   applySteepWaterTerrainRemap,
 } from "../world/terrain-utils.js";
-import { loadDisplaySettings } from "../settingsStorage.js";
+import { loadDisplaySettings, loadGameplaySettings } from "../settingsStorage.js";
 import { ShadowCasterGroup } from "./ShadowCasterGroup.js";
 import { SharedTireMarksManager } from "../managers/SharedTireMarksManager.js";
 
@@ -120,7 +120,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   const cameraController = new CameraController(camera, new Vector3(0, 28, -20));
   // Starting mode only — a live settings change mid-drive shouldn't yank the
   // camera away from whatever the player has since cycled to with 'C'.
-  cameraController.mode = loadDisplaySettings().preferredView;
+  cameraController.mode = loadGameplaySettings().preferredView;
 
   // -- Light intensity tuning --
   // Every number here is consumed by applyDisplaySettings() below, which runs

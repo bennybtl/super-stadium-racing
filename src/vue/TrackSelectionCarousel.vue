@@ -132,15 +132,18 @@ const filteredTracks = computed(() => {
 });
 
 const displayTracks = computed(() => {
-  return filteredTracks.value.map(trackData => ({
-    key: trackData.key,
-    name: trackData.name,
-    image: trackData?.image
-      ? (getImageUrl(trackData.image) ?? trackImageUrl(trackData.image))
-      : null,
-    // The editor (showHidden) ignores player-facing lock state entirely.
-    locked: !props.showHidden && !!trackData.locked,
-  }));
+  return filteredTracks.value
+    .map(trackData => ({
+      key: trackData.key,
+      name: trackData.name,
+      image: trackData?.image
+        ? (getImageUrl(trackData.image) ?? trackImageUrl(trackData.image))
+        : null,
+      // The editor (showHidden) ignores player-facing lock state entirely.
+      locked: !props.showHidden && !!trackData.locked,
+    }))
+    // Unlocked tracks first, alphabetical within each group.
+    .sort((a, b) => (a.locked === b.locked ? a.name.localeCompare(b.name) : a.locked ? 1 : -1));
 });
 
 // Locked tracks stay visible (with a padlock) but can't become the selection.

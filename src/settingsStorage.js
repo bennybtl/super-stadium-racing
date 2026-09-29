@@ -57,13 +57,13 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   checkpointArrow: true,
   aiTruckShadows: true,
   treeDetail: 'high',
-  minimap: true,
-  cameraShake: true,
-  preferredView: 'fixed',
 };
 
 export const DEFAULT_GAMEPLAY_SETTINGS = {
   rubberBand: 'medium',
+  minimap: true,
+  cameraShake: true,
+  preferredView: 'fixed',
 };
 
 function deepClone(value) {
@@ -119,11 +119,8 @@ function normalizeAudioSettings(candidate) {
 function normalizeDisplaySettings(candidate) {
   const shadow = candidate?.shadow;
   const lights = Number(candidate?.lights);
-  const preferredView = candidate?.preferredView;
   const validShadow = shadow === 'off' || shadow === 'low' || shadow === 'medium' || shadow === 'high';
   const validLights = lights === 1 || lights === 2 || lights === 4;
-  const validView = preferredView === 'fixed' || preferredView === 'isometric'
-    || preferredView === 'chase' || preferredView === 'chase-low';
 
   return {
     shadow: validShadow ? shadow : DEFAULT_DISPLAY_SETTINGS.shadow,
@@ -137,22 +134,25 @@ function normalizeDisplaySettings(candidate) {
     treeDetail: candidate?.treeDetail === 'low' || candidate?.treeDetail === 'high'
       ? candidate.treeDetail
       : DEFAULT_DISPLAY_SETTINGS.treeDetail,
-    minimap: candidate?.minimap === undefined
-      ? DEFAULT_DISPLAY_SETTINGS.minimap
-      : Boolean(candidate.minimap),
-    cameraShake: candidate?.cameraShake === undefined
-      ? DEFAULT_DISPLAY_SETTINGS.cameraShake
-      : Boolean(candidate.cameraShake),
-    preferredView: validView ? preferredView : DEFAULT_DISPLAY_SETTINGS.preferredView,
   };
 }
 
 function normalizeGameplaySettings(candidate) {
   const rubberBand = candidate?.rubberBand;
+  const preferredView = candidate?.preferredView;
   const validRubberBand = rubberBand === 'off' || rubberBand === 'low' || rubberBand === 'medium' || rubberBand === 'high';
+  const validView = preferredView === 'fixed' || preferredView === 'isometric'
+    || preferredView === 'chase' || preferredView === 'chase-low';
 
   return {
     rubberBand: validRubberBand ? rubberBand : DEFAULT_GAMEPLAY_SETTINGS.rubberBand,
+    minimap: candidate?.minimap === undefined
+      ? DEFAULT_GAMEPLAY_SETTINGS.minimap
+      : Boolean(candidate.minimap),
+    cameraShake: candidate?.cameraShake === undefined
+      ? DEFAULT_GAMEPLAY_SETTINGS.cameraShake
+      : Boolean(candidate.cameraShake),
+    preferredView: validView ? preferredView : DEFAULT_GAMEPLAY_SETTINGS.preferredView,
   };
 }
 

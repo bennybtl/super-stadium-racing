@@ -9,7 +9,7 @@
 // the top 3 unlocks its reward truck and activates its reward pack (or
 // Remix Championship, for the last pack in the chain).
 
-import { PACK_PROGRESSION, DEFAULT_UNLOCKED_TRUCKS, DEFAULT_ACTIVE_PACK } from '../config/progression.js';
+import { PACK_PROGRESSION, DEFAULT_UNLOCKED_TRUCKS, DEFAULT_ACTIVE_PACK, REMIX_PACK_ID } from '../config/progression.js';
 
 const STORAGE_KEY = 'player_progress';
 export const PROGRESS_SCHEMA_VERSION = 1;
@@ -51,6 +51,22 @@ export function loadPlayerProgress() {
 export function savePlayerProgress(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   return state;
+}
+
+/** Settings-screen "Reset Progression": back to Baja + the starting pack. */
+export function resetPlayerProgress() {
+  return savePlayerProgress(defaultState());
+}
+
+/** Cheat code: every truck, pack and track unlocked outright. */
+export function unlockAllProgress() {
+  return savePlayerProgress({
+    version: PROGRESS_SCHEMA_VERSION,
+    unlockedTrucks: window.vehicleLoader?.getVehicleList?.().map(v => v.key) ?? [...DEFAULT_UNLOCKED_TRUCKS],
+    activePacks: [...Object.keys(PACK_PROGRESSION), REMIX_PACK_ID],
+    unlockedTracks: window.trackLoader?.getTrackList?.() ?? [],
+    completedPacks: Object.keys(PACK_PROGRESSION),
+  });
 }
 
 function starterTracksOf(packId) {

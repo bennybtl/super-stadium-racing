@@ -98,13 +98,17 @@ export function isChampionshipComplete(state) {
 /**
  * Apply one race's finish order to the cup: award points/purse to every driver
  * by their finishing position and advance to the next race. `finishOrder` is an
- * array of driver ids, winner first. Returns a new state (input untouched).
+ * array of driver ids, winner first; `dnfIds` marks which of those didn't
+ * actually finish — they're skipped entirely rather than paid the tail-end
+ * position's award, so a DNF nets nothing rather than a last-place consolation.
+ * Returns a new state (input untouched).
  */
-export function applyRaceResult(state, finishOrder) {
+export function applyRaceResult(state, finishOrder, dnfIds = []) {
   const place = new Map(finishOrder.map((id, idx) => [id, idx + 1]));
+  const dnfSet = new Set(dnfIds);
   const drivers = state.drivers.map((d) => {
     const pos = place.get(d.id);
-    if (!pos) return { ...d };
+    if (!pos || dnfSet.has(d.id)) return { ...d };
     const { points, purse } = awardRace(pos);
     return {
       ...d,

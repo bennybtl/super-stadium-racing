@@ -11,7 +11,7 @@
  * 'fixed' camera, which looks down +Z.
  */
 
-import { loadDisplaySettings } from "../settingsStorage.js";
+import { loadGameplaySettings } from "../settingsStorage.js";
 
 const SIZE_PX = 190;
 const PAD_PX = 12;
@@ -71,14 +71,14 @@ export class Minimap {
     this._bg.width = this._bg.height = this.canvas.width;
     this._drawTrack(track, startFinish);
 
-    // Shown only while the Display setting is on and photo mode is off.
-    this._enabled = loadDisplaySettings().minimap !== false;
+    // Shown only while the Gameplay setting is on and photo mode is off.
+    this._enabled = loadGameplaySettings().minimap !== false;
     this._hidden = false;
     this._onDisplaySettingsChanged = (event) => {
-      this._enabled = (event?.detail ?? loadDisplaySettings()).minimap !== false;
+      this._enabled = (event?.detail ?? loadGameplaySettings()).minimap !== false;
       this._applyVisibility();
     };
-    window.addEventListener('offroad:display-settings-changed', this._onDisplaySettingsChanged);
+    window.addEventListener('offroad:gameplay-settings-changed', this._onDisplaySettingsChanged);
     this._applyVisibility();
   }
 
@@ -199,7 +199,7 @@ export class Minimap {
   }
 
   dispose() {
-    window.removeEventListener('offroad:display-settings-changed', this._onDisplaySettingsChanged);
+    window.removeEventListener('offroad:gameplay-settings-changed', this._onDisplaySettingsChanged);
     this.canvas.remove();
   }
 }

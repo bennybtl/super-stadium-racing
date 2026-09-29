@@ -269,7 +269,8 @@ export class ModeController {
   /** Award the just-finished race and route to the pit or the final podium. */
   _onChampionshipRaceComplete(finishOrderIds, meta) {
     const raceTrackKey = this.championship.calendar[this.championship.currentRaceIndex];
-    const state = applyRaceResult(this.championship, finishOrderIds);
+    const dnfIds = (meta?.rows ?? []).filter(row => row.dnf).map(row => row.id);
+    const state = applyRaceResult(this.championship, finishOrderIds, dnfIds);
     // Fold in per-driver post-race adjustments:
     //  • leftover nitro carries into the next race (consumable, not a refill),
     //  • cash from money pickups is added to the spendable wallet (not winnings,

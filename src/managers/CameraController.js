@@ -1,12 +1,12 @@
 import { Vector3 } from "@babylonjs/core";
-import { loadDisplaySettings } from "../settingsStorage.js";
+import { loadGameplaySettings } from "../settingsStorage.js";
 
-// Display setting "Camera Shake". Module-level (one listener, not one per
+// Gameplay setting "Camera Shake". Module-level (one listener, not one per
 // CameraController) since controllers are made per mode with no dispose hook.
-let shakeEnabled = loadDisplaySettings().cameraShake !== false;
+let shakeEnabled = loadGameplaySettings().cameraShake !== false;
 if (typeof window !== "undefined") {
-  window.addEventListener("offroad:display-settings-changed", (event) => {
-    shakeEnabled = (event?.detail ?? loadDisplaySettings()).cameraShake !== false;
+  window.addEventListener("offroad:gameplay-settings-changed", (event) => {
+    shakeEnabled = (event?.detail ?? loadGameplaySettings()).cameraShake !== false;
   });
 }
 

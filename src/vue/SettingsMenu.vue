@@ -23,7 +23,7 @@
       <DisplaySettings :in-race="inRace" @back="close" />
     </div>
     <div v-else-if="screen === 'gameplay'">
-      <GameplaySettings @back="close" />
+      <GameplaySettings :in-race="inRace" @back="close" />
     </div>
     <div v-else-if="screen === 'tracks'">
       <ManageTracksSettings @back="close" />

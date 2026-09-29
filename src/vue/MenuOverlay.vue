@@ -241,6 +241,12 @@
     :key="pitScreenKey"
     class="fixed inset-0 z-[1001] font-sans overflow-hidden pointer-events-none"
   >
+    <div v-if="showLockedContentHint" class="absolute inset-x-0 top-0 flex justify-center p-4 pointer-events-none">
+      <div class="pointer-events-auto max-w-xl rounded-lg bg-black/65 px-5 py-3 text-center shadow-[0_6px_24px_rgba(0,0,0,0.6)]">
+        <div class="text-lg font-bold text-amber-300">{{ lockedContentHintTitle }}</div>
+        <div class="mt-1 text-sm text-amber-100">{{ lockedContentHintBody }}</div>
+      </div>
+    </div>
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
       <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
         <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] mb-2">{{ store.pitData.pitMode }}</h2>
@@ -418,6 +424,23 @@ const packOptions = computed(() => store.activePackIds.map(id => ({
   label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
 })));
 const setupStep = ref('selectTruck');
+// Nudge players toward Championship mode while they're browsing tracks or
+// trucks in any other mode and some are still locked (championship-only pit
+// screens don't browse either list at all, so they're excluded).
+const showLockedContentHint = computed(() => {
+  if (!store.pitData || store.pitData.pitMode === 'championship') return false;
+  if (setupStep.value === 'selectTrack') return store.trackList.some(t => t.locked);
+  if (setupStep.value === 'selectTruck') return store.vehicleList.some(v => v.locked);
+  return false;
+});
+const lockedContentHintTitle = computed(() =>
+  setupStep.value === 'selectTruck' ? 'UNLOCK TRUCKS' : 'UNLOCK TRACKS'
+);
+const lockedContentHintBody = computed(() =>
+  setupStep.value === 'selectTruck'
+    ? 'Finish a Championship in the top 3 to unlock its reward truck.'
+    : 'Win a locked track in a Championship race to unlock it. Finish a Championship in the top 3 to unlock the next!'
+);
 // Each fresh pit-menu visit should start at vehicle selection, not wherever
 // the previous visit left off.
 watch(() => store.pitData, (newVal, oldVal) => {
