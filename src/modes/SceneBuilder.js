@@ -474,7 +474,7 @@ export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
   // per track anyway, so it rarely did. The cell painters snap their rects to
   // whole pixels instead (see _fillTerrainCell in ground-shader.js), which is
   // what keeps the raster from seaming.
-  const texSize = 2000;
+  const texSize = 2024;
   const pixelsPerCell = texSize / terrainManager.cellsPerSide;
 
   const {

@@ -297,35 +297,38 @@ export function attachWaterSurfacePlugin(material) {
 //
 // The foam ribbon (createWaterFoamRibbon in Water.js) bakes its band width,
 // shore-to-open falloff and dither into the mesh at build time — this plugin
-// only modulates the alpha that baked stream already produces, the same way
+// only reshapes the alpha that baked stream already produces, the same way
 // WaterSurfacePlugin only perturbs the surface normal:
 //
-//  - Organic breakup, same noise as the wake churn above, so the shoreline
-//    band froths and drifts instead of sitting as a static dithered gradient.
+//  - Procedural froth: drifting noise thresholded against the band's falloff,
+//    replacing the old swirl-texture mask (see below).
 //  - Shoreline lapping: where the wake field has reached the shore, the band
 //    is pushed toward fully solid — the truck's wake visibly washes it.
 //
-// One hazard specific to this material: `alpha` at CUSTOM_FRAGMENT_UPDATE_DIFFUSE
-// is still just the material's flat vDiffuseColor.a (1, since foam mat.alpha is
-// never set) — vertex alpha and the opacityTexture (the shared swirl mask) both
-// multiply in *after* this hook, not before. So this plugin only ever
-// multiplies `alpha`, never `max()`s it: a `max` against the still-1 value here
-// would be silently overwritten the instant the later vertex-alpha multiply
-// runs, which is the trap WaterSurfacePlugin's own `alpha = max(...)` line
-// above sits in without needing it (that value is only cosmetic there — the
-// churn read comes from the rgb whitening, not the alpha line).
-
-// Patch size smaller than the wake churn's — the ribbon is a much narrower
-// band, so patches need to read at that scale rather than get averaged out.
-const FOAM_NOISE_SCALE = 0.45;
+// Shoreline foam is the depth-foam technique from a Babylon Playground sample:
+// scrolling value noise multiplied by a shallowness mask, then hard-thresholded
+// with a narrow smoothstep. The mask is the ribbon's baked vertex alpha (1 at
+// the shore, 0 toward open water), so the froth is solid at the waterline and
+// breaks into crisp organic blobs that thin out and vanish with distance.
+//
+// This runs at CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR rather than the diffuse hook:
+// vertex alpha only multiplies into `alpha` after the diffuse hook, but by here
+// it is already folded into color.a. The ribbon material has no opacityTexture.
+const FOAM_NOISE_SCALE = 0.9;   // world units^-1 — larger = smaller blobs
 const FOAM_NOISE_SPEED = 0.10;
-const FOAM_NOISE_LO = 0.30;
-const FOAM_NOISE_HI = 0.70;
-// The breakup never drops the baked band fully to zero — a full black-out
-// would read as a hole in the shoreline rather than froth.
-const FOAM_NOISE_FLOOR = 0.55;
+const FOAM_EDGE_LO = 0.22;      // smoothstep edges on noise * shallowness
+const FOAM_EDGE_HI = 0.34;
 // How hard a wake value pulls the band back toward fully solid.
 const FOAM_LAP_GAIN = 1.4;
+// Water motion, borrowed from the playground's animated surface. SWAY warps the
+// noise lookup by a second, slower noise so blobs slosh instead of only
+// scrolling; SURGE is a travelling wave that pushes the foam edge in and out
+// along the shore. Both are small — this is a hint of movement, not a wave sim.
+const FOAM_SWAY_SCALE = 0.35;   // world units^-1 of the warp noise
+const FOAM_SWAY_AMOUNT = 0.5;   // world units of warp
+const FOAM_SURGE_AMOUNT = 0.18; // fraction of shallowness the surge adds/removes
+const FOAM_SURGE_SPEED = (2 * Math.PI * 105) / WATER_TIME_WRAP; // rad/s — whole cycles per clock wrap, so no jump
+const FOAM_SURGE_FREQ = 0.6;    // rad per world unit along the water
 
 const _FOAM_GLSL_DEFS = `
   uniform sampler2D waterWakeSampler;
@@ -333,18 +336,22 @@ const _FOAM_GLSL_DEFS = `
   ${_WATER_NOISE_GLSL}
 `;
 
-const _FOAM_UPDATE_DIFFUSE = `
-  float _foamBreakupNoise = _waterNoise(vec3(vPositionW.xz * ${FOAM_NOISE_SCALE.toFixed(3)}, waterTime * ${FOAM_NOISE_SPEED.toFixed(3)}));
-  float _foamBreakup = smoothstep(${FOAM_NOISE_LO.toFixed(3)}, ${FOAM_NOISE_HI.toFixed(3)}, _foamBreakupNoise);
-  float _foamMul = mix(${FOAM_NOISE_FLOOR.toFixed(3)}, 1.0, _foamBreakup);
+const _FOAM_BEFORE_FRAGCOLOR = `
+  vec2 _foamWarp = vec2(
+    _waterNoise(vec3(vPositionW.xz * ${FOAM_SWAY_SCALE.toFixed(3)}, waterTime * 0.21)),
+    _waterNoise(vec3(vPositionW.zx * ${FOAM_SWAY_SCALE.toFixed(3)} + 17.0, waterTime * 0.21))
+  ) - 0.5;
+  vec2 _foamPos = vPositionW.xz + _foamWarp * ${(FOAM_SWAY_AMOUNT * 2).toFixed(3)};
+  float _foamNoise = _waterNoise(vec3(_foamPos * ${FOAM_NOISE_SCALE.toFixed(3)}, waterTime * ${FOAM_NOISE_SPEED.toFixed(3)}));
+  float _surge = sin(waterTime * ${FOAM_SURGE_SPEED.toFixed(3)} + (vPositionW.x + vPositionW.z) * ${FOAM_SURGE_FREQ.toFixed(3)});
 
   // Outside the wake field's bounds this samples the permanently-zero padded
   // border, so a track with no truck nearby costs one tap and changes nothing.
   vec2 _fUv = (vPositionW.xz - waterWakeBounds.xy) * waterWakeBounds.zw;
   float _fWake = texture2D(waterWakeSampler, _fUv).r;
-  _foamMul = mix(_foamMul, 1.0, clamp(_fWake * ${FOAM_LAP_GAIN.toFixed(3)}, 0.0, 1.0));
 
-  alpha *= _foamMul;
+  float _shallow = clamp(color.a * (1.0 + _surge * ${FOAM_SURGE_AMOUNT.toFixed(3)}) + _fWake * ${FOAM_LAP_GAIN.toFixed(3)}, 0.0, 1.0);
+  color.a = smoothstep(${FOAM_EDGE_LO.toFixed(3)}, ${FOAM_EDGE_HI.toFixed(3)}, _foamNoise * _shallow);
 `;
 
 export class WaterFoamPlugin extends MaterialPluginBase {
@@ -404,7 +411,7 @@ export class WaterFoamPlugin extends MaterialPluginBase {
     if (shaderType !== "fragment") return null;
     return {
       "CUSTOM_FRAGMENT_DEFINITIONS": _FOAM_GLSL_DEFS,
-      "CUSTOM_FRAGMENT_UPDATE_DIFFUSE": _FOAM_UPDATE_DIFFUSE,
+      "CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR": _FOAM_BEFORE_FRAGCOLOR,
     };
   }
 }

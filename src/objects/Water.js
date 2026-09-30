@@ -10,7 +10,6 @@ import {
   isWaterFeature,
   isMudFeature,
   foamWidths,
-  foamTiling,
   FOAM_NOMINAL_WIDTH,
 } from "./water-field.js";
 import { attachWaterSurfacePlugin, attachWaterFoamPlugin } from "../shaders/water-shader.js";
@@ -23,18 +22,9 @@ import { attachWaterSurfacePlugin, attachWaterFoamPlugin } from "../shaders/wate
 
 // ─── Meshes ────────────────────────────────────────────────────────────────
 
-const _foamTextureModules = import.meta.glob('../assets/textures/water-swirl.texture.png', {
-  eager: true, query: '?url', import: 'default',
-});
-const FOAM_TEXTURE_URL = Object.values(_foamTextureModules)[0];
-
 // A tiny vertical bias so the foam sits just above the water plane without
 // z-fighting. Band width is not a constant — see foamWidths in water-field.js.
 const FOAM_Y_BIAS = 0.05;
-// World size of one repeat of the swirl mask. The mask is mapped isotropically —
-// `v` across the band uses the same world-units-per-UV as `u` along it — so the
-// swirls stay round instead of smearing along a band whose width varies.
-const FOAM_TEXTURE_TILE = 15;
 // Dither: per-vertex the band width shrinks by up to this fraction and the
 // shoreline opacity drops by up to FOAM_ALPHA_DITHER, breaking up the uniform
 // gradient into a frothier edge.
@@ -126,29 +116,6 @@ function getWaterMaterial(scene, kind) {
   return mat;
 }
 
-const _foamTextures = new WeakMap();
-
-/**
- * The shoreline swirl mask, one per scene. Exported because the wake ribbon
- * (WakeRibbon.js) wants the same froth so the two read as one material.
- * Callers must not mutate its offsets — it is shared; clone it if you need your
- * own scroll.
- *
- * @param {BABYLON.Scene} scene
- * @returns {import('@babylonjs/core').Texture|null}
- */
-export function getSharedFoamTexture(scene) {
-  if (!FOAM_TEXTURE_URL) return null;
-  const cached = _foamTextures.get(scene);
-  if (cached) return cached;
-
-  const tex = new Texture(FOAM_TEXTURE_URL, scene);
-  tex.wrapU = Texture.WRAP_ADDRESSMODE;
-  tex.wrapV = Texture.WRAP_ADDRESSMODE;
-  _foamTextures.set(scene, tex);
-  return tex;
-}
-
 function getFoamMaterial(scene, kind) {
   let byKind = _foamMaterials.get(scene);
   if (!byKind) { byKind = {}; _foamMaterials.set(scene, byKind); }
@@ -166,12 +133,8 @@ function getFoamMaterial(scene, kind) {
   mat.specularColor = new Color3(0, 0, 0);
   mat.backFaceCulling = false;
 
-  // The swirl mask multiplies into the band's own gradient: the alpha channel
-  // carries the froth, the vertex alpha carries shore-to-open-water falloff.
-  // Shared across kinds — only the emissive tint above changes the froth's
-  // colour, so mud and water can reuse the same mask texture.
-  const foam = getSharedFoamTexture(scene);
-  if (foam) mat.opacityTexture = foam;
+  // No opacity texture: the foam plugin thresholds noise against the band's
+  // vertex-alpha falloff (see water-shader.js), so the froth is procedural.
 
   // Organic breakup + wake lapping (WATER_REACTIVE.md Phase 3). Attaches once
   // per scene with the material, so every shoreline ribbon of this kind shares
@@ -205,7 +168,6 @@ function createWaterFoamRibbon(name, contour, y, sgn, widths, scene, kind) {
 
   const inner = new Array(n);
   const noise = new Array(n);
-  const bandWidth = new Array(n);
   for (let i = 0; i < n; i++) {
     const a = edgeIn[(i - 1 + n) % n];
     const b = edgeIn[i];
@@ -215,20 +177,13 @@ function createWaterFoamRibbon(name, contour, y, sgn, widths, scene, kind) {
     const ns = _foamNoise(contour[i].x, contour[i].z);
     noise[i] = ns;
     const w = widths[i] * (1 - FOAM_WIDTH_DITHER * ns); // wavy inner edge
-    bandWidth[i] = w;
     inner[i] = { x: contour[i].x + bx * w, z: contour[i].z + bz * w };
   }
-
-  // Mask UVs: `u` runs the shoreline by arc length, `v` across the band at the
-  // same world-to-UV scale so the swirls stay square as the band widens.
-  const { edgeLen, uvScale } = foamTiling(contour, FOAM_TEXTURE_TILE);
 
   const fy = y + FOAM_Y_BIAS;
   const positions = [];
   const colors = [];
   const normals = [];
-  const uvs = [];
-  let travelled = 0;
   for (let i = 0; i < n; i++) {
     positions.push(contour[i].x, fy, contour[i].z); // outer (shoreline)
     positions.push(inner[i].x, fy, inner[i].z);     // inner (open water)
@@ -236,9 +191,6 @@ function createWaterFoamRibbon(name, contour, y, sgn, widths, scene, kind) {
     colors.push(1, 1, 1, shoreAlpha); // ~opaque white at the shore
     colors.push(1, 1, 1, 0);          // transparent toward open water
     normals.push(0, 1, 0, 0, 1, 0);
-    const u = travelled * uvScale;
-    uvs.push(u, 0, u, bandWidth[i] * uvScale);
-    travelled += edgeLen[i];
   }
   const indices = [];
   for (let i = 0; i < n; i++) {
@@ -252,7 +204,6 @@ function createWaterFoamRibbon(name, contour, y, sgn, widths, scene, kind) {
   vd.indices = indices;
   vd.normals = normals;
   vd.colors = colors;
-  vd.uvs = uvs;
   vd.applyToMesh(mesh);
   mesh.isPickable = false;
   mesh.useVertexColors = true;

@@ -1,5 +1,5 @@
 import { Mesh, VertexBuffer, VertexData, StandardMaterial, Color3 } from "@babylonjs/core";
-import { getSharedFoamTexture } from "../objects/Water.js";
+import { attachWaterFoamPlugin } from "../shaders/water-shader.js";
 
 /**
  * WakeRibbon — the V-shaped foam trail a truck drags through water.
@@ -39,11 +39,13 @@ const SPREAD_RATE = 2.5;       // metres of half-width per second of age
 // NODE_LIFE so it never binds during a node's life.
 const HALF_WIDTH_MAX = 10.0;
 
-// Alpha across the ribbon: the two edges are the wake lines and carry most of
-// it, the centre is the churn between them and thins out faster, so an old
-// stretch of wake reads as two diverging lines rather than a solid wedge.
+// Alpha across the ribbon: the two wake lines carry most of it, the centre is
+// the churn between them and thins out faster, so an old stretch of wake reads
+// as two diverging lines rather than a solid wedge. OUTER_ALPHA is the trace of
+// foam left at the very edge — small, so the outside is soft and sparse.
 const EDGE_ALPHA = 1.0;
 const CENTRE_ALPHA = 0.70;
+const OUTER_ALPHA = 0.0;
 const CENTRE_FADE_POWER = 1.4; // centre fades this much faster than the edges
 
 // Fraction of a node's life spent at full strength before it starts fading.
@@ -64,9 +66,13 @@ const TAPER_NODES = 10;
 const TELEPORT_DIST = 12;
 
 const Y_LIFT = 0.06;           // above the water surface, same idea as FOAM_Y_BIAS
-const UV_SCALE = 0.12;         // texture repeats per metre along the ribbon
 
-const VERTS_PER_NODE = 3;      // left edge, centre, right edge
+// Cross-section: outer left, left wake line, centre, right wake line, outer
+// right. The wake lines sit inside the ribbon's edge and carry the foam; the
+// outer vertices are alpha zero, so the froth feathers out past the line
+// instead of ending on a hard cut. OFFSETS are fractions of the half-width.
+const VERTS_PER_NODE = 5;
+const PROFILE_OFFSETS = [-1.0, -0.7, 0.0, 0.7, 1.0];
 
 // Every truck's ribbon wants the identical material, and a race can field eight
 // of them. One per scene, built on first use — the same reasoning as the water
@@ -83,10 +89,9 @@ function getRibbonMaterial(scene) {
   material.diffuseColor = Color3.Black();
   material.specularColor = Color3.Black();
   material.backFaceCulling = false;
-  // The same swirl mask the shoreline foam uses, so the two read as one
-  // material. Its alpha carries the froth; the vertex alpha carries the V.
-  const foam = getSharedFoamTexture(scene);
-  if (foam) material.opacityTexture = foam;
+  // The same procedural froth as the shoreline bands: the plugin thresholds
+  // drifting noise against this ribbon's vertex alpha, which carries the V.
+  attachWaterFoamPlugin(material);
   // The ribbon crosses itself wherever the truck turns, and every quad sits at
   // the same height, so depth writes would make those overlaps fight.
   material.disableDepthWrite = true;
@@ -108,15 +113,11 @@ export class WakeRibbon {
     // A truck spends almost all of its time out of the water, so an empty
     // ribbon writes and uploads its buffers once and then costs nothing at all.
     this._blank = false;
-    // Ageing moves every vertex and fades every colour, but UVs only shift when
-    // the node list itself changes, so they ride a separate flag.
-    this._uvDirty = true;
     this._lastX = 0;
     this._lastZ = 0;
 
     this._positions = new Float32Array(CAPACITY * VERTS_PER_NODE * 3);
     this._colors = new Float32Array(CAPACITY * VERTS_PER_NODE * 4);
-    this._uvs = new Float32Array(CAPACITY * VERTS_PER_NODE * 2);
     // Scratch for the end taper, reused rather than allocated per frame.
     this._taper = new Float32Array(CAPACITY);
     this.mesh = this._createMesh(scene);
@@ -188,16 +189,12 @@ export class WakeRibbon {
     while (expired < this._nodes.length && this._nodes[expired].age >= NODE_LIFE) expired++;
     if (expired > 0) {
       this._nodes.splice(0, expired);
-      this._uvDirty = true; // every node moved slot
     }
   }
 
   _push(x, z, y, rx, rz, strength) {
-    const prev = this._nodes[this._nodes.length - 1];
-    const dist = prev ? prev.dist + Math.hypot(x - prev.x, z - prev.z) : 0;
-    this._nodes.push({ x, y, z, rx, rz, strength, age: 0, dist });
+    this._nodes.push({ x, y, z, rx, rz, strength, age: 0 });
     if (this._nodes.length > CAPACITY) this._nodes.shift();
-    this._uvDirty = true;
   }
 
   /**
@@ -225,7 +222,6 @@ export class WakeRibbon {
       const node = i < count ? nodes[i] : nodes[count - 1];
       const p = i * VERTS_PER_NODE * 3;
       const c = i * VERTS_PER_NODE * 4;
-      const t = i * VERTS_PER_NODE * 2;
 
       const live = i < count;
       const ageT = Math.min(1, node.age / NODE_LIFE);
@@ -238,40 +234,27 @@ export class WakeRibbon {
       const oz = node.rz * halfWidth;
       const y = node.y + Y_LIFT;
 
-      this._positions[p]     = node.x - ox;
-      this._positions[p + 1] = y;
-      this._positions[p + 2] = node.z - oz;
-      this._positions[p + 3] = node.x;
-      this._positions[p + 4] = y;
-      this._positions[p + 5] = node.z;
-      this._positions[p + 6] = node.x + ox;
-      this._positions[p + 7] = y;
-      this._positions[p + 8] = node.z + oz;
+      for (let v = 0; v < VERTS_PER_NODE; v++) {
+        const o = PROFILE_OFFSETS[v];
+        this._positions[p + v * 3]     = node.x + ox * o;
+        this._positions[p + v * 3 + 1] = y;
+        this._positions[p + v * 3 + 2] = node.z + oz * o;
+      }
 
       const edge = fade * EDGE_ALPHA;
       const centre = fade * CENTRE_ALPHA * Math.pow(1 - ageT, CENTRE_FADE_POWER);
+      const outer = fade * OUTER_ALPHA;
       for (let v = 0; v < VERTS_PER_NODE; v++) {
         const k = c + v * 4;
         this._colors[k] = 1;
         this._colors[k + 1] = 1;
         this._colors[k + 2] = 1;
-        this._colors[k + 3] = v === 1 ? centre : edge;
+        this._colors[k + 3] = v === 2 ? centre : (v === 1 || v === 3) ? edge : outer;
       }
-
-      // u runs along the trail by distance travelled, so the froth stays put on
-      // the water instead of stretching when the truck speeds up.
-      const u = node.dist * UV_SCALE;
-      this._uvs[t] = u;     this._uvs[t + 1] = 0;
-      this._uvs[t + 2] = u; this._uvs[t + 3] = 0.5;
-      this._uvs[t + 4] = u; this._uvs[t + 5] = 1;
     }
 
     this.mesh.getVertexBuffer(VertexBuffer.PositionKind).updateDirectly(this._positions, 0);
     this.mesh.getVertexBuffer(VertexBuffer.ColorKind).updateDirectly(this._colors, 0);
-    if (this._uvDirty) {
-      this.mesh.getVertexBuffer(VertexBuffer.UVKind).updateDirectly(this._uvs, 0);
-      this._uvDirty = false;
-    }
   }
 
   /**
@@ -302,15 +285,16 @@ export class WakeRibbon {
   _createMesh(scene) {
     const mesh = new Mesh("wakeRibbon", scene);
 
-    // Two quads between consecutive nodes — left-to-centre and centre-to-right —
-    // so the centre vertex can carry its own alpha and the wake reads as two
-    // lines with churn between them rather than one flat wedge.
-    const indices = new Uint32Array((CAPACITY - 1) * 12);
+    // One quad per cross-section segment between consecutive nodes, so each
+    // profile vertex carries its own alpha and the wake reads as two lines with
+    // churn between them and a soft outer edge, rather than one flat wedge.
+    const segments = VERTS_PER_NODE - 1;
+    const indices = new Uint32Array((CAPACITY - 1) * segments * 6);
     let i = 0;
     for (let n = 0; n < CAPACITY - 1; n++) {
       const a = n * VERTS_PER_NODE;
       const b = (n + 1) * VERTS_PER_NODE;
-      for (let half = 0; half < 2; half++) {
+      for (let half = 0; half < segments; half++) {
         const a0 = a + half, a1 = a + half + 1;
         const b0 = b + half, b1 = b + half + 1;
         indices[i++] = a0; indices[i++] = b0; indices[i++] = b1;
@@ -322,7 +306,6 @@ export class WakeRibbon {
     vertexData.positions = this._positions;
     vertexData.indices = indices;
     vertexData.colors = this._colors;
-    vertexData.uvs = this._uvs;
     vertexData.applyToMesh(mesh, true);
 
     mesh.material = getRibbonMaterial(scene);

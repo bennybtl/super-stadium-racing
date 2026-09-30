@@ -993,7 +993,8 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   vec2 _tUVWobbled = clamp(_tUV + _wkWobble, vec2(0.0), vec2(1.0));
   vec2 _coordWobbled = clamp(_tUVWobbled * terrainCellCount, vec2(0.001), vec2((terrainCellCount - 1.0) + 0.999));
   vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUVWobbled);
-  _waterOverlay.a *= _waterCoverage(_coordWobbled);
+  float _waterCover = _waterCoverage(_coordWobbled);
+  _waterOverlay.a *= _waterCover;
   vec4 _wearOverlay = texture2D(terrainWearOverlaySampler, _tUV);
   float _wearLighten = _wearOverlay.r;
   float _wearDarken  = _wearOverlay.g;
@@ -1009,13 +1010,17 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   _terrainRgb = clamp(_terrainRgb * (1.0 + _wearLighten * 0.22), 0.0, 1.0);
   _terrainRgb = clamp(_terrainRgb * (1.0 - _wearDarken  * 0.22), 0.0, 1.0);
   _terrainBlendResult.a = clamp(_terrainBlendResult.a + max(_wearLighten, _wearDarken) * 0.06, 0.0, 1.0);
+  // Submerged ground is matte: the water surface above it carries the glints.
+  _terrainBlendResult.a *= 1.0 - _waterCover;
   baseColor = vec4(_terrainRgb, 1.0);
   // Tilt the surface normal by the tiled per-type relief. This block runs after
   // Babylon's bumpFragment, so normalW already carries the baked composite map
   // (ruts, decals, steep-slope overlays) and this adds the fine grain the bake
   // is too coarse to hold. Tangent frame is world X/Z, matching how the detail
   // is tiled, so the two just add.
-  normalW = normalize(normalW + vec3(_terrainDetailNormalResult.x, 0.0, _terrainDetailNormalResult.y) * terrainDetailNormalStrength);
+  // Fade the grain out under water: the surface above carries the ripples, and
+  // bed relief that doesn't move with them reads as a second, wrong skin.
+  normalW = normalize(normalW + vec3(_terrainDetailNormalResult.x, 0.0, _terrainDetailNormalResult.y) * terrainDetailNormalStrength * (1.0 - _waterCover));
 `;
 
 // Per-pixel specular intensity is now injected via a regex replacement

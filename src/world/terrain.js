@@ -10,7 +10,7 @@ export const TERRAIN_TYPES = {
     smokeColor: new Color3(0.9, 0.9, 0.9), // Light gray smoke
     dustIntensity: 0,        // Paved — no cruising dust
     diffuseTexture: 'textures/asphalt_2.texture.png',
-    diffuseTextureWorldUnitsPerTile: 20,
+    diffuseTextureWorldUnitsPerTile: 10,
     diffuseTextureOpacity: 0.5,
     dragMultiplier: 0.3,
     roughness: 0,            // Perfectly smooth
@@ -24,7 +24,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.packed_dirt,
     dustIntensity: 0.25,     // Compacted — light haze
     diffuseTexture: 'textures/packed_dirt.texture.png',
-    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.5,
     dragMultiplier: 0.5,
     roughness: 0.1,          // Very slight — compacted surface
@@ -39,7 +39,7 @@ export const TERRAIN_TYPES = {
     dustIntensity: 0.35,      // Loose soil — kicks up readily
     roosterTail: 1.0,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/loamy-soil.texture.png',
-    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.5,
     dragMultiplier: 1.1,
     roughness: 0.25,         // Noticeable ruts and loose clumps
@@ -54,7 +54,7 @@ export const TERRAIN_TYPES = {
     dustIntensity: 0.35,      // Loose — kicks up readily
     roosterTail: 0.9,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/dirt.texture.png',
-    diffuseTextureWorldUnitsPerTile: 30,
+    diffuseTextureWorldUnitsPerTile: 15,
     diffuseTextureOpacity: 0.5,
     dragMultiplier: 0.7,
     roughness: 0.15,         // Noticeable ruts and loos6e clumps
@@ -68,7 +68,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.mud,
     dustIntensity: 0,        // Wet — uses the mud-splash spray instead
     diffuseTexture: 'textures/mud.texture.png',
-    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 2.9,    // Slows you down
     roughness: 0.15,         // Sloppy but soft — low-impact bumps
@@ -103,7 +103,7 @@ export const TERRAIN_TYPES = {
     color: TERRAIN_COLORS.rocky, // Dark reddish-brown rock
     dustIntensity: 0.2,      // Grit and rock powder
     diffuseTexture: 'textures/rocky.texture.png',
-    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 0.8,     // Slowing — holes catch and drag the truck
     roughness: 0.75,         // Very rough — hard impacts and significant jostling
@@ -125,7 +125,7 @@ export const TERRAIN_TYPES = {
       'textures/grass_2.texture.jpg',
       'textures/grass_3.texture.jpg',
     ],
-    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.7,
     dragMultiplier: 1.2,     // Slightly slows down
     roughness: 0.3,          // Slightly rough — soft impacts
@@ -140,7 +140,7 @@ export const TERRAIN_TYPES = {
     dustIntensity: 0.25,     // Light clippings/haze
     roosterTail: 0.5,        // Tires throw a rooster tail under throttle
     diffuseTexture: 'textures/weeds.texture.jpg',
-    diffuseTextureWorldUnitsPerTile: 40,
+    diffuseTextureWorldUnitsPerTile: 20,
     diffuseTextureOpacity: 0.9,
     dustIntensity: 0.35,      // Loose — kicks up readily
     dragMultiplier: 1.1,     // Slightly slows down
