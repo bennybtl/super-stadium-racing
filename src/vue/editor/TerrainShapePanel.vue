@@ -70,7 +70,7 @@
         <button
           class="ed-btn-danger"
           @click="editor.featureAction('deleteTerrainShapePoint')"
-        >Delete Point</button>
+        ><i class="bi bi-trash"></i> Point</button>
         <button
           class="ed-btn"
           @click="editor.featureAction('insertTerrainShapePoint')"

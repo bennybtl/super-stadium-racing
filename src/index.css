@@ -101,18 +101,23 @@
   .ed-input   { @apply w-full mb-3 px-3 py-2 rounded-md border border-slate-700 bg-slate-800 text-[12px] text-white outline-none transition focus:border-slate-500; }
   .ed-checkbox { @apply h-4 w-4 shrink-0 cursor-pointer accent-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed; }
   .ed-heading { @apply mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500; }
-  .ed-divider { @apply my-4 border-t border-slate-700; }
+  .ed-divider { @apply my-4 border-t border-white/30; }
   /* contain: inline-size — hints wrap to the panel's width instead of setting it. */
   .ed-hint    { @apply mb-3 text-[10px] text-slate-400; contain: inline-size; }
   .ed-btn-row { @apply flex gap-2 mb-3; }
   .ed-btn {
-    @apply flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-slate-100
-           transition duration-150 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800;
+    @apply flex-1 rounded-md bg-white/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-black
+           transition duration-150 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed;
   }
   .ed-btn-danger {
-    @apply flex-1 rounded-md border border-red-500/70 bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100
+    @apply flex-1 rounded-md bg-red-950/70 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-red-100
            transition duration-150 hover:bg-red-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-950/70;
   }
+  .ed-btn-invert {
+    @apply flex-1 rounded-md bg-white/20 px-3 py-2 text-[12px] font-bold uppercase tracking-[1px] text-white
+           transition duration-150 hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
   /* One option of a segmented toggle (Flat | Sloped); active colour comes from :style. */
   .ed-seg     { @apply flex-1 rounded px-2 py-1 text-[12px] transition; }
   /* Small text-only action inside a label row (e.g. Jitter's Reroll). */

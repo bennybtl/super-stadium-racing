@@ -39,11 +39,11 @@
         <button
           class="ed-btn-danger"
           @click="editor.featureAction('deleteDecalPoint')"
-        >Delete Point</button>
+        ><i class="bi bi-trash"></i> Point</button>
         <button
           class="ed-btn"
           @click="editor.featureAction('insertDecalPoint')"
-        >Insert Point</button>
+        ><i class="bi bi-plus-circle-fill"></i> Point</button>
       </div>
       <hr class="ed-divider" />
     </template>

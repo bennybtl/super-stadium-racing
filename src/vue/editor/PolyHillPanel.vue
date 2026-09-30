@@ -31,7 +31,7 @@
         :disabled="!editor.polyHill.canDeletePoint"
         @click="editor.featureAction('deletePolyHillPoint')"
       >
-        Delete Point
+        <i class="bi bi-trash"></i> Point
       </button>
 
       <button
@@ -39,7 +39,7 @@
         :disabled="!editor.polyHill.hasSelection"
         @click="editor.featureAction('insertPolyHillPoint')"
       >
-        Insert Point
+        <i class="bi bi-plus-circle-fill"></i> Point
       </button>
     </div>
 

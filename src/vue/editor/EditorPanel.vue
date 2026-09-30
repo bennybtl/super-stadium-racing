@@ -2,13 +2,13 @@
   <div
     v-if="visible"
     ref="panelEl"
-    class="editor-panel fixed flex flex-col bg-slate-950/95 rounded-2xl z-50 min-w-[240px] text-white pointer-events-auto shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+    class="editor-panel fixed flex flex-col bg-black/75  rounded-2xl z-50 min-w-[240px] text-white pointer-events-auto shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
     :style="panelStyle"
     @mousedown.stop
   >
     <!-- Header acts as drag handle. shrink-0 so it survives a squeezed panel. -->
     <div
-      class="flex shrink-0 items-center justify-between px-4 py-3 border-b border-slate-700 cursor-grab active:cursor-grabbing text-slate-200"
+      class="flex shrink-0 items-center justify-between px-4 py-3 cursor-grab active:cursor-grabbing text-slate-200"
       @mousedown="startDrag"
     >
       <span class="text-[11px] font-bold uppercase tracking-[0.2em]">{{ title }}</span>
@@ -137,7 +137,7 @@ onUnmounted(() => {
   window.removeEventListener('resize',    onResize);
 });
 
-const PANEL_ACCENT = '#9ca3af';
+const PANEL_ACCENT = '#f0a020';
 
 // Distance from the top of the window to the panel's top edge, whether that came
 // from a drag or from the default offset.
@@ -150,7 +150,7 @@ const topOffset = computed(() => {
 const panelStyle = computed(() => ({
   // CSS variable cascades to slot content for a uniform silver accent.
   '--accent': PANEL_ACCENT,
-  border: `2px solid ${PANEL_ACCENT}`,
+  backdropFilter: 'blur(10px) saturate(120%)',
   maxHeight: `${Math.max(MIN_PANEL_HEIGHT, viewport.value.height - topOffset.value - PANEL_MARGIN - STATUS_BAR_HEIGHT)}px`,
   maxWidth: `${Math.max(240, viewport.value.width - PANEL_MARGIN * 2)}px`,
   ...(dragged.value

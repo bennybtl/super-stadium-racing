@@ -77,13 +77,11 @@
         <div class="ed-label">{{ ctl.label ?? 'Mirror' }}</div>
         <div class="ed-btn-row">
           <button
-            class="flex-1 rounded border px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider transition duration-150"
-            :class="editor.decoration.mirrorX ? 'border-sky-500 bg-sky-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'"
+            :class="editor.decoration.mirrorX ? 'ed-btn' : 'ed-btn-invert'"
             @click="editor.setDecorationProp('mirrorX', !editor.decoration.mirrorX)"
           >Flip X</button>
           <button
-            class="flex-1 rounded border px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider transition duration-150"
-            :class="editor.decoration.mirrorZ ? 'border-sky-500 bg-sky-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'"
+            :class="editor.decoration.mirrorZ ? 'ed-btn' : 'ed-btn-invert'"
             @click="editor.setDecorationProp('mirrorZ', !editor.decoration.mirrorZ)"
           >Flip Z</button>
         </div>
