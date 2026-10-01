@@ -34,7 +34,7 @@ bucket, 30/s sustained, burst 10); names/keys are type- and length-checked;
 **Still trusted (i.e. cheatable):** position (teleporting/speed hacks are
 invisible to the server), lap *timing*, and checkpoint order — the server only
 checks that laps arrive in sequence. Acceptable for friendly lobbies; the
-server-authoritative plan below is the fix if that stops being true.
+server-authoritative plan below is the fix if that stops being true. Work on it lives on the `mp-server` branch (Phase 0 done).
 
 **Since this plan was written:** the fixed 60 Hz sim step from Phase 2 has
 landed client-side (`src/modes/fixed-step.js`, max 5 steps/frame), and the game
@@ -48,7 +48,7 @@ in sim paths) still stand.
 # Future plan: server-authoritative simulation
 
 Server-authoritative racing over WebSockets. Clients send inputs; the server runs
-the real simulation and broadcasts state. Not started.
+the real simulation and broadcasts state. Phase 0 done; Phase 1 next.
 
 ## Architecture decisions (locked)
 
@@ -145,6 +145,27 @@ steps under Node — plus a first read on per-lobby memory and per-tick cost.
 Fall back to `scripts/babylon-stub.mjs`-style stubbing only if `NullEngine`
 proves unusable; prefer the real engine so there is one physics codebase.
 
+**Result (2026-09-27): viable.** `node scripts/spike-headless.mjs [track] [trucks]`
+— NullEngine + Havok WASM (`HavokPhysics({ wasmBinary })` from the package file)
++ real track JSON + displaced ground (MESH body, drive-surface registry, real
+`TerrainQuery`) + real `new Truck(scene, null)`, 600 ticks at SIM_DT.
+
+- Same-machine determinism: identical state hashes across runs (1 and 8 trucks,
+  apple_river and cross_country), with `Math.random`/`Date.now`/`performance.now`
+  shimmed to a seeded PRNG + sim clock — i.e. the Phase 2 work is required.
+- Cost, 8 trucks (ground only, no walls/collision/checkpoints yet): median
+  0.2–0.27 ms/tick, p99 ~1 ms, one ~10 ms outlier (JIT warm-up). 60 Hz budget is
+  16.7 ms — CPU is not the constraint.
+- Init: Havok 13 ms, track + ground ~400 ms, 8 trucks ~35 ms.
+- Memory: ~260–285 MB RSS per process, of which ~140 MB is Node + the bundled
+  Babylon before any scene exists. That's the per-child floor → ~3–4 lobbies/GB.
+  A leaner server bundle (sim modules only) is the lever if density matters.
+- `Truck`'s constructor builds visuals regardless (`TruckBody` canvas texture →
+  needed an `OffscreenCanvas` stub; tire OBJ load fails → cylinder fallback).
+  Confirms the Phase 1 `updateSim`/presentation split.
+- Shared `Math.random` couples trucks: truck 0 ends somewhere different in an
+  8-truck run than alone. Per-truck RNG streams in Phase 2 would decouple them.
+
 ### Phase 1 — Extract the simulation step
 
 Pure refactor, no behaviour change, client still single-player.
@@ -163,6 +184,27 @@ Pure refactor, no behaviour change, client still single-player.
   registry) and `buildVisuals()` (everything else). Browser path calls both.
 - `RaceMode` becomes: build both, own `InputManager`/camera/UI, call
   `sim.step(dt, {local: input})` then `updatePresentation()`.
+
+**Progress (2026-09-27):**
+- ✅ `Truck.update()` = `updateSim()` + `updatePresentation()` (+ `getDebugInfo()`).
+  Physics golden and spike hash unchanged.
+- ✅ `src/sim/race-rules.js`: zones, out-of-bounds tracker (sim-time grace, was
+  `performance.now`), respawn — pure; DriveMode/BaseMode methods delegate.
+- ✅ `src/sim/RaceSimulation.js`: race state + `step(dt, inputsById)` + events;
+  RaceMode drives it (`test/race-simulation.test.js`). Truck presentation now runs
+  after the whole sim step instead of interleaved per truck. Other modes
+  (HotLap/Practice/Multiplayer/Menu) still call `truck.update()` directly.
+- ✅ Scene split: `src/sim/sim-scene.js` — `enableSimPhysics`, `buildSimTerrain`
+  (terrain grid, ground geometry + MESH body, drive surfaces), `buildSimFeatures`
+  (walls, border, outskirts, checkpoints, obstacles, pickups, tunnels, steep-slope
+  blockers, bridges), `buildSimScene` (both, headless). `buildScene` interleaves
+  them with its visuals (lights/shadows → terrain textures → sim features with
+  visual hooks → signs, lights, decorations, decals, tire marks, water, scatter).
+  Sim managers still make meshes/materials (fine under NullEngine); visual args
+  (`shadows`, bridge blend textures, outskirts material) are optional.
+  `scripts/spike-headless.mjs` now builds the real sim scene + `updateSim()`:
+  deterministic on apple_river / quarry_run (tunnel) / the_road, ~0.6–0.9 s build.
+  Headless needs `window.obstacleLoader` stubbed — a Phase 2 browser-global item.
 
 Verify: `npm run build:raw` clean, then drive a race and confirm handling,
 collisions, laps, and effects are unchanged. This phase is where feel can
@@ -187,6 +229,36 @@ silently regress — bisect by reverting one extraction at a time if it does.
 Verify: extend the Phase 0 spike into a repeatable check script
 (`scripts/check-sim-determinism.mjs`) — same seed and input log must produce the
 same final state across runs. Wire it up like the existing `check:*` scripts.
+
+**Progress (2026-09-27):**
+- ✅ Fixed 60 Hz step + catch-up cap — landed earlier (C1, `modes/fixed-step.js`).
+- ✅ `src/sim/rng.js`: mulberry32 + `rngStream(seed, label)`, one stream per
+  consumer so trucks don't couple. Seeded: roughness bumps
+  (`TerrainPhysics.random`, stream `truck:<id>`), pickup spawns
+  (`PickupManager.random`, `pickups`), AI line choice + boost rolls
+  (`AIDriver.random`, `ai:<i>`, set by `makeAIDriverFactory({ seed })` before the
+  grid-time path bake), AI random vehicle pick (`setupAIDrivers({ random })`,
+  `grid`). Each defaults to Math.random; RaceMode draws a race seed and passes
+  it to both the AI factory and `RaceSimulation({ seed })`.
+- ✅ Wall clock out of the sim: head-on lockouts are countdown seconds
+  (`state.noDriveTimer`/`noSteerTimer`, counted down in `updateSim`); the AI boost
+  controller runs on `AIDriver.clockMs`; PolyWall's scuff repaint moved from the
+  contact callback to a render hook.
+- ✅ Injectable definitions: `setObstacleLoader()` (falls back to
+  `window.obstacleLoader`); obstacles without a `modelUrl` are physics-only.
+  `setupAIDrivers({ vehicleLoader })`.
+- ✅ `RaceSimulation.step` takes input for any number of human trucks (AI =
+  trucks with a `driver`).
+- ✅ `npm run check:determinism` (`scripts/check-sim-determinism.mjs`): 4 human
+  trucks × 15 s on apple_river / quarry_run / the_road, twice per seed →
+  identical; `Math.random`, `Date.now` and `performance.now` throw during steps.
+- ⬜ AI headless: `AIDriver` imports the Vue debug store (`useDebugStore`), so it
+  doesn't construct in Node. Needed only if lobbies get AI fillers.
+- ⬜ `Truck` still builds its visual body at construction (needs a canvas and a
+  `window` stub headless). A `{ headless }` option, or moving `TruckBody` out of
+  the constructor, would drop both stubs.
+- Not needed: a Node `TrackLoader` — `Track.fromJSON(readFileSync(...))` is it.
+  Settings already arrive as arguments (`rubberBandLevel`, upgrades).
 
 ### Phase 3 — Lobby child process
 
@@ -216,6 +288,44 @@ Wire format: start with JSON to get it working, then move snapshots to a binary
 (fixed field order, analog `steer`/`throttle` as `i8` rather than the current
 boolean left/right, so gamepads and mobile need no protocol change later).
 
+**Progress (2026-09-27): built, JSON wire format.**
+- `server/lobby/index.js` — the child. Config via `LOBBY_CONFIG` env (JSON:
+  `trackKey, reverse, laps, seed, port, players[{id,name,vehicleKey,token}],
+  joinTimeoutMs, maxRaceMs`) — env, not argv, so tokens stay out of `ps`.
+  Token auth by first message (`hello`, constant-time compare; never in the URL);
+  a reconnect with the same token replaces the old socket. Countdown when all
+  joined or on join timeout; 60 Hz drift-corrected loop, ≤5 catch-up steps then
+  drop time; snapshots every 3 ticks; sim events forwarded as `event` messages;
+  `results` to clients and `{ result, inputLog, seed, … }` to the parent, then
+  exit. Heartbeat `{ tick, phase }` over IPC each second; exits if the parent goes.
+  Ends on race end, `maxRaceMs`, SIGTERM, or everyone disconnecting.
+- `server/lobby/inputs.js` — ingest (unit-tested): sanitise/clamp, window
+  `[tick, tick + 4]` (late frames dropped — no rewind, so the plan's `- 8` is
+  moot), one frame per tick, extrapolate last frame, boost/respawn on rising
+  edge. Per-connection token bucket (120 msg/s) on top.
+- Sim side: `RaceSimulation.requestBoost` / `requestRespawn` (3 s cooldown on
+  the server, last *validated* checkpoint) / `getSnapshot()`;
+  `src/sim/headless-race.js` `createRace()` (shared with check:determinism);
+  `new Truck(…, { headless: true })` skips all visuals.
+- Node runs a bundle of the sim: `npm run build:server-sim` →
+  `server/build/sim.mjs` (git-ignored). `server/lobby/headless-env.js` stubs
+  `OffscreenCanvas` (checkpoint decals still draw into one).
+- Input log: `[tick, playerIndex, s, g, b, r]` whenever a player's applied frame
+  changes — hold-until-next replays it exactly.
+- `npm run check:lobby` (`scripts/lobby-smoke.mjs`, in CI via `npm run check`):
+  forks a real child, two ws clients + a bad-token one, checks welcome,
+  countdown, 20 Hz snapshots, acks, extrapolation, results, IPC, clean exit.
+
+Open for later phases:
+- ~~**Input lead window.**~~ Widened to `+8` in Phase 5; clients stamp inputs
+  one-way latency + 2 ahead.
+- **Grid** is behind the start/finish gate in join order; a track's
+  `startPosition` marker isn't applied headless yet.
+- ~~**Deployment**~~ (done in Phase 4): the Dockerfile copied only `server/` and omitted dev deps, but
+  the child needs `src/tracks|vehicles|obstacles` and a built bundle (esbuild is
+  a dev dep) — a build stage is Phase 4 work.
+- Binary snapshots; surface id in `flags`; reconnect/rejoin semantics.
+
 ### Phase 4 — Parent process
 
 - `server/index.js`: HTTP + WebSocket on one public port.
@@ -233,6 +343,44 @@ box; if that becomes a problem later, front it with a proxy that reads the lobby
 registry — that change is invisible to the client, which already receives its
 endpoint at runtime.
 
+**Progress (2026-09-27): built.** Lives beside the colyseus relay (unchanged)
+on the same port, mounted by `server/index.js` via `server/lobbies/index.js`.
+- **HTTP API** (not a WebSocket — lobby state is polled, ~1 s is plenty):
+  `GET/POST /race-lobbies`, `GET /race-lobbies/:code`, `POST …/join`,
+  `…/leave`, `…/start`, `PATCH …` (host settings), `PATCH …/me` (name/vehicle),
+  `GET /races`, `GET /races/:raceId`. Each player's `secret` goes in
+  `Authorization: Bearer` — never a URL. Polling with it is also presence; once
+  racing, the view carries that player's own `race: { host, port, token }`.
+  Create/join rate-limited per IP.
+- `LobbyRegistry` — pure state machine (waiting → starting → racing →
+  finished | failed), 5-char codes without 0/O/1/I, host-only settings/start,
+  host handover, idle players dropped after 30 s, idle lobbies expire after
+  30 min, closed ones readable 10 min. A spawn failure (no free port) puts the
+  lobby back to waiting with a 503. 9 unit tests.
+- `RaceSupervisor` — forks `server/lobby/index.js` per race, port pool
+  (`RACE_PORT_MIN..MAX`, default 22000–22099), kills on: no ready in 30 s,
+  heartbeat lapse > 5 s, tick frozen > 5 s during countdown/racing. Every exit
+  path releases the port and reports once. 5 tests against a fake race process
+  (`test/fixtures/fake-race.mjs`). The child now sends `ready` only once its
+  WebSocket is listening.
+- `ResultStore` — one JSON per race (`RACE_DATA_DIR`, default
+  `server/data/races`, git-ignored): rows, seed, track, reason and the input
+  log; temp-file + rename writes. The API never serves input logs.
+- **Docker** — `server/Dockerfile` is multi-stage: a build stage bundles the sim
+  (esbuild is a dev dep); the runtime copies the bundle plus the track/vehicle/
+  obstacle JSON. Build from the repo root: `docker build -f server/Dockerfile .`.
+  Publish 2567 **and** the race port range; `PUBLIC_HOST` sets the host clients
+  are told to connect races to. `/data` is a volume for results.
+- `npm run check:lobbies` (`scripts/lobbies-smoke.mjs`, in CI): the whole flow
+  against the real server — create, join, vehicle pick, host-only start, forged
+  secret refused, per-player tokens, two ws clients race, stored result. Also
+  run against the Docker image (`LOBBIES_URL=http://127.0.0.1:<port>`): passes.
+
+Not done / later: leaderboards (results are stored; nothing aggregates them
+yet); `/races` reads every file per call (fine until there are many); lobbies
+live in memory, so a server restart drops open lobbies and running races; only
+`src/tracks` tracks are raceable (not track packs).
+
 ### Phase 5 — Client: remote trucks, no prediction
 
 Get a correct race on screen before making it feel good.
@@ -247,6 +395,52 @@ Get a correct race on screen before making it feel good.
 
 This will feel laggy on the local truck. That is expected and correct — it
 proves the pipeline before prediction can hide bugs in it.
+
+**Progress (2026-09-27): built — dev-only "Online (beta)" on the start menu,
+beside the colyseus Multiplayer (unchanged).**
+- `src/net/LobbyApi.js` — REST client (same host as the page, port 2567).
+- `src/net/NetClient.js` — race socket. `ServerClock` (ping/pong every 1 s,
+  lowest-RTT sample, NTP-style), `InputStamper` (one frame per tick, stamped
+  one-way latency + 2 ahead, skips stale ticks after a stall),
+  `SnapshotBuffer` (interpolation, short-way heading, ≤6-tick extrapolation).
+  Draws at *server clock − one-way latency − 6 ticks* — the jitter buffer sits
+  behind the newest state that can have arrived; measured to stay interpolating
+  (≥ ~2 ticks margin at p5) at 0, 50±20 and 100±30 ms one-way.
+- Server additions: `ping`/`pong`; snapshots also carry lap, checkpoint, nitros
+  left, chassis pitch/roll, slip, throttle, steer, speed-pad flag (what a client
+  needs to *present* a truck it doesn't simulate); `startLine` event; input
+  window `+8`.
+- `Truck.applyNetState(sample)` poses a truck from a snapshot and fills its sim
+  frame so the normal `updatePresentation()` runs (body, dust, marks, wake,
+  audio).
+- `NetRaceMode` — full visual scene, no local sim: every truck (own included)
+  from snapshots; HUD, checkpoint highlight, timer, laps and results from server
+  events; countdown aligned to the server's GO tick; nitro / R reset as short
+  held flags (one rising edge server-side). Pausing sends *neutral* input — the
+  server repeats the last frame, so a held throttle would keep driving.
+- UI: `OnlineLobby.vue` (join by code, open races, create), `OnlineRoom.vue`
+  (code, host track/laps/reverse, vehicle pick, players, start),
+  `stores/online.js` (polls the lobby at 1 Hz; hands off to NetRaceMode when
+  the view carries the race endpoint).
+- `check:lobby` now also runs the game's real `NetClient` over a 50 ms ± 20 ms
+  socket: clock sync, inputs landing on their ticks (p95 0 behind),
+  interpolation margin.
+
+- Pickups and obstacles are mirrored. `RaceSimulation` owns pickup collection
+  (grants the nitro; `onPickupSpawn` / `onPickup` events — RaceMode keeps only its
+  UI part); the child forwards them as `pickupSpawn` / `pickup` events and the
+  client shows copies (`PickupManager.addMirrored` / `removeMirrored` / `animate`,
+  never collects). Knocked-loose obstacles ride in snapshots as `obs` (by build
+  index — identical on every client); the client drops its own obstacle physics
+  and interpolates the pose (`Obstacle.setNetPose`). check:determinism now hashes
+  obstacle poses too: Havok is deterministic across fresh instances.
+- Fixed on first real use: a pickup spawning mid-race crashed the race process
+  (model import is empty server-side); a sim error now ends the race with
+  reason "server error" instead of dropping everyone. Track packs are raceable
+  (`server/tracks.js`, `GET /race-tracks`); editor-only tracks aren't.
+
+Still: truck colours are by join order; a locally edited copy of a built-in
+track is drawn but the server races the original file.
 
 ### Phase 6 — Client prediction and reconciliation
 
@@ -266,6 +460,40 @@ Watch item: prediction only converges if client and server agree on ground
 height. Analytic terrain sampling is the safe path here; divergence between the
 raycast and analytic paths shows up as visible snapping. This is the piece most
 likely to need iteration.
+
+**Progress (2026-09-27): built.**
+- `src/net/Prediction.js` — the player's truck simulates each tick it sends
+  input for: the per-truck part of `RaceSimulation.step` (updateSim, wall
+  collisions, slow / speed-pad zones, nitro on the rising edge, grid handbrake
+  until GO), recording `Truck.captureSimState()` per tick. A snapshot for tick t
+  is compared with the record for t (1 cm / 0.002 rad / 0.05 m/s / nitro count);
+  on a mismatch the truck is restored to t, given the server's pose, velocity,
+  pitch/roll, timers and suspension, and the stored inputs replayed (≤ 30 ticks).
+  Corrections glide out over ~0.1 s (a > 3 m jump — a respawn — cuts). Rendered
+  between the last two predicted ticks, like FixedStepLoop.
+- Shared so client and server can't drift: `src/sim/input-frame.js` (frame →
+  truck controls) and `src/sim/snapshot-wire.js` (snapshot short keys). The
+  truck's own roughness RNG stream is seeded identically and is rewindable
+  (`getState` / `setState`). Snapshots gained `bt sbt nd ns sc`.
+- `Truck.captureSimState` / `restoreSimState` (`src/sim/sim-state.js`): pose,
+  `state`, terrain/controls/drift internals, the surface-continuity lock, the
+  terrain query's last surface, RNG position. Verified complete: after a
+  respawn correction the full state diff between server and client is empty.
+- **Found and fixed:** Havok wrote each truck's body back onto its mesh after
+  every physics step, float32-rounded — the server and client step Havok on
+  different schedules, so that alone broke exact prediction. Truck bodies now
+  have `disableSync` (the mesh is the sole authority; affects single-player only
+  by removing that rounding).
+- `npm run check:prediction`: server race + predicting client side by side —
+  exact match tick for tick (1200 ticks on apple_river, until an out-of-bounds
+  respawn elsewhere); late snapshots need no correction beyond ≤ 2 per server
+  respawn; a knocked-off prediction recovers (last 3 s: p90 ≤ 6 mm).
+- NetRaceMode logs `rtt · corrections · resets` to the console every 5 s.
+
+Not predicted (the snapshot corrects them): other trucks, obstacle hits,
+pickups, out-of-bounds and requested respawns. A snapshot only carries the
+pose, not the truck's internal smoothing, so after a real misprediction the
+internals can differ slightly and a landing may need one more small correction.
 
 ### Phase 7 — Replay archive and bot detection
 

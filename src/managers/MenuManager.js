@@ -73,6 +73,18 @@ export class MenuManager {
     this._store.screen = 'multiplayerRoom';
   }
 
+  showOnlineLobby() {
+    this.currentMenu = 'online';
+    this._refreshTrackList();
+    this._refreshVehicleList();
+    this._store.screen = 'online';
+  }
+
+  showOnlineRoom() {
+    this.currentMenu = 'onlineRoom';
+    this._store.screen = 'onlineRoom';
+  }
+
   showEditorMenu() {
     this.currentMenu = 'editorPause';
     this.isPaused = true;
@@ -277,6 +289,7 @@ export class MenuManager {
   onStartSingleRace()    {}
   onStartHotLap()        {}
   onStartMultiplayer(_config) {}
+  onStartOnlineRace(_config) {}
   onShowChampionshipSetup() { this.showChampionshipSetup(); }
   onStartChampionship()     {}
   onContinueChampionship()  {}

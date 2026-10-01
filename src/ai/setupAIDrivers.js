@@ -32,6 +32,9 @@ export const AI_COLOR_KEYS = [
  * @param {Function} opts.getAIId        (i) => string
  * @param {Function} opts.getAIDriver    (i) => AIDriver instance
  * @param {string}   [opts.aiVehicleKey] Vehicle key for AI trucks, or 'random'.
+ * @param {Function} [opts.random]       [0,1) source for the random vehicle pick
+ *                                       (a seeded stream in a seeded race).
+ * @param {object}   [opts.vehicleLoader] defaults to the browser's window.vehicleLoader.
  *
  * @returns {{ aiTruckDataList: Array, aiDrivers: Array }}
  *   aiTruckDataList — ready-to-push entries for the `trucks` array (without the player).
@@ -53,6 +56,8 @@ export function setupAIDrivers({
   getAIGridSlot = null,
   aiVehicleKey = 'random',
   excludeColorKey = null,
+  random = Math.random,
+  vehicleLoader = globalThis.window?.vehicleLoader ?? null,
 }) {
   // Grid slot 0 is reserved for the player; AI starts at slot 1.
   const AI_GRID_OFFSET = 1;
@@ -67,10 +72,10 @@ export function setupAIDrivers({
     .filter(Boolean);
 
   const unlockedTruckKeys = getUnlockedTruckKeys();
-  const availableAIVehicleKeys = (window.vehicleLoader?.getVehicleList?.().map(vehicle => vehicle.key) ?? [])
+  const availableAIVehicleKeys = (vehicleLoader?.getVehicleList?.().map(vehicle => vehicle.key) ?? [])
     .filter(key => unlockedTruckKeys.includes(key));
   const selectedAIVehicleDef = aiVehicleKey !== 'random'
-    ? window.vehicleLoader?.getVehicle(aiVehicleKey) ?? null
+    ? vehicleLoader?.getVehicle(aiVehicleKey) ?? null
     : null;
 
   for (let i = 0; i < count; i++) {
@@ -89,11 +94,11 @@ export function setupAIDrivers({
     let aiVehicleDef = selectedAIVehicleDef;
     const overrideVehicleKey = typeof getAIVehicleKey === 'function' ? getAIVehicleKey(i) : null;
     if (overrideVehicleKey) {
-      aiVehicleDef = window.vehicleLoader?.getVehicle(overrideVehicleKey) ?? aiVehicleDef;
+      aiVehicleDef = vehicleLoader?.getVehicle(overrideVehicleKey) ?? aiVehicleDef;
     }
     if (!aiVehicleDef && availableAIVehicleKeys.length > 0) {
-      const randomVehicleKey = availableAIVehicleKeys[Math.floor(Math.random() * availableAIVehicleKeys.length)];
-      aiVehicleDef = window.vehicleLoader?.getVehicle(randomVehicleKey) ?? null;
+      const randomVehicleKey = availableAIVehicleKeys[Math.floor(random() * availableAIVehicleKeys.length)];
+      aiVehicleDef = vehicleLoader?.getVehicle(randomVehicleKey) ?? null;
     }
     if (!aiVehicleDef) aiVehicleDef = vehicleDef;
 

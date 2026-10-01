@@ -34,6 +34,13 @@ export class AIDriver {
     this.wallManager = wallManager;
     this.scene = scene;
     this._terrainQuery = new TerrainQuery(scene);
+    // Randomness for line choice and boost rolls — a seeded stream in a
+    // seeded race (sim/rng.js; set before the grid-time calculateFullPath),
+    // Math.random otherwise.
+    this.random = Math.random;
+    // Driver-local sim clock (ms), advanced by getInput's dt — the boost
+    // controller's cooldowns run on it instead of wall-clock time.
+    this.clockMs = 0;
     
     // Skill-based parameters (can be customized per AI)
     const {
@@ -423,6 +430,7 @@ export class AIDriver {
    * Get steering input based on current position
    */
   getInput(position, heading, fwdSpeed = 0, dt = 0.01667) {
+    this.clockMs += dt * 1000;
     // Periodically update debug visualization if enabled
     this._debugRenderer.onFrame();
 

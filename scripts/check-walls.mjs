@@ -124,7 +124,7 @@ const setPrev = (x, y, z) => mgr._prevPositions.set(1, new Vector3(x, y, z));
   const v = truck.state.velocity;
   const outward = v.x * -inX + v.z * -inZ;
   check('head-on: rebounds off the face', outward > 0, `(outward ${outward.toFixed(2)})`);
-  check('head-on: suppresses drive + steer', !!truck.state.noDriveUntil && !!truck.state.noSteerUntil);
+  check('head-on: suppresses drive + steer', truck.state.noDriveTimer > 0 && truck.state.noSteerTimer > 0);
 }
 
 // ── 3. Tunneling through the wall body is caught ────────────────────────────

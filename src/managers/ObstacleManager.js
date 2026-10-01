@@ -1,4 +1,4 @@
-import { Vector3 } from "@babylonjs/core";
+import { Vector3, Quaternion } from "@babylonjs/core";
 import { Obstacle, normalizeObstacleType } from "../objects/Obstacle.js";
 import { TerrainQuery } from "./TerrainQuery.js";
 import { TRUCK_RADIUS, TRUCK_WIDTH, TRUCK_DEPTH, TRUCK_HALF_HEIGHT } from "../constants.js";
@@ -32,6 +32,27 @@ export class ObstacleManager {
     const stack = new Obstacle(x, z, groundY, this.scene, this.shadows, obstacleType, angle, scale, weight, feature.color, feature.count);
     stack.feature = feature; // so a stuck-on decal can resolve its parent by id
     this._stacks.push(stack);
+  }
+
+  /**
+   * Poses of the obstacles knocked loose so far (still-pinned ones never move),
+   * for an online race's snapshots. `i` is the build index — every client builds
+   * the same track's obstacles in the same order, so it names the same one.
+   */
+  activePoses() {
+    const poses = [];
+    this._stacks.forEach((stack, i) => {
+      if (!stack._active) return;
+      const b = stack.body;
+      const q = b.rotationQuaternion ?? Quaternion.FromEulerAngles(b.rotation.x, b.rotation.y, b.rotation.z);
+      poses.push({ i, x: b.position.x, y: b.position.y, z: b.position.z, qx: q.x, qy: q.y, qz: q.z, qw: q.w });
+    });
+    return poses;
+  }
+
+  /** Online client: pose obstacle `i` as the server has it (see Obstacle.setNetPose). */
+  applyPose(pose) {
+    this._stacks[pose.i]?.setNetPose(pose);
   }
 
   /** Obstacle instance whose feature carries this id, or null. */

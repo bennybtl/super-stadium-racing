@@ -20,6 +20,7 @@ import { TRUCK_HEIGHT, TRUCK_WIDTH, TRUCK_DEPTH, TRUCK_COLLISION_STEP_LIFT } fro
 import { SPLASH_MIN_DEPTH } from "../constants.js";
 import { UPGRADES } from "../managers/UpgradeStorage.js";
 import { TERRAIN_TYPES } from "../world/terrain.js";
+import { captureFields, restoreFields } from "../sim/sim-state.js";
 
 // --- AI terrain-sampling LOD -------------------------------------------------
 // AI trucks only need the expensive multi-probe floor sampling near bridges,
@@ -42,13 +43,22 @@ const AI_TERRAIN_LOW_DETAIL_DIST = 75; // metres
 const YAW_PIVOT_FORWARD = 1.5; // ≈ front axle (TruckBody frontAxle)
 // Forward speed above which stamping on the brakes starts laying rubber (m/s).
 const TIRE_MARK_BRAKE_SPEED = 7;
+// Fixed wiring on the sim subsystems — never part of a captured state.
+const SIM_STATE_SKIP = new Set(["state", "random", "_terrainQuery", "_continuityOptions"]);
 
 /**
  * Main Truck class that coordinates all truck subsystems
  */
 export class Truck {
-  constructor(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null, upgrades = null) {
+  /**
+   * @param {object} [options]
+   * @param {boolean} [options.headless]  simulation only: no particles, lights,
+   *   body puppet, tire marks or wake (a server race — docs/MULTIPLAYER.md).
+   *   updatePresentation() is then a no-op.
+   */
+  constructor(scene, shadows, diffuseColor = null, driver = null, vehicleDef = null, upgrades = null, options = {}) {
     this.scene = scene;
+    this.headless = options.headless === true;
     this.shadows = shadows;
     this.driver = driver; // Optional AI driver
     this.vehicleDef = vehicleDef; // Optional vehicle definition from VehicleLoader
@@ -93,9 +103,6 @@ export class Truck {
     this.state = this.createState();
     
     // Initialize subsystems
-    this.particles = new ParticleEffects(this.mesh, scene, {
-      qualityScale: this.driver ? 0.45 : 1,
-    });
     this.audioController = null;
     const terrainQuery = new TerrainQuery(scene);
     // Multi-probe geometry is always derived from this truck's footprint so the
@@ -121,6 +128,7 @@ export class Truck {
 
     // Reused hot-path temporaries (avoid per-frame allocations)
     this._forward = new Vector3();
+    this._simFrame = {}; // last updateSim() result, reused (see updateSim)
     this._surfaceSampleTrack = null;
     this._surfaceSampleFallback = 0;
     this._surfaceSampler = (x, z, fromY, fallback = this._surfaceSampleFallback) =>
@@ -154,6 +162,23 @@ export class Truck {
       surfaceLevel: '-',
     };
 
+    this.headlights = [];
+    if (this.headless) {
+      this.particles = null;
+      this.body = null;
+      this.tireMarks = null;
+      this.wakeRibbon = null;
+    } else {
+      this._buildVisuals(scene, shadows, vehicleDef);
+    }
+  }
+
+  /** Particles, headlights, body puppet, tire-mark writer, wake — presentation only. */
+  _buildVisuals(scene, shadows, vehicleDef) {
+    this.particles = new ParticleEffects(this.mesh, scene, {
+      qualityScale: this.driver ? 0.45 : 1,
+    });
+
     // Night races: every truck gets a pair of forward headlights, parented to
     // the physics box (whose rotation.y tracks heading) so they sweep for
     // free. These are bundled into the scene's ClusteredLightContainer (see
@@ -162,7 +187,6 @@ export class Truck {
     // maxSimultaneousLights budget. Clustered lights can't cast shadows, so
     // these are never registered with the ShadowCasterGroup. If clustering
     // isn't supported on this GPU, only the player gets a real headlight.
-    this.headlights = [];
     const vehicleLights = scene?.metadata?.vehicleLights ?? null;
     if (scene?.metadata?.night === true && (vehicleLights || !this.driver)) {
       const sideOffset = this.width * 0.45;
@@ -284,6 +308,12 @@ export class Truck {
     }, this.scene);
     physics.body.setMotionType(PhysicsMotionType.ANIMATED);
     physics.body.disablePreStep = false;
+    // The mesh is the sole authority on the truck's pose (updateSim integrates
+    // it; preStep pushes it to Havok). Without this Havok writes the body back
+    // onto the mesh after every physics step, float32-rounded — noise that made
+    // a predicting client drift from the server, which steps Havok on a
+    // different schedule (docs/MULTIPLAYER.md, Phase 6).
+    physics.body.disableSync = true;
     
     return physics;
   }
@@ -357,8 +387,9 @@ export class Truck {
 
       // suspend driving / steering (set on head-on collisions so the truck
       // bounces straight back without drive force or steering overriding it)
-      noDriveUntil: false,
-      noSteerUntil: false,
+      // (seconds remaining; counted down each updateSim)
+      noDriveTimer: 0,
+      noSteerTimer: 0,
 
       // Handbrake hold — set true while grid-lined up pre-race so a sloped
       // start doesn't let gravity's along-slope component (never cancelled by
@@ -386,7 +417,134 @@ export class Truck {
 
 
 
+  /**
+   * One step of the truck: simulation, then presentation. Callers that only
+   * need the simulation (headless / server) call updateSim() alone.
+   */
   update(input, deltaTime, terrainManager = null, track = null, collectDebugInfo = true, effectsFocusPosition = null, profiler = null) {
+    this.updateSim(input, deltaTime, terrainManager, track, effectsFocusPosition, profiler);
+    this.updatePresentation(deltaTime, terrainManager, track, effectsFocusPosition, profiler);
+
+    if (!collectDebugInfo) return null;
+    return profiler ? profiler.measure('truck.debugPayload', () => this.getDebugInfo()) : this.getDebugInfo();
+  }
+
+  /** The last updateSim()'s derived values (reused object — read, don't keep). */
+  get simFrame() {
+    return this._simFrame;
+  }
+
+  /**
+   * Take the truck's state from a server snapshot sample (src/net/NetClient.js)
+   * instead of simulating it: pose, velocity, chassis pitch/roll and the
+   * handful of values the presentation reads (slip, throttle, steer, boost).
+   * Fills `_simFrame` the way updateSim() would, so updatePresentation() runs
+   * as normal afterwards. `s` uses the snapshot's short keys.
+   */
+  applyNetState(s, terrainManager = null) {
+    const st = this.state;
+    this.mesh.position.set(s.x, s.y, s.z);
+    this.mesh.rotation.y = s.h;
+    st.heading = s.h;
+    st.velocity.set(s.vx, s.vy, s.vz);
+    st.flightPitch = s.p ?? 0;
+    st.terrainRoll = s.rl ?? 0;
+    st.slipAngle = s.sl ?? 0;
+    st.throttle = s.th ?? 0;
+    st.boostActive = (s.flags & 2) !== 0;
+    st.speedBoostActive = (s.flags & 8) !== 0;
+    this.driftPhysics.updateRoll(this.mesh);
+    this.syncPhysicsBody();
+
+    const grounded = (s.flags & 1) !== 0;
+    const hSpeed = Math.hypot(s.vx, s.vz);
+    const terrain = grounded ? (terrainManager?.getTerrainAt(this.mesh.position) ?? null) : null;
+    // The body puppet anchors to the floor under the truck.
+    this.terrainPhysics.lastFloorY = s.y - this.halfHeight;
+    const f = this._simFrame;
+    f.input = { forward: st.throttle > 0, back: false, left: s.st < -0.1, right: s.st > 0.1 };
+    f.speed = Math.hypot(hSpeed, s.vy);
+    f.hSpeed = hSpeed;
+    f.groundedness = grounded ? 1 : 0;
+    f.controlGroundedness = f.groundedness;
+    f.penetration = grounded ? 0 : -1;
+    f.isGrounded = grounded;
+    f.onNaturalGround = true;
+    f.terrain = terrain;
+    f.effectsTerrain = terrain;
+    f.effectiveGrip = 1;
+    f.terrainGripMultiplier = terrain?.gripMultiplier ?? 1;
+  }
+
+  /**
+   * Everything updateSim() reads and writes about this truck, so a client can
+   * rewind its predicted truck and replay inputs (src/net/Prediction.js).
+   * Covers the pose, `state`, and the terrain / controls / drift internals —
+   * including the two nested values mutated in place (the surface-continuity
+   * lock and the terrain query's last surface) and the roughness RNG position.
+   */
+  captureSimState() {
+    const tp = this.terrainPhysics;
+    return {
+      position: this.mesh.position.clone(),
+      rotation: this.mesh.rotation.clone(),
+      state: captureFields(this.state),
+      terrain: captureFields(tp, SIM_STATE_SKIP),
+      lockSurfaceId: tp._continuityOptions.transitionLock.surfaceId,
+      querySurface: tp._terrainQuery?._lastResolvedSurface ?? null,
+      rng: tp.random.getState?.() ?? null,
+      controls: captureFields(this.controls, SIM_STATE_SKIP),
+      drift: captureFields(this.driftPhysics, SIM_STATE_SKIP),
+      aiMultiProbeSticky: this._aiMultiProbeSticky,
+    };
+  }
+
+  /** Put back a captureSimState() result (and re-sync the physics body). */
+  restoreSimState(s) {
+    const tp = this.terrainPhysics;
+    this.mesh.position.copyFrom(s.position);
+    this.mesh.rotation.copyFrom(s.rotation);
+    restoreFields(this.state, s.state);
+    restoreFields(tp, s.terrain);
+    tp._continuityOptions.transitionLock.surfaceId = s.lockSurfaceId;
+    if (tp._terrainQuery) tp._terrainQuery._lastResolvedSurface = s.querySurface;
+    if (s.rng !== null) tp.random.setState?.(s.rng);
+    restoreFields(this.controls, s.controls);
+    restoreFields(this.driftPhysics, s.drift);
+    this._aiMultiProbeSticky = s.aiMultiProbeSticky;
+    this.syncPhysicsBody();
+  }
+
+  /** Debug-overlay payload for the last updateSim() (reused object). */
+  getDebugInfo() {
+    const f = this._simFrame;
+    const payload = this._debugInfo;
+    payload.compression = this.state.suspensionCompression;
+    payload.groundedness = f.groundedness;
+    payload.controlGroundedness = f.controlGroundedness;
+    payload.penetration = f.penetration;
+    payload.verticalVelocity = this.state.velocity.y;
+    payload.speed = f.speed;
+    payload.effectiveGrip = f.effectiveGrip;
+    payload.slipAngle = this.state.slipAngle;
+    payload.terrainGripMultiplier = f.terrainGripMultiplier;
+    payload.x = this.mesh.position.x;
+    payload.y = this.mesh.position.y;
+    payload.z = this.mesh.position.z;
+    const floorSurface = this.terrainPhysics.floorSurface;
+    payload.surfaceId = floorSurface?.surfaceId ?? '-';
+    payload.surfaceKind = floorSurface?.kind ?? '-';
+    payload.surfaceLevel = floorSurface?.level ?? '-';
+    return payload;
+  }
+
+  /**
+   * Advance the truck's physical state one step: AI input, terrain, controls,
+   * drag/drift, integration, rotation, physics-body sync. Touches nothing
+   * visual. Returns the step's derived values (also kept on `_simFrame`) for
+   * updatePresentation() and the debug payload.
+   */
+  updateSim(input, deltaTime, terrainManager = null, track = null, effectsFocusPosition = null, profiler = null) {
     const profile = (label, fn) => {
       if (!profiler) return fn();
       return profiler.measure(label, fn);
@@ -403,6 +561,7 @@ export class Truck {
     
     // Update boost timer
     profile('truck.controls.boost', () => this.controls.updateBoost(deltaTime));
+    this.controls.updateLockouts(deltaTime);
     
     // Terrain physics (gravity, suspension, slopes)
     let terrainLowDetail = false;
@@ -552,6 +711,39 @@ export class Truck {
       this.driftPhysics.updateRoll(this.mesh)
     );
 
+    // Sync physics body
+    profile('truck.syncPhysics', () => this.syncPhysicsBody());
+
+    const f = this._simFrame;
+    f.input = input;
+    f.speed = speed;
+    f.hSpeed = hSpeed;
+    f.groundedness = groundedness;
+    f.controlGroundedness = controlGroundedness;
+    f.penetration = penetration;
+    f.isGrounded = isGrounded;
+    f.onNaturalGround = onNaturalGround;
+    f.terrain = terrain;
+    f.effectsTerrain = effectsTerrain;
+    f.effectiveGrip = effectiveGrip;
+    f.terrainGripMultiplier = terrainGripMultiplier;
+    return f;
+  }
+
+  /**
+   * Visual/audio side of a step, driven by the last updateSim(): body puppet,
+   * tunnel darkening, engine audio, particles, tire marks, wake.
+   */
+  updatePresentation(deltaTime, terrainManager = null, track = null, effectsFocusPosition = null, profiler = null) {
+    if (this.headless) return;
+    const profile = (label, fn) => {
+      if (!profiler) return fn();
+      return profiler.measure(label, fn);
+    };
+    const {
+      input, speed, hSpeed, groundedness, penetration, isGrounded, onNaturalGround, terrain, effectsTerrain,
+    } = this._simFrame;
+
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.
     const terrainY = track ? this.terrainPhysics.lastFloorY : null;
@@ -604,8 +796,6 @@ export class Truck {
       });
     });
 
-    // Sync physics body
-    profile('truck.syncPhysics', () => this.syncPhysicsBody());
     this._particleUpdateAccumulator += deltaTime;
     if (
       this._particleUpdateInterval <= 0 ||
@@ -702,30 +892,6 @@ export class Truck {
       this._particleUpdateAccumulator = 0;
     }
 
-    if (!collectDebugInfo) return null;
-
-    // Return debug info
-    const debug = profile('truck.debugPayload', () => {
-      const payload = this._debugInfo;
-      payload.compression = this.state.suspensionCompression;
-      payload.groundedness = groundedness;
-      payload.controlGroundedness = controlGroundedness;
-      payload.penetration = penetration;
-      payload.verticalVelocity = this.state.velocity.y;
-      payload.speed = speed;
-      payload.effectiveGrip = effectiveGrip;
-      payload.slipAngle = this.state.slipAngle;
-      payload.terrainGripMultiplier = terrainGripMultiplier;
-      payload.x = this.mesh.position.x;
-      payload.y = this.mesh.position.y;
-      payload.z = this.mesh.position.z;
-      const floorSurface = this.terrainPhysics.floorSurface;
-      payload.surfaceId = floorSurface?.surfaceId ?? '-';
-      payload.surfaceKind = floorSurface?.kind ?? '-';
-      payload.surfaceLevel = floorSurface?.level ?? '-';
-      return payload;
-    });
-    return debug;
   }
 
   syncPhysicsBody() {

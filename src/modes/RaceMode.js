@@ -1,4 +1,3 @@
-import { Vector3 } from "@babylonjs/core";
 import { Truck } from "../truck/truck.js";
 import { GameState } from "../managers/GameState.js";
 import { InputManager } from "../managers/InputManager.js";
@@ -18,7 +17,8 @@ import { RacePositionLabels } from "../managers/RacePositionLabels.js";
 import { FloatingTextManager } from "../managers/FloatingTextManager.js";
 import { CheckpointArrow } from "../managers/CheckpointArrow.js";
 import { loadGameplaySettings } from "../settingsStorage.js";
-import { stepRubberBandMultiplier } from "../ai/RubberBand.js";
+import { RaceSimulation } from "../sim/RaceSimulation.js";
+import { randomSeed, rngStream } from "../sim/rng.js";
 import { buildRaceResultRows } from "./race-results.js";
 
 /**
@@ -28,19 +28,16 @@ import { buildRaceResultRows } from "./race-results.js";
  * and the game loop. Delegates scene construction to SceneBuilder.
  *
  * Structure: setup() builds everything into `this._race` (the scene managers,
- * the truck list, and the mutable race state — clock, started, finish order,
- * DNF deadline), then the rest of the class works off that object:
- *   _stepRace   — one fixed physics step (trucks, collisions, zones, laps)
- *   _updateLaps — checkpoint crossings, lap/race completion, DNF start
+ * the truck list), then the rest of the class works off that object. The race
+ * rules and state — clock, laps, finish order, DNF grace — live in `r.sim`, a
+ * RaceSimulation with no presentation; this class feeds it input and turns its
+ * events into HUD, audio and telemetry:
+ *   _stepRace   — one fixed step: sim.step(), then truck effects / fireworks
+ *   _simEvents  — sim callbacks (start, checkpoints, laps, finish, OOB, end)
  *   _renderRace — once per frame (HUD, labels, minimap, camera)
- *   _startCountdown / _resetGame / _triggerRaceEnd / _handleDNF
+ *   _startCountdown / _resetGame / _onRaceEnd
  */
-const DNF_GRACE_MS = 45_000;
 const TRUCK_STATUS_UI_INTERVAL_MS = 200;
-// AI last-known terrain grip (telemetry speed scaling), sampled at 10 Hz —
-// cuts redundant per-step terrain lookups with minimal behaviour change.
-const AI_GRIP_SAMPLE_INTERVAL_MS = 100;
-const NO_INPUT = Object.freeze({ forward: false, back: false, left: false, right: false });
 
 export class RaceMode extends DriveMode {
   constructor(controller) {
@@ -94,6 +91,8 @@ export class RaceMode extends DriveMode {
       ...built,                   // scene, cameraController, currentTrack, managers…
       trackKey,
       championship,
+      // Seeds every random draw in the race's sim (sim/rng.js).
+      seed: randomSeed(),
       totalLaps: laps || 3,
       frameProfiler,
       audioManager,
@@ -104,43 +103,48 @@ export class RaceMode extends DriveMode {
       // Gameplay > Rubber Band setting from the pause menu applies on the next
       // step instead of needing a race restart.
       rubberBandLevel: loadGameplaySettings().rubberBand,
-
-      // -- Race state --
-      // Race timing runs on sim time: clockMs advances only in fixed physics
-      // steps, so pausing, a background tab or slow frames never count against a
-      // lap. startMs / each truck's lapStartTime / the DNF deadline are all on it.
-      clockMs: 0,
-      started: false,
-      startMs: null,
       countdownActive: false,
 
-      // -- Finish / DNF tracking --
-      finishOrder: [],     // truckData entries in finish order
-      dnfDeadlineMs: null, // race-clock time the DNF grace ends (set on first finish)
-      ended: false,
-
       // Cash collected from money pickups this race, per driver id. Applied to
-      // each driver's championship wallet at race end (see _triggerRaceEnd).
+      // each driver's championship wallet at race end (see _onRaceEnd).
       moneyCollected: {},
 
       playerDebugInfo: null,
       truckStatusUiElapsedMs: 0,
-      aiGripSampleElapsedMs: 0,
     };
     this._gameplaySettingsChangedHandler = (e) => {
       r.rubberBandLevel = e.detail?.rubberBand ?? loadGameplaySettings().rubberBand;
+      if (r.sim) r.sim.rubberBandLevel = r.rubberBandLevel;
     };
     window.addEventListener('offroad:gameplay-settings-changed', this._gameplaySettingsChangedHandler);
 
     await this._createTrucks({ vehicleKey, aiVehicleKey, aiCount, playerColorKey });
     this._createRaceUi();
     this._wireInputAndMenus(menuManager);
-    this._wirePickups();
 
-    // Pre-filter action zones for per-step position checks
-    r.slowZones = this.getSlowZones(currentTrack);
-    r.outOfBoundsZones = this.getOutOfBoundsZones(currentTrack);
-    r.speedBoostZones = this.getSpeedBoostZones(currentTrack);
+    r.sim = new RaceSimulation({
+      trucks: r.trucks,
+      track: currentTrack,
+      terrainManager: r.terrainManager,
+      checkpointManager,
+      truckCollisionManager: r.truckCollisionManager,
+      staticBodyCollisionManager: r.staticBodyCollisionManager,
+      obstacleManager: r.obstacleManager,
+      pickupManager,
+      aiDrivers: r.aiDrivers,
+      totalLaps: r.totalLaps,
+      maxCheckpointNumber,
+      startFinishCp,
+      getGridSpawn: r.getGridSpawn,
+      focusId: r.playerTruckData.id,
+      rubberBandLevel: r.rubberBandLevel,
+      profiler: frameProfiler,
+      events: this._simEvents(),
+      seed: r.seed,
+    });
+    checkpointManager.updatePlayerCheckpointHighlight(r.playerTruckData.gameState.lastCheckpointPassed);
+
+    // Fireworks are presentation; the sim applies the other zone types.
     r.fireworkZones = this.getFireworkZones(currentTrack);
 
     // Setup visibility handler to prevent physics accumulation
@@ -156,8 +160,8 @@ export class RaceMode extends DriveMode {
       inputManager: this.inputManager,
       isMenuUp: () => menuManager.isMenuActive(),
       isCountdownActive: () => r.countdownActive,
-      getRaceStartMs: () => (r.started && r.startMs !== null ? r.startMs : null),
-      getRaceClockMs: () => r.clockMs,
+      getRaceStartMs: () => (r.sim.started && r.sim.startMs !== null ? r.sim.startMs : null),
+      getRaceClockMs: () => r.sim.clockMs,
       getMeshes: () => r.trucks.map(td => td.truck.mesh),
       onStep: (dt, input) => this._stepRace(dt, input),
       onRender: (dt) => this._renderRace(dt),
@@ -208,6 +212,7 @@ export class RaceMode extends DriveMode {
       scene,
       terrainManager: r.terrainManager,
       championship,
+      seed: r.seed,
     });
 
     // In a championship, AI colour/vehicle come from the persisted roster so a
@@ -237,6 +242,7 @@ export class RaceMode extends DriveMode {
       getAIGridSlot,
       aiVehicleKey,
       excludeColorKey: playerColorKey,
+      random: rngStream(r.seed, 'grid'),
     });
     r.aiDrivers = aiDrivers;
 
@@ -275,12 +281,6 @@ export class RaceMode extends DriveMode {
       d.setGameState(td.gameState);
       d.setRaceContext(td, r.trucks);
     });
-
-    // Prime lastCheckpointPassed so trucks are ready to cross the start/finish line first
-    r.trucks.forEach(td => {
-      td.gameState.lastCheckpointPassed = r.maxCheckpointNumber > 0 ? r.maxCheckpointNumber - 1 : 0;
-    });
-    r.checkpointManager.updatePlayerCheckpointHighlight(r.playerTruckData.gameState.lastCheckpointPassed);
   }
 
   /** HUD, debug overlay, position badges, minimap, popups, arrow, collisions. */
@@ -338,13 +338,9 @@ export class RaceMode extends DriveMode {
     this.setupDebugToggle(this.inputManager, r.debugManager);
 
     this.inputManager.onBoost(() => {
-      if (player.gameState.useBoost() && !player.truck.state.boostActive) {
-        player.truck.state.boostActive = true;
-        player.truck.state.boostTimer = player.truck.state.boostDuration;
-        r.uiManager.updateBoosts(player.gameState.boostCount);
-      }
+      if (r.sim.requestBoost(player.id)) r.uiManager.updateBoosts(player.gameState.boostCount);
     });
-    this.inputManager.onReset(() => this._respawnToLastCheckpoint(player));
+    this.inputManager.onReset(() => r.sim.requestRespawn(player.id));
 
     menuManager.onResume = () => menuManager.hideMenu();
     menuManager.onReset = () => {
@@ -368,29 +364,29 @@ export class RaceMode extends DriveMode {
     };
   }
 
-  /** Pickups are spawned as trucks complete laps (see _updateLaps), not up
-   *  front. Value scales with the lap, so grant it in full. */
-  _wirePickups() {
+  /**
+   * A truck collected a pickup (RaceSimulation has already granted nitro).
+   * Pickups spawn as trucks complete laps, valued by the lap.
+   */
+  _onPickup(truckData, type, value = 1) {
     const r = this._race;
-    r.pickupManager.onPickupCollected = (type, truckData, value = 1) => {
-      if (type === 'boost' && truckData.gameState) {
-        truckData.gameState.boostCount += value;
-        if (truckData.isPlayer) {
-          r.uiManager.updateBoosts(truckData.gameState.boostCount);
-          this.floatingText.spawn(`+${value.toLocaleString()} nitro${value > 1 ? 's' : ''}`, truckData.truck.mesh.position);
-        }
-        return;
+    if (type === 'boost' && truckData.gameState) {
+      if (truckData.isPlayer) {
+        r.uiManager.updateBoosts(truckData.gameState.boostCount);
+        this.floatingText.spawn(`+${value.toLocaleString()} nitro${value > 1 ? 's' : ''}`, truckData.truck.mesh.position);
       }
-      if (type === 'coin') {
-        // Bank the cash for this driver; applied to their cup wallet at race end.
-        r.moneyCollected[truckData.id] = (r.moneyCollected[truckData.id] ?? 0) + value;
-        if (truckData.isPlayer) {
-          truckData.truck.audioController?.playReload?.();
-          this.floatingText.spawn(`+$${value.toLocaleString()}`, truckData.truck.mesh.position);
-        }
+      return;
+    }
+    if (type === 'coin') {
+      // Bank the cash for this driver; applied to their cup wallet at race end.
+      r.moneyCollected[truckData.id] = (r.moneyCollected[truckData.id] ?? 0) + value;
+      if (truckData.isPlayer) {
+        truckData.truck.audioController?.playReload?.();
+        this.floatingText.spawn(`+$${value.toLocaleString()}`, truckData.truck.mesh.position);
       }
-    };
+    }
   }
+
 
   // ── Race flow ──────────────────────────────────────────────────────────────
 
@@ -412,21 +408,6 @@ export class RaceMode extends DriveMode {
     );
   }
 
-  /** Teleport a truck to the center of the last checkpoint it physically
-   *  passed; the grid spawn if the race hasn't started yet. */
-  _respawnToLastCheckpoint(truckData) {
-    const r = this._race;
-    this.respawnAtLastCheckpoint(truckData.truck, {
-      lastCheckpointNumber: truckData.gameState.lastCheckpointPassed,
-      hasStarted: truckData.hasStarted,
-      checkpointManager: r.checkpointManager,
-      track: r.currentTrack,
-      staticBodyCollisionManager: r.staticBodyCollisionManager,
-      fallbackCheckpoint: r.startFinishCp,
-      fallbackSpawn: () => r.getGridSpawn(truckData.gridSlot ?? (truckData.isPlayer ? 0 : 1)),
-    });
-  }
-
   _startCountdown() {
     const r = this._race;
     r.countdownActive = true;
@@ -437,70 +418,27 @@ export class RaceMode extends DriveMode {
     this.musicManager?.stop();
     playTheme(r.audioManager);
 
-    // Re-snap all trucks to their grid positions with zeroed physics state.
-    // This neutralises any drift from the large first-frame dt that accumulates
-    // during async scene setup, so trucks are clean when the player sees "3".
-    r.trucks.forEach((truckData, index) => {
-      const { pos, heading } = r.getGridSpawn(index);
-      this.respawnTruck(truckData.truck, pos, heading, r.staticBodyCollisionManager);
-      // Handbrake hold: a sloped grid spot would otherwise let the truck
-      // roll during the countdown, since neither AI's paused input nor the
-      // player's neutral input engages any brake.
-      truckData.truck.state.parked = true;
-    });
+    // Re-snap all trucks to their grid positions with zeroed physics state and
+    // the handbrake on. This neutralises any drift from the large first-frame
+    // dt that accumulates during async scene setup, so trucks are clean when
+    // the player sees "3".
+    r.sim.placeOnGrid({ parked: true });
 
     this.runCountdownSequence(r.uiManager, () => {
       r.countdownActive = false;
       r.aiDrivers.forEach(d => { d.paused = false; });
-      r.trucks.forEach(td => { td.truck.state.parked = false; });
       // Green light: hand off from the theme to the regular playlist.
       stopTheme(r.audioManager);
       this.musicManager?.start();
-      // No start/finish gate: the race (and every lap clock) starts on GO.
-      if (r.maxCheckpointNumber === 0 && !r.started) {
-        r.started = true;
-        r.startMs = r.clockMs;
-        r.trucks.forEach(t => t.lapStartTime = r.clockMs);
-        r.uiManager.showRaceTimer();
-      }
+      r.sim.go();
     });
   }
 
   /** Full race reset (pause menu Restart / Exit). */
   _resetGame() {
     const r = this._race;
-    r.started = false;
-    r.startMs = null;
-    r.trucks.forEach(t => t.lapStartTime = null);
-    r.ended = false;
-    r.finishOrder.length = 0;
-    r.dnfDeadlineMs = null;
     r.uiManager.hideRaceTimer();
-
-    r.trucks.forEach((truckData, index) => {
-      const { pos, heading } = r.getGridSpawn(index);
-      // Use the proper respawn path. teleportTo zeroes the physics body and
-      // notifyTeleport flushes the collision manager's stale previous position.
-      // A bare mesh.position assignment leaves prevPos at the truck's pre-reset
-      // spot, so the swept-AABB static-collision test drags the truck straight
-      // back onto the track the moment the game loop resumes.
-      this.respawnTruck(truckData.truck, pos, heading, r.staticBodyCollisionManager);
-      truckData.gameState.reset();
-      truckData.gameState.lastCheckpointPassed = r.maxCheckpointNumber > 0 ? r.maxCheckpointNumber - 1 : 0;
-      truckData.hasStarted = false;
-      truckData.truck.state.rubberBandSpeedMult = 1;
-    });
-
-    // Reset AI navigation + recovery state to match a freshly-built driver.
-    // Without this the stuck-recovery and checkpoint-guidance watchers keep
-    // stale state across the reset (a pending stuck-flag or gate-miss), and
-    // fire a respawn the moment the countdown ends — teleporting AI trucks
-    // off the grid back onto the track instead of starting them on the line.
-    r.aiDrivers.forEach(d => {
-      d.reset();
-      d.currentCheckpointTarget = 0;
-      d.lastCheckpointPassed = 0;
-    });
+    r.sim.reset();
 
     r.checkpointManager.rebuild();
     r.checkpointManager.updatePlayerCheckpointHighlight(r.playerTruckData.gameState.lastCheckpointPassed);
@@ -520,25 +458,9 @@ export class RaceMode extends DriveMode {
     this._startCountdown();
   }
 
-  /** Grace period since the first finish ran out: every truck still racing is
-   *  finished without a time, in truck-array order. */
-  _handleDNF() {
+  /** The sim ended the race (everyone finished, or the DNF grace ran out). */
+  _onRaceEnd(finishOrder) {
     const r = this._race;
-    r.trucks
-      .filter(td => !td.gameState.raceFinished)
-      .forEach(td => {
-        td.gameState.finishRace(null); // mark finished without a time
-        r.finishOrder.push(td);
-        console.debug(`[RaceMode] DNF: ${td.name}`);
-      });
-    this._triggerRaceEnd();
-  }
-
-  _triggerRaceEnd() {
-    const r = this._race;
-    if (r.ended) return;
-    r.ended = true;
-    r.dnfDeadlineMs = null;
     r.checkpointManager.clearPlayerCheckpointHighlight();
 
     // Stop the player engine loop immediately when the race ends.
@@ -546,14 +468,7 @@ export class RaceMode extends DriveMode {
     // so waiting for teardown would leave the engine audio running there.
     this.truckAudioController?.stop();
 
-    // Freeze trucks that DNF'd (still moving with no path to finish)
-    r.trucks.forEach(td => {
-      if (!td.gameState.raceFinished) {
-        td.truck.state.velocity = Vector3.Zero();
-      }
-    });
-
-    const rows = buildRaceResultRows(r.finishOrder, r.trucks);
+    const rows = buildRaceResultRows(finishOrder, r.trucks);
     // The post-race screen (single-race results or the championship pit) is
     // its own view — clear the race HUD and stop rendering the frozen race
     // scene behind it until this mode tears down.
@@ -581,236 +496,104 @@ export class RaceMode extends DriveMode {
   /** One fixed physics step (SIM_DT) — see installRaceFrameLoop. */
   _stepRace(dt, input) {
     const r = this._race;
-    const { frameProfiler: fp, trucks, currentTrack } = r;
+    const { frameProfiler: fp, trucks } = r;
     const player = r.playerTruckData;
 
-    r.clockMs += dt * 1000;
-    if (r.dnfDeadlineMs !== null && r.clockMs >= r.dnfDeadlineMs && !r.ended) {
-      r.dnfDeadlineMs = null;
-      this._handleDNF();
-    }
+    r.sim.step(dt, { [player.id]: input });
+    r.playerDebugInfo = player.truck.getDebugInfo();
 
-    fp.measure('collision.truck.pre', () => r.truckCollisionManager.preUpdate(trucks, dt));
-
-    fp.measure('trucks.update', () => trucks.forEach((truckData) => {
-      // Finished trucks still get physics updates (zero input) so they coast to
-      // a stop; AI trucks take their input from their driver inside update().
-      const truckInput = (truckData.gameState.raceFinished || !truckData.isPlayer) ? NO_INPUT : input;
-      const debugInfo = truckData.truck.update(
-        truckInput,
-        dt,
-        r.terrainManager,
-        currentTrack,
-        truckData.isPlayer,
-        player.truck.mesh.position,
-        fp
-      );
-      if (truckData.isPlayer) r.playerDebugInfo = debugInfo;
-    }));
-
-    fp.measure('collision.staticBodies', () => r.staticBodyCollisionManager.update(trucks, dt));
-
-    // r carries slowZones / speedBoostZones / fireworkZones.
-    this.applyZoneEffects(r.scene, currentTrack, trucks, r, dt, fp);
-
-    fp.measure('zones.oob', () => trucks.forEach((truckData) => {
-      const oobRemaining = this.updateOutOfBoundsCountdown({
-        truckId: truckData.id,
-        truck: truckData.truck,
-        outOfBoundsZones: r.outOfBoundsZones,
-        track: currentTrack,
-        dt,
-        durationSec: truckData.isPlayer ? 5 : 2,
-        onTimeout: () => this._respawnToLastCheckpoint(truckData),
-      });
-      if (truckData.isPlayer) {
-        if (oobRemaining == null) r.uiManager.hideOutOfBoundsCountdown();
-        else r.uiManager.showOutOfBoundsCountdown(oobRemaining);
-      }
-    }));
-
-    fp.measure('collision.truck.resolve', () => r.truckCollisionManager.update(trucks, dt));
-    fp.measure('obstacles.update', () => r.obstacleManager.update(trucks));
-    fp.measure('pickups.update', () => r.pickupManager.update(trucks, dt));
+    // Per-step truck effects (body puppet, audio, particles, tire marks, wake).
+    fp.measure('trucks.presentation', () => trucks.forEach((td) =>
+      td.truck.updatePresentation(dt, r.terrainManager, r.currentTrack, player.truck.mesh.position, fp)
+    ));
+    fp.measure('zones.fireworks', () =>
+      this.updateFireworkZones(r.scene, r.currentTrack, trucks, r.fireworkZones, dt)
+    );
 
     // Feed the telemetry recorder each step for the player truck.
     fp.measure('telemetry.player', () => {
-      if (r.telemetryRecorder.recording && r.started) {
+      if (r.telemetryRecorder.recording && r.sim.started) {
         const pt = player.truck;
         r.telemetryRecorder.update(
           { x: pt.mesh.position.x, z: pt.mesh.position.z },
           forwardSpeed(pt),
           dt * 1000,
-          r.playerDebugInfo?.terrainGripMultiplier ?? 1
+          r.playerDebugInfo.terrainGripMultiplier ?? 1
         );
       }
-    });
-
-    // Keep each AI truck's last-known terrain grip updated for telemetry speed scaling.
-    fp.measure('ai.gripSample', () => {
-      r.aiGripSampleElapsedMs += dt * 1000;
-      if (r.aiGripSampleElapsedMs >= AI_GRIP_SAMPLE_INTERVAL_MS) {
-        trucks.forEach(td => {
-          if (!td.isPlayer && td.truck.driver) {
-            const terrain = r.terrainManager.getTerrainAt(td.truck.mesh.position);
-            td.truck._lastTerrainGrip = terrain.gripMultiplier;
-          }
-        });
-        r.aiGripSampleElapsedMs = 0;
-      }
-    });
-
-    fp.measure('checkpoints.laps', () => trucks.forEach((td) => this._updateLaps(td)));
-
-    // Rubber-band: nudge each AI's effective top speed toward the player based
-    // on race-progress gap (laps + checkpoints). Player speed is never touched.
-    fp.measure('ai.rubberBand', () => {
-      if (!r.started || r.ended || r.rubberBandLevel === 'off') return;
-      const total = Math.max(1, r.checkpointManager.getTotalCheckpoints());
-      const playerGs = player.gameState;
-      const playerProgress = playerGs.lapCount * total + playerGs.checkpointCount;
-      trucks.forEach(td => {
-        if (td.isPlayer || td.gameState.raceFinished) return;
-        const gs = td.gameState;
-        const aiProgress = gs.lapCount * total + gs.checkpointCount;
-        const gapLaps = (playerProgress - aiProgress) / total;
-        td.truck.state.rubberBandSpeedMult = stepRubberBandMultiplier(
-          td.truck.state.rubberBandSpeedMult ?? 1,
-          gapLaps,
-          r.rubberBandLevel,
-          dt
-        );
-      });
     });
   }
 
-  /** Checkpoint crossings for one truck: race start, lap completion, finish. */
-  _updateLaps(truckData) {
-    const r = this._race;
-    const { checkpointManager, uiManager, telemetryRecorder, maxCheckpointNumber, totalLaps } = r;
-    if (truckData.gameState.raceFinished) return;
+  /** RaceSimulation callbacks → HUD, checkpoint highlight, audio, telemetry. */
+  _simEvents() {
+    const r = () => this._race;
+    const playerGrip = () => r().playerTruckData.truck.simFrame.terrainGripMultiplier ?? 1;
+    const recordCheckpoint = (index, pos) => {
+      const { telemetryRecorder, playerTruckData } = r();
+      if (telemetryRecorder.recording) {
+        telemetryRecorder.onCheckpointPassed(index, pos, forwardSpeed(playerTruckData.truck), playerGrip());
+      }
+    };
 
-    const truck = truckData.truck;
-    const checkpointResult = checkpointManager.update(
-      truck.mesh.position,
-      truck.state.velocity,
-      truckData.gameState.lastCheckpointPassed,
-      truckData.id
-    );
-    if (!checkpointResult?.passed) return;
-    const pos = { x: truck.mesh.position.x, z: truck.mesh.position.z };
-
-    // Start/finish crossing: start race timer and reset sequence so lap flow begins at CP 1
-    if (checkpointResult.index === maxCheckpointNumber && !truckData.hasStarted) {
-      truckData.hasStarted = true;
-
-      if (!r.started) {
-        r.started = true;
-        r.startMs = r.clockMs;
-        uiManager.showRaceTimer();
+    return {
+      onRaceStart: () => {
+        r().uiManager.showRaceTimer();
         console.debug("Race started!");
-      }
+      },
 
-      truckData.lapStartTime = r.clockMs;
-      truckData.gameState.lastCheckpointPassed = 0;
-      truckData.gameState.checkpointCount = 0;
-      checkpointManager.resetForTruck(truckData.id);
-      if (truckData.isPlayer) {
-        checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
-        uiManager.updateCheckpoints(0);
-        // Auto-start telemetry recording when player crosses the start line
-        if (telemetryRecorder.recording) {
-          telemetryRecorder.onCheckpointPassed(
-            maxCheckpointNumber, pos, forwardSpeed(truck), r.playerDebugInfo?.terrainGripMultiplier ?? 1
-          );
+      onStartLine: (td, pos) => {
+        if (!td.isPlayer) return;
+        r().checkpointManager.updatePlayerCheckpointHighlight(td.gameState.lastCheckpointPassed);
+        r().uiManager.updateCheckpoints(0);
+        // Auto-start telemetry recording when the player crosses the start line.
+        recordCheckpoint(r().maxCheckpointNumber, pos);
+      },
+
+      onCheckpoint: (td, index, count, pos) => {
+        if (!td.isPlayer) return;
+        recordCheckpoint(index, pos);
+        r().checkpointManager.updatePlayerCheckpointHighlight(td.gameState.lastCheckpointPassed);
+        r().uiManager.updateCheckpoints(count);
+      },
+
+      onLap: (td, lapCount, lapTime) => {
+        const { totalLaps, checkpointManager, uiManager } = r();
+        if (!td.isPlayer) {
+          console.debug(`[${td.name}] Completed lap ${lapCount} in ${(lapTime / 1000).toFixed(2)}s!`);
+          return;
         }
-      }
-      // Notify AI driver so it recalculates path toward checkpoint #1
-      if (!truckData.isPlayer && truck.driver) {
-        truck.driver.onCheckpointPassed(maxCheckpointNumber, pos);
-      }
-      return;
-    }
+        // Air horn as the player starts the last lap.
+        if (lapCount === totalLaps - 1) td.truck.audioController?.playLastLapAirhorn();
+        if (lapCount >= totalLaps) checkpointManager.clearPlayerCheckpointHighlight();
+        else checkpointManager.updatePlayerCheckpointHighlight(td.gameState.lastCheckpointPassed);
+        uiManager.updateLaps(lapCount, totalLaps);
+        uiManager.updateCheckpoints(0);
+        console.debug(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);
+      },
 
-    const newCount = truckData.gameState.incrementCheckpoint(checkpointResult.index);
+      onFinish: (td, totalTime) => {
+        if (!td.isPlayer) {
+          console.debug(`[${td.name}] Finished race! Total time: ${(totalTime / 1000).toFixed(2)}s`);
+          return;
+        }
+        console.debug("\n=== RACE FINISHED ===");
+        console.debug(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
+        console.debug("Lap Times:");
+        td.gameState.lapTimes.forEach((time, i) => {
+          console.debug(`  Lap ${i + 1}: ${(time / 1000).toFixed(2)}s`);
+        });
+      },
 
-    if (!truckData.isPlayer && truck.driver) {
-      truck.driver.onCheckpointPassed(checkpointResult.index, pos);
-    }
+      onOutOfBounds: (td, remaining) => {
+        if (!td.isPlayer) return;
+        if (remaining == null) r().uiManager.hideOutOfBoundsCountdown();
+        else r().uiManager.showOutOfBoundsCountdown(remaining);
+      },
 
-    // Feed mid-lap checkpoint events into the telemetry recorder
-    if (truckData.isPlayer && telemetryRecorder.recording) {
-      telemetryRecorder.onCheckpointPassed(
-        checkpointResult.index, pos, forwardSpeed(truck), r.playerDebugInfo?.terrainGripMultiplier ?? 1
-      );
-    }
+      onPickup: (td, type, value) => this._onPickup(td, type, value),
 
-    if (truckData.isPlayer) {
-      checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
-      uiManager.updateCheckpoints(newCount);
-    }
-
-    if (newCount !== checkpointManager.getTotalCheckpoints()) return;
-
-    // -- Lap complete --
-    const currentTime = r.clockMs;
-    const lapTime = truckData.lapStartTime != null ? currentTime - truckData.lapStartTime : 0;
-    truckData.lapStartTime = currentTime;
-    const lapCount = truckData.gameState.completeLap(lapTime);
-    checkpointManager.resetForTruck(truckData.id);
-
-    // Any truck finishing a lap has a chance to spawn a pickup, more
-    // valuable on later laps (up to 3x nitro).
-    r.pickupManager.spawnForLap(lapCount);
-
-    // Play airhorn when player truck starts last lap
-    if (truckData.isPlayer && lapCount === totalLaps - 1) {
-      truck.audioController?.playLastLapAirhorn();
-    }
-
-    if (truckData.isPlayer) {
-      if (lapCount >= totalLaps) checkpointManager.clearPlayerCheckpointHighlight();
-      else checkpointManager.updatePlayerCheckpointHighlight(truckData.gameState.lastCheckpointPassed);
-      uiManager.updateLaps(lapCount, totalLaps);
-      uiManager.updateCheckpoints(0);
-      console.debug(`Lap ${lapCount} completed in ${(lapTime / 1000).toFixed(2)}s`);
-    } else {
-      console.debug(`[${truckData.name}] Completed lap ${lapCount} in ${(lapTime / 1000).toFixed(2)}s!`);
-    }
-
-    if (lapCount < totalLaps) return;
-
-    // -- Race finished for this truck --
-    const totalTime = currentTime - r.startMs;
-    truckData.gameState.finishRace(totalTime);
-    r.finishOrder.push(truckData);
-
-    // Stop AI driver from issuing further steering inputs
-    if (!truckData.isPlayer && truck.driver) {
-      truck.driver.paused = true;
-    }
-
-    // The first finisher starts the DNF grace for everyone still racing.
-    if (r.dnfDeadlineMs === null && !r.ended && r.finishOrder.length < r.trucks.length) {
-      console.debug(`[RaceMode] ${truckData.name} finished — DNF timer started (${DNF_GRACE_MS / 1000}s)`);
-      r.dnfDeadlineMs = r.clockMs + DNF_GRACE_MS;
-    }
-
-    if (truckData.isPlayer) {
-      console.debug("\n=== RACE FINISHED ===");
-      console.debug(`Total Time: ${(totalTime / 1000).toFixed(2)}s`);
-      console.debug("Lap Times:");
-      truckData.gameState.lapTimes.forEach((time, i) => {
-        console.debug(`  Lap ${i + 1}: ${(time / 1000).toFixed(2)}s`);
-      });
-    } else {
-      console.debug(`[${truckData.name}] Finished race! Total time: ${(totalTime / 1000).toFixed(2)}s`);
-    }
-
-    // All drivers finished — end race immediately
-    if (r.finishOrder.length === r.trucks.length) {
-      this._triggerRaceEnd();
-    }
+      onRaceEnd: (finishOrder) => this._onRaceEnd(finishOrder),
+    };
   }
 
   /** Once per render frame — presentation only (see installRaceFrameLoop). */
@@ -833,7 +616,7 @@ export class RaceMode extends DriveMode {
     fp.measure('ui.boost', () => r.uiManager.setBoostActive(player.state.boostActive));
 
     fp.measure('positions', () => {
-      if (r.started && !r.ended) this.positionLabels.update(trucks, r.checkpointManager, r.finishOrder);
+      if (r.sim.started && !r.sim.ended) this.positionLabels.update(trucks, r.checkpointManager, r.sim.finishOrder);
       else this.positionLabels.hideAll();
     });
 

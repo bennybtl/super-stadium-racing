@@ -215,6 +215,7 @@ export class PolyWall {
     this._paintedRight = null;
     this._pendingScuffHits = [];
     this._lastScuffFlushAt = 0;
+    this._scuffFlushObserver = null;
     this._liveScuffSeed = 0;
     this._wearDirty = false; // true once a real contact changes wear beyond what's already saved
     this._trackKey = track?.id || null;
@@ -252,6 +253,7 @@ export class PolyWall {
   }
 
   dispose() {
+    this._stopScuffFlush();
     if (this._wearDirty && this._trackKey && this._liveLeft && this._liveRight) {
       saveWallWear(this._trackKey, this._wallKey, this._liveLeft, this._liveRight);
       this._wearDirty = false;
@@ -381,7 +383,27 @@ export class PolyWall {
     if (buf[idx] - painted[idx] < LIVE_SCUFF_MIN_DELTA) return;
     painted[idx] = buf[idx];
     this._pendingScuffHits.push({ idx, side, intensity: buf[idx] });
-    this._maybeFlushLiveScuff();
+    this._scheduleScuffFlush();
+  }
+
+  /**
+   * Repaint from a render-frame hook rather than here: contacts arrive inside
+   * the sim step, which must not read the clock (docs/MULTIPLAYER.md, Phase 2).
+   * The hook stays until the queue is painted, so the last hits of a scrape
+   * show without waiting for another contact.
+   */
+  _scheduleScuffFlush() {
+    if (this._scuffFlushObserver || !this._scene) return;
+    this._scuffFlushObserver = this._scene.onBeforeRenderObservable.add(() => {
+      this._maybeFlushLiveScuff();
+      if (this._pendingScuffHits.length === 0) this._stopScuffFlush();
+    });
+  }
+
+  _stopScuffFlush() {
+    if (!this._scuffFlushObserver) return;
+    this._scene?.onBeforeRenderObservable.remove(this._scuffFlushObserver);
+    this._scuffFlushObserver = null;
   }
 
   /** Paint queued live hits onto the wall's scuff texture, no more often than LIVE_SCUFF_FLUSH_MS. */

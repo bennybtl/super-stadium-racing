@@ -1,6 +1,10 @@
 import { Vector3 } from "@babylonjs/core";
 import { TRUCK_HALF_HEIGHT } from "../constants.js";
-import { isPointInPolygon } from "../utils/polyline-utils.js";
+import {
+  OutOfBoundsTracker, getActionZones, isPointInActionZone, applySlowZones, applySpeedBoostZones,
+  getStartFinishCheckpoint, respawnAtLastCheckpoint,
+} from "../sim/race-rules.js";
+import { rngStream } from "../sim/rng.js";
 import { gridSlotXZ, startGridSlot, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../utils/start-grid.js";
 import { AIDriver, AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { BaseMode } from "./BaseMode.js";
@@ -21,7 +25,7 @@ import { Minimap } from "../managers/Minimap.js";
 export class DriveMode extends BaseMode {
   constructor(controller) {
     super(controller);
-    this._oobStateByTruckId = new Map();
+    this._oobTracker = new OutOfBoundsTracker();
     this._fireworksManager = null;
     this.cameraController = null;
     this._photoModeActive = false;
@@ -309,41 +313,8 @@ export class DriveMode extends BaseMode {
    * @param {object}   [o.fallbackCheckpoint]      used when no gate is numbered
    * @param {() => { pos: import('@babylonjs/core').Vector3, heading: number }} o.fallbackSpawn
    */
-  respawnAtLastCheckpoint(truck, {
-    lastCheckpointNumber, hasStarted, checkpointManager, track,
-    staticBodyCollisionManager, fallbackCheckpoint = null, fallbackSpawn,
-  }) {
-    const toSpawn = () => {
-      const { pos, heading } = fallbackSpawn();
-      this.respawnTruck(truck, pos, heading, staticBodyCollisionManager);
-    };
-    if (!hasStarted) return toSpawn();
-
-    let cpFeature;
-    if (lastCheckpointNumber > 0) {
-      const gates = checkpointManager.checkpointMeshes
-        .map(cp => cp.feature)
-        .filter(f => f.checkpointNumber === lastCheckpointNumber);
-      const px = truck.mesh.position.x;
-      const pz = truck.mesh.position.z;
-      cpFeature = gates.reduce((best, g) => {
-        if (!best) return g;
-        const bd = (best.centerX - px) ** 2 + (best.centerZ - pz) ** 2;
-        const gd = (g.centerX - px) ** 2 + (g.centerZ - pz) ** 2;
-        return gd < bd ? g : best;
-      }, null);
-    } else {
-      cpFeature = this.getStartFinishCheckpoint(checkpointManager) ?? fallbackCheckpoint;
-    }
-
-    if (!cpFeature) return toSpawn();
-    const y = track.getHeightAt(cpFeature.centerX, cpFeature.centerZ) + TRUCK_HALF_HEIGHT;
-    this.respawnTruck(
-      truck,
-      new Vector3(cpFeature.centerX, y, cpFeature.centerZ),
-      cpFeature.heading,
-      staticBodyCollisionManager,
-    );
+  respawnAtLastCheckpoint(truck, opts) {
+    respawnAtLastCheckpoint(truck, opts);
   }
 
   /**
@@ -355,7 +326,7 @@ export class DriveMode extends BaseMode {
    *
    * Returns a `(index) => AIDriver` suitable for `setupAIDrivers({ getAIDriver })`.
    */
-  makeAIDriverFactory({ currentTrack, checkpointManager, wallManager, scene, terrainManager, championship = null }) {
+  makeAIDriverFactory({ currentTrack, checkpointManager, wallManager, scene, terrainManager, championship = null, seed = null }) {
     return (i) => {
       let driver;
       if (championship?.aiSkills) {
@@ -368,6 +339,8 @@ export class DriveMode extends BaseMode {
         else driver = AIDriver.createBadDriver(currentTrack, checkpointManager, wallManager, scene);
       }
       driver.setTerrainManager(terrainManager);
+      // Seeded race: each driver draws from its own stream (sim/rng.js).
+      if (seed != null) driver.random = rngStream(seed, `ai:${i}`);
       return driver;
     };
   }
@@ -395,14 +368,7 @@ export class DriveMode extends BaseMode {
    * behind it works for both forward and reverse. Returns null if unnumbered.
    */
   getStartFinishCheckpoint(checkpointManager) {
-    const numbered = checkpointManager.checkpointMeshes
-      .map(cp => cp.feature)
-      .filter(f => f.checkpointNumber != null);
-    if (numbered.length === 0) return null;
-    return numbered.reduce(
-      (max, f) => (f.checkpointNumber > max.checkpointNumber ? f : max),
-      numbered[0],
-    );
+    return getStartFinishCheckpoint(checkpointManager);
   }
 
   /**
@@ -484,30 +450,22 @@ export class DriveMode extends BaseMode {
    * Resolve all slow-zone action zones from track features.
    */
   getSlowZones(track) {
-    return track.features.filter(
-      f => f.type === "actionZone" && f.zoneType === "slowZone"
-    );
+    return getActionZones(track, 'slowZone');
   }
 
   /** Resolve all out-of-bounds action zones from track features. */
   getOutOfBoundsZones(track) {
-    return track.features.filter(
-      f => f.type === "actionZone" && f.zoneType === "outOfBounds"
-    );
+    return getActionZones(track, 'outOfBounds');
   }
 
   /** Resolve all speed-boost action zones from track features. */
   getSpeedBoostZones(track) {
-    return track.features.filter(
-      f => f.type === "actionZone" && f.zoneType === "speedBoost"
-    );
+    return getActionZones(track, 'speedBoost');
   }
 
   /** Resolve all firework action zones from track features. */
   getFireworkZones(track) {
-    return track.features.filter(
-      f => f.type === "actionZone" && f.zoneType === "fireworks"
-    );
+    return getActionZones(track, 'fireworks');
   }
 
   /**
@@ -524,18 +482,7 @@ export class DriveMode extends BaseMode {
   }
 
   isPointInActionZone(x, z, zone) {
-    if (!zone) return false;
-
-    if (zone.shape === 'polygon' && Array.isArray(zone.points)) {
-      return isPointInPolygon(x, z, zone.points);
-    }
-
-    const cx = zone.x ?? 0;
-    const cz = zone.z ?? 0;
-    const r = Math.max(0, zone.radius ?? 0);
-    const dx = x - cx;
-    const dz = z - cz;
-    return (dx * dx + dz * dz) < r * r;
+    return isPointInActionZone(x, z, zone);
   }
 
   /**
@@ -543,28 +490,7 @@ export class DriveMode extends BaseMode {
    * `trucks` accepts either Truck instances or truckData objects with `.truck`.
    */
   applySlowZones(trucks, slowZones) {
-    if (!slowZones || slowZones.length === 0) return;
-
-    for (const truckOrData of trucks) {
-      const truck = truckOrData?.truck ?? truckOrData;
-      if (!truck?.mesh || !truck?.state) continue;
-
-      const pos = truck.mesh.position;
-      const zone = slowZones.find(z => this.isPointInActionZone(pos.x, pos.z, z));
-
-      truck.state.slowZoneActive = zone;
-      if (!zone) continue;
-
-      // slowStrength is the slow *amount* on a 0-10 scale (UI shows it ×10 as a
-      // %): higher = slower. Cap the truck that fraction below its own top speed,
-      // so a low strength barely slows and a high one forces a crawl.
-      const slowFraction = Math.min(1, (zone.slowStrength ?? 3) / 10);
-      const limit = truck.state.maxSpeed * (1 - slowFraction);
-
-      if (truck.state.velocity.length() > limit) {
-        truck.state.velocity.normalize().scaleInPlace(limit);
-      }
-    }
+    applySlowZones(trucks, slowZones);
   }
 
   /**
@@ -574,108 +500,14 @@ export class DriveMode extends BaseMode {
    * acceleration. `trucks` accepts Truck instances or truckData with `.truck`.
    */
   applySpeedBoostZones(trucks, boostZones) {
-    if (!boostZones || boostZones.length === 0) return;
-
-    for (const truckOrData of trucks) {
-      const truck = truckOrData?.truck ?? truckOrData;
-      if (!truck?.mesh || !truck?.state) continue;
-
-      const pos = truck.mesh.position;
-      const zone = boostZones.find(z => this.isPointInActionZone(pos.x, pos.z, z));
-      if (!zone) continue;
-
-      const strength = Math.max(1, zone.boostStrength ?? 1.5);
-      truck.state.speedBoostActive = true;
-      truck.state.speedBoostTimer = Math.max(0.05, zone.boostDuration ?? 1.5);
-      truck.state.speedBoostSpeedMult = strength;
-      // Acceleration gets a slightly punchier multiplier so the truck actually
-      // reaches the raised top speed within the boost window.
-      truck.state.speedBoostAccelMult = 1 + (strength - 1) * 1.5;
-    }
-  }
-
-  _isPointOutsideTrackBounds(x, z, track) {
-    if (!track) return false;
-    const halfWidth = (track.width ?? 0) / 2;
-    const halfDepth = (track.depth ?? 0) / 2;
-    return Math.abs(x) > halfWidth || Math.abs(z) > halfDepth;
+    applySpeedBoostZones(trucks, boostZones);
   }
 
   /**
    * Shared out-of-bounds countdown/respawn logic.
    * Returns remaining seconds (float) while active, or null when inactive.
    */
-  updateOutOfBoundsCountdown({
-    truckId,
-    truck,
-    outOfBoundsZones,
-    track,
-    dt,
-    durationSec = 5,
-    graceSecAfterRespawn = 1.5,
-    onTimeout,
-  }) {
-    if (!truck?.mesh) return null;
-    // Dead-space bounds are an opt-in per-track setting; explicit out-of-bounds
-    // zones always apply. Bail early only when neither source is active.
-    const deadSpaceEnabled = track?.oobDeadSpace === true;
-    if (!outOfBoundsZones?.length && !deadSpaceEnabled) return null;
-
-    const nowMs = performance.now();
-    let state = this._oobStateByTruckId.get(truckId);
-
-    const logOobUpdate = () => {
-      const shouldLog = state.lastLoggedInZone !== state.inZone
-        || Math.abs(state.remainingSec - state.lastLoggedRemainingSec) >= 0.5
-        || state.remainingSec <= 0;
-      if (!shouldLog) return;
-
-      state.lastLoggedInZone = state.inZone;
-      state.lastLoggedRemainingSec = state.remainingSec;
-    };
-    if (!state) {
-      state = {
-        remainingSec: durationSec,
-        inZone: false,
-        immuneUntilMs: 0,
-        lastLoggedRemainingSec: durationSec,
-        lastLoggedInZone: false,
-      };
-      this._oobStateByTruckId.set(truckId, state);
-    }
-
-    const pos = truck.mesh.position;
-    const inExplicitZone = outOfBoundsZones?.some(z => this.isPointInActionZone(pos.x, pos.z, z)) ?? false;
-    // When enabled for the track, leaving the track perimeter (the dead space)
-    // also counts as out of bounds.
-    const inTrackDeadSpace = deadSpaceEnabled && this._isPointOutsideTrackBounds(pos.x, pos.z, track);
-    const inZoneNow = inExplicitZone || inTrackDeadSpace;
-
-    if (nowMs < state.immuneUntilMs) {
-      state.inZone = false;
-      state.remainingSec = durationSec;
-      return null;
-    }
-
-    if (!inZoneNow) {
-      state.inZone = false;
-      state.remainingSec = durationSec;
-      logOobUpdate();
-      return null;
-    }
-
-    state.inZone = true;
-    state.remainingSec = Math.max(0, state.remainingSec - dt);
-    logOobUpdate();
-
-    if (state.remainingSec <= 0) {
-      onTimeout?.();
-      state.remainingSec = durationSec;
-      state.inZone = false;
-      state.immuneUntilMs = nowMs + graceSecAfterRespawn * 1000;
-      return null;
-    }
-
-    return state.remainingSec;
+  updateOutOfBoundsCountdown(opts) {
+    return this._oobTracker.update(opts);
   }
 }

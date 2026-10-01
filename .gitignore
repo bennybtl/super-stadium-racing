@@ -31,3 +31,6 @@ yarn-error.log*
 .cache/
 
 dist/
+
+# Race results written by the lobby server
+server/data/

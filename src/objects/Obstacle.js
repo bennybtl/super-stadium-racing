@@ -6,6 +6,7 @@ import {
   PhysicsMotionType,
   SceneLoader,
   TransformNode,
+  Quaternion,
 } from "@babylonjs/core";
 import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import { MeshMaterialResolver } from "../utils/mesh-materials.js";
@@ -16,9 +17,19 @@ OBJFileLoader.SKIP_MATERIALS = true;
 
 const DEFAULT_OBSTACLE_TYPE = "tireStack";
 
-/** The obstacle loader, exposed on window by main.js. */
+let _obstacleLoader = null;
+
+/**
+ * Supply the obstacle definitions explicitly — `{ getObstacle(id), obstacleList }`
+ * (an ObstacleLoader, or any object shaped like one). The browser needn't: it
+ * falls back to window.obstacleLoader, set by main.js. A headless race does.
+ */
+export function setObstacleLoader(loader) {
+  _obstacleLoader = loader;
+}
+
 function getObstacleLoader() {
-  return typeof window !== "undefined" ? window.obstacleLoader : null;
+  return _obstacleLoader ?? globalThis.window?.obstacleLoader ?? null;
 }
 
 /**
@@ -222,7 +233,7 @@ export class Obstacle {
             // A decal can be stuck to the obstacle (see DecalManager); the ray
             // predicate matches on this tag and ignores isPickable.
             m.metadata = { ...(m.metadata ?? {}), decalTarget: true };
-            shadows.addShadowCaster(m);
+            shadows?.addShadowCaster(m);
             m.receiveShadows = true;
             this._loadedMeshes.push(m);
           }
@@ -254,9 +265,25 @@ export class Obstacle {
     body.setMassProperties({ mass: this.mass });
   }
 
+  /**
+   * Online client: take the pose from the server instead of local physics. The
+   * local body is dropped the first time — the server simulates the obstacle,
+   * and a second simulation here would only fight the pose.
+   */
+  setNetPose({ x, y, z, qx, qy, qz, qw }) {
+    if (this._disposed) return;
+    if (this.aggregate) {
+      this.aggregate.dispose();
+      this.aggregate = null;
+    }
+    this.body.position.set(x, y, z);
+    if (!this.body.rotationQuaternion) this.body.rotationQuaternion = new Quaternion();
+    this.body.rotationQuaternion.set(qx, qy, qz, qw);
+  }
+
   dispose() {
     this._disposed = true;
-    this.aggregate.dispose();
+    this.aggregate?.dispose();
     for (const m of this._loadedMeshes) m.dispose();
     this._matRes?.dispose();
     this._pivot?.dispose();
@@ -283,6 +310,8 @@ export class Obstacle {
       || cached.scene !== scene
       || cachedSceneDisposed;
     if (shouldReload) {
+      // No model to show (a headless race's bare definitions): physics only.
+      if (!spec?.modelUrl) return Promise.resolve([]);
       const url = spec.modelUrl;
       const lastSlash = url.lastIndexOf('/');
       const rootUrl   = url.substring(0, lastSlash + 1);

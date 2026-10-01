@@ -67,7 +67,8 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hot lap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('single race')">Single Race</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showChampionshipSetup()">Championship</button>
-          <button v-if="isDev" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showMultiplayerLobby()">Multiplayer</button>
+          <button v-if="online.serverAvailable" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showMultiplayerLobby()">Multiplayer</button>
+          <button v-if="online.serverAvailable" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showOnlineLobby()">Online (beta)</button>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
@@ -151,6 +152,14 @@
         <!-- ── Multiplayer waiting room ── -->
         <template v-else-if="store.screen === 'multiplayerRoom'">
           <MultiplayerRoom />
+        </template>
+
+        <!-- ── Online (server-authoritative) race lobby ── -->
+        <template v-else-if="store.screen === 'online'">
+          <OnlineLobby />
+        </template>
+        <template v-else-if="store.screen === 'onlineRoom'">
+          <OnlineRoom />
         </template>
 
         <!-- ── Championship setup ── -->
@@ -380,15 +389,13 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useMenuStore } from './store.js';
+import { useMenuStore, useOnlineStore } from './store.js';
 import { basicColors } from '../constants.js';
 import { REMIX_PACK_ID } from '../config/progression.js';
 import { loadControlsSettings } from '../settingsStorage.js';
 import { isSafari } from '../utils/browserSupport.js';
 import { version as appVersion } from '../../package.json';
 
-// Multiplayer is still in progress — only expose it running under `npm run dev`.
-const isDev = import.meta.env.DEV;
 
 import ConfirmDialog from './ConfirmDialog.vue';
 import SettingsMenu from './SettingsMenu.vue';
@@ -403,8 +410,13 @@ import TruckSetup from './TruckSetup.vue';
 import RacePodium3D from './RacePodium3D.vue';
 import MultiplayerLobby from './MultiplayerLobby.vue';
 import MultiplayerRoom from './MultiplayerRoom.vue';
+import OnlineLobby from './OnlineLobby.vue';
+import OnlineRoom from './OnlineRoom.vue';
 
 const store = useMenuStore();
+// Multiplayer entries appear only once a configured server answers.
+const online = useOnlineStore();
+onMounted(() => { online.checkServer(); });
 
 // Top 3 of the race that just finished, for the between-races championship pit.
 const champPodiumEntries = computed(() => {

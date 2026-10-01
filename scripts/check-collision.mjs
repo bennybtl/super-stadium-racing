@@ -155,6 +155,7 @@ function makeTruck(world, { x, z, heading }) {
   t.driftPhysics = new DriftPhysics(t.state);
   t.controls = new Controls(t.state);
   t._forward = new Vector3();
+  t._simFrame = {};
   t._surfaceSampleTrack = null;
   t._surfaceSampleFallback = 0;
   t._surfaceSampler = (sx, sz, fromY, fallback = t._surfaceSampleFallback) =>

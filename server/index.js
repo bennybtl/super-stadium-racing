@@ -4,6 +4,7 @@ import cors from "cors";
 import { Server, matchMaker } from "@colyseus/core";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { DriveRoom } from "./DriveRoom.js";
+import { mountRaceLobbies } from "./lobbies/index.js";
 
 const PORT = Number(process.env.PORT) || 2567;
 const ROOM_NAME = "drive";
@@ -34,6 +35,26 @@ app.get("/lobbies", async (_req, res) => {
     res.status(500).json({ error: "failed to list lobbies" });
   }
 });
+
+// Server-authoritative race lobbies (docs/MULTIPLAYER.md): each race runs in its
+// own child process on a port from RACE_PORT_MIN..RACE_PORT_MAX, which must be
+// reachable by clients. PUBLIC_HOST overrides the host handed to them.
+const raceLobbies = mountRaceLobbies(app, {
+  dataDir: process.env.RACE_DATA_DIR || undefined,
+  portMin: Number(process.env.RACE_PORT_MIN) || 22000,
+  portMax: Number(process.env.RACE_PORT_MAX) || 22099,
+  publicHost: process.env.PUBLIC_HOST || null,
+  raceOptions: {
+    maxRaceMs: Number(process.env.RACE_MAX_MS) || undefined,
+    joinTimeoutMs: Number(process.env.RACE_JOIN_TIMEOUT_MS) || undefined,
+  },
+});
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.once(signal, () => {
+    raceLobbies.stop();
+    process.exit(0);
+  });
+}
 
 const httpServer = createServer(app);
 

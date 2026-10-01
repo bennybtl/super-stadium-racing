@@ -52,7 +52,9 @@ export class Pickup {
     this.value  = value; // nitro count granted on collect (1x / 2x / 3x)
     this.scene  = scene;
     this._baseY = groundY + 1.2;
-    this._time  = Math.random() * Math.PI * 2; // random phase so pickups don't all bob in sync
+    // Phase from the spawn spot so pickups don't all bob in sync — derived, not
+    // random, since pickups spawn inside the (deterministic) sim step.
+    this._time  = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1 + 1) * Math.PI;
     this._aura  = null;
     this._bottles = null; // loaded-model groups (one per value: 1x/2x/3x nitro)
 
@@ -76,7 +78,7 @@ export class Pickup {
     coreMat.specularColor = new Color3(1.0, 1.0, 0.5);
     coreMat.specularPower = 16;
     this._core.material = coreMat;
-    shadows.addShadowCaster(this._core);
+    shadows?.addShadowCaster(this._core);
 
     // ── Outer ring ───────────────────────────────────────────────────────
     this._ring = MeshBuilder.CreateTorus(
@@ -90,7 +92,7 @@ export class Pickup {
     ringMat.diffuseColor  = diffuse;
     ringMat.emissiveColor = emissive;
     this._ring.material = ringMat;
-    shadows.addShadowCaster(this._ring);
+    shadows?.addShadowCaster(this._ring);
 
     // Persistent visibility ring that stays even when custom pickup meshes load.
     this._aura = MeshBuilder.CreateTorus(
@@ -109,6 +111,9 @@ export class Pickup {
     this._aura.material = auraMat;
 
     const loadObjModel = (url, { tiltX = 0, count = 1, spacing = 0.8 } = {}) => {
+      // No model URL (a headless server race bundles assets as empty): keep
+      // the primitive core/ring.
+      if (typeof url !== "string" || !url) return;
       const lastSlash = url.lastIndexOf("/");
       const rootUrl = url.substring(0, lastSlash + 1);
       const fileName = url.substring(lastSlash + 1);
@@ -132,7 +137,7 @@ export class Pickup {
           bottle0.parent = this._core;
           for (const m of result.meshes) {
             m.parent = bottle0;
-            shadows.addShadowCaster(m);
+            shadows?.addShadowCaster(m);
             if (!m.material || m.material.name === "default material") {
               m.material = coreMat;
             }
@@ -143,7 +148,7 @@ export class Pickup {
             const clone = bottle0.clone(`pickup_bottle${i}_${x}_${z}`, this._core);
             if (!clone) continue;
             this._bottles.push(clone);
-            for (const cm of clone.getChildMeshes()) shadows.addShadowCaster(cm);
+            for (const cm of clone.getChildMeshes()) shadows?.addShadowCaster(cm);
           }
           // Tilt each bottle here (not on the parent) so update()'s rotation.y
           // spins it around the world-vertical axis — tilting the parent instead

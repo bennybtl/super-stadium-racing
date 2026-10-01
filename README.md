@@ -67,7 +67,7 @@ Workflow file:
 
 ## Notes
 
-- This is a static site deployment (no server runtime required).
+- This is a static site deployment (no server runtime required). Multiplayer is offered only when the build has `VITE_SERVER_URL` set (e.g. `https://race.example.com:2567`) and that server answers; `npm run dev` defaults to the page's host on port 2567. Otherwise the game is single-player only.
 - For local testing of the production bundle:
 
 ```bash

@@ -176,7 +176,7 @@ export class AIPathPlanner {
         const totalWeight = mainPathWeight + branchWeightTotal;
         if (totalWeight <= 0) return null;
 
-        let roll = Math.random() * totalWeight;
+        let roll = this.driver.random() * totalWeight;
         roll -= mainPathWeight;
         if (roll <= 0) return null;
 
@@ -275,10 +275,10 @@ export class AIPathPlanner {
     // point earlier in the same pass.
     {
       const wanderWavelength = WANDER_WAVELEN_MIN +
-        Math.random() * (WANDER_WAVELEN_MAX - WANDER_WAVELEN_MIN);
+        this.driver.random() * (WANDER_WAVELEN_MAX - WANDER_WAVELEN_MIN);
       const wanderFreq = (2 * Math.PI) / wanderWavelength;
-      const wanderPhase = Math.random() * 2 * Math.PI;
-      const cornerBias = Math.random() * 2 - 1; // -1 = wide, +1 = tight
+      const wanderPhase = this.driver.random() * 2 * Math.PI;
+      const cornerBias = this.driver.random() * 2 - 1; // -1 = wide, +1 = tight
 
       const offsets = new Array(P);
       for (let i = 0; i < P - 1; i++) {

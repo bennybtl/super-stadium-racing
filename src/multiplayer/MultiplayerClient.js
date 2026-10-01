@@ -1,18 +1,7 @@
 import { Client } from "colyseus.js";
+import { serverWsUrl } from "../net/server-config.js";
 
 const ROOM_NAME = "drive";
-const DEFAULT_PORT = 2567;
-
-/**
- * Default Colyseus server URL: same host the page was loaded from, on the
- * server's port. Works unmodified for LAN play — every device connects to
- * whichever machine served the page — as long as that machine is also
- * running `npm run server`.
- */
-function defaultServerUrl() {
-  const proto = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${window.location.hostname}:${DEFAULT_PORT}`;
-}
 
 /** ws(s):// -> http(s):// for the plain REST lobby-list endpoint (see server/index.js). */
 function toHttpUrl(wsUrl) {
@@ -26,7 +15,8 @@ function toHttpUrl(wsUrl) {
  * relaying per-truck state. Not authoritative — see server/DriveRoom.js.
  */
 export class MultiplayerClient {
-  constructor(serverUrl = defaultServerUrl()) {
+  // No configured server: never connected to (the menu hides multiplayer then).
+  constructor(serverUrl = serverWsUrl() ?? "ws://localhost") {
     this.serverUrl = serverUrl;
     this.client = new Client(serverUrl);
     this.room = null;

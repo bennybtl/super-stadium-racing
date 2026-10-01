@@ -58,6 +58,8 @@ export class PickupManager {
     this.track   = track;
     this.shadows = shadows;
     this._terrainQuery = new TerrainQuery(scene);
+    // Spawn randomness; RaceSimulation swaps in a seeded stream (sim/rng.js).
+    this.random = Math.random;
 
     /** @type {Pickup[]} */
     this._pickups = [];
@@ -65,13 +67,21 @@ export class PickupManager {
     /** Rolled spawns waiting out their random delay before appearing.
      *  @type {{ pos: {x:number,z:number}, lapCount: number, zone: object|null, remainingSec: number }[]} */
     this._pendingSpawns = [];
+    this._nextId = 1; // pickup ids, unique per race — the server tells clients by id
 
     /**
-     * Assigned by the owning mode. Called with (type, truckData, value)
+     * Assigned by the owning mode. Called with (type, truckData, value, id)
      * whenever a truck drives through a pickup.
-     * @type {((type: string, truckData: object, value: number) => void) | null}
+     * @type {((type: string, truckData: object, value: number, id: number) => void) | null}
      */
     this.onPickupCollected = null;
+
+    /**
+     * Optional. Called with the new Pickup (`id`, `type`, `value`, `position`)
+     * when one appears.
+     * @type {((pickup: object) => void) | null}
+     */
+    this.onPickupSpawned = null;
 
     /** @type {import('./AudioManager.js').AudioManager|null} */
     this.audioManager = audioManager;
@@ -94,8 +104,8 @@ export class PickupManager {
 
     while (positions.length < count && attempts < maxAttempts) {
       attempts++;
-      const x = (Math.random() - 0.5) * SPAWN_HALF_EXTENT * 2;
-      const z = (Math.random() - 0.5) * SPAWN_HALF_EXTENT * 2;
+      const x = (this.random() - 0.5) * SPAWN_HALF_EXTENT * 2;
+      const z = (this.random() - 0.5) * SPAWN_HALF_EXTENT * 2;
 
       const tooClose = positions.some(p => {
         const dx = p.x - x, dz = p.z - z;
@@ -138,8 +148,8 @@ export class PickupManager {
       }
 
       for (let i = 0; i < 30; i++) {
-        const x = minX + Math.random() * (maxX - minX);
-        const z = minZ + Math.random() * (maxZ - minZ);
+        const x = minX + this.random() * (maxX - minX);
+        const z = minZ + this.random() * (maxZ - minZ);
         if (this._pointInZone(x, z, zone)) return { x, z };
       }
 
@@ -152,8 +162,8 @@ export class PickupManager {
       return { x: sx / zone.points.length, z: sz / zone.points.length };
     }
 
-    const angle = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * (zone?.radius ?? 0);
+    const angle = this.random() * Math.PI * 2;
+    const r = Math.sqrt(this.random()) * (zone?.radius ?? 0);
     return {
       x: (zone?.x ?? 0) + Math.cos(angle) * r,
       z: (zone?.z ?? 0) + Math.sin(angle) * r,
@@ -207,7 +217,7 @@ export class PickupManager {
           }
           // Lap-spawned pickups are one-time: collecting removes them (a new one
           // appears when a truck completes another lap).
-          this.onPickupCollected?.(pickup.type, truckData, pickup.value);
+          this.onPickupCollected?.(pickup.type, truckData, pickup.value, pickup.id);
           break; // only one truck can collect per pickup per frame
         }
       }
@@ -236,7 +246,7 @@ export class PickupManager {
 
     // No authored zones: fall back to a single track-wide roll at a random spot.
     if (zones.length === 0) {
-      if (Math.random() < LAP_SPAWN_CHANCE && activeCount() < MAX_ACTIVE_PICKUPS) {
+      if (this.random() < LAP_SPAWN_CHANCE && activeCount() < MAX_ACTIVE_PICKUPS) {
         const [pos] = this._generatePositionsRandom(1);
         if (pos) this._queueSpawn(pos, lapCount, null);
       }
@@ -247,7 +257,7 @@ export class PickupManager {
     for (const zone of zones) {
       if (activeCount() >= MAX_ACTIVE_PICKUPS) break;
       if (this._zoneOccupied(zone)) continue;
-      if (Math.random() >= LAP_SPAWN_CHANCE) continue;
+      if (this.random() >= LAP_SPAWN_CHANCE) continue;
       const pos = this._randomPointInZone(zone);
       if (!Number.isFinite(pos.x) || !Number.isFinite(pos.z)) continue;
       this._queueSpawn(pos, lapCount, zone);
@@ -261,7 +271,7 @@ export class PickupManager {
   /** Roll a spawn now, but delay its appearance so it doesn't read as tied
    *  to the checkpoint cross that triggered it. */
   _queueSpawn(pos, lapCount, zone) {
-    const remainingSec = SPAWN_DELAY_MIN + Math.random() * (SPAWN_DELAY_MAX - SPAWN_DELAY_MIN);
+    const remainingSec = SPAWN_DELAY_MIN + this.random() * (SPAWN_DELAY_MAX - SPAWN_DELAY_MIN);
     this._pendingSpawns.push({ pos, lapCount, zone, remainingSec });
   }
 
@@ -283,13 +293,15 @@ export class PickupManager {
 
     let type = 'boost';
     let value = tier;
-    if (this.enableMoney && Math.random() < MONEY_SPAWN_RATIO) {
+    if (this.enableMoney && this.random() < MONEY_SPAWN_RATIO) {
       type = 'coin';
       value = MONEY_VALUES[tier - 1];
     }
 
     const pickup = new Pickup(pos.x, pos.z, groundY, type, this.scene, this.shadows, value);
+    pickup.id = this._nextId++;
     this._pickups.push(pickup);
+    this.onPickupSpawned?.(pickup);
     return pickup;
   }
 
@@ -297,7 +309,7 @@ export class PickupManager {
   _rollValue(lapCount) {
     const cap = Math.max(1, Math.min(lapCount, MAX_PICKUP_VALUE));
     let value = 1;
-    while (value < cap && Math.random() < VALUE_UPGRADE_CHANCE) value++;
+    while (value < cap && this.random() < VALUE_UPGRADE_CHANCE) value++;
     return value;
   }
 
@@ -308,5 +320,31 @@ export class PickupManager {
     this._pickups.forEach(p => p.dispose());
     this._pickups = [];
     this._pendingSpawns = [];
+  }
+
+  // ── Mirrored pickups (online client) ───────────────────────────────────────
+  // An online race's pickups live on the server; the client shows copies it is
+  // told about and never collects anything itself (see NetRaceMode).
+
+  /** Show a pickup the server spawned. */
+  addMirrored({ id, x, z, type, value }) {
+    if (this._pickups.some((p) => p.id === id)) return;
+    const groundY = this._terrainQuery.surfaceHeightAt(x, z, this.track);
+    const pickup = new Pickup(x, z, groundY, type, this.scene, this.shadows, value);
+    pickup.id = id;
+    this._pickups.push(pickup);
+  }
+
+  /** Remove a pickup the server says was collected. */
+  removeMirrored(id) {
+    const pickup = this._pickups.find((p) => p.id === id);
+    if (!pickup) return;
+    pickup.dispose();
+    this._pickups = this._pickups.filter((p) => p !== pickup);
+  }
+
+  /** Bob/spin the pickups without testing for collection. */
+  animate(dt) {
+    for (const pickup of this._pickups) pickup.update(dt);
   }
 }
