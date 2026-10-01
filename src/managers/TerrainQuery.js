@@ -179,14 +179,19 @@ export class TerrainQuery {
    * above (so bridge decks count), except inside a tunnel's footprint, where
    * it looks down from just under the roof and lands on the tunnel floor. A
    * respawn point there (an AI path waypoint) is on the route through the
-   * tunnel; waypoints carry no height, so a route crossing *over* a tunnel
-   * would also land inside it where it crosses — a known limit.
+   * tunnel; waypoints and checkpoint gates carry no height of their own (a gate
+   * always sits on the terrain surface), so `refY` — the height of whatever is
+   * being respawned, before the move — says which layer it belongs to. Above the
+   * bore's roof means it was on the hill over the tunnel, so it lands there
+   * rather than being dropped inside. Without `refY`, the tunnel floor wins.
    *
+   * @param {number} [refY]  Y the truck was at before the respawn.
    * @returns {number}
    */
-  respawnHeightAt(x, z, track) {
+  respawnHeightAt(x, z, track, refY) {
     const bore = this.tunnelBoreAt(x, z);
-    return this.surfaceHeightAt(x, z, track, bore ? { fromY: bore.ceilingY - 0.5 } : undefined);
+    const inTunnel = bore && !(Number.isFinite(refY) && refY > bore.ceilingY);
+    return this.surfaceHeightAt(x, z, track, inTunnel ? { fromY: bore.ceilingY - 0.5 } : undefined);
   }
 
   /**

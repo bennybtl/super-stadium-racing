@@ -1,13 +1,13 @@
 <template>
   <div class="confirm-dialog">
     <div class="dialog-panel">
-      <h3>{{ title }}</h3>
+      <h3 class="pb-2">{{ title }}</h3>
       <div class="dialog-content">
         <slot />
       </div>
       <div class="dialog-actions">
-        <button class="confirm-btn" @click="$emit('confirm')">Confirm</button>
-        <button class="cancel-btn" @click="$emit('cancel')">Cancel</button>
+        <button class="ed-btn" @click="$emit('confirm')">Confirm</button>
+        <button class="ed-btn-invert" @click="$emit('cancel')">Cancel</button>
       </div>
     </div>
   </div>

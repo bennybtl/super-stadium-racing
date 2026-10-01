@@ -7,6 +7,7 @@ import { expandPolyline } from "../utils/polyline-utils.js";
 import { createWaterDepthSampler } from "../objects/water-field.js";
 import { clamp, lerp, smoothstep } from "../utils/math-utils.js";
 import { bridgeDeckHeightAt } from "./feature-geometry.js";
+import { deriveTunnel, rasterizeBores, sampleBore } from "./tunnel-geometry.js";
 
 const TERRAIN_TYPE_LIST = Object.values(TERRAIN_TYPES);
 // Keyed by name rather than object identity: a terrain-region feature with a
@@ -367,6 +368,13 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
     }
   }
 
+  // Wear is hidden where the line runs through a tunnel: the hill above the bore
+  // isn't where the trucks are, and the bore floor has its own surface.
+  const tunnels = (track?.features ?? [])
+    .filter(f => f?.type === 'tunnel')
+    .map(f => deriveTunnel(f, (x, z) => track.getHeightAt(x, z)));
+  const boreRaster = tunnels.length > 0 ? rasterizeBores(tunnels) : null;
+
   const rng = _createSeededRandom(wear.seed);
   const waterDepthAt = createWaterDepthSampler(track);
   const halfWorldX = worldWidth / 2;
@@ -511,6 +519,8 @@ export function traceAiPathWearStamps(track, textureSize = 2048, worldWidth = 16
     const submergedFade = 1 - smoothstep(
       WEAR_WATER_FADE_START, WEAR_WATER_FADE_END, waterDepthAt(curr.x, curr.z)
     );
+
+    if (boreRaster && sampleBore(boreRaster, curr.x, curr.z)) continue;
 
     for (const lane of mainLanes) {
       const lanePresence = smoothstep(

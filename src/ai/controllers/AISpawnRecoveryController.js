@@ -22,11 +22,12 @@ export class AISpawnRecoveryController {
    * Ground height to respawn onto at (x, z): the surface lookup (which sees
    * bridge decks, where path waypoints can sit), falling back to the analytic
    * heightfield on a miss, and the tunnel floor inside a tunnel's footprint —
-   * see TerrainQuery.respawnHeightAt.
+   * see TerrainQuery.respawnHeightAt. `refY` is the truck's height before the
+   * move, so a truck stuck on the hill over a tunnel respawns on the hill.
    */
-  _respawnGroundY(x, z) {
+  _respawnGroundY(x, z, refY) {
     const d = this.driver;
-    return d._terrainQuery.respawnHeightAt(x, z, d.track);
+    return d._terrainQuery.respawnHeightAt(x, z, d.track, refY);
   }
 
   snapPathIndexToPosition(pos) {
@@ -87,9 +88,10 @@ export class AISpawnRecoveryController {
       targetWaypoint
     );
 
+    const refY = d.truckMesh.position.y;
     d.truckMesh.position.x = spawnPos.x;
     d.truckMesh.position.z = spawnPos.z;
-    d.truckMesh.position.y = this._respawnGroundY(spawnPos.x, spawnPos.z) + 0.6;
+    d.truckMesh.position.y = this._respawnGroundY(spawnPos.x, spawnPos.z, refY) + 0.6;
 
     const dx = targetWaypoint.x - spawnPos.x;
     const dz = targetWaypoint.z - spawnPos.z;
@@ -128,9 +130,10 @@ export class AISpawnRecoveryController {
     // the driver in front of the gate instead of behind it.
     const spawnPos = this._findClearApproach(gate, fwdX, fwdZ);
 
+    const refY = d.truckMesh.position.y;
     d.truckMesh.position.x = spawnPos.x;
     d.truckMesh.position.z = spawnPos.z;
-    d.truckMesh.position.y = this._respawnGroundY(spawnPos.x, spawnPos.z) + 0.6;
+    d.truckMesh.position.y = this._respawnGroundY(spawnPos.x, spawnPos.z, refY) + 0.6;
 
     // Face straight through the gate (entry → exit direction).
     const targetHeading = Math.atan2(fwdX, fwdZ);
