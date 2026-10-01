@@ -1,17 +1,11 @@
 /**
  * Client for the server-authoritative race lobbies (server/lobbies/index.js).
  *
- * Same host the page came from, on the multiplayer server's port — the same
- * convention as the colyseus client (multiplayer/MultiplayerClient.js), so LAN
- * play works unmodified. The player's lobby secret travels in the
+ * Talks to the configured multiplayer server (net/server-config.js). The player's lobby secret travels in the
  * Authorization header, never in a URL.
  */
 
-const DEFAULT_PORT = 2567;
-
-function defaultBaseUrl() {
-  return `${window.location.protocol}//${window.location.hostname}:${DEFAULT_PORT}`;
-}
+import { serverUrl } from './server-config.js';
 
 export class LobbyApiError extends Error {
   constructor(status, message) {
@@ -21,12 +15,12 @@ export class LobbyApiError extends Error {
 }
 
 export class LobbyApi {
-  constructor(baseUrl = defaultBaseUrl()) {
+  constructor(baseUrl) {
     this.baseUrl = baseUrl;
   }
 
   async _call(method, path, { body, secret } = {}) {
-    const res = await fetch(this.baseUrl + path, {
+    const res = await fetch((this.baseUrl ?? serverUrl()) + path, {
       method,
       headers: {
         ...(body ? { 'content-type': 'application/json' } : {}),

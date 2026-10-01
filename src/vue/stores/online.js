@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { lobbyApi } from '../../net/LobbyApi.js';
 import { useMenuStore } from './menu.js';
+import { probeServer } from '../../net/server-config.js';
 
 const PLAYER_NAME_KEY = 'multiplayerPlayerName'; // shared with the relay lobby
 const POLL_MS = 1000;
@@ -30,6 +31,9 @@ export const useOnlineStore = defineStore('online', () => {
   const refreshing = ref(false);
   const busy = ref(false);
   const error = ref(null);
+  // Multiplayer is offered only when a server is configured and answers.
+  const serverAvailable = ref(false);
+  async function checkServer() { serverAvailable.value = await probeServer(); }
 
   // This player's membership: { code, playerId, secret } (secret stays here).
   const membership = ref(null);
@@ -183,7 +187,7 @@ export const useOnlineStore = defineStore('online', () => {
   }
 
   return {
-    playerName, lobbies, raceTrackKeys, refreshing, busy, error, lobby, isHost, membership,
+    serverAvailable, checkServer, playerName, lobbies, raceTrackKeys, refreshing, busy, error, lobby, isHost, membership,
     setPlayerName, refreshLobbies, createLobby, joinLobby, updateSettings, setVehicle, startRace, leaveLobby, reset,
   };
 });

@@ -6,6 +6,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+# Public address of the multiplayer server, baked into the client. Unset = single-player only.
+ARG VITE_SERVER_URL
 RUN npm run build
 
 # Serve dist/ with the cross-origin-isolation headers Havok's WASM
