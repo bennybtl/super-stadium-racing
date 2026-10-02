@@ -1794,10 +1794,6 @@ export class EditorController {
     rebuild.quickTestTrack?.();
   }
 
-  testTrackReverse() {
-    rebuild.testReverse?.();
-  }
-
   rebuildScene() {
     rebuild.editorScene?.();
   }

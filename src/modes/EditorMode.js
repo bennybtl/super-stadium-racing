@@ -370,18 +370,12 @@ export class EditorMode extends BaseMode {
 
     // Quick-test: hot-swap live track into loader, then switch to race for 1 lap.
     // RaceMode will return here when the player exits.
-    rebuild.quickTestTrack = () => {
+    rebuild.quickTestTrack = async () => {
+      // Save first — switching modes discards unsaved editor changes.
+      await menuManager.onEditorSave();
       const testKey = '__quicktest__';
       trackLoader.tracks.set(testKey, currentTrack);
       this.controller.goToTest({ trackKey: testKey, returnToEditor: trackKey });
-    };
-
-    // Same hot-swap, driven in reverse — lets a reverseOverride/forwardOnly/
-    // reverseOnly edit be test-driven immediately without saving first.
-    rebuild.testReverse = () => {
-      const testKey = '__quicktest__';
-      trackLoader.tracks.set(testKey, currentTrack);
-      this.controller.goToTest({ trackKey: testKey, returnToEditor: trackKey, reverse: true });
     };
 
     rebuild.editorScene = () => {

@@ -3,6 +3,7 @@ import { Truck } from "../truck/truck.js";
 import { InputManager } from "../managers/InputManager.js";
 import { DriveMode } from "./DriveMode.js";
 import { FixedStepLoop } from "./fixed-step.js";
+import { loadPlayerUpgrades } from "../managers/UpgradeStorage.js";
 import { DebugManager } from "../managers/DebugManager.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 
@@ -20,7 +21,7 @@ export class TestMode extends DriveMode {
     this.debugManager = null;
   }
 
-  async setup({ trackKey, returnToEditor, reverse = false }) {
+  async setup({ trackKey, returnToEditor, reverse = false, vehicleKey = 'baja' }) {
     const { engine } = this.controller;
 
     const {
@@ -47,7 +48,7 @@ export class TestMode extends DriveMode {
     // Spawn just behind the start/finish checkpoint, facing forward
     const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);
 
-    const playerTruck = new Truck(scene, shadows);
+    const playerTruck = new Truck(scene, shadows, null, null, window.vehicleLoader?.getVehicle(vehicleKey) ?? null, loadPlayerUpgrades());
 
     const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);
     const spawnPos = spawn.pos;
@@ -66,6 +67,7 @@ export class TestMode extends DriveMode {
     inputManager.onPause(() => this._exitToEditor(returnToEditor));
     this.debugManager = new DebugManager();
     this.setupDebugToggle(inputManager, this.debugManager);
+    this.setupInfiniteNitro(inputManager, playerTruck);
     inputManager.onReset(() => this.respawnTruck(playerTruck, spawnPos, heading, staticBodyCollisionManager));
 
     // Back button (top-left)

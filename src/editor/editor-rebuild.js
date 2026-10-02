@@ -19,7 +19,6 @@ const rebuild = {
   tunnel: null,
   polyHill: null,
   quickTestTrack: null,
-  testReverse: null,
   editorScene: null,
 };
 

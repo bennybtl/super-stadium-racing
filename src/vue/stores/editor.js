@@ -403,7 +403,6 @@ export const useEditorStore = defineStore('editor', () => {
   function cycleSnapSize() { const idx = snapSizes.indexOf(snapSize.value); snapSize.value = snapSizes[(idx + 1) % snapSizes.length]; snapEnabled.value = true; }
   function toggleGizmosVisible() { gizmosVisible.value = !gizmosVisible.value; _bridge.value?.toggleGizmosVisible(); }
   function quickTestTrack() { _bridge.value?.quickTestTrack(); }
-  function testTrackReverse() { _bridge.value?.testTrackReverse(); }
   function rebuildScene() { _bridge.value?.rebuildScene?.(); }
   function captureScreenshot() { _bridge.value?.captureTrackScreenshot?.(); }
   function resetCamera() { _bridge.value?.resetCamera?.(); }
@@ -628,7 +627,7 @@ export const useEditorStore = defineStore('editor', () => {
     setActiveTool,
     gizmosVisible, toggleGizmosVisible,
     nightPreview, toggleNightPreview,
-    toggleSnap, cycleSnapSize, quickTestTrack, testTrackReverse,
+    toggleSnap, cycleSnapSize, quickTestTrack,
     rebuildScene, captureScreenshot, resetCamera,
     openAddMenu, closeAddMenu, toggleAddMenu,
     setObstacleType, openAiPath, closeAiPath,

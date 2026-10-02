@@ -456,6 +456,16 @@ export class DriveMode extends BaseMode {
     return getActionZones(track, 'outOfBounds');
   }
 
+  /** Free-drive nitro: the boost key fires an unlimited boost (no pool to spend). */
+  setupInfiniteNitro(inputManager, truck) {
+    inputManager.onBoost(() => {
+      const s = truck.state;
+      if (s.boostActive) return;
+      s.boostActive = true;
+      s.boostTimer = s.boostDuration;
+    });
+  }
+
   /** Resolve all speed-boost action zones from track features. */
   getSpeedBoostZones(track) {
     return getActionZones(track, 'speedBoost');

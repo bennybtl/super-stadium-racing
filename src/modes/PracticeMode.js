@@ -109,6 +109,7 @@ export class PracticeMode extends DriveMode {
     inputManager.onPause(() => menuManager.showPauseMenu());
     inputManager.onTogglePhotoMode(() => this.togglePhotoMode());
     this.setupDebugToggle(inputManager, debugManager);
+    this.setupInfiniteNitro(inputManager, playerTruck);
     inputManager.onToggleVehicleDebug(() => debugManager.toggleVehicleOverlay());
     inputManager.onReset(() => {
       obstacleManager.rebuild();
