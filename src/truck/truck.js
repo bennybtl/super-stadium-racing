@@ -361,9 +361,9 @@ export class Truck {
       // Boost parameters
       boostCount: 5,
       maxBoosts: 9,
-      boostDuration: 1.6,
-      boostAccelMult: 2,
-      boostSpeedMult: 1.5,
+      boostDuration: 0.75,
+      boostAccelMult: 1.75,
+      boostSpeedMult: 1.25,
 
       // Slow zone — set each frame by the game loop to the active 'slowZone'
       // action zone (its slowStrength scales the speed cap), false when outside.

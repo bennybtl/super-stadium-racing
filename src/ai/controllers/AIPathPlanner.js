@@ -105,6 +105,7 @@ export class AIPathPlanner {
         index: feature.checkpointNumber,
         heading: feature.heading,
         width: feature.width ?? 10,
+        jokerLap: !!feature.jokerLap,
       });
     }
 
@@ -113,16 +114,50 @@ export class AIPathPlanner {
     // Collapse alternative gates to one representative per step so the rest of
     // the AI (which indexes this list by step number) stays valid. Branch-aware
     // choices (e.g. respawn) query the CheckpointManager for the step's gates.
+    // Joker gates hang off the representative as `jokers`; a joker lap swaps
+    // one in (see calculateFullPath).
     const byStep = new Map();
     for (const cp of checkpoints) {
-      if (!byStep.has(cp.index)) byStep.set(cp.index, cp);
+      const rep = byStep.get(cp.index);
+      if (!rep) byStep.set(cp.index, cp);
+      else if (cp.jokerLap) (rep.jokers ??= []).push(cp);
     }
     return [...byStep.values()];
   }
 
+  /** True when the track has both a joker-flagged AI branch and a joker gate to drive it through. */
+  hasJokerBranch() {
+    const d = this.driver;
+    const aiPath = d.track.features?.find(f => f.type === "aiPath");
+    return Boolean(aiPath?.branches?.some(b => b?.joker))
+      && d.checkpoints.some(cp => cp.jokers?.length);
+  }
+
+  /**
+   * Roll this lap's route. Called as each lap begins: every junction rolls its
+   * branch weights against staying on the main line, and the Joker branch is in
+   * that pool only until it has been driven. The racing line is re-baked from
+   * where the truck is, so each lap can differ.
+   */
+  beginLap(truckId) {
+    const d = this.driver;
+    const jokerUsed = d.checkpointManager?.hasUsedJoker(truckId) ?? false;
+    if (d._usingTelemetry || d.path.length === 0) return;
+    const aiPath = d.track.features?.find(f => f.type === "aiPath");
+    if (!aiPath?.branches?.length) return;
+
+    d.jokerAllowed = !jokerUsed && this.hasJokerBranch();
+    const from = d.path[d.currentPathIndex];
+    this.calculateFullPath({ x: from.x, z: from.z, heading: from.heading });
+  }
+
   calculateFullPath(startPosition = null) {
     const d = this.driver;
+    // Restore the normal gate for each step; a joker lap re-picks below.
+    d.checkpoints = this.getCheckpointPositions();
     if (d.checkpoints.length === 0) return;
+    const jokerAllowed = Boolean(d.jokerAllowed);
+    let tookJoker = false;
 
     d.path = [];
     d.checkpointPathIndices = [];
@@ -157,8 +192,10 @@ export class AIPathPlanner {
         return true;
       });
 
+      // The joker branch only joins the pool until it has been driven.
+      const usable = validBranches.filter(b => jokerAllowed || !b.joker);
       const byFrom = new Map();
-      for (const branch of validBranches) {
+      for (const branch of usable) {
         const list = byFrom.get(branch.fromMainIndex) ?? [];
         list.push(branch);
         byFrom.set(branch.fromMainIndex, list);
@@ -200,6 +237,7 @@ export class AIPathPlanner {
 
         const candidates = byFrom.get(i) ?? [];
         const chosen = candidates.length > 0 ? pickWeightedBranch(candidates) : null;
+        if (chosen?.joker) tookJoker = true;
         if (chosen) {
           for (const bp of chosen.points) pushNode(bp);
           i = chosen.toMainIndex;
@@ -274,11 +312,16 @@ export class AIPathPlanner {
     // a neighbour's curvature read is never corrupted by an already-shifted
     // point earlier in the same pass.
     {
-      const wanderWavelength = WANDER_WAVELEN_MIN +
-        this.driver.random() * (WANDER_WAVELEN_MAX - WANDER_WAVELEN_MIN);
+      // Rolled once per driver and reused on every re-bake, so a per-lap branch
+      // re-roll changes the route but not the driver's line character.
+      d._lineStyle ??= {
+        wanderWavelength: WANDER_WAVELEN_MIN +
+          d.random() * (WANDER_WAVELEN_MAX - WANDER_WAVELEN_MIN),
+        wanderPhase: d.random() * 2 * Math.PI,
+        cornerBias: d.random() * 2 - 1, // -1 = wide, +1 = tight
+      };
+      const { wanderWavelength, wanderPhase, cornerBias } = d._lineStyle;
       const wanderFreq = (2 * Math.PI) / wanderWavelength;
-      const wanderPhase = this.driver.random() * 2 * Math.PI;
-      const cornerBias = this.driver.random() * 2 - 1; // -1 = wide, +1 = tight
 
       const offsets = new Array(P);
       for (let i = 0; i < P - 1; i++) {
@@ -420,6 +463,27 @@ export class AIPathPlanner {
     }
     d.path[d.path.length - 1].segLen = 0;
     d.path[d.path.length - 1].heading = d.path[d.path.length - 2]?.heading ?? 0;
+
+    // When the Joker branch was rolled, the step's gate is whichever of its gates (normal or joker)
+    // the racing line actually runs closest to.
+    d.jokerMode = tookJoker;
+    if (tookJoker) {
+      const distSqToPath = (g) => {
+        let best = Infinity;
+        for (const p of d.path) best = Math.min(best, (p.x - g.x) ** 2 + (p.z - g.z) ** 2);
+        return best;
+      };
+      d.checkpoints = d.checkpoints.map(cp => {
+        if (!cp.jokers?.length) return cp;
+        let best = cp;
+        let bestDistSq = distSqToPath(cp);
+        for (const joker of cp.jokers) {
+          const distSq = distSqToPath(joker);
+          if (distSq < bestDistSq) { best = joker; bestDistSq = distSq; }
+        }
+        return best;
+      });
+    }
 
     // Map each checkpoint to its nearest point on the racing line. Look-ahead
     // targeting uses this to cap the aim point at the next required gate so the

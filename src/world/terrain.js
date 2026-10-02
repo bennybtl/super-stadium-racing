@@ -95,7 +95,7 @@ export const TERRAIN_TYPES = {
     diffuseDepthColor: new Color3(0.05, 0.36, 0.72),
     normalMap: 'normals/water.normal.jpg',
     normalMapIntensity: 0.5, // Gentle ripple detail
-    specular: 0.92,          // Highly reflective water surface
+    specular: 0,             // Matte bed: the water surface mesh carries the glints
   },
   ROCKY: {
     name: "rocky",

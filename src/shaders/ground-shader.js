@@ -1010,8 +1010,6 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   _terrainRgb = clamp(_terrainRgb * (1.0 + _wearLighten * 0.22), 0.0, 1.0);
   _terrainRgb = clamp(_terrainRgb * (1.0 - _wearDarken  * 0.22), 0.0, 1.0);
   _terrainBlendResult.a = clamp(_terrainBlendResult.a + max(_wearLighten, _wearDarken) * 0.06, 0.0, 1.0);
-  // Submerged ground is matte: the water surface above it carries the glints.
-  _terrainBlendResult.a *= 1.0 - _waterCover;
   baseColor = vec4(_terrainRgb, 1.0);
   // Tilt the surface normal by the tiled per-type relief. This block runs after
   // Babylon's bumpFragment, so normalW already carries the baked composite map

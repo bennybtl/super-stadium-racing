@@ -98,6 +98,7 @@ export class AIDriver {
     // Telemetry-driven path — when set, this replaces the authored/checkpoint path.
     // Each entry is { x, z, speed } where speed is the target forward speed.
     this._usingTelemetry = false;
+    this.jokerMode = false; // true while following the Joker branch this lap
     
     // Lightweight occupancy grid used for wall/curb blocked checks.
     // Keep independent X/Z extents so blocked probes stay aligned on
@@ -217,13 +218,19 @@ export class AIDriver {
   get debugEnabled() { return this._debugStore?.visible ?? false; }
 
   /**
-  * Pre-calculate the full path through every checkpoint once at race start.
-   * The result is stored in this.path and never changes during the race.
+  * Pre-calculate the full path through every checkpoint at race start. The
+   * result is stored in this.path; on tracks with AI branches it is re-baked
+   * each lap by beginLap() so branches (and the one-time Joker) re-roll.
    * this.checkpointPathIndices[i] records the path index where segment i begins,
    * allowing onCheckpointPassed to quickly advance currentPathIndex.
    */
   calculateFullPath(startPosition = { x: 0, z: 0 }) {
     this._pathPlanner.calculateFullPath(startPosition);
+  }
+
+  /** A lap is starting: re-roll branches (the Joker only until it's been driven). */
+  beginLap(truckId) {
+    this._pathPlanner.beginLap(truckId);
   }
 
   /**

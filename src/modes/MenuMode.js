@@ -393,10 +393,12 @@ export class MenuMode extends DriveMode {
             td.gameState.lastCheckpointPassed = 0;
             td.gameState.checkpointCount = 0;
             checkpointManager.resetForTruck(td.id);
+            checkpointManager.resetJokersForTruck(td.id);
             td.truck.driver?.onCheckpointPassed(maxCheckpointNumber, {
               x: td.truck.mesh.position.x,
               z: td.truck.mesh.position.z,
             });
+            td.truck.driver?.beginLap(td.id);
             return;
           }
 
@@ -409,6 +411,7 @@ export class MenuMode extends DriveMode {
           if (count === checkpointManager.getTotalCheckpoints()) {
             td.gameState.completeLap();
             checkpointManager.resetForTruck(td.id);
+            td.truck.driver?.beginLap(td.id);
             // Endless race: hand the nitro back each lap so the field keeps
             // showing off boosts instead of settling into a parade.
             td.gameState.boostCount = td.truck.state.maxBoosts ?? 5;

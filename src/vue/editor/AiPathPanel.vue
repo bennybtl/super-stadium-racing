@@ -72,6 +72,18 @@
           class="ed-slider"
         />
 
+        <label class="ed-row" :class="editor.aiPathBranch.activeBranchId ? 'cursor-pointer' : 'text-slate-500'">
+          <span>Joker path</span>
+          <input
+            type="checkbox"
+            class="ed-checkbox"
+            :checked="editor.aiPathBranch.activeBranchJoker"
+            :disabled="!editor.aiPathBranch.activeBranchId"
+            @change="editor.setActiveAiPathBranchJoker($event.target.checked)"
+          />
+        </label>
+        <div class="ed-hint">AI drives this branch through the Joker checkpoint once per race; weight is the chance per lap.</div>
+
         <label class="ed-label" :class="editor.aiPathBranch.activeBranchId ? '' : 'opacity-50'">Rejoin Main Waypoint</label>
         <select
           class="ed-select"

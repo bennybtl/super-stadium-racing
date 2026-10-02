@@ -5,6 +5,7 @@ import {
   getStartFinishCheckpoint, respawnAtLastCheckpoint,
 } from "../sim/race-rules.js";
 import { rngStream } from "../sim/rng.js";
+import { CheckpointManager } from "../managers/CheckpointManager.js";
 import { gridSlotXZ, startGridSlot, DEFAULT_START_GRID, CHECKPOINT_GRID_BACK_OFFSET } from "../utils/start-grid.js";
 import { AIDriver, AI_SKILL_PRESETS } from "../ai/AIDriver.js";
 import { BaseMode } from "./BaseMode.js";
@@ -351,11 +352,8 @@ export class DriveMode extends BaseMode {
    */
   getStartFinishInfo(track) {
     const checkpointFeatures = track.features.filter(f => f.type === "checkpoint");
-    // Steps, not gate count: consecutive `alternative` gates share a step.
-    let maxCheckpointNumber = 0;
-    checkpointFeatures.forEach((f, i) => {
-      if (i === 0 || !f.alternative) maxCheckpointNumber += 1;
-    });
+    // Steps, not gate count: `alternative` / `jokerLap` gates share a step.
+    const maxCheckpointNumber = CheckpointManager.groupIntoSteps(checkpointFeatures).length;
     const startFinishCp = checkpointFeatures[checkpointFeatures.length - 1] || null;
 
     return { checkpointFeatures, maxCheckpointNumber, startFinishCp };

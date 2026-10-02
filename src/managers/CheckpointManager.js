@@ -31,6 +31,9 @@ export class CheckpointManager {
     this.checkpointMeshes = []; // array of Checkpoint instances
     this._maxCheckpointNumber = 0;
     this._activeCheckpointNumber = null;
+    // Joker gates a truck has already driven through this race. Unlike
+    // `passedBy` this survives lap resets, so each joker is a one-time option.
+    this._jokerUsed = new Map(); // feature -> Set<truckId>
   }
 
   createCheckpoints(reverse = false) {
@@ -107,6 +110,10 @@ export class CheckpointManager {
       
       // Skip if this truck already passed this checkpoint
       if (feature.passedBy.has(truckId)) continue;
+
+      // A joker gate can only be taken once per race; after that the lap must
+      // go through its sibling.
+      if (feature.jokerLap && this._jokerUsed.get(feature)?.has(truckId)) continue;
       
       // Skip if not the next checkpoint in sequence (if numbered)
       if (feature.checkpointNumber !== null) {
@@ -136,6 +143,10 @@ export class CheckpointManager {
       // Trigger only if truck is within width, crosses the line, AND moving in correct direction
       if (perpDist < feature.width / 2 + PASS_MARGIN && Math.abs(forwardDist) < 2 && velocityDotForward > 0) {
         feature.passedBy.add(truckId);
+        if (feature.jokerLap) {
+          if (!this._jokerUsed.has(feature)) this._jokerUsed.set(feature, new Set());
+          this._jokerUsed.get(feature).add(truckId);
+        }
         return { passed: true, index: feature.checkpointNumber };
       }
     }
@@ -144,6 +155,7 @@ export class CheckpointManager {
   }
 
   reset() {
+    this._jokerUsed.clear();
     for (const cp of this.checkpointMeshes) {
       cp.feature.passedBy = new Set();
     }
@@ -153,6 +165,7 @@ export class CheckpointManager {
   dispose() {
     for (const cp of this.checkpointMeshes) cp.dispose();
     this.checkpointMeshes = [];
+    this._jokerUsed.clear();
     this._maxCheckpointNumber = 0;
     this._activeCheckpointNumber = null;
   }
@@ -160,6 +173,17 @@ export class CheckpointManager {
   rebuild() {
     this.dispose();
     this.createCheckpoints(this._reverse ?? false);
+  }
+
+  /** Whether this truck has driven any joker gate this race. */
+  hasUsedJoker(truckId) {
+    for (const used of this._jokerUsed.values()) if (used.has(truckId)) return true;
+    return false;
+  }
+
+  /** Make every joker gate available again for a truck (new race). */
+  resetJokersForTruck(truckId) {
+    for (const used of this._jokerUsed.values()) used.delete(truckId);
   }
 
   resetForTruck(truckId) {

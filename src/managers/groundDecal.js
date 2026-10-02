@@ -108,6 +108,10 @@ export function projectDecal(target, name, { position, normal, rotationRad = 0, 
   // lets night decals darken under a truck/wall shadow like the surface they
   // sit on, instead of reading as a lit patch inside a shadow.
   decal.receiveShadows = true;
+  // Transparent meshes sort by camera distance within an alphaIndex; the tire
+  // ribbon (alphaIndex 2) spans the track, so without a fixed order marks
+  // flip above/below a decal depending on where the camera is.
+  decal.alphaIndex = 1;
   return decal;
 }
 

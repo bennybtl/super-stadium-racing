@@ -79,6 +79,7 @@
 Existing external calls remain on `AIDriver`:
 
 - `calculateFullPath()`
+- `beginLap()` — per-lap branch re-roll; the Joker branch is in the pool until driven
 - `loadTelemetry()`
 - `onCheckpointPassed()`
 - `setTruck()` / `setOtherTrucks()` / `setGameState()` / `setRaceContext()`

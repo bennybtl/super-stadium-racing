@@ -250,6 +250,7 @@ export class TireMarks {
     material.disableDepthWrite = true;
     mesh.material = material;
 
+    mesh.alphaIndex = 2; // always after ground decals (alphaIndex 1)
     mesh.hasVertexAlpha = true;
     mesh.useVertexColors = true;
     mesh.isPickable = false;

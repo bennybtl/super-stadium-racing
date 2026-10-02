@@ -469,6 +469,18 @@ export class AiPathEditor {
     this._notifyPanelChanged();
   }
 
+  /** Flag the active branch as the Joker path: AI drives it once per race. */
+  setActiveBranchJoker(val) {
+    const feature = this.editor.currentTrack?.features?.find(f => f.type === 'aiPath');
+    if (!feature) return;
+    const branch = this._getActiveBranch(feature);
+    if (!branch) return;
+
+    this.editor.saveSnapshot(true);
+    branch.joker = !!val;
+    this._notifyPanelChanged();
+  }
+
   setActiveBranchRejoinIndex(toMainIndex) {
     const feature = this.editor.currentTrack?.features?.find(f => f.type === 'aiPath');
     if (!feature || !Array.isArray(feature.points) || feature.points.length < 2) return;
@@ -537,6 +549,7 @@ export class AiPathEditor {
           fromMainIndex: b.fromMainIndex,
           toMainIndex: b.toMainIndex,
           weight: Number.isFinite(b.weight) ? b.weight : 1,
+          joker: !!b.joker,
           pointCount: Array.isArray(b.points) ? b.points.length : 0,
         }))
       : [];
@@ -549,6 +562,7 @@ export class AiPathEditor {
       editingMainPath: !this.activeBranchId,
       activeBranchId: this.activeBranchId,
       activeBranchWeight: activeBranch?.weight ?? 1,
+      activeBranchJoker: !!activeBranch?.joker,
       activeBranchFromMainIndex: activeBranch?.fromMainIndex ?? null,
       activeBranchToMainIndex: activeBranch?.toMainIndex ?? null,
       mainWaypointCount: Array.isArray(feature?.points) ? feature.points.length : 0,

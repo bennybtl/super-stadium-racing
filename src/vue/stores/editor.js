@@ -358,6 +358,7 @@ export const useEditorStore = defineStore('editor', () => {
     editingMainPath: true,
     activeBranchId: null,
     activeBranchWeight: 1,
+    activeBranchJoker: false,
     activeBranchFromMainIndex: null,
     activeBranchToMainIndex: null,
     mainWaypointCount: 0,
@@ -374,6 +375,7 @@ export const useEditorStore = defineStore('editor', () => {
     aiPathBranch.activeBranchId = id;
     _bridge.value?.selectAiPathBranch?.(id);
   }
+  function setActiveAiPathBranchJoker(val) { aiPathBranch.activeBranchJoker = !!val; _bridge.value?.setActiveAiPathBranchJoker?.(!!val); }
   function setActiveAiPathBranchWeight(val) { aiPathBranch.activeBranchWeight = val; _bridge.value?.setActiveAiPathBranchWeight?.(val); }
   function setActiveAiPathBranchRejoinIndex(val) { aiPathBranch.activeBranchToMainIndex = val; _bridge.value?.setActiveAiPathBranchRejoinIndex?.(val); }
 
@@ -632,7 +634,7 @@ export const useEditorStore = defineStore('editor', () => {
     setObstacleType, openAiPath, closeAiPath,
     aiPathWear,
     aiPathBranch, aiPathBranches,
-    editMainAiPath, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchRejoinIndex, terrainPath,
+    editMainAiPath, selectAiPathBranch, setActiveAiPathBranchWeight, setActiveAiPathBranchJoker, setActiveAiPathBranchRejoinIndex, terrainPath,
     decal,
     setMeshGridPointHeight,
     setMeshGridDensity, setMeshGridWidth, setMeshGridDepth,

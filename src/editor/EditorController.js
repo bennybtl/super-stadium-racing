@@ -429,6 +429,7 @@ export class EditorController {
     this._editorStore.aiPathBranch.editingMainPath = !!branchState.editingMainPath;
     this._editorStore.aiPathBranch.activeBranchId = branchState.activeBranchId;
     this._editorStore.aiPathBranch.activeBranchWeight = branchState.activeBranchWeight ?? 1;
+    this._editorStore.aiPathBranch.activeBranchJoker = !!branchState.activeBranchJoker;
     this._editorStore.aiPathBranch.activeBranchFromMainIndex = branchState.activeBranchFromMainIndex ?? null;
     this._editorStore.aiPathBranch.activeBranchToMainIndex = branchState.activeBranchToMainIndex ?? null;
     this._editorStore.aiPathBranch.mainWaypointCount = branchState.mainWaypointCount ?? 0;
@@ -2508,6 +2509,7 @@ export class EditorController {
   editMainAiPath()             { this.aiPathEditor.editMainPath(); }
   createAiPathBranchFromSelected() { this.aiPathEditor.createBranchFromSelected(); }
   selectAiPathBranch(branchId) { this.aiPathEditor.selectBranch(branchId); }
+  setActiveAiPathBranchJoker(val) { this.aiPathEditor.setActiveBranchJoker(val); }
   setActiveAiPathBranchWeight(weight) { this.aiPathEditor.setActiveBranchWeight(weight); }
   setActiveAiPathBranchRejoinIndex(index) { this.aiPathEditor.setActiveBranchRejoinIndex(index); }
   deleteActiveAiPathBranch()   { this.aiPathEditor.deleteActiveBranch(); }

@@ -421,8 +421,10 @@ export class RaceSimulation {
       td.gameState.lastCheckpointPassed = 0;
       td.gameState.checkpointCount = 0;
       checkpointManager.resetForTruck(td.id);
+      checkpointManager.resetJokersForTruck(td.id);
       // Notify the AI driver so it recalculates its path toward checkpoint #1.
       if (!td.isPlayer && truck.driver) truck.driver.onCheckpointPassed(maxCheckpointNumber, pos);
+      if (!td.isPlayer && truck.driver) truck.driver.beginLap(td.id);
       this._emit('onStartLine', td, pos);
       return;
     }
@@ -444,7 +446,10 @@ export class RaceSimulation {
     this.pickupManager.spawnForLap(lapCount);
     this._emit('onLap', td, lapCount, lapTime);
 
-    if (lapCount < totalLaps) return;
+    if (lapCount < totalLaps) {
+      if (!td.isPlayer && truck.driver) truck.driver.beginLap(td.id);
+      return;
+    }
 
     // -- Race finished for this truck --
     const totalTime = this.clockMs - this.startMs;
