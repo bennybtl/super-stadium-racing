@@ -3,5 +3,10 @@
   "name": "Flag",
   "defaultColor": "red",
   "defaultScale": 1,
-  "featureDefaults": { "color": "red", "height": 7.5 }
+  "featureDefaults": {
+    "color": "red",
+    "height": 7.5,
+    "style": "pennant",
+    "logo": ""
+  }
 }

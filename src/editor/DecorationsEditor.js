@@ -233,6 +233,9 @@ export class DecorationsEditor {
     const def = defForFeature(this._selected.feature);
     const handled = def?.controller?.edit?.apply?.(this._selected, prop, value) === true;
     if (!handled) applyDecorationProp(this._selected, prop, value);
+    // A prop can gate which other controls exist (the flag's Logo picker only
+    // applies to the feather banner), so re-derive the descriptor.
+    this.syncStore();
     // Height-changing props (pole height) move the top the handle sits above.
     this._positionHandle(this._selected);
     this.editor.decalEditor?.refreshHandles();

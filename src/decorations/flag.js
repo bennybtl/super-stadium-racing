@@ -1,5 +1,5 @@
 import { Flag, COLLISION_RADIUS, POLE_HEIGHT } from "./lib/Flag.js";
-import { TRUCK_RADIUS } from "../constants.js";
+import { TRUCK_RADIUS, TRACK_SIGN_BRANDS } from "../constants.js";
 
 /** Lateral speed (m/s) → impulse magnitude applied to the pole. */
 const BEND_IMPULSE_SCALE = 2.5;
@@ -24,6 +24,8 @@ export default {
         heading: feature.heading ?? 0,
         scale:   feature.scale ?? def.defaultScale ?? 1,
         height:  feature.height ?? def.featureDefaults?.height ?? POLE_HEIGHT,
+        style:   feature.style ?? def.featureDefaults?.style ?? 'pennant',
+        logo:    feature.logo  ?? def.featureDefaults?.logo  ?? '',
       },
     );
   },
@@ -63,11 +65,25 @@ export default {
   },
 
   edit: {
-    controls: () => ({
-      color:   { type: 'color', label: 'Color' },
-      heading: { type: 'range', label: 'Rotation', min: 0,   max: 360, step: 1,   unit: '°' },
-      scale:   { type: 'range', label: 'Scale',    min: 0.5, max: 4,   step: 0.1, unit: '×' },
-      height:  { type: 'range', label: 'Height',   min: 2,   max: 15,  step: 0.5, unit: 'm' },
-    }),
+    /** The logo picker only applies to the feather banner, so it's conditional. */
+    controls: (feature) => {
+      const controls = {
+        style:   { type: 'select', label: 'Banner', options: [
+          { value: 'pennant', label: 'Pennant' },
+          { value: 'feather', label: 'Feather' },
+        ] },
+        color:   { type: 'color', label: 'Color' },
+        heading: { type: 'range', label: 'Rotation', min: 0,   max: 360, step: 1,   unit: '°' },
+        scale:   { type: 'range', label: 'Scale',    min: 0.5, max: 4,   step: 0.1, unit: '×' },
+        height:  { type: 'range', label: 'Height',   min: 2,   max: 15,  step: 0.5, unit: 'm' },
+      };
+      if (feature?.style === 'feather') {
+        controls.logo = { type: 'select', label: 'Logo', options: [
+          { value: '', label: 'None' },
+          ...TRACK_SIGN_BRANDS,
+        ] };
+      }
+      return controls;
+    },
   },
 };

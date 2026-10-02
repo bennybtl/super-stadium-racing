@@ -8,6 +8,7 @@ import {
   VertexData,
 } from "@babylonjs/core";
 import { basicColors } from "../../constants.js";
+import { FeatherSail, poleCurveSlope } from "./FeatherSail.js";
 
 export const POLE_HEIGHT = 7.5;
 export const POLE_RADIUS = 0.1;
@@ -27,8 +28,10 @@ export const COLLISION_RADIUS = POLE_RADIUS * 20;
 // ODEs total, same stability as a single spring, but the pole draws a real
 // curve instead of pivoting rigidly at its base.
 
-/** Number of straight segments the drawn centreline is built from. */
-const N_SEG = 10;
+/** Number of straight segments the drawn centreline is built from. Enough to
+ *  keep the feather pole's curved tip from reading as facets; the modal physics
+ *  is independent of this. */
+const N_SEG = 24;
 
 /** Eigenvalues / shape coefficients for cantilever modes 1 and 2. */
 const MODE_BETA  = [1.8751040687, 4.6940911330];
@@ -126,6 +129,12 @@ export class Flag {
     this._scale   = opts.scale   ?? 1;
     this._heightM = opts.height  ?? POLE_HEIGHT;
 
+    // 'pennant' = the small triangle on the tip; 'feather' = a tall vertical
+    // sail down the whole pole, optionally carrying a brand logo.
+    this._style   = opts.style ?? 'pennant';
+    this._logo    = opts.logo  ?? '';
+    this._shadows = shadows ?? null;
+
     // ── Modal state ───────────────────────────────────────────────────
     // Layout: [mode1·X, mode1·Z, mode2·X, mode2·Z], tip deflection in metres.
     this._amp   = [0, 0, 0, 0];
@@ -158,17 +167,58 @@ export class Flag {
     poleMat.specularColor = basicColors.white.emissive;
     this.pole.material = poleMat;
 
-    // ── Flag banner — child of root, parked on the pole tip frame ──────
-    this.flag = this._createBanner(x, z, color, scene);
-    this.flag.parent = this.root;
+    // ── Flag banner — child of root ───────────────────────────────────
+    this._buildBanner();
 
-    if (shadows) {
-      shadows.addShadowCaster(this.pole);
-      shadows.addShadowCaster(this.flag);
-      this.flag.receiveShadows = true;
-    }
+    if (shadows) shadows.addShadowCaster(this.pole);
 
     this._applyTransform();
+  }
+
+  // ─── Banner ─────────────────────────────────────────────────────────────
+
+  /** Create the banner for the current style and hang it off the root. */
+  _buildBanner() {
+    if (this._style === 'feather') {
+      this._sail = new FeatherSail(
+        `sail_${this.x}_${this.z}`, this.scene, this.color, this._logo, this._heightM,
+      );
+      this.flag = this._sail.mesh;
+    } else {
+      this._sail = null;
+      this.flag  = this._createBanner(this.x, this.z, this.color, this.scene);
+    }
+    this.flag.parent = this.root;
+
+    if (this._shadows) {
+      this._shadows.addShadowCaster(this.flag);
+      this.flag.receiveShadows = true;
+    }
+  }
+
+  _disposeBanner() {
+    if (!this.flag) return;
+    this._shadows?.removeShadowCaster?.(this.flag);
+    if (this._sail) this._sail.dispose();
+    else this.flag.dispose();
+    this.flag  = null;
+    this._sail = null;
+  }
+
+  /** Swap between the tip pennant and the full-height feather banner. */
+  setStyle(style) {
+    const next = style === 'feather' ? 'feather' : 'pennant';
+    if (next === this._style) return;
+    this._style = next;
+    this._disposeBanner();
+    this._buildBanner();
+    this._updateShape();
+  }
+
+  /** Brand logo filename for the feather banner ('' for none). */
+  setLogo(logo) {
+    this._logo = logo || '';
+    this._sail?.setLogo(this._logo);
   }
 
   // ─── Editable transform ─────────────────────────────────────────────────
@@ -298,13 +348,18 @@ export class Flag {
     const seg = L / N_SEG;
     const [a1x, a1z, a2x, a2z] = this._amp;
 
+    // A feather pole has a fixed forward curve near its tip; the modal bend
+    // rides on top of it.
+    const curved = this._style === 'feather';
+
     let x = 0, y = 0, z = 0;
     this._path[0].set(0, 0, 0);
 
     for (let i = 0; i < N_SEG; i++) {
       // du/dy at this segment's midpoint, per axis.
-      const sx = (a1x * SLOPE[0][i] + a2x * SLOPE[1][i]) / L;
+      let sx = (a1x * SLOPE[0][i] + a2x * SLOPE[1][i]) / L;
       const sz = (a1z * SLOPE[0][i] + a2z * SLOPE[1][i]) / L;
+      if (curved) sx += poleCurveSlope((i + 0.5) / N_SEG);
       const step = seg / Math.sqrt(sx * sx + sz * sz + 1);
 
       x += sx * step;
@@ -330,7 +385,10 @@ export class Flag {
       }, this.scene);
     }
 
-    if (this.flag) {
+    if (this._sail) {
+      // The feather hangs off the whole pole, so it follows the entire path.
+      this._sail.update(this._path, this._heightM);
+    } else if (this.flag) {
       const tip = this._path[N_SEG];
       this.flag.position.copyFrom(tip);
 
@@ -400,12 +458,16 @@ export class Flag {
 
   setColor(color) {
     this.color = color;
+    if (this._sail) {
+      this._sail.setColor(color);
+      return;
+    }
     this.flag.material.diffuseColor = basicColors[color]?.diffuse || basicColors.white.diffuse;
     this.flag.material.specularColor = basicColors[color]?.emissive || basicColors.gray.emissive;
   }
 
   dispose() {
-    this.flag?.dispose();
+    this._disposeBanner();
     this.pole?.dispose();
     this.root?.dispose();
   }

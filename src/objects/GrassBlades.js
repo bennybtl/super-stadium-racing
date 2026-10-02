@@ -1,14 +1,12 @@
 import {
-  SceneLoader,
   Mesh,
+  VertexData,
   Matrix,
   Vector3,
   Quaternion,
   StandardMaterial,
   Color3,
-  VertexBuffer,
 } from "@babylonjs/core";
-import { OBJFileLoader } from "@babylonjs/loaders/OBJ/objFileLoader";
 import {
   makeRng,
   hashSeed,
@@ -17,18 +15,15 @@ import {
   collectAiPathPolylines,
   groundColor,
 } from "./scatter-utils.js";
-import grass1Url from "../decorations/grass_1.obj?url";
-import grass2Url from "../decorations/grass_2.obj?url";
-
-OBJFileLoader.MATERIAL_LOADING_FAILS_SILENTLY = true;
-OBJFileLoader.SKIP_MATERIALS = true;
+import { growTuft, meshTuft } from "../decorations/lib/grass/GrassGen.js";
 
 /**
  * Procedural "grass blade" scatter — the grass-terrain counterpart to
  * DirtChunks.
  *
- * Loads a couple of low-poly grass-tuft OBJs and scatters them as thin
- * instances (one draw call each): dense along wall lines, sparse across open
+ * Generates a few grass tufts (GrassGen: fans of curved, tapered blades with a
+ * baked root→tip gradient) and scatters them as thin instances (one draw call
+ * per variant): dense along wall lines, sparse across open
  * ground, always keeping a clearance around the AI drive path — and ONLY over
  * regions whose terrain type is grass. Deterministic (seeded from the track id)
  * so it's stable across rebuilds.
@@ -36,16 +31,11 @@ OBJFileLoader.SKIP_MATERIALS = true;
  * Blades are not saved features: they're regenerated at scene build time.
  */
 
-const GRASS_URLS = [grass1Url, grass2Url];
-
-// Baked root→tip colour (multiplies the per-instance tint): shaded and dark at
-// the root, lighter and a little sun-bleached yellow at the tips. ROOT..TIP
-// averages ~1 so a tuft still reads as the ground's colour overall.
-const ROOT_COLOR = [0.45, 0.45, 0.45];
-const TIP_COLOR = [1.3, 1.22, 0.95];
+// Distinct tuft shapes, each one thin-instanced draw call.
+const TUFT_SEEDS = [3, 7, 12, 21, 34, 55];
 
 const DEFAULTS = {
-  baseScale: 0.45, // OBJ→world scale before per-instance variance
+  baseScale: 1.1, // tuft height in world units before per-instance variance
   maxBlades: 6000, // hard cap for safety/perf
   sink: 0.05, // push the tuft root this far below the ground (m)
   tiltMax: 0.13, // max random lean off vertical (rad)
@@ -76,79 +66,21 @@ function trackHasGrass(track, names) {
   return !!track.features?.some((f) => set.has(f?.terrainType?.name));
 }
 
-/**
- * Load a grass OBJ, merge its parts, and normalise it so the tuft base sits at
- * y=0 centred on X/Z — ready to be thin-instanced.
- */
-async function buildGrassBase(scene, url, name, material) {
-  const lastSlash = url.lastIndexOf("/");
-  const rootUrl = url.substring(0, lastSlash + 1);
-  const fileName = url.substring(lastSlash + 1);
-
-  const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, scene);
-  const parts = result.meshes.filter((m) => m.getTotalVertices?.() > 0);
-  if (parts.length === 0) {
-    for (const m of result.meshes) m.dispose();
-    return null;
-  }
-
-  // Fold the loader's __root__ (its right- to left-handed flip) into each part
-  // before merging, so the baked geometry is upright and correctly wound.
-  for (const p of parts) {
-    p.setParent(null);
-    p.bakeCurrentTransformIntoVertices();
-  }
-
-  const base =
-    parts.length === 1
-      ? parts[0]
-      : Mesh.MergeMeshes(parts, true, true, undefined, false, false);
-  if (!base) return null;
-  base.name = name;
-
-  // Drop the empty __root__ / helper nodes the loader leaves behind.
-  for (const m of result.meshes) {
-    if (m !== base && !m.isDisposed?.() && (m.getTotalVertices?.() ?? 0) === 0) {
-      m.dispose();
-    }
-  }
-
-  // Recentre X/Z and drop the base to y=0, then bake it in so the instance
-  // matrices are a clean scale/rotate/translate.
-  base.refreshBoundingInfo();
-  const bb = base.getBoundingInfo().boundingBox;
-  base.position.set(
-    -(bb.minimum.x + bb.maximum.x) / 2,
-    -bb.minimum.y,
-    -(bb.minimum.z + bb.maximum.z) / 2,
-  );
-  base.bakeCurrentTransformIntoVertices();
-
-  // Root→tip gradient as vertex colours, and every normal straight up: thin
-  // double-sided blades otherwise go dark on their back faces and flicker as
-  // the camera turns; up-normals light each tuft like the ground it grows from.
-  const pos = base.getVerticesData(VertexBuffer.PositionKind);
-  const nVerts = pos.length / 3;
-  let top = 0;
-  for (let i = 1; i < pos.length; i += 3) top = Math.max(top, pos[i]);
-  const colors = new Float32Array(nVerts * 4);
-  const normals = new Float32Array(nVerts * 3);
-  for (let v = 0; v < nVerts; v++) {
-    // Clamp: baked roots can sit at -1e-7, and (negative) ** 0.8 is NaN.
-    const t = top > 0 ? Math.min(1, Math.max(0, pos[v * 3 + 1] / top)) ** 0.8 : 1;
-    for (let c = 0; c < 3; c++) colors[v * 4 + c] = ROOT_COLOR[c] + (TIP_COLOR[c] - ROOT_COLOR[c]) * t;
-    colors[v * 4 + 3] = 1;
-    normals[v * 3 + 1] = 1;
-  }
-  base.setVerticesData(VertexBuffer.ColorKind, colors, false, 4);
-  base.setVerticesData(VertexBuffer.NormalKind, normals, false, 3);
-
-  base.material = material;
-  base.isVisible = true;
-  base.isPickable = false;
-  base.receiveShadows = true;
-  base.alwaysSelectAsActiveMesh = true; // thin instances span the whole track
-  return base;
+/** Build one unit-height tuft mesh, root at y=0, ready to be thin-instanced. */
+function buildTuftMesh(scene, seed, name, material) {
+  const buf = meshTuft(growTuft(seed));
+  const vd = new VertexData();
+  vd.positions = buf.verts;
+  vd.normals = buf.normals;
+  vd.colors = buf.colors;
+  vd.indices = buf.indices;
+  const mesh = new Mesh(name, scene);
+  vd.applyToMesh(mesh);
+  mesh.material = material;
+  mesh.isPickable = false;
+  mesh.receiveShadows = true;
+  mesh.alwaysSelectAsActiveMesh = true; // thin instances span the whole track
+  return mesh;
 }
 
 /**
@@ -251,15 +183,9 @@ export async function scatterGrassBlades(scene, track, options = {}) {
   mat.specularColor = new Color3(0.04, 0.06, 0.03);
   mat.backFaceCulling = false; // grass planes read from both sides
 
-  const baseMeshes = [];
-  for (let v = 0; v < GRASS_URLS.length; v++) {
-    const base = await buildGrassBase(scene, GRASS_URLS[v], `grassBlade_${v}`, mat);
-    if (base) baseMeshes.push(base);
-  }
-  if (baseMeshes.length === 0) {
-    mat.dispose();
-    return null;
-  }
+  const baseMeshes = TUFT_SEEDS.map((seed, v) =>
+    buildTuftMesh(scene, seed, `grassBlade_${v}`, mat),
+  );
 
   const variants = baseMeshes.length;
   const buckets = Array.from({ length: variants }, () => []);
