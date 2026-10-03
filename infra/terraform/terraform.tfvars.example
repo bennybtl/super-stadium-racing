@@ -1,0 +1,3 @@
+domain_name    = "race.example.com"
+hosted_zone_id = "Z0123456789ABCDEFGHIJ"
+# region = "us-east-1"

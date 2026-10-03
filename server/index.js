@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import express from "express";
 import cors from "cors";
 import { mountRaceLobbies } from "./lobbies/index.js";
+import { startIdleShutdown } from "./idleShutdown.js";
 
 const PORT = Number(process.env.PORT) || 2567;
 
@@ -31,6 +32,12 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 const httpServer = createServer(app);
 
 raceLobbies.attach(httpServer);
+startIdleShutdown({
+  isIdle: () => raceLobbies.registry.size === 0 && raceLobbies.supervisor.activeCount === 0,
+  minutes: Number(process.env.IDLE_SHUTDOWN_MINUTES),
+  cluster: process.env.ECS_CLUSTER,
+  service: process.env.ECS_SERVICE,
+});
 
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`[offroad-server] listening on ws://0.0.0.0:${PORT}`);
