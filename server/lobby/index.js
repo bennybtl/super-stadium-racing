@@ -159,7 +159,7 @@ function authenticate(token) {
   return players.find((p) => p.token.length === given.length && timingSafeEqual(p.token, given)) ?? null;
 }
 
-const wss = new WebSocketServer({ port, maxPayload: 4096 });
+const wss = new WebSocketServer({ port, host: process.env.LOBBY_HOST || '127.0.0.1', maxPayload: 4096 });
 wss.on('connection', (ws) => {
   let player = null;
   const helloTimer = setTimeout(() => ws.close(4001, 'no hello'), HELLO_TIMEOUT_MS);

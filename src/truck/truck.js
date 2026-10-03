@@ -743,6 +743,7 @@ export class Truck {
     const {
       input, speed, hSpeed, groundedness, penetration, isGrounded, onNaturalGround, terrain, effectsTerrain,
     } = this._simFrame;
+    if (!input) return; // nothing simulated yet (e.g. a predicted truck's first frame)
 
     // Animate visual puppet — use the floor Y already resolved by TerrainPhysics this frame.
     // This is the effective surface (bridge deck or ground) rather than just raw terrain.

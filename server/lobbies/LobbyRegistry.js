@@ -179,7 +179,7 @@ export class LobbyRegistry {
       hostId: lobby.hostId,
       players: lobby.players.map(({ id, name, vehicleKey }) => ({ id, name, vehicleKey })),
       you: me?.id ?? null,
-      race: me && lobby.status === "racing" ? { port: lobby.port, token: me.token } : null,
+      race: me && lobby.status === "racing" ? { path: `/race/${lobby.raceId}`, token: me.token } : null,
       results: lobby.results,
       failure: lobby.failure,
     };

@@ -66,6 +66,12 @@ export class RaceSupervisor {
     child.on("error", (err) => this._fail(raceId, race, `race process error: ${err.message}`));
   }
 
+  /** Loopback port of a live race that has reported ready, else null. */
+  portFor(raceId) {
+    const race = this._races.get(raceId);
+    return race?.readyAt && !race.done ? race.port : null;
+  }
+
   get activeCount() {
     return this._races.size;
   }

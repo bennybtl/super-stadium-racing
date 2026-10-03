@@ -183,7 +183,7 @@ export class InputStamper {
  * event, results, close.
  */
 export class NetClient {
-  constructor({ host, port, token, WebSocketImpl = globalThis.WebSocket, now = () => performance.now() }) {
+  constructor({ url, token, WebSocketImpl = globalThis.WebSocket, now = () => performance.now() }) {
     this._now = now;
     this.clock = new ServerClock();
     this.snapshots = new SnapshotBuffer();
@@ -195,8 +195,7 @@ export class NetClient {
     this._listeners = new Map();
     this._pingTimer = null;
 
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    this.ws = new WebSocketImpl(`${proto}://${host}:${port}`);
+    this.ws = new WebSocketImpl(url);
     this.ws.onopen = () => this._send({ type: 'hello', token });
     this.ws.onmessage = (e) => this._onMessage(e.data);
     this.ws.onclose = (e) => {

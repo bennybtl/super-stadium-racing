@@ -8,6 +8,7 @@ import { DriveMode } from "./DriveMode.js";
 import { basicColors } from "../constants.js";
 import { AI_COLOR_KEYS } from "../ai/setupAIDrivers.js";
 import { NetClient, TICK_RATE } from "../net/NetClient.js";
+import { raceWsUrl } from "../net/server-config.js";
 import { Prediction } from "../net/Prediction.js";
 import { StaticBodyCollisionManager } from "../managers/StaticBodyCollisionManager.js";
 import { rngStream } from "../sim/rng.js";
@@ -49,7 +50,7 @@ export class NetRaceMode extends DriveMode {
 
   /**
    * @param {object} o
-   * @param {{ host: string, port: number, token: string }} o.race  from the lobby view
+   * @param {{ path: string, token: string }} o.race  from the lobby view
    * @param {string}  o.trackKey
    * @param {boolean} o.reverse
    * @param {number}  o.laps
@@ -115,7 +116,7 @@ export class NetRaceMode extends DriveMode {
     })));
 
     // -- Network --
-    const net = this.net = new NetClient({ host: race.host, port: race.port, token: race.token });
+    const net = this.net = new NetClient({ url: raceWsUrl(race.path), token: race.token });
     let raceStartTick = null;
     let selfFinishMs = null;
     let resultsShown = false;

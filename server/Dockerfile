@@ -1,9 +1,8 @@
 # Multiplayer server: colyseus relay + server-authoritative race lobbies.
 # Build from the repo root:  docker build -f server/Dockerfile .
 #
-# Each race runs in a child process on its own port (RACE_PORT_MIN..MAX), so
-# that range must be published alongside 2567 and reachable by clients; set
-# PUBLIC_HOST if clients reach races by a different name than the API.
+# Each race runs in a child process on a loopback-only port (RACE_PORT_MIN..MAX);
+# the server proxies /race/<id> websockets to it, so 2567 is the only port to expose.
 
 # ── Build: bundle the game's simulation for Node (esbuild is a dev dep) ──────
 FROM node:22-alpine AS build
@@ -32,5 +31,5 @@ COPY src/obstacles/*.json ./src/obstacles/
 
 ENV RACE_PORT_MIN=22000 RACE_PORT_MAX=22099 RACE_DATA_DIR=/data/races
 VOLUME /data
-EXPOSE 2567 22000-22099
+EXPOSE 2567
 CMD ["node", "server/index.js"]

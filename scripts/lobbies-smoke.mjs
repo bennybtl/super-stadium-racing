@@ -108,11 +108,11 @@ try {
     return v.body?.race ?? null;
   }, 30_000, 'race endpoint');
   const [ea, eb] = await Promise.all([endpoint(alice), endpoint(bob)]);
-  check('each player gets their own token', (external || ea.port === RACE_PORT) && eb.port === ea.port && ea.token !== eb.token);
+  check('each player gets their own token', ea.path?.startsWith('/race/') && eb.path === ea.path && ea.token !== eb.token);
 
   const race = (e) => new Promise((resolve) => {
     const out = { snapshots: 0, results: null };
-    const ws = new WebSocket(`ws://${e.host}:${e.port}`);
+    const ws = new WebSocket(base.replace(/^http/, 'ws') + e.path);
     let timer = null;
     ws.on('open', () => ws.send(JSON.stringify({ type: 'hello', token: e.token })));
     ws.on('message', (data) => {

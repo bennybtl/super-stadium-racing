@@ -25,6 +25,11 @@ export function serverWsUrl() {
   return url && url.replace(/^http/, 'ws');
 }
 
+/** ws(s) URL of a race: the lobby view's `race.path` on the multiplayer server. */
+export function raceWsUrl(path) {
+  return serverWsUrl() + path;
+}
+
 /** True when a server is configured and answers. Never throws. */
 export async function probeServer() {
   const url = serverUrl();

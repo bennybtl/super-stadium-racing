@@ -59,7 +59,8 @@ the real simulation and broadcasts state. Phase 0 done; Phase 1 next.
   isolation (Node is single-threaded — one lobby's frame spike must not become
   everyone's jitter).
 - **Children own their own WebSocket server.** A client connects to the parent,
-  receives `{host, port, token}`, and reconnects directly to the child. No
+  receives `{path, token}`, and opens a websocket to `/race/<raceId>` on the
+  same port, which the parent relays to the child (loopback only). No
   per-tick data crosses the IPC boundary.
 - **No pre-warm pool.** Accept the 1–3s spawn + Havok init + track load in the
   lobby-start path. Revisit only if it becomes a felt problem.
@@ -338,10 +339,9 @@ Open for later phases:
   never write to storage directly**, so a killed child cannot half-commit a race
   result.
 
-Deployment note: the child port range has to be reachable. Fine for a single
-box; if that becomes a problem later, front it with a proxy that reads the lobby
-registry — that change is invisible to the client, which already receives its
-endpoint at runtime.
+Deployment note: only the one server port is exposed. Races listen on
+loopback (`RACE_PORT_MIN..MAX`) and `server/lobbies/raceProxy.js` relays
+`/race/<raceId>` upgrades to them.
 
 **Progress (2026-09-27): built.** Lives beside the colyseus relay (unchanged)
 on the same port, mounted by `server/index.js` via `server/lobbies/index.js`.
@@ -350,7 +350,7 @@ on the same port, mounted by `server/index.js` via `server/lobbies/index.js`.
   `…/leave`, `…/start`, `PATCH …` (host settings), `PATCH …/me` (name/vehicle),
   `GET /races`, `GET /races/:raceId`. Each player's `secret` goes in
   `Authorization: Bearer` — never a URL. Polling with it is also presence; once
-  racing, the view carries that player's own `race: { host, port, token }`.
+  racing, the view carries that player's own `race: { path, token }`.
   Create/join rate-limited per IP.
 - `LobbyRegistry` — pure state machine (waiting → starting → racing →
   finished | failed), 5-char codes without 0/O/1/I, host-only settings/start,
@@ -369,8 +369,7 @@ on the same port, mounted by `server/index.js` via `server/lobbies/index.js`.
 - **Docker** — `server/Dockerfile` is multi-stage: a build stage bundles the sim
   (esbuild is a dev dep); the runtime copies the bundle plus the track/vehicle/
   obstacle JSON. Build from the repo root: `docker build -f server/Dockerfile .`.
-  Publish 2567 **and** the race port range; `PUBLIC_HOST` sets the host clients
-  are told to connect races to. `/data` is a volume for results.
+  Publish 2567 only (races are proxied through it). `/data` is a volume for results.
 - `npm run check:lobbies` (`scripts/lobbies-smoke.mjs`, in CI): the whole flow
   against the real server — create, join, vehicle pick, host-only start, forged
   secret refused, per-player tokens, two ws clients race, stored result. Also

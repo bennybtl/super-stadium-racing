@@ -37,13 +37,12 @@ app.get("/lobbies", async (_req, res) => {
 });
 
 // Server-authoritative race lobbies (docs/MULTIPLAYER.md): each race runs in its
-// own child process on a port from RACE_PORT_MIN..RACE_PORT_MAX, which must be
-// reachable by clients. PUBLIC_HOST overrides the host handed to them.
+// own child process on a loopback port from RACE_PORT_MIN..RACE_PORT_MAX, reached
+// by clients through this server's one port at /race/<raceId>.
 const raceLobbies = mountRaceLobbies(app, {
   dataDir: process.env.RACE_DATA_DIR || undefined,
   portMin: Number(process.env.RACE_PORT_MIN) || 22000,
   portMax: Number(process.env.RACE_PORT_MAX) || 22099,
-  publicHost: process.env.PUBLIC_HOST || null,
   raceOptions: {
     maxRaceMs: Number(process.env.RACE_MAX_MS) || undefined,
     joinTimeoutMs: Number(process.env.RACE_JOIN_TIMEOUT_MS) || undefined,
@@ -58,9 +57,13 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 
 const httpServer = createServer(app);
 
-const gameServer = new Server({
-  transport: new WebSocketTransport({ server: httpServer }),
-});
+const transport = new WebSocketTransport({ server: httpServer });
+const gameServer = new Server({ transport });
+// Colyseus's websocket server claims every upgrade; take that over so
+// /race/<id> can be proxied to a race process and the rest still reaches colyseus.
+httpServer.removeAllListeners("upgrade");
+raceLobbies.attach(httpServer, (req, socket, head) =>
+  transport.wss.handleUpgrade(req, socket, head, (ws) => transport.wss.emit("connection", ws, req)));
 
 gameServer.define(ROOM_NAME, DriveRoom);
 

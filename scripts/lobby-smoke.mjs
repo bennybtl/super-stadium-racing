@@ -108,7 +108,7 @@ class LaggySocket {
   close(...args) { this.ws.close(...args); }
 }
 function netClient(p) {
-  const net = new NetClient({ host: '127.0.0.1', port: PORT, token: p.token, WebSocketImpl: LaggySocket });
+  const net = new NetClient({ url: `ws://127.0.0.1:${PORT}`, token: p.token, WebSocketImpl: LaggySocket });
   const stats = { missed: [], margin: [] };
   let over = false;
   net.on('results', () => { over = true; }); // snapshots stop; stop measuring

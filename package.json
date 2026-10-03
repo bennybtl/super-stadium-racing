@@ -28,7 +28,8 @@
     "check:lobby": "node scripts/lobby-smoke.mjs",
     "check:lobbies": "node scripts/lobbies-smoke.mjs",
     "build:server-sim": "node scripts/build-server-sim.mjs",
-    "lobby": "node server/lobby/index.js"
+    "lobby": "node server/lobby/index.js",
+    "deploy:server": "bash scripts/deploy-server.sh"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",

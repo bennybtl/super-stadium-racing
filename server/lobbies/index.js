@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { LobbyRegistry, LobbyError } from "./LobbyRegistry.js";
+import { attachRaceProxy } from "./raceProxy.js";
 import { RaceSupervisor } from "./RaceSupervisor.js";
 import { ResultStore } from "./ResultStore.js";
 import { takeToken } from "../validate.js";
@@ -17,7 +18,7 @@ import { trackFiles } from "../tracks.js";
  *                                        → { code, playerId, secret }
  *   GET    /race-lobbies/:code           lobby state; with the player's secret
  *                                        it is also their presence ping, and
- *                                        once racing carries `race: { host, port, token }`
+ *                                        once racing carries `race: { path, token }`
  *   POST   /race-lobbies/:code/join      { player } → { code, playerId, secret }
  *   POST   /race-lobbies/:code/leave
  *   PATCH  /race-lobbies/:code           host: { name, trackKey, laps, reverse, maxPlayers }
@@ -27,8 +28,9 @@ import { trackFiles } from "../tracks.js";
  *   GET    /race-tracks                  keys of the tracks races can use
  *
  * The secret travels as `Authorization: Bearer <secret>` — never in a URL.
- * Players connect to their race at ws://<host>:<port> and send
- * `{ type: 'hello', token }` (server/lobby/index.js).
+ * Players connect to their race at ws://<this server>/race/<raceId> and send
+ * `{ type: 'hello', token }` (server/lobby/index.js). `attach()` proxies that path
+ * to the race process on loopback, so only the one port is ever exposed.
  */
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -45,17 +47,14 @@ const catalog = (dir) => new Set(
  * @param {import('express').Express} app
  * @param {object} [o]
  * @param {string} [o.dataDir]     where race results are stored
- * @param {number} [o.portMin]     race port range (each race gets one)
+ * @param {number} [o.portMin]     loopback port range for race processes (never exposed)
  * @param {number} [o.portMax]
- * @param {string} [o.publicHost]  host clients should connect races to; defaults
- *                                 to the hostname they reached this server on
  * @param {object} [o.raceOptions] `{ maxRaceMs, joinTimeoutMs }` for every race (tests)
  */
 export function mountRaceLobbies(app, {
   dataDir = join(root, "server", "data", "races"),
   portMin = 22000,
   portMax = 22099,
-  publicHost = null,
   raceOptions = {},
 } = {}) {
   const tracks = new Set(trackFiles().keys());
@@ -95,9 +94,6 @@ export function mountRaceLobbies(app, {
     const m = /^Bearer\s+(\S+)$/.exec(req.get("authorization") ?? "");
     return m ? m[1] : null;
   };
-  const withRaceHost = (req, view) => (view.race
-    ? { ...view, race: { host: publicHost ?? req.hostname, ...view.race } }
-    : view);
 
   // Wrap a handler: LobbyErrors become their status, anything else a 500.
   const handle = (fn) => (req, res) => {
@@ -121,7 +117,7 @@ export function mountRaceLobbies(app, {
     res.status(201);
     return registry.create(req.body ?? {});
   }));
-  router.get("/race-lobbies/:code", handle((req) => withRaceHost(req, registry.view(req.params.code, secretOf(req)))));
+  router.get("/race-lobbies/:code", handle((req) => registry.view(req.params.code, secretOf(req))));
   router.post("/race-lobbies/:code/join", handle((req) => {
     if (rateLimited(req)) throw new LobbyError(429, "slow down");
     return registry.join(req.params.code, req.body?.player ?? {});
@@ -142,6 +138,10 @@ export function mountRaceLobbies(app, {
     registry,
     supervisor,
     store,
+    /** Route `/race/<id>` websocket upgrades on `httpServer`; others go to `fallback`. */
+    attach(httpServer, fallback) {
+      attachRaceProxy(httpServer, { portFor: (id) => supervisor.portFor(id), fallback });
+    },
     stop() {
       clearInterval(sweeper);
       supervisor.stopAll();

@@ -39,7 +39,7 @@ describe('LobbyRegistry', () => {
     const text = JSON.stringify(reg.view(code, b.secret));
     expect(text).not.toContain(secret);
     expect(text).not.toContain(spawned[0].players[0].token);
-    expect(reg.view(code, b.secret).race).toEqual({ port: 22001, token: spawned[0].players[1].token });
+    expect(reg.view(code, b.secret).race).toEqual({ path: `/race/${spawned[0].raceId}`, token: spawned[0].players[1].token });
     expect(reg.view(code).race).toBeNull(); // no secret, no endpoint
   });
 
