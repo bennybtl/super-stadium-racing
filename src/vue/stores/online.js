@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { lobbyApi } from '../../net/LobbyApi.js';
 import { useMenuStore } from './menu.js';
-import { probeServer } from '../../net/server-config.js';
+import { probeServer, wakeServer } from '../../net/server-config.js';
 
 const PLAYER_NAME_KEY = 'multiplayerPlayerName'; // shared with the relay lobby
 const POLL_MS = 1000;
@@ -34,6 +34,25 @@ export const useOnlineStore = defineStore('online', () => {
   // Multiplayer is offered only when a server is configured and answers.
   const serverAvailable = ref(false);
   async function checkServer() { serverAvailable.value = await probeServer(); }
+
+  // A stopped scale-to-zero server is woken on demand (net/server-config.js).
+  const waking = ref(false);
+  const wakeError = ref(null);
+  /** The main-menu "Online" button: wake the server if needed, then open the lobby browser. */
+  async function openOnline() {
+    if (waking.value) return;
+    wakeError.value = null;
+    if (!serverAvailable.value) {
+      waking.value = true;
+      serverAvailable.value = await wakeServer();
+      waking.value = false;
+      if (!serverAvailable.value) {
+        wakeError.value = "Couldn't reach the multiplayer server — try again in a minute.";
+        return;
+      }
+    }
+    useMenuStore().showOnlineLobby();
+  }
 
   // This player's membership: { code, playerId, secret } (secret stays here).
   const membership = ref(null);
@@ -187,7 +206,7 @@ export const useOnlineStore = defineStore('online', () => {
   }
 
   return {
-    serverAvailable, checkServer, playerName, lobbies, raceTrackKeys, refreshing, busy, error, lobby, isHost, membership,
+    serverAvailable, checkServer, waking, wakeError, openOnline, playerName, lobbies, raceTrackKeys, refreshing, busy, error, lobby, isHost, membership,
     setPlayerName, refreshLobbies, createLobby, joinLobby, updateSettings, setVehicle, startRace, leaveLobby, reset,
   };
 });

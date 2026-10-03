@@ -67,7 +67,9 @@
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('hot lap')">Hot Lap</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showPitMenu('single race')">Single Race</button>
           <button class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showChampionshipSetup()">Championship</button>
-          <button v-if="online.serverAvailable" class="menu-button pointer-events-auto px-10 py-4 text-2xl" @click="store.showOnlineLobby()">Online (beta)</button>
+          <button v-if="online.serverAvailable || canWakeServer()" class="menu-button pointer-events-auto px-10 py-4 text-2xl disabled:opacity-60" :disabled="online.waking" @click="online.openOnline()">{{ online.waking ? 'Starting server…' : 'Online (beta)' }}</button>
+          <p v-if="online.waking" class="text-center text-sm text-slate-400">Waking the server — this can take a minute.</p>
+          <p v-else-if="online.wakeError" class="text-center text-sm text-[#ff9b9b]">{{ online.wakeError }}</p>
           <hr class="my-2 opacity-60">
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.showEditorTrackSelect()">Track Editor</button>
           <button class="menu-button menu-button-muted pointer-events-auto px-10 py-4 text-2xl" @click="store.settings()">Settings</button>
@@ -399,9 +401,10 @@ import TruckSetup from './TruckSetup.vue';
 import RacePodium3D from './RacePodium3D.vue';
 import OnlineLobby from './OnlineLobby.vue';
 import OnlineRoom from './OnlineRoom.vue';
+import { canWakeServer } from '../net/server-config.js';
 
 const store = useMenuStore();
-// Multiplayer entries appear only once a configured server answers.
+// The Online entry appears once a configured server answers, or when it can be woken.
 const online = useOnlineStore();
 onMounted(() => { online.checkServer(); });
 

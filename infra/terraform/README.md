@@ -43,11 +43,15 @@ cd ../.. && npm run deploy:web
 Redeploying the server is just `npm run deploy:server`: every cold start pulls
 `:latest` (an already-running task keeps its old image until it scales down).
 
+## Client
+
+The main-menu Online button is shown whenever the build has a `VITE_SERVER_URL`. If
+the server is down it calls `/wake`, shows "Starting server…", and polls the API
+until it answers (up to 3 min) before opening the lobby browser (`wakeServer` in
+`src/net/server-config.js`).
+
 ## Not done yet
 
-- **Client wake-up.** The client doesn't call `/wake` yet, so while the server
-  is stopped `probeServer()` fails and the Online button stays hidden. It needs
-  to call `/wake`, show "starting server…", and poll until the probe succeeds.
 - **Race results** are written to the task's ephemeral disk and vanish on
   scale-down (EFS or S3 if they matter).
 - Default VPC, public subnets, no NAT/ALB: cheapest, not hardened.

@@ -6,6 +6,9 @@
  * answers. `npm run dev` falls back to the page's own host on the server's
  * default port so local and LAN play need no setup. With neither, the game is
  * single-player only — the static-site deployment.
+ *
+ * A scale-to-zero deployment (infra/terraform) has no server running until
+ * someone asks: GET <server>/wake starts it, and wakeServer() waits for it.
  */
 
 const DEV_PORT = 2567;
@@ -39,5 +42,37 @@ export async function probeServer() {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+/** True when this build points at a configured server that may need waking. */
+export function canWakeServer() {
+  return !!import.meta.env.VITE_SERVER_URL?.trim();
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Start the server if it's stopped and wait until it answers. Resolves true
+ * once it does, false if there's no /wake endpoint (an always-on server that is
+ * simply down) or it doesn't come up within `timeoutMs`. Never throws.
+ */
+export async function wakeServer({ timeoutMs = 180_000, intervalMs = 3000, rewakeEvery = 5 } = {}) {
+  const url = serverUrl();
+  if (!url) return false;
+  const deadline = Date.now() + timeoutMs;
+  for (let i = 0; ; i++) {
+    if (await probeServer()) return true;
+    // /wake is idempotent; repeat it in case the task stopped while we waited.
+    if (i % rewakeEvery === 0) {
+      try {
+        const res = await fetch(`${url}/wake`, { signal: AbortSignal.timeout(10_000) });
+        if (!res.ok) return false;
+      } catch {
+        return false;
+      }
+    }
+    if (Date.now() + intervalMs > deadline) return false;
+    await sleep(intervalMs);
   }
 }
