@@ -1,40 +1,13 @@
 import { createServer } from "node:http";
 import express from "express";
 import cors from "cors";
-import { Server, matchMaker } from "@colyseus/core";
-import { WebSocketTransport } from "@colyseus/ws-transport";
-import { DriveRoom } from "./DriveRoom.js";
 import { mountRaceLobbies } from "./lobbies/index.js";
 
 const PORT = Number(process.env.PORT) || 2567;
-const ROOM_NAME = "drive";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// This colyseus version's built-in matchmake route is POST-only (join/create/
-// etc.) — there is no GET room-listing endpoint, so the lobby browser needs
-// its own. matchMaker.query() is the same call the old client-side
-// `getAvailableRooms()` helper used to wrap.
-app.get("/lobbies", async (_req, res) => {
-  try {
-    const rooms = await matchMaker.query({ name: ROOM_NAME });
-    res.json(
-      rooms
-        .filter((r) => !r.private && !r.unlisted && !r.locked)
-        .map((r) => ({
-          roomId: r.roomId,
-          metadata: r.metadata,
-          clients: r.clients,
-          maxClients: r.maxClients,
-        }))
-    );
-  } catch (err) {
-    console.error("[offroad-server] /lobbies query failed", err);
-    res.status(500).json({ error: "failed to list lobbies" });
-  }
-});
 
 // Server-authoritative race lobbies (docs/MULTIPLAYER.md): each race runs in its
 // own child process on a loopback port from RACE_PORT_MIN..RACE_PORT_MAX, reached
@@ -57,17 +30,9 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 
 const httpServer = createServer(app);
 
-const transport = new WebSocketTransport({ server: httpServer });
-const gameServer = new Server({ transport });
-// Colyseus's websocket server claims every upgrade; take that over so
-// /race/<id> can be proxied to a race process and the rest still reaches colyseus.
-httpServer.removeAllListeners("upgrade");
-raceLobbies.attach(httpServer, (req, socket, head) =>
-  transport.wss.handleUpgrade(req, socket, head, (ws) => transport.wss.emit("connection", ws, req)));
-
-gameServer.define(ROOM_NAME, DriveRoom);
+raceLobbies.attach(httpServer);
 
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`[offroad-server] listening on ws://0.0.0.0:${PORT}`);
-  console.log(`[offroad-server] LAN players connect via ws://<this-machine-ip>:${PORT}`);
+  console.log(`[offroad-server] LAN players connect via http://<this-machine-ip>:${PORT}`);
 });

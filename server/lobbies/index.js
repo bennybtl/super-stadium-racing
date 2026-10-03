@@ -11,7 +11,7 @@ import { trackFiles } from "../tracks.js";
 
 /**
  * Server-authoritative race lobbies over HTTP (docs/MULTIPLAYER.md, Phase 4),
- * mounted beside the colyseus relay on the same port.
+ * on the server's one port.
  *
  *   GET    /race-lobbies                 open lobbies
  *   POST   /race-lobbies                 create  { name, trackKey, laps, reverse, maxPlayers, player: { name, vehicleKey } }
@@ -138,9 +138,9 @@ export function mountRaceLobbies(app, {
     registry,
     supervisor,
     store,
-    /** Route `/race/<id>` websocket upgrades on `httpServer`; others go to `fallback`. */
-    attach(httpServer, fallback) {
-      attachRaceProxy(httpServer, { portFor: (id) => supervisor.portFor(id), fallback });
+    /** Route `/race/<id>` websocket upgrades on `httpServer` to their race process. */
+    attach(httpServer) {
+      attachRaceProxy(httpServer, { portFor: (id) => supervisor.portFor(id) });
     },
     stop() {
       clearInterval(sweeper);

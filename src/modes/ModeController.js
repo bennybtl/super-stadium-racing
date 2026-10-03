@@ -3,7 +3,6 @@ import { RaceMode } from "./RaceMode.js";
 import { TestMode } from "./TestMode.js";
 import { PracticeMode } from "./PracticeMode.js";
 import { HotLapMode } from "./HotLapMode.js";
-import { MultiplayerMode } from "./MultiplayerMode.js";
 import { NetRaceMode } from "./NetRaceMode.js";
 import { incrementUpgradeLevel, getUpgradeCatalog, applyPurchase } from "../managers/UpgradeStorage.js";
 import { basicColors } from "../constants.js";
@@ -456,10 +455,6 @@ export class ModeController {
 
   goToHotLap(config) {
     return this.switchTo(HotLapMode, config);
-  }
-
-  goToMultiplayer(config) {
-    return this.switchTo(MultiplayerMode, config);
   }
 
   goToOnlineRace(config) {

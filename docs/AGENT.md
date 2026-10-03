@@ -18,7 +18,7 @@ drives all menus/HUD; the 3D world is Babylon.js + Havok.
 - **Havok Physics 1.3** — WASM physics (MESH colliders for terrain/bridges/walls, BOX for trucks)
 - **Vue 3 + Pinia** — reactive UI (menus, editor panels, HUD)
 - **Vite 6** — build + dev server
-- **colyseus 0.16** — multiplayer relay server (`server/`), `colyseus.js` client
+- **express + ws** — multiplayer server (`server/`): race lobbies over HTTP, each race a child process proxied through one port
 - **Tailwind CSS** — utility CSS in Vue components
 - **ES Modules**, vanilla JS everywhere except `.vue` files
 - **Vitest** — unit tests for the pure-logic modules (`test/`)
@@ -30,9 +30,10 @@ drives all menus/HUD; the 3D world is Babylon.js + Havok.
 ```
 offroad/
 ├── index.html
-├── server/                          # colyseus multiplayer server (its own mini-app)
-│   ├── index.js                     #   express + colyseus bootstrap
-│   ├── DriveRoom.js                 #   per-race room: roster, state broadcast, lap/finish reports
+├── server/                          # multiplayer server (its own mini-app)
+│   ├── index.js                     #   express bootstrap; mounts lobbies/
+│   ├── lobbies/                     #   lobby registry, race supervisor, /race/<id> websocket proxy
+│   ├── lobby/                       #   one race process: headless sim + ws server (loopback)
 │   ├── validate.js                  #   input hygiene for every client message (unit-tested)
 │   └── Dockerfile
 ├── web/                             # static-site container for the built client
@@ -65,10 +66,6 @@ offroad/
     │   ├── ARCHITECTURE.md          # ← read this before touching AI
     │   └── controllers/            # AIPathPlanner, AISteering, AIThrottle, AIBoost,
     │                                 AIStuckRecovery, AISpawnRecovery, AICheckpointGuidance, AIDebugRenderer
-    ├── multiplayer/
-    │   ├── MultiplayerClient.js     # colyseus.js wrapper: join/leave, roster, state send, lap/finish reports
-    │   ├── RemotePuppet.js          # visual-only truck for other players (interpolated from network state)
-    │   └── RemoteTruckCollision.js  # local player ↔ remote-puppet push-apart (shares collision-math.js)
     ├── modes/
     │   ├── ModeController.js        # owns the render loop; switchTo(ModeClass); championship orchestration
     │   ├── BaseMode.js              # visibility handler, respawnTruck (teleport + collision flush)
@@ -76,7 +73,6 @@ offroad/
     │   ├── SceneBuilder.js          # buildScene(): ground, lights, physics, all the per-track managers
     │   ├── MenuMode.js              # menu callbacks + the attract-mode demo race behind the menus
     │   ├── RaceMode.js              # single race / championship race: field, laps, timing, finish/DNF, results
-    │   ├── MultiplayerMode.js       # networked race: local player + remote puppets (client-simulated, server-relayed)
     │   ├── PracticeMode.js          # free drive, one truck
     │   ├── HotLapMode.js            # solo time attack + ghost
     │   ├── EditorMode.js            # hosts EditorController
@@ -131,7 +127,7 @@ offroad/
     └── vue/
         ├── main.js                  # Vue app bootstrap
         ├── store.js                 # barrel re-exporting the 5 Pinia stores in stores/
-        ├── stores/                  # menu.js, race.js, editor.js, debug.js, multiplayer.js
+        ├── stores/                  # menu.js, race.js, editor.js, debug.js, online.js
         ├── AppShell.vue             # root; mounts every overlay/panel (each self-gates)
         ├── MenuOverlay.vue          # title / main menu / pit / pause / settings / championship setup
         ├── RaceHUD.vue              # timer, lap, per-truck status, countdown, OOB warning
@@ -140,7 +136,7 @@ offroad/
         ├── RacePodium3D.vue         # Babylon mini-scene: top-3 trucks on a podium (shared loadVehicleModel.js)
         ├── Modal.vue                # reusable dimmed-backdrop modal shell
         ├── LoadingOverlay.vue       # spinning-wheel loading modal
-        ├── Multiplayer{Lobby,Room}.vue
+        ├── Online{Lobby,Room}.vue
         ├── settings/                # Controls/Sound/Display/Gameplay/LapRecords/ManageTracks/LocalTracks
         └── editor/                  # one *Panel.vue per entity + AddEntityMenu, EditorStatusBar, EditorPanel
 ```
@@ -160,7 +156,7 @@ starts rendering). `BaseMode` → `DriveMode` → the concrete driving modes.
 - action-zone helpers: `getSlowZones` / `getSpeedBoostZones` / `getFireworkZones`
   / `getOutOfBoundsZones`, `applyZoneEffects`, `updateOutOfBoundsCountdown`
 - `makeAIDriverFactory` — the good/ok/bad skill ladder (Race + Menu)
-- `runCountdownSequence` — the 3-2-1-GO choreography (Race + Multiplayer)
+- `runCountdownSequence` — the 3-2-1-GO choreography (Race + Online)
 - `installRaceFrameLoop({ isMenuUp, isCountdownActive, getRaceStartMs, runTimerWhilePaused, getMeshes, onStep, onRender })`
   — the per-frame envelope (dt clamp, profiler frame, photo-mode camera, menu
   bail, HUD-timer throttle). Each mode supplies `onStep(SIM_DT, input)` (the
@@ -175,7 +171,7 @@ starts rendering). `BaseMode` → `DriveMode` → the concrete driving modes.
 - frame profiler + photo mode + fireworks lifecycle
 
 `CLEANUP.md §2.4` records this dedup; `§2.3` is the remaining `RaceMode.setup()` /
-`MultiplayerMode.setup()` decomposition (still large single functions).
+`RaceMode.setup()` decomposition (still large single functions).
 
 **`RaceMode`** — the field (player + AI), lap/checkpoint tracking, race timer,
 finish order + DNF grace timer, rubber-band, telemetry, position labels,
@@ -183,13 +179,7 @@ checkpoint arrow. On finish: `menuManager.showSingleRaceResults` (single race)
 or `championship.onRaceComplete` (cup). Results rows carry `vehicleKey` + `color`
 so the podium can render each finisher's truck.
 
-**`MultiplayerMode`** — one locally-simulated player truck + `RemotePuppet`s
-interpolated from server state. The client runs checkpoints/laps for its own
-player only and reports lap/finish to the server; the server owns the roster and
-race order. The server is a relay, not a simulation — it validates every message
-(`server/validate.js`) but trusts positions and lap timing. See
-`docs/MULTIPLAYER.md` ("What actually shipped") before changing any of this. `runTimerWhilePaused: true` — a live server race doesn't stop for
-this client's pause menu.
+**`NetRaceMode`** — online race: the server runs the sim; this client predicts its own truck (`Prediction`) and interpolates the rest from snapshots (`NetClient`). `runTimerWhilePaused: true` — a live server race doesn't stop for this client's pause menu. See `docs/MULTIPLAYER.md`.
 
 **`MenuMode`** — builds the attract-mode demo (a random track, AI-only field,
 endless resultless race) that the menus sit on top of; falls back to a blank
@@ -474,7 +464,7 @@ Origin at track centre. **+X East, +Z North, +Y Up.** `heading` 0 = +Z,
 ## Build / test / run
 
 - **Dev:** `npm run dev` (`host: true` — LAN-reachable for multiplayer testing)
-- **Server:** `npm run server` (colyseus, `server/index.js`)
+- **Server:** `npm run server` (`server/index.js`)
 - **Build:** `npm run build` → `build:raw` (vite) + `build:optimize` (WAV→OGG,
   PNG/WEBP recompression, asset URL rewriting). `npm run build:raw` alone is the
   fast compile check.

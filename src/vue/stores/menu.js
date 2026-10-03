@@ -95,13 +95,6 @@ export const useMenuStore = defineStore('menu', () => {
     _bridge.value?.onStartPractice();
   }
 
-  function showMultiplayerLobby() { _bridge.value?.showMultiplayerLobby(); }
-  function showMultiplayerRoom() { _bridge.value?.showMultiplayerRoom(); }
-  function startMultiplayer(config) {
-    mode.value = 'multiplayer';
-    _bridge.value?.onStartMultiplayer(config);
-  }
-
   function showOnlineLobby() { _bridge.value?.showOnlineLobby(); }
   function showOnlineRoom() { _bridge.value?.showOnlineRoom(); }
   function startOnlineRace(config) {
@@ -183,7 +176,6 @@ export const useMenuStore = defineStore('menu', () => {
     showEditorTrackSelect,
     startEditor,
     selectPlayerVehicle, setSelectedTrack, setSelectedLaps, setSelectedAIDrivers, setSelectedAIVehicleType, showPitMenu, startPracticeMode,
-    showMultiplayerLobby, showMultiplayerRoom, startMultiplayer,
     showOnlineLobby, showOnlineRoom, startOnlineRace,
     setSelectedReverse,
     setSelectedNight,

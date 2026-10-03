@@ -32,7 +32,6 @@ export default defineConfig({
           if (id.includes("@babylonjs/havok")) return "havok";
           if (id.includes("@babylonjs/")) return "babylon";
           if (/node_modules\/(@vue|vue|pinia)\//.test(id)) return "vue";
-          if (/colyseus/.test(id)) return "colyseus";
           return "vendor";
         },
       },

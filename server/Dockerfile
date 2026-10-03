@@ -1,4 +1,4 @@
-# Multiplayer server: colyseus relay + server-authoritative race lobbies.
+# Multiplayer server: server-authoritative race lobbies.
 # Build from the repo root:  docker build -f server/Dockerfile .
 #
 # Each race runs in a child process on a loopback-only port (RACE_PORT_MIN..MAX);

@@ -2,8 +2,8 @@ import { WebSocket, WebSocketServer } from "ws";
 
 /**
  * Relays `/race/<raceId>` websocket upgrades on the public server to the race
- * process, which listens on loopback only — so one port serves the API, the
- * relay lobby and every race. Anything else goes to `fallback` (colyseus).
+ * process, which listens on loopback only — so one port serves the API and all
+ * races. Any other upgrade is refused.
  *
  * Messages and close codes pass through untouched; the race process still does
  * all auth (`hello` token) and rate limiting.
@@ -13,12 +13,12 @@ const RACE_PATH = /^\/race\/([A-Za-z0-9_-]+)$/;
 const MAX_PAYLOAD = 4096; // matches the race process
 const MAX_BUFFERED = 1 << 20; // drop a client that can't keep up rather than buffer without bound
 
-export function attachRaceProxy(httpServer, { portFor, fallback }) {
+export function attachRaceProxy(httpServer, { portFor }) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD, perMessageDeflate: false });
 
   httpServer.on("upgrade", (req, socket, head) => {
     const id = RACE_PATH.exec(req.url.split("?")[0])?.[1];
-    if (!id) return fallback(req, socket, head);
+    if (!id) return socket.destroy();
     const port = portFor(id);
     if (port === null) {
       socket.end("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");

@@ -1,9 +1,9 @@
 # Online Multiplayer — Implementation Plan
 
-> **Read this first.** Everything below "What actually shipped" is a *future*
-> plan (server-authoritative simulation) that has **not** been built. The
-> multiplayer in the game today is a client-simulated relay. Don't design
-> against the plan as if it were the current architecture.
+> **Update:** the client-simulated colyseus relay described in "What actually
+> shipped" was **removed** (`DriveRoom`, `MultiplayerMode`, `src/multiplayer/`,
+> the colyseus dependencies). The server-authoritative race lobbies (phases
+> 3–4 below) are the only multiplayer now; that section is kept as history.
 
 ## What actually shipped (as of 2026-09-24)
 

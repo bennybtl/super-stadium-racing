@@ -188,7 +188,7 @@ export class DriveMode extends BaseMode {
 
   /**
    * Wire the per-frame plumbing every player-driven racing mode shares onto
-   * `scene`. RaceMode and MultiplayerMode differ in what happens each tick
+   * `scene`. RaceMode and NetRaceMode differ in what happens each tick
    * (local physics + AI + DNF vs. server reconciliation + puppets) but agree on
    * the frame envelope:
    *
