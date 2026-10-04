@@ -48,10 +48,10 @@
               :src="track.image"
               :alt="track.name"
               class="h-full w-full object-cover"
-              :class="track.locked ? 'grayscale opacity-60' : ''"
+              :class="track.locked ? 'grayscale' : ''"
             />
             <div v-else class="flex h-full items-center justify-center bg-slate-800 text-slate-500 text-xs uppercase tracking-[0.15em]">No image</div>
-            <div v-if="track.locked" class="absolute inset-0 flex items-center justify-center bg-black/50">
+            <div v-if="track.locked" class="absolute inset-0 flex items-center justify-center">
               <i class="bi bi-lock-fill text-3xl text-white"></i>
             </div>
           </div>
@@ -139,8 +139,7 @@ const displayTracks = computed(() => {
       image: trackData?.image
         ? (getImageUrl(trackData.image) ?? trackImageUrl(trackData.image))
         : null,
-      // The editor (showHidden) ignores player-facing lock state entirely.
-      locked: !props.showHidden && !!trackData.locked,
+      locked: !!trackData.locked,
     }))
     // Unlocked tracks first, alphabetical within each group.
     .sort((a, b) => (a.locked === b.locked ? a.name.localeCompare(b.name) : a.locked ? 1 : -1));

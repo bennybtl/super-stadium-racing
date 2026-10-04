@@ -241,15 +241,15 @@
     :key="pitScreenKey"
     class="fixed inset-0 z-[1001] font-sans overflow-hidden pointer-events-none"
   >
-    <div v-if="showLockedContentHint" class="absolute inset-x-0 top-0 flex justify-center p-4 pointer-events-none">
-      <div class="pointer-events-auto max-w-xl rounded-lg bg-black/65 px-5 py-3 text-center shadow-[0_6px_24px_rgba(0,0,0,0.6)]">
-        <div class="text-lg font-bold text-amber-300">{{ lockedContentHintTitle }}</div>
-        <div class="mt-1 text-sm text-amber-100">{{ lockedContentHintBody }}</div>
+    <div v-if="showLockedContentHint" class="absolute inset-x-0 top-4 z-10 flex justify-center p-4 pointer-events-none">
+      <div class="pointer-events-auto max-w-xl bg-white px-5 py-3 text-center shadow-[0_6px_24px_rgba(0,0,0,0.6)] rotate-[-5deg]">
+        <div class="text-lg font-bold text-black">{{ lockedContentHintTitle }}</div>
+        <div class="mt-1 text-sm text-black">{{ lockedContentHintBody }}</div>
       </div>
     </div>
     <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
       <div class="menu-panel px-16 py-10 text-center" :style="panelStyle" @mousedown.stop>
-        <h2 class="text-lg uppercase italic tracking-[0.2em] text-[#ffe066] mb-2">{{ store.pitData.pitMode }}</h2>
+        <h2 class="text-xl font-bold uppercase italic tracking-[0.2em] text-[#ffe066] mb-2">{{ store.pitData.pitMode }}</h2>
         <!-- ── Championship pit (between races) ── -->
         <template v-if="store.pitData.pitMode === 'championship'">
           <div class="mb-3 flex items-baseline justify-between">

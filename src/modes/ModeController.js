@@ -39,7 +39,7 @@ function shuffle(arr) {
   return a;
 }
 
-/** 'offroad_pack_3' -> 'Offroad Pack 3' (also covers the remix sentinel id). */
+/** 'southwest_pack_1' -> 'Southwest Pack 1' (also covers the remix sentinel id). */
 function formatPackName(id) {
   return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }

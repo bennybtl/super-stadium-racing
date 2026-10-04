@@ -2,7 +2,7 @@ import { useMenuStore } from '../vue/store.js';
 import { getUpgradeCatalog } from './UpgradeStorage.js';
 import { loadActiveChampionship } from './ChampionshipStorage.js';
 import { getUnlockedTruckKeys, getFreePlayTrackKeys, getActivePackIds, getPackTracks } from './ProgressStorage.js';
-import { REMIX_PACK_ID } from '../config/progression.js';
+import { REMIX_PACK_ID, PACK_PROGRESSION } from '../config/progression.js';
 
 /**
  * MenuManager – thin bridge between game logic (ModeController / modes) and
@@ -301,7 +301,9 @@ export class MenuManager {
         image: track?.image ?? null,
         packId: track?.packId ?? null,
         allowReverse: track?.allowReverse !== false,
-        locked: !unlockedTrackKeys.includes(key),
+        // Only progression-pack tracks can be locked; custom/imported tracks
+        // outside the chain (no packId) are always available.
+        locked: (track?.packId in PACK_PROGRESSION) && !unlockedTrackKeys.includes(key),
       };
     });
   }

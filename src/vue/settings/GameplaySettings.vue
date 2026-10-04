@@ -113,16 +113,39 @@ function confirmReset() {
   store.resetProgression();
 }
 
-const CHEAT_CODE = 'unlockall';
+const CHEAT_CODES = {
+  ALLACCESSPASS: { // all tracks and trucks
+    run: () => store.unlockAllContent(),
+    message: 'All trucks and tracks unlocked!',
+  },
+  BUTTERBURGERS: { // midwest tracks
+    run: () => store.unlockPackContent('midwest_pack_1'),
+    message: 'Midwest tracks unlocked!',
+  },
+  DAYSOFTHUNDER: { // on road tracks
+    run: () => store.unlockPackContent('onroad_pack_1'),
+    message: 'On road tracks unlocked!',
+  },
+  '8HATCHPEPPERS': { // southwest tracks
+    run: () => store.unlockPackContent('southwest_pack_1'),
+    message: 'Southwest tracks unlocked!',
+  },
+  IMTHEWHEELMAN: { // all trucks
+    run: () => store.unlockAllTrucksContent(),
+    message: 'All trucks unlocked!',
+  },
+};
+
 const cheatCode = ref('');
 const cheatMessage = ref('');
 function redeemCheatCode() {
-  const code = cheatCode.value.trim().toLowerCase();
+  const code = cheatCode.value.trim().toUpperCase();
   cheatCode.value = '';
   if (!code) return;
-  if (code === CHEAT_CODE) {
-    store.unlockAllContent();
-    cheatMessage.value = 'All trucks and tracks unlocked!';
+  const cheat = CHEAT_CODES[code];
+  if (cheat) {
+    cheat.run();
+    cheatMessage.value = cheat.message;
   } else {
     cheatMessage.value = 'Invalid code.';
   }

@@ -58,6 +58,23 @@ export function resetPlayerProgress() {
   return savePlayerProgress(defaultState());
 }
 
+/** Cheat code: every truck unlocked outright. */
+export function unlockAllTrucks() {
+  const state = loadPlayerProgress();
+  state.unlockedTrucks = window.vehicleLoader?.getVehicleList?.().map(v => v.key) ?? state.unlockedTrucks;
+  return savePlayerProgress(state);
+}
+
+/** Cheat code: a pack opened for championships, with all its tracks free-play unlocked. */
+export function unlockPack(packId) {
+  const state = loadPlayerProgress();
+  const trackKeys = (window.trackLoader?.getTrackList?.() ?? [])
+    .filter(key => window.trackLoader.getTrack(key)?.packId === packId);
+  state.unlockedTracks = [...new Set([...state.unlockedTracks, ...trackKeys])];
+  if (!state.activePacks.includes(packId)) state.activePacks = [...state.activePacks, packId];
+  return savePlayerProgress(state);
+}
+
 /** Cheat code: every truck, pack and track unlocked outright. */
 export function unlockAllProgress() {
   return savePlayerProgress({

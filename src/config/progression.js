@@ -7,7 +7,7 @@
 // unlocks it for free play too.
 
 export const DEFAULT_UNLOCKED_TRUCKS = ['baja'];
-export const DEFAULT_ACTIVE_PACK = 'offroad_pack_3';
+export const DEFAULT_ACTIVE_PACK = 'southwest_pack_1';
 
 // Sentinel "pack" awarded by the last real pack. Not a real packId — it has
 // no starterTracks/track pool of its own; its championship draws randomly
@@ -16,7 +16,7 @@ export const REMIX_PACK_ID = 'remix_championship';
 export const REMIX_TRACK_COUNT = 8;
 
 export const PACK_PROGRESSION = {
-  offroad_pack_3: {
+  southwest_pack_1: {
     starterTracks: ['desert_doublecross', 'dust_devil', 'rattlesnake_ridge', 'toro_bravo'],
     rewardTruck: 'coati',
     rewardPack: 'midwest_pack_1',

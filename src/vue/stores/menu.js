@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, shallowRef } from 'vue';
 import { resetPlayerUpgrades, getUpgradeCatalog } from '../../managers/UpgradeStorage.js';
-import { resetPlayerProgress, unlockAllProgress } from '../../managers/ProgressStorage.js';
+import { resetPlayerProgress, unlockAllProgress, unlockAllTrucks, unlockPack } from '../../managers/ProgressStorage.js';
 
 // ─── Menu store ───────────────────────────────────────────────────────────────
 export const useMenuStore = defineStore('menu', () => {
@@ -141,6 +141,14 @@ export const useMenuStore = defineStore('menu', () => {
     _bridge.value?._refreshTrackList();
     _bridge.value?._refreshVehicleList();
   }
+  function unlockAllTrucksContent() {
+    unlockAllTrucks();
+    _bridge.value?._refreshVehicleList();
+  }
+  function unlockPackContent(packId) {
+    unlockPack(packId);
+    _bridge.value?._refreshTrackList();
+  }
   function selectPlayerColor(key)  { selectedPlayerColor.value = key; if (!_bridge.value) return; _bridge.value.setSelectedPlayerColor(key); }
   function startHotLapMode()          { mode.value = 'hot lap'; _bridge.value?.onStartHotLap(); }
   function startSingleRace()        { mode.value = 'single race'; _bridge.value?.onStartSingleRace(); }
@@ -182,7 +190,7 @@ export const useMenuStore = defineStore('menu', () => {
     resume, reset, exit,
     editorResume, editorSave, editorLoad, editorExit,
     settings, back, refreshTrackList,
-    purchaseUpgrade, resetUpgrades, resetProgression, unlockAllContent, selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
+    purchaseUpgrade, resetUpgrades, resetProgression, unlockAllContent, unlockAllTrucksContent, unlockPackContent,selectPlayerColor, startHotLapMode, startSingleRace, singleRaceExit,
     showChampionshipSetup, setChampInitials, setChampPackId, setChampReverseMode, setChampNightMode, startChampionship, continueChampionship, resumeChampionship, retireChampionship, championshipExit,
     setMode,
     setLoading,
