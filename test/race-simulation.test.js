@@ -39,6 +39,7 @@ function makeCheckpoints() {
       return { passed: true, index: lastPassed === GATES - 1 && lastPassed !== 0 ? GATES : lastPassed + 1 };
     },
     resetForTruck() {},
+    resetJokersForTruck() {},
     getTotalCheckpoints: () => GATES,
   };
 }
