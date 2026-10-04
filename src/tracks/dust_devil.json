@@ -1274,9 +1274,11 @@
       "x": -21.64431381274029,
       "z": -22.525065144838123,
       "color": "red",
-      "scale": 1,
+      "scale": 1.3,
       "height": 7.5,
-      "heading": 3.1066860685499065
+      "heading": 0.29670597283903605,
+      "style": "feather",
+      "logo": "turbo-blend.png"
     },
     {
       "type": "model",
@@ -1578,14 +1580,14 @@
       "type": "actionZone",
       "zoneType": "fireworks",
       "shape": "circle",
-      "x": 32.33296779561974,
-      "z": -68.37042866003353,
+      "x": -3.078239547311396,
+      "z": -68.89172100823023,
       "radius": 11,
       "fireworkMode": "sparks",
       "fireworkCount": 4,
       "fireworkDuration": 2.2,
       "fireworkColor": "red",
-      "fireworkHeight": 19,
+      "fireworkHeight": 33,
       "heading": -1.5707963267948966
     },
     {
@@ -1709,9 +1711,9 @@
     {
       "type": "decal",
       "position": [
-        -14.671,
+        -14.19285232357165,
         0,
-        -56.158
+        -55.9671589366149
       ],
       "normal": [
         0,
@@ -1726,26 +1728,26 @@
       "opacity": 1,
       "points": [
         {
-          "x": -50.02868381090535,
-          "z": -52.01959932717672
+          "x": -49.55053613447701,
+          "z": -51.82875826379162
         },
         {
-          "x": -28.642989992651575,
-          "z": -58.70287527681357,
+          "x": -28.164842316223226,
+          "z": -58.51203421342847,
           "radius": 22
         },
         {
-          "x": -20.59013268555031,
-          "z": -57.99228306490711,
+          "x": -20.11198500912196,
+          "z": -57.80144200152201,
           "radius": 10
         },
         {
-          "x": 40.57873134452957,
-          "z": -55.91817274150558,
+          "x": 41.056879020957915,
+          "z": -55.72733167812048,
           "radius": 10
         }
       ],
-      "thickness": 0.2
+      "thickness": 0.4
     },
     {
       "type": "terrain",
@@ -2014,8 +2016,8 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": 32.46900592468558,
-      "z": 9.992482051921435,
+      "x": 70.70144675499188,
+      "z": 80,
       "color": "green",
       "scale": 1.5,
       "seed": 31,
@@ -2028,8 +2030,8 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": 37.74139914855697,
-      "z": 2.0689857106712815,
+      "x": 79.22132692703913,
+      "z": 24.25992605228333,
       "color": "green",
       "scale": 1.5,
       "seed": 26,
@@ -2042,8 +2044,8 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": 21.68430251876341,
-      "z": 32.21314694942551,
+      "x": -6.519750847245543,
+      "z": 80,
       "color": "green",
       "scale": 1.1,
       "seed": 6,
@@ -2128,8 +2130,8 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 19.13612229155361,
-      "z": 27.930602682181473,
+      "x": 32.430289303125626,
+      "z": 37.8824139328865,
       "color": "brown",
       "scale": 2.4,
       "seed": 22,
@@ -2140,8 +2142,8 @@
     {
       "type": "model",
       "model": "rock",
-      "x": 22.092462289036316,
-      "z": 29.384656539517962,
+      "x": 32.31708223846052,
+      "z": 40.60514348749032,
       "color": "brown",
       "scale": 1.2,
       "seed": 22,
@@ -2155,9 +2157,11 @@
       "x": -21.64431381274029,
       "z": -38.02506514483812,
       "color": "red",
-      "scale": 1,
+      "scale": 1.3,
       "height": 7.5,
-      "heading": 2.530727415391778
+      "heading": 0.20943951023931956,
+      "style": "feather",
+      "logo": "turbo-blend.png"
     },
     {
       "type": "model",
@@ -2186,6 +2190,102 @@
       "ribs": 8,
       "collider": false,
       "heading": 1.53588974175501
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -27.75563128426645,
+      "z": -56.954636479664096,
+      "color": "black",
+      "scale": 1.3,
+      "height": 10,
+      "heading": 0.29670597283903605,
+      "style": "feather",
+      "logo": "ultra-grip.png"
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -37.23942479632768,
+      "z": -55.138399815774214,
+      "color": "black",
+      "scale": 1.3,
+      "height": 10,
+      "heading": 0.29670597283903605,
+      "style": "feather",
+      "logo": "ultra-grip.png"
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -32.73942479632768,
+      "z": -55.638399815774214,
+      "color": "black",
+      "scale": 1.3,
+      "height": 10,
+      "heading": 0.29670597283903605,
+      "style": "feather",
+      "logo": "ultra-grip.png"
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 37.854212276841494,
+      "z": -54.96917216046891,
+      "color": "black",
+      "scale": 1.3,
+      "height": 10,
+      "heading": -0.43633231299858244,
+      "style": "feather",
+      "logo": "ultra-grip.png"
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 43.354212276841494,
+      "z": -51.96917216046891,
+      "color": "black",
+      "scale": 1.3,
+      "height": 10,
+      "heading": -0.8028514559173916,
+      "style": "feather",
+      "logo": "ultra-grip.png"
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 23.53325795409444,
+      "z": 23.772343245484485,
+      "color": "black",
+      "scale": 1.3,
+      "height": 7.5,
+      "heading": 0.4363323129985826,
+      "style": "feather",
+      "logo": "turbo-blend.png"
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 26.53325795409444,
+      "z": 16.772343245484485,
+      "color": "black",
+      "scale": 1.3,
+      "height": 7.5,
+      "heading": 0.4363323129985826,
+      "style": "feather",
+      "logo": "turbo-blend.png"
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 30.03325795409444,
+      "z": 11.272343245484485,
+      "color": "black",
+      "scale": 1.3,
+      "height": 7.5,
+      "heading": 0.4363323129985826,
+      "style": "feather",
+      "logo": "turbo-blend.png"
     }
   ]
 }

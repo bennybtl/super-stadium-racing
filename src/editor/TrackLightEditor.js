@@ -83,9 +83,11 @@ export class TrackLightEditor {
     for (const h of this._handles.values()) h.setVisible(visible);
   }
 
-  /** Mirror the editor's night-preview toggle onto every placed light. */
+  /** Mirror the editor's night-preview toggle onto every placed light. Stadium
+   *  tracks keep their poles lit by day (same rule as addLight above). */
   setNight(on) {
-    for (const l of this._lights) l.setNight(on);
+    const lit = !!on || !!this._track?.stadiumLighting;
+    for (const l of this._lights) l.setNight(lit);
   }
 
   findByMesh(mesh) {

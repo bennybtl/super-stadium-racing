@@ -656,37 +656,6 @@
       "color": "red"
     },
     {
-      "type": "actionZone",
-      "zoneType": "slowZone",
-      "shape": "polygon",
-      "x": -17.745582580800754,
-      "z": -39.18264587472974,
-      "radius": 15,
-      "slowStrength": 2,
-      "points": [
-        {
-          "x": -52.35034300677922,
-          "z": -33.84989677731531
-        },
-        {
-          "x": -44.27693482331508,
-          "z": -47.801136456130806
-        },
-        {
-          "x": 24.001225044124986,
-          "z": -58.68833981675357
-        },
-        {
-          "x": 30.247616967037086,
-          "z": -44.93855427659816
-        },
-        {
-          "x": -46.34947708507156,
-          "z": -10.635302046850825
-        }
-      ]
-    },
-    {
       "type": "polyWall",
       "points": [
         {
@@ -730,19 +699,21 @@
       "width": 17,
       "checkpointNumber": 1,
       "_altIndex": 0,
-      "_altCount": 1,
+      "_altCount": 2,
       "passedBy": {}
     },
     {
       "type": "checkpoint",
-      "centerX": 68.28687658904114,
-      "centerZ": 11.166518308931927,
-      "heading": 0,
-      "width": 19,
-      "checkpointNumber": 2,
-      "_altIndex": 0,
-      "_altCount": 1,
-      "passedBy": {}
+      "centerX": -13.994035382537886,
+      "centerZ": -42.89886103957802,
+      "heading": 2.13352986419518,
+      "width": 18.5,
+      "checkpointNumber": 1,
+      "_altIndex": 1,
+      "_altCount": 2,
+      "passedBy": {},
+      "alternative": true,
+      "jokerLap": true
     },
     {
       "type": "obstacle",
@@ -754,6 +725,17 @@
       "weight": 40,
       "color": "yellow",
       "count": 4
+    },
+    {
+      "type": "checkpoint",
+      "centerX": 68.28687658904114,
+      "centerZ": 11.166518308931927,
+      "heading": 0,
+      "width": 19,
+      "checkpointNumber": 2,
+      "_altIndex": 0,
+      "_altCount": 1,
+      "passedBy": {}
     },
     {
       "type": "checkpoint",
@@ -784,17 +766,6 @@
       "heading": -3.141592653589793,
       "width": 15.5,
       "checkpointNumber": 5,
-      "_altIndex": 0,
-      "_altCount": 1,
-      "passedBy": {}
-    },
-    {
-      "type": "checkpoint",
-      "centerX": -14.344872092975589,
-      "centerZ": 0.10977188056235576,
-      "heading": -1.2217304763960306,
-      "width": 16,
-      "checkpointNumber": 6,
       "_altIndex": 0,
       "_altCount": 1,
       "passedBy": {}
@@ -1067,7 +1038,41 @@
           "z": 73.34581066964608
         }
       ],
-      "branches": []
+      "branches": [
+        {
+          "id": "branch_1",
+          "fromMainIndex": 8,
+          "toMainIndex": 13,
+          "weight": 1,
+          "points": [
+            {
+              "x": -58.93446861542287,
+              "z": -5.290040931750213
+            },
+            {
+              "x": -54.16,
+              "z": -23.72
+            },
+            {
+              "x": -30.549999999999997,
+              "z": -35.61
+            },
+            {
+              "x": 16.873989398297415,
+              "z": -60.8555089027427
+            },
+            {
+              "x": 43.73997272120722,
+              "z": -58.25119186445002
+            },
+            {
+              "x": 62.64199233406579,
+              "z": -48.63955314091001
+            }
+          ],
+          "joker": true
+        }
+      ]
     },
     {
       "type": "hill",
@@ -1491,6 +1496,89 @@
       "color": "warm",
       "tilt": 1,
       "rotation": 50
+    },
+    {
+      "type": "checkpoint",
+      "centerX": -14.344872092975589,
+      "centerZ": 0.10977188056235576,
+      "heading": -1.2217304763960306,
+      "width": 16,
+      "checkpointNumber": 6,
+      "_altIndex": 0,
+      "_altCount": 1,
+      "passedBy": {}
+    },
+    {
+      "type": "hill",
+      "centerX": -13.799927289818068,
+      "centerZ": -42.998977983219234,
+      "radiusX": 10,
+      "radiusZ": 12.5,
+      "angle": -20,
+      "height": 2.8,
+      "waterLevelOffset": 0,
+      "terrainType": "loose_dirt",
+      "flatTop": 0.2
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -10.986188830773436,
+      "z": -36.33017993400939,
+      "color": "green",
+      "scale": 1,
+      "height": 7.5,
+      "style": "feather",
+      "logo": "",
+      "heading": 3.141592653589791
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -10.931696587588334,
+      "z": -11.601204544719863,
+      "color": "green",
+      "scale": 1,
+      "height": 7.5,
+      "style": "feather",
+      "logo": "",
+      "heading": 6.684611035138276
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -18.143096900658133,
+      "z": -47.990801474998975,
+      "color": "green",
+      "scale": 1,
+      "height": 7.5,
+      "style": "feather",
+      "logo": "",
+      "heading": 3.141592653589791
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": -4.669618049243099,
+      "z": 13.810626768001761,
+      "color": "green",
+      "scale": 1,
+      "height": 7.5,
+      "style": "feather",
+      "logo": "lucky-dice.png",
+      "heading": 2.8623399732707004
+    },
+    {
+      "type": "model",
+      "model": "flag",
+      "x": 0.687490380817593,
+      "z": 27.392071306730884,
+      "color": "green",
+      "scale": 1,
+      "height": 7.5,
+      "style": "feather",
+      "logo": "lucky-dice.png",
+      "heading": 2.8623399732707004
     }
   ]
 }

@@ -431,8 +431,11 @@
       "terrainType": "water",
       "closed": true,
       "filled": true,
-      "blendWidth": 4.5,
-      "waterLevelOffset": 1.6
+      "blendWidth": 3,
+      "waterLevelOffset": 1.6,
+      "jitter": 0.18,
+      "jitterSeed": 6207,
+      "edgeShape": 1.7
     },
     {
       "type": "hill",
@@ -543,7 +546,9 @@
       "height": -1,
       "waterLevelOffset": 0.6,
       "terrainType": "water",
-      "blendWidth": 3
+      "blendWidth": 1.5,
+      "jitter": 0.23,
+      "jitterSeed": 1166
     },
     {
       "type": "squareHill",
@@ -1164,15 +1169,16 @@
     {
       "type": "model",
       "model": "cactus",
-      "x": 26.92797742016863,
-      "z": -20.292006856833815,
-      "color": "olive",
-      "scale": 0.8,
+      "x": 24.802280754165682,
+      "z": -22.702047038245112,
+      "color": "green",
+      "scale": 1.3,
       "seed": 7,
       "trunkHeight": 3.2,
       "trunkRadius": 0.42,
       "ribs": 8,
-      "collider": false
+      "collider": false,
+      "preset": "organ_pipe"
     },
     {
       "type": "model",
@@ -1469,14 +1475,15 @@
       "model": "cactus",
       "x": -72.07447305432716,
       "z": -10.311411646512944,
-      "color": "olive",
+      "color": "forest",
       "scale": 1,
       "seed": 7,
       "trunkHeight": 3.2,
       "trunkRadius": 0.42,
       "ribs": 8,
       "collider": false,
-      "heading": 1.9024088846738192
+      "heading": 1.9024088846738192,
+      "preset": "organ_pipe"
     },
     {
       "type": "model",
@@ -1659,14 +1666,15 @@
       "model": "cactus",
       "x": -60.79471134928599,
       "z": -14.230694904578499,
-      "color": "olive",
-      "scale": 0.8,
+      "color": "forest",
+      "scale": 1.7,
       "seed": 17,
       "trunkHeight": 3.2,
       "trunkRadius": 0.42,
       "ribs": 8,
       "collider": false,
-      "heading": 1.9024088846738192
+      "heading": 1.9024088846738192,
+      "preset": "prickly_pear"
     },
     {
       "type": "trackLight",
@@ -1678,6 +1686,126 @@
       "color": "white",
       "tilt": 49,
       "rotation": 200
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 28.264844391985186,
+      "z": -24.65809749631198,
+      "color": "green",
+      "scale": 1.07,
+      "seed": 15,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "preset": "barrel",
+      "heading": 5.828673151790975
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 25.471595057784356,
+      "z": -25.563707619389014,
+      "color": "green",
+      "scale": 1.11,
+      "seed": 2,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "preset": "barrel",
+      "heading": 4.806643209591193
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 23.29573331904051,
+      "z": -16.45301420557007,
+      "color": "green",
+      "scale": 1.29,
+      "seed": 23,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "preset": "barrel",
+      "heading": 4.731423605651963
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -63.02150003947594,
+      "z": -15.57776816101795,
+      "color": "forest",
+      "scale": 1.77,
+      "seed": 20,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 5.255136039450681,
+      "preset": "prickly_pear"
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -66.73219282226255,
+      "z": -18.101186187119062,
+      "color": "forest",
+      "scale": 1.48,
+      "seed": 8,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 3.183517817085362,
+      "preset": "prickly_pear"
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -64.99494089392547,
+      "z": -16.590481930336075,
+      "color": "forest",
+      "scale": 1.43,
+      "seed": 4,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 0.12870002590150437,
+      "preset": "prickly_pear"
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -62.29838695283461,
+      "z": -17.106737677864484,
+      "color": "forest",
+      "scale": 1.31,
+      "seed": 6,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 2.7520194550374963,
+      "preset": "prickly_pear"
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -64.17232313159859,
+      "z": -21.21425976391948,
+      "color": "forest",
+      "scale": 1.45,
+      "seed": 19,
+      "trunkHeight": 3.2,
+      "trunkRadius": 0.42,
+      "ribs": 8,
+      "collider": false,
+      "heading": 0.2192346269802854,
+      "preset": "prickly_pear"
     }
   ]
 }

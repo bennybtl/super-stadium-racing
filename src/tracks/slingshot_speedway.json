@@ -7,6 +7,7 @@
   "grassBlades": true,
   "oobDeadSpace": false,
   "allowReverse": true,
+  "stadiumLighting": false,
   "borderWall": {
     "enabled": true,
     "thickness": 2,
@@ -1125,7 +1126,7 @@
     {
       "type": "trackSign",
       "x": 0.33220627757304033,
-      "z": -25.77842511851884,
+      "z": -33.77842511851884,
       "name": "Slingshot Speedway",
       "rotation": 0,
       "contentType": "text",
@@ -1134,7 +1135,7 @@
       "background": "black",
       "primaryColor": "red",
       "scale": 1.85,
-      "heightOffset": 0,
+      "heightOffset": 2.4,
       "width": 10
     },
     {
@@ -1211,6 +1212,61 @@
       "scale": 2.5,
       "heightOffset": 2.4,
       "width": 10
+    },
+    {
+      "type": "trackLight",
+      "x": 79.67404877429558,
+      "z": -47.29363069345797,
+      "height": 24,
+      "spread": 108,
+      "intensity": 8,
+      "color": "warm",
+      "tilt": 21,
+      "rotation": 118
+    },
+    {
+      "type": "trackLight",
+      "x": 1.3633993866699212,
+      "z": 14.02137690888651,
+      "height": 24,
+      "spread": 86,
+      "intensity": 15,
+      "color": "warm",
+      "tilt": 21,
+      "rotation": 276
+    },
+    {
+      "type": "trackLight",
+      "x": 69.03723775048528,
+      "z": 54.92661810810719,
+      "height": 24,
+      "spread": 117,
+      "intensity": 8,
+      "color": "warm",
+      "tilt": 42,
+      "rotation": 37
+    },
+    {
+      "type": "trackLight",
+      "x": -63.27482279155833,
+      "z": 55.16829348503409,
+      "height": 24,
+      "spread": 117,
+      "intensity": 7,
+      "color": "warm",
+      "tilt": 59,
+      "rotation": 330
+    },
+    {
+      "type": "trackLight",
+      "x": -77.21474766577431,
+      "z": -47.93079529866855,
+      "height": 24,
+      "spread": 134,
+      "intensity": 4,
+      "color": "warm",
+      "tilt": 21,
+      "rotation": 231
     }
   ]
 }

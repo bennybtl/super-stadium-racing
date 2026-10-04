@@ -260,7 +260,7 @@ export class Checkpoint {
     const triTop  = 20;
     const triBase = 120;
     const triHalfW = baseWidth / 2;
-    ctx.fillStyle = "white";
+    ctx.fillStyle = this.feature.jokerLap ? "#ffd700" : "white";
     ctx.beginPath();
     ctx.moveTo(triCX, triTop);
     ctx.lineTo(triCX - triHalfW, triBase);
@@ -300,7 +300,7 @@ export class Checkpoint {
     if (feature._altCount > 1 && feature._altIndex != null) {
       label += String.fromCharCode(97 + feature._altIndex);
     }
-    if (feature.jokerLap) label += "J";
+    if (feature.jokerLap) label = `${n}J`;
     return label;
   }
 

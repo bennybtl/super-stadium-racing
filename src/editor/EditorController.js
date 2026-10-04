@@ -1957,6 +1957,7 @@ export class EditorController {
     this.saveSnapshot(true);
     this.currentTrack.stadiumLighting = !!enabled;
     this._syncTrackSettingsPanel();
+    this.trackLightEditor.setNight(this._nightPreview);
     window.dispatchEvent(new CustomEvent('offroad:display-settings-changed', {
       detail: loadDisplaySettings(),
     }));
