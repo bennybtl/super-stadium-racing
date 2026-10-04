@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Deploy key (write access, on the main ruleset's bypass list) so the
+          # push below isn't blocked by branch protection.
+          ssh-key: ${{ secrets.BUMP_DEPLOY_KEY }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
