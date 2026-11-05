@@ -59,7 +59,7 @@ export class PracticeMode extends DriveMode {
     this.musicManager = await MusicManager.create(audioManager);
     this.musicManager.start();
 
-    // Spawn just behind the start/finish checkpoint. Resolve the gate from the
+    // Spawn on pole of the starting grid. Resolve the gate from the
     // (possibly reversed) checkpoint manager so the heading faces the right way.
     const startCp = this.getStartFinishCheckpoint(checkpointManager)
       ?? this.getStartFinishInfo(currentTrack).startFinishCp;
@@ -72,7 +72,7 @@ export class PracticeMode extends DriveMode {
     const playerTruck = new Truck(scene, shadows, playerColor, null, vehicleDef, playerUpgrades);
     playerTruck.setAudioController(this.truckAudioController);
 
-    const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);
+    const spawn = this.makeGridSpawner(currentTrack, checkpointManager, startCp)(0);
 
     // -- Track overview, bottom-right --
     const playerDotColor = DriveMode.dotColor(playerTruck.diffuseColor);

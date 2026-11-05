@@ -72,7 +72,7 @@ export class HotLapMode extends DriveMode {
     playerTruck.setAudioController(this.truckAudioController);
     const truckDims = { width: playerTruck.width, height: playerTruck.height, depth: playerTruck.depth };
 
-    const spawn = this.getSpawnBehindCheckpoint(currentTrack, startFinishCp, playerTruck.height, 6);
+    const spawn = this.makeGridSpawner(currentTrack, checkpointManager, startFinishCp)(0);
 
     // -- Track overview, bottom-right --
     const playerDotColor = DriveMode.dotColor(playerTruck.diffuseColor);

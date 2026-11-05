@@ -45,12 +45,12 @@ export class TestMode extends DriveMode {
       checkpointManager.rebuild();
     }
 
-    // Spawn just behind the start/finish checkpoint, facing forward
+    // Spawn on pole of the starting grid (start-position marker if the track has one)
     const { startFinishCp: startCp } = this.getStartFinishInfo(currentTrack);
 
     const playerTruck = new Truck(scene, shadows, null, null, window.vehicleLoader?.getVehicle(vehicleKey) ?? null, loadPlayerUpgrades());
 
-    const spawn = this.getSpawnBehindCheckpoint(currentTrack, startCp, playerTruck.height, 6);
+    const spawn = this.makeGridSpawner(currentTrack, checkpointManager, startCp)(0);
     const spawnPos = spawn.pos;
     const heading = spawn.heading;
 
