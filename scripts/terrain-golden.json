@@ -200,7 +200,7 @@
     ]
   },
   "surfs_up": {
-    "hash": "ef2502f855e6b254",
+    "hash": "a0ee0469d07aa919",
     "spots": [
       "0,0 h=0.000000 t=packed_dirt",
       "-30,-30 h=-1.326246 t=water",
@@ -230,13 +230,13 @@
     ]
   },
   "toro_bravo": {
-    "hash": "e626a61aef986460",
+    "hash": "b2d8138a6d126f1a",
     "spots": [
       "0,0 h=-0.480230 t=weedy_grass",
       "-30,-30 h=-0.012241 t=packed_dirt",
-      "30,30 h=0.053693 t=loose_dirt",
-      "-55,40 h=2.844556 t=packed_dirt",
-      "48,-52 h=-0.857715 t=packed_dirt"
+      "30,30 h=-0.067010 t=loose_dirt",
+      "-55,40 h=1.804660 t=packed_dirt",
+      "48,-52 h=-1.165299 t=packed_dirt"
     ]
   }
 }

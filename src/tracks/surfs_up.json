@@ -128,6 +128,53 @@
       ]
     },
     {
+      "type": "driveBox",
+      "centerX": 10.265126978421172,
+      "centerZ": 18.792802909433718,
+      "width": 14,
+      "depth": 14,
+      "rotation": 160,
+      "solidBase": true,
+      "thickness": 0.6,
+      "layerId": 0,
+      "legs": false,
+      "heightAtMin": 0,
+      "heightAtMax": 3,
+      "color": "tex:concrete",
+      "sideColor": "#b3342e",
+      "reverseOnly": true
+    },
+    {
+      "type": "driveBox",
+      "centerX": -40.20220836602935,
+      "centerZ": -8.511967410293686,
+      "width": 5.5,
+      "depth": 1.5,
+      "rotation": 339,
+      "height": 2,
+      "solidBase": true,
+      "thickness": 0.4,
+      "layerId": 0,
+      "legs": false,
+      "color": "#9aa0a8",
+      "sideColor": "tex:plywood"
+    },
+    {
+      "type": "driveBox",
+      "centerX": -31.702208366029357,
+      "centerZ": -22.011967410293686,
+      "width": 5.5,
+      "depth": 1.5,
+      "rotation": 339,
+      "height": 2,
+      "solidBase": true,
+      "thickness": 0.4,
+      "layerId": 0,
+      "legs": false,
+      "color": "#9aa0a8",
+      "sideColor": "tex:plywood"
+    },
+    {
       "type": "polyHill",
       "points": [
         {
@@ -455,7 +502,8 @@
       "z": -9.915375262236513,
       "heading": 1.7802358370342162,
       "scale": 1.6,
-      "color": "white"
+      "color": "white",
+      "id": "d_muu9clipzal3"
     },
     {
       "type": "tent",
@@ -1169,7 +1217,10 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 0.65
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": 79
+      }
     },
     {
       "type": "decal",
@@ -1190,7 +1241,10 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 0.55
+      "opacity": 0.75,
+      "reverseOverride": {
+        "rotation": -113
+      }
     },
     {
       "type": "decal",
@@ -1292,9 +1346,9 @@
     {
       "type": "decal",
       "position": [
-        35.21668888104785,
-        0,
-        -76.91395054879769
+        37.82665071785894,
+        -2.292529991414767,
+        -70.90633030476114
       ],
       "normal": [
         0,
@@ -1308,7 +1362,10 @@
       "color": "white",
       "count": 3,
       "outline": false,
-      "opacity": 0.65
+      "opacity": 1,
+      "reverseOverride": {
+        "rotation": 36
+      }
     },
     {
       "type": "flag",
@@ -1518,7 +1575,9 @@
       "height": 2.8,
       "waterLevelOffset": 0,
       "terrainType": "loose_dirt",
-      "flatTop": 0.2
+      "flatTop": 0.2,
+      "jitter": 0.33,
+      "jitterSeed": 7434
     },
     {
       "type": "model",
@@ -1537,7 +1596,7 @@
       "model": "flag",
       "x": -10.931696587588334,
       "z": -11.601204544719863,
-      "color": "green",
+      "color": "yellow",
       "scale": 1,
       "height": 7.5,
       "style": "feather",
@@ -1559,9 +1618,9 @@
     {
       "type": "model",
       "model": "flag",
-      "x": -4.669618049243099,
-      "z": 13.810626768001761,
-      "color": "green",
+      "x": -6.169618049243099,
+      "z": 12.810626768001761,
+      "color": "yellow",
       "scale": 1,
       "height": 7.5,
       "style": "feather",
@@ -1572,13 +1631,256 @@
       "type": "model",
       "model": "flag",
       "x": 0.687490380817593,
-      "z": 27.392071306730884,
-      "color": "green",
+      "z": 27.892071306730884,
+      "color": "yellow",
       "scale": 1,
       "height": 7.5,
       "style": "feather",
       "logo": "lucky-dice.png",
       "heading": 2.8623399732707004
+    },
+    {
+      "type": "decal",
+      "position": [
+        1.1257933906450077,
+        3.287193740415649,
+        1.1882372331211482
+      ],
+      "normal": [
+        0.20076912545298392,
+        0.9567800193235195,
+        0.21038952656472665
+      ],
+      "rotation": -75,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "brand": "power-lube.png",
+      "width": 4,
+      "height": 4,
+      "opacity": 1,
+      "attachTo": {
+        "kind": "decoration",
+        "id": "d_muu9clipzal3"
+      }
+    },
+    {
+      "type": "decal",
+      "position": [
+        -1.4050055170803848,
+        3.2137691370117114,
+        -1.2795301790639577
+      ],
+      "normal": [
+        -0.18885194628108543,
+        0.9672724907066174,
+        -0.16946643062289027
+      ],
+      "rotation": 108,
+      "shape": "brand",
+      "color": "white",
+      "count": 3,
+      "outline": false,
+      "brand": "power-lube.png",
+      "width": 4,
+      "height": 4,
+      "opacity": 1,
+      "attachTo": {
+        "kind": "decoration",
+        "id": "d_muu9clipzal3"
+      }
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 7.497372303179386,
+      "z": 33.76132519570973,
+      "color": "red",
+      "scale": 2.1,
+      "preset": "prickly_pear",
+      "seed": 14,
+      "collider": false
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 3.9788488818885153,
+      "z": 33.94376559645621,
+      "color": "red",
+      "scale": 2.44,
+      "preset": "prickly_pear",
+      "seed": 8,
+      "collider": false,
+      "heading": 0.08235812254814945
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 5.031235272756869,
+      "z": 36.19045450811875,
+      "color": "red",
+      "scale": 2.29,
+      "preset": "prickly_pear",
+      "seed": 39,
+      "collider": false,
+      "heading": 0.17561590007925473
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -9.453963586845852,
+      "z": 44.99056430917382,
+      "color": "red",
+      "scale": 2.37,
+      "preset": "prickly_pear",
+      "seed": 7,
+      "collider": false,
+      "heading": 1.931028996513458
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -5.3596172694174005,
+      "z": 38.783859506977045,
+      "color": "red",
+      "scale": 1.93,
+      "preset": "prickly_pear",
+      "seed": 6,
+      "collider": false,
+      "heading": 1.2370813701324386
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 9.35824311888053,
+      "z": 37.777603211122276,
+      "color": "red",
+      "scale": 2.2,
+      "preset": "prickly_pear",
+      "seed": 9,
+      "collider": false,
+      "heading": 4.788332527672738
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -5.511643651111342,
+      "z": 43.079000149226374,
+      "color": "red",
+      "scale": 2.19,
+      "preset": "prickly_pear",
+      "seed": 15,
+      "collider": false,
+      "heading": 0.491475482392707
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 16.05886020808953,
+      "z": 35.651829623234015,
+      "color": "red",
+      "scale": 1.84,
+      "preset": "prickly_pear",
+      "seed": 11,
+      "collider": false,
+      "heading": 2.3919251441470335
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 11.998368189428335,
+      "z": 37.527299950307665,
+      "color": "red",
+      "scale": 2.04,
+      "preset": "prickly_pear",
+      "seed": 19,
+      "collider": false,
+      "heading": 3.348638820731791
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 10.662826616840002,
+      "z": 34.95327792892341,
+      "color": "red",
+      "scale": 2.07,
+      "preset": "prickly_pear",
+      "seed": 8,
+      "collider": false,
+      "heading": 1.284530476326715
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 20.3619326445424,
+      "z": 26.818191686497098,
+      "color": "red",
+      "scale": 2.19,
+      "preset": "prickly_pear",
+      "seed": 22,
+      "collider": false,
+      "heading": 2.9738265865018803
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 15.762336138508404,
+      "z": 30.468551055120503,
+      "color": "red",
+      "scale": 1.84,
+      "preset": "prickly_pear",
+      "seed": 3,
+      "collider": false,
+      "heading": 3.0879553153646166
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 11.424413041294828,
+      "z": 36.90943730107194,
+      "color": "red",
+      "scale": 2.07,
+      "preset": "prickly_pear",
+      "seed": 26,
+      "collider": false,
+      "heading": 1.83968633119453
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -0.5622240569318584,
+      "z": 36.25432535063585,
+      "color": "red",
+      "scale": 1.7,
+      "preset": "prickly_pear",
+      "seed": 6,
+      "collider": false,
+      "heading": 4.062431022583056
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": 13.627056398153044,
+      "z": 29.89695402887424,
+      "color": "red",
+      "scale": 1.87,
+      "preset": "prickly_pear",
+      "seed": 3,
+      "collider": false,
+      "heading": 0.30830559610009334
+    },
+    {
+      "type": "model",
+      "model": "cactus",
+      "x": -10.436782101195108,
+      "z": 42.68959746810514,
+      "color": "forest",
+      "scale": 1.92,
+      "preset": "prickly_pear",
+      "seed": 10,
+      "collider": false,
+      "heading": 2.566676962491268
     }
   ]
 }

@@ -14,6 +14,7 @@ import {
   SSAO2RenderingPipeline,
   ShadowGenerator,
 } from "@babylonjs/core";
+import { installEffectLog } from "../utils/effect-log.js";
 import { Track } from "../world/track.js";
 import { CameraController } from "../managers/CameraController.js";
 import { TrackSignManager } from "../managers/TrackSignManager.js";
@@ -61,6 +62,7 @@ export function applyNightMode(scene, night) {
  * can hold references for updates / disposal.
  */
 export async function buildScene(engine, trackLoader, trackKey, opts = {}) {
+  installEffectLog(engine);
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.15, 0.12, 0.1, 1);
 

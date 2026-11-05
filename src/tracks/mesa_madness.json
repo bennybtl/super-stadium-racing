@@ -297,7 +297,7 @@
     },
     {
       "type": "driveBox",
-      "centerX": 2.839213315124848,
+      "centerX": 2.339213315124848,
       "centerZ": -49.257899719120054,
       "width": 17,
       "depth": 37,
@@ -363,6 +363,21 @@
       "reverseOnly": true
     },
     {
+      "type": "driveBox",
+      "centerX": 3.072700255253058,
+      "centerZ": -23.396478314636205,
+      "width": 22,
+      "depth": 16.5,
+      "rotation": 85,
+      "solidBase": false,
+      "thickness": 1.1,
+      "layerId": 0,
+      "legs": true,
+      "heightAtMin": 0.5,
+      "heightAtMax": 6,
+      "color": "tex:concrete"
+    },
+    {
       "type": "squareHill",
       "centerX": 7.153938568362019,
       "centerZ": 13.10797051881184,
@@ -374,21 +389,6 @@
       "transition": 7,
       "terrainType": null,
       "edgeShape": 4
-    },
-    {
-      "type": "squareHill",
-      "centerX": 6.882167007649112,
-      "centerZ": -26.495509161000207,
-      "width": 34,
-      "depth": 34.5,
-      "angle": 90,
-      "waterLevelOffset": 0,
-      "transition": 7,
-      "terrainType": null,
-      "heightAtMin": -0.5,
-      "heightAtMax": 10.5,
-      "edgeShape": 0.8,
-      "forwardOnly": true
     },
     {
       "type": "squareHill",
@@ -802,13 +802,14 @@
           "radius": 10
         },
         {
-          "x": 10.334803189882914,
+          "x": 9.834803189882914,
           "z": -35.05538885792423,
-          "radius": 10
+          "radius": 10,
+          "smoothing": 0
         },
         {
-          "x": 16.69,
-          "z": -19.739999999999995,
+          "x": 11.205874209923222,
+          "z": -14.091105264945476,
           "radius": 10,
           "smoothing": 0
         }
@@ -861,17 +862,19 @@
       "type": "polyWall",
       "points": [
         {
-          "x": -4.75,
-          "z": -19.73,
-          "radius": 10
+          "x": -4.084005021969062,
+          "z": -12.88946306163367,
+          "radius": 10,
+          "smoothing": 0
         },
         {
-          "x": -4.390000000000001,
+          "x": -4.890000000000001,
           "z": -35.44,
-          "radius": 10
+          "radius": 10,
+          "smoothing": 0
         },
         {
-          "x": -4.445988067801767,
+          "x": -4.945988067801767,
           "z": -67.24262351439505,
           "radius": 2.5
         },
@@ -1704,7 +1707,7 @@
     {
       "type": "checkpoint",
       "centerX": 5.5001074376942505,
-      "centerZ": -6.540208008449241,
+      "centerZ": -4.540208008449241,
       "heading": 0,
       "width": 20,
       "checkpointNumber": 5,

@@ -761,10 +761,14 @@ const _TERRAIN_BLEND_GLSL_DEFS = `
   // Wake field (WakeFieldManager.js), shared with the water surface itself —
   // see terrainWakeBounds below and _TERRAIN_BLEND_UPDATE_DIFFUSE's lakebed
   // shimmer for how it's used.
+  #ifdef TERRAIN_HAS_WAKE
   uniform sampler2D terrainWakeSampler;
+  #endif
   // Tunnel bores (TunnelManager): RGBA float texels over the tunnels' bounding
   // box, r = floor Y, g = roof Y, b = inside; see terrainBoreBounds below.
+  #ifdef TERRAIN_HAS_BORE
   uniform sampler2D terrainBoreSampler;
+  #endif
   // Per-type detail textures, one layer per terrain type, tiled in world space.
   // The precision qualifier is required: ESSL3 gives sampler2DArray no default
   // one (unlike sampler2D), and omitting it fails to compile.
@@ -950,10 +954,12 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   // TUNNEL_BORE_DISCARD_ABOVE in tunnel-geometry.js.
   // Ground only — bridge decks share this plugin as a forced-type surface.
   // Outside the bores' box the lookup clamps to an empty border texel.
+  #ifdef TERRAIN_HAS_BORE
   if (terrainForcedTypeIndex < 0.0) {
     vec4 _bore = texture2D(terrainBoreSampler, (vPositionW.xz - terrainBoreBounds.xy) * terrainBoreBounds.zw);
     if (_bore.b > 0.5 && vPositionW.y > _bore.r + ${TUNNEL_BORE_DISCARD_ABOVE.toFixed(3)} && vPositionW.y < _bore.g) discard;
   }
+  #endif
   vec2 _tUV = vec2(
     vPositionW.x / (terrainWorldHalfWidth * 2.0) + 0.5,
     vPositionW.z / (terrainWorldHalfDepth * 2.0) + 0.5
@@ -985,11 +991,14 @@ const _TERRAIN_BLEND_UPDATE_DIFFUSE = `
   // under the water tint anyway. Outside the wake field's bounds this reads the
   // permanently-zero padded border, so dry terrain costs three taps and no
   // visible change.
+  vec2 _wkWobble = vec2(0.0);
+  #ifdef TERRAIN_HAS_WAKE
   vec2 _wkUv = (vPositionW.xz - terrainWakeBounds.xy) * terrainWakeBounds.zw;
   float _wk  = texture2D(terrainWakeSampler, _wkUv).r;
   float _wkX = texture2D(terrainWakeSampler, _wkUv + vec2(${(1 / TERRAIN_WAKE_TEX_SIZE).toFixed(8)}, 0.0)).r;
   float _wkZ = texture2D(terrainWakeSampler, _wkUv + vec2(0.0, ${(1 / TERRAIN_WAKE_TEX_SIZE).toFixed(8)})).r;
-  vec2 _wkWobble = vec2(_wkX - _wk, _wkZ - _wk) * ${TERRAIN_WAKE_WOBBLE_STRENGTH.toFixed(3)};
+  _wkWobble = vec2(_wkX - _wk, _wkZ - _wk) * ${TERRAIN_WAKE_WOBBLE_STRENGTH.toFixed(3)};
+  #endif
   vec2 _tUVWobbled = clamp(_tUV + _wkWobble, vec2(0.0), vec2(1.0));
   vec2 _coordWobbled = clamp(_tUVWobbled * terrainCellCount, vec2(0.001), vec2((terrainCellCount - 1.0) + 0.999));
   vec4 _waterOverlay = texture2D(terrainWaterOverlaySampler, _tUVWobbled);
@@ -1045,7 +1054,11 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
       TERRAIN_HALFWIDTH_KEY: 0,
       TERRAIN_HALFDEPTH_KEY: 0,
       TERRAIN_OUTSIDETYPE_KEY: 0,
+      TERRAIN_HAS_WAKE: false,
+      TERRAIN_HAS_BORE: false,
     });
+    this._hasWake = false;
+    this._hasBore = false;
     this._terrainIdTex        = terrainIdTex;
     this._terrainPropertyTex  = terrainPropertyTex;
     this._terrainWaterOverlayTex = terrainWaterOverlayTex;
@@ -1057,6 +1070,7 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     // zero, so the wobble terms fall out with no branch and no define to
     // recompile against.
     const scene = material.getScene();
+    this._scene = scene;
     this._emptyWake = RawTexture.CreateRTexture(
       new Uint8Array(1), 1, 1, scene, false, false,
       Texture.NEAREST_SAMPLINGMODE, Constants.TEXTURETYPE_UNSIGNED_BYTE
@@ -1112,6 +1126,15 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     defines.TERRAIN_HALFWIDTH_KEY = this._terrainWorldHalfWidth ?? 0;
     defines.TERRAIN_HALFDEPTH_KEY = this._terrainWorldHalfDepth ?? 0;
     defines.TERRAIN_OUTSIDETYPE_KEY = this._outsideTerrainTypeIndex ?? 0;
+    // The wake and bore fields exist only on tracks with water / tunnels. Their
+    // samplers and fetches compile in only then, freeing two texture units (of
+    // 16) and two-to-four fetches per pixel everywhere else. Presence is
+    // re-checked each bind; see bindForSubMesh.
+    const md = this._scene?.metadata;
+    this._hasWake = !!md?.wakeField;
+    this._hasBore = !!md?.tunnelBore;
+    defines.TERRAIN_HAS_WAKE = this._hasWake;
+    defines.TERRAIN_HAS_BORE = this._hasBore;
   }
 
   getSamplers(samplers) {
@@ -1139,6 +1162,10 @@ export class TerrainBlendPlugin extends MaterialPluginBase {
     // new one with different bounds — a stored reference would go dangling.
     const wake = scene.metadata?.wakeField;
     const bore = scene.metadata?.tunnelBore;
+
+    // A water/tunnel edit published or removed a field after the effect was
+    // compiled: recompile with the matching defines (takes effect next frame).
+    if (!!wake !== this._hasWake || !!bore !== this._hasBore) this.markAllDefinesAsDirty();
 
     if (scene.texturesEnabled) {
       uniformBuffer.setTexture("terrainIdSampler", this._terrainIdTex);

@@ -94,12 +94,26 @@ export class ShadowCasterGroup {
    */
   addLight(light, { mapSize = 512, refreshRate } = {}) {
     if (!light || this._extra.has(light)) return this._extra.get(light) ?? null;
+    // Every shadow map is a fragment sampler, and the terrain material already
+    // spends ~9 of the GPU's 16 on its own textures. Past the budget the shader
+    // fails to compile and the ground vanishes, so extra lights beyond it just
+    // go without shadows (they still light).
+    if (this._extra.size >= this._extraBudget()) {
+      light.shadowEnabled = false;
+      return null;
+    }
     const gen = new ShadowGenerator(mapSize, light);
     this._applyQualityTo(gen, refreshRate ?? this._quality.refreshRate);
     for (const [mesh, inc] of this._casters) gen.addShadowCaster(mesh, inc);
     light.shadowEnabled = true;
     this._extra.set(light, gen);
     return gen;
+  }
+
+  _extraBudget() {
+    const TERRAIN_SAMPLERS = 9;
+    const units = this._lights[0]?.getScene?.().getEngine?.().getCaps?.().maxTextureImageUnits ?? 16;
+    return Math.max(0, units - TERRAIN_SAMPLERS - this._activeCount - 1);
   }
 
   /** Detach and dispose an extra light's generator (see addLight). */
